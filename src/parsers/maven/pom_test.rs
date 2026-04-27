@@ -511,109 +511,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_pom_properties() {
-        let pom_props_path = PathBuf::from("testdata/maven/test1/pom.properties");
-        let package_data = MavenParser::extract_first_package(&pom_props_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Maven));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::MavenPomProperties)
-        );
-        assert_eq!(package_data.namespace, Some("com.example.test".to_string()));
-        assert_eq!(package_data.name, Some("test-library".to_string()));
-        assert_eq!(package_data.version, Some("1.2.3".to_string()));
-        assert_eq!(
-            package_data.purl,
-            Some("pkg:maven/com.example.test/test-library@1.2.3".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_manifest_mf_implementation() {
-        let manifest_path = PathBuf::from("testdata/maven/test2/MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Maven));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaJarManifest)
-        );
-        assert_eq!(package_data.name, Some("spring-web".to_string()));
-        assert_eq!(package_data.version, Some("5.3.20".to_string()));
-
-        assert_eq!(package_data.parties.len(), 1);
-        let vendor = &package_data.parties[0];
-        assert_eq!(vendor.r#type, Some("organization".to_string()));
-        assert_eq!(vendor.role, Some("vendor".to_string()));
-        assert_eq!(vendor.name, Some("Spring Framework".to_string()));
-    }
-
-    #[test]
-    fn test_parse_manifest_mf_bundle() {
-        let manifest_path = PathBuf::from("testdata/maven/test3/MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        // This file has Bundle-SymbolicName, so it's detected as OSGi
-        assert_eq!(package_data.package_type, Some(PackageType::Osgi));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaOsgiManifest)
-        );
-        assert_eq!(package_data.name, Some("com.example.mybundle".to_string()));
-        assert_eq!(package_data.version, Some("2.1.0".to_string()));
-
-        assert_eq!(package_data.parties.len(), 1);
-        let vendor = &package_data.parties[0];
-        assert_eq!(vendor.name, Some("Example Corp".to_string()));
-    }
-
-    #[test]
-    fn test_missing_manifest_mf_preserves_manifest_datasource() {
-        let manifest_path = PathBuf::from("/nonexistent/MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Maven));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaJarManifest)
-        );
-    }
-
-    #[test]
-    fn test_minimal_manifest_mf_stays_generic_jar() {
-        let content = "Manifest-Version: 1.0\nStart-Class: ${foo.main}\n";
-        let (_temp_dir, manifest_path) = create_temp_maven_file(content, "MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Jar));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaJarManifest)
-        );
-        assert_eq!(package_data.name, None);
-        assert_eq!(package_data.version, None);
-        assert_eq!(package_data.purl, None);
-    }
-
-    #[test]
-    fn test_pom_properties_purl_generation() {
-        let pom_props_path = PathBuf::from("testdata/maven/test4/pom.properties");
-        let package_data = MavenParser::extract_first_package(&pom_props_path);
-
-        assert_eq!(
-            package_data.purl,
-            Some("pkg:maven/org.apache.commons/commons-lang3@3.12.0".to_string())
-        );
-        assert_eq!(
-            package_data.namespace,
-            Some("org.apache.commons".to_string())
-        );
-        assert_eq!(package_data.name, Some("commons-lang3".to_string()));
-        assert_eq!(package_data.version, Some("3.12.0".to_string()));
-    }
-
-    #[test]
     fn test_extract_repositories() {
         let pom_path = PathBuf::from("testdata/maven/repositories-test.xml");
         let package_data = MavenParser::extract_first_package(&pom_path);
@@ -871,24 +768,6 @@ mod tests {
         if let Some(relative_path) = parent.get("relativePath") {
             assert_eq!(relative_path.as_str().unwrap(), "");
         }
-    }
-
-    #[test]
-    fn test_is_match_pom_properties() {
-        let valid_path = PathBuf::from("/some/path/pom.properties");
-        let invalid_path = PathBuf::from("/some/path/not_pom.properties");
-
-        assert!(MavenParser::is_match(&valid_path));
-        assert!(!MavenParser::is_match(&invalid_path));
-    }
-
-    #[test]
-    fn test_is_match_manifest_mf() {
-        let valid_path = PathBuf::from("/some/path/MANIFEST.MF");
-        let invalid_path = PathBuf::from("/some/path/manifest.mf");
-
-        assert!(MavenParser::is_match(&valid_path));
-        assert!(!MavenParser::is_match(&invalid_path));
     }
 
     #[test]

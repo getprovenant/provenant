@@ -27,6 +27,8 @@ mod manifest_test;
 #[cfg(test)]
 mod pom_test;
 #[cfg(test)]
+mod properties_test;
+#[cfg(test)]
 mod scan_test;
 
 use self::{manifest::parse_manifest_mf, pom::parse_pom_xml, properties::parse_pom_properties};
