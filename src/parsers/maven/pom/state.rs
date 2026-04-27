@@ -19,8 +19,261 @@ use super::properties::{
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::parsers::utils::truncate_field;
+use derive_builder::Builder;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
+
+#[derive(Clone, Copy)]
+struct ElementPath<'a> {
+    current: &'a [u8],
+    parent: Option<&'a [u8]>,
+    depth: usize,
+}
+
+impl<'a> ElementPath<'a> {
+    fn from_stack(stack: &'a [Vec<u8>]) -> Option<Self> {
+        let current = stack.last()?.as_slice();
+        let parent = stack
+            .len()
+            .checked_sub(2)
+            .map(|index| stack[index].as_slice());
+
+        Some(Self {
+            current,
+            parent,
+            depth: stack.len(),
+        })
+    }
+
+    fn parent_is(self, expected: &[u8]) -> bool {
+        self.parent == Some(expected)
+    }
+
+    fn is_project_field(self) -> bool {
+        self.depth == 2
+    }
+}
+
+#[derive(Builder, Default, Serialize)]
+#[builder(default, setter(into, strip_option))]
+struct RepositoryEntry {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<String>,
+}
+
+impl RepositoryEntryBuilder {
+    fn set_field(&mut self, field: RepositoryField, value: String) {
+        match field {
+            RepositoryField::Id => {
+                self.id(value);
+            }
+            RepositoryField::Name => {
+                self.name(value);
+            }
+            RepositoryField::Url => {
+                self.url(value);
+            }
+        }
+    }
+
+    fn finish(self) -> Option<serde_json::Map<String, serde_json::Value>> {
+        serialize_non_empty_object(self.build().ok()?)
+    }
+}
+
+#[derive(Builder, Default, Serialize)]
+#[builder(default, setter(into, strip_option))]
+struct MailingListEntry {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    subscribe: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    unsubscribe: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    post: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    archive: Option<String>,
+}
+
+impl MailingListEntryBuilder {
+    fn set_field(&mut self, field: MailingListField, value: String) {
+        match field {
+            MailingListField::Name => {
+                self.name(value);
+            }
+            MailingListField::Subscribe => {
+                self.subscribe(value);
+            }
+            MailingListField::Unsubscribe => {
+                self.unsubscribe(value);
+            }
+            MailingListField::Post => {
+                self.post(value);
+            }
+            MailingListField::Archive => {
+                self.archive(value);
+            }
+        }
+    }
+
+    fn finish(self) -> Option<serde_json::Map<String, serde_json::Value>> {
+        serialize_non_empty_object(self.build().ok()?)
+    }
+}
+
+fn serialize_non_empty_object<T: Serialize>(
+    value: T,
+) -> Option<serde_json::Map<String, serde_json::Value>> {
+    match serde_json::to_value(value).ok()? {
+        serde_json::Value::Object(map) if !map.is_empty() => Some(map),
+        _ => None,
+    }
+}
+
+#[derive(Clone, Copy)]
+enum DependencyField {
+    GroupId,
+    ArtifactId,
+    Version,
+    Scope,
+    Optional,
+    Type,
+    Classifier,
+    SystemPath,
+}
+
+#[derive(Clone, Copy)]
+enum LicenseField {
+    Name,
+    Url,
+    Comments,
+}
+
+#[derive(Clone, Copy)]
+enum PartyField {
+    Name,
+    Email,
+    Url,
+    Organization,
+    OrganizationUrl,
+    Timezone,
+}
+
+#[derive(Clone, Copy)]
+enum RelocationField {
+    GroupId,
+    ArtifactId,
+    Version,
+    Classifier,
+    Type,
+    Message,
+}
+
+#[derive(Clone, Copy)]
+enum ParentField {
+    GroupId,
+    ArtifactId,
+    Version,
+    RelativePath,
+}
+
+#[derive(Clone, Copy)]
+enum ProjectField {
+    GroupId,
+    ArtifactId,
+    Version,
+    Name,
+    Description,
+    Packaging,
+    Classifier,
+    Url,
+    InceptionYear,
+}
+
+#[derive(Clone, Copy)]
+enum ScmField {
+    Connection,
+    DeveloperConnection,
+    Url,
+    Tag,
+}
+
+#[derive(Clone, Copy)]
+enum OrganizationField {
+    Name,
+    Url,
+}
+
+#[derive(Clone, Copy)]
+enum ManagementField {
+    System,
+    Url,
+}
+
+#[derive(Clone, Copy)]
+enum DistributionField {
+    DownloadUrl,
+}
+
+#[derive(Clone, Copy)]
+enum DistRepositoryField {
+    Id,
+    Name,
+    Url,
+    Layout,
+}
+
+#[derive(Clone, Copy)]
+enum DistSiteField {
+    Id,
+    Name,
+    Url,
+}
+
+#[derive(Clone, Copy)]
+enum RepositoryField {
+    Id,
+    Name,
+    Url,
+}
+
+#[derive(Clone, Copy)]
+enum MailingListField {
+    Name,
+    Subscribe,
+    Unsubscribe,
+    Post,
+    Archive,
+}
+
+#[derive(Clone, Copy)]
+enum TextTarget {
+    Ignore,
+    DependencyManagement(DependencyField),
+    License(LicenseField),
+    Party(PartyField),
+    Dependency(DependencyField),
+    Relocation(RelocationField),
+    Parent(ParentField),
+    Project(ProjectField),
+    Scm(ScmField),
+    Organization(OrganizationField),
+    IssueManagement(ManagementField),
+    CiManagement(ManagementField),
+    DistributionManagement(DistributionField),
+    DistRepository(DistRepositoryField),
+    DistSnapshotRepository(DistRepositoryField),
+    DistSite(DistSiteField),
+    Repository(RepositoryField),
+    Module,
+    MailingList(MailingListField),
+}
 
 pub(super) struct PomParseState {
     package_data: PackageData,
@@ -67,19 +320,13 @@ pub(super) struct PomParseState {
     in_repository: bool,
     repositories: Vec<serde_json::Map<String, serde_json::Value>>,
     plugin_repositories: Vec<serde_json::Map<String, serde_json::Value>>,
-    current_repository_id: Option<String>,
-    current_repository_name: Option<String>,
-    current_repository_url: Option<String>,
+    current_repository: Option<RepositoryEntryBuilder>,
     in_modules: bool,
     modules: Vec<String>,
     in_mailing_lists: bool,
     in_mailing_list: bool,
     mailing_lists: Vec<serde_json::Map<String, serde_json::Value>>,
-    current_mailing_list_name: Option<String>,
-    current_mailing_list_subscribe: Option<String>,
-    current_mailing_list_unsubscribe: Option<String>,
-    current_mailing_list_post: Option<String>,
-    current_mailing_list_archive: Option<String>,
+    current_mailing_list: Option<MailingListEntryBuilder>,
     in_dependency_management: bool,
     dependency_management_entries: Vec<MavenDependencyData>,
     current_dep_mgmt_dependency: Option<MavenDependencyData>,
@@ -151,19 +398,13 @@ impl PomParseState {
             in_repository: false,
             repositories: Vec::new(),
             plugin_repositories: Vec::new(),
-            current_repository_id: None,
-            current_repository_name: None,
-            current_repository_url: None,
+            current_repository: None,
             in_modules: false,
             modules: Vec::new(),
             in_mailing_lists: false,
             in_mailing_list: false,
             mailing_lists: Vec::new(),
-            current_mailing_list_name: None,
-            current_mailing_list_subscribe: None,
-            current_mailing_list_unsubscribe: None,
-            current_mailing_list_post: None,
-            current_mailing_list_archive: None,
+            current_mailing_list: None,
             in_dependency_management: false,
             dependency_management_entries: Vec::new(),
             current_dep_mgmt_dependency: None,
@@ -252,333 +493,425 @@ impl PomParseState {
             b"pluginRepositories" => self.in_plugin_repositories = true,
             b"repository" if self.in_repositories && !self.in_distribution_management => {
                 self.in_repository = true;
-                self.current_repository_id = None;
-                self.current_repository_name = None;
-                self.current_repository_url = None;
+                self.current_repository = Some(RepositoryEntryBuilder::default());
             }
             b"pluginRepository" if self.in_plugin_repositories => {
                 self.in_repository = true;
-                self.current_repository_id = None;
-                self.current_repository_name = None;
-                self.current_repository_url = None;
+                self.current_repository = Some(RepositoryEntryBuilder::default());
             }
             b"modules" => self.in_modules = true,
             b"mailingLists" => self.in_mailing_lists = true,
             b"mailingList" if self.in_mailing_lists => {
                 self.in_mailing_list = true;
-                self.current_mailing_list_name = None;
-                self.current_mailing_list_subscribe = None;
-                self.current_mailing_list_unsubscribe = None;
-                self.current_mailing_list_post = None;
-                self.current_mailing_list_archive = None;
+                self.current_mailing_list = Some(MailingListEntryBuilder::default());
             }
             _ => {}
         }
     }
 
     pub(super) fn handle_text(&mut self, path: &Path, text: String) {
-        let current_path = self.current_element.last().map(|v| v.as_slice());
-        let current_parent = self
-            .current_element
-            .len()
-            .checked_sub(2)
-            .map(|index| self.current_element[index].as_slice());
+        let Some(element_path) = ElementPath::from_stack(&self.current_element) else {
+            return;
+        };
 
-        if self.in_properties
-            && self.current_element.len() >= 2
-            && self.current_element[self.current_element.len() - 2] == b"properties"
-        {
-            if let Some(property_name) = self
-                .current_element
-                .last()
-                .and_then(|name| std::str::from_utf8(name).ok())
-            {
+        if self.in_properties && element_path.parent_is(b"properties") {
+            if let Ok(property_name) = std::str::from_utf8(element_path.current) {
                 self.properties
                     .insert(property_name.to_string(), truncate_field(text));
             } else {
                 warn!("Failed to decode Maven property name in {:?}", path);
             }
-        } else if self.in_dep_mgmt_dependency {
-            if let Some(dep_mgmt) = self.current_dep_mgmt_dependency.as_mut() {
-                match current_path {
-                    Some(b"groupId") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.group_id = Some(text)
-                    }
-                    Some(b"artifactId") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.artifact_id = Some(text)
-                    }
-                    Some(b"version") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.version = Some(text)
-                    }
-                    Some(b"scope") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.scope = Some(text)
-                    }
-                    Some(b"type") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.type_ = Some(text)
-                    }
-                    Some(b"classifier") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.classifier = Some(text)
-                    }
-                    Some(b"optional") if current_parent == Some(b"dependency") => {
-                        dep_mgmt.optional = Some(text)
-                    }
-                    _ => {}
-                }
+            return;
+        }
+
+        match self.text_target(element_path) {
+            TextTarget::Ignore => {}
+            TextTarget::DependencyManagement(field) => {
+                self.apply_dependency_management_text(field, text)
             }
-        } else if let Some(license) = &mut self.current_license {
-            match current_path {
-                Some(b"name") => license.name = Some(text),
-                Some(b"url") => license.url = Some(text),
-                Some(b"comments") => license.comments = Some(text),
-                _ => {}
+            TextTarget::License(field) => self.apply_license_text(field, text),
+            TextTarget::Party(field) => self.apply_party_text(field, text),
+            TextTarget::Dependency(field) => self.apply_dependency_text(field, text),
+            TextTarget::Relocation(field) => self.apply_relocation_text(field, text),
+            TextTarget::Parent(field) => self.apply_parent_text(field, text),
+            TextTarget::Project(field) => self.apply_project_text(field, text),
+            TextTarget::Scm(field) => self.apply_scm_text(field, text),
+            TextTarget::Organization(field) => self.apply_organization_text(field, text),
+            TextTarget::IssueManagement(field) => self.apply_issue_management_text(field, text),
+            TextTarget::CiManagement(field) => self.apply_ci_management_text(field, text),
+            TextTarget::DistributionManagement(field) => {
+                self.apply_distribution_management_text(field, text)
             }
-        } else if let Some(party) = &mut self.current_party {
-            match current_path {
-                Some(b"name") => party.name = Some(text),
-                Some(b"email") => party.email = Some(text),
-                Some(b"url") => party.url = Some(text),
-                Some(b"organization") => party.organization = Some(text),
-                Some(b"organizationUrl") => party.organization_url = Some(text),
-                Some(b"timezone") => party.timezone = Some(text),
-                _ => {}
+            TextTarget::DistRepository(field) => self.apply_dist_repository_text(field, text),
+            TextTarget::DistSnapshotRepository(field) => {
+                self.apply_dist_snapshot_repository_text(field, text)
             }
-        } else if let Some(dep) = &mut self.current_dependency {
-            match current_path {
-                Some(b"groupId") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.group_id = Some(text);
-                    }
-                }
-                Some(b"artifactId") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.artifact_id = Some(text);
-                    }
-                }
-                Some(b"version") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.version = Some(text);
-                    }
-                }
-                Some(b"scope") => {
-                    if current_parent == Some(b"dependency") {
-                        dep.scope = Some(text.clone());
-                        dep.is_optional = Some(text == "test" || text == "provided");
-                        dep.is_runtime = Some(text != "test" && text != "provided");
-                    }
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.scope = Some(text);
-                    }
-                }
-                Some(b"optional") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.optional = Some(text);
-                    }
-                }
-                Some(b"type") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.type_ = Some(text);
-                    }
-                }
-                Some(b"classifier") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.classifier = Some(text);
-                    }
-                }
-                Some(b"systemPath") => {
-                    if current_parent == Some(b"dependency")
-                        && let Some(coords) = self.current_dependency_data.as_mut()
-                    {
-                        coords.system_path = Some(text);
-                    }
-                }
-                _ => {}
+            TextTarget::DistSite(field) => self.apply_dist_site_text(field, text),
+            TextTarget::Repository(field) => self.apply_repository_text(field, text),
+            TextTarget::Module => self.modules.push(text),
+            TextTarget::MailingList(field) => self.apply_mailing_list_text(field, text),
+        }
+    }
+
+    fn text_target(&self, path: ElementPath<'_>) -> TextTarget {
+        if self.in_dep_mgmt_dependency && path.parent_is(b"dependency") {
+            return match path.current {
+                b"groupId" => TextTarget::DependencyManagement(DependencyField::GroupId),
+                b"artifactId" => TextTarget::DependencyManagement(DependencyField::ArtifactId),
+                b"version" => TextTarget::DependencyManagement(DependencyField::Version),
+                b"scope" => TextTarget::DependencyManagement(DependencyField::Scope),
+                b"type" => TextTarget::DependencyManagement(DependencyField::Type),
+                b"classifier" => TextTarget::DependencyManagement(DependencyField::Classifier),
+                b"optional" => TextTarget::DependencyManagement(DependencyField::Optional),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.current_license.is_some() {
+            return match path.current {
+                b"name" => TextTarget::License(LicenseField::Name),
+                b"url" => TextTarget::License(LicenseField::Url),
+                b"comments" => TextTarget::License(LicenseField::Comments),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.current_party.is_some() {
+            return match path.current {
+                b"name" => TextTarget::Party(PartyField::Name),
+                b"email" => TextTarget::Party(PartyField::Email),
+                b"url" => TextTarget::Party(PartyField::Url),
+                b"organization" => TextTarget::Party(PartyField::Organization),
+                b"organizationUrl" => TextTarget::Party(PartyField::OrganizationUrl),
+                b"timezone" => TextTarget::Party(PartyField::Timezone),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.current_dependency.is_some() && path.parent_is(b"dependency") {
+            return match path.current {
+                b"groupId" => TextTarget::Dependency(DependencyField::GroupId),
+                b"artifactId" => TextTarget::Dependency(DependencyField::ArtifactId),
+                b"version" => TextTarget::Dependency(DependencyField::Version),
+                b"scope" => TextTarget::Dependency(DependencyField::Scope),
+                b"optional" => TextTarget::Dependency(DependencyField::Optional),
+                b"type" => TextTarget::Dependency(DependencyField::Type),
+                b"classifier" => TextTarget::Dependency(DependencyField::Classifier),
+                b"systemPath" => TextTarget::Dependency(DependencyField::SystemPath),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.in_relocation {
+            return match path.current {
+                b"groupId" => TextTarget::Relocation(RelocationField::GroupId),
+                b"artifactId" => TextTarget::Relocation(RelocationField::ArtifactId),
+                b"version" => TextTarget::Relocation(RelocationField::Version),
+                b"classifier" => TextTarget::Relocation(RelocationField::Classifier),
+                b"type" => TextTarget::Relocation(RelocationField::Type),
+                b"message" => TextTarget::Relocation(RelocationField::Message),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.in_parent {
+            return match path.current {
+                b"groupId" => TextTarget::Parent(ParentField::GroupId),
+                b"artifactId" => TextTarget::Parent(ParentField::ArtifactId),
+                b"version" => TextTarget::Parent(ParentField::Version),
+                b"relativePath" => TextTarget::Parent(ParentField::RelativePath),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if path.is_project_field() {
+            return match path.current {
+                b"groupId" => TextTarget::Project(ProjectField::GroupId),
+                b"artifactId" => TextTarget::Project(ProjectField::ArtifactId),
+                b"version" => TextTarget::Project(ProjectField::Version),
+                b"name" => TextTarget::Project(ProjectField::Name),
+                b"description" => TextTarget::Project(ProjectField::Description),
+                b"packaging" => TextTarget::Project(ProjectField::Packaging),
+                b"classifier" => TextTarget::Project(ProjectField::Classifier),
+                b"url" => TextTarget::Project(ProjectField::Url),
+                b"inceptionYear" => TextTarget::Project(ProjectField::InceptionYear),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if path.parent_is(b"scm") {
+            return match path.current {
+                b"connection" => TextTarget::Scm(ScmField::Connection),
+                b"developerConnection" => TextTarget::Scm(ScmField::DeveloperConnection),
+                b"url" => TextTarget::Scm(ScmField::Url),
+                b"tag" => TextTarget::Scm(ScmField::Tag),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if path.parent_is(b"organization") {
+            return match path.current {
+                b"name" => TextTarget::Organization(OrganizationField::Name),
+                b"url" => TextTarget::Organization(OrganizationField::Url),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if path.parent_is(b"issueManagement") {
+            return match path.current {
+                b"system" => TextTarget::IssueManagement(ManagementField::System),
+                b"url" => TextTarget::IssueManagement(ManagementField::Url),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if path.parent_is(b"ciManagement") {
+            return match path.current {
+                b"system" => TextTarget::CiManagement(ManagementField::System),
+                b"url" => TextTarget::CiManagement(ManagementField::Url),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if path.parent_is(b"distributionManagement") && path.current == b"downloadUrl" {
+            return TextTarget::DistributionManagement(DistributionField::DownloadUrl);
+        }
+
+        if self.in_dist_repository {
+            return match path.current {
+                b"id" => TextTarget::DistRepository(DistRepositoryField::Id),
+                b"name" => TextTarget::DistRepository(DistRepositoryField::Name),
+                b"url" => TextTarget::DistRepository(DistRepositoryField::Url),
+                b"layout" => TextTarget::DistRepository(DistRepositoryField::Layout),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.in_dist_snapshot_repository {
+            return match path.current {
+                b"id" => TextTarget::DistSnapshotRepository(DistRepositoryField::Id),
+                b"name" => TextTarget::DistSnapshotRepository(DistRepositoryField::Name),
+                b"url" => TextTarget::DistSnapshotRepository(DistRepositoryField::Url),
+                b"layout" => TextTarget::DistSnapshotRepository(DistRepositoryField::Layout),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.in_dist_site {
+            return match path.current {
+                b"id" => TextTarget::DistSite(DistSiteField::Id),
+                b"name" => TextTarget::DistSite(DistSiteField::Name),
+                b"url" => TextTarget::DistSite(DistSiteField::Url),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.in_repository {
+            return match path.current {
+                b"id" => TextTarget::Repository(RepositoryField::Id),
+                b"name" => TextTarget::Repository(RepositoryField::Name),
+                b"url" => TextTarget::Repository(RepositoryField::Url),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        if self.in_modules && path.current == b"module" {
+            return TextTarget::Module;
+        }
+
+        if self.in_mailing_list {
+            return match path.current {
+                b"name" => TextTarget::MailingList(MailingListField::Name),
+                b"subscribe" => TextTarget::MailingList(MailingListField::Subscribe),
+                b"unsubscribe" => TextTarget::MailingList(MailingListField::Unsubscribe),
+                b"post" => TextTarget::MailingList(MailingListField::Post),
+                b"archive" => TextTarget::MailingList(MailingListField::Archive),
+                _ => TextTarget::Ignore,
+            };
+        }
+
+        TextTarget::Ignore
+    }
+
+    fn apply_dependency_management_text(&mut self, field: DependencyField, text: String) {
+        if let Some(dep_mgmt) = self.current_dep_mgmt_dependency.as_mut() {
+            Self::set_dependency_field(dep_mgmt, field, text);
+        }
+    }
+
+    fn apply_license_text(&mut self, field: LicenseField, text: String) {
+        if let Some(license) = self.current_license.as_mut() {
+            match field {
+                LicenseField::Name => license.name = Some(text),
+                LicenseField::Url => license.url = Some(text),
+                LicenseField::Comments => license.comments = Some(text),
             }
-        } else if self.in_relocation {
-            match current_path {
-                Some(b"groupId") => self.relocation.group_id = Some(text),
-                Some(b"artifactId") => self.relocation.artifact_id = Some(text),
-                Some(b"version") => self.relocation.version = Some(text),
-                Some(b"classifier") => self.relocation.classifier = Some(text),
-                Some(b"type") => self.relocation.type_ = Some(text),
-                Some(b"message") => self.relocation.message = Some(text),
-                _ => {}
+        }
+    }
+
+    fn apply_party_text(&mut self, field: PartyField, text: String) {
+        if let Some(party) = self.current_party.as_mut() {
+            match field {
+                PartyField::Name => party.name = Some(text),
+                PartyField::Email => party.email = Some(text),
+                PartyField::Url => party.url = Some(text),
+                PartyField::Organization => party.organization = Some(text),
+                PartyField::OrganizationUrl => party.organization_url = Some(text),
+                PartyField::Timezone => party.timezone = Some(text),
             }
-        } else if self.in_parent {
-            match current_path {
-                Some(b"groupId") => self.parent_group_id = Some(text),
-                Some(b"artifactId") => self.parent_artifact_id = Some(text),
-                Some(b"version") => self.parent_version = Some(text),
-                Some(b"relativePath") => self.parent_relative_path = Some(text),
-                _ => {}
+        }
+    }
+
+    fn apply_dependency_text(&mut self, field: DependencyField, text: String) {
+        if matches!(field, DependencyField::Scope)
+            && let Some(dep) = self.current_dependency.as_mut()
+        {
+            dep.scope = Some(text.clone());
+            dep.is_optional = Some(text == "test" || text == "provided");
+            dep.is_runtime = Some(text != "test" && text != "provided");
+        }
+
+        if let Some(coords) = self.current_dependency_data.as_mut() {
+            Self::set_dependency_field(coords, field, text);
+        }
+    }
+
+    fn apply_relocation_text(&mut self, field: RelocationField, text: String) {
+        match field {
+            RelocationField::GroupId => self.relocation.group_id = Some(text),
+            RelocationField::ArtifactId => self.relocation.artifact_id = Some(text),
+            RelocationField::Version => self.relocation.version = Some(text),
+            RelocationField::Classifier => self.relocation.classifier = Some(text),
+            RelocationField::Type => self.relocation.type_ = Some(text),
+            RelocationField::Message => self.relocation.message = Some(text),
+        }
+    }
+
+    fn apply_parent_text(&mut self, field: ParentField, text: String) {
+        match field {
+            ParentField::GroupId => self.parent_group_id = Some(text),
+            ParentField::ArtifactId => self.parent_artifact_id = Some(text),
+            ParentField::Version => self.parent_version = Some(text),
+            ParentField::RelativePath => self.parent_relative_path = Some(text),
+        }
+    }
+
+    fn apply_project_text(&mut self, field: ProjectField, text: String) {
+        match field {
+            ProjectField::GroupId => self.package_data.namespace = Some(text),
+            ProjectField::ArtifactId => self.package_data.name = Some(text),
+            ProjectField::Version => self.package_data.version = Some(text),
+            ProjectField::Name => self.project_name = Some(text),
+            ProjectField::Description => self.project_description = Some(text),
+            ProjectField::Packaging => self.project_packaging = Some(text),
+            ProjectField::Classifier => self.project_classifier = Some(text),
+            ProjectField::Url => self.package_data.homepage_url = Some(text),
+            ProjectField::InceptionYear => self.inception_year = Some(text),
+        }
+    }
+
+    fn apply_scm_text(&mut self, field: ScmField, text: String) {
+        match field {
+            ScmField::Connection => {
+                self.scm_connection = Some(Self::normalize_scm_connection(text))
             }
+            ScmField::DeveloperConnection => {
+                self.scm_developer_connection = Some(Self::normalize_scm_connection(text));
+            }
+            ScmField::Url => self.scm_url = Some(text),
+            ScmField::Tag => self.scm_tag = Some(text),
+        }
+    }
+
+    fn apply_organization_text(&mut self, field: OrganizationField, text: String) {
+        match field {
+            OrganizationField::Name => self.organization_name = Some(text),
+            OrganizationField::Url => self.organization_url = Some(text),
+        }
+    }
+
+    fn apply_issue_management_text(&mut self, field: ManagementField, text: String) {
+        match field {
+            ManagementField::System => self.issue_management_system = Some(text),
+            ManagementField::Url => self.issue_management_url = Some(text),
+        }
+    }
+
+    fn apply_ci_management_text(&mut self, field: ManagementField, text: String) {
+        match field {
+            ManagementField::System => self.ci_management_system = Some(text),
+            ManagementField::Url => self.ci_management_url = Some(text),
+        }
+    }
+
+    fn apply_distribution_management_text(&mut self, field: DistributionField, text: String) {
+        match field {
+            DistributionField::DownloadUrl => self.dist_download_url = Some(text),
+        }
+    }
+
+    fn apply_dist_repository_text(&mut self, field: DistRepositoryField, text: String) {
+        match field {
+            DistRepositoryField::Id => self.dist_repository_id = Some(text),
+            DistRepositoryField::Name => self.dist_repository_name = Some(text),
+            DistRepositoryField::Url => self.dist_repository_url = Some(text),
+            DistRepositoryField::Layout => self.dist_repository_layout = Some(text),
+        }
+    }
+
+    fn apply_dist_snapshot_repository_text(&mut self, field: DistRepositoryField, text: String) {
+        match field {
+            DistRepositoryField::Id => self.dist_snapshot_repository_id = Some(text),
+            DistRepositoryField::Name => self.dist_snapshot_repository_name = Some(text),
+            DistRepositoryField::Url => self.dist_snapshot_repository_url = Some(text),
+            DistRepositoryField::Layout => self.dist_snapshot_repository_layout = Some(text),
+        }
+    }
+
+    fn apply_dist_site_text(&mut self, field: DistSiteField, text: String) {
+        match field {
+            DistSiteField::Id => self.dist_site_id = Some(text),
+            DistSiteField::Name => self.dist_site_name = Some(text),
+            DistSiteField::Url => self.dist_site_url = Some(text),
+        }
+    }
+
+    fn apply_repository_text(&mut self, field: RepositoryField, text: String) {
+        if let Some(repository) = self.current_repository.as_mut() {
+            repository.set_field(field, text);
+        }
+    }
+
+    fn apply_mailing_list_text(&mut self, field: MailingListField, text: String) {
+        if let Some(mailing_list) = self.current_mailing_list.as_mut() {
+            mailing_list.set_field(field, text);
+        }
+    }
+
+    fn set_dependency_field(
+        dependency: &mut MavenDependencyData,
+        field: DependencyField,
+        text: String,
+    ) {
+        match field {
+            DependencyField::GroupId => dependency.group_id = Some(text),
+            DependencyField::ArtifactId => dependency.artifact_id = Some(text),
+            DependencyField::Version => dependency.version = Some(text),
+            DependencyField::Scope => dependency.scope = Some(text),
+            DependencyField::Optional => dependency.optional = Some(text),
+            DependencyField::Type => dependency.type_ = Some(text),
+            DependencyField::Classifier => dependency.classifier = Some(text),
+            DependencyField::SystemPath => dependency.system_path = Some(text),
+        }
+    }
+
+    fn normalize_scm_connection(text: String) -> String {
+        if text.starts_with("scm:git:") {
+            text.replacen("scm:git:", "git+", 1)
+        } else if text.starts_with("scm:") {
+            text.replacen("scm:", "", 1)
         } else {
-            match current_path {
-                Some(b"groupId") if self.current_element.len() == 2 => {
-                    self.package_data.namespace = Some(text)
-                }
-                Some(b"artifactId") if self.current_element.len() == 2 => {
-                    self.package_data.name = Some(text)
-                }
-                Some(b"version") if self.current_element.len() == 2 => {
-                    self.package_data.version = Some(text)
-                }
-                Some(b"name") if self.current_element.len() == 2 => self.project_name = Some(text),
-                Some(b"description") if self.current_element.len() == 2 => {
-                    self.project_description = Some(text)
-                }
-                Some(b"packaging") if self.current_element.len() == 2 => {
-                    self.project_packaging = Some(text)
-                }
-                Some(b"classifier") if self.current_element.len() == 2 => {
-                    self.project_classifier = Some(text)
-                }
-                Some(b"url") if self.current_element.len() == 2 => {
-                    self.package_data.homepage_url = Some(text)
-                }
-                Some(b"inceptionYear") if self.current_element.len() == 2 => {
-                    self.inception_year = Some(text)
-                }
-                Some(b"connection")
-                    if self.current_element.len() >= 3
-                        && self.current_element[self.current_element.len() - 2] == b"scm" =>
-                {
-                    self.scm_connection = if text.starts_with("scm:git:") {
-                        Some(text.replacen("scm:git:", "git+", 1))
-                    } else if text.starts_with("scm:") {
-                        Some(text.replacen("scm:", "", 1))
-                    } else {
-                        Some(text)
-                    };
-                }
-                Some(b"developerConnection")
-                    if self.current_element.len() >= 3
-                        && self.current_element[self.current_element.len() - 2] == b"scm" =>
-                {
-                    self.scm_developer_connection = if text.starts_with("scm:git:") {
-                        Some(text.replacen("scm:git:", "git+", 1))
-                    } else if text.starts_with("scm:") {
-                        Some(text.replacen("scm:", "", 1))
-                    } else {
-                        Some(text)
-                    };
-                }
-                Some(b"url")
-                    if self.current_element.len() >= 3
-                        && self.current_element[self.current_element.len() - 2] == b"scm" =>
-                {
-                    self.scm_url = Some(text);
-                }
-                Some(b"tag")
-                    if self.current_element.len() >= 3
-                        && self.current_element[self.current_element.len() - 2] == b"scm" =>
-                {
-                    self.scm_tag = Some(text);
-                }
-                Some(b"name")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"organization" =>
-                {
-                    self.organization_name = Some(text);
-                }
-                Some(b"url")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"organization" =>
-                {
-                    self.organization_url = Some(text);
-                }
-                Some(b"system")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"issueManagement" =>
-                {
-                    self.issue_management_system = Some(text);
-                }
-                Some(b"url")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"issueManagement" =>
-                {
-                    self.issue_management_url = Some(text);
-                }
-                Some(b"system")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"ciManagement" =>
-                {
-                    self.ci_management_system = Some(text);
-                }
-                Some(b"url")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"ciManagement" =>
-                {
-                    self.ci_management_url = Some(text);
-                }
-                Some(b"downloadUrl")
-                    if self.current_element.len() >= 2
-                        && self.current_element[self.current_element.len() - 2]
-                            == b"distributionManagement" =>
-                {
-                    self.dist_download_url = Some(text);
-                }
-                Some(b"id") if self.in_dist_repository => self.dist_repository_id = Some(text),
-                Some(b"name") if self.in_dist_repository => self.dist_repository_name = Some(text),
-                Some(b"url") if self.in_dist_repository => self.dist_repository_url = Some(text),
-                Some(b"layout") if self.in_dist_repository => {
-                    self.dist_repository_layout = Some(text)
-                }
-                Some(b"id") if self.in_dist_snapshot_repository => {
-                    self.dist_snapshot_repository_id = Some(text)
-                }
-                Some(b"name") if self.in_dist_snapshot_repository => {
-                    self.dist_snapshot_repository_name = Some(text)
-                }
-                Some(b"url") if self.in_dist_snapshot_repository => {
-                    self.dist_snapshot_repository_url = Some(text)
-                }
-                Some(b"layout") if self.in_dist_snapshot_repository => {
-                    self.dist_snapshot_repository_layout = Some(text)
-                }
-                Some(b"id") if self.in_dist_site => self.dist_site_id = Some(text),
-                Some(b"name") if self.in_dist_site => self.dist_site_name = Some(text),
-                Some(b"url") if self.in_dist_site => self.dist_site_url = Some(text),
-                Some(b"id") if self.in_repository => self.current_repository_id = Some(text),
-                Some(b"name") if self.in_repository => self.current_repository_name = Some(text),
-                Some(b"url") if self.in_repository => self.current_repository_url = Some(text),
-                Some(b"module") if self.in_modules => self.modules.push(text),
-                Some(b"name") if self.in_mailing_list => {
-                    self.current_mailing_list_name = Some(text)
-                }
-                Some(b"subscribe") if self.in_mailing_list => {
-                    self.current_mailing_list_subscribe = Some(text)
-                }
-                Some(b"unsubscribe") if self.in_mailing_list => {
-                    self.current_mailing_list_unsubscribe = Some(text)
-                }
-                Some(b"post") if self.in_mailing_list => {
-                    self.current_mailing_list_post = Some(text)
-                }
-                Some(b"archive") if self.in_mailing_list => {
-                    self.current_mailing_list_archive = Some(text)
-                }
-                _ => {}
-            }
+            text
         }
     }
 
@@ -649,39 +982,21 @@ impl PomParseState {
             }
             b"repository" if !self.in_dependencies && self.in_repositories => {
                 self.in_repository = false;
-                if self.current_repository_id.is_some()
-                    || self.current_repository_name.is_some()
-                    || self.current_repository_url.is_some()
+                if let Some(repo) = self
+                    .current_repository
+                    .take()
+                    .and_then(RepositoryEntryBuilder::finish)
                 {
-                    let mut repo = serde_json::Map::new();
-                    if let Some(id) = self.current_repository_id.take() {
-                        repo.insert("id".to_string(), serde_json::Value::String(id));
-                    }
-                    if let Some(name) = self.current_repository_name.take() {
-                        repo.insert("name".to_string(), serde_json::Value::String(name));
-                    }
-                    if let Some(url) = self.current_repository_url.take() {
-                        repo.insert("url".to_string(), serde_json::Value::String(url));
-                    }
                     self.repositories.push(repo);
                 }
             }
             b"pluginRepository" if self.in_plugin_repositories => {
                 self.in_repository = false;
-                if self.current_repository_id.is_some()
-                    || self.current_repository_name.is_some()
-                    || self.current_repository_url.is_some()
+                if let Some(repo) = self
+                    .current_repository
+                    .take()
+                    .and_then(RepositoryEntryBuilder::finish)
                 {
-                    let mut repo = serde_json::Map::new();
-                    if let Some(id) = self.current_repository_id.take() {
-                        repo.insert("id".to_string(), serde_json::Value::String(id));
-                    }
-                    if let Some(name) = self.current_repository_name.take() {
-                        repo.insert("name".to_string(), serde_json::Value::String(name));
-                    }
-                    if let Some(url) = self.current_repository_url.take() {
-                        repo.insert("url".to_string(), serde_json::Value::String(url));
-                    }
                     self.plugin_repositories.push(repo);
                 }
             }
@@ -692,34 +1007,11 @@ impl PomParseState {
             b"mailingLists" => self.in_mailing_lists = false,
             b"mailingList" => {
                 self.in_mailing_list = false;
-                if self.current_mailing_list_name.is_some()
-                    || self.current_mailing_list_subscribe.is_some()
-                    || self.current_mailing_list_unsubscribe.is_some()
-                    || self.current_mailing_list_post.is_some()
-                    || self.current_mailing_list_archive.is_some()
+                if let Some(ml) = self
+                    .current_mailing_list
+                    .take()
+                    .and_then(MailingListEntryBuilder::finish)
                 {
-                    let mut ml = serde_json::Map::new();
-                    if let Some(name) = self.current_mailing_list_name.take() {
-                        ml.insert("name".to_string(), serde_json::Value::String(name));
-                    }
-                    if let Some(subscribe) = self.current_mailing_list_subscribe.take() {
-                        ml.insert(
-                            "subscribe".to_string(),
-                            serde_json::Value::String(subscribe),
-                        );
-                    }
-                    if let Some(unsubscribe) = self.current_mailing_list_unsubscribe.take() {
-                        ml.insert(
-                            "unsubscribe".to_string(),
-                            serde_json::Value::String(unsubscribe),
-                        );
-                    }
-                    if let Some(post) = self.current_mailing_list_post.take() {
-                        ml.insert("post".to_string(), serde_json::Value::String(post));
-                    }
-                    if let Some(archive) = self.current_mailing_list_archive.take() {
-                        ml.insert("archive".to_string(), serde_json::Value::String(archive));
-                    }
                     self.mailing_lists.push(ml);
                 }
             }
