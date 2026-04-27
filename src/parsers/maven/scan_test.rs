@@ -5,8 +5,8 @@
 mod tests {
     use std::path::Path;
 
-    use super::super::scan_test_utils::scan_and_assemble;
     use crate::models::{DatasourceId, PackageType};
+    use crate::parsers::scan_test_utils::scan_and_assemble;
 
     #[test]
     fn test_maven_repository_pom_scan_assembles_package_from_repo_style_filename() {
