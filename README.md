@@ -15,7 +15,7 @@ Provenant reimplements the scanning engine in Rust while continuing to use the u
 
 ```sh
 cargo install provenant-cli
-provenant --json-pp - --license --package /path/to/repo
+provenant scan --json-pp - --license --package /path/to/repo
 ```
 
 Prefer release binaries? Download precompiled archives from [GitHub Releases](https://github.com/mstykow/provenant/releases).
@@ -135,7 +135,7 @@ Provenant currently exposes these Cargo features:
 ## Usage
 
 ```sh
-provenant --json-pp <FILE> [OPTIONS] <INPUT>...
+provenant scan --json-pp <FILE> [OPTIONS] <INPUT>...
 ```
 
 At least one output option is required.
@@ -157,7 +157,7 @@ For guided workflows and important flag combinations, see the [CLI Guide](docs/C
 ### Example
 
 ```sh
-provenant --json-pp scan-results.json --license --package ~/projects/my-codebase --ignore "*.git*" --ignore "target/*" --ignore "node_modules/*"
+provenant scan --json-pp scan-results.json --license --package ~/projects/my-codebase --ignore "*.git*" --ignore "target/*" --ignore "node_modules/*"
 ```
 
 ### Highlighted Workflows
@@ -165,13 +165,13 @@ provenant --json-pp scan-results.json --license --package ~/projects/my-codebase
 For PR-scoped or CI-selected scans, use `--paths-file` with one explicit scan root instead of expanding the file list into positional args:
 
 ```sh
-provenant --json-pp scan-results.json --license /path/to/repo --paths-file changed-files.txt
+provenant scan --json-pp scan-results.json --license /path/to/repo --paths-file changed-files.txt
 ```
 
 For repeated scans of the same checkout, use `--incremental` so Provenant can reuse unchanged file results from the shared cache:
 
 ```sh
-provenant --json-pp scan-results.json --license --package --incremental /path/to/repo
+provenant scan --json-pp scan-results.json --license --package --incremental /path/to/repo
 ```
 
 Use `-` as `FILE` to write an output stream to stdout, for example `--json-pp -`.

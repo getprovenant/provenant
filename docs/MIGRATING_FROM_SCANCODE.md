@@ -22,6 +22,7 @@ If you mostly want a ScanCode-aligned scan from a single binary, start with the 
 - Provenant keeps the ScanCode-aligned scan model and output formats as its primary compatibility target.
 - `spdx_license_list_version` stays in the existing ScanCode-style header location.
 - `--from-json` continues to target ScanCode-style JSON inputs rather than a Provenant-only format.
+- Scanning now has an explicit `provenant scan ...` command form, while bare `provenant ...` scan invocations continue to work as a compatibility alias.
 
 For broader positioning and compatibility context, see [Provenant and ScanCode Toolkit](SCANCODE_COMPARISON.md).
 

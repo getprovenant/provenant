@@ -25,7 +25,7 @@ This guide does **not** try to repeat every scan flag from `scan --help`. Instea
 If you are starting a new scan and want a strong default, start with pretty JSON and explicitly ask for the scan types you care about:
 
 ```sh
-provenant --json-pp scan.json --license --package /path/to/project
+provenant scan --json-pp scan.json --license --package /path/to/project
 ```
 
 Why this is a good first command:
@@ -44,7 +44,7 @@ What you get back:
 If you also want copyright, holder, and author detection, add `--copyright`:
 
 ```sh
-provenant --json-pp scan.json --license --copyright --package /path/to/project
+provenant scan --json-pp scan.json --license --copyright --package /path/to/project
 ```
 
 ## Important Mental Model: Detections Are Opt-In
@@ -72,7 +72,7 @@ Every run needs at least one output flag, and you can request more than one in t
 For most users, the best default is still pretty JSON:
 
 ```sh
-provenant --json-pp scan.json --license --package /path/to/project
+provenant scan --json-pp scan.json --license --package /path/to/project
 ```
 
 Use other outputs when you need a specific consumer or review format:
@@ -89,7 +89,7 @@ Use other outputs when you need a specific consumer or review format:
 You can write more than one output format in the same run. For example:
 
 ```sh
-provenant --json-pp scan.json --html report.html --license --package /path/to/project
+provenant scan --json-pp scan.json --html report.html --license --package /path/to/project
 ```
 
 That is useful when you want one machine-readable result for automation and one human-readable report for review.
@@ -97,7 +97,7 @@ That is useful when you want one machine-readable result for automation and one 
 You can also write to stdout by using `-` as the output file:
 
 ```sh
-provenant --json-pp - --license /path/to/project
+provenant scan --json-pp - --license /path/to/project
 ```
 
 That is useful when you want to inspect a quick result in the terminal or pipe it to another command.
@@ -109,7 +109,7 @@ The examples below are organized by the question a user is trying to answer.
 ### 1. "I want a good first inventory of this codebase"
 
 ```sh
-provenant --json-pp scan.json --license --copyright --package /path/to/project
+provenant scan --json-pp scan.json --license --copyright --package /path/to/project
 ```
 
 Use this when you want a broad provenance-oriented view of a repository.
@@ -125,7 +125,7 @@ This is the best place to start if you are doing general review or compliance tr
 ### 2. "I only care about licenses"
 
 ```sh
-provenant --json-pp licenses.json --license /path/to/project
+provenant scan --json-pp licenses.json --license /path/to/project
 ```
 
 Use this when your main question is "what licenses were detected in this tree?"
@@ -140,7 +140,7 @@ If you need to customize the license dataset Provenant uses, first export the bu
 
 ```sh
 provenant export-license-dataset /tmp/provenant-license-dataset
-provenant --json-pp licenses.json --license --license-dataset-path /tmp/provenant-license-dataset /path/to/project
+provenant scan --json-pp licenses.json --license --license-dataset-path /tmp/provenant-license-dataset /path/to/project
 ```
 
 Use this advanced workflow when you want to inspect, edit, or replace the `.RULE` and `.LICENSE` files Provenant uses. The dataset root must contain:
@@ -157,13 +157,13 @@ When `--license-dataset-path` is set, Provenant uses that dataset as authoritati
 If you need the matched text that triggered a detection, add `--license-text`:
 
 ```sh
-provenant --json-pp licenses.json --license --license-text /path/to/project
+provenant scan --json-pp licenses.json --license --license-text /path/to/project
 ```
 
 Add diagnostics only when you are actively investigating why something matched:
 
 ```sh
-provenant --json-pp licenses.json --license --license-text --license-text-diagnostics --license-diagnostics /path/to/project
+provenant scan --json-pp licenses.json --license --license-text --license-text-diagnostics --license-diagnostics /path/to/project
 ```
 
 Add `--license-references` when you want top-level unique license and rule reference blocks, and add `--unknown-licenses` when you want unmatched license-like text surfaced for review.
@@ -191,13 +191,13 @@ Three CLI flags control cache behavior:
 - `--cache-dir <DIR>` — choose the shared cache root for both incremental manifests and license-index cache files
 
 ```sh
-provenant --json-pp scan.json --license --cache-dir .cache/provenant --reindex /path/to/project
+provenant scan --json-pp scan.json --license --cache-dir .cache/provenant --reindex /path/to/project
 ```
 
 ### 3. "I want file metadata such as checksums and type hints"
 
 ```sh
-provenant --json-pp info.json --info /path/to/project
+provenant scan --json-pp info.json --info /path/to/project
 ```
 
 Use `--info` when you want file-level metadata rather than legal or package detections.
@@ -213,7 +213,7 @@ You also need `--info` for some related features such as `--mark-source`.
 ### 4. "I want packages and dependencies"
 
 ```sh
-provenant --json-pp packages.json --package /path/to/project
+provenant scan --json-pp packages.json --package /path/to/project
 ```
 
 Use this when you want package manifests, lockfile-derived dependencies, and assembled package records.
@@ -233,7 +233,7 @@ What to expect in the results:
 ### 5. "I want both packages and licenses together"
 
 ```sh
-provenant --json-pp scan.json --license --package /path/to/project
+provenant scan --json-pp scan.json --license --package /path/to/project
 ```
 
 This is one of the most common real-world scans.
@@ -248,7 +248,7 @@ This combination is often more useful than a package-only or license-only run be
 ### 6. "I only want package data, and I want it fast"
 
 ```sh
-provenant --json-pp packages.json --package-only /path/to/project
+provenant scan --json-pp packages.json --package-only /path/to/project
 ```
 
 Use `--package-only` when you explicitly want a narrower package-focused scan and do **not** want license or copyright detection.
@@ -268,7 +268,7 @@ If you want assembled top-level packages and dependencies, use `--package` inste
 ### 7. "I need system package data"
 
 ```sh
-provenant --json-pp system-packages.json --system-package /path/to/rootfs-or-image-extract
+provenant scan --json-pp system-packages.json --system-package /path/to/rootfs-or-image-extract
 ```
 
 Use this when scanning extracted environments or roots that contain installed package databases rather than just source manifests.
@@ -282,7 +282,7 @@ This is the right workflow for things like:
 ### 8. "I want package data from compiled binaries"
 
 ```sh
-provenant --json-pp compiled-packages.json --package-in-compiled /path/to/project
+provenant scan --json-pp compiled-packages.json --package-in-compiled /path/to/project
 ```
 
 Use this when you want package metadata embedded in supported compiled Go or Rust binaries.
@@ -298,7 +298,7 @@ If you also want manifest/lockfile package detection, combine it with `--package
 ### 9. "I want a browsable HTML report"
 
 ```sh
-provenant --html report.html --license --copyright /path/to/project
+provenant scan --html report.html --license --copyright /path/to/project
 ```
 
 Use this when you want to review findings in a browser rather than inspect JSON directly.
@@ -312,13 +312,13 @@ HTML is useful for:
 ### 10. "I need SPDX or CycloneDX output"
 
 ```sh
-provenant --cyclonedx bom.json --package /path/to/project
+provenant scan --cyclonedx bom.json --package /path/to/project
 ```
 
 or:
 
 ```sh
-provenant --spdx-tv sbom.spdx --package /path/to/project
+provenant scan --spdx-tv sbom.spdx --package /path/to/project
 ```
 
 Use these formats when another tool or downstream process expects them.
@@ -332,7 +332,7 @@ In practice:
 ### 11. "I need Debian copyright output"
 
 ```sh
-provenant --debian debian.copyright --license --copyright --license-text /path/to/project
+provenant scan --debian debian.copyright --license --copyright --license-text /path/to/project
 ```
 
 Use this when you need a machine-readable Debian copyright file.
@@ -348,7 +348,7 @@ This workflow is more specialized than JSON or HTML, so it is usually something 
 ### 12. "I want to ignore obvious noise"
 
 ```sh
-provenant --json-pp scan.json --license --package /path/to/project --ignore "*.min.js" --ignore "node_modules/*"
+provenant scan --json-pp scan.json --license --package /path/to/project --ignore "*.min.js" --ignore "node_modules/*"
 ```
 
 Use ignore patterns when you want to:
@@ -362,7 +362,7 @@ Use quotes around glob patterns so your shell does not expand them before Proven
 ### 13. "I want to inspect results in the terminal first"
 
 ```sh
-provenant --json-pp - --license --package /path/to/project
+provenant scan --json-pp - --license --package /path/to/project
 ```
 
 Use stdout when you are trying to validate a command quickly before saving a file or when you want to pipe the result elsewhere.
@@ -370,7 +370,7 @@ Use stdout when you are trying to validate a command quickly before saving a fil
 ### 14. "I already have a scan and only want to reshape it"
 
 ```sh
-provenant --json-pp reshaped.json --from-json scan.json --only-findings
+provenant scan --json-pp reshaped.json --from-json scan.json --only-findings
 ```
 
 Use `--from-json` when you want to reuse an existing ScanCode-style JSON result instead of rescanning the original inputs.
@@ -386,7 +386,7 @@ Important: `--from-json` is for reshaping existing results. It is not a second s
 ### 15. "I want a codebase-level summary instead of reading raw file-by-file results"
 
 ```sh
-provenant --json-pp summary.json --license --package --classify --summary /path/to/project
+provenant scan --json-pp summary.json --license --package --classify --summary /path/to/project
 ```
 
 Use this when the raw scan output is correct but too detailed for your immediate question.
@@ -399,7 +399,7 @@ Why it is useful:
 If you want count-oriented review, add `--tallies`:
 
 ```sh
-provenant --json-pp summary.json --license --package --classify --summary --tallies /path/to/project
+provenant scan --json-pp summary.json --license --package --classify --summary --tallies /path/to/project
 ```
 
 This is a good second-step workflow after a first broad scan, especially on larger repositories.
@@ -407,7 +407,7 @@ This is a good second-step workflow after a first broad scan, especially on larg
 ### 16. "I run the same scan repeatedly"
 
 ```sh
-provenant --json-pp scan.json --license --package --incremental /path/to/project
+provenant scan --json-pp scan.json --license --package --incremental /path/to/project
 ```
 
 Use incremental reuse for repeated native directory scans.
@@ -436,7 +436,7 @@ Important details:
 ### 17. "I want policy-aware license review"
 
 ```sh
-provenant --json-pp policy.json --license --license-references --filter-clues --license-policy policy.yml /path/to/project
+provenant scan --json-pp policy.json --license --license-references --filter-clues --license-policy policy.yml /path/to/project
 ```
 
 Use this when you want a review-oriented license scan rather than raw low-level findings.
@@ -453,7 +453,7 @@ This workflow is also useful with `--from-json` when you want to reshape an exis
 ### 18. "I want tallies, facets, or clarity scoring"
 
 ```sh
-provenant --json-pp summary.json --license --package --classify --summary --tallies /path/to/project
+provenant scan --json-pp summary.json --license --package --classify --summary --tallies /path/to/project
 ```
 
 Build on that baseline when you need more structured review output:
@@ -466,13 +466,13 @@ Build on that baseline when you need more structured review output:
 Example:
 
 ```sh
-provenant --json-pp summary.json --license --package --classify --summary --tallies --facet core=src/** --facet tests=test/** --tallies-by-facet --license-clarity-score /path/to/project
+provenant scan --json-pp summary.json --license --package --classify --summary --tallies --facet core=src/** --facet tests=test/** --tallies-by-facet --license-clarity-score /path/to/project
 ```
 
 ### 19. "I need to scan more than one input path"
 
 ```sh
-provenant --json-pp scan.json --license dir-a dir-b
+provenant scan --json-pp scan.json --license dir-a dir-b
 ```
 
 Use this when you want one result file covering more than one native input path.
@@ -490,7 +490,7 @@ You can also pass multiple JSON inputs with `--from-json`.
 ### 20. "I want to scan only files matching certain patterns"
 
 ```sh
-provenant --json-pp scan.json --license /path/to/repo --include "*.rs" --include "src/**/*.toml"
+provenant scan --json-pp scan.json --license /path/to/repo --include "*.rs" --include "src/**/*.toml"
 ```
 
 Use `--include` when you want glob-style path filtering inside one scan root.
@@ -505,7 +505,7 @@ Current behavior:
 ### 21. "I have an explicit list of files or directories to scan"
 
 ```sh
-provenant --json-pp scan.json --license /path/to/repo --paths-file changed-files.txt
+provenant scan --json-pp scan.json --license /path/to/repo --paths-file changed-files.txt
 ```
 
 Use this when you already have a selected path list under one known root, especially for CI and pull-request workflows where cwd cannot be the repo root.
@@ -529,7 +529,7 @@ Current behavior:
 Example with stdin:
 
 ```sh
-git diff --name-only --diff-filter=d origin/main...HEAD | provenant --json-pp - --license /path/to/repo --paths-file -
+git diff --name-only --diff-filter=d origin/main...HEAD | provenant scan --json-pp - --license /path/to/repo --paths-file -
 ```
 
 ## Important Flag Combinations
