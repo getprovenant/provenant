@@ -335,6 +335,14 @@ struct RepositoryEntry {
     url: Option<String>,
 }
 
+impl RepositoryEntry {
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.id);
+        resolve_option(resolver, &mut self.name);
+        resolve_option(resolver, &mut self.url);
+    }
+}
+
 impl RepositoryEntryBuilder {
     fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
         match current {
@@ -371,6 +379,16 @@ struct MailingListEntry {
     post: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     archive: Option<String>,
+}
+
+impl MailingListEntry {
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.name);
+        resolve_option(resolver, &mut self.subscribe);
+        resolve_option(resolver, &mut self.unsubscribe);
+        resolve_option(resolver, &mut self.post);
+        resolve_option(resolver, &mut self.archive);
+    }
 }
 
 impl MailingListEntryBuilder {
@@ -893,7 +911,19 @@ impl CollectionData {
     }
 
     fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        for repository in &mut self.repositories {
+            repository.resolve_fields(resolver);
+        }
+
+        for repository in &mut self.plugin_repositories {
+            repository.resolve_fields(resolver);
+        }
+
         resolve_vec(resolver, &mut self.modules);
+
+        for mailing_list in &mut self.mailing_lists {
+            mailing_list.resolve_fields(resolver);
+        }
     }
 
     fn has_extra_data(&self) -> bool {

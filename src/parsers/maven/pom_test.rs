@@ -255,6 +255,145 @@ mod tests {
     }
 
     #[test]
+    fn test_property_resolution_restores_repository_entries() {
+        let content = r#"
+<project>
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>1.0.0</version>
+    <properties>
+        <repo.id>central</repo.id>
+        <repo.name>Maven Central Repository</repo.name>
+        <repo.url>https://repo1.maven.org/maven2</repo.url>
+        <plugin.repo.id>plugins</plugin.repo.id>
+        <plugin.repo.name>Plugin Releases</plugin.repo.name>
+        <plugin.repo.url>https://repo.example.com/plugins</plugin.repo.url>
+    </properties>
+    <repositories>
+        <repository>
+            <id>${repo.id}</id>
+            <name>${repo.name}</name>
+            <url>${repo.url}</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>${plugin.repo.id}</id>
+            <name>${plugin.repo.name}</name>
+            <url>${plugin.repo.url}</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+        let extra_data = package_data.extra_data.expect("extra_data should exist");
+
+        let repositories = extra_data
+            .get("repositories")
+            .expect("repositories should exist")
+            .as_array()
+            .expect("repositories should be array");
+        assert_eq!(repositories.len(), 1);
+
+        let repository = repositories[0]
+            .as_object()
+            .expect("repository should be object");
+        assert_eq!(repository.get("id").unwrap().as_str().unwrap(), "central");
+        assert_eq!(
+            repository.get("name").unwrap().as_str().unwrap(),
+            "Maven Central Repository"
+        );
+        assert_eq!(
+            repository.get("url").unwrap().as_str().unwrap(),
+            "https://repo1.maven.org/maven2"
+        );
+
+        let plugin_repositories = extra_data
+            .get("plugin_repositories")
+            .expect("plugin_repositories should exist")
+            .as_array()
+            .expect("plugin_repositories should be array");
+        assert_eq!(plugin_repositories.len(), 1);
+
+        let plugin_repository = plugin_repositories[0]
+            .as_object()
+            .expect("plugin repository should be object");
+        assert_eq!(
+            plugin_repository.get("id").unwrap().as_str().unwrap(),
+            "plugins"
+        );
+        assert_eq!(
+            plugin_repository.get("name").unwrap().as_str().unwrap(),
+            "Plugin Releases"
+        );
+        assert_eq!(
+            plugin_repository.get("url").unwrap().as_str().unwrap(),
+            "https://repo.example.com/plugins"
+        );
+    }
+
+    #[test]
+    fn test_property_resolution_restores_mailing_lists() {
+        let content = r#"
+<project>
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>1.0.0</version>
+    <properties>
+        <list.name>Users</list.name>
+        <list.subscribe>users-subscribe@example.com</list.subscribe>
+        <list.unsubscribe>users-unsubscribe@example.com</list.unsubscribe>
+        <list.post>users@example.com</list.post>
+        <list.archive>https://example.com/archive</list.archive>
+    </properties>
+    <mailingLists>
+        <mailingList>
+            <name>${list.name}</name>
+            <subscribe>${list.subscribe}</subscribe>
+            <unsubscribe>${list.unsubscribe}</unsubscribe>
+            <post>${list.post}</post>
+            <archive>${list.archive}</archive>
+        </mailingList>
+    </mailingLists>
+</project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+        let extra_data = package_data.extra_data.expect("extra_data should exist");
+
+        let mailing_lists = extra_data
+            .get("mailing_lists")
+            .expect("mailing_lists should exist")
+            .as_array()
+            .expect("mailing_lists should be array");
+        assert_eq!(mailing_lists.len(), 1);
+
+        let mailing_list = mailing_lists[0]
+            .as_object()
+            .expect("mailing list should be object");
+        assert_eq!(mailing_list.get("name").unwrap().as_str().unwrap(), "Users");
+        assert_eq!(
+            mailing_list.get("subscribe").unwrap().as_str().unwrap(),
+            "users-subscribe@example.com"
+        );
+        assert_eq!(
+            mailing_list.get("unsubscribe").unwrap().as_str().unwrap(),
+            "users-unsubscribe@example.com"
+        );
+        assert_eq!(
+            mailing_list.get("post").unwrap().as_str().unwrap(),
+            "users@example.com"
+        );
+        assert_eq!(
+            mailing_list.get("archive").unwrap().as_str().unwrap(),
+            "https://example.com/archive"
+        );
+    }
+
+    #[test]
     fn test_purl_encodes_at_delimited_version_placeholder() {
         let content = r#"
 <project>
