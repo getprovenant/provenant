@@ -152,6 +152,12 @@ For the complete scan-flag surface, run:
 provenant scan --help
 ```
 
+To compare existing ScanCode and Provenant JSON outputs without rescanning, run:
+
+```sh
+provenant compare --help
+```
+
 For guided workflows and important flag combinations, see the [CLI Guide](docs/CLI_GUIDE.md).
 
 ### Example
