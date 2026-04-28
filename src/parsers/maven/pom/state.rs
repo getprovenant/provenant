@@ -353,17 +353,12 @@ impl FrameContext {
                 builder,
             } => {
                 if let Some(repo) = RepositoryEntryBuilder::finish(builder) {
-                    match collection {
-                        RepositoryCollection::Repositories => acc.repositories.push(repo),
-                        RepositoryCollection::PluginRepositories => {
-                            acc.plugin_repositories.push(repo)
-                        }
-                    }
+                    acc.collections.push_repository(collection, repo)
                 }
             }
             Self::MailingList(mailing_list) => {
                 if let Some(ml) = MailingListEntryBuilder::finish(mailing_list) {
-                    acc.mailing_lists.push(ml);
+                    acc.collections.push_mailing_list(ml);
                 }
             }
             _ => {}
@@ -930,6 +925,61 @@ impl ProjectDetails {
 }
 
 #[derive(Default)]
+struct CollectionData {
+    repositories: Vec<RepositoryEntry>,
+    plugin_repositories: Vec<RepositoryEntry>,
+    modules: Vec<String>,
+    mailing_lists: Vec<MailingListEntry>,
+}
+
+impl CollectionData {
+    fn push_repository(&mut self, collection: RepositoryCollection, entry: RepositoryEntry) {
+        match collection {
+            RepositoryCollection::Repositories => self.repositories.push(entry),
+            RepositoryCollection::PluginRepositories => self.plugin_repositories.push(entry),
+        }
+    }
+
+    fn push_mailing_list(&mut self, entry: MailingListEntry) {
+        self.mailing_lists.push(entry);
+    }
+
+    fn push_module(&mut self, module: String) {
+        self.modules.push(module);
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_vec(resolver, &mut self.modules);
+    }
+
+    fn has_extra_data(&self) -> bool {
+        !self.repositories.is_empty()
+            || !self.plugin_repositories.is_empty()
+            || !self.modules.is_empty()
+            || !self.mailing_lists.is_empty()
+    }
+
+    fn populate_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
+        insert_extra_data_array(
+            extra_data,
+            "repositories",
+            std::mem::take(&mut self.repositories),
+        );
+        insert_extra_data_array(
+            extra_data,
+            "plugin_repositories",
+            std::mem::take(&mut self.plugin_repositories),
+        );
+        insert_extra_data_array(extra_data, "modules", std::mem::take(&mut self.modules));
+        insert_extra_data_array(
+            extra_data,
+            "mailing_lists",
+            std::mem::take(&mut self.mailing_lists),
+        );
+    }
+}
+
+#[derive(Default)]
 struct DependencyScratchData {
     package_entries: Vec<MavenDependencyData>,
     management_entries: Vec<MavenDependencyData>,
@@ -1216,7 +1266,7 @@ impl ActiveSection {
             }
             Self::Modules => {
                 if path.current_known() == Some(KnownTag::Module) {
-                    state.modules.push(text.to_string());
+                    state.collections.push_module(text.to_string());
                 }
                 true
             }
@@ -1277,10 +1327,7 @@ struct PomAccumulator {
     project_details: ProjectDetails,
     project_metadata: ProjectMetadata,
     distribution: DistributionData,
-    repositories: Vec<RepositoryEntry>,
-    plugin_repositories: Vec<RepositoryEntry>,
-    modules: Vec<String>,
-    mailing_lists: Vec<MailingListEntry>,
+    collections: CollectionData,
     parent: ParentEntry,
     properties: HashMap<String, String>,
 }
@@ -1304,10 +1351,7 @@ impl PomAccumulator {
             project_details: ProjectDetails::default(),
             project_metadata: ProjectMetadata::default(),
             distribution: DistributionData::default(),
-            repositories: Vec::new(),
-            plugin_repositories: Vec::new(),
-            modules: Vec::new(),
-            mailing_lists: Vec::new(),
+            collections: CollectionData::default(),
             parent: ParentEntry::default(),
             properties: HashMap::new(),
         }
@@ -1359,10 +1403,7 @@ impl PomAccumulator {
         self.project_details.has_extra_data()
             || self.project_metadata.has_extra_data()
             || self.distribution.has_extra_data()
-            || !self.repositories.is_empty()
-            || !self.plugin_repositories.is_empty()
-            || !self.modules.is_empty()
-            || !self.mailing_lists.is_empty()
+            || self.collections.has_extra_data()
             || self.parent.has_data()
             || self.dependency_scratch.has_extra_data()
     }
@@ -1383,22 +1424,7 @@ impl PomAccumulator {
         &mut self,
         extra_data: &mut HashMap<String, serde_json::Value>,
     ) {
-        insert_extra_data_array(
-            extra_data,
-            "repositories",
-            std::mem::take(&mut self.repositories),
-        );
-        insert_extra_data_array(
-            extra_data,
-            "plugin_repositories",
-            std::mem::take(&mut self.plugin_repositories),
-        );
-        insert_extra_data_array(extra_data, "modules", std::mem::take(&mut self.modules));
-        insert_extra_data_array(
-            extra_data,
-            "mailing_lists",
-            std::mem::take(&mut self.mailing_lists),
-        );
+        self.collections.populate_extra_data(extra_data);
     }
 
     fn populate_dependency_extra_data(
@@ -1448,8 +1474,8 @@ impl PomAccumulator {
         self.project_details.resolve_fields(&mut resolver);
         self.project_metadata.resolve_fields(&mut resolver);
         self.distribution.resolve_fields(&mut resolver);
+        self.collections.resolve_fields(&mut resolver);
         self.parent.resolve_fields(&mut resolver);
-        resolve_vec(&mut resolver, &mut self.modules);
         self.license_data.resolve_fields(&mut resolver);
         self.dependency_scratch
             .resolve_fields(&mut resolver, &mut self.package_data.dependencies);
