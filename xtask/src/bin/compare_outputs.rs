@@ -34,6 +34,10 @@ struct Args {
     repo_url: Option<String>,
     #[arg(long)]
     target_path: Vec<PathBuf>,
+    #[arg(long)]
+    scancode_json: Option<PathBuf>,
+    #[arg(long)]
+    provenant_json: Option<PathBuf>,
     #[arg(long, requires = "target_path")]
     scancode_cache_identity: Option<String>,
     #[arg(long)]
@@ -43,8 +47,21 @@ struct Args {
     scan_args: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum CompareMode {
+    ScanTarget,
+    DirectJson,
+}
+
+#[derive(Debug, Clone)]
+struct DirectJsonInputs {
+    scancode_source: PathBuf,
+    provenant_source: PathBuf,
+}
+
 #[derive(Debug)]
 struct ContextState {
+    compare_mode: CompareMode,
     project_root: PathBuf,
     scancode_submodule_dir: PathBuf,
     run_id: String,
@@ -60,6 +77,7 @@ struct ContextState {
     target_resolved_paths: Vec<PathBuf>,
     target_input_args: Vec<String>,
     target_uses_staged_inputs: bool,
+    direct_json_inputs: Option<DirectJsonInputs>,
     auxiliary_scan_inputs: Vec<AuxiliaryScanInput>,
     target_label: String,
     target_source_label: String,
@@ -177,93 +195,122 @@ struct ScancodeCacheEntryManifest {
 const SCANCODE_PLACEHOLDER_LOG_MESSAGE: &str = "ScanCode stdout was not captured for this cache entry. Reused cached scancode.json without a corresponding log file.\n";
 const COMMON_PROFILE_SCANCODE_MEMORY_LIMIT: &str = "12g";
 const COMMON_PROFILE_SCANCODE_MEMORY_LIMIT_BYTES: u64 = 12 * 1024 * 1024 * 1024;
+const DIRECT_JSON_MODE_PLACEHOLDER: &str = "not executed (direct JSON compare mode)";
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let profile = args.profile;
-    let explicit_scan_args = args.scan_args.clone();
-    let scan_args = resolve_scan_args(
-        profile,
-        explicit_scan_args,
-        "pass --profile <common|common-with-compiled|licenses|packages> or explicit shared scan flags after --",
-    )?;
-    let mut context = prepare_context(&args, scan_args)?;
+    let compare_mode = compare_mode(&args)?;
+    let scan_args = resolve_compare_scan_args(&args, compare_mode)?;
+    let mut context = prepare_context(&args, compare_mode, scan_args)?;
 
     println!("==========================================");
     println!("Provenant vs ScanCode Compare Command");
     println!("==========================================\n");
 
     println!(
-        "[1/6] Preparing compare run directory...\n  {}\n",
+        "[1/{}] Preparing compare run directory...\n  {}\n",
+        total_steps(&context),
         context.run_dir.display()
     );
-    println!("[2/6] Preparing target...");
-    let checkout = prepare_target(&mut context, &args)?;
-    println!();
+    let checkout = match context.compare_mode {
+        CompareMode::ScanTarget => {
+            println!("[2/6] Preparing target...");
+            let checkout = prepare_target(&mut context, &args)?;
+            println!();
 
-    println!("[3/6] Ensuring Provenant release binary...");
-    ensure_release_binary(&context.project_root, &context.provenant_bin, "provenant")?;
-    println!();
+            println!("[3/6] Ensuring Provenant release binary...");
+            ensure_release_binary(&context.project_root, &context.provenant_bin, "provenant")?;
+            println!();
 
-    resolve_provenant_runtime_identity(&mut context)?;
-    println!("[4/6] Preparing ScanCode runtime/cache...");
-    resolve_scancode_runtime_identity(&mut context)?;
-    prepare_scancode_cache(&mut context)?;
-    if context.scancode_cache_hit {
-        println!(
-            "Reusing cached ScanCode result: {}",
-            context.scancode_cache_dir.as_ref().unwrap().display()
-        );
-        println!("Skipping Docker runtime preparation on cache hit");
-    } else {
-        ensure_scancode_runtime(&context)?;
-    }
-    println!();
+            resolve_provenant_runtime_identity(&mut context)?;
+            println!("[4/6] Preparing ScanCode runtime/cache...");
+            resolve_scancode_runtime_identity(&mut context)?;
+            prepare_scancode_cache(&mut context)?;
+            if context.scancode_cache_hit {
+                println!(
+                    "Reusing cached ScanCode result: {}",
+                    context.scancode_cache_dir.as_ref().unwrap().display()
+                );
+                println!("Skipping Docker runtime preparation on cache hit");
+            } else {
+                ensure_scancode_runtime(&context)?;
+            }
+            println!();
+            checkout
+        }
+        CompareMode::DirectJson => {
+            println!("[2/4] Materializing provided JSON inputs...");
+            let checkout = materialize_direct_json_inputs(&context)?;
+            println!();
+            checkout
+        }
+    };
 
     println!("Configuration:");
     println!("  Artifact root: {}", context.run_dir.display());
-    println!(
-        "  {}: {}",
-        context.target_source_label, context.target_label
-    );
-    if let Some(cache_dir) = &context.repo_manifest.cache_dir {
-        println!("  Repo cache:    {}", cache_dir.display());
-        println!(
-            "  Repo ref:      {}",
-            context.repo_manifest.requested_ref.as_deref().unwrap_or("")
-        );
-    }
-    if let Some(profile_name) = &context.profile_name {
-        println!("  Profile:       {profile_name}");
-    }
-    println!("  Provenant:     {}", context.provenant_version);
-    if let Some(revision) = &context.provenant_runtime_revision {
-        println!("  Provenant rev: {revision}");
-    }
-    println!("  ScanCode image: {}", context.scancode_image);
-    println!("  ScanCode platform: {}", context.scancode_platform);
-    println!("  Scan args:     {}\n", context.scan_args.join(" "));
-    if let Some(cache_dir) = &context.scancode_cache_dir {
-        println!(
-            "  ScanCode cache: {} ({})",
-            cache_dir.display(),
-            if context.scancode_cache_hit {
-                "hit"
-            } else {
-                "miss"
+    match context.compare_mode {
+        CompareMode::ScanTarget => {
+            println!(
+                "  {}: {}",
+                context.target_source_label, context.target_label
+            );
+            if let Some(cache_dir) = &context.repo_manifest.cache_dir {
+                println!("  Repo cache:    {}", cache_dir.display());
+                println!(
+                    "  Repo ref:      {}",
+                    context.repo_manifest.requested_ref.as_deref().unwrap_or("")
+                );
             }
-        );
-    } else {
-        println!(
-            "  ScanCode cache: disabled (repo-url runs require --repo-ref; target-path runs require --scancode-cache-identity)\n"
-        );
-    }
+            if let Some(profile_name) = &context.profile_name {
+                println!("  Profile:       {profile_name}");
+            }
+            println!("  Provenant:     {}", context.provenant_version);
+            if let Some(revision) = &context.provenant_runtime_revision {
+                println!("  Provenant rev: {revision}");
+            }
+            println!("  ScanCode image: {}", context.scancode_image);
+            println!("  ScanCode platform: {}", context.scancode_platform);
+            println!("  Scan args:     {}\n", context.scan_args.join(" "));
+            if let Some(cache_dir) = &context.scancode_cache_dir {
+                println!(
+                    "  ScanCode cache: {} ({})",
+                    cache_dir.display(),
+                    if context.scancode_cache_hit {
+                        "hit"
+                    } else {
+                        "miss"
+                    }
+                );
+            } else {
+                println!(
+                    "  ScanCode cache: disabled (repo-url runs require --repo-ref; target-path runs require --scancode-cache-identity)\n"
+                );
+            }
 
-    println!("[5/6] Running both scanners...");
-    run_scancode(&mut context)?;
-    run_provenant(&context)?;
-    println!("[6/6] Generating reduced comparison artifacts...");
+            println!("[5/6] Running both scanners...");
+            run_scancode(&mut context)?;
+            run_provenant(&context)?;
+            println!("[6/6] Generating reduced comparison artifacts...");
+        }
+        CompareMode::DirectJson => {
+            let direct_json = context
+                .direct_json_inputs
+                .as_ref()
+                .expect("direct JSON mode requires source metadata");
+            println!("  Mode:          direct JSON compare");
+            println!("  ScanCode JSON: {}", direct_json.scancode_source.display());
+            println!(
+                "  Provenant JSON: {}",
+                direct_json.provenant_source.display()
+            );
+            println!();
+            println!("[3/4] Generating reduced comparison artifacts...");
+        }
+    }
     generate_comparison_artifacts(&context)?;
+    if context.compare_mode == CompareMode::DirectJson {
+        println!("[4/4] Writing run manifest...");
+    }
     write_manifest(&context)?;
 
     println!("\n==========================================");
@@ -298,80 +345,268 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn prepare_context(args: &Args, scan_args: Vec<String>) -> Result<ContextState> {
-    let has_target_paths = !args.target_path.is_empty();
-    if args.repo_url.is_some() == has_target_paths {
-        bail!("specify exactly one of --repo-url or --target-path");
-    }
-    if has_target_paths && args.repo_ref.is_some() {
-        bail!("--repo-ref can only be used with --repo-url");
-    }
-    if args.repo_url.is_some() && args.repo_ref.is_none() {
-        bail!("--repo-url requires --repo-ref (commit SHA, tag, or branch)");
-    }
-    if args.scancode_cache_identity.is_some() && !has_target_paths {
-        bail!("--scancode-cache-identity can only be used with --target-path");
-    }
-    let target_scancode_cache_identity = args
-        .scancode_cache_identity
-        .as_deref()
-        .map(str::trim)
-        .map(str::to_string);
-    if target_scancode_cache_identity
-        .as_deref()
-        .is_some_and(str::is_empty)
-    {
-        bail!("--scancode-cache-identity must not be blank");
+fn compare_mode(args: &Args) -> Result<CompareMode> {
+    let has_scan_target = args.repo_url.is_some() || !args.target_path.is_empty();
+    let has_direct_json = args.scancode_json.is_some() || args.provenant_json.is_some();
+
+    if !has_scan_target && !has_direct_json {
+        bail!(
+            "choose exactly one input mode: --repo-url, one-or-more --target-path values, or the pair --scancode-json + --provenant-json"
+        );
     }
 
-    let target_resolved_paths = if has_target_paths {
-        args.target_path
-            .iter()
-            .map(|path| realpath(path))
-            .collect::<Result<Vec<_>>>()?
-    } else {
-        Vec::new()
-    };
-    if target_resolved_paths.len() > 1 && target_resolved_paths.iter().any(|path| path.is_dir()) {
-        bail!("multiple --target-path values currently support files only");
+    if has_direct_json {
+        if args.scancode_json.is_none() || args.provenant_json.is_none() {
+            bail!("--scancode-json and --provenant-json must be provided together");
+        }
+        if has_scan_target {
+            bail!(
+                "direct JSON mode cannot be combined with --repo-url or --target-path; choose one input mode"
+            );
+        }
+        return Ok(CompareMode::DirectJson);
     }
-    let target_uses_staged_inputs = !target_resolved_paths.is_empty()
-        && target_resolved_paths.iter().all(|path| path.is_file());
-    let target_input_args = if target_uses_staged_inputs {
-        staged_input_names(&target_resolved_paths)
-    } else {
-        vec![".".to_string()]
-    };
-    let auxiliary_scan_inputs = auxiliary_scan_inputs(&scan_args)?;
 
+    Ok(CompareMode::ScanTarget)
+}
+
+fn resolve_compare_scan_args(args: &Args, compare_mode: CompareMode) -> Result<Vec<String>> {
+    match compare_mode {
+        CompareMode::ScanTarget => resolve_scan_args(
+            args.profile,
+            args.scan_args.clone(),
+            "pass --profile <common|common-with-compiled|licenses|packages> or explicit shared scan flags after --",
+        ),
+        CompareMode::DirectJson => {
+            if args.profile.is_some() || !args.scan_args.is_empty() {
+                bail!(
+                    "direct JSON mode compares the provided JSON files as-is and does not accept --profile or explicit scan flags after --"
+                );
+            }
+            Ok(Vec::new())
+        }
+    }
+}
+
+fn total_steps(context: &ContextState) -> usize {
+    match context.compare_mode {
+        CompareMode::ScanTarget => 6,
+        CompareMode::DirectJson => 4,
+    }
+}
+
+fn prepare_context(
+    args: &Args,
+    compare_mode: CompareMode,
+    scan_args: Vec<String>,
+) -> Result<ContextState> {
     let project_root = project_root();
     let artifact_root = project_root.join(".provenant/compare-runs");
     let scancode_cache_root = project_root.join(".provenant/scancode-cache");
     let scancode_submodule_dir = project_root.join("reference/scancode-toolkit");
-    if !scancode_submodule_dir.exists() {
-        bail!(
-            "ScanCode submodule not available at {}. Run ./setup.sh or git submodule update --init first.",
-            scancode_submodule_dir.display()
-        );
-    }
-    let slug = if has_target_paths {
-        if target_resolved_paths.len() == 1 {
-            sanitize_label(
-                target_resolved_paths[0]
-                    .file_name()
-                    .and_then(|v| v.to_str())
-                    .unwrap_or("compare-target"),
-                "compare-target",
+
+    let (
+        target_dir,
+        target_resolved_paths,
+        target_input_args,
+        target_uses_staged_inputs,
+        direct_json_inputs,
+        auxiliary_scan_inputs,
+        target_label,
+        target_source_label,
+        target_revision,
+        target_scancode_cache_identity,
+        repo_manifest,
+        worktree_retained_after_run,
+        profile_name,
+        slug,
+    ) = match compare_mode {
+        CompareMode::ScanTarget => {
+            let has_target_paths = !args.target_path.is_empty();
+            if args.repo_url.is_some() == has_target_paths {
+                bail!("specify exactly one of --repo-url or --target-path");
+            }
+            if has_target_paths && args.repo_ref.is_some() {
+                bail!("--repo-ref can only be used with --repo-url");
+            }
+            if args.repo_url.is_some() && args.repo_ref.is_none() {
+                bail!("--repo-url requires --repo-ref (commit SHA, tag, or branch)");
+            }
+            if args.scancode_cache_identity.is_some() && !has_target_paths {
+                bail!("--scancode-cache-identity can only be used with --target-path");
+            }
+            if !scancode_submodule_dir.exists() {
+                bail!(
+                    "ScanCode submodule not available at {}. Run ./setup.sh or git submodule update --init first.",
+                    scancode_submodule_dir.display()
+                );
+            }
+
+            let target_scancode_cache_identity = args
+                .scancode_cache_identity
+                .as_deref()
+                .map(str::trim)
+                .map(str::to_string);
+            if target_scancode_cache_identity
+                .as_deref()
+                .is_some_and(str::is_empty)
+            {
+                bail!("--scancode-cache-identity must not be blank");
+            }
+
+            let target_resolved_paths = if has_target_paths {
+                args.target_path
+                    .iter()
+                    .map(|path| realpath(path))
+                    .collect::<Result<Vec<_>>>()?
+            } else {
+                Vec::new()
+            };
+            if target_resolved_paths.len() > 1
+                && target_resolved_paths.iter().any(|path| path.is_dir())
+            {
+                bail!("multiple --target-path values currently support files only");
+            }
+            let target_uses_staged_inputs = !target_resolved_paths.is_empty()
+                && target_resolved_paths.iter().all(|path| path.is_file());
+            let target_input_args = if target_uses_staged_inputs {
+                staged_input_names(&target_resolved_paths)
+            } else {
+                vec![".".to_string()]
+            };
+            let auxiliary_scan_inputs = auxiliary_scan_inputs(&scan_args)?;
+            let slug = if has_target_paths {
+                if target_resolved_paths.len() == 1 {
+                    sanitize_label(
+                        target_resolved_paths[0]
+                            .file_name()
+                            .and_then(|v| v.to_str())
+                            .unwrap_or("compare-target"),
+                        "compare-target",
+                    )
+                } else {
+                    "multi-target".to_string()
+                }
+            } else {
+                sanitize_label(
+                    &derive_repo_name_from_url(args.repo_url.as_deref().unwrap(), "compare-target"),
+                    "compare-target",
+                )
+            };
+            let target_dir = if has_target_paths {
+                if target_uses_staged_inputs {
+                    project_root
+                        .join(".provenant/compare-runs")
+                        .join("_pending")
+                } else {
+                    target_resolved_paths.first().cloned().unwrap_or_else(|| {
+                        project_root
+                            .join(".provenant/compare-runs")
+                            .join("_pending")
+                    })
+                }
+            } else {
+                project_root
+                    .join(".provenant/compare-runs")
+                    .join("_pending")
+            };
+            let target_source_label = if has_target_paths {
+                if target_resolved_paths.len() > 1 {
+                    "Target paths"
+                } else {
+                    "Target path"
+                }
+            } else {
+                "Repo URL"
+            }
+            .to_string();
+            let target_label = if has_target_paths {
+                target_resolved_paths
+                    .iter()
+                    .map(|path| path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            } else {
+                args.repo_url.clone().unwrap()
+            };
+            let repo_manifest = RepoManifest::new(
+                args.repo_url.clone(),
+                args.repo_ref.clone(),
+                None,
+                args.repo_url
+                    .as_ref()
+                    .map(|url| repo_cache_path(&project_root, url)),
+            );
+            (
+                target_dir,
+                target_resolved_paths,
+                target_input_args,
+                target_uses_staged_inputs,
+                None,
+                auxiliary_scan_inputs,
+                target_label,
+                target_source_label,
+                String::new(),
+                target_scancode_cache_identity,
+                repo_manifest,
+                has_target_paths,
+                args.profile
+                    .map(|profile| profile.display_name().to_string()),
+                slug,
             )
-        } else {
-            "multi-target".to_string()
         }
-    } else {
-        sanitize_label(
-            &derive_repo_name_from_url(args.repo_url.as_deref().unwrap(), "compare-target"),
-            "compare-target",
-        )
+        CompareMode::DirectJson => {
+            if args.repo_ref.is_some() {
+                bail!("--repo-ref cannot be used in direct JSON mode");
+            }
+            if args.scancode_cache_identity.is_some() {
+                bail!("--scancode-cache-identity cannot be used in direct JSON mode");
+            }
+
+            let scancode_source = realpath(args.scancode_json.as_ref().unwrap())?;
+            let provenant_source = realpath(args.provenant_json.as_ref().unwrap())?;
+            let slug = sanitize_label(
+                &format!(
+                    "{}-vs-{}",
+                    scancode_source
+                        .file_stem()
+                        .and_then(|value| value.to_str())
+                        .unwrap_or("scancode"),
+                    provenant_source
+                        .file_stem()
+                        .and_then(|value| value.to_str())
+                        .unwrap_or("provenant")
+                ),
+                "json-compare",
+            );
+            (
+                project_root
+                    .join(".provenant/compare-runs")
+                    .join("_pending-json"),
+                Vec::new(),
+                Vec::new(),
+                false,
+                Some(DirectJsonInputs {
+                    scancode_source: scancode_source.clone(),
+                    provenant_source: provenant_source.clone(),
+                }),
+                Vec::new(),
+                format!(
+                    "{} vs {}",
+                    scancode_source.display(),
+                    provenant_source.display()
+                ),
+                "Direct JSON inputs".to_string(),
+                "provided raw JSON inputs".to_string(),
+                None,
+                RepoManifest::new(None, None, None, None),
+                false,
+                None,
+                slug,
+            )
+        }
     };
+
     let run_id = now_run_id(&slug);
     let run_dir = artifact_root.join(&run_id);
     let raw_dir = run_dir.join("raw");
@@ -379,47 +614,15 @@ fn prepare_context(args: &Args, scan_args: Vec<String>) -> Result<ContextState> 
     let samples_dir = comparison_dir.join("samples");
     fs::create_dir_all(&raw_dir)?;
     fs::create_dir_all(&samples_dir)?;
-    let target_dir = if has_target_paths {
-        if target_uses_staged_inputs {
-            run_dir.join("input")
-        } else {
-            target_resolved_paths
-                .first()
-                .cloned()
-                .unwrap_or_else(|| run_dir.join("input"))
-        }
-    } else {
-        run_dir.join(&slug)
+    let target_dir = match compare_mode {
+        CompareMode::ScanTarget if target_uses_staged_inputs => run_dir.join("input"),
+        CompareMode::ScanTarget if repo_manifest.url.is_some() => run_dir.join(&slug),
+        CompareMode::ScanTarget => target_dir,
+        CompareMode::DirectJson => run_dir.join("direct-json-inputs"),
     };
-    let auxiliary_dir = run_dir.join("auxiliary-inputs");
-    let target_source_label = if has_target_paths {
-        if target_resolved_paths.len() > 1 {
-            "Target paths"
-        } else {
-            "Target path"
-        }
-    } else {
-        "Repo URL"
-    }
-    .to_string();
-    let target_label = if has_target_paths {
-        target_resolved_paths
-            .iter()
-            .map(|path| path.display().to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
-    } else {
-        args.repo_url.clone().unwrap()
-    };
-    let repo_manifest = RepoManifest::new(
-        args.repo_url.clone(),
-        args.repo_ref.clone(),
-        None,
-        args.repo_url
-            .as_ref()
-            .map(|url| repo_cache_path(&project_root, url)),
-    );
+
     Ok(ContextState {
+        compare_mode,
         project_root: project_root.clone(),
         scancode_submodule_dir,
         run_id,
@@ -431,33 +634,32 @@ fn prepare_context(args: &Args, scan_args: Vec<String>) -> Result<ContextState> 
         summary_json: comparison_dir.join("summary.json"),
         summary_tsv: comparison_dir.join("summary.tsv"),
         target_dir,
-        auxiliary_dir,
+        auxiliary_dir: run_dir.join("auxiliary-inputs"),
         target_resolved_paths,
         target_input_args,
         target_uses_staged_inputs,
+        direct_json_inputs,
         auxiliary_scan_inputs,
         target_label,
         target_source_label,
-        target_revision: String::new(),
+        target_revision,
         target_scancode_cache_identity,
         repo_manifest,
-        worktree_retained_after_run: has_target_paths,
-        profile_name: args
-            .profile
-            .map(|profile| profile.display_name().to_string()),
+        worktree_retained_after_run,
+        profile_name,
         scan_args,
         provenant_bin: project_root.join("target/release/provenant"),
         provenant_json: raw_dir.join("provenant.json"),
         provenant_stdout: raw_dir.join("provenant-stdout.txt"),
-        provenant_version: String::new(),
+        provenant_version: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
         provenant_runtime_revision: None,
         provenant_runtime_dirty: false,
         provenant_runtime_diff_hash: None,
         scancode_json: raw_dir.join("scancode.json"),
         scancode_stdout: raw_dir.join("scancode-stdout.txt"),
-        scancode_image: String::new(),
-        scancode_platform: String::new(),
-        scancode_runtime_revision: String::new(),
+        scancode_image: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
+        scancode_platform: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
+        scancode_runtime_revision: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
         scancode_runtime_dirty: false,
         scancode_runtime_diff_hash: None,
         scancode_docker_memory_limit: None,
@@ -525,6 +727,19 @@ fn prepare_target(context: &mut ContextState, args: &Args) -> Result<CheckoutGua
     Ok(CheckoutGuard {
         cache_dir: Some(cache_dir),
         target_dir: context.target_dir.clone(),
+    })
+}
+
+fn materialize_direct_json_inputs(context: &ContextState) -> Result<CheckoutGuard> {
+    let direct_json = context
+        .direct_json_inputs
+        .as_ref()
+        .context("direct JSON mode requires source metadata")?;
+    materialize_file(&direct_json.scancode_source, &context.scancode_json)?;
+    materialize_file(&direct_json.provenant_source, &context.provenant_json)?;
+    Ok(CheckoutGuard {
+        cache_dir: None,
+        target_dir: context.run_dir.clone(),
     })
 }
 
@@ -997,23 +1212,6 @@ fn run_provenant(context: &ContextState) -> Result<()> {
 fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     let scancode: Value = serde_json::from_str(&fs::read_to_string(&context.scancode_json)?)?;
     let provenant: Value = serde_json::from_str(&fs::read_to_string(&context.provenant_json)?)?;
-    let info_mode = context
-        .scan_args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--info" | "--mark-source"));
-    let row2_mode = context.scan_args.iter().any(|arg| {
-        matches!(
-            arg.as_str(),
-            "--classify"
-                | "--summary"
-                | "--license-clarity-score"
-                | "--tallies"
-                | "--tallies-key-files"
-                | "--tallies-with-details"
-                | "--tallies-by-facet"
-                | "--facet"
-        )
-    });
     let scancode_files = files_by_path(&scancode);
     let provenant_files = files_by_path(&provenant);
     let scancode_resources = resources_by_path(&scancode);
@@ -1092,6 +1290,30 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         "tallies_of_key_files",
         "tallies_by_facet",
     ];
+    let info_mode = context
+        .scan_args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--info" | "--mark-source"))
+        || resources_contain_any_field(&scancode_resources, &info_metrics)
+        || resources_contain_any_field(&provenant_resources, &info_metrics);
+    let row2_mode = context.scan_args.iter().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--classify"
+                | "--summary"
+                | "--license-clarity-score"
+                | "--tallies"
+                | "--tallies-key-files"
+                | "--tallies-with-details"
+                | "--tallies-by-facet"
+                | "--facet"
+        )
+    }) || resources_contain_any_field(&scancode_resources, &classify_metrics)
+        || resources_contain_any_field(&provenant_resources, &classify_metrics)
+        || resources_contain_any_field(&scancode_resources, &row2_value_metrics)
+        || resources_contain_any_field(&provenant_resources, &row2_value_metrics)
+        || value_contains_any_section(&scancode, &row2_top_level_sections)
+        || value_contains_any_section(&provenant, &row2_top_level_sections);
     let mut lower_counts: BTreeMap<String, Vec<CountDeltaEntry>> = metrics
         .iter()
         .map(|m| ((*m).to_string(), Vec::new()))
@@ -1581,6 +1803,25 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         &rows,
     )?;
     Ok(())
+}
+
+fn resources_contain_any_field(resources: &BTreeMap<String, Value>, fields: &[&str]) -> bool {
+    resources.values().any(|entry| {
+        fields.iter().any(|field| {
+            entry.get(field).is_some_and(|value| match value {
+                Value::Null => false,
+                Value::Array(values) => !values.is_empty(),
+                Value::String(text) => !text.trim().is_empty(),
+                _ => true,
+            })
+        })
+    })
+}
+
+fn value_contains_any_section(value: &Value, sections: &[&str]) -> bool {
+    sections
+        .iter()
+        .any(|section| value.get(section).is_some_and(|entry| !entry.is_null()))
 }
 
 fn files_by_path(value: &Value) -> BTreeMap<String, Value> {
@@ -2231,9 +2472,42 @@ fn tsv_row(metric: &str, scancode: i64, provenant: i64, delta: i64, notes: &str)
 }
 
 fn write_manifest(context: &ContextState) -> Result<()> {
-    let scancode_args = build_scancode_docker_args(context);
-    let provenant_args = build_provenant_args(context);
-    let (provenant_working_dir, _provenant_input_args) = build_provenant_invocation(context);
+    let commands = match context.compare_mode {
+        CompareMode::ScanTarget => {
+            let scancode_args = build_scancode_docker_args(context);
+            let provenant_args = build_provenant_args(context);
+            let (provenant_working_dir, _provenant_input_args) =
+                build_provenant_invocation(context);
+            CommandsManifest {
+                scancode: CommandInvocation {
+                    command: shell_join(
+                        &std::iter::once("docker".to_string())
+                            .chain(scancode_args.iter().cloned())
+                            .collect::<Vec<_>>(),
+                    ),
+                    working_directory: None,
+                },
+                provenant: CommandInvocation {
+                    command: shell_join(
+                        &std::iter::once(context.provenant_bin.display().to_string())
+                            .chain(provenant_args.iter().cloned())
+                            .collect::<Vec<_>>(),
+                    ),
+                    working_directory: Some(provenant_working_dir),
+                },
+            }
+        }
+        CompareMode::DirectJson => CommandsManifest {
+            scancode: CommandInvocation {
+                command: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
+                working_directory: None,
+            },
+            provenant: CommandInvocation {
+                command: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
+                working_directory: None,
+            },
+        },
+    };
     let manifest = CompareRunManifest {
         run_id: context.run_id.clone(),
         target: TargetManifest::new(
@@ -2255,24 +2529,7 @@ fn write_manifest(context: &ContextState) -> Result<()> {
             raw_dir: context.raw_dir.clone(),
             comparison_dir: context.comparison_dir.clone(),
         },
-        commands: CommandsManifest {
-            scancode: CommandInvocation {
-                command: shell_join(
-                    &std::iter::once("docker".to_string())
-                        .chain(scancode_args.iter().cloned())
-                        .collect::<Vec<_>>(),
-                ),
-                working_directory: None,
-            },
-            provenant: CommandInvocation {
-                command: shell_join(
-                    &std::iter::once(context.provenant_bin.display().to_string())
-                        .chain(provenant_args.iter().cloned())
-                        .collect::<Vec<_>>(),
-                ),
-                working_directory: Some(provenant_working_dir),
-            },
-        },
+        commands,
         provenant: ProvenantManifest {
             version: context.provenant_version.clone(),
             runtime_revision: context.provenant_runtime_revision.clone(),
@@ -2789,6 +3046,7 @@ mod tests {
 
     fn test_context() -> ContextState {
         ContextState {
+            compare_mode: CompareMode::ScanTarget,
             project_root: PathBuf::from("/tmp/project"),
             scancode_submodule_dir: PathBuf::from("/tmp/project/reference/scancode-toolkit"),
             run_id: "run-id".to_string(),
@@ -2814,6 +3072,7 @@ mod tests {
             target_resolved_paths: Vec::new(),
             target_input_args: vec![".".to_string()],
             target_uses_staged_inputs: false,
+            direct_json_inputs: None,
             auxiliary_scan_inputs: Vec::new(),
             target_label: "/tmp/target".to_string(),
             target_source_label: "Target path".to_string(),
@@ -3319,13 +3578,20 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![fixture.clone()],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("fixture@rev".to_string()),
             repo_ref: None,
             profile: None,
             scan_args: Vec::new(),
         };
 
-        let context = prepare_context(&args, vec!["--copyright".to_string()]).unwrap();
+        let context = prepare_context(
+            &args,
+            CompareMode::ScanTarget,
+            vec!["--copyright".to_string()],
+        )
+        .unwrap();
 
         assert_eq!(
             context.target_label,
@@ -3360,6 +3626,8 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![fixture.clone()],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("fixture@rev".to_string()),
             repo_ref: None,
             profile: None,
@@ -3408,13 +3676,15 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![PathBuf::from("/tmp/chromium")],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("   ".to_string()),
             repo_ref: None,
             profile: None,
             scan_args: Vec::new(),
         };
 
-        let error = prepare_context(&args, vec!["-p".to_string()])
+        let error = prepare_context(&args, CompareMode::ScanTarget, vec!["-p".to_string()])
             .err()
             .unwrap()
             .to_string();
@@ -3433,13 +3703,20 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![first.clone(), second.clone()],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("pair@rev".to_string()),
             repo_ref: None,
             profile: None,
             scan_args: Vec::new(),
         };
 
-        let context = prepare_context(&args, vec!["--from-json".to_string()]).unwrap();
+        let context = prepare_context(
+            &args,
+            CompareMode::ScanTarget,
+            vec!["--from-json".to_string()],
+        )
+        .unwrap();
 
         assert!(context.target_uses_staged_inputs);
         assert_eq!(
@@ -3475,6 +3752,8 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![first.clone(), second.clone()],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("pair@rev".to_string()),
             repo_ref: None,
             profile: None,
@@ -3539,6 +3818,243 @@ mod tests {
     }
 
     #[test]
+    fn prepare_context_accepts_direct_json_inputs() {
+        let temp_root = unique_temp_dir("direct-json-context");
+        fs::create_dir_all(&temp_root).unwrap();
+        let scancode = temp_root.join("scancode-context.json");
+        let provenant = temp_root.join("provenant-context.json");
+        fs::write(&scancode, "{}\n").unwrap();
+        fs::write(&provenant, "{}\n").unwrap();
+
+        let args = Args {
+            repo_url: None,
+            target_path: Vec::new(),
+            scancode_json: Some(scancode.clone()),
+            provenant_json: Some(provenant.clone()),
+            scancode_cache_identity: None,
+            repo_ref: None,
+            profile: None,
+            scan_args: Vec::new(),
+        };
+
+        let context = prepare_context(&args, CompareMode::DirectJson, Vec::new()).unwrap();
+
+        assert_eq!(context.compare_mode, CompareMode::DirectJson);
+        assert_eq!(context.target_source_label, "Direct JSON inputs");
+        assert!(context.direct_json_inputs.is_some());
+        assert_eq!(
+            context
+                .target_dir
+                .file_name()
+                .and_then(|value| value.to_str()),
+            Some("direct-json-inputs")
+        );
+
+        let _ = fs::remove_dir_all(&temp_root);
+        let _ = fs::remove_dir_all(&context.run_dir);
+    }
+
+    #[test]
+    fn compare_mode_requires_complete_direct_json_pair() {
+        let args = Args {
+            repo_url: None,
+            target_path: Vec::new(),
+            scancode_json: Some(PathBuf::from("/tmp/scancode.json")),
+            provenant_json: None,
+            scancode_cache_identity: None,
+            repo_ref: None,
+            profile: None,
+            scan_args: Vec::new(),
+        };
+
+        let error = compare_mode(&args).unwrap_err().to_string();
+        assert!(error.contains("must be provided together"));
+    }
+
+    #[test]
+    fn compare_mode_rejects_mixing_direct_json_with_target_input() {
+        let args = Args {
+            repo_url: None,
+            target_path: vec![PathBuf::from("/tmp/fixture")],
+            scancode_json: Some(PathBuf::from("/tmp/scancode.json")),
+            provenant_json: Some(PathBuf::from("/tmp/provenant.json")),
+            scancode_cache_identity: None,
+            repo_ref: None,
+            profile: None,
+            scan_args: Vec::new(),
+        };
+
+        let error = compare_mode(&args).unwrap_err().to_string();
+        assert!(error.contains("cannot be combined"));
+    }
+
+    #[test]
+    fn materialize_direct_json_inputs_copies_provided_pair() {
+        let temp_root = unique_temp_dir("direct-json-materialize");
+        fs::create_dir_all(&temp_root).unwrap();
+        let scancode = temp_root.join("scancode-copy.json");
+        let provenant = temp_root.join("provenant-copy.json");
+        fs::write(&scancode, "{\"files\":[]}\n").unwrap();
+        fs::write(&provenant, "{\"files\":[]}\n").unwrap();
+
+        let args = Args {
+            repo_url: None,
+            target_path: Vec::new(),
+            scancode_json: Some(scancode.clone()),
+            provenant_json: Some(provenant.clone()),
+            scancode_cache_identity: None,
+            repo_ref: None,
+            profile: None,
+            scan_args: Vec::new(),
+        };
+
+        let context = prepare_context(&args, CompareMode::DirectJson, Vec::new()).unwrap();
+        let _guard = materialize_direct_json_inputs(&context).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&context.scancode_json).unwrap(),
+            "{\"files\":[]}\n"
+        );
+        assert_eq!(
+            fs::read_to_string(&context.provenant_json).unwrap(),
+            "{\"files\":[]}\n"
+        );
+
+        let _ = fs::remove_dir_all(&temp_root);
+        let _ = fs::remove_dir_all(&context.run_dir);
+    }
+
+    #[test]
+    fn write_manifest_uses_placeholders_in_direct_json_mode() {
+        let temp_root = unique_temp_dir("direct-json-manifest");
+        fs::create_dir_all(&temp_root).unwrap();
+        let mut context = test_context();
+        context.compare_mode = CompareMode::DirectJson;
+        context.run_dir = temp_root.join("run");
+        context.raw_dir = context.run_dir.join("raw");
+        context.comparison_dir = context.run_dir.join("comparison");
+        context.samples_dir = context.comparison_dir.join("samples");
+        context.run_manifest = context.run_dir.join("run-manifest.json");
+        context.target_dir = context.run_dir.join("direct-json-inputs");
+        context.target_label = "/tmp/scancode.json vs /tmp/provenant.json".to_string();
+        context.target_source_label = "Direct JSON inputs".to_string();
+        context.target_revision = "provided raw JSON inputs".to_string();
+        context.profile_name = None;
+        context.scan_args = Vec::new();
+        context.provenant_version = DIRECT_JSON_MODE_PLACEHOLDER.to_string();
+        context.scancode_image = DIRECT_JSON_MODE_PLACEHOLDER.to_string();
+        context.scancode_platform = DIRECT_JSON_MODE_PLACEHOLDER.to_string();
+        context.scancode_runtime_revision = DIRECT_JSON_MODE_PLACEHOLDER.to_string();
+        fs::create_dir_all(&context.raw_dir).unwrap();
+        fs::create_dir_all(&context.samples_dir).unwrap();
+
+        write_manifest(&context).unwrap();
+
+        let manifest: Value =
+            serde_json::from_str(&fs::read_to_string(&context.run_manifest).unwrap()).unwrap();
+        assert_eq!(
+            manifest["commands"]["scancode"]["command"],
+            DIRECT_JSON_MODE_PLACEHOLDER
+        );
+        assert_eq!(
+            manifest["commands"]["provenant"]["command"],
+            DIRECT_JSON_MODE_PLACEHOLDER
+        );
+        assert_eq!(manifest["scancode"]["image"], DIRECT_JSON_MODE_PLACEHOLDER);
+        assert_eq!(
+            manifest["provenant"]["version"],
+            DIRECT_JSON_MODE_PLACEHOLDER
+        );
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn direct_json_comparison_infers_info_and_row2_sections_from_json() {
+        let temp_root = unique_temp_dir("direct-json-infer-sections");
+        fs::create_dir_all(&temp_root).unwrap();
+        let mut context = test_context();
+        context.compare_mode = CompareMode::DirectJson;
+        context.scan_args = Vec::new();
+        context.run_dir = temp_root.join("run");
+        context.raw_dir = context.run_dir.join("raw");
+        context.comparison_dir = context.run_dir.join("comparison");
+        context.samples_dir = context.comparison_dir.join("samples");
+        context.run_manifest = context.run_dir.join("run-manifest.json");
+        context.summary_json = context.comparison_dir.join("summary.json");
+        context.summary_tsv = context.comparison_dir.join("summary.tsv");
+        context.scancode_json = context.raw_dir.join("scancode.json");
+        context.provenant_json = context.raw_dir.join("provenant.json");
+        fs::create_dir_all(&context.raw_dir).unwrap();
+        fs::create_dir_all(&context.samples_dir).unwrap();
+        fs::write(
+            &context.scancode_json,
+            serde_json::to_string_pretty(&json!({
+                "files": [{
+                    "path": "src/lib.rs",
+                    "type": "file",
+                    "mime_type": "text/x-rust",
+                    "is_top_level": false,
+                    "facets": ["core"]
+                }],
+                "summary": {"declared_license_expression": "mit"}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            &context.provenant_json,
+            serde_json::to_string_pretty(&json!({
+                "files": [{
+                    "path": "src/lib.rs",
+                    "type": "file",
+                    "mime_type": "text/plain",
+                    "is_top_level": true,
+                    "facets": ["core"]
+                }],
+                "summary": {"declared_license_expression": "apache-2.0"}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        generate_comparison_artifacts(&context).unwrap();
+
+        let summary: Value =
+            serde_json::from_str(&fs::read_to_string(&context.summary_json).unwrap()).unwrap();
+        assert_eq!(
+            summary["info_metric_summary"]["mime_type"]["value_differences"],
+            1
+        );
+        assert_eq!(
+            summary["classify_metric_summary"]["is_top_level"]["value_differences"],
+            1
+        );
+        assert_eq!(summary["row2_top_level_section_difference_count"], 1);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn resolve_compare_scan_args_rejects_scan_flags_in_direct_json_mode() {
+        let args = Args {
+            repo_url: None,
+            target_path: Vec::new(),
+            scancode_json: Some(PathBuf::from("/tmp/scancode.json")),
+            provenant_json: Some(PathBuf::from("/tmp/provenant.json")),
+            scancode_cache_identity: None,
+            repo_ref: None,
+            profile: Some(ScanProfile::Common),
+            scan_args: Vec::new(),
+        };
+
+        let error = resolve_compare_scan_args(&args, CompareMode::DirectJson)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("does not accept --profile"));
+    }
+
+    #[test]
     fn prepare_target_materializes_auxiliary_scan_inputs() {
         let temp_root = unique_temp_dir("auxiliary-scan-inputs");
         fs::create_dir_all(&temp_root).unwrap();
@@ -3561,6 +4077,8 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![fixture.clone()],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("fixture@rev".to_string()),
             repo_ref: None,
             profile: None,
@@ -3610,15 +4128,21 @@ mod tests {
         let args = Args {
             repo_url: None,
             target_path: vec![temp_root.join("a"), temp_root.join("b")],
+            scancode_json: None,
+            provenant_json: None,
             scancode_cache_identity: Some("dirs@rev".to_string()),
             repo_ref: None,
             profile: None,
             scan_args: Vec::new(),
         };
 
-        let error = prepare_context(&args, vec!["--from-json".to_string()])
-            .unwrap_err()
-            .to_string();
+        let error = prepare_context(
+            &args,
+            CompareMode::ScanTarget,
+            vec!["--from-json".to_string()],
+        )
+        .unwrap_err()
+        .to_string();
         assert!(error.contains("multiple --target-path values currently support files only"));
 
         let _ = fs::remove_dir_all(&temp_root);
