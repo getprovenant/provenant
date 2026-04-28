@@ -33,6 +33,7 @@ extern crate self as provenance;
 pub mod assembly;
 pub mod cache;
 pub mod cli;
+pub(crate) mod compare;
 pub mod copyright;
 pub mod finder;
 pub mod golden_maintenance;

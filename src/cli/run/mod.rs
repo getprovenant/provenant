@@ -8,6 +8,7 @@ use crate::cache::{
     manifest_entry_matches_path, metadata_fingerprint, write_incremental_manifest,
 };
 use crate::cli::{Cli, Command, ProcessMode, ScanArgs};
+use crate::compare::compare_json_files;
 use crate::license_detection::LicenseDetectionEngine;
 use crate::license_detection::dataset::export_embedded_license_dataset;
 use crate::license_detection::license_cache::LicenseCacheConfig;
@@ -53,6 +54,23 @@ pub fn run() -> Result<()> {
     match &cli.command {
         Command::ShowAttribution => {
             print!("{}", include_str!("../../../NOTICE"));
+            return Ok(());
+        }
+        Command::Compare(args) => {
+            let result = compare_json_files(
+                &args.scancode_json,
+                &args.provenant_json,
+                &args.artifact_dir,
+            )?;
+            println!("Comparison status: {}", result.comparison_status);
+            println!("Artifacts:");
+            println!("  Artifact directory: {}", result.artifact_dir.display());
+            println!("  Run manifest:       {}", result.manifest_path.display());
+            println!("  Raw ScanCode JSON:  {}", result.scancode_json.display());
+            println!("  Raw Provenant JSON: {}", result.provenant_json.display());
+            println!("  Summary JSON:       {}", result.summary_json.display());
+            println!("  Summary TSV:        {}", result.summary_tsv.display());
+            println!("  Sample artifacts:   {}", result.samples_dir.display());
             return Ok(());
         }
         Command::ExportLicenseDataset(args) => {

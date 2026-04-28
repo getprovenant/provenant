@@ -11,7 +11,7 @@ use std::ffi::OsString;
 use std::fs;
 #[cfg(test)]
 use std::ops::Deref;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use yaml_serde::Value as YamlValue;
 
 use crate::license_detection::DEFAULT_LICENSEDB_URL_TEMPLATE;
@@ -143,10 +143,27 @@ pub struct Cli {
 pub enum Command {
     /// Scan files or existing ScanCode-style JSON inputs.
     Scan(Box<ScanArgs>),
+    /// Compare one ScanCode JSON output against one Provenant JSON output.
+    Compare(CompareArgs),
     /// Show attribution notices for embedded license detection data.
     ShowAttribution,
     /// Export the effective built-in license dataset to DIR and exit.
     ExportLicenseDataset(ExportLicenseDatasetArgs),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CompareArgs {
+    /// Path to an existing ScanCode JSON output file.
+    #[arg(long = "scancode-json", value_name = "PATH")]
+    pub scancode_json: PathBuf,
+
+    /// Path to an existing Provenant JSON output file.
+    #[arg(long = "provenant-json", value_name = "PATH")]
+    pub provenant_json: PathBuf,
+
+    /// Directory where comparison artifacts should be written.
+    #[arg(long = "artifact-dir", value_name = "DIR")]
+    pub artifact_dir: PathBuf,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -479,7 +496,9 @@ impl Cli {
     pub(crate) fn scan_args(&self) -> Option<&ScanArgs> {
         match &self.command {
             Command::Scan(scan_args) => Some(scan_args.as_ref()),
-            Command::ShowAttribution | Command::ExportLicenseDataset(_) => None,
+            Command::Compare(_) | Command::ShowAttribution | Command::ExportLicenseDataset(_) => {
+                None
+            }
         }
     }
 }
@@ -508,6 +527,7 @@ where
     if matches!(
         first.as_ref(),
         "scan"
+            | "compare"
             | "show-attribution"
             | "export-license-dataset"
             | "help"
@@ -928,6 +948,48 @@ mod tests {
     }
 
     #[test]
+    fn test_parses_compare_subcommand() {
+        let parsed = Cli::try_parse_from([
+            "provenant",
+            "compare",
+            "--scancode-json",
+            "scan-a.json",
+            "--provenant-json",
+            "scan-b.json",
+            "--artifact-dir",
+            "compare-out",
+        ])
+        .expect("compare subcommand should parse");
+
+        match parsed.command {
+            Command::Compare(args) => {
+                assert_eq!(args.scancode_json, PathBuf::from("scan-a.json"));
+                assert_eq!(args.provenant_json, PathBuf::from("scan-b.json"));
+                assert_eq!(args.artifact_dir, PathBuf::from("compare-out"));
+            }
+            other => panic!("expected compare subcommand, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_unknown_command_like_token_is_not_rewritten_to_scan() {
+        let parsed = Cli::try_parse_from([
+            "provenant",
+            "future-command",
+            "--json-pp",
+            "scan.json",
+            "samples",
+        ]);
+
+        let error = parsed.expect_err("unknown command-like token should fail");
+        assert!(
+            error
+                .to_string()
+                .contains("unrecognized subcommand 'future-command'")
+        );
+    }
+
+    #[test]
     fn test_allows_multiple_output_options_in_one_run() {
         let parsed = Cli::try_parse_from([
             "provenant",
@@ -1159,6 +1221,7 @@ mod tests {
         let help = Cli::command().render_help().to_string();
 
         assert!(help.contains("scan"));
+        assert!(help.contains("compare"));
         assert!(help.contains("show-attribution"));
         assert!(help.contains("export-license-dataset"));
     }
