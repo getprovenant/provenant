@@ -169,6 +169,7 @@ jobs:
         run: |
           cargo run --quiet --locked --bin provenant -- show-attribution | Out-Null
           cargo run --quiet --locked --bin provenant -- scan --help | Out-Null
+          cargo run --quiet --locked --bin provenant -- compare --help | Out-Null
 
   intel-macos-build-smoke:
     name: Intel macOS Build Smoke Test
@@ -196,6 +197,7 @@ jobs:
         run: |
           cargo run --quiet --locked --bin provenant -- show-attribution > /dev/null
           cargo run --quiet --locked --bin provenant -- scan --help > /dev/null
+          cargo run --quiet --locked --bin provenant -- compare --help > /dev/null
 
   rust-sharded-tests:
     name: Tests (${{ matrix.shard }})
