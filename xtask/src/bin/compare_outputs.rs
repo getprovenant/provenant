@@ -196,6 +196,48 @@ const SCANCODE_PLACEHOLDER_LOG_MESSAGE: &str = "ScanCode stdout was not captured
 const COMMON_PROFILE_SCANCODE_MEMORY_LIMIT: &str = "12g";
 const COMMON_PROFILE_SCANCODE_MEMORY_LIMIT_BYTES: u64 = 12 * 1024 * 1024 * 1024;
 const DIRECT_JSON_MODE_PLACEHOLDER: &str = "not executed (direct JSON compare mode)";
+const FILES_COUNT_SOURCE: &str = "files[]";
+const PACKAGES_COUNT_SOURCE: &str = "packages[]";
+const PACKAGE_DATA_COUNT_SOURCE: &str = "packages[] empty; files[].package_data present";
+const DEPENDENCIES_COUNT_SOURCE: &str = "dependencies[]";
+const PACKAGE_DATA_DEPENDENCIES_COUNT_SOURCE: &str =
+    "dependencies[] empty; files[].package_data[].dependencies present";
+const LICENSE_DETECTIONS_COUNT_SOURCE: &str = "license_detections[]";
+const LICENSE_REFERENCES_COUNT_SOURCE: &str = "license_references[]";
+const LICENSE_RULE_REFERENCES_COUNT_SOURCE: &str = "license_rule_references[]";
+
+#[derive(Debug, Clone)]
+struct TopLevelCounts {
+    counts: HashMap<&'static str, i64>,
+    sources: HashMap<&'static str, &'static str>,
+}
+
+impl TopLevelCounts {
+    fn count(&self, key: &str) -> i64 {
+        *self.counts.get(key).expect("top-level count exists")
+    }
+
+    fn source(&self, key: &str) -> &'static str {
+        self.sources
+            .get(key)
+            .copied()
+            .expect("top-level count source exists")
+    }
+
+    fn counts_json(&self) -> BTreeMap<String, i64> {
+        self.counts
+            .iter()
+            .map(|(key, value)| ((*key).to_string(), *value))
+            .collect()
+    }
+
+    fn sources_json(&self) -> BTreeMap<String, String> {
+        self.sources
+            .iter()
+            .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+            .collect()
+    }
+}
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -1455,6 +1497,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     let license_deltas = top_level_license_deltas(&scancode, &provenant);
     let top_level_regressions_map = top_level_regressions(&sc_top, &pr_top, true);
     let top_level_higher_counts = top_level_regressions(&pr_top, &sc_top, false);
+    let skipped_comparisons = skipped_comparisons(&sc_top, &pr_top);
 
     let mut file_metric_summary = Map::new();
     let mut rows = vec![];
@@ -1468,10 +1511,10 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     ] {
         rows.push(tsv_row(
             key,
-            sc_top[key],
-            pr_top[key],
-            pr_top[key] - sc_top[key],
-            "top-level count",
+            sc_top.count(key),
+            pr_top.count(key),
+            pr_top.count(key) - sc_top.count(key),
+            &top_level_count_note(key, &sc_top, &pr_top),
         ));
     }
     rows.push(tsv_row(
@@ -1650,37 +1693,124 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         0,
         "top-level row-2 workflow sections with normalized JSON differences",
     ));
-    let dependency_value_differences = dependency_differences(&scancode, &provenant);
-    let dependency_missing = dependency_value_differences
+    let top_level_package_skip_reason = skipped_comparisons.get("packages").cloned();
+    let top_level_package_value_differences = top_level_package_differences(&scancode, &provenant);
+    let top_level_package_missing = top_level_package_value_differences
         .iter()
         .filter(|entry| !entry.missing_in_provenant.is_empty())
-        .count();
-    let dependency_extra = dependency_value_differences
+        .map(|entry| entry.missing_in_provenant.len())
+        .sum::<usize>();
+    let top_level_package_extra = top_level_package_value_differences
         .iter()
         .filter(|entry| !entry.extra_in_provenant.is_empty())
-        .count();
+        .map(|entry| entry.extra_in_provenant.len())
+        .sum::<usize>();
+    let top_level_dependency_skip_reason = skipped_comparisons.get("dependencies").cloned();
+    let top_level_dependency_value_differences =
+        top_level_dependency_differences(&scancode, &provenant);
+    let top_level_dependency_missing = top_level_dependency_value_differences
+        .iter()
+        .filter(|entry| !entry.missing_in_provenant.is_empty())
+        .map(|entry| entry.missing_in_provenant.len())
+        .sum::<usize>();
+    let top_level_dependency_extra = top_level_dependency_value_differences
+        .iter()
+        .filter(|entry| !entry.extra_in_provenant.is_empty())
+        .map(|entry| entry.extra_in_provenant.len())
+        .sum::<usize>();
+    let raw_dependency_value_differences = raw_dependency_differences(&scancode, &provenant);
+    let raw_dependency_missing = raw_dependency_value_differences
+        .iter()
+        .filter(|entry| !entry.missing_in_provenant.is_empty())
+        .map(|entry| entry.missing_in_provenant.len())
+        .sum::<usize>();
+    let raw_dependency_extra = raw_dependency_value_differences
+        .iter()
+        .filter(|entry| !entry.extra_in_provenant.is_empty())
+        .map(|entry| entry.extra_in_provenant.len())
+        .sum::<usize>();
+    let top_level_package_summary = json!({
+        "missing_in_provenant": top_level_package_missing,
+        "extra_in_provenant": top_level_package_extra,
+        "comparison_skipped": top_level_package_skip_reason.is_some(),
+        "skip_reason": top_level_package_skip_reason,
+    });
+    let top_level_dependency_summary = json!({
+        "missing_in_provenant": top_level_dependency_missing,
+        "extra_in_provenant": top_level_dependency_extra,
+        "comparison_skipped": top_level_dependency_skip_reason.is_some(),
+        "skip_reason": top_level_dependency_skip_reason,
+    });
+    let raw_dependency_summary = json!({
+        "missing_in_provenant": raw_dependency_missing,
+        "extra_in_provenant": raw_dependency_extra,
+    });
     file_metric_summary.insert(
-        "dependencies".to_string(),
+        "raw_package_dependencies".to_string(),
         json!({
-            "missing_in_provenant": dependency_missing,
-            "extra_in_provenant": dependency_extra,
+            "missing_in_provenant": raw_dependency_missing,
+            "extra_in_provenant": raw_dependency_extra,
         }),
     );
-    potential_regressions += dependency_missing;
-    potential_higher += dependency_extra;
+    if top_level_package_skip_reason.is_none() {
+        potential_regressions += top_level_package_missing;
+        potential_higher += top_level_package_extra;
+    }
+    if top_level_dependency_skip_reason.is_none() {
+        potential_regressions += top_level_dependency_missing;
+        potential_higher += top_level_dependency_extra;
+    }
+    potential_regressions += raw_dependency_missing;
+    potential_higher += raw_dependency_extra;
     rows.push(tsv_row(
-        "dependencies_missing_in_provenant",
-        dependency_missing as i64,
+        "top_level_packages_missing_in_provenant",
+        top_level_package_missing as i64,
         0,
-        -(dependency_missing as i64),
-        "dependency identities present only in ScanCode output",
+        -(top_level_package_missing as i64),
+        top_level_package_skip_reason
+            .as_deref()
+            .unwrap_or("top-level package identities present only in ScanCode output"),
     ));
     rows.push(tsv_row(
-        "dependencies_extra_in_provenant",
+        "top_level_packages_extra_in_provenant",
         0,
-        dependency_extra as i64,
-        dependency_extra as i64,
-        "dependency identities present only in Provenant output",
+        top_level_package_extra as i64,
+        top_level_package_extra as i64,
+        top_level_package_skip_reason
+            .as_deref()
+            .unwrap_or("top-level package identities present only in Provenant output"),
+    ));
+    rows.push(tsv_row(
+        "top_level_dependencies_missing_in_provenant",
+        top_level_dependency_missing as i64,
+        0,
+        -(top_level_dependency_missing as i64),
+        top_level_dependency_skip_reason
+            .as_deref()
+            .unwrap_or("top-level dependency identities present only in ScanCode output"),
+    ));
+    rows.push(tsv_row(
+        "top_level_dependencies_extra_in_provenant",
+        0,
+        top_level_dependency_extra as i64,
+        top_level_dependency_extra as i64,
+        top_level_dependency_skip_reason
+            .as_deref()
+            .unwrap_or("top-level dependency identities present only in Provenant output"),
+    ));
+    rows.push(tsv_row(
+        "raw_package_dependencies_missing_in_provenant",
+        raw_dependency_missing as i64,
+        0,
+        -(raw_dependency_missing as i64),
+        "raw dependency identities present only in ScanCode file-level package_data output",
+    ));
+    rows.push(tsv_row(
+        "raw_package_dependencies_extra_in_provenant",
+        0,
+        raw_dependency_extra as i64,
+        raw_dependency_extra as i64,
+        "raw dependency identities present only in Provenant file-level package_data output",
     ));
     rows.push(tsv_row(
         "top_level_license_expression_deltas",
@@ -1728,10 +1858,22 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
                 .join("top_level_license_expression_deltas.json"),
         ),
         (
-            "dependency_value_differences",
+            "top_level_package_value_differences",
             context
                 .samples_dir
-                .join("dependency_value_differences.json"),
+                .join("top_level_package_value_differences.json"),
+        ),
+        (
+            "top_level_dependency_value_differences",
+            context
+                .samples_dir
+                .join("top_level_dependency_value_differences.json"),
+        ),
+        (
+            "raw_dependency_value_differences",
+            context
+                .samples_dir
+                .join("raw_dependency_value_differences.json"),
         ),
         (
             "info_value_differences",
@@ -1756,26 +1898,36 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     write_pretty_json(&sample_paths[3].1, &higher_counts)?;
     write_pretty_json(&sample_paths[4].1, &value_differences)?;
     write_pretty_json(&sample_paths[5].1, &license_deltas)?;
-    write_pretty_json(&sample_paths[6].1, &dependency_value_differences)?;
-    write_pretty_json(&sample_paths[7].1, &info_value_differences)?;
-    write_pretty_json(&sample_paths[8].1, &classify_value_differences)?;
-    write_pretty_json(&sample_paths[9].1, &row2_value_differences)?;
-    write_pretty_json(&sample_paths[10].1, &row2_top_level_differences)?;
+    write_pretty_json(&sample_paths[6].1, &top_level_package_value_differences)?;
+    write_pretty_json(&sample_paths[7].1, &top_level_dependency_value_differences)?;
+    write_pretty_json(&sample_paths[8].1, &raw_dependency_value_differences)?;
+    write_pretty_json(&sample_paths[9].1, &info_value_differences)?;
+    write_pretty_json(&sample_paths[10].1, &classify_value_differences)?;
+    write_pretty_json(&sample_paths[11].1, &row2_value_differences)?;
+    write_pretty_json(&sample_paths[12].1, &row2_top_level_differences)?;
 
     let summary = json!({
         "comparison_status": comparison_status,
         "top_level_counts": {
-            "scancode": sc_top,
-            "provenant": pr_top,
+            "scancode": sc_top.counts_json(),
+            "provenant": pr_top.counts_json(),
             "delta": {
-                "files": pr_top["files"] - sc_top["files"],
-                "packages": pr_top["packages"] - sc_top["packages"],
-                "dependencies": pr_top["dependencies"] - sc_top["dependencies"],
-                "license_detections": pr_top["license_detections"] - sc_top["license_detections"],
-                "license_references": pr_top["license_references"] - sc_top["license_references"],
-                "license_rule_references": pr_top["license_rule_references"] - sc_top["license_rule_references"],
-            }
+                "files": pr_top.count("files") - sc_top.count("files"),
+                "packages": pr_top.count("packages") - sc_top.count("packages"),
+                "dependencies": pr_top.count("dependencies") - sc_top.count("dependencies"),
+                "license_detections": pr_top.count("license_detections") - sc_top.count("license_detections"),
+                "license_references": pr_top.count("license_references") - sc_top.count("license_references"),
+                "license_rule_references": pr_top.count("license_rule_references") - sc_top.count("license_rule_references"),
+            },
+            "sources": {
+                "scancode": sc_top.sources_json(),
+                "provenant": pr_top.sources_json(),
+            },
         },
+        "skipped_comparisons": skipped_comparisons,
+        "top_level_package_summary": top_level_package_summary,
+        "top_level_dependency_summary": top_level_dependency_summary,
+        "raw_dependency_summary": raw_dependency_summary,
         "file_path_comparison": {
             "common_paths": common_paths.len(),
             "only_scancode_paths": only_scancode_paths.len(),
@@ -2274,24 +2426,53 @@ fn counter_entries(counter: &BTreeMap<String, usize>) -> Vec<ValueCountEntry> {
         .collect()
 }
 
-fn top_level_counts(value: &Value) -> HashMap<&'static str, i64> {
-    HashMap::from([
-        ("files", file_entry_count(value) as i64),
-        ("packages", array_len(value, "packages") as i64),
-        ("dependencies", array_len(value, "dependencies") as i64),
-        (
-            "license_detections",
-            array_len(value, "license_detections") as i64,
-        ),
-        (
-            "license_references",
-            array_len(value, "license_references") as i64,
-        ),
-        (
-            "license_rule_references",
-            array_len(value, "license_rule_references") as i64,
-        ),
-    ])
+fn top_level_counts(value: &Value) -> TopLevelCounts {
+    let package_count = array_len(value, "packages");
+    let fallback_package_count = file_package_data_count(value);
+    let dependency_count = array_len(value, "dependencies");
+    let fallback_dependency_count = file_package_data_dependency_count(value);
+
+    let packages_source = if package_count == 0 && fallback_package_count > 0 {
+        PACKAGE_DATA_COUNT_SOURCE
+    } else {
+        PACKAGES_COUNT_SOURCE
+    };
+    let dependencies_source = if dependency_count == 0 && fallback_dependency_count > 0 {
+        PACKAGE_DATA_DEPENDENCIES_COUNT_SOURCE
+    } else {
+        DEPENDENCIES_COUNT_SOURCE
+    };
+
+    TopLevelCounts {
+        counts: HashMap::from([
+            ("files", file_entry_count(value) as i64),
+            ("packages", package_count as i64),
+            ("dependencies", dependency_count as i64),
+            (
+                "license_detections",
+                array_len(value, "license_detections") as i64,
+            ),
+            (
+                "license_references",
+                array_len(value, "license_references") as i64,
+            ),
+            (
+                "license_rule_references",
+                array_len(value, "license_rule_references") as i64,
+            ),
+        ]),
+        sources: HashMap::from([
+            ("files", FILES_COUNT_SOURCE),
+            ("packages", packages_source),
+            ("dependencies", dependencies_source),
+            ("license_detections", LICENSE_DETECTIONS_COUNT_SOURCE),
+            ("license_references", LICENSE_REFERENCES_COUNT_SOURCE),
+            (
+                "license_rule_references",
+                LICENSE_RULE_REFERENCES_COUNT_SOURCE,
+            ),
+        ]),
+    }
 }
 
 fn file_entry_count(value: &Value) -> usize {
@@ -2310,6 +2491,46 @@ fn array_len(value: &Value, key: &str) -> usize {
         .and_then(Value::as_array)
         .map(|values| values.len())
         .unwrap_or(0)
+}
+
+fn file_package_data_count(value: &Value) -> usize {
+    value
+        .get("files")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|entry| {
+            entry
+                .get("package_data")
+                .and_then(Value::as_array)
+                .map(|package_data| package_data.len())
+                .unwrap_or(0)
+        })
+        .sum()
+}
+
+fn file_package_data_dependency_count(value: &Value) -> usize {
+    value
+        .get("files")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|entry| {
+            entry
+                .get("package_data")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .map(|package_data| {
+                    package_data
+                        .get("dependencies")
+                        .and_then(Value::as_array)
+                        .map(|dependencies| dependencies.len())
+                        .unwrap_or(0)
+                })
+                .sum::<usize>()
+        })
+        .sum()
 }
 
 fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
@@ -2343,9 +2564,57 @@ fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
     counter.into_iter().filter_map(|(key, (sc, pr))| (sc != pr).then_some(json!({"license_expression": key, "scancode": sc, "provenant": pr, "delta": pr - sc}))).collect()
 }
 
-fn dependency_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDifferenceEntry> {
-    let sc_by_path = dependency_identities_by_path(scancode);
-    let pr_by_path = dependency_identities_by_path(provenant);
+fn top_level_package_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDifferenceEntry> {
+    let sc_top = top_level_counts(scancode);
+    let pr_top = top_level_counts(provenant);
+    if !count_delta_is_hard_regression_comparable("packages", &sc_top, &pr_top) {
+        return Vec::new();
+    }
+
+    let sc_identities = top_level_package_identities(scancode);
+    let pr_identities = top_level_package_identities(provenant);
+    let missing = difference_entries(&sc_identities, &pr_identities);
+    let extra = difference_entries(&pr_identities, &sc_identities);
+    if missing.is_empty() && extra.is_empty() {
+        return Vec::new();
+    }
+
+    vec![ValueDifferenceEntry {
+        path: "<top-level>".to_string(),
+        scancode: sc_identities.len(),
+        provenant: pr_identities.len(),
+        missing_in_provenant: missing,
+        extra_in_provenant: extra,
+    }]
+}
+
+fn top_level_package_identities(value: &Value) -> BTreeSet<String> {
+    value
+        .get("packages")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|item| {
+            package_identity(item)
+                .map(str::to_string)
+                .or_else(|| package_fallback_identity(item))
+                .unwrap_or_else(|| "<unknown>".to_string())
+        })
+        .collect()
+}
+
+fn top_level_dependency_differences(
+    scancode: &Value,
+    provenant: &Value,
+) -> Vec<ValueDifferenceEntry> {
+    let sc_top = top_level_counts(scancode);
+    let pr_top = top_level_counts(provenant);
+    if !count_delta_is_hard_regression_comparable("dependencies", &sc_top, &pr_top) {
+        return Vec::new();
+    }
+
+    let sc_by_path = top_level_dependency_identities_by_path(scancode);
+    let pr_by_path = top_level_dependency_identities_by_path(provenant);
     let mut paths = BTreeSet::new();
     paths.extend(sc_by_path.keys().cloned());
     paths.extend(pr_by_path.keys().cloned());
@@ -2368,7 +2637,7 @@ fn dependency_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDiffe
     differences
 }
 
-fn dependency_identities_by_path(value: &Value) -> BTreeMap<String, BTreeSet<String>> {
+fn top_level_dependency_identities_by_path(value: &Value) -> BTreeMap<String, BTreeSet<String>> {
     let mut output: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for item in value
         .get("dependencies")
@@ -2384,6 +2653,71 @@ fn dependency_identities_by_path(value: &Value) -> BTreeMap<String, BTreeSet<Str
             .unwrap_or_else(|| "<unknown>".to_string());
         let identity = dependency_identity(item).unwrap_or_else(|| "<unknown>".to_string());
         output.entry(path).or_default().insert(identity);
+    }
+    output
+}
+
+fn raw_dependency_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDifferenceEntry> {
+    let sc_by_path = raw_dependency_identities_by_path(scancode);
+    let pr_by_path = raw_dependency_identities_by_path(provenant);
+    let mut paths = BTreeSet::new();
+    paths.extend(sc_by_path.keys().cloned());
+    paths.extend(pr_by_path.keys().cloned());
+    let mut differences = Vec::new();
+    for path in paths {
+        let sc_identities = sc_by_path.get(&path).cloned().unwrap_or_default();
+        let pr_identities = pr_by_path.get(&path).cloned().unwrap_or_default();
+        let missing = difference_entries(&sc_identities, &pr_identities);
+        let extra = difference_entries(&pr_identities, &sc_identities);
+        if !missing.is_empty() || !extra.is_empty() {
+            differences.push(ValueDifferenceEntry {
+                path,
+                scancode: sc_identities.len(),
+                provenant: pr_identities.len(),
+                missing_in_provenant: missing,
+                extra_in_provenant: extra,
+            });
+        }
+    }
+    differences
+}
+
+fn raw_dependency_identities_by_path(value: &Value) -> BTreeMap<String, BTreeSet<String>> {
+    let mut output: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for file in value
+        .get("files")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let file_path = file
+            .get("path")
+            .and_then(Value::as_str)
+            .map(normalize_compare_path)
+            .unwrap_or_else(|| "<unknown>".to_string());
+
+        for package_data in file
+            .get("package_data")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            for item in package_data
+                .get("dependencies")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
+                let path = item
+                    .get("datafile_path")
+                    .or_else(|| item.get("path"))
+                    .and_then(Value::as_str)
+                    .map(normalize_compare_path)
+                    .unwrap_or_else(|| file_path.clone());
+                let identity = dependency_identity(item).unwrap_or_else(|| "<unknown>".to_string());
+                output.entry(path).or_default().insert(identity);
+            }
+        }
     }
     output
 }
@@ -2436,8 +2770,8 @@ fn dependency_identity(item: &Value) -> Option<String> {
 }
 
 fn top_level_regressions(
-    left: &HashMap<&'static str, i64>,
-    right: &HashMap<&'static str, i64>,
+    left: &TopLevelCounts,
+    right: &TopLevelCounts,
     left_is_scancode: bool,
 ) -> BTreeMap<String, i64> {
     let mut output = BTreeMap::new();
@@ -2448,8 +2782,11 @@ fn top_level_regressions(
         "license_references",
         "license_rule_references",
     ] {
-        let left_value = left[key];
-        let right_value = right[key];
+        if !count_delta_is_hard_regression_comparable(key, left, right) {
+            continue;
+        }
+        let left_value = left.count(key);
+        let right_value = right.count(key);
         if left_is_scancode {
             if right_value < left_value {
                 output.insert(key.to_string(), left_value - right_value);
@@ -2459,6 +2796,64 @@ fn top_level_regressions(
         }
     }
     output
+}
+
+fn skipped_comparisons(left: &TopLevelCounts, right: &TopLevelCounts) -> BTreeMap<String, String> {
+    ["packages", "dependencies"]
+        .into_iter()
+        .filter(|metric| !count_delta_is_hard_regression_comparable(metric, left, right))
+        .map(|metric| {
+            (
+                metric.to_string(),
+                mixed_source_skip_reason(metric, left, right),
+            )
+        })
+        .collect()
+}
+
+fn count_delta_is_hard_regression_comparable(
+    key: &str,
+    left: &TopLevelCounts,
+    right: &TopLevelCounts,
+) -> bool {
+    match key {
+        "packages" => {
+            left.source(key) == PACKAGES_COUNT_SOURCE && right.source(key) == PACKAGES_COUNT_SOURCE
+        }
+        "dependencies" => {
+            left.source(key) == DEPENDENCIES_COUNT_SOURCE
+                && right.source(key) == DEPENDENCIES_COUNT_SOURCE
+        }
+        _ => true,
+    }
+}
+
+fn mixed_source_skip_reason(
+    metric: &str,
+    scancode: &TopLevelCounts,
+    provenant: &TopLevelCounts,
+) -> String {
+    format!(
+        "top-level {metric} comparison skipped: ScanCode {}; Provenant {}",
+        scancode.source(metric),
+        provenant.source(metric)
+    )
+}
+
+fn top_level_count_note(
+    metric: &str,
+    scancode: &TopLevelCounts,
+    provenant: &TopLevelCounts,
+) -> String {
+    if !matches!(metric, "packages" | "dependencies") {
+        return "top-level count".to_string();
+    }
+
+    if count_delta_is_hard_regression_comparable(metric, scancode, provenant) {
+        return "top-level count".to_string();
+    }
+
+    mixed_source_skip_reason(metric, scancode, provenant)
 }
 
 fn tsv_row(metric: &str, scancode: i64, provenant: i64, delta: i64, notes: &str) -> Vec<String> {
@@ -3496,7 +3891,120 @@ mod tests {
             ]
         });
 
-        assert!(dependency_differences(&scancode, &provenant).is_empty());
+        assert!(top_level_dependency_differences(&scancode, &provenant).is_empty());
+    }
+
+    #[test]
+    fn top_level_counts_record_missing_assembled_data_without_fallback() {
+        let value = json!({
+            "files": [{
+                "path": "package-lock.json",
+                "type": "file",
+                "package_data": [{
+                    "type": "npm",
+                    "name": "left-pad",
+                    "version": "1.3.0",
+                    "purl": "pkg:npm/left-pad@1.3.0",
+                    "dependencies": [{
+                        "purl": "pkg:npm/ansi-regex@5.0.1",
+                        "scope": "dependencies",
+                        "is_runtime": true
+                    }]
+                }]
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        });
+
+        let counts = top_level_counts(&value);
+
+        assert_eq!(counts.count("packages"), 0);
+        assert_eq!(counts.count("dependencies"), 0);
+        assert_eq!(
+            counts.source("packages"),
+            "packages[] empty; files[].package_data present"
+        );
+        assert_eq!(
+            counts.source("dependencies"),
+            "dependencies[] empty; files[].package_data[].dependencies present"
+        );
+    }
+
+    #[test]
+    fn raw_dependency_differences_compare_file_level_package_data_when_top_level_is_empty() {
+        let scancode = json!({
+            "files": [{
+                "path": "package-lock.json",
+                "type": "file",
+                "package_data": [{
+                    "type": "npm",
+                    "name": "left-pad",
+                    "version": "1.3.0",
+                    "purl": "pkg:npm/left-pad@1.3.0",
+                    "dependencies": [{
+                        "purl": "pkg:npm/ansi-regex@5.0.1",
+                        "scope": "dependencies",
+                        "is_runtime": true
+                    }]
+                }]
+            }],
+            "dependencies": []
+        });
+        let provenant = json!({
+            "files": [{
+                "path": "package-lock.json",
+                "type": "file",
+                "package_data": [{
+                    "type": "npm",
+                    "name": "left-pad",
+                    "version": "1.3.0",
+                    "purl": "pkg:npm/left-pad@1.3.0",
+                    "dependencies": [{
+                        "purl": "pkg:npm/ansi-regex@5.0.1",
+                        "scope": "dependencies",
+                        "is_runtime": true
+                    }]
+                }]
+            }],
+            "dependencies": []
+        });
+
+        assert!(raw_dependency_differences(&scancode, &provenant).is_empty());
+    }
+
+    #[test]
+    fn top_level_dependency_differences_skip_mixed_source_inputs() {
+        let scancode = json!({
+            "files": [{
+                "path": "package-lock.json",
+                "type": "file",
+                "package_data": [{
+                    "type": "npm",
+                    "name": "left-pad",
+                    "version": "1.3.0",
+                    "purl": "pkg:npm/left-pad@1.3.0",
+                    "dependencies": [{
+                        "purl": "pkg:npm/ansi-regex@5.0.1",
+                        "scope": "dependencies",
+                        "is_runtime": true
+                    }]
+                }]
+            }],
+            "dependencies": []
+        });
+        let provenant = json!({
+            "dependencies": [{
+                "purl": "pkg:npm/chalk@5.3.0",
+                "datafile_path": "package-lock.json",
+                "scope": "dependencies",
+                "is_runtime": true
+            }]
+        });
+
+        assert!(top_level_dependency_differences(&scancode, &provenant).is_empty());
     }
 
     #[test]
