@@ -170,6 +170,70 @@ fn create_from_json_fixture_with_warning() -> (TempDir, String) {
     (temp, input_file.to_string_lossy().to_string())
 }
 
+fn create_compare_json_fixtures() -> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let scancode_file = temp.path().join("scancode.json");
+    let provenant_file = temp.path().join("provenant.json");
+
+    fs::write(
+        &scancode_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "license_detections": [{
+                    "license_expression": "mit",
+                    "license_expression_spdx": "MIT",
+                    "detection_count": 1
+                }]
+            }],
+            "license_detections": [{
+                "license_expression": "mit",
+                "license_expression_spdx": "MIT",
+                "detection_count": 1
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write scancode fixture");
+
+    fs::write(
+        &provenant_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "license_detections": [{
+                    "license_expression": "apache-2.0",
+                    "license_expression_spdx": "Apache-2.0",
+                    "detection_count": 1
+                }]
+            }],
+            "license_detections": [{
+                "license_expression": "apache-2.0",
+                "license_expression_spdx": "Apache-2.0",
+                "detection_count": 1
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write provenant fixture");
+
+    (
+        temp,
+        scancode_file.to_string_lossy().to_string(),
+        provenant_file.to_string_lossy().to_string(),
+    )
+}
+
 fn normalize_multi_parser_header(output: &mut Value) {
     let header = output["headers"]
         .as_array_mut()
@@ -689,6 +753,47 @@ fn explicit_scan_subcommand_matches_legacy_bare_scan_behavior() {
         explicit_json["headers"][0]["options"]
     );
     assert_eq!(bare_json["files"], explicit_json["files"]);
+}
+
+#[test]
+fn compare_subcommand_writes_artifacts_and_summary() {
+    let (_temp, scancode_json, provenant_json) = create_compare_json_fixtures();
+    let artifact_temp = TempDir::new().expect("artifact temp dir");
+    let artifact_dir = artifact_temp.path().join("compare-artifacts");
+
+    let output = provenant_command()
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+            "--artifact-dir",
+            artifact_dir.to_str().expect("utf8 artifact path"),
+        ])
+        .output()
+        .expect("failed to run compare subcommand");
+
+    assert!(output.status.success(), "compare should succeed");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Comparison status:"),
+        "stdout was: {stdout}"
+    );
+
+    let summary_path = artifact_dir.join("comparison").join("summary.json");
+    let manifest_path = artifact_dir.join("run-manifest.json");
+    assert!(summary_path.is_file());
+    assert!(manifest_path.is_file());
+    assert!(artifact_dir.join("raw").join("scancode.json").is_file());
+    assert!(artifact_dir.join("raw").join("provenant.json").is_file());
+
+    let summary: Value =
+        serde_json::from_str(&fs::read_to_string(&summary_path).expect("summary json")).unwrap();
+    assert_eq!(
+        summary["comparison_status"].as_str(),
+        Some("potential_regressions_detected")
+    );
 }
 
 #[test]
