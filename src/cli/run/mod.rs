@@ -60,7 +60,7 @@ pub fn run() -> Result<()> {
             let result = compare_json_files(
                 &args.scancode_json,
                 &args.provenant_json,
-                &args.artifact_dir,
+                args.artifact_dir.as_deref(),
             )?;
             println!("Comparison status: {}", result.comparison_status);
             println!("Artifacts:");

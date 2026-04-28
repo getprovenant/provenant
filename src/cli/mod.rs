@@ -143,7 +143,7 @@ pub struct Cli {
 pub enum Command {
     /// Scan files or existing ScanCode-style JSON inputs.
     Scan(Box<ScanArgs>),
-    /// Compare one ScanCode JSON output against one Provenant JSON output.
+    /// Compare ScanCode and Provenant JSON outputs to review migration-confidence deltas.
     Compare(CompareArgs),
     /// Show attribution notices for embedded license detection data.
     ShowAttribution,
@@ -161,9 +161,9 @@ pub struct CompareArgs {
     #[arg(long = "provenant-json", value_name = "PATH")]
     pub provenant_json: PathBuf,
 
-    /// Directory where comparison artifacts should be written.
+    /// Directory where comparison artifacts should be written. Defaults to a timestamped directory in the current working directory.
     #[arg(long = "artifact-dir", value_name = "DIR")]
-    pub artifact_dir: PathBuf,
+    pub artifact_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -965,7 +965,29 @@ mod tests {
             Command::Compare(args) => {
                 assert_eq!(args.scancode_json, PathBuf::from("scan-a.json"));
                 assert_eq!(args.provenant_json, PathBuf::from("scan-b.json"));
-                assert_eq!(args.artifact_dir, PathBuf::from("compare-out"));
+                assert_eq!(args.artifact_dir, Some(PathBuf::from("compare-out")));
+            }
+            other => panic!("expected compare subcommand, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_compare_subcommand_allows_default_artifact_dir() {
+        let parsed = Cli::try_parse_from([
+            "provenant",
+            "compare",
+            "--scancode-json",
+            "scan-a.json",
+            "--provenant-json",
+            "scan-b.json",
+        ])
+        .expect("compare subcommand should allow default artifact dir");
+
+        match parsed.command {
+            Command::Compare(args) => {
+                assert_eq!(args.scancode_json, PathBuf::from("scan-a.json"));
+                assert_eq!(args.provenant_json, PathBuf::from("scan-b.json"));
+                assert!(args.artifact_dir.is_none());
             }
             other => panic!("expected compare subcommand, got {other:?}"),
         }
