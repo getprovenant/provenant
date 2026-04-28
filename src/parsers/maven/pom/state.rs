@@ -1104,8 +1104,7 @@ impl PomAccumulator {
         self.package_data
     }
 
-    fn finalize(mut self, path: &Path) -> PackageData {
-        let has_extra_data = self.has_extra_data();
+    fn resolve_accumulated_fields(&mut self) {
         let builtins = build_builtin_properties(MavenBuiltinPropertyInputs {
             namespace: &self.package_data.namespace,
             name: &self.package_data.name,
@@ -1207,14 +1206,18 @@ impl PomAccumulator {
                 ));
             }
         }
+    }
 
+    fn apply_parent_fallbacks(&mut self) {
         if self.package_data.namespace.is_none() {
             self.package_data.namespace = self.parent_group_id.clone();
         }
         if self.package_data.version.is_none() {
             self.package_data.version = self.parent_version.clone();
         }
+    }
 
+    fn finalize_package_metadata(&mut self) {
         self.package_data.qualifiers = build_maven_qualifiers(
             self.project_classifier.as_deref(),
             self.project_packaging.as_deref(),
@@ -1234,7 +1237,9 @@ impl PomAccumulator {
             (None, Some(description)) => Some(description.to_string()),
             (None, None) => None,
         };
+    }
 
+    fn infer_meta_inf_coordinates(&mut self, path: &Path) {
         if path.to_string_lossy().contains("META-INF/maven/") {
             let path_str = path.to_string_lossy();
             if let Some(meta_inf_pos) = path_str.find("META-INF/maven/") {
@@ -1250,7 +1255,9 @@ impl PomAccumulator {
                 }
             }
         }
+    }
 
+    fn finalize_package_urls(&mut self) {
         let package_coords = self
             .package_data
             .namespace
@@ -1315,7 +1322,9 @@ impl PomAccumulator {
                 );
             }
         }
+    }
 
+    fn finalize_related_urls(&mut self) {
         self.package_data.vcs_url = self
             .scm_connection
             .clone()
@@ -1331,7 +1340,9 @@ impl PomAccumulator {
         if let Some(url) = &self.dist_download_url {
             self.package_data.download_url = Some(url.clone());
         }
+    }
 
+    fn add_organization_owner_party(&mut self) {
         if self.organization_name.is_some() || self.organization_url.is_some() {
             let org_name = self.organization_name.clone();
             let org_url = self.organization_url.clone();
@@ -1346,7 +1357,9 @@ impl PomAccumulator {
                 timezone: None,
             });
         }
+    }
 
+    fn expand_dependency_entries(&mut self) {
         let dependency_management_entries = self.dependency_management_entries.clone();
         for dependency in &dependency_management_entries {
             if dependency.scope.as_deref() == Some("import")
@@ -1376,11 +1389,9 @@ impl PomAccumulator {
         {
             self.package_data.dependencies.push(converted);
         }
+    }
 
-        if has_extra_data {
-            self.populate_extra_data();
-        }
-
+    fn finalize_license_data(&mut self) {
         self.package_data.extracted_license_statement =
             build_license_statement(&self.licenses).map(truncate_field);
         let (declared_license_expression, declared_license_expression_spdx, license_detections) =
@@ -1391,7 +1402,9 @@ impl PomAccumulator {
         self.package_data.declared_license_expression = declared_license_expression;
         self.package_data.declared_license_expression_spdx = declared_license_expression_spdx;
         self.package_data.license_detections = license_detections;
+    }
 
+    fn truncate_package_fields(&mut self) {
         self.package_data.namespace = self.package_data.namespace.take().map(truncate_field);
         self.package_data.name = self.package_data.name.take().map(truncate_field);
         self.package_data.version = self.package_data.version.take().map(truncate_field);
@@ -1422,6 +1435,26 @@ impl PomAccumulator {
             dep.purl = dep.purl.take().map(truncate_field);
             dep.extracted_requirement = dep.extracted_requirement.take().map(truncate_field);
         }
+    }
+
+    fn finalize(mut self, path: &Path) -> PackageData {
+        let has_extra_data = self.has_extra_data();
+
+        self.resolve_accumulated_fields();
+        self.apply_parent_fallbacks();
+        self.finalize_package_metadata();
+        self.infer_meta_inf_coordinates(path);
+        self.finalize_package_urls();
+        self.finalize_related_urls();
+        self.add_organization_owner_party();
+        self.expand_dependency_entries();
+
+        if has_extra_data {
+            self.populate_extra_data();
+        }
+
+        self.finalize_license_data();
+        self.truncate_package_fields();
 
         self.package_data
     }
