@@ -475,6 +475,29 @@ struct DistributionRepositoryEntry {
     layout: Option<String>,
 }
 
+impl DistributionRepositoryEntry {
+    fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::Id) => self.id = Some(text.to_string()),
+            Some(KnownTag::Name) => self.name = Some(text.to_string()),
+            Some(KnownTag::Url) => self.url = Some(text.to_string()),
+            Some(KnownTag::Layout) => self.layout = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.id);
+        resolve_option(resolver, &mut self.name);
+        resolve_option(resolver, &mut self.url);
+        resolve_option(resolver, &mut self.layout);
+    }
+
+    fn has_data(&self) -> bool {
+        self.id.is_some() || self.name.is_some() || self.url.is_some() || self.layout.is_some()
+    }
+}
+
 #[derive(Default, Serialize)]
 struct DistributionSiteEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -483,6 +506,106 @@ struct DistributionSiteEntry {
     name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
+}
+
+impl DistributionSiteEntry {
+    fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::Id) => self.id = Some(text.to_string()),
+            Some(KnownTag::Name) => self.name = Some(text.to_string()),
+            Some(KnownTag::Url) => self.url = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.id);
+        resolve_option(resolver, &mut self.name);
+        resolve_option(resolver, &mut self.url);
+    }
+
+    fn has_data(&self) -> bool {
+        self.id.is_some() || self.name.is_some() || self.url.is_some()
+    }
+}
+
+#[derive(Default)]
+struct DistributionData {
+    download_url: Option<String>,
+    repository: DistributionRepositoryEntry,
+    snapshot_repository: DistributionRepositoryEntry,
+    site: DistributionSiteEntry,
+}
+
+impl DistributionData {
+    fn apply_text(
+        &mut self,
+        section: DistributionSection,
+        current: Option<KnownTag>,
+        text: &str,
+    ) -> bool {
+        match section {
+            DistributionSection::Repository => {
+                self.repository.apply_text(current, text);
+                true
+            }
+            DistributionSection::SnapshotRepository => {
+                self.snapshot_repository.apply_text(current, text);
+                true
+            }
+            DistributionSection::Site => {
+                self.site.apply_text(current, text);
+                true
+            }
+            DistributionSection::Management => false,
+        }
+    }
+
+    fn apply_download_url(&mut self, text: &str) {
+        self.download_url = Some(text.to_string());
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.download_url);
+        self.repository.resolve_fields(resolver);
+        self.snapshot_repository.resolve_fields(resolver);
+        self.site.resolve_fields(resolver);
+    }
+
+    fn has_extra_data(&self) -> bool {
+        self.download_url.is_some()
+            || self.repository.has_data()
+            || self.snapshot_repository.has_data()
+            || self.site.has_data()
+    }
+
+    fn populate_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
+        if let Some(url) = self.download_url.take() {
+            extra_data.insert(
+                "distribution_download_url".to_string(),
+                serde_json::Value::String(url),
+            );
+        }
+        insert_extra_data_object(
+            extra_data,
+            "distribution_repository",
+            std::mem::take(&mut self.repository),
+        );
+        insert_extra_data_object(
+            extra_data,
+            "distribution_snapshot_repository",
+            std::mem::take(&mut self.snapshot_repository),
+        );
+        insert_extra_data_object(
+            extra_data,
+            "distribution_site",
+            std::mem::take(&mut self.site),
+        );
+    }
+
+    fn download_url(&self) -> Option<&str> {
+        self.download_url.as_deref()
+    }
 }
 
 #[derive(Default, Serialize)]
@@ -682,46 +805,7 @@ impl ActiveSection {
 
 impl DistributionSection {
     fn apply_text(self, state: &mut PomAccumulator, current: Option<KnownTag>, text: &str) -> bool {
-        match self {
-            Self::Repository => {
-                match current {
-                    Some(KnownTag::Id) => state.dist_repository_id = Some(text.to_string()),
-                    Some(KnownTag::Name) => state.dist_repository_name = Some(text.to_string()),
-                    Some(KnownTag::Url) => state.dist_repository_url = Some(text.to_string()),
-                    Some(KnownTag::Layout) => state.dist_repository_layout = Some(text.to_string()),
-                    _ => {}
-                }
-                true
-            }
-            Self::SnapshotRepository => {
-                match current {
-                    Some(KnownTag::Id) => {
-                        state.dist_snapshot_repository_id = Some(text.to_string())
-                    }
-                    Some(KnownTag::Name) => {
-                        state.dist_snapshot_repository_name = Some(text.to_string())
-                    }
-                    Some(KnownTag::Url) => {
-                        state.dist_snapshot_repository_url = Some(text.to_string())
-                    }
-                    Some(KnownTag::Layout) => {
-                        state.dist_snapshot_repository_layout = Some(text.to_string())
-                    }
-                    _ => {}
-                }
-                true
-            }
-            Self::Site => {
-                match current {
-                    Some(KnownTag::Id) => state.dist_site_id = Some(text.to_string()),
-                    Some(KnownTag::Name) => state.dist_site_name = Some(text.to_string()),
-                    Some(KnownTag::Url) => state.dist_site_url = Some(text.to_string()),
-                    _ => {}
-                }
-                true
-            }
-            Self::Management => false,
-        }
+        state.distribution.apply_text(self, current, text)
     }
 }
 
@@ -766,18 +850,7 @@ struct PomAccumulator {
     issue_management_url: Option<String>,
     ci_management_system: Option<String>,
     ci_management_url: Option<String>,
-    dist_download_url: Option<String>,
-    dist_repository_id: Option<String>,
-    dist_repository_name: Option<String>,
-    dist_repository_url: Option<String>,
-    dist_repository_layout: Option<String>,
-    dist_snapshot_repository_id: Option<String>,
-    dist_snapshot_repository_name: Option<String>,
-    dist_snapshot_repository_url: Option<String>,
-    dist_snapshot_repository_layout: Option<String>,
-    dist_site_id: Option<String>,
-    dist_site_name: Option<String>,
-    dist_site_url: Option<String>,
+    distribution: DistributionData,
     repositories: Vec<RepositoryEntry>,
     plugin_repositories: Vec<RepositoryEntry>,
     modules: Vec<String>,
@@ -823,18 +896,7 @@ impl PomAccumulator {
             issue_management_url: None,
             ci_management_system: None,
             ci_management_url: None,
-            dist_download_url: None,
-            dist_repository_id: None,
-            dist_repository_name: None,
-            dist_repository_url: None,
-            dist_repository_layout: None,
-            dist_snapshot_repository_id: None,
-            dist_snapshot_repository_name: None,
-            dist_snapshot_repository_url: None,
-            dist_snapshot_repository_layout: None,
-            dist_site_id: None,
-            dist_site_name: None,
-            dist_site_url: None,
+            distribution: DistributionData::default(),
             repositories: Vec::new(),
             plugin_repositories: Vec::new(),
             modules: Vec::new(),
@@ -926,7 +988,7 @@ impl PomAccumulator {
         if path.parent_is(KnownTag::DistributionManagement)
             && path.current_known() == Some(KnownTag::DownloadUrl)
         {
-            self.dist_download_url = Some(text.to_string());
+            self.distribution.apply_download_url(text);
         }
     }
 
@@ -939,10 +1001,7 @@ impl PomAccumulator {
             || self.issue_management_system.is_some()
             || self.ci_management_system.is_some()
             || self.ci_management_url.is_some()
-            || self.dist_download_url.is_some()
-            || self.dist_repository_id.is_some()
-            || self.dist_snapshot_repository_id.is_some()
-            || self.dist_site_id.is_some()
+            || self.distribution.has_extra_data()
             || !self.repositories.is_empty()
             || !self.plugin_repositories.is_empty()
             || !self.modules.is_empty()
@@ -995,47 +1054,13 @@ impl PomAccumulator {
         if let Some(url) = self.ci_management_url.take() {
             extra_data.insert("ci_url".to_string(), serde_json::Value::String(url));
         }
-        if let Some(url) = self.dist_download_url.take() {
-            extra_data.insert(
-                "distribution_download_url".to_string(),
-                serde_json::Value::String(url),
-            );
-        }
     }
 
     fn populate_distribution_extra_data(
         &mut self,
         extra_data: &mut HashMap<String, serde_json::Value>,
     ) {
-        insert_extra_data_object(
-            extra_data,
-            "distribution_repository",
-            DistributionRepositoryEntry {
-                id: self.dist_repository_id.take(),
-                name: self.dist_repository_name.take(),
-                url: self.dist_repository_url.take(),
-                layout: self.dist_repository_layout.take(),
-            },
-        );
-        insert_extra_data_object(
-            extra_data,
-            "distribution_snapshot_repository",
-            DistributionRepositoryEntry {
-                id: self.dist_snapshot_repository_id.take(),
-                name: self.dist_snapshot_repository_name.take(),
-                url: self.dist_snapshot_repository_url.take(),
-                layout: self.dist_snapshot_repository_layout.take(),
-            },
-        );
-        insert_extra_data_object(
-            extra_data,
-            "distribution_site",
-            DistributionSiteEntry {
-                id: self.dist_site_id.take(),
-                name: self.dist_site_name.take(),
-                url: self.dist_site_url.take(),
-            },
-        );
+        self.distribution.populate_extra_data(extra_data);
     }
 
     fn populate_collection_extra_data(
@@ -1148,18 +1173,7 @@ impl PomAccumulator {
         resolve_option(&mut resolver, &mut self.issue_management_url);
         resolve_option(&mut resolver, &mut self.ci_management_system);
         resolve_option(&mut resolver, &mut self.ci_management_url);
-        resolve_option(&mut resolver, &mut self.dist_download_url);
-        resolve_option(&mut resolver, &mut self.dist_repository_id);
-        resolve_option(&mut resolver, &mut self.dist_repository_name);
-        resolve_option(&mut resolver, &mut self.dist_repository_url);
-        resolve_option(&mut resolver, &mut self.dist_repository_layout);
-        resolve_option(&mut resolver, &mut self.dist_snapshot_repository_id);
-        resolve_option(&mut resolver, &mut self.dist_snapshot_repository_name);
-        resolve_option(&mut resolver, &mut self.dist_snapshot_repository_url);
-        resolve_option(&mut resolver, &mut self.dist_snapshot_repository_layout);
-        resolve_option(&mut resolver, &mut self.dist_site_id);
-        resolve_option(&mut resolver, &mut self.dist_site_name);
-        resolve_option(&mut resolver, &mut self.dist_site_url);
+        self.distribution.resolve_fields(&mut resolver);
         resolve_option(&mut resolver, &mut self.parent_group_id);
         resolve_option(&mut resolver, &mut self.parent_artifact_id);
         resolve_option(&mut resolver, &mut self.parent_version);
@@ -1353,8 +1367,8 @@ impl PomAccumulator {
         if let Some(url) = &self.issue_management_url {
             self.package_data.bug_tracking_url = Some(url.clone());
         }
-        if let Some(url) = &self.dist_download_url {
-            self.package_data.download_url = Some(url.clone());
+        if let Some(url) = self.distribution.download_url() {
+            self.package_data.download_url = Some(url.to_string());
         }
     }
 
