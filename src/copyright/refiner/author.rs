@@ -30,6 +30,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = truncate_bug_reports_clause(&a);
     a = truncate_caller_specificaly_clause(&a);
     a = truncate_json_metadata_tail(&a);
+    a = truncate_distribution_metadata_tail(&a);
     a = normalize_slash_spacing(&a);
     a = normalize_slash_author_pairs(&a);
     a = strip_trailing_status_works(&a);
@@ -52,6 +53,14 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = restore_leading_the_for_collective_author(s, &a);
 
     if is_path_like_code_fragment(&a) {
+        return None;
+    }
+
+    if !a.chars().any(|ch| ch.is_alphabetic()) {
+        return None;
+    }
+
+    if looks_like_generated_resource_identifier(&a) {
         return None;
     }
 
@@ -81,6 +90,10 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
     let trimmed = s.trim();
     if trimmed.is_empty() {
         return false;
+    }
+
+    if looks_like_generated_resource_identifier(trimmed) {
+        return true;
     }
 
     if contains_standalone_at_prefixed_token(trimmed) {
@@ -116,6 +129,14 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
     }
 
     if contains_dollar_prefixed_code_token(trimmed) {
+        return true;
+    }
+
+    if looks_like_template_token_run(trimmed) {
+        return true;
+    }
+
+    if looks_like_uppercase_numeric_token_run(trimmed) {
         return true;
     }
 
@@ -485,6 +506,68 @@ fn truncate_json_metadata_tail(s: &str) -> String {
         }
     }
     s.to_string()
+}
+
+fn truncate_distribution_metadata_tail(s: &str) -> String {
+    static DISTRIBUTION_METADATA_TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?P<prefix>.+?)\s+(?:author|maintainer)-email\b.*$").unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = DISTRIBUTION_METADATA_TAIL_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+
+    prefix.to_string()
+}
+
+fn looks_like_generated_resource_identifier(s: &str) -> bool {
+    let trimmed = s.trim();
+    if trimmed.is_empty() || trimmed.contains(' ') {
+        return false;
+    }
+
+    contains_generated_resource_token(trimmed)
+}
+
+fn looks_like_template_token_run(s: &str) -> bool {
+    let trimmed = s.trim();
+    if !(trimmed.contains('+') || trimmed.contains('?')) {
+        return false;
+    }
+
+    let uppercase_count = trimmed.chars().filter(|ch| ch.is_ascii_uppercase()).count();
+    let digit_count = trimmed.chars().filter(|ch| ch.is_ascii_digit()).count();
+    uppercase_count >= 4 && digit_count >= 1
+}
+
+fn looks_like_uppercase_numeric_token_run(s: &str) -> bool {
+    let trimmed = s.trim();
+    let words: Vec<&str> = trimmed.split_whitespace().collect();
+    if words.len() < 2 || words.len() > 6 {
+        return false;
+    }
+
+    let has_digits = words
+        .iter()
+        .any(|word| word.chars().any(|ch| ch.is_ascii_digit()));
+    let uppercaseish = words
+        .iter()
+        .filter(|word| {
+            !word.is_empty()
+                && word.chars().all(|ch| {
+                    ch.is_ascii_uppercase()
+                        || ch.is_ascii_digit()
+                        || matches!(ch, '_' | '+' | '?' | '-')
+                })
+        })
+        .count();
+
+    has_digits && uppercaseish >= 2
 }
 
 fn truncate_bug_reports_clause(s: &str) -> String {

@@ -1267,6 +1267,13 @@ fn test_is_junk_copyright_drops_code_signature_and_commentary_fragments() {
     assert!(is_junk_copyright(
         "Copyright Flutter code sample for MyElement"
     ));
+    assert!(is_junk_copyright(
+        "Copyright d+(?:- d+)?, the V8 project authors"
+    ));
+    assert!(is_junk_copyright("Copyright (c ) d+ Google Inc."));
+    assert!(is_junk_copyright("Copyright 201 34"));
+    assert!(is_junk_copyright("Copyright 0 absl::StrCat(errors 0 )"));
+    assert!(is_junk_copyright("Copyright void"));
     assert!(!is_junk_copyright("Not copyrighted 1992 by Mark Adler"));
 }
 
@@ -1312,6 +1319,7 @@ fn test_refine_holder_drops_flutter_compare_noise_fragments() {
         None
     );
     assert_eq!(refine_holder("resulting in confusion over"), None);
+    assert_eq!(refine_holder("absl::StrCat(errors 0"), None);
 }
 
 #[test]
@@ -1344,6 +1352,32 @@ fn test_refine_author_normalizes_angle_bracket_email_comma_spacing() {
 fn test_refine_author_keeps_obfuscated_angle_contact_author() {
     let result = refine_author("Deepak M <m.deepak at intel.com>");
     assert_eq!(result, Some("Deepak M m.deepak at intel.com".to_string()));
+}
+
+#[test]
+fn test_refine_author_strips_distribution_metadata_tails() {
+    assert_eq!(
+        refine_author("Armin Ronacher Author-email armin.ronacher@active-4.com"),
+        Some("Armin Ronacher".to_string())
+    );
+    assert_eq!(
+        refine_author("OWASP Foundation Maintainer-email security@owasp.org"),
+        Some("OWASP Foundation".to_string())
+    );
+}
+
+#[test]
+fn test_refine_author_drops_generated_resource_identifiers() {
+    assert_eq!(refine_author("icon-app-20x20@2x.png.img.tmpl"), None);
+}
+
+#[test]
+fn test_refine_author_drops_template_token_runs_and_numeric_fragments() {
+    assert_eq!(refine_author("AUTH CONTRIBUTORS AUTHS+ + 2660"), None);
+    assert_eq!(refine_author("AUTH AUTHS 2730"), None);
+    assert_eq!(refine_author("COMPANY 1411"), None);
+    assert_eq!(refine_author("MAINT 26382"), None);
+    assert_eq!(refine_author("2645-1"), None);
 }
 
 #[test]

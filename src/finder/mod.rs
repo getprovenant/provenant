@@ -265,6 +265,16 @@ mod tests {
     }
 
     #[test]
+    fn test_find_emails_ignores_generated_template_asset_tokens() {
+        let text = "icon-app-20x20@2x.png.img.tmpl git@github.com this@mockk.projectdir";
+        let config = DetectionConfig::default();
+        let emails = find_emails(text, &config);
+
+        let values: Vec<_> = emails.into_iter().map(|email| email.email).collect();
+        assert_eq!(values, vec!["git@github.com".to_string()]);
+    }
+
+    #[test]
     fn test_find_urls_ignores_file_like_fake_hosts() {
         let text = "http://ftp.sftp/ http://www.classes.hint/ http://www.conf.default/ https://rust-lang.org/real";
         let config = DetectionConfig::default();
