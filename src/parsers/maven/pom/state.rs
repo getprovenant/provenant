@@ -167,148 +167,68 @@ enum ContextFrameState {
 
 impl ContextFrameState {
     fn for_start(stack: &ContextStack, acc: &mut PomAccumulator, element_name: &Tag) -> Self {
-        Self::start_dependency_context(stack, element_name)
-            .or_else(|| Self::start_party_context(stack, element_name))
-            .or_else(|| Self::start_distribution_context(stack, element_name))
-            .or_else(|| Self::start_repository_context(stack, element_name))
-            .or_else(|| Self::start_section_context(stack, acc, element_name))
-            .or_else(|| Self::start_item_context(stack, element_name))
-            .unwrap_or(Self::Plain)
-    }
+        let dependency_context = stack.current_dependency_context();
+        let party_list = stack.current_party_list();
+        let distribution_section = stack.current_distribution_section();
+        let repository_collection = stack.current_repository_collection();
+        let section = stack.current_section();
 
-    fn start_dependency_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match element_name {
-            Tag::Known(KnownTag::Dependency)
-                if stack.current_dependency_context()
-                    == Some(DependencyContext::ManagementEntries) =>
-            {
-                Some(Self::Dependency(ActiveDependency::Management(
-                    MavenDependencyData::default(),
-                )))
-            }
-            Tag::Known(KnownTag::Dependency)
-                if stack.current_dependency_context()
-                    == Some(DependencyContext::PackageEntries) =>
-            {
-                Some(Self::Dependency(ActiveDependency::Package {
-                    package: new_package_dependency(),
-                    data: MavenDependencyData::default(),
-                }))
-            }
-            Tag::Known(KnownTag::DependencyManagement) => Some(Self::DependencyContext(
-                DependencyContext::ManagementContainer,
-            )),
-            Tag::Known(KnownTag::Dependencies)
-                if stack.current_dependency_context()
-                    == Some(DependencyContext::ManagementContainer) =>
-            {
-                Some(Self::DependencyContext(
-                    DependencyContext::ManagementEntries,
-                ))
-            }
-            Tag::Known(KnownTag::Dependencies) => {
-                Some(Self::DependencyContext(DependencyContext::PackageEntries))
-            }
-            _ => None,
+        if let Some(dependency) =
+            dependency_context.and_then(|context| context.start_dependency(element_name))
+        {
+            return Self::Dependency(dependency);
         }
-    }
 
-    fn start_party_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match element_name {
-            Tag::Known(KnownTag::Developers) => Some(Self::PartyList(PartyList::Developers)),
-            Tag::Known(KnownTag::Contributors) => Some(Self::PartyList(PartyList::Contributors)),
-            Tag::Known(KnownTag::Developer)
-                if stack.current_party_list() == Some(PartyList::Developers) =>
-            {
-                Some(Self::Party(Party::person("developer", None, None)))
-            }
-            Tag::Known(KnownTag::Contributor)
-                if stack.current_party_list() == Some(PartyList::Contributors) =>
-            {
-                Some(Self::Party(Party::person("contributor", None, None)))
-            }
-            _ => None,
+        if let Some(context) = DependencyContext::for_start(dependency_context, element_name) {
+            return Self::DependencyContext(context);
         }
-    }
 
-    fn start_distribution_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match element_name {
-            Tag::Known(KnownTag::DistributionManagement) => {
-                Some(Self::Distribution(DistributionSection::Management))
-            }
-            Tag::Known(KnownTag::Repository) if stack.current_distribution_section().is_some() => {
-                Some(Self::Distribution(DistributionSection::Repository))
-            }
-            Tag::Known(KnownTag::SnapshotRepository)
-                if stack.current_distribution_section().is_some() =>
-            {
-                Some(Self::Distribution(DistributionSection::SnapshotRepository))
-            }
-            Tag::Known(KnownTag::Site) if stack.current_distribution_section().is_some() => {
-                Some(Self::Distribution(DistributionSection::Site))
-            }
-            _ => None,
+        if let Some(party) = party_list.and_then(|list| list.start_party(element_name)) {
+            return Self::Party(party);
         }
-    }
 
-    fn start_repository_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match element_name {
-            Tag::Known(KnownTag::Repositories) => Some(Self::RepositoryCollection(
-                RepositoryCollection::Repositories,
-            )),
-            Tag::Known(KnownTag::PluginRepositories) => Some(Self::RepositoryCollection(
-                RepositoryCollection::PluginRepositories,
-            )),
-            Tag::Known(KnownTag::Repository)
-                if stack.current_repository_collection()
-                    == Some(RepositoryCollection::Repositories)
-                    && stack.current_dependency_context()
-                        != Some(DependencyContext::PackageEntries) =>
-            {
-                Some(Self::Repository {
-                    collection: RepositoryCollection::Repositories,
-                    builder: RepositoryEntryBuilder::default(),
-                })
-            }
-            Tag::Known(KnownTag::PluginRepository)
-                if stack.current_repository_collection()
-                    == Some(RepositoryCollection::PluginRepositories) =>
-            {
-                Some(Self::Repository {
-                    collection: RepositoryCollection::PluginRepositories,
-                    builder: RepositoryEntryBuilder::default(),
-                })
-            }
-            _ => None,
+        if let Some(list) = PartyList::for_start(element_name) {
+            return Self::PartyList(list);
         }
-    }
 
-    fn start_section_context(
-        stack: &ContextStack,
-        acc: &mut PomAccumulator,
-        element_name: &Tag,
-    ) -> Option<Self> {
-        match element_name {
-            Tag::Known(KnownTag::Parent) => Some(Self::Section(ActiveSection::Parent)),
-            Tag::Known(KnownTag::Properties) => Some(Self::Section(ActiveSection::Properties)),
-            Tag::Known(KnownTag::Relocation) if stack.current_distribution_section().is_some() => {
-                acc.dependency_scratch.reset_relocation();
-                Some(Self::Section(ActiveSection::Relocation))
-            }
-            Tag::Known(KnownTag::Modules) => Some(Self::Section(ActiveSection::Modules)),
-            Tag::Known(KnownTag::MailingLists) => Some(Self::Section(ActiveSection::MailingLists)),
-            _ => None,
+        if let Some(distribution) =
+            DistributionSection::for_start(distribution_section, element_name)
+        {
+            return Self::Distribution(distribution);
         }
-    }
 
-    fn start_item_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match (element_name, stack.current_section()) {
-            (Tag::Known(KnownTag::License), _) => Some(Self::License(MavenLicenseEntry::default())),
-            (Tag::Known(KnownTag::MailingList), Some(ActiveSection::MailingLists)) => {
-                Some(Self::MailingList(MailingListEntryBuilder::default()))
-            }
-            _ => None,
+        if let Some((collection, builder)) = repository_collection
+            .and_then(|collection| collection.start_repository(dependency_context, element_name))
+        {
+            return Self::Repository {
+                collection,
+                builder,
+            };
         }
+
+        if let Some(collection) = RepositoryCollection::for_start(element_name) {
+            return Self::RepositoryCollection(collection);
+        }
+
+        if let Some(active_section) = ActiveSection::for_start(
+            distribution_section,
+            &mut acc.dependency_scratch,
+            element_name,
+        ) {
+            return Self::Section(active_section);
+        }
+
+        if let Some(license) = MavenLicenseEntry::for_start(element_name) {
+            return Self::License(license);
+        }
+
+        if let Some(mailing_list) =
+            section.and_then(|section| section.start_mailing_list(element_name))
+        {
+            return Self::MailingList(mailing_list);
+        }
+
+        Self::Plain
     }
 
     fn apply_text(
@@ -1187,10 +1107,60 @@ enum PartyList {
     Contributors,
 }
 
+impl PartyList {
+    fn for_start(tag: &Tag) -> Option<Self> {
+        match tag {
+            Tag::Known(KnownTag::Developers) => Some(Self::Developers),
+            Tag::Known(KnownTag::Contributors) => Some(Self::Contributors),
+            _ => None,
+        }
+    }
+
+    fn start_party(self, tag: &Tag) -> Option<Party> {
+        match (self, tag) {
+            (Self::Developers, Tag::Known(KnownTag::Developer)) => {
+                Some(Party::person("developer", None, None))
+            }
+            (Self::Contributors, Tag::Known(KnownTag::Contributor)) => {
+                Some(Party::person("contributor", None, None))
+            }
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum RepositoryCollection {
     Repositories,
     PluginRepositories,
+}
+
+impl RepositoryCollection {
+    fn for_start(tag: &Tag) -> Option<Self> {
+        match tag {
+            Tag::Known(KnownTag::Repositories) => Some(Self::Repositories),
+            Tag::Known(KnownTag::PluginRepositories) => Some(Self::PluginRepositories),
+            _ => None,
+        }
+    }
+
+    fn start_repository(
+        self,
+        dependency_context: Option<DependencyContext>,
+        tag: &Tag,
+    ) -> Option<(RepositoryCollection, RepositoryEntryBuilder)> {
+        match (self, tag) {
+            (Self::Repositories, Tag::Known(KnownTag::Repository))
+                if dependency_context != Some(DependencyContext::PackageEntries) =>
+            {
+                Some((Self::Repositories, RepositoryEntryBuilder::default()))
+            }
+            (Self::PluginRepositories, Tag::Known(KnownTag::PluginRepository)) => {
+                Some((Self::PluginRepositories, RepositoryEntryBuilder::default()))
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1199,6 +1169,20 @@ enum DistributionSection {
     Repository,
     SnapshotRepository,
     Site,
+}
+
+impl DistributionSection {
+    fn for_start(current: Option<Self>, tag: &Tag) -> Option<Self> {
+        match tag {
+            Tag::Known(KnownTag::DistributionManagement) => Some(Self::Management),
+            Tag::Known(KnownTag::Repository) if current.is_some() => Some(Self::Repository),
+            Tag::Known(KnownTag::SnapshotRepository) if current.is_some() => {
+                Some(Self::SnapshotRepository)
+            }
+            Tag::Known(KnownTag::Site) if current.is_some() => Some(Self::Site),
+            _ => None,
+        }
+    }
 }
 
 enum ActiveDependency {
@@ -1210,6 +1194,21 @@ enum ActiveDependency {
 }
 
 impl ActiveDependency {
+    fn for_start(context: DependencyContext, tag: &Tag) -> Option<Self> {
+        match (context, tag) {
+            (DependencyContext::ManagementEntries, Tag::Known(KnownTag::Dependency)) => {
+                Some(Self::Management(MavenDependencyData::default()))
+            }
+            (DependencyContext::PackageEntries, Tag::Known(KnownTag::Dependency)) => {
+                Some(Self::Package {
+                    package: new_package_dependency(),
+                    data: MavenDependencyData::default(),
+                })
+            }
+            _ => None,
+        }
+    }
+
     fn apply_text(&mut self, current: Option<KnownTag>, parent: Option<&Tag>, text: &str) -> bool {
         if !parent.is_some_and(|tag| tag.is(KnownTag::Dependency)) {
             return false;
@@ -1260,6 +1259,23 @@ enum DependencyContext {
     PackageEntries,
 }
 
+impl DependencyContext {
+    fn for_start(current: Option<Self>, tag: &Tag) -> Option<Self> {
+        match tag {
+            Tag::Known(KnownTag::DependencyManagement) => Some(Self::ManagementContainer),
+            Tag::Known(KnownTag::Dependencies) if current == Some(Self::ManagementContainer) => {
+                Some(Self::ManagementEntries)
+            }
+            Tag::Known(KnownTag::Dependencies) => Some(Self::PackageEntries),
+            _ => None,
+        }
+    }
+
+    fn start_dependency(self, tag: &Tag) -> Option<ActiveDependency> {
+        ActiveDependency::for_start(self, tag)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ActiveSection {
     Parent,
@@ -1270,6 +1286,33 @@ enum ActiveSection {
 }
 
 impl ActiveSection {
+    fn for_start(
+        distribution: Option<DistributionSection>,
+        dependency_scratch: &mut DependencyScratchData,
+        tag: &Tag,
+    ) -> Option<Self> {
+        match tag {
+            Tag::Known(KnownTag::Parent) => Some(Self::Parent),
+            Tag::Known(KnownTag::Properties) => Some(Self::Properties),
+            Tag::Known(KnownTag::Relocation) if distribution.is_some() => {
+                dependency_scratch.reset_relocation();
+                Some(Self::Relocation)
+            }
+            Tag::Known(KnownTag::Modules) => Some(Self::Modules),
+            Tag::Known(KnownTag::MailingLists) => Some(Self::MailingLists),
+            _ => None,
+        }
+    }
+
+    fn start_mailing_list(self, tag: &Tag) -> Option<MailingListEntryBuilder> {
+        match (self, tag) {
+            (Self::MailingLists, Tag::Known(KnownTag::MailingList)) => {
+                Some(MailingListEntryBuilder::default())
+            }
+            _ => None,
+        }
+    }
+
     fn apply_text(
         self,
         state: &mut PomAccumulator,
@@ -1324,6 +1367,13 @@ impl DistributionSection {
 }
 
 impl MavenLicenseEntry {
+    fn for_start(tag: &Tag) -> Option<Self> {
+        match tag {
+            Tag::Known(KnownTag::License) => Some(Self::default()),
+            _ => None,
+        }
+    }
+
     fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
         match current {
             Some(KnownTag::Name) => self.name = Some(text.to_string()),
