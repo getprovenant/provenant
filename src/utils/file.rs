@@ -1634,12 +1634,21 @@ fn extract_exif_metadata_values(bytes: &[u8]) -> Vec<String> {
     let mut values = Vec::new();
     for field in exif.fields() {
         let rendered = match field.tag {
-            exif::Tag::ImageDescription | exif::Tag::Copyright | exif::Tag::UserComment => {
-                Some(field.display_value().with_unit(&exif).to_string())
-            }
-            exif::Tag::Artist => Some(format!(
-                "Author: {}",
-                field.display_value().with_unit(&exif)
+            exif::Tag::ImageDescription => Some(format_metadata_field(
+                "Description",
+                &field.display_value().with_unit(&exif).to_string(),
+            )),
+            exif::Tag::Copyright => Some(format_metadata_field(
+                "Copyright",
+                &field.display_value().with_unit(&exif).to_string(),
+            )),
+            exif::Tag::UserComment => Some(format_metadata_field(
+                "Comment",
+                &field.display_value().with_unit(&exif).to_string(),
+            )),
+            exif::Tag::Artist => Some(format_metadata_field(
+                "Author",
+                &field.display_value().with_unit(&exif).to_string(),
             )),
             _ => None,
         };
@@ -1816,23 +1825,50 @@ fn allowed_xmp_field(name: &str) -> Option<&'static str> {
 
 fn format_xmp_value(field: &str, value: &str) -> String {
     match field {
-        "creator" => format!("Author: {value}"),
+        "creator" => format_metadata_field("Author", value),
+        "rights" => format_metadata_field("Copyright", value),
+        "description" => format_metadata_field("Description", value),
+        "title" => format_metadata_field("Title", value),
+        "subject" => format_metadata_field("Subject", value),
+        "usage_terms" => format_metadata_field("UsageTerms", value),
+        "web_statement" => format_metadata_field("WebStatement", value),
         _ => value.to_string(),
     }
 }
 
+fn format_metadata_field(label: &str, value: &str) -> String {
+    format!("{label}: {value}")
+}
+
 fn values_to_text(values: Vec<String>) -> String {
     let mut seen = BTreeSet::new();
+    let mut normalized_lines = Vec::new();
+
+    for value in values {
+        let normalized = normalize_metadata_value(&value);
+        if normalized.is_empty() || !seen.insert(normalized.clone()) {
+            continue;
+        }
+
+        normalized_lines.push(normalized);
+    }
+
+    let author_values: BTreeSet<String> = normalized_lines
+        .iter()
+        .filter_map(|line| split_metadata_field(line))
+        .filter(|(label, _)| label.eq_ignore_ascii_case("Author"))
+        .map(|(_, value)| value.to_string())
+        .collect();
+
     let mut lines = Vec::new();
     let mut total_bytes = 0usize;
 
-    for value in values {
+    for normalized in normalized_lines {
         if lines.len() >= MAX_IMAGE_METADATA_VALUES {
             break;
         }
 
-        let normalized = normalize_metadata_value(&value);
-        if normalized.is_empty() || !seen.insert(normalized.clone()) {
+        if should_suppress_bare_copyright_metadata_line(&normalized, &author_values) {
             continue;
         }
 
@@ -1846,6 +1882,33 @@ fn values_to_text(values: Vec<String>) -> String {
     }
 
     lines.join("\n")
+}
+
+fn split_metadata_field(line: &str) -> Option<(&str, &str)> {
+    let (label, value) = line.split_once(':')?;
+    Some((label.trim(), value.trim()))
+}
+
+fn should_suppress_bare_copyright_metadata_line(
+    line: &str,
+    author_values: &BTreeSet<String>,
+) -> bool {
+    let Some((label, value)) = split_metadata_field(line) else {
+        return false;
+    };
+    if !label.eq_ignore_ascii_case("Copyright")
+        || value.is_empty()
+        || !author_values.contains(value)
+    {
+        return false;
+    }
+
+    let lower = value.to_ascii_lowercase();
+    !lower.contains("copyright")
+        && !lower.contains("(c)")
+        && !lower.contains('©')
+        && !lower.contains("all rights")
+        && !value.chars().any(|ch| ch.is_ascii_digit())
 }
 
 fn normalize_metadata_value(value: &str) -> String {
@@ -2148,13 +2211,53 @@ pub fn extract_printable_strings(bytes: &[u8]) -> String {
 mod tests {
     use std::path::Path;
 
+    use crate::copyright::detect_copyrights;
+
     use super::{
         ExtractedTextKind, LARGE_OPAQUE_BINARY_SKIP_BYTES, classify_file_info,
         extract_printable_strings, extract_text_for_detection,
-        extract_text_for_detection_with_diagnostics, is_non_actionable_pdf_failure,
-        normalize_mime_type, normalize_pdf_heading_comparison_text,
-        windows_metadata_or_empty_result,
+        extract_text_for_detection_with_diagnostics, format_metadata_field, format_xmp_value,
+        is_non_actionable_pdf_failure, normalize_mime_type, normalize_pdf_heading_comparison_text,
+        values_to_text, windows_metadata_or_empty_result,
     };
+
+    fn png_chunk(chunk_type: &[u8; 4], data: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+        out.extend_from_slice(chunk_type);
+        out.extend_from_slice(data);
+        out.extend_from_slice(&0u32.to_be_bytes());
+        out
+    }
+
+    fn build_png_with_xmp(xmp: &str) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+
+        let ihdr = [
+            0, 0, 0, 1, // width
+            0, 0, 0, 1, // height
+            8, // bit depth
+            2, // color type
+            0, // compression
+            0, // filter
+            0, // interlace
+        ];
+        bytes.extend_from_slice(&png_chunk(b"IHDR", &ihdr));
+
+        let mut itxt = Vec::new();
+        itxt.extend_from_slice(b"XML:com.adobe.xmp");
+        itxt.push(0); // keyword terminator
+        itxt.push(0); // compression flag
+        itxt.push(0); // compression method
+        itxt.push(0); // language tag terminator
+        itxt.push(0); // translated keyword terminator
+        itxt.extend_from_slice(xmp.as_bytes());
+        bytes.extend_from_slice(&png_chunk(b"iTXt", &itxt));
+
+        bytes.extend_from_slice(&png_chunk(b"IEND", &[]));
+        bytes
+    }
 
     #[test]
     fn test_extract_text_for_detection_skips_jar_archives() {
@@ -2304,6 +2407,79 @@ mod tests {
         assert_eq!(kind, ExtractedTextKind::WindowsExecutableMetadata);
         assert_eq!(text, "LegalCopyright: Example Corp");
         assert!(scan_error.is_none());
+    }
+
+    #[test]
+    fn test_format_xmp_value_labels_creator_and_title_fields() {
+        assert_eq!(
+            format_xmp_value("creator", "Chinmay Garde"),
+            "Author: Chinmay Garde"
+        );
+        assert_eq!(
+            format_xmp_value("title", "Bay Bridge At Night"),
+            "Title: Bay Bridge At Night"
+        );
+        assert_eq!(
+            format_xmp_value("description", "Embarcadero in the evening on Delta 3200"),
+            "Description: Embarcadero in the evening on Delta 3200"
+        );
+    }
+
+    #[test]
+    fn test_format_metadata_field_prefixes_exif_text() {
+        assert_eq!(
+            format_metadata_field("Author", "Chinmay Garde"),
+            "Author: Chinmay Garde"
+        );
+        assert_eq!(
+            format_metadata_field("Description", "Bay Bridge At Night"),
+            "Description: Bay Bridge At Night"
+        );
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_keeps_image_author_separate_from_title_and_description() {
+        let xmp = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator>Chinmay Garde</dc:creator><dc:title>Bay Bridge At Night</dc:title><dc:description>Embarcadero in the evening on Delta 3200</dc:description></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+        let bytes = build_png_with_xmp(xmp);
+
+        let (text, kind) = extract_text_for_detection(Path::new("fixture.png"), &bytes);
+
+        assert_eq!(kind, ExtractedTextKind::ImageMetadata);
+        assert!(text.contains("Author: Chinmay Garde"), "text: {text:?}");
+        assert!(
+            text.contains("Title: Bay Bridge At Night"),
+            "text: {text:?}"
+        );
+        assert!(
+            text.contains("Description: Embarcadero in the evening on Delta 3200"),
+            "text: {text:?}"
+        );
+
+        let (_copyrights, _holders, authors) = detect_copyrights(&text, None);
+        assert_eq!(
+            authors
+                .iter()
+                .map(|a| a.author.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Chinmay Garde"],
+            "authors: {authors:?}; text: {text:?}"
+        );
+    }
+
+    #[test]
+    fn test_values_to_text_suppresses_bare_copyright_duplicate_of_author() {
+        let text = values_to_text(vec![
+            "Author: Chinmay Garde".to_string(),
+            "Copyright: Chinmay Garde".to_string(),
+            "Title: Bay Bridge At Night".to_string(),
+        ]);
+
+        assert!(text.contains("Author: Chinmay Garde"), "text: {text:?}");
+        assert!(
+            text.contains("Title: Bay Bridge At Night"),
+            "text: {text:?}"
+        );
+        assert!(!text.contains("Copyright: Chinmay Garde"), "text: {text:?}");
     }
 
     #[test]

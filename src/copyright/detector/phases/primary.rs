@@ -435,6 +435,17 @@ fn run_content_and_markup_extractions(
     copyrights.extend(new_c);
     holders.extend(new_h);
 
+    let (mut new_c, new_h) =
+        super::super::pattern_extract::extract_markup_text_attributes_with_copyright(
+            content,
+            line_number_index,
+            holders,
+        );
+    seen.dedup_new_copyrights(&mut new_c, 0);
+    seen.register_holders(&new_h);
+    copyrights.extend(new_c);
+    holders.extend(new_h);
+
     let (mut new_c, mut new_h) = super::super::pattern_extract::extract_html_anchor_copyright_url(
         content,
         line_number_index,

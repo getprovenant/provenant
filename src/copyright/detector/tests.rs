@@ -1053,6 +1053,62 @@ fn test_detect_not_copyrighted_statement() {
 }
 
 #[test]
+fn test_detect_unknown_year_placeholder_copyright_with_email() {
+    let input = "Copyright (C) ???? Simon Mourier <simonm@microsoft.com>";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright (c) ???? Simon Mourier <simonm@microsoft.com>"),
+        "Missing copyright, got: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|ho| ho.holder == "Simon Mourier"),
+        "Missing holder, got: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_storyboard_text_attribute_copyright_holder() {
+    let input = r#"<label text="© 2018 The Flutter Authors. All rights reserved." />"#;
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "(c) 2018 The Flutter Authors"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|ho| ho.holder == "The Flutter Authors"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_iso_date_holder_regression() {
+    let input = "Copyright (c) 2006-07-24 John Boolage";
+    let (_c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        h.iter().any(|ho| ho.holder == "John Boolage"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_copyright_holders_boilerplate_regression() {
+    let input = "The above copyright holders, or their entities, not be used in advertising.";
+    let (c, _h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter().all(|cr| cr.copyright != "copyright holders"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_detect_copyright_c_symbol() {
     let (c, h, _a) = detect_copyrights_from_text("Copyright (c) 2020-2024 Foo Bar");
     assert!(!c.is_empty(), "Should detect copyright with (c)");

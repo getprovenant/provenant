@@ -8,6 +8,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     if s.is_empty() {
         return None;
     }
+    let had_obfuscated_angle_contact = contains_obfuscated_angle_contact(s);
     let mut a = remove_some_extra_words_and_punct(s);
     a = strip_leading_maintainers_label(&a);
     a = strip_trailing_javadoc_tags(&a);
@@ -21,6 +22,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = truncate_common_clock_framework_clause(&a);
     a = truncate_omap_dual_mode_clause(&a);
     a = strip_initials_before_angle_email(&a);
+    a = normalize_obfuscated_angle_contact(&a);
     a = strip_trailing_comma_year_after_angle_email(&a);
     a = strip_trailing_comma_month_year(&a);
     a = strip_trailing_comma_email_matching_name(&a);
@@ -53,7 +55,7 @@ pub fn refine_author(s: &str) -> Option<String> {
         return None;
     }
 
-    if looks_like_prose_fragment_author(&a) {
+    if looks_like_prose_fragment_author(&a) && !had_obfuscated_angle_contact {
         return None;
     }
 
@@ -66,6 +68,13 @@ pub fn refine_author(s: &str) -> Option<String> {
     } else {
         None
     }
+}
+
+fn contains_obfuscated_angle_contact(s: &str) -> bool {
+    static OBFUSCATED_ANGLE_CONTACT_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)<\s*(?P<inner>[^<>]*\bat\b[^<>]*)\s*>").unwrap());
+
+    OBFUSCATED_ANGLE_CONTACT_RE.is_match(s)
 }
 
 fn looks_like_prose_fragment_author(s: &str) -> bool {
@@ -121,6 +130,9 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
     }
 
     if looks_like_institution_and_contributors_author(trimmed) {
+        return false;
+    }
+    if looks_like_leading_the_institution_author(trimmed) {
         return false;
     }
     if looks_like_collective_author_with_leading_the(trimmed) {
@@ -366,6 +378,39 @@ fn looks_like_collective_author_with_leading_the(s: &str) -> bool {
     ]
     .iter()
     .any(|suffix| lower.ends_with(suffix))
+}
+
+fn looks_like_leading_the_institution_author(s: &str) -> bool {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("the ") {
+        return false;
+    }
+
+    let uppercase_word_count = trimmed
+        .split_whitespace()
+        .filter(|word| {
+            word.chars()
+                .find(|ch| ch.is_alphabetic())
+                .is_some_and(|ch| ch.is_uppercase())
+        })
+        .count();
+
+    uppercase_word_count >= 3 && (lower.contains(" at the ") || lower.contains(" of the "))
+}
+
+fn normalize_obfuscated_angle_contact(s: &str) -> String {
+    static OBFUSCATED_ANGLE_CONTACT_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)<\s*(?P<inner>[^<>]*\bat\b[^<>]*)\s*>").unwrap());
+
+    let replaced = OBFUSCATED_ANGLE_CONTACT_RE
+        .replace_all(s, |caps: &regex::Captures| {
+            caps.name("inner")
+                .map(|m| format!(" {} ", m.as_str().trim()))
+                .unwrap_or_default()
+        })
+        .into_owned();
+    normalize_whitespace(&replaced)
 }
 
 fn starts_with_lowercase_alpha(word: &str) -> bool {

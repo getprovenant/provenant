@@ -239,6 +239,7 @@ pub fn extract_copyrighted_by_lines(
             .prepared
             .to_ascii_lowercase()
             .contains("not copyrighted")
+            && !crate::copyright::hints::has_year(prepared_line.prepared)
         {
             continue;
         }

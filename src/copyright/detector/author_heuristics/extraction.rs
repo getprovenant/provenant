@@ -236,6 +236,30 @@ fn trim_notice_support_sentence(who: &str) -> String {
     trimmed.to_string()
 }
 
+fn refine_author_or_institution(who: &str) -> Option<String> {
+    if let Some(author) = refine_author(who) {
+        return Some(author);
+    }
+
+    let trimmed = who.trim().trim_end_matches('.').trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("the ") {
+        return None;
+    }
+
+    let words: Vec<&str> = trimmed.split_whitespace().collect();
+    if words.len() < 4 {
+        return None;
+    }
+
+    let capitalized_word_count = words
+        .iter()
+        .filter_map(|word| word.chars().find(|ch| ch.is_alphabetic()))
+        .filter(|ch| ch.is_uppercase())
+        .count();
+    (capitalized_word_count >= 2).then(|| trimmed.to_string())
+}
+
 fn refine_notice_collective_author(who: &str) -> Option<String> {
     let trimmed = trim_notice_support_sentence(&trim_following_sentence_clause(who))
         .trim_end_matches(&['.', ';', ','][..])
@@ -934,7 +958,7 @@ pub(in super::super) fn extract_was_developed_by_author_blocks(
             continue;
         }
 
-        let Some(author) = refine_author(&joined) else {
+        let Some(author) = refine_author_or_institution(&joined) else {
             line_number = line_number.next();
             continue;
         };
@@ -1221,6 +1245,13 @@ fn sanitize_author_colon_tail(tail: &str) -> Option<String> {
 fn is_author_metadata_line(line: &str) -> bool {
     let lower = line.trim().to_ascii_lowercase();
     lower.starts_with("url:")
+        || lower.starts_with("homepage:")
+        || lower.starts_with("repository:")
+        || lower.starts_with("documentation:")
+        || lower.starts_with("bugs:")
+        || lower.starts_with("issuetracker:")
+        || lower.starts_with("issue-tracker:")
+        || lower.starts_with("issue_tracker:")
         || lower.starts_with("version:")
         || lower.starts_with("wiki:")
         || lower.starts_with("gav:")
@@ -1237,6 +1268,12 @@ fn is_author_metadata_line(line: &str) -> bool {
         || lower.starts_with("releasetimestamp:")
         || lower.starts_with("requiredcore:")
         || lower.starts_with("scm:")
+        || lower.starts_with("title:")
+        || lower.starts_with("description:")
+        || lower.starts_with("subject:")
+        || lower.starts_with("comment:")
+        || lower.starts_with("usageterms:")
+        || lower.starts_with("webstatement:")
         || lower.starts_with("disambiguatingdescription")
 }
 
@@ -1776,6 +1813,43 @@ pub(in super::super) fn extract_toml_author_assignment_authors(
     authors
 }
 
+pub(in super::super) fn extract_comment_author_label_authors(
+    raw_lines: &[&str],
+) -> Vec<AuthorDetection> {
+    let mut authors = Vec::new();
+    if raw_lines.is_empty() {
+        return authors;
+    }
+
+    for (idx, raw_line) in raw_lines.iter().enumerate() {
+        let trimmed = raw_line.trim();
+        let normalized = trimmed
+            .trim_start_matches(|ch: char| {
+                ch.is_whitespace() || matches!(ch, '#' | ';' | '/' | '*' | '!' | '-')
+            })
+            .trim();
+        let Some((label, who_raw)) = normalized.split_once(':') else {
+            continue;
+        };
+        if !label.eq_ignore_ascii_case("author") {
+            continue;
+        }
+        let who = who_raw.trim().trim_end_matches('.').trim();
+        let who_lower = who.to_ascii_lowercase();
+        if who.is_empty() || !who.contains('<') || !who.contains('>') || !who_lower.contains(" at ")
+        {
+            continue;
+        }
+        authors.push(AuthorDetection {
+            author: who.to_string(),
+            start_line: LineNumber::new(idx + 1).expect("invalid line number"),
+            end_line: LineNumber::new(idx + 1).expect("invalid line number"),
+        });
+    }
+
+    authors
+}
+
 pub(in super::super) fn extract_written_by_comma_and_copyright_authors(
     prepared_cache: &PreparedLines<'_>,
     authors: &mut Vec<AuthorDetection>,
@@ -1891,7 +1965,7 @@ pub(in super::super) fn extract_developed_by_sentence_authors(
         }
 
         let candidate = format!("{p1} {p2}");
-        let Some(author) = refine_author(&candidate) else {
+        let Some(author) = refine_author_or_institution(&candidate) else {
             continue;
         };
 
@@ -1928,7 +2002,7 @@ pub(in super::super) fn extract_developed_by_phrase_authors(
                 continue;
             }
 
-            let Some(author) = refine_author(who) else {
+            let Some(author) = refine_author_or_institution(who) else {
                 continue;
             };
 

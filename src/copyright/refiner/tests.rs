@@ -65,14 +65,14 @@ fn test_refine_copyright_keeps_year_only_line() {
 }
 
 #[test]
-fn test_refine_copyright_strips_obfuscated_email_after_dash() {
+fn test_refine_copyright_preserves_holder_obfuscated_email_after_dash() {
     assert_eq!(
         refine_copyright("Copyright (c) 2005, 2006 Nick Galbreath -- nickg at modp dot com"),
-        Some("Copyright (c) 2005, 2006 Nick Galbreath".to_string()),
+        Some("Copyright (c) 2005, 2006 Nick Galbreath - nickg at modp dot com".to_string()),
     );
     assert_eq!(
         refine_copyright("Copyright (c) 2005, 2006 Nick Galbreath - nickg at modp dot com"),
-        Some("Copyright (c) 2005, 2006 Nick Galbreath".to_string()),
+        Some("Copyright (c) 2005, 2006 Nick Galbreath - nickg at modp dot com".to_string()),
     );
 }
 
@@ -95,6 +95,8 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
     assert_eq!(refine_author("compatible"), None);
     assert_eq!(refine_author("desired"), None);
     assert_eq!(refine_author("document"), None);
+    assert_eq!(refine_author("homepage"), None);
+    assert_eq!(refine_author("Package Author"), None);
     assert_eq!(refine_author("otherwise"), None);
     assert_eq!(refine_author("performing"), None);
     assert_eq!(refine_author("review"), None);
@@ -111,6 +113,10 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
     assert_eq!(
         refine_author("the University of California, Berkeley and its contributors"),
         Some("the University of California, Berkeley and its contributors".to_string())
+    );
+    assert_eq!(
+        refine_author("the National Center for Supercomputing Applications at the University of Illinois at Urbana-Champaign"),
+        Some("the National Center for Supercomputing Applications at the University of Illinois at Urbana-Champaign".to_string())
     );
     assert_eq!(
         refine_author(
@@ -1250,7 +1256,27 @@ fn test_is_junk_copyright_drops_code_signature_and_commentary_fragments() {
     assert!(is_junk_copyright(
         "copyright referencing The Flutter Authors"
     ));
+    assert!(is_junk_copyright(
+        "line.startswith Copyright (c) Microsoft Corporation"
+    ));
     assert!(is_junk_copyright("not copyrighted The Flutter Authors"));
+    assert!(!is_junk_copyright("Not copyrighted 1992 by Mark Adler"));
+}
+
+#[test]
+fn test_refine_copyright_strips_trailing_or_and_noise_descriptors() {
+    assert_eq!(
+        refine_copyright("Copyright (c) 1993,2004 Sun Microsystems or"),
+        Some("Copyright (c) 1993,2004 Sun Microsystems".to_string())
+    );
+    assert_eq!(
+        refine_copyright("Copyright (c) 2011 by Ashima Arts (Simplex noise)"),
+        Some("Copyright (c) 2011 by Ashima Arts".to_string())
+    );
+    assert_eq!(
+        refine_copyright("Copyright (c) 2011-2016 by Stefan Gustavson (Classic noise and others)"),
+        Some("Copyright (c) 2011-2016 by Stefan Gustavson".to_string())
+    );
 }
 
 #[test]
@@ -1260,9 +1286,25 @@ fn test_refine_holder_strips_trailing_et_al() {
 }
 
 #[test]
+fn test_refine_holder_drops_flutter_compare_noise_fragments() {
+    assert_eq!(refine_holder("String? description, bool"), None);
+    assert_eq!(refine_holder("String? description late bool"), None);
+    assert_eq!(
+        refine_holder("$template .replaceAllMapped RegExp r ^ +), (Match match) final"),
+        None
+    );
+}
+
+#[test]
 fn test_refine_author_normalizes_angle_bracket_email_comma_spacing() {
     let result = refine_author("dev <dev@acme.test>, Foo");
     assert_eq!(result, Some("dev <dev@acme.test>, Foo".to_string()));
+}
+
+#[test]
+fn test_refine_author_keeps_obfuscated_angle_contact_author() {
+    let result = refine_author("Deepak M <m.deepak at intel.com>");
+    assert_eq!(result, Some("Deepak M m.deepak at intel.com".to_string()));
 }
 
 #[test]

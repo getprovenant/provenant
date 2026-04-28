@@ -83,6 +83,34 @@ fn test_refine_final_authors_keeps_handle_suffixed_maintainer() {
 }
 
 #[test]
+fn test_refine_final_authors_keeps_obfuscated_angle_contact_author() {
+    let mut authors = vec![AuthorDetection {
+        author: "Deepak M <m.deepak at intel.com>".to_string(),
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+
+    refine_final_authors(&mut authors);
+
+    assert_eq!(
+        authors,
+        vec![AuthorDetection {
+            author: "Deepak M m.deepak at intel.com".to_string(),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::ONE,
+        }]
+    );
+}
+
+#[test]
+fn test_derive_holder_from_simple_copyright_string_keeps_iso_date_holder() {
+    assert_eq!(
+        derive_holder_from_simple_copyright_string("Copyright (c) 2006-07-24 John Boolage"),
+        Some("John Boolage".to_string())
+    );
+}
+
+#[test]
 fn test_refine_final_authors_keeps_structured_metadata_collectives() {
     let mut authors = vec![
         AuthorDetection {

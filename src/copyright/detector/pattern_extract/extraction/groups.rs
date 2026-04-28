@@ -638,9 +638,9 @@ pub fn extract_standalone_c_holder_year_lines(
                 }
             } else if has_separator_comma {
                 if use_copyright_prefix {
-                    format!("Copyright (c) {holder_raw}, {yearish}")
+                    format!("Copyright (c) {holder_raw} {yearish}")
                 } else {
-                    format!("(c) {holder_raw}, {yearish}")
+                    format!("(c) {holder_raw} {yearish}")
                 }
             } else if use_copyright_prefix {
                 format!("Copyright (c) {holder_raw} {yearish}")
@@ -901,7 +901,7 @@ pub fn extract_copyright_c_years_holder_lines(
 ) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
     static COPY_C_YEARS_HOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"(?i)^copyright\s*\(c\)\s*(?P<years>(?:19\d{2}|20\d{2})(?:\s*[-–]\s*(?:19\d{2}|20\d{2}|\d{2}))?(?:\s*,\s*(?:19\d{2}|20\d{2}))*?)\s+(?P<holder>.+?)\s*$",
+            r"(?i)^copyright\s*\(c\)\s*(?P<years>(?:19\d{2}|20\d{2}|\?\?\?\?)(?:\s*[-–]\s*(?:19\d{2}|20\d{2}|\d{2}))?(?:\s*,\s*(?:19\d{2}|20\d{2}))*?)\s+(?P<holder>.+?)\s*$",
         )
         .unwrap()
     });
@@ -1181,7 +1181,7 @@ pub fn extract_copyright_c_year_comma_name_angle_email_lines(
 
     static COPY_C_YEAR_NAME_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"(?i)^copyright\s*\(c\)\s+(?P<years>(?:19\d{2}|20\d{2})(?:\s*[-–]\s*(?:\d{4}|\d{2}))?(?:\s*,\s*(?:19\d{2}|20\d{2}))*)\s*,\s*(?P<name>[^<>]+?)\s*<\s*(?P<email>[^>\s]+@[^>\s]+)\s*>\s*[\.,;:]*\s*$",
+            r"(?i)^copyright\s*\(c\)\s+(?P<years>(?:19\d{2}|20\d{2}|\?\?\?\?)(?:\s*[-–]\s*(?:\d{4}|\d{2}))?(?:\s*,\s*(?:19\d{2}|20\d{2}))*)\s*,?\s*(?P<name>[^<>]+?)\s*<\s*(?P<email>[^>\s]+@[^>\s]+)\s*>\s*[\.,;:]*\s*$",
         )
         .unwrap()
     });
@@ -1206,8 +1206,8 @@ pub fn extract_copyright_c_year_comma_name_angle_email_lines(
                 continue;
             }
 
-            let raw = format!("Copyright (c) {years}, {name} <{email}>");
-            let Some(cr) = refine_copyright(&raw) else {
+            let matched = cap.get(0).map(|m| m.as_str()).unwrap_or(trimmed);
+            let Some(cr) = refine_copyright(matched) else {
                 continue;
             };
 
@@ -1665,7 +1665,7 @@ pub fn extract_copyright_year_c_name_angle_email_lines(
 ) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
     static COPY_YEAR_C_NAME_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"(?i)^copyright\s+(?P<year>19\d{2}|20\d{2})\s+\(c\)\s+(?P<name>.+?)\s*<\s*(?P<email>[^>\s]+@[^>\s]+)\s*>\s*$",
+            r"(?i)^copyright\s+(?P<year>19\d{2}|20\d{2}|\?\?\?\?)\s+\(c\)\s+(?P<name>.+?)\s*<\s*(?P<email>[^>\s]+@[^>\s]+)\s*>\s*$",
         )
         .unwrap()
     });
