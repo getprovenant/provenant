@@ -537,6 +537,160 @@ struct DistributionData {
     site: DistributionSiteEntry,
 }
 
+#[derive(Default)]
+struct ProjectMetadata {
+    scm_connection: Option<String>,
+    scm_developer_connection: Option<String>,
+    scm_url: Option<String>,
+    scm_tag: Option<String>,
+    organization_name: Option<String>,
+    organization_url: Option<String>,
+    issue_management_system: Option<String>,
+    issue_management_url: Option<String>,
+    ci_management_system: Option<String>,
+    ci_management_url: Option<String>,
+}
+
+impl ProjectMetadata {
+    fn normalize_scm_connection(text: String) -> String {
+        if text.starts_with("scm:git:") {
+            text.replacen("scm:git:", "git+", 1)
+        } else if text.starts_with("scm:") {
+            text.replacen("scm:", "", 1)
+        } else {
+            text
+        }
+    }
+
+    fn apply_scm_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::Connection) => {
+                self.scm_connection = Some(Self::normalize_scm_connection(text.to_string()))
+            }
+            Some(KnownTag::DeveloperConnection) => {
+                self.scm_developer_connection =
+                    Some(Self::normalize_scm_connection(text.to_string()));
+            }
+            Some(KnownTag::Url) => self.scm_url = Some(text.to_string()),
+            Some(KnownTag::Tag) => self.scm_tag = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn apply_organization_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::Name) => self.organization_name = Some(text.to_string()),
+            Some(KnownTag::Url) => self.organization_url = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn apply_issue_management_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::System) => self.issue_management_system = Some(text.to_string()),
+            Some(KnownTag::Url) => self.issue_management_url = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn apply_ci_management_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::System) => self.ci_management_system = Some(text.to_string()),
+            Some(KnownTag::Url) => self.ci_management_url = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.scm_connection);
+        resolve_option(resolver, &mut self.scm_developer_connection);
+        resolve_option(resolver, &mut self.scm_url);
+        resolve_option(resolver, &mut self.scm_tag);
+        resolve_option(resolver, &mut self.organization_name);
+        resolve_option(resolver, &mut self.organization_url);
+        resolve_option(resolver, &mut self.issue_management_system);
+        resolve_option(resolver, &mut self.issue_management_url);
+        resolve_option(resolver, &mut self.ci_management_system);
+        resolve_option(resolver, &mut self.ci_management_url);
+    }
+
+    fn has_extra_data(&self) -> bool {
+        self.organization_name.is_some()
+            || self.organization_url.is_some()
+            || self.scm_tag.is_some()
+            || self.scm_developer_connection.is_some()
+            || self.issue_management_system.is_some()
+            || self.ci_management_system.is_some()
+            || self.ci_management_url.is_some()
+    }
+
+    fn populate_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
+        if let Some(name) = self.organization_name.take() {
+            extra_data.insert(
+                "organization_name".to_string(),
+                serde_json::Value::String(name),
+            );
+        }
+        if let Some(url) = self.organization_url.take() {
+            extra_data.insert(
+                "organization_url".to_string(),
+                serde_json::Value::String(url),
+            );
+        }
+        if let Some(tag) = self.scm_tag.take() {
+            extra_data.insert("scm_tag".to_string(), serde_json::Value::String(tag));
+        }
+        if let Some(dev_conn) = self.scm_developer_connection.take() {
+            extra_data.insert(
+                "scm_developer_connection".to_string(),
+                serde_json::Value::String(dev_conn),
+            );
+        }
+        if let Some(system) = self.issue_management_system.take() {
+            extra_data.insert(
+                "issue_tracking_system".to_string(),
+                serde_json::Value::String(system),
+            );
+        }
+        if let Some(system) = self.ci_management_system.take() {
+            extra_data.insert("ci_system".to_string(), serde_json::Value::String(system));
+        }
+        if let Some(url) = self.ci_management_url.take() {
+            extra_data.insert("ci_url".to_string(), serde_json::Value::String(url));
+        }
+    }
+
+    fn apply_related_urls(&self, package_data: &mut PackageData) {
+        package_data.vcs_url = self
+            .scm_connection
+            .clone()
+            .or_else(|| self.scm_developer_connection.clone())
+            .or_else(|| self.scm_url.clone());
+
+        if let Some(url) = &self.scm_url {
+            package_data.code_view_url = Some(url.clone());
+        }
+        if let Some(url) = &self.issue_management_url {
+            package_data.bug_tracking_url = Some(url.clone());
+        }
+    }
+
+    fn add_owner_party(&self, package_data: &mut PackageData) {
+        if self.organization_name.is_some() || self.organization_url.is_some() {
+            package_data.parties.push(Party {
+                r#type: Some("organization".to_string()),
+                role: Some("owner".to_string()),
+                name: self.organization_name.clone(),
+                email: None,
+                url: self.organization_url.clone(),
+                organization: None,
+                organization_url: None,
+                timezone: None,
+            });
+        }
+    }
+}
+
 impl DistributionData {
     fn apply_text(
         &mut self,
@@ -840,16 +994,7 @@ struct PomAccumulator {
     licenses: Vec<MavenLicenseEntry>,
     xml_license_comments: Vec<String>,
     inception_year: Option<String>,
-    scm_connection: Option<String>,
-    scm_developer_connection: Option<String>,
-    scm_url: Option<String>,
-    scm_tag: Option<String>,
-    organization_name: Option<String>,
-    organization_url: Option<String>,
-    issue_management_system: Option<String>,
-    issue_management_url: Option<String>,
-    ci_management_system: Option<String>,
-    ci_management_url: Option<String>,
+    project_metadata: ProjectMetadata,
     distribution: DistributionData,
     repositories: Vec<RepositoryEntry>,
     plugin_repositories: Vec<RepositoryEntry>,
@@ -886,16 +1031,7 @@ impl PomAccumulator {
             licenses: Vec::new(),
             xml_license_comments: Vec::new(),
             inception_year: None,
-            scm_connection: None,
-            scm_developer_connection: None,
-            scm_url: None,
-            scm_tag: None,
-            organization_name: None,
-            organization_url: None,
-            issue_management_system: None,
-            issue_management_url: None,
-            ci_management_system: None,
-            ci_management_url: None,
+            project_metadata: ProjectMetadata::default(),
             distribution: DistributionData::default(),
             repositories: Vec::new(),
             plugin_repositories: Vec::new(),
@@ -914,17 +1050,6 @@ impl PomAccumulator {
             relocation: MavenDependencyData::default(),
         }
     }
-
-    fn normalize_scm_connection(text: String) -> String {
-        if text.starts_with("scm:git:") {
-            text.replacen("scm:git:", "git+", 1)
-        } else if text.starts_with("scm:") {
-            text.replacen("scm:", "", 1)
-        } else {
-            text
-        }
-    }
-
     fn apply_structural_text(&mut self, path: ElementPath, text: &str) {
         if path.is_project_field() {
             match path.current_known() {
@@ -943,45 +1068,26 @@ impl PomAccumulator {
         }
 
         if path.parent_is(KnownTag::Scm) {
-            match path.current_known() {
-                Some(KnownTag::Connection) => {
-                    self.scm_connection = Some(Self::normalize_scm_connection(text.to_string()))
-                }
-                Some(KnownTag::DeveloperConnection) => {
-                    self.scm_developer_connection =
-                        Some(Self::normalize_scm_connection(text.to_string()));
-                }
-                Some(KnownTag::Url) => self.scm_url = Some(text.to_string()),
-                Some(KnownTag::Tag) => self.scm_tag = Some(text.to_string()),
-                _ => {}
-            }
+            self.project_metadata
+                .apply_scm_text(path.current_known(), text);
             return;
         }
 
         if path.parent_is(KnownTag::Organization) {
-            match path.current_known() {
-                Some(KnownTag::Name) => self.organization_name = Some(text.to_string()),
-                Some(KnownTag::Url) => self.organization_url = Some(text.to_string()),
-                _ => {}
-            }
+            self.project_metadata
+                .apply_organization_text(path.current_known(), text);
             return;
         }
 
         if path.parent_is(KnownTag::IssueManagement) {
-            match path.current_known() {
-                Some(KnownTag::System) => self.issue_management_system = Some(text.to_string()),
-                Some(KnownTag::Url) => self.issue_management_url = Some(text.to_string()),
-                _ => {}
-            }
+            self.project_metadata
+                .apply_issue_management_text(path.current_known(), text);
             return;
         }
 
         if path.parent_is(KnownTag::CiManagement) {
-            match path.current_known() {
-                Some(KnownTag::System) => self.ci_management_system = Some(text.to_string()),
-                Some(KnownTag::Url) => self.ci_management_url = Some(text.to_string()),
-                _ => {}
-            }
+            self.project_metadata
+                .apply_ci_management_text(path.current_known(), text);
             return;
         }
 
@@ -994,13 +1100,7 @@ impl PomAccumulator {
 
     fn has_extra_data(&self) -> bool {
         self.inception_year.is_some()
-            || self.organization_name.is_some()
-            || self.organization_url.is_some()
-            || self.scm_tag.is_some()
-            || self.scm_developer_connection.is_some()
-            || self.issue_management_system.is_some()
-            || self.ci_management_system.is_some()
-            || self.ci_management_url.is_some()
+            || self.project_metadata.has_extra_data()
             || self.distribution.has_extra_data()
             || !self.repositories.is_empty()
             || !self.plugin_repositories.is_empty()
@@ -1021,39 +1121,7 @@ impl PomAccumulator {
                 serde_json::Value::String(year),
             );
         }
-        if let Some(name) = self.organization_name.take() {
-            extra_data.insert(
-                "organization_name".to_string(),
-                serde_json::Value::String(name),
-            );
-        }
-        if let Some(url) = self.organization_url.take() {
-            extra_data.insert(
-                "organization_url".to_string(),
-                serde_json::Value::String(url),
-            );
-        }
-        if let Some(tag) = self.scm_tag.take() {
-            extra_data.insert("scm_tag".to_string(), serde_json::Value::String(tag));
-        }
-        if let Some(dev_conn) = self.scm_developer_connection.take() {
-            extra_data.insert(
-                "scm_developer_connection".to_string(),
-                serde_json::Value::String(dev_conn),
-            );
-        }
-        if let Some(system) = self.issue_management_system.take() {
-            extra_data.insert(
-                "issue_tracking_system".to_string(),
-                serde_json::Value::String(system),
-            );
-        }
-        if let Some(system) = self.ci_management_system.take() {
-            extra_data.insert("ci_system".to_string(), serde_json::Value::String(system));
-        }
-        if let Some(url) = self.ci_management_url.take() {
-            extra_data.insert("ci_url".to_string(), serde_json::Value::String(url));
-        }
+        self.project_metadata.populate_extra_data(extra_data);
     }
 
     fn populate_distribution_extra_data(
@@ -1163,16 +1231,7 @@ impl PomAccumulator {
         resolve_option(&mut resolver, &mut self.package_data.version);
         resolve_option(&mut resolver, &mut self.package_data.homepage_url);
         resolve_option(&mut resolver, &mut self.inception_year);
-        resolve_option(&mut resolver, &mut self.scm_connection);
-        resolve_option(&mut resolver, &mut self.scm_developer_connection);
-        resolve_option(&mut resolver, &mut self.scm_url);
-        resolve_option(&mut resolver, &mut self.scm_tag);
-        resolve_option(&mut resolver, &mut self.organization_name);
-        resolve_option(&mut resolver, &mut self.organization_url);
-        resolve_option(&mut resolver, &mut self.issue_management_system);
-        resolve_option(&mut resolver, &mut self.issue_management_url);
-        resolve_option(&mut resolver, &mut self.ci_management_system);
-        resolve_option(&mut resolver, &mut self.ci_management_url);
+        self.project_metadata.resolve_fields(&mut resolver);
         self.distribution.resolve_fields(&mut resolver);
         resolve_option(&mut resolver, &mut self.parent_group_id);
         resolve_option(&mut resolver, &mut self.parent_artifact_id);
@@ -1355,38 +1414,16 @@ impl PomAccumulator {
     }
 
     fn finalize_related_urls(&mut self) {
-        self.package_data.vcs_url = self
-            .scm_connection
-            .clone()
-            .or_else(|| self.scm_developer_connection.clone())
-            .or_else(|| self.scm_url.clone());
-
-        if let Some(url) = &self.scm_url {
-            self.package_data.code_view_url = Some(url.clone());
-        }
-        if let Some(url) = &self.issue_management_url {
-            self.package_data.bug_tracking_url = Some(url.clone());
-        }
+        self.project_metadata
+            .apply_related_urls(&mut self.package_data);
         if let Some(url) = self.distribution.download_url() {
             self.package_data.download_url = Some(url.to_string());
         }
     }
 
     fn add_organization_owner_party(&mut self) {
-        if self.organization_name.is_some() || self.organization_url.is_some() {
-            let org_name = self.organization_name.clone();
-            let org_url = self.organization_url.clone();
-            self.package_data.parties.push(Party {
-                r#type: Some("organization".to_string()),
-                role: Some("owner".to_string()),
-                name: org_name,
-                email: None,
-                url: org_url,
-                organization: None,
-                organization_url: None,
-                timezone: None,
-            });
-        }
+        self.project_metadata
+            .add_owner_party(&mut self.package_data);
     }
 
     fn expand_dependency_entries(&mut self) {
