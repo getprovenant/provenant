@@ -234,27 +234,6 @@ pub(super) fn resolve_vec(resolver: &mut PropertyResolver, values: &mut [String]
     }
 }
 
-fn resolve_map_strings(
-    resolver: &mut PropertyResolver,
-    values: &mut serde_json::Map<String, serde_json::Value>,
-) {
-    for value in values.values_mut() {
-        if let serde_json::Value::String(current) = value {
-            let resolved = resolver.resolve_text(current, 0);
-            *current = resolved;
-        }
-    }
-}
-
-pub(super) fn resolve_maps(
-    resolver: &mut PropertyResolver,
-    values: &mut [serde_json::Map<String, serde_json::Value>],
-) {
-    for value in values.iter_mut() {
-        resolve_map_strings(resolver, value);
-    }
-}
-
 pub(super) fn resolve_dependency_data(
     resolver: &mut PropertyResolver,
     dependency: &mut MavenDependencyData,

@@ -14,7 +14,7 @@ use super::licenses::{
 };
 use super::properties::{
     MavenBuiltinPropertyInputs, PropertyResolver, build_builtin_properties,
-    resolve_dependency_data, resolve_maps, resolve_option, resolve_vec,
+    resolve_dependency_data, resolve_option, resolve_vec,
 };
 use super::tags::{KnownTag, Tag};
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
@@ -398,8 +398,10 @@ impl RepositoryEntryBuilder {
         }
     }
 
-    fn finish(self) -> Option<serde_json::Map<String, serde_json::Value>> {
-        serialize_non_empty_object(self.build().ok()?)
+    fn finish(self) -> Option<RepositoryEntry> {
+        let entry = self.build().ok()?;
+        serialize_non_empty_object(&entry)?;
+        Some(entry)
     }
 }
 
@@ -440,8 +442,10 @@ impl MailingListEntryBuilder {
         }
     }
 
-    fn finish(self) -> Option<serde_json::Map<String, serde_json::Value>> {
-        serialize_non_empty_object(self.build().ok()?)
+    fn finish(self) -> Option<MailingListEntry> {
+        let entry = self.build().ok()?;
+        serialize_non_empty_object(&entry)?;
+        Some(entry)
     }
 }
 
@@ -495,6 +499,20 @@ fn insert_extra_data_object<T: Serialize>(
 ) {
     if let Some(object) = serialize_non_empty_object(value) {
         extra_data.insert(key.to_string(), serde_json::Value::Object(object));
+    }
+}
+
+fn insert_extra_data_array<T: Serialize>(
+    extra_data: &mut HashMap<String, serde_json::Value>,
+    key: &str,
+    values: Vec<T>,
+) {
+    if values.is_empty() {
+        return;
+    }
+
+    if let Ok(value) = serde_json::to_value(values) {
+        extra_data.insert(key.to_string(), value);
     }
 }
 
@@ -746,10 +764,10 @@ struct PomAccumulator {
     dist_site_id: Option<String>,
     dist_site_name: Option<String>,
     dist_site_url: Option<String>,
-    repositories: Vec<serde_json::Map<String, serde_json::Value>>,
-    plugin_repositories: Vec<serde_json::Map<String, serde_json::Value>>,
+    repositories: Vec<RepositoryEntry>,
+    plugin_repositories: Vec<RepositoryEntry>,
     modules: Vec<String>,
-    mailing_lists: Vec<serde_json::Map<String, serde_json::Value>>,
+    mailing_lists: Vec<MailingListEntry>,
     dependency_management_entries: Vec<MavenDependencyData>,
     parent_group_id: Option<String>,
     parent_artifact_id: Option<String>,
@@ -1029,28 +1047,16 @@ impl PomAccumulator {
             },
         );
 
-        if !self.repositories.is_empty() {
-            extra_data.insert(
-                "repositories".to_string(),
-                serde_json::Value::Array(
-                    self.repositories
-                        .drain(..)
-                        .map(serde_json::Value::Object)
-                        .collect(),
-                ),
-            );
-        }
-        if !self.plugin_repositories.is_empty() {
-            extra_data.insert(
-                "plugin_repositories".to_string(),
-                serde_json::Value::Array(
-                    self.plugin_repositories
-                        .drain(..)
-                        .map(serde_json::Value::Object)
-                        .collect(),
-                ),
-            );
-        }
+        insert_extra_data_array(
+            &mut extra_data,
+            "repositories",
+            std::mem::take(&mut self.repositories),
+        );
+        insert_extra_data_array(
+            &mut extra_data,
+            "plugin_repositories",
+            std::mem::take(&mut self.plugin_repositories),
+        );
         if !self.modules.is_empty() {
             extra_data.insert(
                 "modules".to_string(),
@@ -1062,17 +1068,11 @@ impl PomAccumulator {
                 ),
             );
         }
-        if !self.mailing_lists.is_empty() {
-            extra_data.insert(
-                "mailing_lists".to_string(),
-                serde_json::Value::Array(
-                    self.mailing_lists
-                        .drain(..)
-                        .map(serde_json::Value::Object)
-                        .collect(),
-                ),
-            );
-        }
+        insert_extra_data_array(
+            &mut extra_data,
+            "mailing_lists",
+            std::mem::take(&mut self.mailing_lists),
+        );
         if !self.dependency_management_entries.is_empty() {
             extra_data.insert(
                 "dependency_management".to_string(),
@@ -1167,9 +1167,6 @@ impl PomAccumulator {
         resolve_option(&mut resolver, &mut self.project_packaging);
         resolve_option(&mut resolver, &mut self.project_classifier);
         resolve_vec(&mut resolver, &mut self.modules);
-        resolve_maps(&mut resolver, &mut self.repositories);
-        resolve_maps(&mut resolver, &mut self.plugin_repositories);
-        resolve_maps(&mut resolver, &mut self.mailing_lists);
         for comment in &mut self.xml_license_comments {
             *comment = resolver.resolve_text(comment, 0);
         }
