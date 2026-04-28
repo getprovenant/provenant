@@ -443,6 +443,7 @@ pub fn is_junk_copyright(s: &str) -> bool {
     COPYRIGHTS_JUNK_PATTERNS.iter().any(|re| re.is_match(s))
         || is_junk_copyright_scan_phrase(s)
         || is_junk_copyright_code_fragment(s)
+        || is_junk_copyright_symbol_garbage(s)
         || is_junk_c_sign_path_fragment(s)
 }
 
@@ -476,6 +477,9 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower.contains("bool")
         || lower.contains("final ")
         || lower.contains("this.")
+        || lower.contains("absl::")
+        || lower.contains("strcat(")
+        || lower.contains(" main.cc")
         || lower.contains("regexp")
         || lower.contains("match ")
         || lower.contains("replaceallmapped")
@@ -483,7 +487,15 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower.contains("startswith(")
         || lower.contains("formatoutput")
         || lower.contains("$template")
-        || trimmed.contains("??");
+        || lower.contains("icondata")
+        || lower.contains("static const")
+        || lower.contains("classifiers")
+        || lower.contains("authors.append")
+        || lower == "copyright void"
+        || trimmed.contains("??")
+        || contains_regex_or_template_marker(trimmed)
+        || contains_generated_resource_token(trimmed)
+        || contains_malformed_spaced_year(trimmed);
     let has_prose_markers = is_obvious_prose_fragment(trimmed);
 
     if !lower.starts_with("copyright") {
@@ -514,7 +526,13 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || lower.contains("replaceallmapped")
         || lower.contains(".startswith")
         || lower.contains("startswith(")
-        || lower.contains("$template");
+        || lower.contains("$template")
+        || lower.contains("::")
+        || lower.contains("static const")
+        || lower.contains("icondata")
+        || lower.contains("authors.append")
+        || contains_regex_or_template_marker(trimmed)
+        || contains_generated_resource_token(trimmed);
     let has_prose_markers = is_obvious_prose_fragment(trimmed);
 
     (has_code_markers || has_prose_markers) && !has_copyright_year(trimmed)
@@ -547,6 +565,67 @@ fn is_junk_holder_symbol_garbage(s: &str) -> bool {
             && ascii_alpha_count <= 2
             && symbol_count >= 4
             && token_count <= 4)
+}
+
+fn is_junk_copyright_symbol_garbage(s: &str) -> bool {
+    let trimmed = s.trim();
+    if trimmed.len() < 8 || has_copyright_year(trimmed) {
+        return false;
+    }
+
+    let tail = trimmed
+        .strip_prefix("Copyright")
+        .unwrap_or(trimmed)
+        .trim()
+        .strip_prefix("(c)")
+        .unwrap_or(trimmed)
+        .trim();
+
+    let ascii_alpha_count = tail.chars().filter(|ch| ch.is_ascii_alphabetic()).count();
+    let non_ascii_count = tail.chars().filter(|ch| !ch.is_ascii()).count();
+    let symbol_count = tail
+        .chars()
+        .filter(|ch| !ch.is_alphanumeric() && !ch.is_whitespace())
+        .count();
+
+    (contains_malformed_spaced_year(trimmed) && !tail.contains('@'))
+        || (tail.len() >= 10 && non_ascii_count >= 4 && ascii_alpha_count <= 2 && symbol_count >= 2)
+}
+
+fn contains_regex_or_template_marker(s: &str) -> bool {
+    let trimmed = s.trim();
+    trimmed.contains("(?")
+        || trimmed.contains("?:")
+        || trimmed.contains(r"\d")
+        || trimmed.contains(r"\s")
+        || trimmed.contains(r"\w")
+        || trimmed.contains("{{")
+        || trimmed.contains("}}")
+        || trimmed.contains("${")
+        || trimmed.contains("^ ")
+        || trimmed.contains(" d+")
+        || trimmed.contains(" ?")
+}
+
+fn contains_generated_resource_token(s: &str) -> bool {
+    static ASSET_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)(?:@(?:1x|2x|3x|4x))?\.(?:png|jpg|jpeg|gif|webp|bmp|ico|icns|svg|ttf|otf|woff2?|img|tmpl|json|xml|yaml|yml|g\.dart)\b")
+            .unwrap()
+    });
+
+    let trimmed = s.trim();
+    if trimmed.contains(' ') && !trimmed.contains("FileDescription") {
+        return false;
+    }
+
+    ASSET_RE.is_match(trimmed)
+}
+
+fn contains_malformed_spaced_year(s: &str) -> bool {
+    static SPACED_YEAR_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"\b(?:19|20)\s+\d{2}\b|\b\d{3}\s+\d{1,2}\b").unwrap());
+
+    SPACED_YEAR_RE.is_match(s)
 }
 
 fn is_obvious_prose_fragment(s: &str) -> bool {
