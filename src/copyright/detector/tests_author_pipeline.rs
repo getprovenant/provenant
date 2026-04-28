@@ -146,6 +146,29 @@ fn test_nested_json_author_string_machine_token_dropped_with_metadata_context() 
 }
 
 #[test]
+fn test_author_metadata_label_placeholder_not_detected() {
+    let input = "author: Package Author\nhomepage: Homepage\nrepository: Repository";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_author_media_title_metadata_does_not_merge_into_author() {
+    let input = "Author: Chinmay Garde\nTitle: Bay Bridge At Night\nDescription: Embarcadero in the evening on Delta 3200";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        authors
+            .iter()
+            .map(|a| a.author.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Chinmay Garde"],
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_author_span_prose_continuation_not_detected() {
     let input = "contributors, for example.\nIf you want to help, start with docs.";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
@@ -232,6 +255,14 @@ fn test_author_written_by_notice_tail_not_detected() {
         vec!["Alexander Peslyak"],
         "authors: {authors:?}"
     );
+}
+
+#[test]
+fn test_author_homepage_label_not_detected() {
+    let input = "homepage Homepage repository Repository";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
 }
 
 #[test]
@@ -691,6 +722,22 @@ fn test_maintainer_comment_extracts_author_without_label() {
     );
     assert!(
         !values.iter().any(|value| value.contains("Maintainer")),
+        "authors: {values:?}"
+    );
+}
+
+#[test]
+fn test_author_comment_extracts_obfuscated_angle_contact_author() {
+    let input = "* Author: Deepak M <m.deepak at intel.com>\n";
+
+    let (_c, _h, authors) = detect_copyrights_from_text(input);
+    let values: Vec<&str> = authors
+        .iter()
+        .map(|author| author.author.as_str())
+        .collect();
+
+    assert!(
+        values.contains(&"Deepak M m.deepak at intel.com"),
         "authors: {values:?}"
     );
 }

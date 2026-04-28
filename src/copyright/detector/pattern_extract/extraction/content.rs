@@ -259,6 +259,69 @@ pub fn extract_markup_copyright_attributes(
     (copyrights, holders)
 }
 
+pub fn extract_markup_text_attributes_with_copyright(
+    content: &str,
+    line_number_index: &LineNumberIndex,
+    existing_holders: &[HolderDetection],
+) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
+    static TEXT_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?is)\btext\s*=\s*(?:\"(?P<dq>[^\"]*(?:©|\(c\)|opyright)[^\"]*)\"|'(?P<sq>[^']*(?:©|\(c\)|opyright)[^']*)')"#,
+        )
+        .unwrap()
+    });
+
+    let mut copyrights = Vec::new();
+    let mut holders = Vec::new();
+    let mut seen_h: HashSet<(String, usize)> = existing_holders
+        .iter()
+        .map(|h| (h.holder.clone(), h.start_line.get()))
+        .collect();
+
+    for caps in TEXT_ATTR_RE.captures_iter(content) {
+        let Some(m) = caps.get(0) else {
+            continue;
+        };
+        let value = caps
+            .name("dq")
+            .or_else(|| caps.name("sq"))
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        if value.is_empty() {
+            continue;
+        }
+
+        let normalized = normalize_markup_attribute_value(value);
+        if normalized.is_empty() {
+            continue;
+        }
+
+        let Some(refined) = refine_copyright(&normalized) else {
+            continue;
+        };
+        let ln = line_number_index.line_number_at_offset(m.start());
+        copyrights.push(CopyrightDetection {
+            copyright: refined.clone(),
+            start_line: ln,
+            end_line: ln,
+        });
+
+        if let Some(holder) =
+            postprocess_transforms::derive_holder_from_simple_copyright_string(&refined)
+            && seen_h.insert((holder.clone(), ln.get()))
+        {
+            holders.push(HolderDetection {
+                holder,
+                start_line: ln,
+                end_line: ln,
+            });
+        }
+    }
+
+    (copyrights, holders)
+}
+
 pub fn extract_changelog_timestamp_copyrights_from_content(
     content: &str,
     existing_holders: &[HolderDetection],

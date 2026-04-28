@@ -357,10 +357,17 @@ pub fn detect_copyrights_from_text_with_deadline(
         extend_dash_obfuscated_email_suffixes(&raw_lines, group, &mut copyrights[..], &holders[..]);
     }
     restore_linux_foundation_copyrights_from_raw_lines(&raw_lines, &mut copyrights);
+    copyrights.retain(|c| {
+        let trimmed = c.copyright.trim();
+        !trimmed.eq_ignore_ascii_case("copyright holders")
+            && !trimmed.eq_ignore_ascii_case("the above copyright holders")
+    });
 
     holders.extend(add_missing_holders_for_bare_c_name_year_suffixes(
         &copyrights,
     ));
+    holders
+        .extend(postprocess_transforms::add_missing_holders_for_iso_date_copyrights(&copyrights));
 
     dedupe_exact_span_holders(&mut holders);
 

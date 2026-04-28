@@ -77,6 +77,19 @@ fn test_extract_authors_from_dense_name_email_list() {
 }
 
 #[test]
+fn test_extract_comment_author_label_authors_keeps_obfuscated_angle_contact() {
+    let raw_lines = vec!["* Author: Deepak M <m.deepak at intel.com>"];
+    let authors = extract_comment_author_label_authors(&raw_lines);
+
+    assert!(
+        authors
+            .iter()
+            .any(|author| author.author == "Deepak M <m.deepak at intel.com>"),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_extract_collective_author_with_contributors_before_email() {
     let input = "authors = [\"Tokio Contributors <team@tokio.rs>\"]\n";
     let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);

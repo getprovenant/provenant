@@ -54,9 +54,12 @@ static YEAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"[\(\.,\-\)\s]+(19[6-9][0-9]|20[0-9]{2})([\(\.,\-\)\s]+|$)").unwrap()
 });
 
+static UNKNOWN_YEAR_PLACEHOLDER_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)copyright\s*\(c\)\s*\?\?\?\?").unwrap());
+
 /// Check if a line contains a copyright-relevant year (1960–2099).
 pub fn has_year(line: &str) -> bool {
-    YEAR_REGEX.is_match(line)
+    YEAR_REGEX.is_match(line) || UNKNOWN_YEAR_PLACEHOLDER_REGEX.is_match(line)
 }
 
 /// Check if a line contains any copyright hint marker (case-insensitive).
@@ -272,6 +275,13 @@ mod tests {
     #[test]
     fn test_year_at_end_of_line() {
         assert!(has_year("Copyright 2024"));
+    }
+
+    #[test]
+    fn test_unknown_year_placeholder_in_copyright_matches() {
+        assert!(has_year(
+            "Copyright (C) ???? Simon Mourier <simonm@microsoft.com>"
+        ));
     }
 
     // ── is_candidate ────────────────────────────────────────────────

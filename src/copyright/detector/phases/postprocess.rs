@@ -282,6 +282,10 @@ fn run_author_extraction_and_repairs(
     let mut new_a = super::author_heuristics::extract_name_contributed_authors(prepared_cache);
     seen.dedup_new_authors(&mut new_a, 0);
     authors.extend(new_a);
+
+    let mut new_a = super::author_heuristics::extract_comment_author_label_authors(raw_lines);
+    seen.dedup_new_authors(&mut new_a, 0);
+    authors.extend(new_a);
 }
 
 #[allow(clippy::too_many_arguments)]

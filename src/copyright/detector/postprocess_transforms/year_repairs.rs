@@ -40,6 +40,36 @@ pub fn add_missing_holders_for_bare_c_name_year_suffixes(
         .collect()
 }
 
+pub fn add_missing_holders_for_iso_date_copyrights(
+    copyrights: &[CopyrightDetection],
+) -> Vec<HolderDetection> {
+    static ISO_DATE_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^copyright\s*\(c\)\s*(?:19|20)\d{2}-\d{2}-\d{2}\s+(?P<holder>.+)$")
+            .expect("valid iso-date copyright holder regex")
+    });
+
+    copyrights
+        .iter()
+        .filter_map(|cr| {
+            let cap = ISO_DATE_COPY_RE.captures(cr.copyright.trim())?;
+            let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
+            if holder_raw.is_empty() {
+                return None;
+            }
+            let holder = refine_holder_in_copyright_context(holder_raw)
+                .or_else(|| refine_holder(holder_raw))
+                .or_else(|| {
+                    Some(crate::copyright::detector::token_utils::normalize_whitespace(holder_raw))
+                })?;
+            Some(HolderDetection {
+                holder,
+                start_line: cr.start_line,
+                end_line: cr.end_line,
+            })
+        })
+        .collect()
+}
+
 pub fn drop_shadowed_year_only_copyright_prefixes_same_start_line(
     copyrights: &mut Vec<CopyrightDetection>,
 ) {
@@ -781,6 +811,10 @@ pub fn add_missing_holders_derived_from_split_copyrights(
 }
 
 pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
+    static ISO_DATE_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^copyright\s*\(c\)\s*(?:19|20)\d{2}-\d{2}-\d{2}\s+(?P<holder>.+)$")
+            .expect("valid iso-date copyright holder regex")
+    });
     static BARE_HOLDER_C_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)^(?P<holder>[^\n]+?)\s*,?\s*\(c\)\s*(?:19|20)\d{2}\b")
             .expect("valid bare holder (c) year regex")
@@ -790,6 +824,21 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
         LazyLock::new(|| Regex::new(r"(?i)^(?P<head>.+?)\s*,\s*\(c\)\s*(?:19|20)\d{2}\b").unwrap());
 
     let trimmed = s.trim();
+    if trimmed.to_ascii_lowercase().starts_with("copyright")
+        && crate::copyright::refiner::is_junk_copyright(trimmed)
+    {
+        return None;
+    }
+    if let Some(cap) = ISO_DATE_COPY_RE.captures(trimmed)
+        && let Some(holder_raw) = cap.name("holder").map(|m| m.as_str().trim())
+        && !holder_raw.is_empty()
+    {
+        return refine_holder_in_copyright_context(holder_raw)
+            .or_else(|| refine_holder(holder_raw))
+            .or_else(|| {
+                Some(crate::copyright::detector::token_utils::normalize_whitespace(holder_raw))
+            });
+    }
     let lower = trimmed.to_ascii_lowercase();
     if !lower.starts_with("copyright") {
         let t = trimmed.trim_start();
@@ -809,7 +858,7 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
             if tail.is_empty() {
                 return None;
             }
-            return refine_holder_in_copyright_context(tail);
+            return refine_holder_in_copyright_context(tail).or_else(|| refine_holder(tail));
         }
 
         let cap = BARE_HOLDER_C_YEAR_RE.captures(trimmed)?;
@@ -817,7 +866,8 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
         if holder_raw.is_empty() {
             return None;
         }
-        return refine_holder_in_copyright_context(holder_raw);
+        return refine_holder_in_copyright_context(holder_raw)
+            .or_else(|| refine_holder(holder_raw));
     }
     let next = trimmed.chars().nth("copyright".len());
     if !matches!(next, Some(' ') | Some('\t') | Some('(') | None) {
@@ -856,5 +906,5 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
         return None;
     }
 
-    refine_holder_in_copyright_context(holder_raw)
+    refine_holder_in_copyright_context(holder_raw).or_else(|| refine_holder(holder_raw))
 }

@@ -135,6 +135,11 @@ static AUTHORS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         "attributions",
         "the",
         "app id",
+        "homepage",
+        "repository",
+        "documentation",
+        "package author",
+        "package authors",
         "project",
         "previous lucene",
         "group",
@@ -467,10 +472,6 @@ fn is_junk_c_sign_path_fragment(s: &str) -> bool {
 fn is_junk_copyright_code_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
-    if !lower.starts_with("copyright") {
-        return false;
-    }
-
     let has_code_markers = lower.contains("string?")
         || lower.contains("bool")
         || lower.contains("final ")
@@ -478,16 +479,58 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower.contains("regexp")
         || lower.contains("match ")
         || lower.contains("replaceallmapped")
+        || lower.contains(".startswith")
+        || lower.contains("startswith(")
         || lower.contains("formatoutput")
         || lower.contains("$template")
         || trimmed.contains("??");
+
+    if !lower.starts_with("copyright") {
+        return (lower.starts_with("not copyrighted") && !has_copyright_year(trimmed))
+            || (lower.contains("copyright") && has_code_markers);
+    }
 
     has_code_markers && !has_copyright_year(trimmed)
 }
 
 /// Return true if `s` matches any known junk holder pattern.
 pub(crate) fn is_junk_holder(s: &str) -> bool {
-    HOLDERS_JUNK_PATTERNS.iter().any(|re| re.is_match(s)) || s.eq_ignore_ascii_case("MIT")
+    HOLDERS_JUNK_PATTERNS.iter().any(|re| re.is_match(s))
+        || is_junk_holder_code_fragment(s)
+        || is_junk_holder_symbol_garbage(s)
+        || s.eq_ignore_ascii_case("MIT")
+}
+
+fn is_junk_holder_code_fragment(s: &str) -> bool {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    let has_code_markers = lower.contains("string?")
+        || lower.contains("bool")
+        || lower.contains("final ")
+        || lower.contains("this.")
+        || lower.contains("regexp")
+        || lower.contains("match ")
+        || lower.contains("replaceallmapped")
+        || lower.contains(".startswith")
+        || lower.contains("startswith(")
+        || lower.contains("$template");
+
+    has_code_markers && !has_copyright_year(trimmed)
+}
+
+fn is_junk_holder_symbol_garbage(s: &str) -> bool {
+    let trimmed = s.trim();
+    if trimmed.len() < 12 {
+        return false;
+    }
+
+    let alpha_count = trimmed.chars().filter(|ch| ch.is_alphabetic()).count();
+    let symbol_count = trimmed
+        .chars()
+        .filter(|ch| !ch.is_alphanumeric() && !ch.is_whitespace())
+        .count();
+
+    alpha_count <= 2 && symbol_count >= 6
 }
 
 pub(crate) fn is_path_like_code_fragment(s: &str) -> bool {
@@ -525,6 +568,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_leading_author_label_in_copyright(&c);
     c = strip_leading_licensed_material_of(&c);
     c = strip_leading_version_number_before_c(&c);
+    c = strip_trailing_parenthesized_descriptor_after_by_holder(&c);
     c = strip_contributor_parens_after_org(&c);
     c = strip_trailing_paren_email_after_c_by(&c);
     c = strip_trailing_for_clause_after_email(&c);
@@ -541,6 +585,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_et_al(&c);
     c = strip_trailing_authors_clause(&c);
     c = strip_trailing_document_authors_clause(&c);
+    c = strip_trailing_parenthesized_descriptor_after_by_holder(&c);
     c = strip_trailing_amp_authors(&c);
     c = strip_trailing_x509_dn_fields(&c);
     c = strip_some_punct(&c);
@@ -561,7 +606,6 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_linux_ag_location_in_copyright(&c);
     c = strip_trailing_by_person_clause_after_company(&c);
     c = strip_trailing_division_of_company_suffix(&c);
-    c = strip_trailing_linux_foundation_suffix(&c);
     c = strip_trailing_paren_at_without_domain(&c);
     c = strip_trailing_inc_after_today_year_placeholder(&c);
     c = truncate_trailing_boilerplate(&c);
@@ -587,6 +631,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = c.trim_matches('\'').to_string();
     c = wrap_trailing_and_urls_in_parens(&c);
     c = strip_trailing_url_slash(&c);
+    c = strip_trailing_or_suffix(&c);
     c = truncate_long_words(&c);
     c = strip_trailing_single_digit_token(&c);
     c = strip_trailing_period(&c);
@@ -648,10 +693,30 @@ fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
         return s.to_string();
     };
 
-    cap.name("prefix")
+    let prefix = cap
+        .name("prefix")
         .map(|m| m.as_str().trim_end_matches(&[' ', '-', '–', '—'][..]))
         .unwrap_or(trimmed)
-        .to_string()
+        .trim();
+    let user = cap.name("user").map(|m| m.as_str()).unwrap_or("").trim();
+    let host = cap.name("host").map(|m| m.as_str()).unwrap_or("").trim();
+    let tld = cap.name("tld").map(|m| m.as_str()).unwrap_or("").trim();
+
+    let prefix_lower = prefix.to_ascii_lowercase();
+    let holderish_word_count = prefix
+        .split_whitespace()
+        .filter(|word| word.chars().any(|ch| ch.is_alphabetic()))
+        .count();
+    if prefix_lower.starts_with("copyright")
+        && !user.is_empty()
+        && !host.is_empty()
+        && !tld.is_empty()
+        && holderish_word_count >= 3
+    {
+        return format!("{prefix} - {user} at {host} dot {tld}");
+    }
+
+    prefix.to_string()
 }
 
 fn strip_trailing_secondary_angle_email_after_comma(s: &str) -> String {
@@ -741,23 +806,6 @@ fn strip_obfuscated_angle_emails(s: &str) -> String {
     }
     let out = OBF_ANGLE_RE.replace_all(trimmed, " ").into_owned();
     normalize_whitespace(&out)
-}
-
-fn strip_trailing_linux_foundation_suffix(s: &str) -> String {
-    static LINUX_FOUNDATION_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(
-            r"(?i)^(?P<prefix>Copyright\s*\(c\)\s*\d{4}(?:\s*,\s*\d{4})*)\s+Linux\s+Foundation\s*$",
-        )
-        .unwrap()
-    });
-    let trimmed = s.trim();
-    if let Some(cap) = LINUX_FOUNDATION_RE.captures(trimmed) {
-        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
-        if !prefix.is_empty() {
-            return prefix.to_string();
-        }
-    }
-    s.to_string()
 }
 
 fn strip_trailing_linux_ag_location_in_copyright(s: &str) -> String {
@@ -1118,6 +1166,45 @@ fn strip_trailing_et_al(s: &str) -> String {
     };
     let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("");
     prefix.trim().trim_end_matches(',').trim().to_string()
+}
+
+fn strip_trailing_parenthesized_descriptor_after_by_holder(s: &str) -> String {
+    static DESCRIPTOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^(?P<prefix>Copyright\s*\(c\)\s*(?:19\d{2}|20\d{2})(?:\s*[-–]\s*(?:19\d{2}|20\d{2}|\d{2}))?\s+by\s+.+?)\s*\(\s*(?P<paren>[A-Za-z][A-Za-z\s-]{2,64})\s*\)\s*$",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = DESCRIPTOR_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    let desc = cap.name("paren").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || desc.is_empty() {
+        return s.to_string();
+    }
+
+    let desc_lower = desc.to_ascii_lowercase();
+    if !(desc_lower.contains("noise") || desc_lower.ends_with("and others")) {
+        return s.to_string();
+    }
+
+    prefix.to_string()
+}
+
+fn strip_trailing_or_suffix(s: &str) -> String {
+    static TRAILING_OR_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>copyright\b.+?)\s+or\s*$").unwrap());
+
+    let trimmed = s.trim();
+    let Some(cap) = TRAILING_OR_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    cap.name("prefix")
+        .map(|m| m.as_str().trim_end().to_string())
+        .unwrap_or_else(|| s.to_string())
 }
 
 fn strip_trailing_x509_dn_fields(s: &str) -> String {
@@ -1492,7 +1579,10 @@ fn is_junk_copyrighted_works_header(s: &str) -> bool {
 }
 
 fn is_junk_copyrighted_software_phrase(s: &str) -> bool {
-    s.trim().eq_ignore_ascii_case("copyrighted software")
+    let trimmed = s.trim();
+    trimmed.eq_ignore_ascii_case("copyrighted software")
+        || trimmed.eq_ignore_ascii_case("copyright holders")
+        || trimmed.eq_ignore_ascii_case("the above copyright holders")
 }
 
 fn strip_trailing_company_name_placeholder(s: &str) -> String {

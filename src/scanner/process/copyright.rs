@@ -225,7 +225,7 @@ fn extract_patch_header_author_supplements(text_content: &str) -> Vec<AuthorDete
 fn extract_comment_author_supplements(text_content: &str) -> Vec<AuthorDetection> {
     static COMMENT_AUTHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"(?i)\b(?:written|edited|modified|updated|originally)\s+by\s+(?P<author>[^<\n]+<\s*(?:[^>\s]+@[^>\s]+|https?://[^>\s]+)\s*>)\s*\.?$|^(?:[#;/*!\-\s]+)?(?:[^<\n]*?\bby\s+(?P<author2>[^<\n]+<\s*(?:[^>\s]+@[^>\s]+|https?://[^>\s]+)\s*>))\s*\.?$",
+            r"(?i)\b(?:written|edited|modified|updated|originally)\s+by\s+(?P<author>[^<\n]+<\s*(?:[^>\s]+@[^>\s]+|https?://[^>\s]+|[^>\n]*\bat\b[^>\n]*)\s*>)\s*\.?$|^(?:[#;/*!\-\s]+)?(?:[^<\n]*?\bby\s+(?P<author2>[^<\n]+<\s*(?:[^>\s]+@[^>\s]+|https?://[^>\s]+|[^>\n]*\bat\b[^>\n]*)\s*>))\s*\.?$|^(?:[#;/*!\-\s]+)?author:\s*(?P<author3>[^<\n]+<\s*(?:[^>\s]+@[^>\s]+|https?://[^>\s]+|[^>\n]*\bat\b[^>\n]*)\s*>)\s*\.?$",
         )
         .expect("valid comment author regex")
     });
@@ -257,6 +257,7 @@ fn extract_comment_author_supplements(text_content: &str) -> Vec<AuthorDetection
             && let Some(author) = captures
                 .name("author")
                 .or_else(|| captures.name("author2"))
+                .or_else(|| captures.name("author3"))
                 .map(|m| m.as_str().trim())
             && let Some(author) = refine_author(&normalize_comment_author_candidate(author))
         {
