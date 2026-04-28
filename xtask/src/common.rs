@@ -583,7 +583,7 @@ mod tests {
         let script = temp.path().join("fake-provenant");
         fs::write(
             &script,
-            "#!/bin/sh\nif [ \"$1\" = \"-V\" ]; then\n  printf 'provenant-cli 0.0.13\\n'\nelse\n  printf 'provenant-cli 0.0.13\\nLicense detection uses data from ScanCode Toolkit (CC-BY-4.0). See NOTICE or --show_attribution.\\n'\nfi",
+            "#!/bin/sh\nif [ \"$1\" = \"-V\" ]; then\n  printf 'provenant-cli 0.0.13\\n'\nelse\n  printf 'provenant-cli 0.0.13\\nLicense detection uses data from ScanCode Toolkit (CC-BY-4.0). See NOTICE or the show-attribution command.\\n'\nfi",
         )
         .unwrap();
         let mut perms = fs::metadata(&script).unwrap().permissions();
