@@ -175,7 +175,7 @@ Confirmed remaining gaps:
 | `--incremental`            | Enables unchanged-file reuse on repeated scans      | `Rust-specific` | Beyond-parity feature; kept as the sole repeated-run reuse mechanism.                                                                                                                                                                                                                 |
 | `--reindex`                | Forces rebuild of the license index cache           | `Rust-specific` | Beyond-parity feature; invalidates the rkyv license index cache and rebuilds from the source rules on next run.                                                                                                                                                                       |
 | `--no-license-index-cache` | Disables persistent license index cache I/O         | `Rust-specific` | Keeps license detection behavior the same while forcing the index to be built in memory for the current run only.                                                                                                                                                                     |
-| `--show-attribution`       | Prints embedded-data attribution notices            | `Rust-specific` | Provenant-only convenience for bundled license-detection data notices.                                                                                                                                                                                                                |
+| `show-attribution`         | Prints embedded-data attribution notices            | `Rust-specific` | Provenant-only convenience command for bundled license-detection data notices.                                                                                                                                                                                                        |
 
 ## Key Design Decisions
 
@@ -197,7 +197,7 @@ Confirmed remaining gaps:
 - Thread pool via rayon instead of multiprocessing
 - JSON output structure matches Python (`OUTPUT_FORMAT_VERSION`)
 - `--no-cache` is not a parity requirement (upstream removed it); if retained, it is Rust-specific
-- `--show-attribution` is a Rust-specific convenience flag for printing embedded-data notices
+- `show-attribution` is a Rust-specific convenience command for printing embedded-data notices
 
 ## References
 
