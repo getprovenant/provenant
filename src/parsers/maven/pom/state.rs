@@ -25,55 +25,14 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
 
-#[derive(Clone)]
-struct ElementPath {
-    current: Tag,
-    parent: Option<Tag>,
-    depth: usize,
-}
-
-impl ElementPath {
-    fn from_stack(stack: &[ElementFrame]) -> Option<Self> {
-        let current = stack.last()?.tag().clone();
-        let parent = stack
-            .len()
-            .checked_sub(2)
-            .map(|index| stack[index].tag().clone());
-
-        Some(Self {
-            current,
-            parent,
-            depth: stack.len(),
-        })
-    }
-
-    fn parent_is(&self, expected: KnownTag) -> bool {
-        self.parent
-            .as_ref()
-            .is_some_and(|parent| parent.is(expected))
-    }
-
-    fn is_project_field(&self) -> bool {
-        self.depth == 2
-    }
-
-    fn current_known(&self) -> Option<KnownTag> {
-        self.current.known()
-    }
-
-    fn current_bytes(&self) -> &[u8] {
-        self.current.as_bytes()
-    }
-}
-
-struct ElementFrame {
+struct ContextFrame {
     tag: Tag,
-    context: FrameContext,
+    state: ContextFrameState,
 }
 
-impl ElementFrame {
-    fn new(tag: Tag, context: FrameContext) -> Self {
-        Self { tag, context }
+impl ContextFrame {
+    fn new(tag: Tag, state: ContextFrameState) -> Self {
+        Self { tag, state }
     }
 
     fn tag(&self) -> &Tag {
@@ -83,30 +42,42 @@ impl ElementFrame {
 
 #[derive(Default)]
 struct ContextStack {
-    frames: Vec<ElementFrame>,
+    frames: Vec<ContextFrame>,
 }
 
 impl ContextStack {
-    fn current_path(&self) -> Option<ElementPath> {
-        ElementPath::from_stack(&self.frames)
+    fn text_position(&self) -> Option<(Tag, Option<Tag>, usize)> {
+        let current = self.frames.last()?.tag().clone();
+        let parent = self
+            .frames
+            .len()
+            .checked_sub(2)
+            .map(|index| self.frames[index].tag().clone());
+
+        Some((current, parent, self.frames.len()))
     }
 
-    fn current_context<T>(&self, selector: fn(&FrameContext) -> Option<T>) -> Option<T> {
+    fn current_context<T>(&self, selector: fn(&ContextFrameState) -> Option<T>) -> Option<T> {
         self.frames
             .iter()
             .rev()
-            .find_map(|frame| selector(&frame.context))
+            .find_map(|frame| selector(&frame.state))
     }
 
     fn apply_text(
         &mut self,
         acc: &mut PomAccumulator,
         source_path: &Path,
-        path: &ElementPath,
+        current_tag: &Tag,
+        parent_tag: Option<&Tag>,
+        depth: usize,
         text: &str,
     ) -> bool {
         for frame in self.frames.iter_mut().rev() {
-            if frame.context.apply_text(acc, source_path, path, text) {
+            if frame
+                .state
+                .apply_text(acc, source_path, current_tag, parent_tag, depth, text)
+            {
                 return true;
             }
         }
@@ -114,14 +85,14 @@ impl ContextStack {
         false
     }
 
-    fn push(&mut self, tag: Tag, context: FrameContext) {
-        self.frames.push(ElementFrame::new(tag, context));
+    fn push(&mut self, tag: Tag, state: ContextFrameState) {
+        self.frames.push(ContextFrame::new(tag, state));
     }
 
     fn finish_current_frame(&mut self, acc: &mut PomAccumulator) {
         if let Some(frame) = self.frames.last_mut() {
-            let context = std::mem::replace(&mut frame.context, FrameContext::Plain);
-            context.finish(acc);
+            let state = std::mem::replace(&mut frame.state, ContextFrameState::Plain);
+            state.finish(acc);
         }
     }
 
@@ -134,7 +105,7 @@ impl ContextStack {
     }
 }
 
-enum FrameContext {
+enum ContextFrameState {
     Plain,
     Section(ActiveSection),
     PartyList(PartyList),
@@ -151,7 +122,7 @@ enum FrameContext {
     Dependency(ActiveDependency),
 }
 
-impl FrameContext {
+impl ContextFrameState {
     fn for_start(stack: &ContextStack, acc: &mut PomAccumulator, element_name: &Tag) -> Self {
         Self::start_dependency_context(stack, element_name)
             .or_else(|| Self::start_party_context(stack, element_name))
@@ -165,7 +136,7 @@ impl FrameContext {
     fn start_dependency_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::Dependency)
-                if stack.current_context(FrameContext::dependency_context)
+                if stack.current_context(ContextFrameState::dependency_context)
                     == Some(DependencyContext::ManagementEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Management(
@@ -173,7 +144,7 @@ impl FrameContext {
                 )))
             }
             Tag::Known(KnownTag::Dependency)
-                if stack.current_context(FrameContext::dependency_context)
+                if stack.current_context(ContextFrameState::dependency_context)
                     == Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Package {
@@ -185,7 +156,7 @@ impl FrameContext {
                 DependencyContext::ManagementContainer,
             )),
             Tag::Known(KnownTag::Dependencies)
-                if stack.current_context(FrameContext::dependency_context)
+                if stack.current_context(ContextFrameState::dependency_context)
                     == Some(DependencyContext::ManagementContainer) =>
             {
                 Some(Self::DependencyContext(
@@ -204,13 +175,13 @@ impl FrameContext {
             Tag::Known(KnownTag::Developers) => Some(Self::PartyList(PartyList::Developers)),
             Tag::Known(KnownTag::Contributors) => Some(Self::PartyList(PartyList::Contributors)),
             Tag::Known(KnownTag::Developer)
-                if stack.current_context(FrameContext::party_list)
+                if stack.current_context(ContextFrameState::party_list)
                     == Some(PartyList::Developers) =>
             {
                 Some(Self::Party(Party::person("developer", None, None)))
             }
             Tag::Known(KnownTag::Contributor)
-                if stack.current_context(FrameContext::party_list)
+                if stack.current_context(ContextFrameState::party_list)
                     == Some(PartyList::Contributors) =>
             {
                 Some(Self::Party(Party::person("contributor", None, None)))
@@ -226,21 +197,21 @@ impl FrameContext {
             }
             Tag::Known(KnownTag::Repository)
                 if stack
-                    .current_context(FrameContext::distribution_section)
+                    .current_context(ContextFrameState::distribution_section)
                     .is_some() =>
             {
                 Some(Self::Distribution(DistributionSection::Repository))
             }
             Tag::Known(KnownTag::SnapshotRepository)
                 if stack
-                    .current_context(FrameContext::distribution_section)
+                    .current_context(ContextFrameState::distribution_section)
                     .is_some() =>
             {
                 Some(Self::Distribution(DistributionSection::SnapshotRepository))
             }
             Tag::Known(KnownTag::Site)
                 if stack
-                    .current_context(FrameContext::distribution_section)
+                    .current_context(ContextFrameState::distribution_section)
                     .is_some() =>
             {
                 Some(Self::Distribution(DistributionSection::Site))
@@ -258,9 +229,9 @@ impl FrameContext {
                 RepositoryCollection::PluginRepositories,
             )),
             Tag::Known(KnownTag::Repository)
-                if stack.current_context(FrameContext::repository_collection)
+                if stack.current_context(ContextFrameState::repository_collection)
                     == Some(RepositoryCollection::Repositories)
-                    && stack.current_context(FrameContext::dependency_context)
+                    && stack.current_context(ContextFrameState::dependency_context)
                         != Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Repository {
@@ -269,7 +240,7 @@ impl FrameContext {
                 })
             }
             Tag::Known(KnownTag::PluginRepository)
-                if stack.current_context(FrameContext::repository_collection)
+                if stack.current_context(ContextFrameState::repository_collection)
                     == Some(RepositoryCollection::PluginRepositories) =>
             {
                 Some(Self::Repository {
@@ -291,7 +262,7 @@ impl FrameContext {
             Tag::Known(KnownTag::Properties) => Some(Self::Section(ActiveSection::Properties)),
             Tag::Known(KnownTag::Relocation)
                 if stack
-                    .current_context(FrameContext::distribution_section)
+                    .current_context(ContextFrameState::distribution_section)
                     .is_some() =>
             {
                 acc.dependency_scratch.reset_relocation();
@@ -304,7 +275,10 @@ impl FrameContext {
     }
 
     fn start_item_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match (element_name, stack.current_context(FrameContext::section)) {
+        match (
+            element_name,
+            stack.current_context(ContextFrameState::section),
+        ) {
             (Tag::Known(KnownTag::License), _) => Some(Self::License(MavenLicenseEntry::default())),
             (Tag::Known(KnownTag::MailingList), Some(ActiveSection::MailingLists)) => {
                 Some(Self::MailingList(MailingListEntryBuilder::default()))
@@ -352,31 +326,35 @@ impl FrameContext {
         &mut self,
         acc: &mut PomAccumulator,
         source_path: &Path,
-        path: &ElementPath,
+        current_tag: &Tag,
+        parent_tag: Option<&Tag>,
+        depth: usize,
         text: &str,
     ) -> bool {
+        let current_known = current_tag.known();
+
         match self {
-            Self::Dependency(dependency) => dependency.apply_text(path, text),
+            Self::Dependency(dependency) => dependency.apply_text(current_known, parent_tag, text),
             Self::License(license) => {
-                license.apply_text(path.current_known(), text);
+                license.apply_text(current_known, text);
                 true
             }
             Self::Party(party) => {
-                party.apply_text(path.current_known(), text);
+                party.apply_text(current_known, text);
                 true
             }
             Self::Repository { builder, .. } => {
-                builder.apply_text(path.current_known(), text);
+                builder.apply_text(current_known, text);
                 true
             }
             Self::MailingList(mailing_list) => {
-                mailing_list.apply_text(path.current_known(), text);
+                mailing_list.apply_text(current_known, text);
                 true
             }
-            Self::Section(section) => section.apply_text(acc, source_path, path, text),
-            Self::Distribution(distribution) => {
-                distribution.apply_text(acc, path.current_known(), text)
+            Self::Section(section) => {
+                section.apply_text(acc, source_path, current_tag, parent_tag, depth, text)
             }
+            Self::Distribution(distribution) => distribution.apply_text(acc, current_known, text),
             _ => false,
         }
     }
@@ -1243,14 +1221,14 @@ enum ActiveDependency {
 }
 
 impl ActiveDependency {
-    fn apply_text(&mut self, path: &ElementPath, text: &str) -> bool {
-        if !path.parent_is(KnownTag::Dependency) {
+    fn apply_text(&mut self, current: Option<KnownTag>, parent: Option<&Tag>, text: &str) -> bool {
+        if !parent.is_some_and(|tag| tag.is(KnownTag::Dependency)) {
             return false;
         }
 
         match self {
             Self::Management(dependency) => {
-                match path.current_known() {
+                match current {
                     Some(KnownTag::GroupId) => dependency.group_id = Some(text.to_string()),
                     Some(KnownTag::ArtifactId) => dependency.artifact_id = Some(text.to_string()),
                     Some(KnownTag::Version) => dependency.version = Some(text.to_string()),
@@ -1263,7 +1241,7 @@ impl ActiveDependency {
                 true
             }
             Self::Package { package, data } => {
-                match path.current_known() {
+                match current {
                     Some(KnownTag::GroupId) => data.group_id = Some(text.to_string()),
                     Some(KnownTag::ArtifactId) => data.artifact_id = Some(text.to_string()),
                     Some(KnownTag::Version) => data.version = Some(text.to_string()),
@@ -1307,29 +1285,33 @@ impl ActiveSection {
         self,
         state: &mut PomAccumulator,
         source_path: &Path,
-        path: &ElementPath,
+        current_tag: &Tag,
+        parent_tag: Option<&Tag>,
+        depth: usize,
         text: &str,
     ) -> bool {
+        let current_known = current_tag.known();
+
         match self {
             Self::Relocation => {
                 state
                     .dependency_scratch
-                    .apply_relocation_text(path.current_known(), text);
+                    .apply_relocation_text(current_known, text);
                 true
             }
             Self::Parent => {
-                state.parent.apply_text(path.current_known(), text);
+                state.parent.apply_text(current_known, text);
                 true
             }
             Self::Modules => {
-                if path.current_known() == Some(KnownTag::Module) {
+                if current_known == Some(KnownTag::Module) {
                     state.collections.push_module(text.to_string());
                 }
                 true
             }
             Self::Properties => {
-                if path.parent_is(KnownTag::Properties) {
-                    if let Ok(property_name) = std::str::from_utf8(path.current_bytes()) {
+                if depth >= 2 && parent_tag.is_some_and(|tag| tag.is(KnownTag::Properties)) {
+                    if let Ok(property_name) = std::str::from_utf8(current_tag.as_bytes()) {
                         state
                             .properties
                             .insert(property_name.to_string(), truncate_field(text.to_string()));
@@ -1413,44 +1395,51 @@ impl PomAccumulator {
             properties: HashMap::new(),
         }
     }
-    fn apply_structural_text(&mut self, path: ElementPath, text: &str) {
-        if path.is_project_field() {
-            match path.current_known() {
+    fn apply_structural_text(
+        &mut self,
+        current_tag: &Tag,
+        parent_tag: Option<&Tag>,
+        depth: usize,
+        text: &str,
+    ) {
+        let current_known = current_tag.known();
+
+        if depth == 2 {
+            match current_known {
                 Some(KnownTag::GroupId) => self.package_data.namespace = Some(text.to_string()),
                 Some(KnownTag::ArtifactId) => self.package_data.name = Some(text.to_string()),
                 Some(KnownTag::Version) => self.package_data.version = Some(text.to_string()),
                 Some(KnownTag::Url) => self.package_data.homepage_url = Some(text.to_string()),
-                _ => self.project_details.apply_text(path.current_known(), text),
+                _ => self.project_details.apply_text(current_known, text),
             }
             return;
         }
 
-        if path.parent_is(KnownTag::Scm) {
-            self.project_metadata
-                .apply_scm_text(path.current_known(), text);
+        if parent_tag.is_some_and(|tag| tag.is(KnownTag::Scm)) {
+            self.project_metadata.apply_scm_text(current_known, text);
             return;
         }
 
-        if path.parent_is(KnownTag::Organization) {
+        if parent_tag.is_some_and(|tag| tag.is(KnownTag::Organization)) {
             self.project_metadata
-                .apply_organization_text(path.current_known(), text);
+                .apply_organization_text(current_known, text);
             return;
         }
 
-        if path.parent_is(KnownTag::IssueManagement) {
+        if parent_tag.is_some_and(|tag| tag.is(KnownTag::IssueManagement)) {
             self.project_metadata
-                .apply_issue_management_text(path.current_known(), text);
+                .apply_issue_management_text(current_known, text);
             return;
         }
 
-        if path.parent_is(KnownTag::CiManagement) {
+        if parent_tag.is_some_and(|tag| tag.is(KnownTag::CiManagement)) {
             self.project_metadata
-                .apply_ci_management_text(path.current_known(), text);
+                .apply_ci_management_text(current_known, text);
             return;
         }
 
-        if path.parent_is(KnownTag::DistributionManagement)
-            && path.current_known() == Some(KnownTag::DownloadUrl)
+        if parent_tag.is_some_and(|tag| tag.is(KnownTag::DistributionManagement))
+            && current_known == Some(KnownTag::DownloadUrl)
         {
             self.distribution.apply_download_url(text);
         }
@@ -1724,23 +1713,28 @@ impl PomParseState {
     }
 
     pub(super) fn handle_start(&mut self, element_name: Tag) {
-        let context = FrameContext::for_start(&self.context_stack, &mut self.acc, &element_name);
-        self.context_stack.push(element_name, context);
+        let state = ContextFrameState::for_start(&self.context_stack, &mut self.acc, &element_name);
+        self.context_stack.push(element_name, state);
     }
 
     pub(super) fn handle_text(&mut self, path: &Path, text: String) {
-        let Some(element_path) = self.context_stack.current_path() else {
+        let Some((current_tag, parent_tag, depth)) = self.context_stack.text_position() else {
             return;
         };
 
-        if self
-            .context_stack
-            .apply_text(&mut self.acc, path, &element_path, &text)
-        {
+        if self.context_stack.apply_text(
+            &mut self.acc,
+            path,
+            &current_tag,
+            parent_tag.as_ref(),
+            depth,
+            &text,
+        ) {
             return;
         }
 
-        self.acc.apply_structural_text(element_path, &text);
+        self.acc
+            .apply_structural_text(&current_tag, parent_tag.as_ref(), depth, &text);
     }
 
     pub(super) fn handle_comment(&mut self, comment: String) {
@@ -1755,7 +1749,7 @@ impl PomParseState {
             Tag::Known(KnownTag::Repository)
                 if self
                     .context_stack
-                    .current_context(FrameContext::dependency_context)
+                    .current_context(ContextFrameState::dependency_context)
                     == Some(DependencyContext::PackageEntries) => {}
             _ => self.context_stack.finish_current_frame(&mut self.acc),
         }
