@@ -5,8 +5,9 @@ mod dependencies;
 mod licenses;
 mod properties;
 mod state;
+mod tags;
 
-use self::{properties::sanitize_template_directives, state::PomParseState};
+use self::{properties::sanitize_template_directives, state::PomParseState, tags::Tag};
 use super::default_package_data;
 use crate::models::{DatasourceId, PackageData};
 use crate::parser_warn as warn;
@@ -45,7 +46,7 @@ pub(super) fn parse_pom_xml(path: &Path) -> Vec<PackageData> {
 
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) => {
-                let element_name = e.name().as_ref().to_vec();
+                let element_name = Tag::from_bytes(e.name().as_ref());
                 state.handle_start(element_name);
             }
             Ok(Event::Text(e)) => {
@@ -79,7 +80,7 @@ pub(super) fn parse_pom_xml(path: &Path) -> Vec<PackageData> {
                 };
                 state.handle_comment(comment);
             }
-            Ok(Event::End(e)) => state.handle_end(e.name().as_ref()),
+            Ok(Event::End(e)) => state.handle_end(Tag::from_bytes(e.name().as_ref())),
             Ok(Event::Eof) => break,
             Err(e) => {
                 warn!("Error parsing pom.xml at {:?}: {}", path, e);
