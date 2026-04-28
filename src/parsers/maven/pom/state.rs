@@ -152,20 +152,20 @@ enum FrameContext {
 }
 
 impl FrameContext {
-    fn for_start(state: &mut PomParseState, element_name: &Tag) -> Self {
-        Self::start_dependency_context(state, element_name)
-            .or_else(|| Self::start_party_context(state, element_name))
-            .or_else(|| Self::start_distribution_context(state, element_name))
-            .or_else(|| Self::start_repository_context(state, element_name))
-            .or_else(|| Self::start_section_context(state, element_name))
-            .or_else(|| Self::start_item_context(state, element_name))
+    fn for_start(stack: &ContextStack, acc: &mut PomAccumulator, element_name: &Tag) -> Self {
+        Self::start_dependency_context(stack, element_name)
+            .or_else(|| Self::start_party_context(stack, element_name))
+            .or_else(|| Self::start_distribution_context(stack, element_name))
+            .or_else(|| Self::start_repository_context(stack, element_name))
+            .or_else(|| Self::start_section_context(stack, acc, element_name))
+            .or_else(|| Self::start_item_context(stack, element_name))
             .unwrap_or(Self::Plain)
     }
 
-    fn start_dependency_context(state: &PomParseState, element_name: &Tag) -> Option<Self> {
+    fn start_dependency_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::Dependency)
-                if state.current_context(FrameContext::dependency_context)
+                if stack.current_context(FrameContext::dependency_context)
                     == Some(DependencyContext::ManagementEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Management(
@@ -173,7 +173,7 @@ impl FrameContext {
                 )))
             }
             Tag::Known(KnownTag::Dependency)
-                if state.current_context(FrameContext::dependency_context)
+                if stack.current_context(FrameContext::dependency_context)
                     == Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Package {
@@ -185,7 +185,7 @@ impl FrameContext {
                 DependencyContext::ManagementContainer,
             )),
             Tag::Known(KnownTag::Dependencies)
-                if state.current_context(FrameContext::dependency_context)
+                if stack.current_context(FrameContext::dependency_context)
                     == Some(DependencyContext::ManagementContainer) =>
             {
                 Some(Self::DependencyContext(
@@ -199,18 +199,18 @@ impl FrameContext {
         }
     }
 
-    fn start_party_context(state: &PomParseState, element_name: &Tag) -> Option<Self> {
+    fn start_party_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::Developers) => Some(Self::PartyList(PartyList::Developers)),
             Tag::Known(KnownTag::Contributors) => Some(Self::PartyList(PartyList::Contributors)),
             Tag::Known(KnownTag::Developer)
-                if state.current_context(FrameContext::party_list)
+                if stack.current_context(FrameContext::party_list)
                     == Some(PartyList::Developers) =>
             {
                 Some(Self::Party(Party::person("developer", None, None)))
             }
             Tag::Known(KnownTag::Contributor)
-                if state.current_context(FrameContext::party_list)
+                if stack.current_context(FrameContext::party_list)
                     == Some(PartyList::Contributors) =>
             {
                 Some(Self::Party(Party::person("contributor", None, None)))
@@ -219,27 +219,27 @@ impl FrameContext {
         }
     }
 
-    fn start_distribution_context(state: &PomParseState, element_name: &Tag) -> Option<Self> {
+    fn start_distribution_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::DistributionManagement) => {
                 Some(Self::Distribution(DistributionSection::Management))
             }
             Tag::Known(KnownTag::Repository)
-                if state
+                if stack
                     .current_context(FrameContext::distribution_section)
                     .is_some() =>
             {
                 Some(Self::Distribution(DistributionSection::Repository))
             }
             Tag::Known(KnownTag::SnapshotRepository)
-                if state
+                if stack
                     .current_context(FrameContext::distribution_section)
                     .is_some() =>
             {
                 Some(Self::Distribution(DistributionSection::SnapshotRepository))
             }
             Tag::Known(KnownTag::Site)
-                if state
+                if stack
                     .current_context(FrameContext::distribution_section)
                     .is_some() =>
             {
@@ -249,7 +249,7 @@ impl FrameContext {
         }
     }
 
-    fn start_repository_context(state: &PomParseState, element_name: &Tag) -> Option<Self> {
+    fn start_repository_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::Repositories) => Some(Self::RepositoryCollection(
                 RepositoryCollection::Repositories,
@@ -258,9 +258,9 @@ impl FrameContext {
                 RepositoryCollection::PluginRepositories,
             )),
             Tag::Known(KnownTag::Repository)
-                if state.current_context(FrameContext::repository_collection)
+                if stack.current_context(FrameContext::repository_collection)
                     == Some(RepositoryCollection::Repositories)
-                    && state.current_context(FrameContext::dependency_context)
+                    && stack.current_context(FrameContext::dependency_context)
                         != Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Repository {
@@ -269,7 +269,7 @@ impl FrameContext {
                 })
             }
             Tag::Known(KnownTag::PluginRepository)
-                if state.current_context(FrameContext::repository_collection)
+                if stack.current_context(FrameContext::repository_collection)
                     == Some(RepositoryCollection::PluginRepositories) =>
             {
                 Some(Self::Repository {
@@ -281,16 +281,20 @@ impl FrameContext {
         }
     }
 
-    fn start_section_context(state: &mut PomParseState, element_name: &Tag) -> Option<Self> {
+    fn start_section_context(
+        stack: &ContextStack,
+        acc: &mut PomAccumulator,
+        element_name: &Tag,
+    ) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::Parent) => Some(Self::Section(ActiveSection::Parent)),
             Tag::Known(KnownTag::Properties) => Some(Self::Section(ActiveSection::Properties)),
             Tag::Known(KnownTag::Relocation)
-                if state
+                if stack
                     .current_context(FrameContext::distribution_section)
                     .is_some() =>
             {
-                state.acc.dependency_scratch.reset_relocation();
+                acc.dependency_scratch.reset_relocation();
                 Some(Self::Section(ActiveSection::Relocation))
             }
             Tag::Known(KnownTag::Modules) => Some(Self::Section(ActiveSection::Modules)),
@@ -299,8 +303,8 @@ impl FrameContext {
         }
     }
 
-    fn start_item_context(state: &PomParseState, element_name: &Tag) -> Option<Self> {
-        match (element_name, state.current_context(FrameContext::section)) {
+    fn start_item_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
+        match (element_name, stack.current_context(FrameContext::section)) {
             (Tag::Known(KnownTag::License), _) => Some(Self::License(MavenLicenseEntry::default())),
             (Tag::Known(KnownTag::MailingList), Some(ActiveSection::MailingLists)) => {
                 Some(Self::MailingList(MailingListEntryBuilder::default()))
@@ -1720,7 +1724,7 @@ impl PomParseState {
     }
 
     pub(super) fn handle_start(&mut self, element_name: Tag) {
-        let context = FrameContext::for_start(self, &element_name);
+        let context = FrameContext::for_start(&self.context_stack, &mut self.acc, &element_name);
         self.context_stack.push(element_name, context);
     }
 
@@ -1739,10 +1743,6 @@ impl PomParseState {
         self.acc.apply_structural_text(element_path, &text);
     }
 
-    fn current_context<T>(&self, selector: fn(&FrameContext) -> Option<T>) -> Option<T> {
-        self.context_stack.current_context(selector)
-    }
-
     pub(super) fn handle_comment(&mut self, comment: String) {
         if self.context_stack.is_empty() && !comment.is_empty() && is_license_like_comment(&comment)
         {
@@ -1753,7 +1753,9 @@ impl PomParseState {
     pub(super) fn handle_end(&mut self, element_name: Tag) {
         match element_name {
             Tag::Known(KnownTag::Repository)
-                if self.current_context(FrameContext::dependency_context)
+                if self
+                    .context_stack
+                    .current_context(FrameContext::dependency_context)
                     == Some(DependencyContext::PackageEntries) => {}
             _ => self.context_stack.finish_current_frame(&mut self.acc),
         }
