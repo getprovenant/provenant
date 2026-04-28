@@ -136,10 +136,35 @@ See also:
 
 ## Practical migration advice
 
+### Compare one representative target first
+
+If you are trying to build confidence in Provenant during a migration, the most useful workflow is:
+
+1. run ScanCode on one representative codebase and save the JSON output
+2. run Provenant on that same codebase and save the JSON output
+3. run `provenant compare` on those two JSON files
+4. review the generated artifact bundle before switching broader workflows
+
+```sh
+provenant compare \
+  --scancode-json scancode.json \
+  --provenant-json provenant.json
+```
+
+By default, `compare` creates a timestamped artifact directory in the current working directory so
+you can inspect:
+
+- copied raw inputs under `raw/`
+- machine-readable summaries under `comparison/`
+- representative diff samples under `comparison/samples/`
+- `run-manifest.json` with the exact artifact locations
+
+Use `--artifact-dir DIR` if you want the bundle written to a specific location.
+
 If you are moving an existing ScanCode workflow to Provenant:
 
 1. start with the same broad scan shape you already use
-2. compare outputs on one representative codebase
+2. compare outputs on one representative codebase with `provenant compare`
 3. check this guide if you see a meaningful delta
 4. use the exported dataset workflow if you previously customized license/rule data in a ScanCode checkout
 5. if your old workflow used `--include` to approximate explicit path lists, consider switching that part to `--paths-file`

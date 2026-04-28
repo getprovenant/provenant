@@ -152,7 +152,7 @@ For the complete scan-flag surface, run:
 provenant scan --help
 ```
 
-To compare existing ScanCode and Provenant JSON outputs without rescanning, run:
+To review migration-confidence deltas between ScanCode and Provenant on the same saved scan target, run:
 
 ```sh
 provenant compare --help
