@@ -797,6 +797,56 @@ fn compare_subcommand_writes_artifacts_and_summary() {
 }
 
 #[test]
+fn compare_subcommand_defaults_to_timestamped_artifact_dir_in_cwd() {
+    let (_temp, scancode_json, provenant_json) = create_compare_json_fixtures();
+    let working_dir = TempDir::new().expect("working dir temp");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_provenant"))
+        .current_dir(working_dir.path())
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+        ])
+        .output()
+        .expect("failed to run compare subcommand with default artifact dir");
+
+    assert!(output.status.success(), "compare should succeed");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Artifact directory:"),
+        "stdout was: {stdout}"
+    );
+
+    let entries: Vec<_> = fs::read_dir(working_dir.path())
+        .expect("working dir should be readable")
+        .map(|entry| entry.expect("entry should be readable").path())
+        .collect();
+    assert_eq!(
+        entries.len(),
+        1,
+        "expected exactly one artifact dir: {entries:?}"
+    );
+
+    let artifact_dir = &entries[0];
+    assert!(artifact_dir.is_dir());
+    assert!(
+        artifact_dir
+            .file_name()
+            .and_then(|value| value.to_str())
+            .is_some_and(|name| name.starts_with("provenant-compare-"))
+    );
+    assert!(
+        artifact_dir
+            .join("comparison")
+            .join("summary.json")
+            .is_file()
+    );
+}
+
+#[test]
 fn export_license_dataset_writes_expected_dataset_structure() {
     let temp = TempDir::new().expect("temp dir");
     let export_dir = temp.path().join("dataset");

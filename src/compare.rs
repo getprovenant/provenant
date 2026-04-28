@@ -107,12 +107,13 @@ struct TopLevelSectionDifferenceEntry {
 pub(crate) fn compare_json_files(
     scancode_source: &Path,
     provenant_source: &Path,
-    artifact_dir: &Path,
+    artifact_dir: Option<&Path>,
 ) -> Result<CompareCommandResult> {
     validate_json_input(scancode_source, "--scancode-json")?;
     validate_json_input(provenant_source, "--provenant-json")?;
 
-    let layout = prepare_layout(artifact_dir)?;
+    let artifact_dir = resolve_artifact_dir(artifact_dir)?;
+    let layout = prepare_layout(&artifact_dir)?;
     materialize_file(scancode_source, &layout.scancode_json)?;
     materialize_file(provenant_source, &layout.provenant_json)?;
 
@@ -136,6 +137,16 @@ pub(crate) fn compare_json_files(
         samples_dir: layout.samples_dir.clone(),
         manifest_path: layout.manifest_path.clone(),
     })
+}
+
+fn resolve_artifact_dir(artifact_dir: Option<&Path>) -> Result<PathBuf> {
+    if let Some(artifact_dir) = artifact_dir {
+        return Ok(artifact_dir.to_path_buf());
+    }
+
+    let cwd = std::env::current_dir().context("failed to determine current working directory")?;
+    let timestamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+    Ok(cwd.join(format!("provenant-compare-{timestamp}")))
 }
 
 pub(crate) fn write_comparison_artifacts(
