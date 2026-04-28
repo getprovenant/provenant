@@ -519,6 +519,7 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
     let lower = trimmed.to_ascii_lowercase();
     let has_code_markers = lower.contains("string?")
         || lower.contains("bool")
+        || lower == "void"
         || lower.contains("final ")
         || lower.contains("this.")
         || lower.contains("regexp")
