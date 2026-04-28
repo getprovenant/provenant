@@ -1684,6 +1684,12 @@ fn test_refine_author_drops_path_like_fragment() {
 }
 
 #[test]
+fn test_refine_author_drops_file_reference_note() {
+    assert_eq!(refine_author("see LICENSE.txt"), None);
+    assert_eq!(refine_author("refer to docs/NOTICE.md"), None);
+}
+
+#[test]
 fn test_refine_author_drops_dollar_prefixed_code_tokens() {
     assert_eq!(refine_author("Agatha Christie, $sort"), None);
     assert_eq!(refine_author("$limit 10"), None);

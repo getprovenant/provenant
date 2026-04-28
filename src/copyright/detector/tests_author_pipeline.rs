@@ -534,6 +534,14 @@ fn test_tomcat_contributing_prose_not_author() {
 }
 
 #[test]
+fn test_license_file_reference_note_not_author() {
+    let input = "Licence: BSD 3-Clause + Condition for any enhancements shared publicly or with the author (see LICENSE.txt).";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
 fn test_update_center_metadata_blob_not_multiple_authors() {
     let input = "author: Box UK, url: http://updates.jenkins-ci.org/download/plugins/jslint/0.7.6/jslint.hpi, version: 0.7.6, wiki: https://wiki.jenkins-ci.org/display/JENKINS/JSLint+plugin, title: JSLint plugin, buildDate: Jan 03, 2013, developerId: gavd";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);

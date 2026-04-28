@@ -56,6 +56,10 @@ pub fn refine_author(s: &str) -> Option<String> {
         return None;
     }
 
+    if looks_like_file_reference_note_author(&a) {
+        return None;
+    }
+
     if !a.chars().any(|ch| ch.is_alphabetic()) {
         return None;
     }
@@ -219,6 +223,30 @@ fn contains_windows_versioninfo_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     trimmed.starts_with("VALUE ")
         && (trimmed.contains("FileDescription") || trimmed.contains("FileVersion"))
+}
+
+fn looks_like_file_reference_note_author(s: &str) -> bool {
+    static FILE_REFERENCE_NOTE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^
+            (?:see|see\ also|refer\ to|consult)
+            \s+
+            (?P<target>
+                [A-Za-z0-9_./-]+
+                \.[A-Za-z0-9]{1,16}
+            )
+            $
+            ",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    FILE_REFERENCE_NOTE_RE
+        .captures(trimmed)
+        .and_then(|caps| caps.name("target").map(|m| m.as_str()))
+        .is_some_and(|target| target.chars().any(|ch| ch.is_ascii_alphabetic()))
 }
 
 fn contains_no_copyright_clause(s: &str) -> bool {
