@@ -57,31 +57,54 @@ impl ContextStack {
         Some((current, parent, self.frames.len()))
     }
 
-    fn current_context<T>(&self, selector: fn(&ContextFrameState) -> Option<T>) -> Option<T> {
+    fn current_section(&self) -> Option<ActiveSection> {
         self.frames
             .iter()
             .rev()
-            .find_map(|frame| selector(&frame.state))
-    }
-
-    fn current_section(&self) -> Option<ActiveSection> {
-        self.current_context(ContextFrameState::section)
+            .find_map(|frame| match frame.state {
+                ContextFrameState::Section(section) => Some(section),
+                _ => None,
+            })
     }
 
     fn current_party_list(&self) -> Option<PartyList> {
-        self.current_context(ContextFrameState::party_list)
+        self.frames
+            .iter()
+            .rev()
+            .find_map(|frame| match frame.state {
+                ContextFrameState::PartyList(party_list) => Some(party_list),
+                _ => None,
+            })
     }
 
     fn current_repository_collection(&self) -> Option<RepositoryCollection> {
-        self.current_context(ContextFrameState::repository_collection)
+        self.frames
+            .iter()
+            .rev()
+            .find_map(|frame| match frame.state {
+                ContextFrameState::RepositoryCollection(collection) => Some(collection),
+                _ => None,
+            })
     }
 
     fn current_distribution_section(&self) -> Option<DistributionSection> {
-        self.current_context(ContextFrameState::distribution_section)
+        self.frames
+            .iter()
+            .rev()
+            .find_map(|frame| match frame.state {
+                ContextFrameState::Distribution(section) => Some(section),
+                _ => None,
+            })
     }
 
     fn current_dependency_context(&self) -> Option<DependencyContext> {
-        self.current_context(ContextFrameState::dependency_context)
+        self.frames
+            .iter()
+            .rev()
+            .find_map(|frame| match frame.state {
+                ContextFrameState::DependencyContext(context) => Some(context),
+                _ => None,
+            })
     }
 
     fn apply_text(
@@ -284,41 +307,6 @@ impl ContextFrameState {
             (Tag::Known(KnownTag::MailingList), Some(ActiveSection::MailingLists)) => {
                 Some(Self::MailingList(MailingListEntryBuilder::default()))
             }
-            _ => None,
-        }
-    }
-
-    fn section(&self) -> Option<ActiveSection> {
-        match self {
-            Self::Section(section) => Some(*section),
-            _ => None,
-        }
-    }
-
-    fn party_list(&self) -> Option<PartyList> {
-        match self {
-            Self::PartyList(party_list) => Some(*party_list),
-            _ => None,
-        }
-    }
-
-    fn repository_collection(&self) -> Option<RepositoryCollection> {
-        match self {
-            Self::RepositoryCollection(collection) => Some(*collection),
-            _ => None,
-        }
-    }
-
-    fn distribution_section(&self) -> Option<DistributionSection> {
-        match self {
-            Self::Distribution(section) => Some(*section),
-            _ => None,
-        }
-    }
-
-    fn dependency_context(&self) -> Option<DependencyContext> {
-        match self {
-            Self::DependencyContext(context) => Some(*context),
             _ => None,
         }
     }
