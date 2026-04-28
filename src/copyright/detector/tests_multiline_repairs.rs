@@ -277,3 +277,35 @@ fn test_drop_trademarked_materials_prose_false_positive_copyrights_and_holders()
         "holders: {holders:?}"
     );
 }
+
+#[test]
+fn test_drop_code_and_cc0_prose_false_positive_copyrights() {
+    let input = concat!(
+        "String generateCode(CodeSample sample, { File? output, String? copyright, String? description, bool includeAssumptions = false, }) {\n",
+        "  return '${addCopyright ? '{{copyright}}\\n\\n' : ''}$template'.replaceAllMapped(RegExp(r'{{([^}]+)}}'), (Match match) {\n",
+        "    final String name = match[1]!;\n",
+        "  });\n",
+        "}\n\n",
+        "the copyright and related or neighboring legal rights previously held by the Affirmer in the Work, to the greatest extent permitted by law.\n",
+    );
+    let (copyrights, _holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.contains("String? description, bool")),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.contains("replaceAllMapped") && !c.copyright.contains("RegExp")),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.contains("related or neighboring legal rights")),
+        "copyrights: {copyrights:?}"
+    );
+}

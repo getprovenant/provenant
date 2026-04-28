@@ -90,6 +90,14 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
         return true;
     }
 
+    if contains_windows_versioninfo_fragment(trimmed) {
+        return true;
+    }
+
+    if contains_no_copyright_clause(trimmed) {
+        return true;
+    }
+
     if looks_like_structured_key_with_hex_value(trimmed) {
         return true;
     }
@@ -135,6 +143,10 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
             return true;
         }
 
+        if words[0].eq_ignore_ascii_case("the") && looks_like_camel_case_identifier(words[1]) {
+            return true;
+        }
+
         if words[0].ends_with('.')
             && starts_with_lowercase_alpha(words[0])
             && starts_with_uppercase_alpha(words[1])
@@ -153,13 +165,47 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
     let starts_lowercase = words
         .first()
         .is_some_and(|word| starts_with_lowercase_alpha(word));
+    let lowercase_word_count = words
+        .iter()
+        .filter(|word| starts_with_lowercase_alpha(word))
+        .count();
     let capitalized_word_count = words
         .iter()
         .filter_map(|word| word.chars().find(|ch| ch.is_alphabetic()))
         .filter(|ch| ch.is_uppercase())
         .count();
 
+    if words.len() >= 4 && lowercase_word_count >= 2 && capitalized_word_count <= 2 {
+        return true;
+    }
+
     starts_lowercase || capitalized_word_count < 2
+}
+
+fn contains_windows_versioninfo_fragment(s: &str) -> bool {
+    let trimmed = s.trim();
+    trimmed.starts_with("VALUE ")
+        && (trimmed.contains("FileDescription") || trimmed.contains("FileVersion"))
+}
+
+fn contains_no_copyright_clause(s: &str) -> bool {
+    s.to_ascii_lowercase().contains("no copyright")
+}
+
+fn looks_like_camel_case_identifier(s: &str) -> bool {
+    let token = s.trim_matches(|ch: char| !ch.is_alphanumeric() && ch != '_');
+    if token.len() < 6 || token.contains('_') || token.contains('-') || token.contains('.') {
+        return false;
+    }
+
+    let starts_upper = token
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_uppercase());
+    let uppercase_count = token.chars().filter(|ch| ch.is_ascii_uppercase()).count();
+    let lowercase_count = token.chars().filter(|ch| ch.is_ascii_lowercase()).count();
+
+    starts_upper && uppercase_count >= 2 && lowercase_count >= 1
 }
 
 fn contains_html_like_fragment(s: &str) -> bool {

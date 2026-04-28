@@ -806,9 +806,13 @@ pub(super) static COPYRIGHTS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new
         r"(?i)^not\s+copyrighted\s*[-–]\s*provided\s+to\s+the\s+public\s+domain\b",
         r"(?i)^copyright\s+and\s+related\s+rights\b",
         r"(?i)^copyright\s+and\s+related\s+or\s+neighboring\s+rights$",
+        r"(?i)^copyright\s+and\s+related\s+or\s+neighboring\s+legal\s+rights\b.*$",
         r"(?i)^copyright\s+was\s+owned\s+solely\s+by\s+fsf$",
         r"(?i)^copyright\s+years\s+may\s+be\s+listed$",
         r"(?i)^\(c\)\s+final\s+[a-z_][a-zA-Z0-9_]*$",
+        r"(?i)^copyright\s+referencing\b.*$",
+        r"(?i)^copyright\s+and\s+comment\s+directing\b.*$",
+        r"(?i)^not\s+copyrighted\b.*$",
     ];
     patterns.iter().filter_map(|p| Regex::new(p).ok()).collect()
 });

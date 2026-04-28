@@ -98,7 +98,7 @@ fn test_extract_comment_author_supplements_handles_c_style_translator_headers() 
         values,
         vec![
             "Jorge Barreiro <yortx.barry@gmail.com>",
-            "Mathias Bynens https://mathiasbynens.be",
+            "Mathias Bynens (https://mathiasbynens.be)",
             "Cloudream (cloudream@gmail.com)",
             "S A Sureshkumar (saskumar@live.com)",
         ]
@@ -141,6 +141,65 @@ fn test_extract_copyright_information_ignores_pnpm_markdown_link_prose() {
         .base_name("README".to_string())
         .extension(".md".to_string())
         .path("README.md".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(file.authors.is_empty(), "authors: {:?}", file.authors);
+}
+
+#[test]
+fn test_extract_copyright_information_ignores_flutter_issue_hygiene_markdown_link_prose() {
+    let text = concat!(
+        "See also:\n\n",
+        " * [All open issues sorted by thumbs-up](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc)\n",
+        " * [Feature requests by thumbs-up](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc+label%3A%22c%3A+new+feature%22)\n",
+    );
+
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(
+        &mut builder,
+        Path::new("docs/contributing/issue_hygiene/README.md"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("README.md".to_string())
+        .base_name("README".to_string())
+        .extension(".md".to_string())
+        .path("docs/contributing/issue_hygiene/README.md".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(file.authors.is_empty(), "authors: {:?}", file.authors);
+}
+
+#[test]
+fn test_extract_copyright_information_ignores_flutter_api_sentence_fragment() {
+    let text = concat!(
+        "* If fixing it requires an API that is not yet available on stable, add the `p: waiting for stable update` label.\n",
+        "  * If it's easy to determine, include the version that the replacement API will be available in the issue description.\n",
+    );
+
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(
+        &mut builder,
+        Path::new("docs/infra/Packages-Gardener-Rotation.md"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("Packages-Gardener-Rotation.md".to_string())
+        .base_name("Packages-Gardener-Rotation".to_string())
+        .extension(".md".to_string())
+        .path("docs/infra/Packages-Gardener-Rotation.md".to_string())
         .file_type(FileType::File)
         .size(text.len() as u64)
         .build()

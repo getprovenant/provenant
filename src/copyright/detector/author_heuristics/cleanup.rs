@@ -560,20 +560,16 @@ pub(in super::super) fn refine_json_author_candidate(name: &str, window: &str) -
     let has_metadata_context = json_window_has_metadata_context(window);
     let is_simple_author_only_fragment = json_window_is_simple_author_only_fragment(window);
 
+    if looks_like_simple_machine_author_token(trimmed) {
+        return None;
+    }
+
     if !has_metadata_context
         && !is_simple_author_only_fragment
         && !looks_like_name_with_parenthesized_url(trimmed)
     {
         return None;
     }
-
-    if !has_metadata_context
-        && is_simple_author_only_fragment
-        && looks_like_simple_machine_author_token(trimmed)
-    {
-        return None;
-    }
-
     if let Some(author) = refine_author(name) {
         return Some(author);
     }
