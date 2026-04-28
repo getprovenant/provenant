@@ -237,7 +237,7 @@ impl FrameContext {
                     .current_context(FrameContext::distribution_section)
                     .is_some() =>
             {
-                state.acc.relocation = MavenDependencyData::default();
+                state.acc.dependency_scratch.reset_relocation();
                 Some(Self::Section(ActiveSection::Relocation))
             }
             Tag::Known(KnownTag::Modules) => Some(Self::Section(ActiveSection::Modules)),
@@ -331,12 +331,12 @@ impl FrameContext {
                     || dep_mgmt.artifact_id.is_some()
                     || dep_mgmt.version.is_some() =>
             {
-                acc.dependency_management_entries.push(dep_mgmt);
+                acc.dependency_scratch.push_management_entry(dep_mgmt);
             }
             Self::Dependency(ActiveDependency::Management(_)) => {}
             Self::Dependency(ActiveDependency::Package { package, data }) => {
                 acc.package_data.dependencies.push(package);
-                acc.dependency_data.push(data);
+                acc.dependency_scratch.push_package_entry(data);
             }
             Self::License(license)
                 if license.name.is_some()
@@ -929,6 +929,151 @@ impl ProjectDetails {
     }
 }
 
+#[derive(Default)]
+struct DependencyScratchData {
+    package_entries: Vec<MavenDependencyData>,
+    management_entries: Vec<MavenDependencyData>,
+    relocation: MavenDependencyData,
+}
+
+impl DependencyScratchData {
+    fn push_management_entry(&mut self, entry: MavenDependencyData) {
+        self.management_entries.push(entry);
+    }
+
+    fn push_package_entry(&mut self, entry: MavenDependencyData) {
+        self.package_entries.push(entry);
+    }
+
+    fn reset_relocation(&mut self) {
+        self.relocation = MavenDependencyData::default();
+    }
+
+    fn apply_relocation_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::GroupId) => self.relocation.group_id = Some(text.to_string()),
+            Some(KnownTag::ArtifactId) => self.relocation.artifact_id = Some(text.to_string()),
+            Some(KnownTag::Version) => self.relocation.version = Some(text.to_string()),
+            Some(KnownTag::Classifier) => self.relocation.classifier = Some(text.to_string()),
+            Some(KnownTag::Type) => self.relocation.type_ = Some(text.to_string()),
+            Some(KnownTag::Message) => self.relocation.message = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn has_relocation_data(&self) -> bool {
+        self.relocation.group_id.is_some()
+            || self.relocation.artifact_id.is_some()
+            || self.relocation.version.is_some()
+            || self.relocation.message.is_some()
+    }
+
+    fn has_extra_data(&self) -> bool {
+        !self.management_entries.is_empty() || self.has_relocation_data()
+    }
+
+    fn populate_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
+        if !self.management_entries.is_empty() {
+            extra_data.insert(
+                "dependency_management".to_string(),
+                serde_json::Value::Array(
+                    self.management_entries
+                        .iter()
+                        .map(|dependency| {
+                            serde_json::Value::Object(dependency_management_entry_to_value(
+                                dependency,
+                            ))
+                        })
+                        .collect(),
+                ),
+            );
+        }
+
+        if self.has_relocation_data() {
+            extra_data.insert(
+                "relocation".to_string(),
+                serde_json::Value::Object(dependency_management_entry_to_value(&self.relocation)),
+            );
+        }
+    }
+
+    fn resolve_fields(
+        &mut self,
+        resolver: &mut PropertyResolver,
+        package_dependencies: &mut [Dependency],
+    ) {
+        for dependency in &mut self.management_entries {
+            resolve_dependency_data(resolver, dependency);
+        }
+        resolve_dependency_data(resolver, &mut self.relocation);
+
+        for (dependency, coords) in package_dependencies
+            .iter_mut()
+            .zip(self.package_entries.iter_mut())
+        {
+            resolve_dependency_data(resolver, coords);
+            dependency.scope = coords.scope.clone();
+            dependency.extracted_requirement = coords.version.clone();
+            dependency.extra_data = dependency_extra_data(coords);
+            dependency.is_optional = Some(parse_maven_bool(coords.optional.as_deref()));
+
+            match dependency.scope.as_deref() {
+                Some("test") | Some("provided") => {
+                    dependency.is_runtime = Some(false);
+                    dependency.is_optional = Some(true);
+                }
+                Some(_) => dependency.is_runtime = Some(true),
+                None => dependency.is_runtime = None,
+            }
+
+            if let Some(version) = &coords.version {
+                dependency.is_pinned = Some(is_maven_version_pinned(version));
+            }
+
+            if let (Some(group_id), Some(artifact_id)) = (&coords.group_id, &coords.artifact_id) {
+                dependency.purl = Some(build_maven_purl(
+                    group_id,
+                    artifact_id,
+                    coords.version.as_deref(),
+                    coords.classifier.as_deref(),
+                    coords.type_.as_deref(),
+                ));
+            }
+        }
+    }
+
+    fn expand_entries(&self, package_dependencies: &mut Vec<Dependency>) {
+        for dependency in &self.management_entries {
+            if dependency.scope.as_deref() == Some("import")
+                && let Some(import_dependency) =
+                    maven_dependency_to_dependency(dependency, Some("import"), true)
+            {
+                package_dependencies.push(import_dependency);
+            }
+
+            let mut dependency_management_copy = dependency.clone();
+            dependency_management_copy.scope = Some("dependencymanagement".to_string());
+
+            if let Some(converted) = maven_dependency_to_dependency(
+                &dependency_management_copy,
+                Some("dependencymanagement"),
+                true,
+            ) {
+                package_dependencies.push(converted);
+            }
+        }
+
+        if (self.relocation.group_id.is_some()
+            || self.relocation.artifact_id.is_some()
+            || self.relocation.version.is_some())
+            && let Some(converted) =
+                maven_dependency_to_dependency(&self.relocation, Some("relocation"), true)
+        {
+            package_dependencies.push(converted);
+        }
+    }
+}
+
 fn serialize_non_empty_object<T: Serialize>(
     value: T,
 ) -> Option<serde_json::Map<String, serde_json::Value>> {
@@ -1060,19 +1205,9 @@ impl ActiveSection {
     ) -> bool {
         match self {
             Self::Relocation => {
-                match path.current_known() {
-                    Some(KnownTag::GroupId) => state.relocation.group_id = Some(text.to_string()),
-                    Some(KnownTag::ArtifactId) => {
-                        state.relocation.artifact_id = Some(text.to_string())
-                    }
-                    Some(KnownTag::Version) => state.relocation.version = Some(text.to_string()),
-                    Some(KnownTag::Classifier) => {
-                        state.relocation.classifier = Some(text.to_string())
-                    }
-                    Some(KnownTag::Type) => state.relocation.type_ = Some(text.to_string()),
-                    Some(KnownTag::Message) => state.relocation.message = Some(text.to_string()),
-                    _ => {}
-                }
+                state
+                    .dependency_scratch
+                    .apply_relocation_text(path.current_known(), text);
                 true
             }
             Self::Parent => {
@@ -1137,7 +1272,7 @@ impl Party {
 
 struct PomAccumulator {
     package_data: PackageData,
-    dependency_data: Vec<MavenDependencyData>,
+    dependency_scratch: DependencyScratchData,
     license_data: LicenseData,
     project_details: ProjectDetails,
     project_metadata: ProjectMetadata,
@@ -1146,10 +1281,8 @@ struct PomAccumulator {
     plugin_repositories: Vec<RepositoryEntry>,
     modules: Vec<String>,
     mailing_lists: Vec<MailingListEntry>,
-    dependency_management_entries: Vec<MavenDependencyData>,
     parent: ParentEntry,
     properties: HashMap<String, String>,
-    relocation: MavenDependencyData,
 }
 
 pub(super) struct PomParseState {
@@ -1166,7 +1299,7 @@ impl PomAccumulator {
 
         Self {
             package_data,
-            dependency_data: Vec::new(),
+            dependency_scratch: DependencyScratchData::default(),
             license_data: LicenseData::default(),
             project_details: ProjectDetails::default(),
             project_metadata: ProjectMetadata::default(),
@@ -1175,10 +1308,8 @@ impl PomAccumulator {
             plugin_repositories: Vec::new(),
             modules: Vec::new(),
             mailing_lists: Vec::new(),
-            dependency_management_entries: Vec::new(),
             parent: ParentEntry::default(),
             properties: HashMap::new(),
-            relocation: MavenDependencyData::default(),
         }
     }
     fn apply_structural_text(&mut self, path: ElementPath, text: &str) {
@@ -1232,12 +1363,8 @@ impl PomAccumulator {
             || !self.plugin_repositories.is_empty()
             || !self.modules.is_empty()
             || !self.mailing_lists.is_empty()
-            || !self.dependency_management_entries.is_empty()
             || self.parent.has_data()
-            || self.relocation.group_id.is_some()
-            || self.relocation.artifact_id.is_some()
-            || self.relocation.version.is_some()
-            || self.relocation.message.is_some()
+            || self.dependency_scratch.has_extra_data()
     }
 
     fn populate_scalar_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
@@ -1278,31 +1405,7 @@ impl PomAccumulator {
         &mut self,
         extra_data: &mut HashMap<String, serde_json::Value>,
     ) {
-        if !self.dependency_management_entries.is_empty() {
-            extra_data.insert(
-                "dependency_management".to_string(),
-                serde_json::Value::Array(
-                    self.dependency_management_entries
-                        .iter()
-                        .map(|dependency| {
-                            serde_json::Value::Object(dependency_management_entry_to_value(
-                                dependency,
-                            ))
-                        })
-                        .collect(),
-                ),
-            );
-        }
-        if self.relocation.group_id.is_some()
-            || self.relocation.artifact_id.is_some()
-            || self.relocation.version.is_some()
-            || self.relocation.message.is_some()
-        {
-            extra_data.insert(
-                "relocation".to_string(),
-                serde_json::Value::Object(dependency_management_entry_to_value(&self.relocation)),
-            );
-        }
+        self.dependency_scratch.populate_extra_data(extra_data);
     }
 
     fn populate_parent_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
@@ -1348,44 +1451,8 @@ impl PomAccumulator {
         self.parent.resolve_fields(&mut resolver);
         resolve_vec(&mut resolver, &mut self.modules);
         self.license_data.resolve_fields(&mut resolver);
-        for dependency in &mut self.dependency_management_entries {
-            resolve_dependency_data(&mut resolver, dependency);
-        }
-        resolve_dependency_data(&mut resolver, &mut self.relocation);
-
-        for index in 0..self.package_data.dependencies.len() {
-            let dependency = &mut self.package_data.dependencies[index];
-            let coords = &mut self.dependency_data[index];
-
-            resolve_dependency_data(&mut resolver, coords);
-            dependency.scope = coords.scope.clone();
-            dependency.extracted_requirement = coords.version.clone();
-            dependency.extra_data = dependency_extra_data(coords);
-            dependency.is_optional = Some(parse_maven_bool(coords.optional.as_deref()));
-
-            match dependency.scope.as_deref() {
-                Some("test") | Some("provided") => {
-                    dependency.is_runtime = Some(false);
-                    dependency.is_optional = Some(true);
-                }
-                Some(_) => dependency.is_runtime = Some(true),
-                None => dependency.is_runtime = None,
-            }
-
-            if let Some(version) = &coords.version {
-                dependency.is_pinned = Some(is_maven_version_pinned(version));
-            }
-
-            if let (Some(group_id), Some(artifact_id)) = (&coords.group_id, &coords.artifact_id) {
-                dependency.purl = Some(build_maven_purl(
-                    group_id,
-                    artifact_id,
-                    coords.version.as_deref(),
-                    coords.classifier.as_deref(),
-                    coords.type_.as_deref(),
-                ));
-            }
-        }
+        self.dependency_scratch
+            .resolve_fields(&mut resolver, &mut self.package_data.dependencies);
     }
 
     fn apply_parent_fallbacks(&mut self) {
@@ -1501,35 +1568,8 @@ impl PomAccumulator {
     }
 
     fn expand_dependency_entries(&mut self) {
-        let dependency_management_entries = self.dependency_management_entries.clone();
-        for dependency in &dependency_management_entries {
-            if dependency.scope.as_deref() == Some("import")
-                && let Some(import_dependency) =
-                    maven_dependency_to_dependency(dependency, Some("import"), true)
-            {
-                self.package_data.dependencies.push(import_dependency);
-            }
-
-            let mut dependency_management_copy = dependency.clone();
-            dependency_management_copy.scope = Some("dependencymanagement".to_string());
-
-            if let Some(converted) = maven_dependency_to_dependency(
-                &dependency_management_copy,
-                Some("dependencymanagement"),
-                true,
-            ) {
-                self.package_data.dependencies.push(converted);
-            }
-        }
-
-        if (self.relocation.group_id.is_some()
-            || self.relocation.artifact_id.is_some()
-            || self.relocation.version.is_some())
-            && let Some(converted) =
-                maven_dependency_to_dependency(&self.relocation, Some("relocation"), true)
-        {
-            self.package_data.dependencies.push(converted);
-        }
+        self.dependency_scratch
+            .expand_entries(&mut self.package_data.dependencies);
     }
 
     fn finalize_license_data(&mut self) {
