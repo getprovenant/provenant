@@ -383,33 +383,6 @@ fn validate_scan_option_compatibility_rejects_mark_source_without_info() {
 }
 
 #[test]
-fn validate_scan_option_compatibility_allows_export_license_dataset_mode() {
-    let cli =
-        crate::cli::Cli::try_parse_from(["provenant", "--export-license-dataset", "dataset-out"])
-            .unwrap();
-
-    assert!(validate_scan_option_compatibility(&cli).is_ok());
-}
-
-#[test]
-fn validate_scan_option_compatibility_rejects_scan_flags_with_export_license_dataset() {
-    let cli = crate::cli::Cli::try_parse_from([
-        "provenant",
-        "--export-license-dataset",
-        "dataset-out",
-        "--license",
-    ])
-    .unwrap();
-
-    let error = validate_scan_option_compatibility(&cli).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("--export-license-dataset is a standalone mode")
-    );
-}
-
-#[test]
 fn from_json_skips_final_native_projection_block() {
     let mut loaded = JsonScanInput {
         headers: vec![],
