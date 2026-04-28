@@ -183,6 +183,7 @@ pub(super) static COPYRIGHTS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new
         r"(?i)^copyright holder, author\b",
         r"(?i)^copyright holders? disclaim\b",
         r"(?i)^copyright and has\b",
+        r"(?i)^copyright and trade secrets?\b",
         r"(?i)^copyright and trademark\b",
         r"(?i)^copyright and other proprietary\b",
         r"(?i)^copyright in the\b",

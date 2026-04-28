@@ -379,6 +379,8 @@ fn test_is_junk_copyright_patents_trade_secrets() {
 fn test_is_junk_copyright_trade_secrets_fragments() {
     assert!(is_junk_copyright("copyrights, trade secrets or"));
     assert!(is_junk_copyright("COPYRIGHT, TRADE SECRET OR"));
+    assert!(is_junk_copyright("copyright and trade secret"));
+    assert!(is_junk_copyright("COPYRIGHT AND TRADE SECRETS"));
     assert!(is_junk_copyright(
         "copyright, trade secret, trademark or other intellectual property rights of"
     ));
