@@ -368,6 +368,36 @@ fn test_mit_intro_not_copyright_or_holder() {
 }
 
 #[test]
+fn test_confidential_notice_trade_secret_phrase_not_detected_as_copyright() {
+    let input = concat!(
+        "/*\n",
+        " * Copyright Acme Inc. and its affiliates.\n",
+        " * The information contained herein is protected by applicable copyright and trade secret law.\n",
+        " */\n",
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright Acme Inc. and its affiliates"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        !copyrights
+            .iter()
+            .any(|c| c.copyright == "copyright and trade secret"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders
+            .iter()
+            .any(|h| h.holder == "Acme Inc. and its affiliates"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
 fn test_rest_api_description_not_holder_or_copyright() {
     let input = "We provide developers, researchers, and students the ability to access any model using a simple REST API call. The REST API description.";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
