@@ -5,9 +5,11 @@ mod run;
 
 pub use run::run;
 
-use clap::{ArgGroup, Parser};
+use clap::{ArgGroup, Args, Parser, Subcommand};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
+use std::ffi::OsString;
 use std::fs;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use yaml_serde::Value as YamlValue;
 
@@ -128,6 +130,32 @@ fn parse_license_policy_arg(value: &str) -> Result<String, String> {
     after_help = PDF_OXIDE_LOG_HELP,
     about,
     long_about = None,
+    arg_required_else_help = true,
+    subcommand_required = true
+)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum Command {
+    /// Scan files or existing ScanCode-style JSON inputs.
+    Scan(Box<ScanArgs>),
+    /// Show attribution notices for embedded license detection data.
+    ShowAttribution,
+    /// Export the effective built-in license dataset to DIR and exit.
+    ExportLicenseDataset(ExportLicenseDatasetArgs),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ExportLicenseDatasetArgs {
+    #[arg(value_name = "DIR")]
+    pub dir: String,
+}
+
+#[derive(Args, Debug, Clone)]
+#[command(
     group(
         ArgGroup::new("output")
             .required(true)
@@ -143,13 +171,12 @@ fn parse_license_policy_arg(value: &str) -> Result<String, String> {
                 "output_spdx_rdf",
                 "output_cyclonedx",
                 "output_cyclonedx_xml",
-                "custom_output",
-                "show_attribution",
-                "export_license_dataset"
+                "custom_output"
             ])
-    )
+    ),
+    after_help = PDF_OXIDE_LOG_HELP
 )]
-pub struct Cli {
+pub struct ScanArgs {
     /// File or directory paths to scan
     #[arg(required = false)]
     pub dir_path: Vec<String>,
@@ -433,47 +460,79 @@ pub struct Cli {
     /// Report only up to INT URLs found in a file. Use 0 for no limit.
     #[arg(long, default_value_t = 50, requires = "url")]
     pub max_url: usize,
+}
 
-    /// Show attribution notices for embedded license detection data
-    #[arg(
-        long,
-        conflicts_with_all = [
-            "output_json",
-            "output_json_pp",
-            "output_json_lines",
-            "output_yaml",
-            "output_debian",
-            "output_html",
-            "output_spdx_tv",
-            "output_spdx_rdf",
-            "output_cyclonedx",
-            "output_cyclonedx_xml",
-            "custom_output",
-            "export_license_dataset"
-        ]
-    )]
-    pub show_attribution: bool,
+impl Cli {
+    pub fn parse() -> Self {
+        <Self as Parser>::parse_from(rewrite_args_for_default_scan(std::env::args_os()))
+    }
 
-    /// Export the effective built-in license dataset to DIR and exit.
-    #[arg(
-        long = "export-license-dataset",
-        value_name = "DIR",
-        conflicts_with_all = [
-            "output_json",
-            "output_json_pp",
-            "output_json_lines",
-            "output_yaml",
-            "output_debian",
-            "output_html",
-            "output_spdx_tv",
-            "output_spdx_rdf",
-            "output_cyclonedx",
-            "output_cyclonedx_xml",
-            "custom_output",
-            "show_attribution"
-        ]
-    )]
-    pub export_license_dataset: Option<String>,
+    pub fn try_parse_from<I, T>(itr: I) -> Result<Self, clap::Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<OsString>,
+    {
+        <Self as Parser>::try_parse_from(rewrite_args_for_default_scan(itr))
+    }
+
+    fn scan_args(&self) -> Option<&ScanArgs> {
+        match &self.command {
+            Command::Scan(scan_args) => Some(scan_args.as_ref()),
+            Command::ShowAttribution | Command::ExportLicenseDataset(_) => None,
+        }
+    }
+
+    fn scan_args_mut(&mut self) -> Option<&mut ScanArgs> {
+        match &mut self.command {
+            Command::Scan(scan_args) => Some(scan_args.as_mut()),
+            Command::ShowAttribution | Command::ExportLicenseDataset(_) => None,
+        }
+    }
+}
+
+impl Deref for Cli {
+    type Target = ScanArgs;
+
+    fn deref(&self) -> &Self::Target {
+        self.scan_args()
+            .expect("scan arguments are only available for the scan command")
+    }
+}
+
+impl DerefMut for Cli {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.scan_args_mut()
+            .expect("scan arguments are only available for the scan command")
+    }
+}
+
+fn rewrite_args_for_default_scan<I, T>(itr: I) -> Vec<OsString>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString>,
+{
+    let mut args: Vec<OsString> = itr.into_iter().map(Into::into).collect();
+    if args.len() <= 1 {
+        return args;
+    }
+
+    let first = args[1].to_string_lossy();
+    if matches!(
+        first.as_ref(),
+        "scan"
+            | "show-attribution"
+            | "export-license-dataset"
+            | "help"
+            | "-h"
+            | "--help"
+            | "-V"
+            | "--version"
+    ) {
+        return args;
+    }
+
+    args.insert(1, OsString::from("scan"));
+    args
 }
 
 fn parse_max_in_memory(value: &str) -> Result<MemoryMode, String> {
@@ -498,7 +557,7 @@ pub struct OutputTarget {
     pub custom_template: Option<String>,
 }
 
-impl Cli {
+impl ScanArgs {
     pub fn output_targets(&self) -> Vec<OutputTarget> {
         let mut targets = Vec::new();
 
@@ -835,6 +894,13 @@ mod tests {
     use super::*;
     use clap::CommandFactory;
 
+    fn scan_command() -> clap::Command {
+        Cli::command()
+            .find_subcommand("scan")
+            .expect("scan subcommand should exist")
+            .clone()
+    }
+
     #[test]
     fn test_requires_at_least_one_output_option() {
         let parsed = Cli::try_parse_from(["provenant", "samples"]);
@@ -869,37 +935,34 @@ mod tests {
     }
 
     #[test]
-    fn test_show_attribution_conflicts_with_output_flags() {
-        let parsed = Cli::try_parse_from([
-            "provenant",
-            "--show-attribution",
-            "--json",
-            "scan.json",
-            "samples",
-        ]);
-        assert!(parsed.is_err());
+    fn test_parses_show_attribution_subcommand() {
+        let parsed = Cli::try_parse_from(["provenant", "show-attribution"])
+            .expect("show-attribution subcommand should parse");
+
+        assert!(matches!(parsed.command, Command::ShowAttribution));
     }
 
     #[test]
-    fn test_show_attribution_conflicts_with_export_license_dataset() {
-        let parsed = Cli::try_parse_from([
-            "provenant",
-            "--show-attribution",
-            "--export-license-dataset",
-            "dataset-out",
-        ]);
+    fn test_legacy_show_attribution_flag_is_rejected() {
+        let parsed = Cli::try_parse_from(["provenant", "--show-attribution"]);
         assert!(parsed.is_err());
     }
 
     #[test]
     fn test_export_license_dataset_allows_mode_without_output_file() {
-        let parsed = Cli::try_parse_from(["provenant", "--export-license-dataset", "dataset-out"])
+        let parsed = Cli::try_parse_from(["provenant", "export-license-dataset", "dataset-out"])
             .expect("cli parse should allow export mode without output flags");
 
-        assert_eq!(
-            parsed.export_license_dataset.as_deref(),
-            Some("dataset-out")
-        );
+        match parsed.command {
+            Command::ExportLicenseDataset(args) => assert_eq!(args.dir, "dataset-out"),
+            other => panic!("expected export subcommand, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_legacy_export_license_dataset_flag_is_rejected() {
+        let parsed = Cli::try_parse_from(["provenant", "--export-license-dataset", "dataset-out"]);
+        assert!(parsed.is_err());
     }
 
     #[test]
@@ -1059,7 +1122,7 @@ mod tests {
 
     #[test]
     fn test_debian_help_mentions_required_companion_flags() {
-        let command = Cli::command();
+        let command = scan_command();
         let debian_arg = command
             .get_arguments()
             .find(|arg| arg.get_long() == Some("debian"))
@@ -1074,11 +1137,20 @@ mod tests {
     }
 
     #[test]
-    fn test_help_mentions_pdf_oxide_rust_log_escape_hatch() {
-        let help = Cli::command().render_help().to_string();
+    fn test_scan_help_mentions_pdf_oxide_rust_log_escape_hatch() {
+        let help = scan_command().render_help().to_string();
 
         assert!(help.contains("RUST_LOG=pdf_oxide=warn"));
         assert!(help.contains("suppresses noisy pdf_oxide logs by default"));
+    }
+
+    #[test]
+    fn test_root_help_mentions_subcommands() {
+        let help = Cli::command().render_help().to_string();
+
+        assert!(help.contains("scan"));
+        assert!(help.contains("show-attribution"));
+        assert!(help.contains("export-license-dataset"));
     }
 
     #[test]

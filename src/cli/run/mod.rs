@@ -7,7 +7,7 @@ use crate::cache::{
     build_collection_exclude_patterns, incremental_manifest_path, load_incremental_manifest,
     manifest_entry_matches_path, metadata_fingerprint, write_incremental_manifest,
 };
-use crate::cli::{Cli, ProcessMode};
+use crate::cli::{Cli, Command, ProcessMode, ScanArgs};
 use crate::license_detection::LicenseDetectionEngine;
 use crate::license_detection::dataset::export_embedded_license_dataset;
 use crate::license_detection::license_cache::LicenseCacheConfig;
@@ -36,7 +36,6 @@ use crate::time::format_scancode_timestamp;
 use crate::utils::hash::calculate_sha256;
 use anyhow::{Result, anyhow};
 use chrono::Utc;
-use clap::Parser;
 use regex::Regex;
 use std::collections::{BTreeMap, HashMap};
 use std::env;
@@ -51,18 +50,19 @@ pub fn run() -> Result<()> {
     touch_license_golden_symbols();
 
     let cli = Cli::parse();
+    match &cli.command {
+        Command::ShowAttribution => {
+            print!("{}", include_str!("../../../NOTICE"));
+            return Ok(());
+        }
+        Command::ExportLicenseDataset(args) => {
+            export_embedded_license_dataset(Path::new(&args.dir))?;
+            return Ok(());
+        }
+        Command::Scan(_) => {}
+    }
 
     validate_scan_option_compatibility(&cli)?;
-
-    if cli.show_attribution {
-        print!("{}", include_str!("../../../NOTICE"));
-        return Ok(());
-    }
-
-    if let Some(export_dir) = cli.export_license_dataset.as_deref() {
-        export_embedded_license_dataset(Path::new(export_dir))?;
-        return Ok(());
-    }
 
     let start_time = Utc::now();
     let progress = Arc::new(ScanProgress::new(progress_mode_from_cli(&cli)));
@@ -727,42 +727,7 @@ fn build_paths_file_warning_messages(missing_entries: &[String]) -> Vec<String> 
         .collect()
 }
 
-fn validate_scan_option_compatibility(cli: &Cli) -> Result<()> {
-    if cli.show_attribution {
-        return Ok(());
-    }
-
-    if cli.export_license_dataset.is_some() {
-        if !cli.dir_path.is_empty() || !cli.paths_file.is_empty() {
-            return Err(anyhow!(
-                "--export-license-dataset does not accept scan input paths or --paths-file"
-            ));
-        }
-
-        if cli.from_json
-            || cli.license
-            || cli.package
-            || cli.system_package
-            || cli.package_in_compiled
-            || cli.package_only
-            || cli.copyright
-            || cli.email
-            || cli.url
-            || cli.generated
-            || cli.info
-            || cli.incremental
-            || cli.reindex
-            || cli.no_license_index_cache
-            || cli.license_dataset_path.is_some()
-        {
-            return Err(anyhow!(
-                "--export-license-dataset is a standalone mode and cannot be combined with scan or license-index flags"
-            ));
-        }
-
-        return Ok(());
-    }
-
+fn validate_scan_option_compatibility(cli: &ScanArgs) -> Result<()> {
     if cli.from_json
         && (cli.package
             || cli.system_package
