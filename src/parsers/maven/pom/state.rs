@@ -774,6 +774,32 @@ struct ParentEntry {
     relative_path: Option<String>,
 }
 
+impl ParentEntry {
+    fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::GroupId) => self.group_id = Some(text.to_string()),
+            Some(KnownTag::ArtifactId) => self.artifact_id = Some(text.to_string()),
+            Some(KnownTag::Version) => self.version = Some(text.to_string()),
+            Some(KnownTag::RelativePath) => self.relative_path = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.group_id);
+        resolve_option(resolver, &mut self.artifact_id);
+        resolve_option(resolver, &mut self.version);
+        resolve_option(resolver, &mut self.relative_path);
+    }
+
+    fn has_data(&self) -> bool {
+        self.group_id.is_some()
+            || self.artifact_id.is_some()
+            || self.version.is_some()
+            || self.relative_path.is_some()
+    }
+}
+
 fn serialize_non_empty_object<T: Serialize>(
     value: T,
 ) -> Option<serde_json::Map<String, serde_json::Value>> {
@@ -921,15 +947,7 @@ impl ActiveSection {
                 true
             }
             Self::Parent => {
-                match path.current_known() {
-                    Some(KnownTag::GroupId) => state.parent_group_id = Some(text.to_string()),
-                    Some(KnownTag::ArtifactId) => state.parent_artifact_id = Some(text.to_string()),
-                    Some(KnownTag::Version) => state.parent_version = Some(text.to_string()),
-                    Some(KnownTag::RelativePath) => {
-                        state.parent_relative_path = Some(text.to_string())
-                    }
-                    _ => {}
-                }
+                state.parent.apply_text(path.current_known(), text);
                 true
             }
             Self::Modules => {
@@ -1001,10 +1019,7 @@ struct PomAccumulator {
     modules: Vec<String>,
     mailing_lists: Vec<MailingListEntry>,
     dependency_management_entries: Vec<MavenDependencyData>,
-    parent_group_id: Option<String>,
-    parent_artifact_id: Option<String>,
-    parent_version: Option<String>,
-    parent_relative_path: Option<String>,
+    parent: ParentEntry,
     properties: HashMap<String, String>,
     project_name: Option<String>,
     project_description: Option<String>,
@@ -1038,10 +1053,7 @@ impl PomAccumulator {
             modules: Vec::new(),
             mailing_lists: Vec::new(),
             dependency_management_entries: Vec::new(),
-            parent_group_id: None,
-            parent_artifact_id: None,
-            parent_version: None,
-            parent_relative_path: None,
+            parent: ParentEntry::default(),
             properties: HashMap::new(),
             project_name: None,
             project_description: None,
@@ -1107,7 +1119,7 @@ impl PomAccumulator {
             || !self.modules.is_empty()
             || !self.mailing_lists.is_empty()
             || !self.dependency_management_entries.is_empty()
-            || self.parent_group_id.is_some()
+            || self.parent.has_data()
             || self.relocation.group_id.is_some()
             || self.relocation.artifact_id.is_some()
             || self.relocation.version.is_some()
@@ -1185,16 +1197,7 @@ impl PomAccumulator {
     }
 
     fn populate_parent_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
-        insert_extra_data_object(
-            extra_data,
-            "parent",
-            ParentEntry {
-                group_id: self.parent_group_id.take(),
-                artifact_id: self.parent_artifact_id.take(),
-                version: self.parent_version.take(),
-                relative_path: self.parent_relative_path.take(),
-            },
-        );
+        insert_extra_data_object(extra_data, "parent", std::mem::take(&mut self.parent));
     }
 
     fn populate_extra_data(&mut self) {
@@ -1218,9 +1221,9 @@ impl PomAccumulator {
             namespace: &self.package_data.namespace,
             name: &self.package_data.name,
             version: &self.package_data.version,
-            parent_group_id: &self.parent_group_id,
-            parent_artifact_id: &self.parent_artifact_id,
-            parent_version: &self.parent_version,
+            parent_group_id: &self.parent.group_id,
+            parent_artifact_id: &self.parent.artifact_id,
+            parent_version: &self.parent.version,
             project_name: &self.project_name,
             project_packaging: &self.project_packaging,
         });
@@ -1233,10 +1236,7 @@ impl PomAccumulator {
         resolve_option(&mut resolver, &mut self.inception_year);
         self.project_metadata.resolve_fields(&mut resolver);
         self.distribution.resolve_fields(&mut resolver);
-        resolve_option(&mut resolver, &mut self.parent_group_id);
-        resolve_option(&mut resolver, &mut self.parent_artifact_id);
-        resolve_option(&mut resolver, &mut self.parent_version);
-        resolve_option(&mut resolver, &mut self.parent_relative_path);
+        self.parent.resolve_fields(&mut resolver);
         resolve_option(&mut resolver, &mut self.project_name);
         resolve_option(&mut resolver, &mut self.project_description);
         resolve_option(&mut resolver, &mut self.project_packaging);
@@ -1299,10 +1299,10 @@ impl PomAccumulator {
 
     fn apply_parent_fallbacks(&mut self) {
         if self.package_data.namespace.is_none() {
-            self.package_data.namespace = self.parent_group_id.clone();
+            self.package_data.namespace = self.parent.group_id.clone();
         }
         if self.package_data.version.is_none() {
-            self.package_data.version = self.parent_version.clone();
+            self.package_data.version = self.parent.version.clone();
         }
     }
 
