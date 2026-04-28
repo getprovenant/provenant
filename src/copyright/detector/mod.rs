@@ -311,6 +311,7 @@ pub fn detect_copyrights_from_text_with_deadline(
 
     if deadline_exceeded(deadline) {
         refine_final_copyrights(&mut copyrights);
+        postprocess_transforms::refine_final_holders(&mut holders);
         postprocess_transforms::refine_final_authors(&mut authors);
         dedupe_exact_span_copyrights(&mut copyrights);
         dedupe_exact_span_holders(&mut holders);
@@ -342,6 +343,7 @@ pub fn detect_copyrights_from_text_with_deadline(
     );
 
     refine_final_copyrights(&mut copyrights);
+    postprocess_transforms::refine_final_holders(&mut holders);
     postprocess_transforms::refine_final_authors(&mut authors);
     postprocess_transforms::drop_trademark_boilerplate_multiline_extensions(
         &raw_lines,

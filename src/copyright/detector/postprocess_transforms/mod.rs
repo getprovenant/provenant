@@ -49,6 +49,9 @@ pub fn refine_final_copyrights(copyrights: &mut Vec<CopyrightDetection>) {
         .iter()
         .filter_map(|c| {
             let text = refine_copyright(&c.copyright)?;
+            if is_late_code_fragment_copyright(&text) {
+                return None;
+            }
             Some(CopyrightDetection {
                 copyright: text,
                 start_line: c.start_line,
@@ -56,6 +59,30 @@ pub fn refine_final_copyrights(copyrights: &mut Vec<CopyrightDetection>) {
             })
         })
         .collect();
+}
+
+pub fn refine_final_holders(holders: &mut Vec<HolderDetection>) {
+    if holders.is_empty() {
+        return;
+    }
+
+    holders.retain(|holder| !is_late_code_fragment_holder(&holder.holder));
+}
+
+fn is_late_code_fragment_copyright(s: &str) -> bool {
+    let lower = s.trim().to_ascii_lowercase();
+    lower == "copyright void"
+        || lower.contains("absl::")
+        || lower.contains("strcat(")
+        || lower.contains(" main.cc")
+}
+
+fn is_late_code_fragment_holder(s: &str) -> bool {
+    let lower = s.trim().to_ascii_lowercase();
+    lower == "void"
+        || lower.contains("absl::")
+        || lower.contains("strcat(")
+        || lower.contains(" main.cc")
 }
 
 pub fn refine_final_authors(authors: &mut Vec<AuthorDetection>) {

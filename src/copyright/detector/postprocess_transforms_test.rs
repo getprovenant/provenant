@@ -170,3 +170,36 @@ fn test_refine_final_authors_drops_markdown_link_fragments() {
 
     assert!(authors.is_empty(), "authors: {authors:?}");
 }
+
+#[test]
+fn test_refine_final_copyrights_drops_late_code_fragment_junk() {
+    let mut copyrights = vec![CopyrightDetection {
+        copyright: "Copyright 0 absl::StrCat(errors 0 )".to_string(),
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+
+    refine_final_copyrights(&mut copyrights);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+}
+
+#[test]
+fn test_refine_final_holders_drops_late_code_fragment_junk() {
+    let mut holders = vec![
+        HolderDetection {
+            holder: "absl::StrCat(errors 0".to_string(),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::ONE,
+        },
+        HolderDetection {
+            holder: "void".to_string(),
+            start_line: LineNumber::new(2).unwrap(),
+            end_line: LineNumber::new(2).unwrap(),
+        },
+    ];
+
+    refine_final_holders(&mut holders);
+
+    assert!(holders.is_empty(), "holders: {holders:?}");
+}
