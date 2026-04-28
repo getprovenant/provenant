@@ -8,21 +8,21 @@ The license detection system is a multi-phase, multi-strategy detection engine t
 
 ## Entry Points
 
-### CLI Flags
+### CLI Entry Points
 
-| Flag                         | Purpose                                                |
-| ---------------------------- | ------------------------------------------------------ |
-| `--license-dataset-path`     | Override to load a custom license dataset root         |
-| `--export-license-dataset`   | Export the effective embedded license dataset and exit |
-| `--license`                  | Enable license scanning                                |
-| `--license-text`             | Include matched text in output                         |
-| `--license-text-diagnostics` | Highlight unmatched words inside matched text          |
-| `--license-diagnostics`      | Include detection post-processing diagnostics          |
-| `--license-references`       | Emit top-level license and rule reference blocks       |
-| `--license-score`            | Filter returned license detections by minimum score    |
-| `--license-url-template`     | Customize top-level `licensedb_url` references         |
-| `--reindex`                  | Force rebuild of the license index cache               |
-| `--no-license-index-cache`   | Disable persistent license index cache reads/writes    |
+| Entry point                                 | Purpose                                                |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `provenant scan --license-dataset-path`     | Override to load a custom license dataset root         |
+| `provenant export-license-dataset <DIR>`    | Export the effective embedded license dataset and exit |
+| `provenant scan --license`                  | Enable license scanning                                |
+| `provenant scan --license-text`             | Include matched text in output                         |
+| `provenant scan --license-text-diagnostics` | Highlight unmatched words inside matched text          |
+| `provenant scan --license-diagnostics`      | Include detection post-processing diagnostics          |
+| `provenant scan --license-references`       | Emit top-level license and rule reference blocks       |
+| `provenant scan --license-score`            | Filter returned license detections by minimum score    |
+| `provenant scan --license-url-template`     | Customize top-level `licensedb_url` references         |
+| `provenant scan --reindex`                  | Force rebuild of the license index cache               |
+| `provenant scan --no-license-index-cache`   | Disable persistent license index cache reads/writes    |
 
 **Default behavior**: Uses the built-in embedded license index. No external files required.
 
@@ -30,7 +30,7 @@ The license detection system is a multi-phase, multi-strategy detection engine t
 
 **Custom license datasets**: Use `--license-dataset-path /path/to/dataset-root` to load from a custom dataset root containing `manifest.json`, `rules/`, and `licenses/`. This is an advanced override rather than the recommended default workflow; normal scans should keep using the embedded artifact. Custom-dataset scans are cached using a content fingerprint of the loaded effective rules/licenses, so the index is rebuilt automatically when the dataset changes.
 
-**Dataset export**: Use `--export-license-dataset /path/to/output-dir` to dump the effective embedded dataset into that dataset-root layout so you can inspect or edit it before reusing it with `--license-dataset-path`.
+**Dataset export**: Use `provenant export-license-dataset /path/to/output-dir` to dump the effective embedded dataset into that dataset-root layout so you can inspect or edit it before reusing it with `provenant scan --license-dataset-path`.
 
 **Index build policy**: Provenant also applies a checked-in build policy from `resources/license_detection/index_build_policy.toml` before fingerprinting and index construction. This manifest carries the small curation decisions (ignored rule/license ids), while downstream add/replace overlays live as real ScanCode-format files under `resources/license_detection/overlay/`. This keeps local curation in the same `.RULE` / `.LICENSE` syntax as upstream without severing the broader dataset dependency. Stale ignore ids and overlays that become identical to upstream now fail the build so maintainers get an explicit prompt to remove redundant downstream curation.
 

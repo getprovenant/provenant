@@ -10,13 +10,15 @@ Use it to answer practical questions such as:
 - "When should I use JSON, HTML, SPDX, or CycloneDX?"
 - "How do I re-use an existing scan instead of rescanning?"
 
-For the complete flag reference, always use:
+For the complete scan-flag reference, use:
 
 ```sh
-provenant --help
+provenant scan --help
 ```
 
-This guide does **not** try to repeat every flag from `--help`. Instead, it focuses on the workflows most users actually need.
+Bare `provenant ...` still defaults to scan mode for backward compatibility, but the explicit subcommand form keeps the command tree easier to navigate in help and docs.
+
+This guide does **not** try to repeat every scan flag from `scan --help`. Instead, it focuses on the workflows most users actually need.
 
 ## Start Here: A Strong Default Scan
 
@@ -137,7 +139,7 @@ This is especially useful for:
 If you need to customize the license dataset Provenant uses, first export the built-in effective dataset and then point a scan at the exported dataset root:
 
 ```sh
-provenant --export-license-dataset /tmp/provenant-license-dataset
+provenant export-license-dataset /tmp/provenant-license-dataset
 provenant --json-pp licenses.json --license --license-dataset-path /tmp/provenant-license-dataset /path/to/project
 ```
 
@@ -566,7 +568,7 @@ If you are not sure where to start, use this rule of thumb:
 
 ## Where to Go Next
 
-- Run `provenant --help` for the full CLI surface
+- Run `provenant --help` for the command tree and `provenant scan --help` for the full scan CLI surface
 - See [README.md](../README.md) for installation and quick start
 - See [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md) for supported package and ecosystem coverage
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for implementation details

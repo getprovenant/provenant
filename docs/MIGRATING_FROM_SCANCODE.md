@@ -38,7 +38,7 @@ With Provenant, the equivalent workflow is:
 3. scan with the exported dataset root
 
 ```sh
-provenant --export-license-dataset /tmp/provenant-license-dataset
+provenant export-license-dataset /tmp/provenant-license-dataset
 provenant --json-pp licenses.json --license \
   --license-dataset-path /tmp/provenant-license-dataset \
   /path/to/project

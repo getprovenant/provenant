@@ -695,7 +695,7 @@ let engine = LicenseDetectionEngine::from_embedded()?;
 let engine = LicenseDetectionEngine::from_directory(&rules_path)?;
 ```
 
-The CLI uses `from_embedded()` by default. Use `--license-dataset-path` to load from a custom dataset root instead, or `--export-license-dataset` to dump the built-in effective dataset for inspection and reuse.
+The CLI uses `from_embedded()` by default. Use `provenant scan --license-dataset-path` to load from a custom dataset root instead, or `provenant export-license-dataset` to dump the built-in effective dataset for inspection and reuse.
 
 ### Regenerating the Embedded Artifact
 

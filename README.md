@@ -140,10 +140,16 @@ provenant --json-pp <FILE> [OPTIONS] <INPUT>...
 
 At least one output option is required.
 
-For the complete CLI surface, run:
+For the command tree, run:
 
 ```sh
 provenant --help
+```
+
+For the complete scan-flag surface, run:
+
+```sh
+provenant scan --help
 ```
 
 For guided workflows and important flag combinations, see the [CLI Guide](docs/CLI_GUIDE.md).
