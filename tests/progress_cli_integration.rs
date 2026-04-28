@@ -234,6 +234,76 @@ fn create_compare_json_fixtures() -> (TempDir, String, String) {
     )
 }
 
+fn create_compare_json_fixtures_with_file_level_package_fallback() -> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let scancode_file = temp.path().join("scancode-fallback.json");
+    let provenant_file = temp.path().join("provenant-fallback.json");
+
+    let shared_package_data = serde_json::json!([{
+        "type": "npm",
+        "name": "left-pad",
+        "version": "1.3.0",
+        "purl": "pkg:npm/left-pad@1.3.0",
+        "dependencies": [{
+            "purl": "pkg:npm/ansi-regex@5.0.1",
+            "scope": "dependencies",
+            "is_runtime": true
+        }]
+    }]);
+
+    fs::write(
+        &scancode_file,
+        serde_json::json!({
+            "files": [{
+                "path": "package-lock.json",
+                "type": "file",
+                "package_data": shared_package_data.clone()
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write scancode fallback fixture");
+
+    fs::write(
+        &provenant_file,
+        serde_json::json!({
+            "files": [{
+                "path": "package-lock.json",
+                "type": "file",
+                "package_data": shared_package_data
+            }],
+            "packages": [{
+                "type": "npm",
+                "name": "left-pad",
+                "version": "1.3.0",
+                "purl": "pkg:npm/left-pad@1.3.0"
+            }],
+            "dependencies": [{
+                "purl": "pkg:npm/ansi-regex@5.0.1",
+                "datafile_path": "package-lock.json",
+                "scope": "dependencies",
+                "is_runtime": true
+            }],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write provenant fallback fixture");
+
+    (
+        temp,
+        scancode_file.to_string_lossy().to_string(),
+        provenant_file.to_string_lossy().to_string(),
+    )
+}
+
 fn normalize_multi_parser_header(output: &mut Value) {
     let header = output["headers"]
         .as_array_mut()
@@ -844,6 +914,83 @@ fn compare_subcommand_defaults_to_timestamped_artifact_dir_in_cwd() {
             .join("summary.json")
             .is_file()
     );
+}
+
+#[test]
+fn compare_subcommand_uses_file_level_package_fallback_without_false_regressions() {
+    let (_temp, scancode_json, provenant_json) =
+        create_compare_json_fixtures_with_file_level_package_fallback();
+    let artifact_temp = TempDir::new().expect("artifact temp dir");
+    let artifact_dir = artifact_temp.path().join("compare-artifacts");
+
+    let output = provenant_command()
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+            "--artifact-dir",
+            artifact_dir.to_str().expect("utf8 artifact path"),
+        ])
+        .output()
+        .expect("failed to run compare subcommand");
+
+    assert!(output.status.success(), "compare should succeed");
+
+    let summary_path = artifact_dir.join("comparison").join("summary.json");
+    let summary: Value =
+        serde_json::from_str(&fs::read_to_string(&summary_path).expect("summary json")).unwrap();
+
+    assert_eq!(
+        summary["comparison_status"].as_str(),
+        Some("no_detected_differences")
+    );
+    assert_eq!(
+        summary["top_level_counts"]["scancode"]["packages"].as_i64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["top_level_counts"]["scancode"]["dependencies"].as_i64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["top_level_counts"]["sources"]["scancode"]["packages"].as_str(),
+        Some("packages[] empty; files[].package_data present")
+    );
+    assert_eq!(
+        summary["top_level_counts"]["sources"]["scancode"]["dependencies"].as_str(),
+        Some("dependencies[] empty; files[].package_data[].dependencies present")
+    );
+    assert_eq!(
+        summary["skipped_comparisons"]["packages"].as_str(),
+        Some(
+            "top-level packages comparison skipped: ScanCode packages[] empty; files[].package_data present; Provenant packages[]"
+        )
+    );
+    assert_eq!(
+        summary["skipped_comparisons"]["dependencies"].as_str(),
+        Some(
+            "top-level dependencies comparison skipped: ScanCode dependencies[] empty; files[].package_data[].dependencies present; Provenant dependencies[]"
+        )
+    );
+    assert_eq!(
+        summary["raw_dependency_summary"]["missing_in_provenant"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["raw_dependency_summary"]["extra_in_provenant"].as_u64(),
+        Some(0)
+    );
+
+    let summary_tsv = fs::read_to_string(artifact_dir.join("comparison").join("summary.tsv"))
+        .expect("summary tsv");
+    assert!(summary_tsv.contains(
+        "top-level packages comparison skipped: ScanCode packages[] empty; files[].package_data present; Provenant packages[]"
+    ));
+    assert!(summary_tsv.contains(
+        "top-level dependencies comparison skipped: ScanCode dependencies[] empty; files[].package_data[].dependencies present; Provenant dependencies[]"
+    ));
 }
 
 #[test]
