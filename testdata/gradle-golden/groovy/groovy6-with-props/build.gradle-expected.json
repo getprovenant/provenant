@@ -40,7 +40,7 @@
       {
         "purl": "pkg:maven/cassandra-commons",
         "extracted_requirement": "",
-        "scope": "project",
+        "scope": "compile",
         "is_runtime": true,
         "is_optional": false,
         "is_pinned": false,

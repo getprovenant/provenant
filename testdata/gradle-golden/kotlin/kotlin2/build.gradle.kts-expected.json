@@ -63,7 +63,7 @@
       {
         "purl": "pkg:maven/detekt-rules",
         "extracted_requirement": "",
-        "scope": "project",
+        "scope": "detektPlugins",
         "is_runtime": true,
         "is_optional": false,
         "is_pinned": false,
@@ -74,9 +74,9 @@
       {
         "purl": "pkg:maven/utils/test-utils",
         "extracted_requirement": "",
-        "scope": "project",
-        "is_runtime": true,
-        "is_optional": false,
+        "scope": "testImplementation",
+        "is_runtime": false,
+        "is_optional": true,
         "is_pinned": false,
         "is_direct": true,
         "resolved_package": {},

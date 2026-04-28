@@ -40,7 +40,7 @@
       {
         "purl": "pkg:maven/documentation",
         "extracted_requirement": "",
-        "scope": "project",
+        "scope": "implementation",
         "is_runtime": true,
         "is_optional": false,
         "is_pinned": false,
@@ -51,7 +51,7 @@
       {
         "purl": "pkg:maven/basics",
         "extracted_requirement": "",
-        "scope": "project",
+        "scope": "implementation",
         "is_runtime": true,
         "is_optional": false,
         "is_pinned": false,
@@ -62,7 +62,7 @@
       {
         "purl": "pkg:maven/module-identity",
         "extracted_requirement": "",
-        "scope": "project",
+        "scope": "implementation",
         "is_runtime": true,
         "is_optional": false,
         "is_pinned": false,
@@ -73,7 +73,7 @@
       {
         "purl": "pkg:maven/jvm",
         "extracted_requirement": "",
-        "scope": "project",
+        "scope": "implementation",
         "is_runtime": true,
         "is_optional": false,
         "is_pinned": false,
