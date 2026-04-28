@@ -166,7 +166,9 @@ jobs:
           shared-key: windows-build-smoke
 
       - name: Build and run Windows CLI smoke check
-        run: cargo run --quiet --locked --bin provenant -- show-attribution | Out-Null
+        run: |
+          cargo run --quiet --locked --bin provenant -- show-attribution | Out-Null
+          cargo run --quiet --locked --bin provenant -- scan --help | Out-Null
 
   intel-macos-build-smoke:
     name: Intel macOS Build Smoke Test
@@ -191,7 +193,9 @@ jobs:
           shared-key: intel-macos-build-smoke
 
       - name: Build and run Intel macOS CLI smoke check
-        run: cargo run --quiet --locked --bin provenant -- show-attribution > /dev/null
+        run: |
+          cargo run --quiet --locked --bin provenant -- show-attribution > /dev/null
+          cargo run --quiet --locked --bin provenant -- scan --help > /dev/null
 
   rust-sharded-tests:
     name: Tests (${{ matrix.shard }})

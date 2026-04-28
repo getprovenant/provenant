@@ -9,7 +9,8 @@ use clap::{ArgGroup, Args, Parser, Subcommand};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
 use std::ffi::OsString;
 use std::fs;
-use std::ops::{Deref, DerefMut};
+#[cfg(test)]
+use std::ops::Deref;
 use std::path::Path;
 use yaml_serde::Value as YamlValue;
 
@@ -475,33 +476,20 @@ impl Cli {
         <Self as Parser>::try_parse_from(rewrite_args_for_default_scan(itr))
     }
 
-    fn scan_args(&self) -> Option<&ScanArgs> {
+    pub(crate) fn scan_args(&self) -> Option<&ScanArgs> {
         match &self.command {
             Command::Scan(scan_args) => Some(scan_args.as_ref()),
             Command::ShowAttribution | Command::ExportLicenseDataset(_) => None,
         }
     }
-
-    fn scan_args_mut(&mut self) -> Option<&mut ScanArgs> {
-        match &mut self.command {
-            Command::Scan(scan_args) => Some(scan_args.as_mut()),
-            Command::ShowAttribution | Command::ExportLicenseDataset(_) => None,
-        }
-    }
 }
 
+#[cfg(test)]
 impl Deref for Cli {
     type Target = ScanArgs;
 
     fn deref(&self) -> &Self::Target {
         self.scan_args()
-            .expect("scan arguments are only available for the scan command")
-    }
-}
-
-impl DerefMut for Cli {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.scan_args_mut()
             .expect("scan arguments are only available for the scan command")
     }
 }
@@ -531,7 +519,10 @@ where
         return args;
     }
 
-    args.insert(1, OsString::from("scan"));
+    if first.starts_with('-') || Path::new(first.as_ref()).exists() {
+        args.insert(1, OsString::from("scan"));
+    }
+
     args
 }
 
@@ -915,6 +906,25 @@ mod tests {
         assert_eq!(parsed.output_json_pp.as_deref(), Some("scan.json"));
         assert_eq!(parsed.output_targets().len(), 1);
         assert_eq!(parsed.output_targets()[0].format, OutputFormat::JsonPretty);
+    }
+
+    #[test]
+    fn test_explicit_scan_subcommand_parses_scan_flags() {
+        let parsed = Cli::try_parse_from([
+            "provenant",
+            "scan",
+            "--json-pp",
+            "scan.json",
+            "--license",
+            "samples",
+        ])
+        .expect("explicit scan subcommand should parse");
+
+        assert!(matches!(parsed.command, Command::Scan(_)));
+        let scan = parsed.scan_args().expect("scan args should be present");
+        assert_eq!(scan.output_json_pp.as_deref(), Some("scan.json"));
+        assert!(scan.license);
+        assert_eq!(scan.dir_path, vec!["samples"]);
     }
 
     #[test]

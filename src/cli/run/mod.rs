@@ -62,12 +62,16 @@ pub fn run() -> Result<()> {
         Command::Scan(_) => {}
     }
 
-    validate_scan_option_compatibility(&cli)?;
+    let cli = cli
+        .scan_args()
+        .expect("scan arguments should exist after command dispatch");
+
+    validate_scan_option_compatibility(cli)?;
 
     let start_time = Utc::now();
-    let progress = Arc::new(ScanProgress::new(progress_mode_from_cli(&cli)));
+    let progress = Arc::new(ScanProgress::new(progress_mode_from_cli(cli)));
     progress.set_processes(cli.processes);
-    progress.set_scan_names(configured_scan_names(&cli));
+    progress.set_scan_names(configured_scan_names(cli));
     progress.init_logging_bridge();
     let mut shared_license_cache_config: Option<LicenseCacheConfig> = None;
 
@@ -82,8 +86,8 @@ pub fn run() -> Result<()> {
     progress.start_discovery();
 
     let mut shared_cache_config = if cli.from_json {
-        let cache_config = prepare_cache_config(None, &cli)?;
-        shared_license_cache_config = Some(build_license_cache_config(&cache_config, &cli));
+        let cache_config = prepare_cache_config(None, cli)?;
+        shared_license_cache_config = Some(build_license_cache_config(&cache_config, cli));
         Some(cache_config)
     } else {
         None
@@ -141,14 +145,14 @@ pub fn run() -> Result<()> {
             selected_paths,
             collection_frontier,
             missing_entries: missing_paths_file_entries,
-        } = resolve_native_scan_selection(&cli)?;
+        } = resolve_native_scan_selection(cli)?;
         let paths_file_warnings = build_paths_file_warning_messages(&missing_paths_file_entries);
         for warning in &paths_file_warnings {
             progress.output_written(warning);
         }
 
-        let cache_config = prepare_cache_config(Some(Path::new(&scan_path)), &cli)?;
-        shared_license_cache_config = Some(build_license_cache_config(&cache_config, &cli));
+        let cache_config = prepare_cache_config(Some(Path::new(&scan_path)), cli)?;
+        shared_license_cache_config = Some(build_license_cache_config(&cache_config, cli));
         shared_cache_config = Some(cache_config.clone());
         let collection_exclude_patterns =
             build_collection_exclude_patterns(Path::new(&scan_path), cache_config.root_dir());
@@ -203,7 +207,7 @@ pub fn run() -> Result<()> {
                 shared_cache_config
                     .as_ref()
                     .expect("cache config should be prepared before license engine init"),
-                &cli,
+                cli,
             )?;
             progress.finish_license_detection_engine_creation("setup_scan:licenses");
             progress.finish_setup();
@@ -389,7 +393,7 @@ pub fn run() -> Result<()> {
         });
     }
 
-    if should_include_info_surface(&scan_result.files, &cli) {
+    if should_include_info_surface(&scan_result.files, cli) {
         progress.post_scan_step("Populating info resource counts...");
         record_detail_timing(&progress, "post-scan:info-resource-counts", || {
             populate_info_resource_counts(&mut scan_result.files);
@@ -525,7 +529,7 @@ pub fn run() -> Result<()> {
             shared_cache_config
                 .as_ref()
                 .expect("cache config should be prepared before license engine init"),
-            &cli,
+            cli,
         )?);
         progress.finish_license_detection_engine_creation("finalize:license-engine-creation");
     }
@@ -665,7 +669,7 @@ struct NativeScanSelection {
     missing_entries: Vec<String>,
 }
 
-fn resolve_native_scan_selection(cli: &Cli) -> Result<NativeScanSelection> {
+fn resolve_native_scan_selection(cli: &ScanArgs) -> Result<NativeScanSelection> {
     if cli.paths_file.is_empty() {
         let (scan_path, selected_paths) = resolve_native_scan_inputs(&cli.dir_path)?;
         return Ok(NativeScanSelection {
@@ -778,7 +782,7 @@ fn validate_scan_option_compatibility(cli: &ScanArgs) -> Result<()> {
     Ok(())
 }
 
-fn prepare_cache_config(scan_root: Option<&Path>, cli: &Cli) -> Result<CacheConfig> {
+fn prepare_cache_config(scan_root: Option<&Path>, cli: &ScanArgs) -> Result<CacheConfig> {
     let env_cache_dir = env::var_os(CACHE_DIR_ENV_VAR).map(PathBuf::from);
     let config = CacheConfig::from_overrides(
         scan_root,
@@ -800,7 +804,7 @@ fn prepare_cache_config(scan_root: Option<&Path>, cli: &Cli) -> Result<CacheConf
     Ok(config)
 }
 
-fn build_license_cache_config(cache_root: &CacheConfig, cli: &Cli) -> LicenseCacheConfig {
+fn build_license_cache_config(cache_root: &CacheConfig, cli: &ScanArgs) -> LicenseCacheConfig {
     LicenseCacheConfig::new(
         cache_root.root_dir().to_path_buf(),
         cli.reindex,
@@ -970,7 +974,7 @@ fn process_mode_message(process_mode: ProcessMode) -> Option<&'static str> {
     }
 }
 
-fn progress_mode_from_cli(cli: &Cli) -> ProgressMode {
+fn progress_mode_from_cli(cli: &ScanArgs) -> ProgressMode {
     if cli.quiet {
         ProgressMode::Quiet
     } else if cli.verbose {
@@ -980,7 +984,7 @@ fn progress_mode_from_cli(cli: &Cli) -> ProgressMode {
     }
 }
 
-fn configured_scan_names(cli: &Cli) -> String {
+fn configured_scan_names(cli: &ScanArgs) -> String {
     let mut names = Vec::new();
     if cli.license {
         names.push("licenses");
@@ -1008,7 +1012,7 @@ fn configured_scan_names(cli: &Cli) -> String {
     names.join(", ")
 }
 
-fn should_include_info_surface(files: &[crate::models::FileInfo], cli: &Cli) -> bool {
+fn should_include_info_surface(files: &[crate::models::FileInfo], cli: &ScanArgs) -> bool {
     cli.info
         || files.iter().any(|file| {
             file.date.is_some()
@@ -1052,7 +1056,10 @@ where
     pool.install(f)
 }
 
-fn init_license_engine(cache_root: &CacheConfig, cli: &Cli) -> Result<Arc<LicenseDetectionEngine>> {
+fn init_license_engine(
+    cache_root: &CacheConfig,
+    cli: &ScanArgs,
+) -> Result<Arc<LicenseDetectionEngine>> {
     let cache_config = build_license_cache_config(cache_root, cli);
 
     match &cli.license_dataset_path {

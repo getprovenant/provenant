@@ -665,6 +665,33 @@ fn from_json_warning_summary_matches_output_header_warnings() {
 }
 
 #[test]
+fn explicit_scan_subcommand_matches_legacy_bare_scan_behavior() {
+    let (_temp, scan_dir) = create_scan_fixture();
+
+    let bare_output = provenant_command()
+        .args(["--json-pp", "-", "--info", &scan_dir])
+        .output()
+        .expect("failed to run bare scan command");
+    assert!(bare_output.status.success());
+
+    let explicit_output = provenant_command()
+        .args(["scan", "--json-pp", "-", "--info", &scan_dir])
+        .output()
+        .expect("failed to run explicit scan command");
+    assert!(explicit_output.status.success());
+
+    let bare_json: Value = serde_json::from_slice(&bare_output.stdout).expect("bare stdout json");
+    let explicit_json: Value =
+        serde_json::from_slice(&explicit_output.stdout).expect("explicit stdout json");
+
+    assert_eq!(
+        bare_json["headers"][0]["options"],
+        explicit_json["headers"][0]["options"]
+    );
+    assert_eq!(bare_json["files"], explicit_json["files"]);
+}
+
+#[test]
 fn export_license_dataset_writes_expected_dataset_structure() {
     let temp = TempDir::new().expect("temp dir");
     let export_dir = temp.path().join("dataset");

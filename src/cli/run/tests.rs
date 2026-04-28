@@ -373,9 +373,13 @@ fn validate_scan_option_compatibility_rejects_paths_file_without_single_root() {
 
 #[test]
 fn validate_scan_option_compatibility_rejects_mark_source_without_info() {
-    let mut cli =
+    let cli =
         crate::cli::Cli::try_parse_from(["provenant", "--json-pp", "scan.json", "sample-dir"])
             .unwrap();
+    let mut cli = cli
+        .scan_args()
+        .expect("scan args should be present")
+        .clone();
     cli.mark_source = true;
 
     let error = validate_scan_option_compatibility(&cli).unwrap_err();
