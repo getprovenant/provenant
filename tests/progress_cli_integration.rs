@@ -671,7 +671,7 @@ fn export_license_dataset_writes_expected_dataset_structure() {
 
     let output = provenant_command()
         .args([
-            "--export-license-dataset",
+            "export-license-dataset",
             export_dir.to_str().expect("utf8 export path"),
         ])
         .output()
@@ -702,7 +702,7 @@ fn exported_dataset_can_be_reused_via_license_dataset_path() {
     let export_dir = export_temp.path().join("dataset");
     let export_output = provenant_command()
         .args([
-            "--export-license-dataset",
+            "export-license-dataset",
             export_dir.to_str().expect("utf8 export path"),
         ])
         .output()
