@@ -124,7 +124,7 @@ impl FrameContext {
                     == Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Package {
-                    package: PomAccumulator::new_package_dependency(),
+                    package: new_package_dependency(),
                     data: MavenDependencyData::default(),
                 }))
             }
@@ -154,13 +154,13 @@ impl FrameContext {
                 if state.current_context(FrameContext::party_list)
                     == Some(PartyList::Developers) =>
             {
-                Some(Self::Party(PomAccumulator::new_party("developer")))
+                Some(Self::Party(Party::person("developer", None, None)))
             }
             Tag::Known(KnownTag::Contributor)
                 if state.current_context(FrameContext::party_list)
                     == Some(PartyList::Contributors) =>
             {
-                Some(Self::Party(PomAccumulator::new_party("contributor")))
+                Some(Self::Party(Party::person("contributor", None, None)))
             }
             _ => None,
         }
@@ -368,6 +368,20 @@ impl FrameContext {
             }
             _ => {}
         }
+    }
+}
+
+fn new_package_dependency() -> Dependency {
+    Dependency {
+        purl: None,
+        extracted_requirement: None,
+        scope: None,
+        is_runtime: None,
+        is_optional: Some(false),
+        is_pinned: None,
+        is_direct: Some(true),
+        resolved_package: None,
+        extra_data: None,
     }
 }
 
@@ -846,33 +860,6 @@ impl PomAccumulator {
             text.replacen("scm:", "", 1)
         } else {
             text
-        }
-    }
-
-    fn new_party(role: &str) -> Party {
-        Party {
-            r#type: Some("person".to_string()),
-            role: Some(role.to_string()),
-            name: None,
-            email: None,
-            url: None,
-            organization: None,
-            organization_url: None,
-            timezone: None,
-        }
-    }
-
-    fn new_package_dependency() -> Dependency {
-        Dependency {
-            purl: None,
-            extracted_requirement: None,
-            scope: None,
-            is_runtime: None,
-            is_optional: Some(false),
-            is_pinned: None,
-            is_direct: Some(true),
-            resolved_package: None,
-            extra_data: None,
         }
     }
 
