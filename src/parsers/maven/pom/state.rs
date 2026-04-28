@@ -800,6 +800,87 @@ impl ParentEntry {
     }
 }
 
+#[derive(Default)]
+struct ProjectDetails {
+    inception_year: Option<String>,
+    name: Option<String>,
+    description: Option<String>,
+    packaging: Option<String>,
+    classifier: Option<String>,
+}
+
+impl ProjectDetails {
+    fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
+        match current {
+            Some(KnownTag::Name) => self.name = Some(text.to_string()),
+            Some(KnownTag::Description) => self.description = Some(text.to_string()),
+            Some(KnownTag::Packaging) => self.packaging = Some(text.to_string()),
+            Some(KnownTag::Classifier) => self.classifier = Some(text.to_string()),
+            Some(KnownTag::InceptionYear) => self.inception_year = Some(text.to_string()),
+            _ => {}
+        }
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        resolve_option(resolver, &mut self.inception_year);
+        resolve_option(resolver, &mut self.name);
+        resolve_option(resolver, &mut self.description);
+        resolve_option(resolver, &mut self.packaging);
+        resolve_option(resolver, &mut self.classifier);
+    }
+
+    fn has_extra_data(&self) -> bool {
+        self.inception_year.is_some()
+    }
+
+    fn populate_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
+        if let Some(year) = self.inception_year.take() {
+            extra_data.insert(
+                "inception_year".to_string(),
+                serde_json::Value::String(year),
+            );
+        }
+    }
+
+    fn apply_package_metadata(&self, package_data: &mut PackageData) {
+        package_data.qualifiers =
+            build_maven_qualifiers(self.classifier.as_deref(), self.packaging.as_deref());
+
+        package_data.description = match (
+            self.name.as_deref().filter(|value| !value.is_empty()),
+            self.description
+                .as_deref()
+                .filter(|value| !value.is_empty()),
+        ) {
+            (Some(name), Some(description)) if name == description => Some(name.to_string()),
+            (Some(name), Some(description)) => Some(format!("{name}\n{description}")),
+            (Some(name), None) => Some(name.to_string()),
+            (None, Some(description)) => Some(description.to_string()),
+            (None, None) => None,
+        };
+    }
+
+    fn name(&self) -> &Option<String> {
+        &self.name
+    }
+
+    fn packaging(&self) -> &Option<String> {
+        &self.packaging
+    }
+
+    fn classifier(&self) -> Option<&str> {
+        self.classifier.as_deref()
+    }
+
+    fn packaging_str(&self) -> Option<&str> {
+        self.packaging.as_deref()
+    }
+
+    fn has_classifier(&self) -> bool {
+        self.classifier.is_some()
+    }
+}
+
 fn serialize_non_empty_object<T: Serialize>(
     value: T,
 ) -> Option<serde_json::Map<String, serde_json::Value>> {
@@ -1011,7 +1092,7 @@ struct PomAccumulator {
     dependency_data: Vec<MavenDependencyData>,
     licenses: Vec<MavenLicenseEntry>,
     xml_license_comments: Vec<String>,
-    inception_year: Option<String>,
+    project_details: ProjectDetails,
     project_metadata: ProjectMetadata,
     distribution: DistributionData,
     repositories: Vec<RepositoryEntry>,
@@ -1021,10 +1102,6 @@ struct PomAccumulator {
     dependency_management_entries: Vec<MavenDependencyData>,
     parent: ParentEntry,
     properties: HashMap<String, String>,
-    project_name: Option<String>,
-    project_description: Option<String>,
-    project_packaging: Option<String>,
-    project_classifier: Option<String>,
     relocation: MavenDependencyData,
 }
 
@@ -1045,7 +1122,7 @@ impl PomAccumulator {
             dependency_data: Vec::new(),
             licenses: Vec::new(),
             xml_license_comments: Vec::new(),
-            inception_year: None,
+            project_details: ProjectDetails::default(),
             project_metadata: ProjectMetadata::default(),
             distribution: DistributionData::default(),
             repositories: Vec::new(),
@@ -1055,10 +1132,6 @@ impl PomAccumulator {
             dependency_management_entries: Vec::new(),
             parent: ParentEntry::default(),
             properties: HashMap::new(),
-            project_name: None,
-            project_description: None,
-            project_packaging: None,
-            project_classifier: None,
             relocation: MavenDependencyData::default(),
         }
     }
@@ -1068,13 +1141,8 @@ impl PomAccumulator {
                 Some(KnownTag::GroupId) => self.package_data.namespace = Some(text.to_string()),
                 Some(KnownTag::ArtifactId) => self.package_data.name = Some(text.to_string()),
                 Some(KnownTag::Version) => self.package_data.version = Some(text.to_string()),
-                Some(KnownTag::Name) => self.project_name = Some(text.to_string()),
-                Some(KnownTag::Description) => self.project_description = Some(text.to_string()),
-                Some(KnownTag::Packaging) => self.project_packaging = Some(text.to_string()),
-                Some(KnownTag::Classifier) => self.project_classifier = Some(text.to_string()),
                 Some(KnownTag::Url) => self.package_data.homepage_url = Some(text.to_string()),
-                Some(KnownTag::InceptionYear) => self.inception_year = Some(text.to_string()),
-                _ => {}
+                _ => self.project_details.apply_text(path.current_known(), text),
             }
             return;
         }
@@ -1111,7 +1179,7 @@ impl PomAccumulator {
     }
 
     fn has_extra_data(&self) -> bool {
-        self.inception_year.is_some()
+        self.project_details.has_extra_data()
             || self.project_metadata.has_extra_data()
             || self.distribution.has_extra_data()
             || !self.repositories.is_empty()
@@ -1127,12 +1195,7 @@ impl PomAccumulator {
     }
 
     fn populate_scalar_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
-        if let Some(year) = self.inception_year.take() {
-            extra_data.insert(
-                "inception_year".to_string(),
-                serde_json::Value::String(year),
-            );
-        }
+        self.project_details.populate_extra_data(extra_data);
         self.project_metadata.populate_extra_data(extra_data);
     }
 
@@ -1224,8 +1287,8 @@ impl PomAccumulator {
             parent_group_id: &self.parent.group_id,
             parent_artifact_id: &self.parent.artifact_id,
             parent_version: &self.parent.version,
-            project_name: &self.project_name,
-            project_packaging: &self.project_packaging,
+            project_name: self.project_details.name(),
+            project_packaging: self.project_details.packaging(),
         });
         let mut resolver = PropertyResolver::new(std::mem::take(&mut self.properties), builtins);
 
@@ -1233,14 +1296,10 @@ impl PomAccumulator {
         resolve_option(&mut resolver, &mut self.package_data.name);
         resolve_option(&mut resolver, &mut self.package_data.version);
         resolve_option(&mut resolver, &mut self.package_data.homepage_url);
-        resolve_option(&mut resolver, &mut self.inception_year);
+        self.project_details.resolve_fields(&mut resolver);
         self.project_metadata.resolve_fields(&mut resolver);
         self.distribution.resolve_fields(&mut resolver);
         self.parent.resolve_fields(&mut resolver);
-        resolve_option(&mut resolver, &mut self.project_name);
-        resolve_option(&mut resolver, &mut self.project_description);
-        resolve_option(&mut resolver, &mut self.project_packaging);
-        resolve_option(&mut resolver, &mut self.project_classifier);
         resolve_vec(&mut resolver, &mut self.modules);
         for comment in &mut self.xml_license_comments {
             *comment = resolver.resolve_text(comment, 0);
@@ -1307,25 +1366,8 @@ impl PomAccumulator {
     }
 
     fn finalize_package_metadata(&mut self) {
-        self.package_data.qualifiers = build_maven_qualifiers(
-            self.project_classifier.as_deref(),
-            self.project_packaging.as_deref(),
-        );
-
-        self.package_data.description = match (
-            self.project_name
-                .as_deref()
-                .filter(|value| !value.is_empty()),
-            self.project_description
-                .as_deref()
-                .filter(|value| !value.is_empty()),
-        ) {
-            (Some(name), Some(description)) if name == description => Some(name.to_string()),
-            (Some(name), Some(description)) => Some(format!("{name}\n{description}")),
-            (Some(name), None) => Some(name.to_string()),
-            (None, Some(description)) => Some(description.to_string()),
-            (None, None) => None,
-        };
+        self.project_details
+            .apply_package_metadata(&mut self.package_data);
     }
 
     fn infer_meta_inf_coordinates(&mut self, path: &Path) {
@@ -1360,10 +1402,10 @@ impl PomAccumulator {
                 &group_id,
                 &artifact_id,
                 Some(&version),
-                self.project_classifier.as_deref(),
-                self.project_packaging.as_deref(),
+                self.project_details.classifier(),
+                self.project_details.packaging_str(),
             ));
-            if self.project_classifier.is_none() {
+            if !self.project_details.has_classifier() {
                 self.package_data
                     .source_packages
                     .push(build_maven_source_package(
@@ -1391,8 +1433,8 @@ impl PomAccumulator {
                     group_id,
                     artifact_id,
                     ver,
-                    self.project_classifier.as_deref(),
-                    self.project_packaging.as_deref(),
+                    self.project_details.classifier(),
+                    self.project_details.packaging_str(),
                 ));
             } else {
                 self.package_data.repository_download_url = None;
