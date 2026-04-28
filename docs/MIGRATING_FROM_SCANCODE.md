@@ -161,6 +161,10 @@ you can inspect:
 
 Use `--artifact-dir DIR` if you want the bundle written to a specific location.
 
+This comparison only makes sense when the two JSON files came from the same target snapshot and
+the same effective scan shape. Try to keep the major detection flags and output-shaping intent in
+sync; otherwise the diff mostly reflects different scan scopes rather than meaningful Provenant-vs-ScanCode behavior.
+
 If you are moving an existing ScanCode workflow to Provenant:
 
 1. start with the same broad scan shape you already use

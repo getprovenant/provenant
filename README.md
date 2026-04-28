@@ -152,12 +152,6 @@ For the complete scan-flag surface, run:
 provenant scan --help
 ```
 
-To review migration-confidence deltas between ScanCode and Provenant on the same saved scan target, run:
-
-```sh
-provenant compare --help
-```
-
 For guided workflows and important flag combinations, see the [CLI Guide](docs/CLI_GUIDE.md).
 
 ### Example
