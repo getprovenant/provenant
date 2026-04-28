@@ -14,17 +14,17 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 
 ## Command Index
 
-| Command                      | Purpose                                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| `benchmark-target`           | Measure Provenant against an explicit local or remote benchmark target.                        |
-| `compare-outputs`            | Run Provenant and ScanCode on the same target and write raw plus reduced comparison artifacts. |
-| `update-parser-golden`       | Regenerate parser `.expected.json` fixtures from current Rust parser output.                   |
-| `update-copyright-golden`    | Maintain copyright golden YAML fixtures with parity-gated or Rust-owned update modes.          |
-| `update-license-golden`      | Maintain license golden YAML fixtures with parity-gated or Rust-owned update modes.            |
-| `validate-urls`              | Validate URLs in production docs and Rust docstrings.                                          |
-| `generate-supported-formats` | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                   |
-| `generate-benchmark-chart`   | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.       |
-| `generate-index-artifact`    | Regenerate the embedded license index artifact from ScanCode rules and licenses.               |
+| Command                      | Purpose                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `benchmark-target`           | Measure Provenant against an explicit local or remote benchmark target.                                                                     |
+| `compare-outputs`            | Compare Provenant and ScanCode raw outputs, either by running both scanners on one target or by comparing two existing JSON files directly. |
+| `update-parser-golden`       | Regenerate parser `.expected.json` fixtures from current Rust parser output.                                                                |
+| `update-copyright-golden`    | Maintain copyright golden YAML fixtures with parity-gated or Rust-owned update modes.                                                       |
+| `update-license-golden`      | Maintain license golden YAML fixtures with parity-gated or Rust-owned update modes.                                                         |
+| `validate-urls`              | Validate URLs in production docs and Rust docstrings.                                                                                       |
+| `generate-supported-formats` | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
+| `generate-benchmark-chart`   | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
+| `generate-index-artifact`    | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
 
 ## `benchmark-target`
 
@@ -103,16 +103,21 @@ It also writes a tab-separated summary file at:
 
 ### Purpose
 
-`compare-outputs` runs the same shared scan profile through Provenant and
-ScanCode. It saves both raw JSON outputs and produces reduced comparison
-artifacts for later manual or agent review.
+`compare-outputs` compares Provenant and ScanCode raw outputs and produces
+reduced comparison artifacts for later manual or agent review.
+
+It supports two input modes:
+
+- **scan-target mode**: run both scanners on the same repository or local target
+- **direct-json mode**: compare one existing ScanCode JSON file and one existing Provenant JSON file without rerunning either scanner
 
 ### Requirements
 
-- Docker is required on ScanCode cache misses.
-- The command builds a local ScanCode Docker image from the bundled
+- Scan-target mode requires Docker on ScanCode cache misses.
+- Scan-target mode builds a local ScanCode Docker image from the bundled
   `reference/scancode-toolkit` submodule automatically when the matching image
   is missing and a ScanCode run is required.
+- Direct-json mode only requires readable input JSON files.
 
 ### Usage
 
@@ -125,31 +130,36 @@ cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-pat
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --repo-url https://github.com/org/repo.git --repo-ref <sha> --profile common
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path /path/to/local/directory --profile common
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path /path/to/local/directory -- --license --package --strip-root
+cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --scancode-json /path/to/scancode.json --provenant-json /path/to/provenant.json
 ```
 
 CLI arguments:
 
-- Exactly one of `--repo-url` or one-or-more `--target-path` values is required.
+- Choose exactly one input mode: either `--repo-url`, one-or-more `--target-path` values, or the pair `--scancode-json` + `--provenant-json`.
 - `--repo-url URL`: compare the given repository URL via the shared repo cache.
 - `--repo-ref REF`: required with `--repo-url`; commit SHA, tag, or branch to resolve and compare.
 - `--target-path PATH`: compare an existing local directory in place, or repeat the flag to stage multiple local files into one compare run.
+- `--scancode-json PATH`: compare an existing ScanCode output JSON directly, without rerunning ScanCode.
+- `--provenant-json PATH`: compare an existing Provenant output JSON directly, without rerunning Provenant.
 - `--scancode-cache-identity ID`: optional with `--target-path`; opt in to shared ScanCode cache reuse for a caller-asserted local snapshot identity.
 - `--profile common`: convenience shorthand for `-clupe --system-package --strip-root --processes 4`.
 - `--profile common-with-compiled`: convenience shorthand for `-clupe --system-package --package-in-compiled --strip-root`.
 - `--profile licenses`: convenience shorthand for `-l --strip-root`.
 - `--profile packages`: convenience shorthand for `-p --strip-root`.
-- Pass either a supported `--profile` or explicit shared scan flags after `--`.
+- In scan-target mode, pass either a supported `--profile` or explicit shared scan flags after `--`.
+- Direct-json mode compares the provided JSON files as-is and does not accept `--profile` or explicit scan flags after `--`.
 
 ### What It Does
 
 1. Creates a per-run artifact directory under `.provenant/compare-runs/`.
-2. Either scans the local directory in place or resolves `--repo-url` + `--repo-ref` through a shared repo cache.
-3. Builds Provenant in release mode.
-4. Updates or creates a shared shallow repo cache under `.provenant/repo-cache/`, fetches only the requested ref at depth 1, resolves it to a full commit SHA, and materializes a detached checkout for the run.
-5. Resolves the ScanCode runtime identity and, on cache misses, ensures a local Docker-backed ScanCode runtime exists by building the image from `reference/scancode-toolkit` if needed.
-6. Reuses cached ScanCode raw artifacts when available, otherwise runs ScanCode alongside Provenant with the same shared scan profile and ephemeral license-cache directories.
-7. Saves raw outputs and logs under `raw/`.
-8. Produces reduced comparison artifacts under `comparison/` and prints the absolute artifact paths at the end.
+2. In scan-target mode, either scans the local directory in place or resolves `--repo-url` + `--repo-ref` through a shared repo cache.
+3. In scan-target mode, builds Provenant in release mode.
+4. In scan-target mode, updates or creates a shared shallow repo cache under `.provenant/repo-cache/`, fetches only the requested ref at depth 1, resolves it to a full commit SHA, and materializes a detached checkout for the run.
+5. In scan-target mode, resolves the ScanCode runtime identity and, on cache misses, ensures a local Docker-backed ScanCode runtime exists by building the image from `reference/scancode-toolkit` if needed.
+6. In scan-target mode, reuses cached ScanCode raw artifacts when available, otherwise runs ScanCode alongside Provenant with the same shared scan profile and ephemeral license-cache directories.
+7. In direct-json mode, copies the provided raw JSON files into the run artifact directory without rerunning either scanner.
+8. Saves raw outputs and logs under `raw/`.
+9. Produces reduced comparison artifacts under `comparison/` and prints the absolute artifact paths at the end.
 
 ### Output
 
@@ -176,11 +186,13 @@ Optional diagnostic logs when available:
 - The command keeps the full raw scanner outputs; it does **not** stream giant machine-readable payloads to stdout.
 - Stdout is reserved for progress, a reduced summary table, and the saved artifact paths.
 - ScanCode currently runs via Docker on all platforms for this workflow because that is the reproducible runtime path verified in this repository.
+- Direct-json mode skips Docker, Provenant binary builds, cache preparation, and scanner execution. It compares the provided raw JSON files exactly as supplied.
 - When `compare-outputs` actually executes either scanner, it disables persistent license-cache reuse for fairness: Provenant runs with `--no-license-index-cache`, and ScanCode uses container-local ephemeral cache directories.
 - `compare-outputs` passes the same shared scan args to both scanners. The `common` profile includes installed package database coverage and fixes the shared worker count at `--processes 4`, which is usually a no-op on ordinary source repositories but matters for extracted rootfs/container trees and other artifact targets. Use `common-with-compiled` when you also want Go/Rust compiled-binary package extraction in the shared scan profile.
+- Direct-json mode infers whether info/classify/summary-style sections should be compared from the JSON contents themselves, so it does not require replaying the original scan flags just to unlock those diffs.
 - For `--profile common`, the ScanCode Docker invocation also adds `--memory 12g --memory-swap 12g`, and that runtime cap is part of ScanCode cache validation.
 - `--repo-url` mode requires `--repo-ref`; the command records both the requested ref and the resolved full commit SHA in `run-manifest.json`.
-- `run-manifest.json` also records the Provenant binary version plus the current Provenant repository revision, dirty state, and diff hash, alongside the ScanCode runtime identity.
+- In scan-target mode, `run-manifest.json` also records the Provenant binary version plus the current Provenant repository revision, dirty state, and diff hash, alongside the ScanCode runtime identity. Direct-json mode records placeholder command/runtime fields because it compares the supplied raw JSON files without executing either scanner.
 - Repo URL runs reuse cached git objects from `.provenant/repo-cache/`, fetch only the requested ref shallowly, and remove the temporary detached checkout after the run so compare artifacts do not retain duplicate full repository trees.
 - Repo URL runs also reuse cached raw ScanCode artifacts from `.provenant/scancode-cache/` when the resolved target commit, ScanCode runtime identity, and effective ScanCode scan args are unchanged.
 - Local `--target-path` runs rerun ScanCode by default. Pass `--scancode-cache-identity <id>` to opt into shared ScanCode raw-artifact reuse for a local snapshot you have identified explicitly.
