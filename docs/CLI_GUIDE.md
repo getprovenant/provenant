@@ -9,6 +9,7 @@ Use it to answer practical questions such as:
 - "How do I scan for packages and dependencies?"
 - "When should I use JSON, HTML, SPDX, or CycloneDX?"
 - "How do I re-use an existing scan instead of rescanning?"
+- "How do I compare existing ScanCode and Provenant JSON outputs?"
 
 For the complete scan-flag reference, use:
 
@@ -565,10 +566,34 @@ If you are not sure where to start, use this rule of thumb:
 - Want glob-style file filtering inside one scan root? → add one or more `--include` patterns
 - Want an explicit rooted list of files/directories? → use `--paths-file`
 - Already have JSON and only want to filter or reshape it? → `--from-json`
+- Already have ScanCode and Provenant JSON outputs and want a diff artifact set? → `compare`
+
+## Compare Existing JSON Outputs
+
+When you already have one ScanCode JSON output and one Provenant JSON output, use the `compare`
+command instead of rescanning:
+
+```sh
+provenant compare \
+  --scancode-json scancode.json \
+  --provenant-json provenant.json \
+  --artifact-dir compare-artifacts
+```
+
+This writes a small artifact tree containing:
+
+- copied raw JSON inputs under `raw/`
+- `comparison/summary.json`
+- `comparison/summary.tsv`
+- detailed sample diff artifacts under `comparison/samples/`
+- `run-manifest.json`
+
+Use this when you want to review JSON-level parity or regression deltas without rerunning either
+scanner.
 
 ## Where to Go Next
 
-- Run `provenant --help` for the command tree and `provenant scan --help` for the full scan CLI surface
+- Run `provenant --help` for the command tree, `provenant scan --help` for the full scan CLI surface, and `provenant compare --help` for JSON comparison options
 - See [README.md](../README.md) for installation and quick start
 - See [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md) for supported package and ecosystem coverage
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for implementation details
