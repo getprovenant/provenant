@@ -955,9 +955,7 @@ impl PomAccumulator {
             || self.relocation.message.is_some()
     }
 
-    fn populate_extra_data(&mut self) {
-        let mut extra_data = self.package_data.extra_data.take().unwrap_or_default();
-
+    fn populate_scalar_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
         if let Some(year) = self.inception_year.take() {
             extra_data.insert(
                 "inception_year".to_string(),
@@ -1003,9 +1001,14 @@ impl PomAccumulator {
                 serde_json::Value::String(url),
             );
         }
+    }
 
+    fn populate_distribution_extra_data(
+        &mut self,
+        extra_data: &mut HashMap<String, serde_json::Value>,
+    ) {
         insert_extra_data_object(
-            &mut extra_data,
+            extra_data,
             "distribution_repository",
             DistributionRepositoryEntry {
                 id: self.dist_repository_id.take(),
@@ -1015,7 +1018,7 @@ impl PomAccumulator {
             },
         );
         insert_extra_data_object(
-            &mut extra_data,
+            extra_data,
             "distribution_snapshot_repository",
             DistributionRepositoryEntry {
                 id: self.dist_snapshot_repository_id.take(),
@@ -1025,7 +1028,7 @@ impl PomAccumulator {
             },
         );
         insert_extra_data_object(
-            &mut extra_data,
+            extra_data,
             "distribution_site",
             DistributionSiteEntry {
                 id: self.dist_site_id.take(),
@@ -1033,33 +1036,34 @@ impl PomAccumulator {
                 url: self.dist_site_url.take(),
             },
         );
+    }
 
+    fn populate_collection_extra_data(
+        &mut self,
+        extra_data: &mut HashMap<String, serde_json::Value>,
+    ) {
         insert_extra_data_array(
-            &mut extra_data,
+            extra_data,
             "repositories",
             std::mem::take(&mut self.repositories),
         );
         insert_extra_data_array(
-            &mut extra_data,
+            extra_data,
             "plugin_repositories",
             std::mem::take(&mut self.plugin_repositories),
         );
-        if !self.modules.is_empty() {
-            extra_data.insert(
-                "modules".to_string(),
-                serde_json::Value::Array(
-                    self.modules
-                        .drain(..)
-                        .map(serde_json::Value::String)
-                        .collect(),
-                ),
-            );
-        }
+        insert_extra_data_array(extra_data, "modules", std::mem::take(&mut self.modules));
         insert_extra_data_array(
-            &mut extra_data,
+            extra_data,
             "mailing_lists",
             std::mem::take(&mut self.mailing_lists),
         );
+    }
+
+    fn populate_dependency_extra_data(
+        &mut self,
+        extra_data: &mut HashMap<String, serde_json::Value>,
+    ) {
         if !self.dependency_management_entries.is_empty() {
             extra_data.insert(
                 "dependency_management".to_string(),
@@ -1085,9 +1089,11 @@ impl PomAccumulator {
                 serde_json::Value::Object(dependency_management_entry_to_value(&self.relocation)),
             );
         }
+    }
 
+    fn populate_parent_extra_data(&mut self, extra_data: &mut HashMap<String, serde_json::Value>) {
         insert_extra_data_object(
-            &mut extra_data,
+            extra_data,
             "parent",
             ParentEntry {
                 group_id: self.parent_group_id.take(),
@@ -1096,6 +1102,16 @@ impl PomAccumulator {
                 relative_path: self.parent_relative_path.take(),
             },
         );
+    }
+
+    fn populate_extra_data(&mut self) {
+        let mut extra_data = self.package_data.extra_data.take().unwrap_or_default();
+
+        self.populate_scalar_extra_data(&mut extra_data);
+        self.populate_distribution_extra_data(&mut extra_data);
+        self.populate_collection_extra_data(&mut extra_data);
+        self.populate_dependency_extra_data(&mut extra_data);
+        self.populate_parent_extra_data(&mut extra_data);
 
         self.package_data.extra_data = Some(extra_data);
     }
