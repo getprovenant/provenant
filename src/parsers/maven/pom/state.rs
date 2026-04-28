@@ -81,6 +81,59 @@ impl ElementFrame {
     }
 }
 
+#[derive(Default)]
+struct ContextStack {
+    frames: Vec<ElementFrame>,
+}
+
+impl ContextStack {
+    fn current_path(&self) -> Option<ElementPath> {
+        ElementPath::from_stack(&self.frames)
+    }
+
+    fn current_context<T>(&self, selector: fn(&FrameContext) -> Option<T>) -> Option<T> {
+        self.frames
+            .iter()
+            .rev()
+            .find_map(|frame| selector(&frame.context))
+    }
+
+    fn apply_text(
+        &mut self,
+        acc: &mut PomAccumulator,
+        source_path: &Path,
+        path: &ElementPath,
+        text: &str,
+    ) -> bool {
+        for frame in self.frames.iter_mut().rev() {
+            if frame.context.apply_text(acc, source_path, path, text) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn push(&mut self, tag: Tag, context: FrameContext) {
+        self.frames.push(ElementFrame::new(tag, context));
+    }
+
+    fn finish_current_frame(&mut self, acc: &mut PomAccumulator) {
+        if let Some(frame) = self.frames.last_mut() {
+            let context = std::mem::replace(&mut frame.context, FrameContext::Plain);
+            context.finish(acc);
+        }
+    }
+
+    fn pop(&mut self) {
+        self.frames.pop();
+    }
+
+    fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+}
+
 enum FrameContext {
     Plain,
     Section(ActiveSection),
@@ -1333,7 +1386,7 @@ struct PomAccumulator {
 }
 
 pub(super) struct PomParseState {
-    context_stack: Vec<ElementFrame>,
+    context_stack: ContextStack,
     acc: PomAccumulator,
 }
 
@@ -1661,23 +1714,25 @@ impl PomAccumulator {
 impl PomParseState {
     pub(super) fn new() -> Self {
         Self {
-            context_stack: Vec::new(),
+            context_stack: ContextStack::default(),
             acc: PomAccumulator::new(),
         }
     }
 
     pub(super) fn handle_start(&mut self, element_name: Tag) {
         let context = FrameContext::for_start(self, &element_name);
-        self.context_stack
-            .push(ElementFrame::new(element_name, context));
+        self.context_stack.push(element_name, context);
     }
 
     pub(super) fn handle_text(&mut self, path: &Path, text: String) {
-        let Some(element_path) = ElementPath::from_stack(&self.context_stack) else {
+        let Some(element_path) = self.context_stack.current_path() else {
             return;
         };
 
-        if self.apply_context_text(path, &element_path, &text) {
+        if self
+            .context_stack
+            .apply_text(&mut self.acc, path, &element_path, &text)
+        {
             return;
         }
 
@@ -1685,33 +1740,7 @@ impl PomParseState {
     }
 
     fn current_context<T>(&self, selector: fn(&FrameContext) -> Option<T>) -> Option<T> {
-        self.context_stack
-            .iter()
-            .rev()
-            .find_map(|frame| selector(&frame.context))
-    }
-
-    fn apply_context_text(&mut self, source_path: &Path, path: &ElementPath, text: &str) -> bool {
-        let (context_stack, acc) = (&mut self.context_stack, &mut self.acc);
-        for frame in context_stack.iter_mut().rev() {
-            if frame.context.apply_text(acc, source_path, path, text) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn take_current_context(&mut self) -> Option<FrameContext> {
-        self.context_stack
-            .last_mut()
-            .map(|frame| std::mem::replace(&mut frame.context, FrameContext::Plain))
-    }
-
-    fn finish_current_frame(&mut self) {
-        if let Some(context) = self.take_current_context() {
-            context.finish(&mut self.acc);
-        }
+        self.context_stack.current_context(selector)
     }
 
     pub(super) fn handle_comment(&mut self, comment: String) {
@@ -1726,7 +1755,7 @@ impl PomParseState {
             Tag::Known(KnownTag::Repository)
                 if self.current_context(FrameContext::dependency_context)
                     == Some(DependencyContext::PackageEntries) => {}
-            _ => self.finish_current_frame(),
+            _ => self.context_stack.finish_current_frame(&mut self.acc),
         }
 
         if !self.context_stack.is_empty() {
