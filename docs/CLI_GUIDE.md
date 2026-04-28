@@ -592,6 +592,11 @@ Each compare run writes:
 - detailed sample diff artifacts under `comparison/samples/`
 - `run-manifest.json`
 
+For the comparison to be meaningful, make sure the ScanCode and Provenant JSON files were produced
+with the same effective scan shape: the same target snapshot, the same broad detection flags, and
+the same output-shaping intent. Comparing mismatched scan modes is usually noise, not migration
+signal.
+
 Use this workflow when you want to review parity or regression deltas before trusting Provenant on
 broader repositories or automation. It is most useful as a migration-confidence check, not as a
 generic replacement for normal scanning.
