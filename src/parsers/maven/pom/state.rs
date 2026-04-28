@@ -343,7 +343,7 @@ impl FrameContext {
                     || license.url.is_some()
                     || license.comments.is_some() =>
             {
-                acc.licenses.push(license);
+                acc.license_data.push_entry(license);
             }
             Self::Party(party) => {
                 acc.package_data.parties.push(party);
@@ -801,6 +801,54 @@ impl ParentEntry {
 }
 
 #[derive(Default)]
+struct LicenseData {
+    entries: Vec<MavenLicenseEntry>,
+    xml_comments: Vec<String>,
+}
+
+impl LicenseData {
+    fn push_entry(&mut self, entry: MavenLicenseEntry) {
+        self.entries.push(entry);
+    }
+
+    fn push_xml_comment(&mut self, comment: String) {
+        self.xml_comments.push(comment);
+    }
+
+    fn resolve_fields(&mut self, resolver: &mut PropertyResolver) {
+        for comment in &mut self.xml_comments {
+            *comment = resolver.resolve_text(comment, 0);
+        }
+        for license in &mut self.entries {
+            resolve_license_entry(resolver, license);
+        }
+
+        let license_comments = std::mem::take(&mut self.xml_comments);
+        for comment in license_comments {
+            if !comment.trim().is_empty() {
+                self.entries.push(MavenLicenseEntry {
+                    comments: Some(comment),
+                    ..Default::default()
+                });
+            }
+        }
+    }
+
+    fn finalize(self, package_data: &mut PackageData) {
+        package_data.extracted_license_statement =
+            build_license_statement(&self.entries).map(truncate_field);
+        let (declared_license_expression, declared_license_expression_spdx, license_detections) =
+            build_maven_declared_license_data(
+                &self.entries,
+                package_data.extracted_license_statement.as_deref(),
+            );
+        package_data.declared_license_expression = declared_license_expression;
+        package_data.declared_license_expression_spdx = declared_license_expression_spdx;
+        package_data.license_detections = license_detections;
+    }
+}
+
+#[derive(Default)]
 struct ProjectDetails {
     inception_year: Option<String>,
     name: Option<String>,
@@ -1090,8 +1138,7 @@ impl Party {
 struct PomAccumulator {
     package_data: PackageData,
     dependency_data: Vec<MavenDependencyData>,
-    licenses: Vec<MavenLicenseEntry>,
-    xml_license_comments: Vec<String>,
+    license_data: LicenseData,
     project_details: ProjectDetails,
     project_metadata: ProjectMetadata,
     distribution: DistributionData,
@@ -1120,8 +1167,7 @@ impl PomAccumulator {
         Self {
             package_data,
             dependency_data: Vec::new(),
-            licenses: Vec::new(),
-            xml_license_comments: Vec::new(),
+            license_data: LicenseData::default(),
             project_details: ProjectDetails::default(),
             project_metadata: ProjectMetadata::default(),
             distribution: DistributionData::default(),
@@ -1301,25 +1347,11 @@ impl PomAccumulator {
         self.distribution.resolve_fields(&mut resolver);
         self.parent.resolve_fields(&mut resolver);
         resolve_vec(&mut resolver, &mut self.modules);
-        for comment in &mut self.xml_license_comments {
-            *comment = resolver.resolve_text(comment, 0);
-        }
+        self.license_data.resolve_fields(&mut resolver);
         for dependency in &mut self.dependency_management_entries {
             resolve_dependency_data(&mut resolver, dependency);
         }
         resolve_dependency_data(&mut resolver, &mut self.relocation);
-        for license in &mut self.licenses {
-            resolve_license_entry(&mut resolver, license);
-        }
-        let license_comments = std::mem::take(&mut self.xml_license_comments);
-        for comment in license_comments {
-            if !comment.trim().is_empty() {
-                self.licenses.push(MavenLicenseEntry {
-                    comments: Some(comment),
-                    ..Default::default()
-                });
-            }
-        }
 
         for index in 0..self.package_data.dependencies.len() {
             let dependency = &mut self.package_data.dependencies[index];
@@ -1501,16 +1533,7 @@ impl PomAccumulator {
     }
 
     fn finalize_license_data(&mut self) {
-        self.package_data.extracted_license_statement =
-            build_license_statement(&self.licenses).map(truncate_field);
-        let (declared_license_expression, declared_license_expression_spdx, license_detections) =
-            build_maven_declared_license_data(
-                &self.licenses,
-                self.package_data.extracted_license_statement.as_deref(),
-            );
-        self.package_data.declared_license_expression = declared_license_expression;
-        self.package_data.declared_license_expression_spdx = declared_license_expression_spdx;
-        self.package_data.license_detections = license_detections;
+        std::mem::take(&mut self.license_data).finalize(&mut self.package_data);
     }
 
     fn truncate_package_fields(&mut self) {
@@ -1628,7 +1651,7 @@ impl PomParseState {
     pub(super) fn handle_comment(&mut self, comment: String) {
         if self.context_stack.is_empty() && !comment.is_empty() && is_license_like_comment(&comment)
         {
-            self.acc.xml_license_comments.push(comment);
+            self.acc.license_data.push_xml_comment(comment);
         }
     }
 
