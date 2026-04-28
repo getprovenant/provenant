@@ -64,6 +64,26 @@ impl ContextStack {
             .find_map(|frame| selector(&frame.state))
     }
 
+    fn current_section(&self) -> Option<ActiveSection> {
+        self.current_context(ContextFrameState::section)
+    }
+
+    fn current_party_list(&self) -> Option<PartyList> {
+        self.current_context(ContextFrameState::party_list)
+    }
+
+    fn current_repository_collection(&self) -> Option<RepositoryCollection> {
+        self.current_context(ContextFrameState::repository_collection)
+    }
+
+    fn current_distribution_section(&self) -> Option<DistributionSection> {
+        self.current_context(ContextFrameState::distribution_section)
+    }
+
+    fn current_dependency_context(&self) -> Option<DependencyContext> {
+        self.current_context(ContextFrameState::dependency_context)
+    }
+
     fn apply_text(
         &mut self,
         acc: &mut PomAccumulator,
@@ -136,7 +156,7 @@ impl ContextFrameState {
     fn start_dependency_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
         match element_name {
             Tag::Known(KnownTag::Dependency)
-                if stack.current_context(ContextFrameState::dependency_context)
+                if stack.current_dependency_context()
                     == Some(DependencyContext::ManagementEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Management(
@@ -144,7 +164,7 @@ impl ContextFrameState {
                 )))
             }
             Tag::Known(KnownTag::Dependency)
-                if stack.current_context(ContextFrameState::dependency_context)
+                if stack.current_dependency_context()
                     == Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Dependency(ActiveDependency::Package {
@@ -156,7 +176,7 @@ impl ContextFrameState {
                 DependencyContext::ManagementContainer,
             )),
             Tag::Known(KnownTag::Dependencies)
-                if stack.current_context(ContextFrameState::dependency_context)
+                if stack.current_dependency_context()
                     == Some(DependencyContext::ManagementContainer) =>
             {
                 Some(Self::DependencyContext(
@@ -175,14 +195,12 @@ impl ContextFrameState {
             Tag::Known(KnownTag::Developers) => Some(Self::PartyList(PartyList::Developers)),
             Tag::Known(KnownTag::Contributors) => Some(Self::PartyList(PartyList::Contributors)),
             Tag::Known(KnownTag::Developer)
-                if stack.current_context(ContextFrameState::party_list)
-                    == Some(PartyList::Developers) =>
+                if stack.current_party_list() == Some(PartyList::Developers) =>
             {
                 Some(Self::Party(Party::person("developer", None, None)))
             }
             Tag::Known(KnownTag::Contributor)
-                if stack.current_context(ContextFrameState::party_list)
-                    == Some(PartyList::Contributors) =>
+                if stack.current_party_list() == Some(PartyList::Contributors) =>
             {
                 Some(Self::Party(Party::person("contributor", None, None)))
             }
@@ -195,25 +213,15 @@ impl ContextFrameState {
             Tag::Known(KnownTag::DistributionManagement) => {
                 Some(Self::Distribution(DistributionSection::Management))
             }
-            Tag::Known(KnownTag::Repository)
-                if stack
-                    .current_context(ContextFrameState::distribution_section)
-                    .is_some() =>
-            {
+            Tag::Known(KnownTag::Repository) if stack.current_distribution_section().is_some() => {
                 Some(Self::Distribution(DistributionSection::Repository))
             }
             Tag::Known(KnownTag::SnapshotRepository)
-                if stack
-                    .current_context(ContextFrameState::distribution_section)
-                    .is_some() =>
+                if stack.current_distribution_section().is_some() =>
             {
                 Some(Self::Distribution(DistributionSection::SnapshotRepository))
             }
-            Tag::Known(KnownTag::Site)
-                if stack
-                    .current_context(ContextFrameState::distribution_section)
-                    .is_some() =>
-            {
+            Tag::Known(KnownTag::Site) if stack.current_distribution_section().is_some() => {
                 Some(Self::Distribution(DistributionSection::Site))
             }
             _ => None,
@@ -229,9 +237,9 @@ impl ContextFrameState {
                 RepositoryCollection::PluginRepositories,
             )),
             Tag::Known(KnownTag::Repository)
-                if stack.current_context(ContextFrameState::repository_collection)
+                if stack.current_repository_collection()
                     == Some(RepositoryCollection::Repositories)
-                    && stack.current_context(ContextFrameState::dependency_context)
+                    && stack.current_dependency_context()
                         != Some(DependencyContext::PackageEntries) =>
             {
                 Some(Self::Repository {
@@ -240,7 +248,7 @@ impl ContextFrameState {
                 })
             }
             Tag::Known(KnownTag::PluginRepository)
-                if stack.current_context(ContextFrameState::repository_collection)
+                if stack.current_repository_collection()
                     == Some(RepositoryCollection::PluginRepositories) =>
             {
                 Some(Self::Repository {
@@ -260,11 +268,7 @@ impl ContextFrameState {
         match element_name {
             Tag::Known(KnownTag::Parent) => Some(Self::Section(ActiveSection::Parent)),
             Tag::Known(KnownTag::Properties) => Some(Self::Section(ActiveSection::Properties)),
-            Tag::Known(KnownTag::Relocation)
-                if stack
-                    .current_context(ContextFrameState::distribution_section)
-                    .is_some() =>
-            {
+            Tag::Known(KnownTag::Relocation) if stack.current_distribution_section().is_some() => {
                 acc.dependency_scratch.reset_relocation();
                 Some(Self::Section(ActiveSection::Relocation))
             }
@@ -275,10 +279,7 @@ impl ContextFrameState {
     }
 
     fn start_item_context(stack: &ContextStack, element_name: &Tag) -> Option<Self> {
-        match (
-            element_name,
-            stack.current_context(ContextFrameState::section),
-        ) {
+        match (element_name, stack.current_section()) {
             (Tag::Known(KnownTag::License), _) => Some(Self::License(MavenLicenseEntry::default())),
             (Tag::Known(KnownTag::MailingList), Some(ActiveSection::MailingLists)) => {
                 Some(Self::MailingList(MailingListEntryBuilder::default()))
@@ -1747,9 +1748,7 @@ impl PomParseState {
     pub(super) fn handle_end(&mut self, element_name: Tag) {
         match element_name {
             Tag::Known(KnownTag::Repository)
-                if self
-                    .context_stack
-                    .current_context(ContextFrameState::dependency_context)
+                if self.context_stack.current_dependency_context()
                     == Some(DependencyContext::PackageEntries) => {}
             _ => self.context_stack.finish_current_frame(&mut self.acc),
         }
