@@ -131,6 +131,21 @@ fn test_plain_json_author_string_machine_token_dropped_without_metadata_context(
 }
 
 #[test]
+fn test_nested_json_author_string_machine_token_dropped_with_metadata_context() {
+    let input = concat!(
+        "{\n",
+        "  \"info\": {\n",
+        "    \"version\": 1,\n",
+        "    \"author\": \"makeappicon\"\n",
+        "  }\n",
+        "}\n",
+    );
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
 fn test_author_span_prose_continuation_not_detected() {
     let input = "contributors, for example.\nIf you want to help, start with docs.";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
@@ -160,6 +175,63 @@ fn test_author_markdown_link_label_not_detected() {
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
 
     assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_author_flutter_issue_hygiene_link_not_detected() {
+    let input = "[All open issues sorted by thumbs-up] (https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc)";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_author_flutter_api_sentence_not_detected() {
+    let input =
+        "If fixing it requires an API that is not yet available on stable, add the waiting label.";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_author_windows_filedescription_resource_not_detected() {
+    let input = concat!(
+        "VALUE \"LegalCopyright\", \"Copyright 2014 The Flutter Authors. All rights reserved.\" \"\\0\"\n",
+        "VALUE \"FileDescription\", \"A sample application demonstrating Flutter APIs.\" \"\\0\"\n",
+        "VALUE \"FileVersion\", VERSION_AS_STRING \"\\0\"\n",
+    );
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .all(|a| !a.author.contains("FileDescription") && !a.author.contains("FileVersion")),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
+fn test_author_camel_case_class_phrase_not_detected() {
+    let input = "A delegate used by RenderListWheelViewport to manage its children. the ListWheelChildManager";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_author_written_by_notice_tail_not_detected() {
+    let input = "This software was written by Alexander Peslyak in d+. No copyright is claimed.";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        authors
+            .iter()
+            .map(|a| a.author.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Alexander Peslyak"],
+        "authors: {authors:?}"
+    );
 }
 
 #[test]

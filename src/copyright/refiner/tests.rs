@@ -94,8 +94,11 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
     assert_eq!(refine_author("chef-client"), None);
     assert_eq!(refine_author("compatible"), None);
     assert_eq!(refine_author("desired"), None);
+    assert_eq!(refine_author("document"), None);
+    assert_eq!(refine_author("otherwise"), None);
     assert_eq!(refine_author("performing"), None);
     assert_eq!(refine_author("review"), None);
+    assert_eq!(refine_author("reviewer"), None);
     assert_eq!(refine_author("volunteers"), None);
     assert_eq!(refine_author("Guide"), None);
     assert_eq!(refine_author("maintainers with write access"), None);
@@ -125,6 +128,11 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
     );
     assert_eq!(refine_author("the DTD (see Section 13.3).</p>"), None);
     assert_eq!(refine_author("distribute Contributors"), None);
+    assert_eq!(refine_author("If fixing it requires an API"), None);
+    assert_eq!(
+        refine_author("Flutter and Dart have told us they plan to work contributors"),
+        None
+    );
 }
 
 #[test]
@@ -1178,6 +1186,17 @@ fn test_refine_author_drops_glibc_prose_fragments() {
     assert_eq!(refine_author("doxygen. Using"), None);
     assert_eq!(refine_author("final String?"), None);
     assert_eq!(
+        refine_author(
+            "VALUE FileDescription A sample application demonstrating Flutter APIs VALUE FileVersion"
+        ),
+        None
+    );
+    assert_eq!(refine_author("the ListWheelChildManager"), None);
+    assert_eq!(
+        refine_author("Alexander Peslyak in d+. No copyright is"),
+        None
+    );
+    assert_eq!(
         refine_author("[becoming a sponsor] (https://opencollective.com/pnpm#sponsor)"),
         None
     );
@@ -1212,8 +1231,26 @@ fn test_is_junk_copyright_drops_cc0_and_libgcrypt_junk_fragments() {
     assert!(is_junk_copyright(
         "copyright and related or neighboring rights"
     ));
+    assert!(is_junk_copyright(
+        "copyright and related or neighboring legal rights in the Work"
+    ));
     assert!(is_junk_copyright("copyright was owned solely by FSF"));
     assert!(is_junk_copyright("copyright years may be listed"));
+}
+
+#[test]
+fn test_is_junk_copyright_drops_code_signature_and_commentary_fragments() {
+    assert!(is_junk_copyright("copyright, String? description, bool"));
+    assert!(is_junk_copyright(
+        "copyright $template .replaceAllMapped RegExp r ( ^ +), (Match match) final"
+    ));
+    assert!(is_junk_copyright(
+        "copyright and comment directing the reader to the original source"
+    ));
+    assert!(is_junk_copyright(
+        "copyright referencing The Flutter Authors"
+    ));
+    assert!(is_junk_copyright("not copyrighted The Flutter Authors"));
 }
 
 #[test]

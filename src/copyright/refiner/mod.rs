@@ -160,6 +160,9 @@ static AUTHORS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         "recheck",
         "reputations",
         "review",
+        "reviewer",
+        "document",
+        "otherwise",
         "disclaims",
         "liability",
         "required",
@@ -434,6 +437,7 @@ static HOLDERS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
 pub fn is_junk_copyright(s: &str) -> bool {
     COPYRIGHTS_JUNK_PATTERNS.iter().any(|re| re.is_match(s))
         || is_junk_copyright_scan_phrase(s)
+        || is_junk_copyright_code_fragment(s)
         || is_junk_c_sign_path_fragment(s)
 }
 
@@ -458,6 +462,27 @@ fn is_junk_c_sign_path_fragment(s: &str) -> bool {
     };
 
     !has_copyright_year(s) && is_path_like_code_fragment(tail)
+}
+
+fn is_junk_copyright_code_fragment(s: &str) -> bool {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("copyright") {
+        return false;
+    }
+
+    let has_code_markers = lower.contains("string?")
+        || lower.contains("bool")
+        || lower.contains("final ")
+        || lower.contains("this.")
+        || lower.contains("regexp")
+        || lower.contains("match ")
+        || lower.contains("replaceallmapped")
+        || lower.contains("formatoutput")
+        || lower.contains("$template")
+        || trimmed.contains("??");
+
+    has_code_markers && !has_copyright_year(trimmed)
 }
 
 /// Return true if `s` matches any known junk holder pattern.

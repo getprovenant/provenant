@@ -5,7 +5,7 @@ use super::binary_text::{
     extract_named_author_from_binary_line, has_binary_name_like_shape, has_excessive_at_noise,
     has_sufficient_alphabetic_content, is_binary_string_author_candidate, is_company_like_suffix,
 };
-use crate::copyright::{self, AuthorDetection, CopyrightDetection, HolderDetection};
+use crate::copyright::{self, AuthorDetection, CopyrightDetection, HolderDetection, refine_author};
 use crate::models::{Author, Copyright, FileInfoBuilder, Holder, LineNumber};
 use regex::Regex;
 use std::collections::HashSet;
@@ -212,8 +212,9 @@ fn extract_patch_header_author_supplements(text_content: &str) -> Vec<AuthorDete
         .filter_map(|(line_index, line)| {
             let captures = PATCH_AUTHOR_RE.captures(line.trim())?;
             let author = captures.name("author")?.as_str().trim();
+            let author = refine_author(author)?;
             Some(AuthorDetection {
-                author: author.to_string(),
+                author,
                 start_line: LineNumber::from_0_indexed(line_index),
                 end_line: LineNumber::from_0_indexed(line_index),
             })
@@ -257,9 +258,10 @@ fn extract_comment_author_supplements(text_content: &str) -> Vec<AuthorDetection
                 .name("author")
                 .or_else(|| captures.name("author2"))
                 .map(|m| m.as_str().trim())
+            && let Some(author) = refine_author(&normalize_comment_author_candidate(author))
         {
             authors.push(AuthorDetection {
-                author: normalize_comment_author_candidate(author),
+                author,
                 start_line: line_number,
                 end_line: line_number,
             });
@@ -278,8 +280,12 @@ fn extract_comment_author_supplements(text_content: &str) -> Vec<AuthorDetection
                 .map(|m| m.as_str().trim());
 
             if let (Some(name), Some(contact)) = (name, contact) {
+                let author = normalize_parenthesized_contact_author(name, contact);
+                let Some(author) = refine_author(&author) else {
+                    continue;
+                };
                 authors.push(AuthorDetection {
-                    author: normalize_parenthesized_contact_author(name, contact),
+                    author,
                     start_line: line_number,
                     end_line: line_number,
                 });
@@ -288,9 +294,10 @@ fn extract_comment_author_supplements(text_content: &str) -> Vec<AuthorDetection
 
         if let Some(captures) = DOCKER_MAINTAINER_LABEL_RE.captures(trimmed)
             && let Some(author) = captures.name("author").map(|m| m.as_str().trim())
+            && let Some(author) = refine_author(author)
         {
             authors.push(AuthorDetection {
-                author: author.to_string(),
+                author,
                 start_line: line_number,
                 end_line: line_number,
             });
@@ -310,8 +317,12 @@ fn extract_comment_author_supplements(text_content: &str) -> Vec<AuthorDetection
             if name.is_empty() {
                 continue;
             }
+            let author = format!("{name} <{email}>");
+            let Some(author) = refine_author(&author) else {
+                continue;
+            };
             authors.push(AuthorDetection {
-                author: format!("{name} <{email}>"),
+                author,
                 start_line: line_number,
                 end_line: line_number,
             });
@@ -356,7 +367,7 @@ fn normalize_comment_author_candidate(author: &str) -> String {
             .name("url")
             .map(|m| m.as_str().trim_end_matches('/'))
             .unwrap_or(trimmed);
-        return format!("{name} {url}");
+        return format!("{name} ({url})");
     }
 
     trimmed.to_string()

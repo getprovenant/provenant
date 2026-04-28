@@ -207,7 +207,7 @@ fn trim_attribution_tail(who: &str) -> String {
 
 fn trim_following_sentence_clause(who: &str) -> String {
     static FOLLOWING_SENTENCE_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?is)^(?P<head>.+?)\.\s+(?:it|this|these|those|the|a|an)\b.*$").unwrap()
+        Regex::new(r"(?is)^(?P<head>.+?)\.\s+(?:it|this|these|those|the|a|an|no)\b.*$").unwrap()
     });
 
     let trimmed = who.trim();
@@ -934,11 +934,10 @@ pub(in super::super) fn extract_was_developed_by_author_blocks(
             continue;
         }
 
-        let author = refine_author(&joined).unwrap_or(joined);
-        if author.is_empty() {
+        let Some(author) = refine_author(&joined) else {
             line_number = line_number.next();
             continue;
-        }
+        };
 
         authors.push(AuthorDetection {
             author,
@@ -1892,10 +1891,9 @@ pub(in super::super) fn extract_developed_by_sentence_authors(
         }
 
         let candidate = format!("{p1} {p2}");
-        let author = refine_author(&candidate).unwrap_or(candidate);
-        if author.is_empty() {
+        let Some(author) = refine_author(&candidate) else {
             continue;
-        }
+        };
 
         authors.push(AuthorDetection {
             author,
@@ -1930,10 +1928,9 @@ pub(in super::super) fn extract_developed_by_phrase_authors(
                 continue;
             }
 
-            let author = refine_author(who).unwrap_or_else(|| who.to_string());
-            if author.is_empty() {
+            let Some(author) = refine_author(who) else {
                 continue;
-            }
+            };
 
             authors.push(AuthorDetection {
                 author,
