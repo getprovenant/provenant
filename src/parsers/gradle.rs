@@ -425,7 +425,7 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
             continue;
         }
 
-        if let Tok::Str(_) = &tokens[i]
+        if let Tok::Str(scope_name) = &tokens[i]
             && i + 1 < tokens.len()
             && tokens[i + 1] == Tok::OpenParen
             && let Some(end) = find_matching_paren(tokens, i + 1)
@@ -438,7 +438,7 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
                 && let Some(project_end) = find_matching_paren(inner, 1)
             {
                 let project_tokens = &inner[2..project_end];
-                if let Some(rd) = parse_project_ref(project_tokens) {
+                if let Some(rd) = parse_project_ref(project_tokens, scope_name) {
                     deps.push(rd);
                 }
                 i = end + 1;
@@ -541,13 +541,13 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
             continue;
         }
 
-        // PATTERN: scope ident.attr (variable reference / dotted identifier)
-        // Note: Skip references starting with "dependencies." as Python's pygmars
-        // relabels the "dependencies" token, breaking the DEPENDENCY-5 grammar rule.
+        // PATTERN: scope libs.foo.bar (version catalog alias)
+        // Keep TOML-backed `libs.*` aliases for later version-catalog resolution,
+        // but ignore other unresolved dotted identifiers such as `dependencies.*`
+        // or arbitrary constants like `Deps.AndroidX.core`.
         if next < tokens.len()
             && let Tok::Ident(ref val) = tokens[next]
-            && val.contains('.')
-            && !val.starts_with("dependencies.")
+            && val.starts_with("libs.")
             && let Some(last_seg) = val.rsplit('.').next()
             && !last_seg.is_empty()
         {
@@ -574,7 +574,7 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
             && let Some(end) = find_matching_paren(tokens, next + 1)
         {
             let inner = &tokens[next + 2..end];
-            if let Some(rd) = parse_project_ref(inner) {
+            if let Some(rd) = parse_project_ref(inner, &scope_name) {
                 deps.push(rd);
             }
             i = end + 1;
@@ -637,7 +637,7 @@ fn parse_paren_content(scope: &str, tokens: &[Tok], deps: &mut Vec<RawDep>) {
         if inner_fn == "project" {
             if let Some(end) = find_matching_paren(tokens, 1) {
                 let inner = &tokens[2..end];
-                if let Some(rd) = parse_project_ref(inner) {
+                if let Some(rd) = parse_project_ref(inner, scope) {
                     deps.push(rd);
                 }
             }
@@ -776,7 +776,7 @@ fn parse_named_params(scope: &str, tokens: &[Tok]) -> Option<(RawDep, usize)> {
     ))
 }
 
-fn parse_project_ref(tokens: &[Tok]) -> Option<RawDep> {
+fn parse_project_ref(tokens: &[Tok], scope: &str) -> Option<RawDep> {
     if let Some(Tok::Str(val)) = tokens.first() {
         let module_name = val.trim_start_matches(':');
         let mut segments = module_name
@@ -795,7 +795,7 @@ fn parse_project_ref(tokens: &[Tok]) -> Option<RawDep> {
             },
             name: truncate_field(name.to_string()),
             version: String::new(),
-            scope: "project".to_string(),
+            scope: truncate_field(scope.to_string()),
             catalog_alias: None,
             project_path: Some(truncate_field(module_name.to_string())),
         });
@@ -1561,8 +1561,25 @@ dependencies {
         let tokens = lex(content);
         let deps = extract_dependencies(&tokens);
         assert_eq!(deps.len(), 2);
-        assert_eq!(deps[0].scope, Some("project".to_string()));
+        assert_eq!(deps[0].scope, Some("implementation".to_string()));
+        assert_eq!(
+            deps[0]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("documentation")
+        );
         assert_eq!(deps[0].purl, Some("pkg:maven/documentation".to_string()));
+        assert_eq!(deps[1].scope, Some("implementation".to_string()));
+        assert_eq!(
+            deps[1]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("basics")
+        );
         assert_eq!(deps[1].purl, Some("pkg:maven/basics".to_string()));
     }
 
@@ -1579,8 +1596,78 @@ dependencies {
 
         assert_eq!(deps.len(), 2);
         assert_eq!(deps[0].purl, Some("pkg:maven/libs/download".to_string()));
-        assert_eq!(deps[0].scope, Some("project".to_string()));
+        assert_eq!(deps[0].scope, Some("implementation".to_string()));
+        assert_eq!(
+            deps[0]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("libs:download")
+        );
+        assert_eq!(deps[1].scope, Some("implementation".to_string()));
+        assert_eq!(
+            deps[1]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("libs:index")
+        );
         assert_eq!(deps[1].purl, Some("pkg:maven/libs/index".to_string()));
+    }
+
+    #[test]
+    fn test_testimplementation_project_reference_is_not_runtime() {
+        let content = r#"
+dependencies {
+    testImplementation project(':mockito-config')
+}
+"#;
+        let tokens = lex(content);
+        let deps = extract_dependencies(&tokens);
+
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].scope, Some("testImplementation".to_string()));
+        assert_eq!(deps[0].purl, Some("pkg:maven/mockito-config".to_string()));
+        assert_eq!(deps[0].is_runtime, Some(false));
+        assert_eq!(deps[0].is_optional, Some(true));
+        assert_eq!(
+            deps[0]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("mockito-config")
+        );
+    }
+
+    #[test]
+    fn test_unresolved_dotted_identifiers_are_ignored_but_project_refs_survive() {
+        let content = r#"
+dependencies {
+    implementation Deps.AndroidX.core
+    implementation Deps.AndroidX.androidxAnnotation
+    testImplementation TestDeps.mockitoCore3
+    testImplementation project(':mockito-config')
+}
+"#;
+        let tokens = lex(content);
+        let deps = extract_dependencies(&tokens);
+
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].scope, Some("testImplementation".to_string()));
+        assert_eq!(deps[0].purl, Some("pkg:maven/mockito-config".to_string()));
+        assert_eq!(deps[0].is_runtime, Some(false));
+        assert_eq!(deps[0].is_optional, Some(true));
+        assert_eq!(
+            deps[0]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("mockito-config")
+        );
     }
 
     #[test]
@@ -1784,8 +1871,18 @@ subprojects {
         let tokens = lex(content);
         let deps = extract_dependencies(&tokens);
         assert_eq!(deps.len(), 1);
-        assert_eq!(deps[0].scope, Some("project".to_string()));
+        assert_eq!(deps[0].scope, Some("testImplementation".to_string()));
         assert_eq!(deps[0].purl, Some("pkg:maven/utils/test-utils".to_string()));
+        assert_eq!(deps[0].is_runtime, Some(false));
+        assert_eq!(deps[0].is_optional, Some(true));
+        assert_eq!(
+            deps[0]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("project_path"))
+                .and_then(|value| value.as_str()),
+            Some("utils:test-utils")
+        );
     }
 
     #[test]
