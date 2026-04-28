@@ -1109,6 +1109,44 @@ fn test_detect_copyright_holders_boilerplate_regression() {
 }
 
 #[test]
+fn test_detect_sample_comment_prose_does_not_survive_as_holder_or_copyright() {
+    let input = "// Copyright\n// Flutter code sample for [MyElement].\n";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        !c.iter()
+            .any(|cr| cr.copyright.contains("Flutter code sample for MyElement")),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        !h.iter()
+            .any(|ho| ho.holder.contains("Flutter code sample for MyElement")),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_notice_prose_fragment_does_not_survive_as_holder_or_copyright() {
+    let input = "copyright comments are original works produced specifically for use as part of";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter().all(|cr| !cr
+            .copyright
+            .contains("original works produced specifically for use as")),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().all(|ho| !ho
+            .holder
+            .contains("original works produced specifically for use as")),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_detect_copyright_c_symbol() {
     let (c, h, _a) = detect_copyrights_from_text("Copyright (c) 2020-2024 Foo Bar");
     assert!(!c.is_empty(), "Should detect copyright with (c)");

@@ -484,13 +484,14 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower.contains("formatoutput")
         || lower.contains("$template")
         || trimmed.contains("??");
+    let has_prose_markers = is_obvious_prose_fragment(trimmed);
 
     if !lower.starts_with("copyright") {
         return (lower.starts_with("not copyrighted") && !has_copyright_year(trimmed))
-            || (lower.contains("copyright") && has_code_markers);
+            || (lower.contains("copyright") && (has_code_markers || has_prose_markers));
     }
 
-    has_code_markers && !has_copyright_year(trimmed)
+    (has_code_markers || has_prose_markers) && !has_copyright_year(trimmed)
 }
 
 /// Return true if `s` matches any known junk holder pattern.
@@ -514,8 +515,9 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || lower.contains(".startswith")
         || lower.contains("startswith(")
         || lower.contains("$template");
+    let has_prose_markers = is_obvious_prose_fragment(trimmed);
 
-    has_code_markers && !has_copyright_year(trimmed)
+    (has_code_markers || has_prose_markers) && !has_copyright_year(trimmed)
 }
 
 fn is_junk_holder_symbol_garbage(s: &str) -> bool {
@@ -525,12 +527,72 @@ fn is_junk_holder_symbol_garbage(s: &str) -> bool {
     }
 
     let alpha_count = trimmed.chars().filter(|ch| ch.is_alphabetic()).count();
+    let ascii_alpha_count = trimmed
+        .chars()
+        .filter(|ch| ch.is_ascii_alphabetic())
+        .count();
+    let non_ascii_count = trimmed.chars().filter(|ch| !ch.is_ascii()).count();
     let symbol_count = trimmed
         .chars()
         .filter(|ch| !ch.is_alphanumeric() && !ch.is_whitespace())
         .count();
+    let token_count = trimmed
+        .split_whitespace()
+        .filter(|token| token.chars().any(|ch| ch.is_alphanumeric()))
+        .count();
 
-    alpha_count <= 2 && symbol_count >= 6
+    (alpha_count <= 2 && symbol_count >= 6)
+        || (trimmed.len() >= 16
+            && non_ascii_count >= 12
+            && ascii_alpha_count <= 2
+            && symbol_count >= 4
+            && token_count <= 4)
+}
+
+fn is_obvious_prose_fragment(s: &str) -> bool {
+    let trimmed = s.trim();
+    if trimmed.is_empty()
+        || has_copyright_year(trimmed)
+        || trimmed.contains('@')
+        || trimmed.contains("http://")
+        || trimmed.contains("https://")
+    {
+        return false;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("not by ") {
+        return false;
+    }
+    if lower.contains("code sample for") {
+        return true;
+    }
+
+    let phrase_markers = [
+        "directing the reader",
+        "for use as part of",
+        "original works produced specifically for use as",
+        "confusion over",
+        "original source",
+    ];
+    if phrase_markers.iter().any(|marker| lower.contains(marker)) {
+        return true;
+    }
+
+    let words: Vec<&str> = lower.split_whitespace().collect();
+    if words.len() < 3 {
+        return false;
+    }
+
+    matches!(
+        words.first().copied(),
+        Some("comment" | "comments" | "referencing" | "resulting" | "not")
+    )
+}
+
+fn is_trailing_component_descriptor(desc: &str) -> bool {
+    let desc_lower = desc.to_ascii_lowercase();
+    desc_lower.contains("noise") || desc_lower.ends_with("and others")
 }
 
 pub(crate) fn is_path_like_code_fragment(s: &str) -> bool {
@@ -1186,12 +1248,40 @@ fn strip_trailing_parenthesized_descriptor_after_by_holder(s: &str) -> String {
         return s.to_string();
     }
 
-    let desc_lower = desc.to_ascii_lowercase();
-    if !(desc_lower.contains("noise") || desc_lower.ends_with("and others")) {
+    if !is_trailing_component_descriptor(desc) {
         return s.to_string();
     }
 
     prefix.to_string()
+}
+
+fn strip_trailing_component_descriptor_from_holder(s: &str) -> String {
+    static PAREN_DESCRIPTOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^(?P<prefix>.+?)\s*\(\s*(?P<desc>[A-Za-z][A-Za-z\s-]{2,64})\s*\)\s*$").unwrap()
+    });
+    static TRAILING_COMPONENT_DESCRIPTOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\s+(?P<desc>(?:[A-Za-z]+\s+)?noise(?:\s+and\s+others)?)$").unwrap()
+    });
+
+    let trimmed = s.trim();
+
+    if let Some(cap) = PAREN_DESCRIPTOR_RE.captures(trimmed) {
+        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+        let desc = cap.name("desc").map(|m| m.as_str()).unwrap_or("").trim();
+        if !prefix.is_empty() && is_trailing_component_descriptor(desc) {
+            return prefix.to_string();
+        }
+    }
+
+    if let Some(m) = TRAILING_COMPONENT_DESCRIPTOR_RE.find(trimmed) {
+        let prefix = trimmed[..m.start()].trim();
+        let desc = m.as_str().trim();
+        if !prefix.is_empty() && is_trailing_component_descriptor(desc) {
+            return prefix.to_string();
+        }
+    }
+
+    s.to_string()
 }
 
 fn strip_trailing_or_suffix(s: &str) -> String {
@@ -1697,6 +1787,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     if had_paren_email {
         h = remove_comma_between_person_and_company_suffix(&h);
     }
+    h = strip_trailing_component_descriptor_from_holder(&h);
     h = strip_trailing_by_person_clause_after_company(&h);
     h = strip_trailing_division_of_company_suffix(&h);
     h = strip_leading_product_operating_system_title(&h);

@@ -1260,6 +1260,13 @@ fn test_is_junk_copyright_drops_code_signature_and_commentary_fragments() {
         "line.startswith Copyright (c) Microsoft Corporation"
     ));
     assert!(is_junk_copyright("not copyrighted The Flutter Authors"));
+    assert!(is_junk_copyright(
+        "copyright comments are original works produced specifically for use as"
+    ));
+    assert!(is_junk_copyright("copyright, resulting in confusion over"));
+    assert!(is_junk_copyright(
+        "Copyright Flutter code sample for MyElement"
+    ));
     assert!(!is_junk_copyright("Not copyrighted 1992 by Mark Adler"));
 }
 
@@ -1291,6 +1298,38 @@ fn test_refine_holder_drops_flutter_compare_noise_fragments() {
     assert_eq!(refine_holder("String? description late bool"), None);
     assert_eq!(
         refine_holder("$template .replaceAllMapped RegExp r ^ +), (Match match) final"),
+        None
+    );
+    assert_eq!(
+        refine_holder("comment directing the reader to the original source"),
+        None
+    );
+    assert_eq!(refine_holder("Flutter code sample for MyElement"), None);
+    assert_eq!(refine_holder("not The Flutter Authors"), None);
+    assert_eq!(refine_holder("referencing The Flutter Authors"), None);
+    assert_eq!(
+        refine_holder("comments original works produced specifically for use as part of"),
+        None
+    );
+    assert_eq!(refine_holder("resulting in confusion over"), None);
+}
+
+#[test]
+fn test_refine_holder_strips_trailing_noise_descriptors() {
+    assert_eq!(
+        refine_holder("Ashima Arts (Simplex noise)"),
+        Some("Ashima Arts".to_string())
+    );
+    assert_eq!(
+        refine_holder("Stefan Gustavson Classic noise and others"),
+        Some("Stefan Gustavson".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_drops_dense_unicode_symbol_runs() {
+    assert_eq!(
+        refine_holder("˙∆˚¬…æ≈ç√∫˜µ≤≥≥≥≥÷¡™£¢∞ ¶•ªº-≠⁄€‹›ﬁﬂ‡°·‚—±Œ„´‰Á¨Ø∏”’"),
         None
     );
 }
