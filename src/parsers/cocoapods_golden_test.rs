@@ -176,4 +176,20 @@ mod golden_tests {
             Err(e) => panic!("Golden test failed: {}", e),
         }
     }
+
+    #[test]
+    fn test_golden_podfile_required_version_hash() {
+        let test_file =
+            PathBuf::from("testdata/cocoapods-golden/podfile/with-required-version-hash/Podfile");
+        let expected_file = PathBuf::from(
+            "testdata/cocoapods-golden/podfile/with-required-version-hash/Podfile-expected.json",
+        );
+
+        let package_data = PodfileParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
 }

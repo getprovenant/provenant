@@ -1,0 +1,23 @@
+[
+  {
+    "type": "cocoapods",
+    "primary_language": "Objective-C",
+    "parties": [],
+    "dependencies": [
+      {
+        "purl": "pkg:cocoapods/FlipperKit",
+        "extracted_requirement": "0.125.0",
+        "scope": "dependencies",
+        "is_pinned": true,
+        "is_direct": true
+      },
+      {
+        "purl": "pkg:cocoapods/RNVectorIcons",
+        "scope": "dependencies",
+        "is_pinned": false,
+        "is_direct": true
+      }
+    ],
+    "datasource_id": "cocoapods_podfile"
+  }
+]
