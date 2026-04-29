@@ -225,11 +225,11 @@ pub(crate) fn write_comparison_artifacts(
         .intersection(&provenant_paths)
         .cloned()
         .collect();
-    let only_scancode_paths: Vec<String> = scancode_paths
+    let scancode_only_output_paths: Vec<String> = scancode_paths
         .difference(&provenant_paths)
         .cloned()
         .collect();
-    let only_provenant_paths: Vec<String> = provenant_paths
+    let provenant_only_output_paths: Vec<String> = provenant_paths
         .difference(&scancode_paths)
         .cloned()
         .collect();
@@ -237,14 +237,18 @@ pub(crate) fn write_comparison_artifacts(
         .intersection(&provenant_resource_paths)
         .cloned()
         .collect();
-    let only_scancode_resource_paths: Vec<String> = scancode_resource_paths
+    let scancode_only_output_resource_paths: Vec<String> = scancode_resource_paths
         .difference(&provenant_resource_paths)
         .cloned()
         .collect();
-    let only_provenant_resource_paths: Vec<String> = provenant_resource_paths
+    let provenant_only_output_resource_paths: Vec<String> = provenant_resource_paths
         .difference(&scancode_resource_paths)
         .cloned()
         .collect();
+    let only_findings_active = compare_uses_only_findings(scan_args, &scancode, &provenant);
+    let path_presence_note = only_findings_active.then_some(
+        "This compare run used --only-findings. Path-presence buckets reflect final filtered outputs, not proven scan coverage gaps: a missing path may simply have had no findings after filtering.",
+    );
 
     let metrics = [
         "license_detections",
@@ -490,49 +494,50 @@ pub(crate) fn write_comparison_artifacts(
         common_paths.len() as i64,
         common_paths.len() as i64,
         0,
-        "paths present in both outputs",
+        "paths present in both final outputs",
     ));
     rows.push(tsv_row(
-        "only_scancode_file_paths",
-        only_scancode_paths.len() as i64,
+        "scancode_only_output_file_paths",
+        scancode_only_output_paths.len() as i64,
         0,
-        -(only_scancode_paths.len() as i64),
-        "paths seen only in ScanCode output",
+        -(scancode_only_output_paths.len() as i64),
+        &output_only_path_note("ScanCode", "file", only_findings_active),
     ));
     rows.push(tsv_row(
-        "only_provenant_file_paths",
+        "provenant_only_output_file_paths",
         0,
-        only_provenant_paths.len() as i64,
-        only_provenant_paths.len() as i64,
-        "paths seen only in Provenant output",
+        provenant_only_output_paths.len() as i64,
+        provenant_only_output_paths.len() as i64,
+        &output_only_path_note("Provenant", "file", only_findings_active),
     ));
     rows.push(tsv_row(
         "common_resource_paths",
         common_resource_paths.len() as i64,
         common_resource_paths.len() as i64,
         0,
-        "resource paths present in both outputs",
+        "resource paths present in both final outputs",
     ));
     rows.push(tsv_row(
-        "only_scancode_resource_paths",
-        only_scancode_resource_paths.len() as i64,
+        "scancode_only_output_resource_paths",
+        scancode_only_output_resource_paths.len() as i64,
         0,
-        -(only_scancode_resource_paths.len() as i64),
-        "resource paths seen only in ScanCode output",
+        -(scancode_only_output_resource_paths.len() as i64),
+        &output_only_path_note("ScanCode", "resource", only_findings_active),
     ));
     rows.push(tsv_row(
-        "only_provenant_resource_paths",
+        "provenant_only_output_resource_paths",
         0,
-        only_provenant_resource_paths.len() as i64,
-        only_provenant_resource_paths.len() as i64,
-        "resource paths seen only in Provenant output",
+        provenant_only_output_resource_paths.len() as i64,
+        provenant_only_output_resource_paths.len() as i64,
+        &output_only_path_note("Provenant", "resource", only_findings_active),
     ));
 
-    let mut potential_regressions = only_scancode_paths.len() + top_level_regressions_map.len();
-    let mut potential_higher = only_provenant_paths.len() + top_level_higher_counts.len();
+    let mut potential_regressions =
+        scancode_only_output_paths.len() + top_level_regressions_map.len();
+    let mut potential_higher = provenant_only_output_paths.len() + top_level_higher_counts.len();
     if info_mode {
-        potential_regressions += only_scancode_resource_paths.len();
-        potential_higher += only_provenant_resource_paths.len();
+        potential_regressions += scancode_only_output_resource_paths.len();
+        potential_higher += provenant_only_output_resource_paths.len();
     }
     if row2_mode {
         potential_regressions += row2_top_level_differences.len();
@@ -804,12 +809,12 @@ pub(crate) fn write_comparison_artifacts(
 
     let sample_paths = [
         (
-            "only_scancode_paths",
-            layout.samples_dir.join("only_scancode_paths.json"),
+            "scancode_only_output_paths",
+            layout.samples_dir.join("scancode_only_output_paths.json"),
         ),
         (
-            "only_provenant_paths",
-            layout.samples_dir.join("only_provenant_paths.json"),
+            "provenant_only_output_paths",
+            layout.samples_dir.join("provenant_only_output_paths.json"),
         ),
         (
             "file_metric_lower_counts",
@@ -867,8 +872,8 @@ pub(crate) fn write_comparison_artifacts(
         ),
     ];
 
-    write_pretty_json(&sample_paths[0].1, &only_scancode_paths)?;
-    write_pretty_json(&sample_paths[1].1, &only_provenant_paths)?;
+    write_pretty_json(&sample_paths[0].1, &scancode_only_output_paths)?;
+    write_pretty_json(&sample_paths[1].1, &provenant_only_output_paths)?;
     write_pretty_json(&sample_paths[2].1, &lower_counts)?;
     write_pretty_json(&sample_paths[3].1, &higher_counts)?;
     write_pretty_json(&sample_paths[4].1, &value_differences)?;
@@ -903,15 +908,20 @@ pub(crate) fn write_comparison_artifacts(
         "top_level_package_summary": top_level_package_summary,
         "top_level_dependency_summary": top_level_dependency_summary,
         "raw_dependency_summary": raw_dependency_summary,
+        "comparison_context": {
+            "only_findings_active": only_findings_active,
+            "path_presence_semantics": "final_output_membership",
+            "path_presence_note": path_presence_note,
+        },
         "file_path_comparison": {
             "common_paths": common_paths.len(),
-            "only_scancode_paths": only_scancode_paths.len(),
-            "only_provenant_paths": only_provenant_paths.len(),
+            "scancode_only_output_paths": scancode_only_output_paths.len(),
+            "provenant_only_output_paths": provenant_only_output_paths.len(),
         },
         "resource_path_comparison": {
             "common_paths": common_resource_paths.len(),
-            "only_scancode_paths": only_scancode_resource_paths.len(),
-            "only_provenant_paths": only_provenant_resource_paths.len(),
+            "scancode_only_output_paths": scancode_only_output_resource_paths.len(),
+            "provenant_only_output_paths": provenant_only_output_resource_paths.len(),
         },
         "file_metric_summary": file_metric_summary,
         "info_metric_summary": info_metric_summary,
@@ -1983,6 +1993,44 @@ fn top_level_count_note(
     }
 
     mixed_source_skip_reason(metric, scancode, provenant)
+}
+
+fn compare_uses_only_findings(scan_args: &[String], scancode: &Value, provenant: &Value) -> bool {
+    scan_args.iter().any(|arg| arg == "--only-findings")
+        || json_output_uses_only_findings(scancode)
+        || json_output_uses_only_findings(provenant)
+}
+
+fn json_output_uses_only_findings(value: &Value) -> bool {
+    value
+        .get("headers")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .any(|header| {
+            header
+                .get("options")
+                .and_then(Value::as_object)
+                .is_some_and(|options| {
+                    option_value_is_truthy(options.get("--only-findings"))
+                        || option_value_is_truthy(options.get("only_findings"))
+                })
+        })
+}
+
+fn option_value_is_truthy(value: Option<&Value>) -> bool {
+    matches!(value, Some(Value::Bool(true)))
+        || matches!(value, Some(Value::String(text)) if text.eq_ignore_ascii_case("true"))
+}
+
+fn output_only_path_note(tool_name: &str, path_kind: &str, only_findings_active: bool) -> String {
+    let mut note = format!("{path_kind} paths present only in {tool_name} final output");
+    if only_findings_active {
+        note.push_str(
+            "; with --only-findings, the other output may have filtered these paths away after finding nothing",
+        );
+    }
+    note
 }
 
 fn tsv_row(metric: &str, scancode: i64, provenant: i64, delta: i64, notes: &str) -> Vec<String> {

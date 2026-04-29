@@ -368,6 +368,56 @@ fn create_compare_json_fixtures_with_equivalent_license_expressions() -> (TempDi
     )
 }
 
+fn create_compare_json_fixtures_with_only_findings_path_difference() -> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let scancode_file = temp.path().join("scancode-only-findings.json");
+    let provenant_file = temp.path().join("provenant-only-findings.json");
+
+    fs::write(
+        &scancode_file,
+        serde_json::json!({
+            "headers": [{"options": {"--only-findings": true}}],
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "license_detections": [{
+                    "license_expression": "mit",
+                    "license_expression_spdx": "MIT",
+                    "detection_count": 1
+                }]
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write scancode only-findings fixture");
+
+    fs::write(
+        &provenant_file,
+        serde_json::json!({
+            "headers": [{"options": {"--only-findings": true}}],
+            "files": [],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write provenant only-findings fixture");
+
+    (
+        temp,
+        scancode_file.to_string_lossy().to_string(),
+        provenant_file.to_string_lossy().to_string(),
+    )
+}
+
 fn normalize_multi_parser_header(output: &mut Value) {
     let header = output["headers"]
         .as_array_mut()
@@ -1114,6 +1164,74 @@ fn compare_subcommand_treats_trivial_license_expression_parentheses_as_equal() {
     );
     assert_eq!(samples["license_detections"], serde_json::json!([]));
     assert_eq!(deltas, serde_json::json!([]));
+}
+
+#[test]
+fn compare_subcommand_marks_only_findings_path_buckets_as_filtered_output() {
+    let (_temp, scancode_json, provenant_json) =
+        create_compare_json_fixtures_with_only_findings_path_difference();
+    let artifact_temp = TempDir::new().expect("artifact temp dir");
+    let artifact_dir = artifact_temp.path().join("compare-artifacts");
+
+    let output = provenant_command()
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+            "--artifact-dir",
+            artifact_dir.to_str().expect("utf8 artifact path"),
+        ])
+        .output()
+        .expect("failed to run compare subcommand");
+
+    assert!(output.status.success(), "compare should succeed");
+
+    let summary_path = artifact_dir.join("comparison").join("summary.json");
+    let summary_tsv_path = artifact_dir.join("comparison").join("summary.tsv");
+    let sample_path = artifact_dir
+        .join("comparison")
+        .join("samples")
+        .join("scancode_only_output_paths.json");
+
+    let summary: Value =
+        serde_json::from_str(&fs::read_to_string(&summary_path).expect("summary json")).unwrap();
+    let summary_tsv = fs::read_to_string(summary_tsv_path).expect("summary tsv");
+
+    assert_eq!(
+        summary["comparison_context"]["only_findings_active"].as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        summary["comparison_context"]["path_presence_semantics"].as_str(),
+        Some("final_output_membership")
+    );
+    assert!(
+        summary["comparison_context"]["path_presence_note"]
+            .as_str()
+            .unwrap()
+            .contains("--only-findings")
+    );
+    assert_eq!(
+        summary["file_path_comparison"]["scancode_only_output_paths"].as_u64(),
+        Some(1)
+    );
+    assert!(
+        summary["file_path_comparison"]
+            .get("only_scancode_paths")
+            .is_none()
+    );
+    assert!(
+        summary["sample_artifacts"]["scancode_only_output_paths"]
+            .as_str()
+            .unwrap()
+            .ends_with("scancode_only_output_paths.json")
+    );
+    assert!(sample_path.is_file());
+    assert!(summary_tsv.contains("scancode_only_output_file_paths"));
+    assert!(summary_tsv.contains("ScanCode final output"));
+    assert!(summary_tsv.contains("filtered these paths away after finding nothing"));
 }
 
 #[test]
