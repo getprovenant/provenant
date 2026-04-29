@@ -1738,7 +1738,7 @@ mod tests {
     }
 
     #[test]
-    fn test_assemble_npm_package_json_skips_lockfile_with_missing_identity() {
+    fn test_assemble_npm_package_json_merges_lockfile_with_missing_version_when_name_matches() {
         let mut files = vec![
             create_test_file_info(
                 "project/package.json",
@@ -1775,10 +1775,78 @@ mod tests {
         assert_eq!(result.packages[0].version, Some("1.0.0".to_string()));
         assert_eq!(
             result.packages[0].datafile_paths,
-            vec!["project/package.json".to_string()]
+            vec![
+                "project/package-lock.json".to_string(),
+                "project/package.json".to_string()
+            ]
         );
-        assert!(result.dependencies.is_empty());
-        assert!(files[1].for_packages.is_empty());
+        assert_eq!(result.dependencies.len(), 1);
+        assert_eq!(
+            result.dependencies[0].purl.as_deref(),
+            Some("pkg:npm/left-pad@1.3.0")
+        );
+        assert_eq!(
+            result.dependencies[0].datafile_path,
+            "project/package-lock.json"
+        );
+        assert_eq!(files[0].for_packages.len(), 1);
+        assert_eq!(files[1].for_packages.len(), 1);
+    }
+
+    #[test]
+    fn test_assemble_npm_package_json_and_lockfile_merge_when_both_omit_version() {
+        let mut manifest = create_test_file_info(
+            "project/package.json",
+            DatasourceId::NpmPackageJson,
+            None,
+            Some("my-app"),
+            None,
+            vec![],
+        );
+        manifest.package_data[0].package_type = Some(PackageType::Npm);
+
+        let mut lockfile = create_test_file_info(
+            "project/package-lock.json",
+            DatasourceId::NpmPackageLockJson,
+            None,
+            Some("my-app"),
+            None,
+            vec![Dependency {
+                purl: Some("pkg:npm/left-pad@1.3.0".to_string()),
+                extracted_requirement: Some("1.3.0".to_string()),
+                scope: Some("dependencies".to_string()),
+                is_runtime: Some(true),
+                is_optional: Some(false),
+                is_pinned: Some(true),
+                is_direct: Some(false),
+                resolved_package: None,
+                extra_data: None,
+            }],
+        );
+        lockfile.package_data[0].package_type = Some(PackageType::Npm);
+
+        let mut files = vec![manifest, lockfile];
+
+        let result = assemble(&mut files);
+
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(result.packages[0].name, Some("my-app".to_string()));
+        assert_eq!(result.packages[0].version, None);
+        assert_eq!(
+            result.packages[0].datafile_paths,
+            vec![
+                "project/package-lock.json".to_string(),
+                "project/package.json".to_string()
+            ]
+        );
+        assert_eq!(result.dependencies.len(), 1);
+        assert_eq!(
+            result.dependencies[0].purl.as_deref(),
+            Some("pkg:npm/left-pad@1.3.0")
+        );
+        assert!(result.dependencies[0].for_package_uid.is_some());
+        assert_eq!(files[0].for_packages.len(), 1);
+        assert_eq!(files[1].for_packages.len(), 1);
     }
 
     #[test]
