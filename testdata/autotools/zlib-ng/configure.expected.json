@@ -1,0 +1,9 @@
+[
+  {
+    "type": "autotools",
+    "name": "zlib-ng",
+    "purl": "pkg:autotools/zlib-ng",
+    "parties": [],
+    "datasource_id": "autotools_configure"
+  }
+]
