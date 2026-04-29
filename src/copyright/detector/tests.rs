@@ -874,6 +874,25 @@ fn test_detect_copyright_with_short_holder_and_trailing_punct_email() {
 }
 
 #[test]
+fn test_detect_copyright_with_malformed_first_year_range() {
+    let input = "Copyright (C) 20010-2011 Hauke Heibel <hauke.heibel@gmail.com>";
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights.iter().any(|c| {
+            c.copyright == "Copyright (c) 20010-2011 Hauke Heibel <hauke.heibel@gmail.com>"
+        }),
+        "copyrights: {:?}",
+        copyrights.iter().map(|c| &c.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Hauke Heibel"),
+        "holders: {:?}",
+        holders.iter().map(|h| &h.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_detect_copyright_compact_c_parens_with_lowercase_holder_and_email() {
     let input = "Copyright(c) 2014 dead_horse <dead_horse@qq.com>";
     let (c, h, _a) = detect_copyrights_from_text(input);
