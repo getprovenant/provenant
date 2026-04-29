@@ -1140,6 +1140,22 @@ gem "specific-range", ">= 1.0.0", "< 1.5.0", "!= 1.2.3"
         assert!(author_names.contains(&"Author Two".to_string()));
     }
 
+    #[test]
+    fn test_extract_gemspec_required_file_interpolated_constants() {
+        use crate::parsers::ruby::GemspecParser;
+        let gemspec_path = PathBuf::from(
+            "testdata/ruby-golden/interpolated-constants/interpolated_constants.gemspec",
+        );
+        let package_data = GemspecParser::extract_first_package(&gemspec_path);
+
+        assert_eq!(package_data.name, Some("example-interpolated".to_string()));
+        assert_eq!(package_data.version, Some("1.2.3".to_string()));
+        assert_eq!(
+            package_data.homepage_url,
+            Some("https://example.com/example-interpolated".to_string())
+        );
+    }
+
     // ==========================================================================
     // Test: Bug #1 - Frozen string handling in .gemspec
     // ==========================================================================

@@ -1153,14 +1153,18 @@ fn resolve_variable_version(var_name: &str, contexts: &[String]) -> Option<Strin
 
     for candidate in candidate_constant_names(var_name) {
         let escaped = regex::escape(&candidate);
-        let pattern = format!(r#"(?m)^\s*{}\s*=\s*["']([^"']+)["']"#, escaped);
+        let pattern = format!(r#"(?m)^\s*{}\s*=\s*(.+)$"#, escaped);
         let Ok(re) = Regex::new(&pattern) else {
             continue;
         };
 
         for context in contexts {
-            if let Some(caps) = re.captures(context) {
-                return caps.get(1).map(|m| m.as_str().to_string());
+            if let Some(caps) = re.captures(context)
+                && let Some(expression) = caps.get(1)
+                && let Some(resolved) =
+                    resolve_scalar_expression(expression.as_str(), None, contexts)
+            {
+                return Some(resolved);
             }
         }
     }
@@ -1275,8 +1279,12 @@ fn resolve_scalar_expression(
             .and_then(|m| resolve_file_read_argument(m.as_str(), base_dir));
     }
 
+    if let Some(joined) = resolve_joined_constant_string(expression, contexts) {
+        return Some(joined);
+    }
+
     if let Some(value) = extract_first_ruby_value(expression) {
-        return Some(value);
+        return Some(interpolate_ruby_constant_string(&value, contexts));
     }
 
     let cleaned = clean_gemspec_value(expression);
@@ -1285,6 +1293,49 @@ fn resolve_scalar_expression(
     }
 
     None
+}
+
+fn resolve_joined_constant_string(expression: &str, contexts: &[String]) -> Option<String> {
+    let expression = strip_freeze_suffix(expression.trim());
+    if !expression.starts_with('[') {
+        return None;
+    }
+    let join_index = expression.find("].join(")?;
+    let body = &expression[1..join_index];
+    let separator_expr = expression[join_index + 7..].strip_suffix(')')?.trim();
+    let separator = extract_first_ruby_value(separator_expr)?;
+
+    let mut parts = Vec::new();
+    for item in body.split(',').take(MAX_ITERATION_COUNT) {
+        let resolved = resolve_scalar_expression(item.trim(), None, contexts)?;
+        parts.push(resolved);
+    }
+
+    Some(parts.join(&separator))
+}
+
+fn interpolate_ruby_constant_string(value: &str, contexts: &[String]) -> String {
+    if !value.contains("#{") {
+        return value.to_string();
+    }
+
+    let Ok(interpolation_re) = Regex::new(r#"#\{([^}]+)\}"#) else {
+        return value.to_string();
+    };
+    interpolation_re
+        .replace_all(value, |captures: &regex::Captures<'_>| {
+            let reference = captures
+                .get(1)
+                .map(|m| m.as_str().trim())
+                .unwrap_or_default();
+            resolve_variable_version(reference, contexts).unwrap_or_else(|| {
+                captures
+                    .get(0)
+                    .map(|value| value.as_str().to_string())
+                    .unwrap_or_default()
+            })
+        })
+        .into_owned()
 }
 
 fn resolve_local_variable_value(
