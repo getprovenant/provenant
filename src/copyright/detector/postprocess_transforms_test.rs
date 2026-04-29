@@ -119,6 +119,14 @@ fn test_derive_holder_from_simple_copyright_string_strips_by_prefix() {
 }
 
 #[test]
+fn test_derive_holder_from_simple_copyright_string_keeps_leading_digits() {
+    assert_eq!(
+        derive_holder_from_simple_copyright_string("Copyright (c) 2010 42North Inc."),
+        Some("42North Inc.".to_string())
+    );
+}
+
+#[test]
 fn test_refine_final_authors_keeps_structured_metadata_collectives() {
     let mut authors = vec![
         AuthorDetection {

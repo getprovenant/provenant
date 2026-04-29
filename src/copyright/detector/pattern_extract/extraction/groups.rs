@@ -935,6 +935,9 @@ pub fn extract_copyright_c_years_holder_lines(
             if years.is_empty() || holder_raw.is_empty() {
                 continue;
             }
+            if holder_raw.contains("...") || holder_raw.contains('…') {
+                continue;
+            }
             let raw = format!("Copyright (c) {years} {holder_raw}");
             let Some(cr) = refine_copyright(&raw) else {
                 continue;

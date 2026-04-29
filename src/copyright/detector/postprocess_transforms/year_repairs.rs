@@ -815,6 +815,16 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
         Regex::new(r"(?i)^copyright\s*\(c\)\s*(?:19|20)\d{2}-\d{2}-\d{2}\s+(?P<holder>.+)$")
             .expect("valid iso-date copyright holder regex")
     });
+    static LEADING_YEARISH_TOKEN_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)^
+            (?:19\d{2}|20\d{2}|\?\?\?\?|\$)
+            (?:\s*[-–/,:]\s*(?:19\d{2}|20\d{2}|\d{2}|\?\?\?\?|\?\?|present|\$))*
+            [\.,;:]?$
+            ",
+        )
+        .expect("valid leading yearish token regex")
+    });
     static BARE_HOLDER_C_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)^(?P<holder>[^\n]+?)\s*,?\s*\(c\)\s*(?:19|20)\d{2}\b")
             .expect("valid bare holder (c) year regex")
@@ -822,6 +832,19 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
 
     static EMBEDDED_C_MARKER_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?i)^(?P<head>.+?)\s*,\s*\(c\)\s*(?:19|20)\d{2}\b").unwrap());
+
+    fn strip_leading_yearish_tokens<'a>(tail: &'a str, yearish_re: &Regex) -> &'a str {
+        let mut rest = tail.trim_start();
+        while !rest.is_empty() {
+            let token_end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+            let token = &rest[..token_end];
+            if !yearish_re.is_match(token) {
+                break;
+            }
+            rest = rest[token_end..].trim_start();
+        }
+        rest
+    }
 
     let trimmed = s.trim();
     if trimmed.to_ascii_lowercase().starts_with("copyright")
@@ -844,17 +867,7 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
         let t = trimmed.trim_start();
         if t.to_ascii_lowercase().starts_with("(c)") {
             let mut tail = t.get(3..).unwrap_or("").trim_start();
-            let mut start = 0usize;
-            for (i, ch) in tail.char_indices() {
-                if ch.is_ascii_digit() || matches!(ch, ' ' | ',' | '-' | '–' | '/' | '+') {
-                    start = i + ch.len_utf8();
-                    continue;
-                }
-                break;
-            }
-            if start > 0 && start < tail.len() {
-                tail = tail[start..].trim();
-            }
+            tail = strip_leading_yearish_tokens(tail, &LEADING_YEARISH_TOKEN_RE);
             if tail.is_empty() {
                 return None;
             }
@@ -883,15 +896,7 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
 
     tail = tail.trim_start_matches(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ':' | '.'));
 
-    let mut start = 0usize;
-    for (i, ch) in tail.char_indices() {
-        if ch.is_ascii_digit() || matches!(ch, ' ' | ',' | '-' | '–' | '/') {
-            start = i + ch.len_utf8();
-            continue;
-        }
-        break;
-    }
-    let mut holder_raw = tail[start..].trim();
+    let mut holder_raw = strip_leading_yearish_tokens(tail, &LEADING_YEARISH_TOKEN_RE).trim();
     if let Some(rest) = holder_raw.strip_prefix("by ") {
         holder_raw = rest.trim();
     }
