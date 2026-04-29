@@ -171,7 +171,7 @@ pub fn extract_from_tree_nodes(
 
             let allow_single_word_contributors = detector::token_utils::collect_all_leaves(node)
                 .iter()
-                .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+                .any(|t| detector::token_utils::is_year_like_token(t));
             let prefix_token = get_orphaned_copy_prefix(tree, i);
             let not_prefix = get_orphaned_not_prefix(tree, i, node, allow_not_copyrighted_prefix);
             let (mut trailing_tokens, mut skip) = collect_trailing_orphan_tokens(node, tree, i + 1);
@@ -429,9 +429,9 @@ pub fn extract_from_tree_nodes(
                 if !has_holder && i + 1 < tree.len() {
                     let copyright_ends_with_year = {
                         let leaves = detector::token_utils::collect_all_leaves(node);
-                        leaves.last().is_some_and(|t| {
-                            matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr)
-                        })
+                        leaves
+                            .last()
+                            .is_some_and(|t| detector::token_utils::is_year_like_token(t))
                     };
                     let next_node = &tree[i + 1];
                     let next_line_ok = {
@@ -724,7 +724,7 @@ pub fn extract_from_tree_nodes(
                         if t.tag == PosTag::Cc && t.value == "," {
                             continue;
                         }
-                        if detector::token_utils::YEAR_LIKE_POS_TAGS.contains(&t.tag) {
+                        if detector::token_utils::is_year_like_token(t) {
                             found = true;
                         }
                         break;
@@ -762,9 +762,7 @@ pub fn extract_from_tree_nodes(
                     holder_tokens_mini.extend(&node_holder_mini);
                     let node_ends_with_year_mini = detector::token_utils::collect_all_leaves(node)
                         .last()
-                        .is_some_and(|t| {
-                            detector::token_utils::YEAR_LIKE_POS_TAGS.contains(&t.tag)
-                        });
+                        .is_some_and(|t| detector::token_utils::is_year_like_token(t));
                     holder_tokens_mini.extend(
                         detector::token_utils::filter_holder_tokens_with_state(
                             &trailing_tokens,
@@ -856,7 +854,7 @@ pub fn extract_from_tree_nodes(
                 cr_tokens.extend(&name_leaves);
                 let allow_single_word_contributors = cr_tokens
                     .iter()
-                    .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+                    .any(|t| detector::token_utils::is_year_like_token(t));
                 if let Some(det) = detector::token_utils::build_copyright_from_tokens(&cr_tokens) {
                     copyrights.push(det);
                 }
@@ -1120,7 +1118,7 @@ fn get_trailing_year_range<'a>(
     }
     let node_has_year = detector::token_utils::collect_all_leaves(copyright_node)
         .iter()
-        .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+        .any(|t| detector::token_utils::is_year_like_token(t));
     if node_has_year {
         return None;
     }
@@ -1287,7 +1285,7 @@ fn is_orphan_copy_name_match(node: &ParseNode) -> bool {
             let leaves = detector::token_utils::collect_all_leaves(node);
             leaves
                 .iter()
-                .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr))
+                .any(|t| detector::token_utils::is_year_like_token(t))
         }
         _ => false,
     }
@@ -1369,7 +1367,7 @@ pub fn should_start_absorbing(
         let same_line = last_line.is_some_and(|l| l == token.start_line);
         let node_has_year = detector::token_utils::collect_all_leaves(copyright_node)
             .iter()
-            .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+            .any(|t| detector::token_utils::is_year_like_token(t));
         let has_holder_like_tokens = detector::token_utils::collect_all_leaves(copyright_node)
             .iter()
             .any(|t| {
@@ -1409,7 +1407,7 @@ pub fn should_start_absorbing(
         if same_line && has_author_keyword {
             let node_has_year = detector::token_utils::collect_all_leaves(copyright_node)
                 .iter()
-                .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+                .any(|t| detector::token_utils::is_year_like_token(t));
             if node_has_year {
                 return true;
             }
@@ -1591,7 +1589,7 @@ pub fn should_start_absorbing(
             && last_line.is_some_and(|l| leaves.first().is_some_and(|t| t.start_line == l));
         let node_has_year = detector::token_utils::collect_all_leaves(copyright_node)
             .iter()
-            .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+            .any(|t| detector::token_utils::is_year_like_token(t));
         let last_tag = detector::token_utils::collect_all_leaves(copyright_node)
             .last()
             .map(|t| t.tag);
@@ -1624,7 +1622,7 @@ pub fn should_start_absorbing(
     if last_leaf_ends_with_comma(copyright_node) {
         let node_has_year = detector::token_utils::collect_all_leaves(copyright_node)
             .iter()
-            .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+            .any(|t| detector::token_utils::is_year_like_token(t));
         if node_has_year {
             let is_name_like_first = match first {
                 ParseNode::Leaf(token) => matches!(
@@ -1911,7 +1909,7 @@ fn collect_following_copyright_clause_tokens(
     let skip = j - start;
     let has_year = tokens
         .iter()
-        .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+        .any(|t| detector::token_utils::is_year_like_token(t));
 
     if !has_year {
         return (Vec::new(), 0);
@@ -1950,7 +1948,7 @@ fn is_year_only_copyright_clause_node(node: &ParseNode) -> bool {
     let leaves = detector::token_utils::collect_all_leaves(node);
     let has_year = leaves
         .iter()
-        .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+        .any(|t| detector::token_utils::is_year_like_token(t));
     if !has_year {
         return false;
     }
@@ -2065,7 +2063,7 @@ fn merge_year_only_copyright_clause_with_preceding_copyrighted_by(
     let holder_tokens = detector::token_utils::strip_all_rights_reserved(holder_tokens);
     let allow_single_word_contributors = holder_tokens
         .iter()
-        .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+        .any(|t| detector::token_utils::is_year_like_token(t));
     let holder_det = detector::token_utils::build_holder_from_tokens(
         &holder_tokens,
         allow_single_word_contributors,
@@ -2202,7 +2200,7 @@ pub fn extract_bare_copyrights(
                 let name_leaves = detector::token_utils::strip_all_rights_reserved(name_leaves);
                 let allow_single_word_contributors = name_leaves
                     .iter()
-                    .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+                    .any(|t| detector::token_utils::is_year_like_token(t));
                 cr_tokens.extend(&name_leaves);
 
                 let mut extra_skip = 0usize;
@@ -2395,7 +2393,7 @@ pub fn extract_from_spans(
                 && copy_start == copy_idx
                 && all_leaves[copy_idx..i]
                     .iter()
-                    .any(|t| detector::token_utils::YEAR_LIKE_POS_TAGS.contains(&t.tag))
+                    .any(|t| detector::token_utils::is_year_like_token(t))
                 && !all_leaves[copy_idx..i].iter().any(|t| {
                     matches!(
                         t.tag,
@@ -2441,7 +2439,7 @@ pub fn extract_from_spans(
             if span.len() > 1 {
                 let allow_single_word_contributors = span
                     .iter()
-                    .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+                    .any(|t| detector::token_utils::is_year_like_token(t));
                 let filtered = detector::token_utils::strip_all_rights_reserved_slice(span);
                 if let Some(det) = detector::token_utils::build_copyright_from_tokens(&filtered) {
                     copyrights.push(det);
@@ -2638,7 +2636,7 @@ pub fn extract_copyrights_from_spans(
                 && copy_start == copy_idx
                 && all_leaves[copy_idx..i]
                     .iter()
-                    .any(|t| detector::token_utils::YEAR_LIKE_POS_TAGS.contains(&t.tag))
+                    .any(|t| detector::token_utils::is_year_like_token(t))
                 && !all_leaves[copy_idx..i].iter().any(|t| {
                     matches!(
                         t.tag,
@@ -2684,7 +2682,7 @@ pub fn extract_copyrights_from_spans(
             if span.len() > 1 {
                 let allow_single_word_contributors = span
                     .iter()
-                    .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+                    .any(|t| detector::token_utils::is_year_like_token(t));
 
                 let filtered = detector::token_utils::strip_all_rights_reserved_slice(span);
                 if let Some(det) = detector::token_utils::build_copyright_from_tokens(&filtered) {

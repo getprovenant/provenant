@@ -98,8 +98,7 @@ fn analyze_tree(nodes: &[ParseNode]) -> TreeAnalysis {
                     token.tag,
                     PosTag::Auths | PosTag::AuthDot | PosTag::Contributors | PosTag::Commit
                 );
-                analysis.has_year_token |=
-                    matches!(token.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr);
+                analysis.has_year_token |= token_utils::is_year_like_token(token);
 
                 let line = token.start_line.get();
                 match analysis.single_line {
