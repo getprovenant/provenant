@@ -221,6 +221,46 @@ fn test_detect_filters_code_like_c_marker_lines() {
 }
 
 #[test]
+fn test_windows_versioninfo_line_is_not_detected_as_copyright_or_holder() {
+    let text = "Copyright (c) 2050 VALUE OriginalFilename NativeConsoleApp.exe";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_dtd_declaration_line_is_not_detected_as_copyright_or_holder() {
+    let text = "copyright <!ELEMENT A ( PCDATA) > aaaa";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_copyright_property_access_line_is_not_detected_as_copyright_or_holder() {
+    let text = "Copyright clone.Copyright.Text";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_unicode_escape_c_marker_line_is_not_detected_as_copyright_or_holder() {
+    let text = "(c) HeaderType.Content u00AD u00AE";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
 fn test_detect_copyright_does_not_absorb_unexpected_as_represented() {
     let text = "Copyright 1993 United States Government as represented by the\nDirector, National Security Agency.";
     let (c, h, _a) = detect_copyrights_from_text(text);

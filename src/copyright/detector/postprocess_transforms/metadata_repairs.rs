@@ -75,6 +75,74 @@ pub fn drop_json_description_metadata_copyrights_and_holders(
     });
 }
 
+pub fn drop_markup_declaration_and_versioninfo_copyrights_and_holders(
+    raw_lines: &[&str],
+    copyrights: &mut Vec<CopyrightDetection>,
+    holders: &mut Vec<HolderDetection>,
+) {
+    if raw_lines.is_empty() {
+        return;
+    }
+
+    let mut retained_spans: HashSet<(usize, usize)> = HashSet::new();
+    copyrights.retain(|copyright| {
+        let keep = !span_has_markup_declaration_or_versioninfo(
+            raw_lines,
+            copyright.start_line.get(),
+            copyright.end_line.get(),
+        );
+        if keep {
+            retained_spans.insert((copyright.start_line.get(), copyright.end_line.get()));
+        }
+        keep
+    });
+
+    holders.retain(|holder| {
+        if retained_spans.contains(&(holder.start_line.get(), holder.end_line.get())) {
+            return true;
+        }
+
+        !span_has_markup_declaration_or_versioninfo(
+            raw_lines,
+            holder.start_line.get(),
+            holder.end_line.get(),
+        )
+    });
+}
+
+fn span_has_markup_declaration_or_versioninfo(
+    raw_lines: &[&str],
+    start_line: usize,
+    end_line: usize,
+) -> bool {
+    if start_line == 0
+        || end_line == 0
+        || start_line > raw_lines.len()
+        || end_line > raw_lines.len()
+    {
+        return false;
+    }
+
+    let joined = raw_lines[start_line - 1..end_line].join(" ");
+    let lower = joined.to_ascii_lowercase();
+
+    lower.contains("<!element")
+        || lower.contains("<!attlist")
+        || lower.contains("<!doctype")
+        || lower.contains("pcdata")
+        || ((lower.contains("originalfilename")
+            || lower.contains("filedescription")
+            || lower.contains("fileversion")
+            || lower.contains("productversion")
+            || lower.contains("legaltrademarks"))
+            && (lower.contains("value ")
+                || lower.contains(".exe")
+                || lower.contains(".dll")
+                || lower.contains(".mui")
+                || lower.contains(".ocx")
+                || lower.contains(".sys")))
+}
+
 pub fn json_window_for_span(
     raw_lines: &[&str],
     start_line: usize,
