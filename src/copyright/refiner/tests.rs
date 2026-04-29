@@ -1411,6 +1411,12 @@ fn test_refine_holder_strips_trailing_period() {
 }
 
 #[test]
+fn test_refine_holder_keeps_xerox_corporation() {
+    let result = refine_holder("Xerox Corporation");
+    assert_eq!(result, Some("Xerox Corporation".to_string()));
+}
+
+#[test]
 fn test_refine_holder_strips_trailing_division_of_company_suffix() {
     let input = "Industrial Light & Magic, a division of Lucas Digital Ltd. LLC";
     assert_eq!(

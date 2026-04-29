@@ -171,7 +171,6 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^the\s+standard$",
         r"(?i)^the\s+product$",
         r"(?i)^rsa$",
-        r"(?i)^xerox corporation$",
         r"(?i)^david j\. bradshaw$",
         r"(?i)^gias kay lee$",
         r"(?i)^tim ruffles$",
