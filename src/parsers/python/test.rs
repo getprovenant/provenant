@@ -889,6 +889,64 @@ homepage = "https://example.com"
     }
 
     #[test]
+    fn test_extract_from_mixed_project_and_poetry_falls_back_per_identity_field() {
+        let content = r#"
+[project]
+description = "pep-621 metadata exists but is incomplete"
+
+[tool.poetry]
+name = "poetry-fallback"
+version = "1.2.3"
+homepage = "https://example.com/poetry-fallback"
+repository = "https://github.com/example/poetry-fallback"
+"#;
+
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(package_data.name.as_deref(), Some("poetry-fallback"));
+        assert_eq!(package_data.version.as_deref(), Some("1.2.3"));
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:pypi/poetry-fallback@1.2.3")
+        );
+        assert_eq!(
+            package_data.homepage_url.as_deref(),
+            Some("https://example.com/poetry-fallback")
+        );
+        assert_eq!(
+            package_data.vcs_url.as_deref(),
+            Some("https://github.com/example/poetry-fallback")
+        );
+        assert_eq!(
+            package_data.download_url.as_deref(),
+            Some("https://pypi.org/packages/source/p/poetry-fallback/poetry-fallback-1.2.3.tar.gz")
+        );
+    }
+
+    #[test]
+    fn test_extract_download_url_does_not_fall_back_to_repository() {
+        let content = r#"
+[project]
+name = "test-package"
+version = "1.0.0"
+repository = "https://github.com/user/test-package"
+"#;
+
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(
+            package_data.vcs_url.as_deref(),
+            Some("https://github.com/user/test-package")
+        );
+        assert_eq!(
+            package_data.download_url.as_deref(),
+            Some("https://pypi.org/packages/source/t/test-package/test-package-1.0.0.tar.gz")
+        );
+    }
+
+    #[test]
     fn test_extract_vcs_url_without_repository() {
         // Given: A minimal pyproject.toml without a repository
         let content = r#"
