@@ -677,7 +677,18 @@ pub fn is_copyright_of_header(span: &[&Token]) -> bool {
     if first.tag != PosTag::Copy || !first.value.eq_ignore_ascii_case("copyright") {
         return false;
     }
-    if second.tag != PosTag::Of || !second.value.eq_ignore_ascii_case("of") {
+
+    let starts_with_notice_of = if span.len() >= 4 {
+        second.value.eq_ignore_ascii_case("notice")
+            && span[2].tag == PosTag::Of
+            && span[2].value.eq_ignore_ascii_case("of")
+    } else {
+        false
+    };
+
+    if !(second.tag == PosTag::Of && second.value.eq_ignore_ascii_case("of")
+        || starts_with_notice_of)
+    {
         return false;
     }
 

@@ -110,6 +110,15 @@ fn test_glide_3dfx_copyright_notice_does_not_trigger_for_notice_s_plural() {
 }
 
 #[test]
+fn test_copyright_notice_of_prose_does_not_emit_xerox_holder() {
+    let content = "the above copyright notice of Xerox Corporation,";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(content);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:#?}");
+    assert!(holders.is_empty(), "holders: {holders:#?}");
+    assert!(authors.is_empty(), "authors: {authors:#?}");
+}
+
+#[test]
 fn test_play_header_does_not_emit_bare_c_from_year_shadow() {
     let content = "Copyright (C) from 2022 The Play Framework Contributors <https://github.com/playframework>, 2011-2021 Lightbend Inc. <https://www.lightbend.com>\n";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
