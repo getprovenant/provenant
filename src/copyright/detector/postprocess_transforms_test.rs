@@ -111,6 +111,14 @@ fn test_derive_holder_from_simple_copyright_string_keeps_iso_date_holder() {
 }
 
 #[test]
+fn test_derive_holder_from_simple_copyright_string_strips_by_prefix() {
+    assert_eq!(
+        derive_holder_from_simple_copyright_string("Copyright (c) 1994 by Xerox Corporation"),
+        Some("Xerox Corporation".to_string())
+    );
+}
+
+#[test]
 fn test_refine_final_authors_keeps_structured_metadata_collectives() {
     let mut authors = vec![
         AuthorDetection {
