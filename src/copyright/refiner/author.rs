@@ -238,9 +238,6 @@ fn contains_windows_versioninfo_fragment(s: &str) -> bool {
 }
 
 fn looks_like_markup_data_identifier(s: &str) -> bool {
-    static BARE_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?i)^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$").expect("valid bare email regex")
-    });
     static DOI_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?i)^doi:[^\s]+$").expect("valid doi regex"));
     static TAG_URI_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -261,8 +258,7 @@ fn looks_like_markup_data_identifier(s: &str) -> bool {
     });
 
     let trimmed = s.trim();
-    BARE_EMAIL_RE.is_match(trimmed)
-        || DOI_RE.is_match(trimmed)
+    DOI_RE.is_match(trimmed)
         || TAG_URI_RE.is_match(trimmed)
         || RELATIVE_ID_RE.is_match(trimmed)
         || NAME_WITH_TIMESTAMP_RE.is_match(trimmed)
