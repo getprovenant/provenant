@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 178 of 178 recorded runs, with a **11.7× median speedup** and **11.0× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
+> Provenant is faster on 179 of 179 recorded runs, with a **11.7× median speedup** and **11.0× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -517,6 +517,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `12.34s`; ScanCode `151.70s`
 - Direct `.gitmodules` package-adjacent visibility (`1` vs `0` file-level package records, plus one raw dependency edge) across the umbrella superproject, cleaner XML author extraction that drops prose-tainted suffixes such as `A.Meredith Compiler`, and Unicode-preserving name normalization for identities such as `René Ferdinand Rivera Morell`, `Ion Gaztañaga`, and `J. López`
+
+##### [boostorg/graph @ ae8e08d](https://github.com/boostorg/graph/tree/ae8e08d88f68669dc3fe5c7043dbc01b3c7c52ae) — **13.04× faster**
+
+- Files: 2,117
+- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `15.37s`; ScanCode `200.37s`
+- Cleaner URL and copyright normalization across Boost metadata files, preserving the real `http://www.boost.org/` target while dropping ScanCode's broken pseudo-URL variant in `example/boost_web.dat`, plus Unicode-preserving `René Ferdinand Rivera Morell` handling on `build.jam` and top-level `.gitattributes` visibility in the final output
 
 ##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **6.02× faster**
 

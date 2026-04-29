@@ -377,6 +377,9 @@ ScanCode: 463.11s</title></rect>
     <rect x="618.50" y="382.03" width="8" height="8" fill="#d97706" rx="1.5"><title>rubocop/rubocop @ 4e0d642
 Files: 2081
 ScanCode: 182.30s</title></rect>
+    <rect x="619.68" y="377.56" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/graph @ ae8e08d
+Files: 2117
+ScanCode: 200.37s</title></rect>
     <rect x="619.78" y="321.51" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/merlin @ 30b4f24
 Files: 2120
 ScanCode: 656.13s</title></rect>
@@ -913,6 +916,9 @@ Provenant: 34.69s</title></circle>
     <circle cx="622.50" cy="481.54" r="4.5" fill="#2563eb"><title>rubocop/rubocop @ 4e0d642
 Files: 2081
 Provenant: 24.15s</title></circle>
+    <circle cx="623.68" cy="502.89" r="4.5" fill="#2563eb"><title>boostorg/graph @ ae8e08d
+Files: 2117
+Provenant: 15.37s</title></circle>
     <circle cx="623.78" cy="468.34" r="4.5" fill="#2563eb"><title>ocaml/merlin @ 30b4f24
 Files: 2120
 Provenant: 31.93s</title></circle>
