@@ -938,6 +938,17 @@ fn test_extract_copy_entity_year_range_only() {
 }
 
 #[test]
+fn test_extract_copy_entity_year_range_from_html_fixture_line() {
+    let input = "<!doctype html><html><head><title>Some test</title></head><body><footer><p>Copyright &copy; 2003-2014</p></footer></body></html>";
+    let (c, _h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter().any(|cr| cr.copyright == "Copyright (c) 2003-2014"),
+        "Expected Copyright (c) year range extracted, got: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_extract_hex_a9_entity_year_range_only_as_bare_c() {
     let input = "expectedXml = \"<p>Copyright &#xA9; 2003-2014</p>\",";
     let (c, _h, _a) = detect_copyrights_from_text(input);

@@ -646,11 +646,29 @@ fn contains_generated_resource_token(s: &str) -> bool {
 }
 
 fn contains_member_access_code_token(s: &str) -> bool {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.contains("http://") || lower.contains("https://") || lower.contains("www.") {
+        return false;
+    }
+
     static MEMBER_ACCESS_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\b(?:[A-Za-z_][A-Za-z0-9_]{1,}\.){1,4}[A-Z][A-Za-z0-9_]{1,}\b").unwrap()
+        Regex::new(r"\b(?:[a-z_][A-Za-z0-9_]{1,}\.){1,4}[A-Z][A-Za-z0-9_]{1,}(?:\.[A-Z][A-Za-z0-9_]{1,})*\b").unwrap()
     });
 
-    MEMBER_ACCESS_RE.is_match(s.trim())
+    MEMBER_ACCESS_RE.is_match(trimmed)
+}
+
+fn is_post_refine_copyright_code_fragment(s: &str) -> bool {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+
+    contains_windows_versioninfo_token(trimmed)
+        || contains_member_access_code_token(trimmed)
+        || contains_unicode_escape_token_run(trimmed)
+        || lower.contains("public void")
+        || lower.contains("get set")
+        || lower.contains("assert.equal")
 }
 
 fn contains_unicode_escape_token_run(s: &str) -> bool {
@@ -767,7 +785,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     }
     let original = normalize_whitespace(s);
     if contains_windows_versioninfo_token(&original)
-        || contains_xml_markup_declaration_token(&original)
+        || (contains_xml_markup_declaration_token(&original) && !has_copyright_year(&original))
     {
         return None;
     }
@@ -877,7 +895,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     {
         return None;
     }
-    if is_junk_copyright(&result)
+    if is_post_refine_copyright_code_fragment(&result)
         || is_junk_copyright_of_header(&result)
         || is_junk_copyrighted_works_header(&result)
         || is_junk_copyrighted_software_phrase(&result)

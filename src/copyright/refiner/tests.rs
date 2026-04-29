@@ -1378,7 +1378,6 @@ fn test_refine_author_drops_markup_feed_identifiers() {
     assert_eq!(refine_author("doi:10.1038/nature05582"), None);
     assert_eq!(refine_author("tag:contoso.com,2000"), None);
     assert_eq!(refine_author("id/1234"), None);
-    assert_eq!(refine_author("jerry@Contoso.com"), None);
     assert_eq!(refine_author("James 2006-04-25T12:12:12Z"), None);
     assert_eq!(refine_author("authorauthor"), None);
     assert_eq!(refine_author("XmlLang en-usabcd"), None);

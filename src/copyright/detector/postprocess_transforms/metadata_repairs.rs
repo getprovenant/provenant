@@ -125,11 +125,16 @@ fn span_has_markup_declaration_or_versioninfo(
 
     let joined = raw_lines[start_line - 1..end_line].join(" ");
     let lower = joined.to_ascii_lowercase();
+    let has_year =
+        Regex::new(r"(?i)\b(?:19\d{2}|20\d{2})(?:\s*[-–/]\s*(?:19\d{2}|20\d{2}|\d{2}))?\b")
+            .expect("valid year regex")
+            .is_match(&joined);
 
-    lower.contains("<!element")
+    ((lower.contains("<!element")
         || lower.contains("<!attlist")
         || lower.contains("<!doctype")
-        || lower.contains("pcdata")
+        || lower.contains("pcdata"))
+        && !has_year)
         || ((lower.contains("originalfilename")
             || lower.contains("filedescription")
             || lower.contains("fileversion")
