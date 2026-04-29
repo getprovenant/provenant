@@ -88,7 +88,7 @@ impl PackageParser for GradleParser {
         };
 
         let tokens = lex(&content);
-        let dependencies = extract_dependencies_with_context(path, &tokens);
+        let dependencies = extract_dependencies_with_context(path, &content, &tokens);
         let (
             extracted_license_statement,
             declared_license_expression,
@@ -388,8 +388,13 @@ type BuildSrcCache = HashMap<PathBuf, Option<BuildSrcConstMap>>;
 
 static BUILD_SRC_CONSTANT_CACHE: OnceLock<Mutex<BuildSrcCache>> = OnceLock::new();
 
-fn extract_dependencies_with_context(path: &Path, tokens: &[Tok]) -> Vec<Dependency> {
+fn extract_dependencies_with_context(
+    path: &Path,
+    content: &str,
+    tokens: &[Tok],
+) -> Vec<Dependency> {
     let mut raw_dependencies = extract_raw_dependencies(tokens);
+    resolve_gradle_script_interpolations(path, content, &mut raw_dependencies);
     resolve_gradle_buildsrc_symbolic_refs(path, &mut raw_dependencies);
     let mut dependencies = raw_dependencies
         .iter()
@@ -1044,6 +1049,168 @@ fn classify_scope(scope: &str) -> (bool, bool) {
     }
 
     (true, false)
+}
+
+fn resolve_gradle_script_interpolations(
+    path: &Path,
+    content: &str,
+    raw_dependencies: &mut [RawDep],
+) {
+    let properties = load_gradle_script_properties(path, content);
+    if properties.is_empty() {
+        return;
+    }
+
+    for raw in raw_dependencies.iter_mut() {
+        raw.namespace = interpolate_gradle_string(&raw.namespace, &properties);
+        raw.name = interpolate_gradle_string(&raw.name, &properties);
+        raw.version = interpolate_gradle_string(&raw.version, &properties);
+    }
+}
+
+fn load_gradle_script_properties(path: &Path, content: &str) -> HashMap<String, String> {
+    let mut properties = load_gradle_properties(path);
+
+    let literal_assignment_patterns = [
+        regex::Regex::new(
+            r#"(?m)^\s*(?:const\s+)?(?:val|var|def)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?::[^=\n]+)?=\s*['\"]([^'\"]+)['\"]"#,
+        )
+        .expect("valid regex"),
+        regex::Regex::new(r#"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*['\"]([^'\"]+)['\"]"#)
+            .expect("valid regex"),
+    ];
+
+    for pattern in literal_assignment_patterns {
+        for captures in pattern.captures_iter(content).take(MAX_ITERATION_COUNT) {
+            let Some(name) = captures.get(1).map(|value| value.as_str().trim()) else {
+                continue;
+            };
+            let Some(raw_value) = captures.get(2).map(|value| value.as_str()) else {
+                continue;
+            };
+            let resolved = interpolate_gradle_string(raw_value, &properties);
+            properties.insert(name.to_string(), resolved);
+        }
+    }
+
+    let delegated_project_property_pattern = regex::Regex::new(
+        r#"(?m)^\s*(?:val|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?::[^=\n]+)?\s+by\s+project\b"#,
+    )
+    .expect("valid regex");
+
+    for captures in delegated_project_property_pattern
+        .captures_iter(content)
+        .take(MAX_ITERATION_COUNT)
+    {
+        let Some(name) = captures.get(1).map(|value| value.as_str().trim()) else {
+            continue;
+        };
+        if let Some(value) = properties.get(name).cloned() {
+            properties.insert(name.to_string(), value);
+        }
+    }
+
+    properties
+}
+
+fn load_gradle_properties(path: &Path) -> HashMap<String, String> {
+    for ancestor in path.ancestors() {
+        let gradle_properties = ancestor.join("gradle.properties");
+        if !gradle_properties.is_file() {
+            continue;
+        }
+
+        let Ok(content) = read_file_to_string(&gradle_properties, None) else {
+            continue;
+        };
+
+        let mut properties = HashMap::new();
+        for line in content.lines().take(MAX_ITERATION_COUNT) {
+            let trimmed = line.split('#').next().unwrap_or("").trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            let Some((key, value)) = trimmed.split_once('=').or_else(|| trimmed.split_once(':'))
+            else {
+                continue;
+            };
+
+            let key = key.trim();
+            let value = value.trim();
+            if key.is_empty() || value.is_empty() {
+                continue;
+            }
+            properties.insert(key.to_string(), value.to_string());
+        }
+        return properties;
+    }
+
+    HashMap::new()
+}
+
+fn interpolate_gradle_string(value: &str, properties: &HashMap<String, String>) -> String {
+    if !value.contains('$') {
+        return truncate_field(value.to_string());
+    }
+
+    let chars = value.chars().collect::<Vec<_>>();
+    let mut rendered = String::new();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] != '$' {
+            rendered.push(chars[i]);
+            i += 1;
+            continue;
+        }
+
+        if i + 1 >= chars.len() {
+            rendered.push(chars[i]);
+            break;
+        }
+
+        if chars[i + 1] == '{' {
+            let start = i;
+            i += 2;
+            let mut reference = String::new();
+            while i < chars.len() && chars[i] != '}' {
+                reference.push(chars[i]);
+                i += 1;
+            }
+            if i < chars.len() && chars[i] == '}' {
+                i += 1;
+            }
+
+            if let Some(resolved) = properties.get(reference.trim()) {
+                rendered.push_str(resolved);
+            } else {
+                rendered.push_str(&value[start..i]);
+            }
+            continue;
+        }
+
+        let start = i;
+        i += 1;
+        let mut reference = String::new();
+        while i < chars.len() && matches!(chars[i], 'A'..='Z' | 'a'..='z' | '0'..='9' | '_') {
+            reference.push(chars[i]);
+            i += 1;
+        }
+
+        if reference.is_empty() {
+            rendered.push('$');
+            continue;
+        }
+
+        if let Some(resolved) = properties.get(reference.as_str()) {
+            rendered.push_str(resolved);
+        } else {
+            rendered.push_str(&value[start..i]);
+        }
+    }
+
+    truncate_field(rendered)
 }
 
 fn resolve_gradle_buildsrc_symbolic_refs(path: &Path, raw_dependencies: &mut [RawDep]) {
@@ -2168,6 +2335,43 @@ dependencies {
                 && dependency.scope.as_deref() == Some("testImplementation")
                 && dependency.is_runtime == Some(false)
                 && dependency.is_optional == Some(true)
+        }));
+    }
+
+    #[test]
+    fn test_gradle_properties_and_local_assignments_resolve_interpolation() {
+        let temp_dir = tempdir().unwrap();
+        std::fs::write(
+            temp_dir.path().join("gradle.properties"),
+            "ktorVersion=2.3.10\nkotlinVersion=2.0.0\n",
+        )
+        .unwrap();
+        let build_gradle = temp_dir.path().join("build.gradle.kts");
+        std::fs::write(
+            &build_gradle,
+            r#"
+val ktorVersion: String by project
+val kotlinVersion = "2.1.0"
+
+dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
+}
+"#,
+        )
+        .unwrap();
+
+        let package_data = GradleParser::extract_first_package(&build_gradle);
+        assert_eq!(package_data.dependencies.len(), 2);
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/org.jetbrains.kotlin/kotlin-stdlib@2.1.0")
+                && dependency.extracted_requirement.as_deref() == Some("2.1.0")
+                && dependency.scope.as_deref() == Some("implementation")
+        }));
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/io.ktor/ktor-server-test-host@2.3.10")
+                && dependency.extracted_requirement.as_deref() == Some("2.3.10")
+                && dependency.scope.as_deref() == Some("testImplementation")
         }));
     }
 
