@@ -277,6 +277,7 @@ fn run_author_extraction_and_repairs(
     authors.extend(new_a);
 
     super::author_heuristics::drop_json_code_example_authors(raw_lines, authors);
+    super::author_heuristics::drop_markup_element_value_authors(raw_lines, authors);
     seen.rebuild_authors_from(authors);
 
     let mut new_a = super::author_heuristics::extract_name_contributed_authors(prepared_cache);
@@ -286,6 +287,8 @@ fn run_author_extraction_and_repairs(
     let mut new_a = super::author_heuristics::extract_comment_author_label_authors(raw_lines);
     seen.dedup_new_authors(&mut new_a, 0);
     authors.extend(new_a);
+    super::author_heuristics::drop_markup_element_value_authors(raw_lines, authors);
+    seen.rebuild_authors_from(authors);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -595,6 +598,9 @@ fn run_final_variant_and_cleanup_repairs(
         copyrights, holders,
     );
     super::postprocess_transforms::drop_json_description_metadata_copyrights_and_holders(
+        raw_lines, copyrights, holders,
+    );
+    super::postprocess_transforms::drop_markup_declaration_and_versioninfo_copyrights_and_holders(
         raw_lines, copyrights, holders,
     );
     super::postprocess_transforms::drop_copyright_like_holders(holders);

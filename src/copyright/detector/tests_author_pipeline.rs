@@ -436,6 +436,56 @@ fn test_json_sponsor_description_does_not_create_authors() {
 }
 
 #[test]
+fn test_xml_author_elements_do_not_create_file_authors() {
+    let input = concat!(
+        "<bookstore>\n",
+        "  <book><author>Joe Bob</author></book>\n",
+        "  <book><author>Mary Bob</author></book>\n",
+        "</bookstore>\n",
+    );
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_atom_feed_identifier_fields_do_not_create_authors() {
+    let input = concat!(
+        "<feed>\n",
+        "  <id>tag:contoso.com,2000</id>\n",
+        "  <updated>2006-04-25T12:12:12Z</updated>\n",
+        "  <email>jerry@Contoso.com</email>\n",
+        "</feed>\n",
+    );
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_xml_nested_name_tags_inside_author_do_not_create_file_authors() {
+    let input = concat!(
+        "<book>\n",
+        "  <author>\n",
+        "    <first-name>Joe</first-name>\n",
+        "    <last-name>Bob</last-name>\n",
+        "  </author>\n",
+        "</book>\n",
+    );
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_xml_lang_attribute_value_does_not_create_author() {
+    let input = r#"<bookstore xml:lang="en-usabcd"></bookstore>"#;
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
 fn test_written_by_sentence_trims_following_description_clause() {
     let input = "JUnit is a regression testing framework written by Erich Gamma and Kent Beck. It is used by the developer who implements unit tests in Java.";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
