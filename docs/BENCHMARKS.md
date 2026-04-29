@@ -770,12 +770,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `290.44s`; ScanCode `5927.08s`
 - Broader Bazel and mixed-tree dependency extraction (`8202` vs `8056` packages, `1465` vs `700` dependencies) from root and vendored `MODULE.bazel`, many committed `BUILD` files, Python lockfiles, Dockerfiles, and Debian control metadata, plus direct `CITATION.cff` package visibility
 
-##### [ValveSoftware/eigen @ e9c4315](https://github.com/ValveSoftware/eigen/tree/e9c43151265207fd3366bba21cddd61141ff402c) — **21.86× faster**
+##### [ValveSoftware/eigen @ e9c4315](https://github.com/ValveSoftware/eigen/tree/e9c43151265207fd3366bba21cddd61141ff402c) — **19.84× faster**
 
 - Files: 1,784
-- Run context: 2026-04-29 · eigen-90726 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `17.61s`; ScanCode `384.96s`
-- Zero package or dependency deltas on this manifest-free source tree, plus Unicode-preserving holder normalization such as `Désiré Nuentsa-Wakam`, split multi-person holder recovery where ScanCode merges names, and full BLAS/LAPACK Doxygen author coverage across committed `blas/testing/*.f` and `lapack/*.f` Fortran headers; the remaining ScanCode edge is limited to a few legacy acknowledgments and SuperLU/Xerox holder extraction cases
+- Run context: 2026-04-29 · eigen-43257 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `19.40s`; ScanCode `384.96s`
+- Zero package, dependency, and top-level license-detection deltas on this manifest-free source tree, plus Unicode-preserving holder normalization such as `Désiré Nuentsa-Wakam` and split multi-person holder recovery where ScanCode merges names; the remaining ScanCode edge is limited to a weak `Distributed` holder overcapture in `bench/eig33.cpp`, a few legacy acknowledgment-shaped author/copyright cases, minor holder formatting differences, and URL normalization deltas
 
 ##### [tokio-rs/tokio @ 5db10f5](https://github.com/tokio-rs/tokio/tree/5db10f538b683fe88d699dfd11be31d193db011c) — **3.31× faster**
 
