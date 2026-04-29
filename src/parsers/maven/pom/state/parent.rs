@@ -8,11 +8,11 @@ use serde::Serialize;
 #[derive(Default, Serialize)]
 pub(super) struct ParentEntry {
     #[serde(rename = "groupId", skip_serializing_if = "Option::is_none")]
-    pub(super) group_id: Option<String>,
+    group_id: Option<String>,
     #[serde(rename = "artifactId", skip_serializing_if = "Option::is_none")]
-    pub(super) artifact_id: Option<String>,
+    artifact_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) version: Option<String>,
+    version: Option<String>,
     #[serde(rename = "relativePath", skip_serializing_if = "Option::is_none")]
     relative_path: Option<String>,
 }
@@ -40,5 +40,30 @@ impl ParentEntry {
             || self.artifact_id.is_some()
             || self.version.is_some()
             || self.relative_path.is_some()
+    }
+
+    pub(super) fn group_id(&self) -> &Option<String> {
+        &self.group_id
+    }
+
+    pub(super) fn artifact_id(&self) -> &Option<String> {
+        &self.artifact_id
+    }
+
+    pub(super) fn version(&self) -> &Option<String> {
+        &self.version
+    }
+
+    pub(super) fn apply_fallbacks(
+        &self,
+        namespace: &mut Option<String>,
+        version: &mut Option<String>,
+    ) {
+        if namespace.is_none() {
+            *namespace = self.group_id.clone();
+        }
+        if version.is_none() {
+            *version = self.version.clone();
+        }
     }
 }

@@ -66,6 +66,10 @@ impl MavenLicenseEntry {
         }
     }
 
+    pub(super) fn has_data(&self) -> bool {
+        self.name.is_some() || self.url.is_some() || self.comments.is_some()
+    }
+
     pub(super) fn apply_text(&mut self, current: Option<KnownTag>, text: &str) {
         match current {
             Some(KnownTag::Name) => self.name = Some(text.to_string()),

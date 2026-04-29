@@ -30,6 +30,7 @@ use super::properties::{
 };
 use super::tags::{KnownTag, Tag};
 use crate::models::{DatasourceId, PackageData, PackageType, Party};
+use crate::parser_warn as warn;
 use crate::parsers::utils::truncate_field;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -220,11 +221,10 @@ impl ContextFrameState {
             return Self::RepositoryCollection(collection);
         }
 
-        if let Some(active_section) = ActiveSection::for_start(
-            distribution_section,
-            &mut acc.dependency_scratch,
-            element_name,
-        ) {
+        if let Some(active_section) = ActiveSection::for_start(distribution_section, element_name) {
+            if active_section == ActiveSection::Relocation {
+                acc.dependency_scratch.reset_relocation();
+            }
             return Self::Section(active_section);
         }
 
@@ -270,35 +270,76 @@ impl ContextFrameState {
                 mailing_list.apply_text(current_known, text);
                 true
             }
-            Self::Section(section) => {
-                section.apply_text(acc, source_path, current_tag, parent_tag, depth, text)
-            }
+            Self::Section(section) => Self::apply_section_text(
+                *section,
+                acc,
+                source_path,
+                current_tag,
+                parent_tag,
+                depth,
+                text,
+            ),
             Self::Distribution(distribution) => distribution.apply_text(acc, current_known, text),
             _ => false,
         }
     }
 
+    fn apply_section_text(
+        section: ActiveSection,
+        acc: &mut PomAccumulator,
+        source_path: &Path,
+        current_tag: &Tag,
+        parent_tag: Option<&Tag>,
+        depth: usize,
+        text: &str,
+    ) -> bool {
+        let current_known = current_tag.known();
+
+        match section {
+            ActiveSection::Relocation => {
+                acc.dependency_scratch
+                    .apply_relocation_text(current_known, text);
+                true
+            }
+            ActiveSection::Parent => {
+                acc.parent.apply_text(current_known, text);
+                true
+            }
+            ActiveSection::Modules => {
+                if current_known == Some(KnownTag::Module) {
+                    acc.collections.push_module(text.to_string());
+                }
+                true
+            }
+            ActiveSection::Properties => {
+                if depth >= 2 && parent_tag.is_some_and(|tag| tag.is(KnownTag::Properties)) {
+                    if let Ok(property_name) = std::str::from_utf8(current_tag.as_bytes()) {
+                        acc.properties
+                            .insert(property_name.to_string(), truncate_field(text.to_string()));
+                    } else {
+                        warn!("Failed to decode Maven property name in {:?}", source_path);
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
+            ActiveSection::MailingLists => false,
+        }
+    }
+
     fn finish(self, acc: &mut PomAccumulator) {
         match self {
-            Self::Dependency(ActiveDependency::Management(dep_mgmt))
-                if dep_mgmt.group_id.is_some()
-                    || dep_mgmt.artifact_id.is_some()
-                    || dep_mgmt.version.is_some() =>
-            {
-                acc.dependency_scratch.push_management_entry(dep_mgmt);
+            Self::Dependency(dependency) => {
+                dependency.finish_into(
+                    &mut acc.package_data.dependencies,
+                    &mut acc.dependency_scratch,
+                );
             }
-            Self::Dependency(ActiveDependency::Management(_)) => {}
-            Self::Dependency(ActiveDependency::Package { package, data }) => {
-                acc.package_data.dependencies.push(package);
-                acc.dependency_scratch.push_package_entry(data);
-            }
-            Self::License(license)
-                if license.name.is_some()
-                    || license.url.is_some()
-                    || license.comments.is_some() =>
-            {
+            Self::License(license) if license.has_data() => {
                 acc.license_data.push_entry(license);
             }
+            Self::License(_) => {}
             Self::Party(party) => {
                 acc.package_data.parties.push(party);
             }
@@ -467,9 +508,9 @@ impl PomAccumulator {
             namespace: &self.package_data.namespace,
             name: &self.package_data.name,
             version: &self.package_data.version,
-            parent_group_id: &self.parent.group_id,
-            parent_artifact_id: &self.parent.artifact_id,
-            parent_version: &self.parent.version,
+            parent_group_id: self.parent.group_id(),
+            parent_artifact_id: self.parent.artifact_id(),
+            parent_version: self.parent.version(),
             project_name: self.project_details.name(),
             project_packaging: self.project_details.packaging(),
         });
@@ -490,12 +531,10 @@ impl PomAccumulator {
     }
 
     fn apply_parent_fallbacks(&mut self) {
-        if self.package_data.namespace.is_none() {
-            self.package_data.namespace = self.parent.group_id.clone();
-        }
-        if self.package_data.version.is_none() {
-            self.package_data.version = self.parent.version.clone();
-        }
+        self.parent.apply_fallbacks(
+            &mut self.package_data.namespace,
+            &mut self.package_data.version,
+        );
     }
 
     fn finalize_package_metadata(&mut self) {

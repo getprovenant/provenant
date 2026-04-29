@@ -97,6 +97,23 @@ impl ActiveDependency {
             }
         }
     }
+
+    pub(super) fn finish_into(
+        self,
+        package_dependencies: &mut Vec<Dependency>,
+        scratch: &mut DependencyScratchData,
+    ) {
+        match self {
+            Self::Management(dependency) if dependency.has_management_coordinates() => {
+                scratch.push_management_entry(dependency);
+            }
+            Self::Management(_) => {}
+            Self::Package { package, data } => {
+                package_dependencies.push(package);
+                scratch.push_package_entry(data);
+            }
+        }
+    }
 }
 
 #[derive(Default)]

@@ -18,6 +18,12 @@ pub(super) struct MavenDependencyData {
     pub(super) message: Option<String>,
 }
 
+impl MavenDependencyData {
+    pub(super) fn has_management_coordinates(&self) -> bool {
+        self.group_id.is_some() || self.artifact_id.is_some() || self.version.is_some()
+    }
+}
+
 pub(super) fn parse_maven_bool(value: Option<&str>) -> bool {
     value.is_some_and(|value| value.trim().eq_ignore_ascii_case("true"))
 }

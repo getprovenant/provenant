@@ -1,14 +1,10 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::PomAccumulator;
 use super::collections::{MailingListEntryBuilder, RepositoryEntryBuilder};
-use super::dependencies::{ActiveDependency, DependencyScratchData};
+use super::dependencies::ActiveDependency;
 use crate::models::Party;
-use crate::parser_warn as warn;
 use crate::parsers::maven::pom::tags::{KnownTag, Tag};
-use crate::parsers::utils::truncate_field;
-use std::path::Path;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum PartyList {
@@ -128,18 +124,11 @@ pub(super) enum ActiveSection {
 }
 
 impl ActiveSection {
-    pub(super) fn for_start(
-        distribution: Option<DistributionSection>,
-        dependency_scratch: &mut DependencyScratchData,
-        tag: &Tag,
-    ) -> Option<Self> {
+    pub(super) fn for_start(distribution: Option<DistributionSection>, tag: &Tag) -> Option<Self> {
         match tag {
             Tag::Known(KnownTag::Parent) => Some(Self::Parent),
             Tag::Known(KnownTag::Properties) => Some(Self::Properties),
-            Tag::Known(KnownTag::Relocation) if distribution.is_some() => {
-                dependency_scratch.reset_relocation();
-                Some(Self::Relocation)
-            }
+            Tag::Known(KnownTag::Relocation) if distribution.is_some() => Some(Self::Relocation),
             Tag::Known(KnownTag::Modules) => Some(Self::Modules),
             Tag::Known(KnownTag::MailingLists) => Some(Self::MailingLists),
             _ => None,
@@ -152,52 +141,6 @@ impl ActiveSection {
                 Some(MailingListEntryBuilder::default())
             }
             _ => None,
-        }
-    }
-
-    pub(super) fn apply_text(
-        self,
-        state: &mut PomAccumulator,
-        source_path: &Path,
-        current_tag: &Tag,
-        parent_tag: Option<&Tag>,
-        depth: usize,
-        text: &str,
-    ) -> bool {
-        let current_known = current_tag.known();
-
-        match self {
-            Self::Relocation => {
-                state
-                    .dependency_scratch
-                    .apply_relocation_text(current_known, text);
-                true
-            }
-            Self::Parent => {
-                state.parent.apply_text(current_known, text);
-                true
-            }
-            Self::Modules => {
-                if current_known == Some(KnownTag::Module) {
-                    state.collections.push_module(text.to_string());
-                }
-                true
-            }
-            Self::Properties => {
-                if depth >= 2 && parent_tag.is_some_and(|tag| tag.is(KnownTag::Properties)) {
-                    if let Ok(property_name) = std::str::from_utf8(current_tag.as_bytes()) {
-                        state
-                            .properties
-                            .insert(property_name.to_string(), truncate_field(text.to_string()));
-                    } else {
-                        warn!("Failed to decode Maven property name in {:?}", source_path);
-                    }
-                    true
-                } else {
-                    false
-                }
-            }
-            Self::MailingLists => false,
         }
     }
 }
