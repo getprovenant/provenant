@@ -129,6 +129,24 @@ fn test_by_keyword_holder_captured() {
 }
 
 #[test]
+fn test_comment_led_by_keyword_holder_backfilled() {
+    let input = "* Copyright (c) 1994 by Xerox Corporation.  All rights reserved.";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright (c) 1994 by Xerox Corporation"),
+        "Should preserve the simple copyright string, got: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|hh| hh.holder == "Xerox Corporation"),
+        "Should backfill holder from the preserved copyright string, got: {:?}",
+        h.iter().map(|hh| &hh.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_holder_company_with_digits_absorbed() {
     let input = "Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.";
     let (c, h, _a) = detect_copyrights_from_text(input);
