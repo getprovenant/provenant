@@ -7,6 +7,18 @@ use std::process::Command;
 
 use anyhow::{Context, Result};
 
+fn prettier_parser_for_path(path: &Path) -> Option<&'static str> {
+    if path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with(".expected"))
+    {
+        Some("json")
+    } else {
+        None
+    }
+}
+
 pub fn find_files_with_extension(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     if !dir.is_dir() {
@@ -46,35 +58,81 @@ pub fn run_prettier(paths: &[PathBuf]) -> Result<()> {
     }
 
     const CHUNK_SIZE: usize = 100;
-    for chunk in paths.chunks(CHUNK_SIZE) {
-        let mut cmd = Command::new("npm");
-        cmd.args([
-            "exec",
-            "--",
-            "prettier",
-            "--write",
-            "--ignore-path",
-            ignore_path
-                .to_str()
-                .context("temporary prettier ignore path is not valid UTF-8")?,
-        ]);
-        for path in chunk {
-            cmd.arg(path);
+
+    let mut default_paths = Vec::new();
+    let mut json_paths = Vec::new();
+
+    for path in paths {
+        match prettier_parser_for_path(path) {
+            Some("json") => json_paths.push(path.clone()),
+            _ => default_paths.push(path.clone()),
         }
+    }
 
-        let output = cmd
-            .output()
-            .context("failed to run `npm exec -- prettier --write`")?;
+    for (parser, parser_paths) in [(None, default_paths), (Some("json"), json_paths)] {
+        for chunk in parser_paths.chunks(CHUNK_SIZE) {
+            let mut cmd = Command::new("npm");
+            cmd.args([
+                "exec",
+                "--",
+                "prettier",
+                "--write",
+                "--ignore-path",
+                ignore_path
+                    .to_str()
+                    .context("temporary prettier ignore path is not valid UTF-8")?,
+            ]);
+            if let Some(parser) = parser {
+                cmd.args(["--parser", parser]);
+            }
+            for path in chunk {
+                cmd.arg(path);
+            }
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!(
-                "prettier formatting failed (status: {}): {}",
-                output.status,
-                stderr.trim()
-            );
+            let output = cmd
+                .output()
+                .context("failed to run `npm exec -- prettier --write`")?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                anyhow::bail!(
+                    "prettier formatting failed (status: {}): {}",
+                    output.status,
+                    stderr.trim()
+                );
+            }
         }
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::prettier_parser_for_path;
+    use std::path::Path;
+
+    #[test]
+    fn test_prettier_parser_for_expected_fixture_without_extension() {
+        assert_eq!(
+            prettier_parser_for_path(Path::new("testdata/maven-golden/basic/pom.xml.expected")),
+            Some("json")
+        );
+    }
+
+    #[test]
+    fn test_prettier_parser_for_regular_json_extension_is_inferred() {
+        assert_eq!(
+            prettier_parser_for_path(Path::new("testdata/foo/bar.expected.json")),
+            None
+        );
+    }
+
+    #[test]
+    fn test_prettier_parser_for_markdown_stays_default() {
+        assert_eq!(
+            prettier_parser_for_path(Path::new("docs/SUPPORTED_FORMATS.md")),
+            None
+        );
+    }
 }
