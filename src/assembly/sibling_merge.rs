@@ -461,20 +461,24 @@ fn should_skip_bun_lock_merge(package: &Package, pkg_data: &PackageData) -> bool
 }
 
 fn npm_package_identity_matches(package: &Package, pkg_data: &PackageData) -> bool {
-    let Some(package_name) = normalized_identity_value(package.name.as_deref()) else {
+    if let (Some(package_name), Some(candidate_name)) = (
+        normalized_identity_value(package.name.as_deref()),
+        normalized_identity_value(pkg_data.name.as_deref()),
+    ) && package_name != candidate_name
+    {
         return false;
-    };
-    let Some(package_version) = normalized_identity_value(package.version.as_deref()) else {
-        return false;
-    };
-    let Some(candidate_name) = normalized_identity_value(pkg_data.name.as_deref()) else {
-        return false;
-    };
-    let Some(candidate_version) = normalized_identity_value(pkg_data.version.as_deref()) else {
-        return false;
-    };
+    }
 
-    package_name == candidate_name && package_version == candidate_version
+    if let (Some(package_version), Some(candidate_version)) = (
+        normalized_identity_value(package.version.as_deref()),
+        normalized_identity_value(pkg_data.version.as_deref()),
+    ) && package_version != candidate_version
+    {
+        return false;
+    }
+
+    normalized_identity_value(package.name.as_deref()).is_some()
+        && normalized_identity_value(pkg_data.name.as_deref()).is_some()
 }
 
 fn normalized_identity_value(value: Option<&str>) -> Option<&str> {
