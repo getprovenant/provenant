@@ -24,7 +24,9 @@
 //! - Graceful error handling with `warn!()` logs
 //! - Direct dependency tracking (all in build file are direct)
 
-use std::path::Path;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -86,8 +88,7 @@ impl PackageParser for GradleParser {
         };
 
         let tokens = lex(&content);
-        let mut dependencies = extract_dependencies(&tokens);
-        resolve_gradle_version_catalog_aliases(path, &mut dependencies);
+        let dependencies = extract_dependencies_with_context(path, &tokens);
         let (
             extracted_license_statement,
             declared_license_expression,
@@ -366,21 +367,53 @@ struct RawDep {
     version: String,
     scope: String,
     catalog_alias: Option<String>,
+    symbolic_ref: Option<String>,
     project_path: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum BuildSrcExpr {
+    Literal(String),
+    Ref(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BuildSrcConst {
+    scope: String,
+    expr: BuildSrcExpr,
+}
+
+type BuildSrcConstMap = HashMap<String, BuildSrcConst>;
+type BuildSrcCache = HashMap<PathBuf, Option<BuildSrcConstMap>>;
+
+static BUILD_SRC_CONSTANT_CACHE: OnceLock<Mutex<BuildSrcCache>> = OnceLock::new();
+
+fn extract_dependencies_with_context(path: &Path, tokens: &[Tok]) -> Vec<Dependency> {
+    let mut raw_dependencies = extract_raw_dependencies(tokens);
+    resolve_gradle_buildsrc_symbolic_refs(path, &mut raw_dependencies);
+    let mut dependencies = raw_dependencies
+        .iter()
+        .filter_map(create_dependency)
+        .collect::<Vec<_>>();
+    resolve_gradle_version_catalog_aliases(path, &mut dependencies);
+    dependencies
+}
+
+#[cfg(test)]
 fn extract_dependencies(tokens: &[Tok]) -> Vec<Dependency> {
+    extract_raw_dependencies(tokens)
+        .iter()
+        .filter_map(create_dependency)
+        .collect()
+}
+
+fn extract_raw_dependencies(tokens: &[Tok]) -> Vec<RawDep> {
     let blocks = find_dependency_blocks(tokens);
     let mut dependencies = Vec::new();
 
     for block in blocks {
         for rd in parse_block(&block).into_iter().take(MAX_ITERATION_COUNT) {
-            if rd.name.is_empty() {
-                continue;
-            }
-            if let Some(dep) = create_dependency(&rd) {
-                dependencies.push(dep);
-            }
+            dependencies.push(rd);
         }
     }
 
@@ -559,8 +592,18 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
                 catalog_alias: val
                     .strip_prefix("libs.")
                     .map(|alias| truncate_field(alias.to_string())),
+                symbolic_ref: None,
                 project_path: None,
             });
+            i = next + 1;
+            continue;
+        }
+
+        if next < tokens.len()
+            && let Tok::Ident(ref val) = tokens[next]
+            && val.contains('.')
+        {
+            deps.push(parse_symbolic_ref(&scope_name, val));
             i = next + 1;
             continue;
         }
@@ -652,7 +695,21 @@ fn parse_paren_content(scope: &str, tokens: &[Tok], deps: &mut Vec<RawDep>) {
                 deps.push(parse_colon_string(val, inner_fn));
                 return;
             }
+
+            if let Some(Tok::Ident(val)) = inner.first()
+                && val.contains('.')
+            {
+                deps.push(parse_symbolic_ref(inner_fn, val));
+                return;
+            }
         }
+    }
+
+    if let Some(Tok::Ident(val)) = tokens.first()
+        && val.contains('.')
+    {
+        deps.push(parse_symbolic_ref(scope, val));
+        return;
     }
 
     // Simple string: ("g:n:v")
@@ -728,6 +785,7 @@ fn parse_map_entries(tokens: &[Tok]) -> Option<RawDep> {
         version,
         scope: String::new(),
         catalog_alias: None,
+        symbolic_ref: None,
         project_path: None,
     })
 }
@@ -770,6 +828,7 @@ fn parse_named_params(scope: &str, tokens: &[Tok]) -> Option<(RawDep, usize)> {
             version,
             scope: scope.to_string(),
             catalog_alias: None,
+            symbolic_ref: None,
             project_path: None,
         },
         i,
@@ -797,10 +856,23 @@ fn parse_project_ref(tokens: &[Tok], scope: &str) -> Option<RawDep> {
             version: String::new(),
             scope: truncate_field(scope.to_string()),
             catalog_alias: None,
+            symbolic_ref: None,
             project_path: Some(truncate_field(module_name.to_string())),
         });
     }
     None
+}
+
+fn parse_symbolic_ref(scope: &str, value: &str) -> RawDep {
+    RawDep {
+        namespace: String::new(),
+        name: String::new(),
+        version: String::new(),
+        scope: truncate_field(scope.to_string()),
+        catalog_alias: None,
+        symbolic_ref: Some(truncate_field(value.to_string())),
+        project_path: None,
+    }
 }
 
 fn parse_colon_string(val: &str, scope: &str) -> RawDep {
@@ -834,6 +906,7 @@ fn parse_colon_string(val: &str, scope: &str) -> RawDep {
         version,
         scope: truncate_field(scope.to_string()),
         catalog_alias: None,
+        symbolic_ref: None,
         project_path: None,
     }
 }
@@ -936,6 +1009,12 @@ fn create_dependency(raw: &RawDep) -> Option<Dependency> {
             json!(truncate_field(project_path.clone())),
         );
     }
+    if let Some(symbolic_ref) = &raw.symbolic_ref {
+        extra_data.insert(
+            "symbolic_ref".to_string(),
+            json!(truncate_field(symbolic_ref.clone())),
+        );
+    }
 
     Some(Dependency {
         purl: Some(purl_string),
@@ -965,6 +1044,333 @@ fn classify_scope(scope: &str) -> (bool, bool) {
     }
 
     (true, false)
+}
+
+fn resolve_gradle_buildsrc_symbolic_refs(path: &Path, raw_dependencies: &mut [RawDep]) {
+    let Some(build_src_dir) = find_build_src_dir(path) else {
+        return;
+    };
+    let Some(constants) = load_build_src_constants(&build_src_dir) else {
+        return;
+    };
+
+    for raw in raw_dependencies.iter_mut() {
+        let Some(symbolic_ref) = raw.symbolic_ref.as_deref() else {
+            continue;
+        };
+
+        let mut visiting = HashSet::new();
+        let Some(resolved) = resolve_build_src_value(symbolic_ref, &constants, &mut visiting)
+        else {
+            continue;
+        };
+        if !resolved.contains(':') {
+            continue;
+        }
+
+        let resolved_dependency = parse_colon_string(&resolved, &raw.scope);
+        raw.namespace = resolved_dependency.namespace;
+        raw.name = resolved_dependency.name;
+        raw.version = resolved_dependency.version;
+    }
+}
+
+fn find_build_src_dir(path: &Path) -> Option<PathBuf> {
+    for ancestor in path.ancestors() {
+        let build_src_dir = ancestor.join("buildSrc");
+        if build_src_dir.is_dir() {
+            return Some(build_src_dir);
+        }
+    }
+    None
+}
+
+fn load_build_src_constants(build_src_dir: &Path) -> Option<BuildSrcConstMap> {
+    let cache = BUILD_SRC_CONSTANT_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(guard) = cache.lock()
+        && let Some(cached) = guard.get(build_src_dir)
+    {
+        return cached.clone();
+    }
+
+    let parsed = parse_build_src_constants_dir(build_src_dir);
+
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(build_src_dir.to_path_buf(), parsed.clone());
+    }
+
+    parsed
+}
+
+fn parse_build_src_constants_dir(build_src_dir: &Path) -> Option<BuildSrcConstMap> {
+    let mut kotlin_files = Vec::new();
+    for source_dir in [
+        build_src_dir.join("src").join("main").join("java"),
+        build_src_dir.join("src").join("main").join("kotlin"),
+    ] {
+        collect_build_src_kotlin_files(&source_dir, &mut kotlin_files);
+    }
+
+    if kotlin_files.is_empty() {
+        return None;
+    }
+
+    let mut constants = HashMap::new();
+    for file in kotlin_files.into_iter().take(MAX_ITERATION_COUNT) {
+        let Ok(content) = read_file_to_string(&file, None) else {
+            continue;
+        };
+        constants.extend(parse_build_src_constants(&content));
+    }
+
+    (!constants.is_empty()).then_some(constants)
+}
+
+fn collect_build_src_kotlin_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    if files.len() >= MAX_ITERATION_COUNT || !dir.is_dir() {
+        return;
+    }
+
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten().take(MAX_ITERATION_COUNT) {
+        if files.len() >= MAX_ITERATION_COUNT {
+            break;
+        }
+
+        let path = entry.path();
+        if path.is_dir() {
+            collect_build_src_kotlin_files(&path, files);
+            continue;
+        }
+
+        if path.extension().is_some_and(|ext| ext == "kt") {
+            files.push(path);
+        }
+    }
+}
+
+fn parse_build_src_constants(content: &str) -> BuildSrcConstMap {
+    let tokens = lex(content);
+    let mut constants = HashMap::new();
+    let mut object_stack = Vec::new();
+    let mut brace_stack: Vec<Option<String>> = Vec::new();
+    let mut i = 0;
+
+    while i < tokens.len() && i < MAX_ITERATION_COUNT {
+        if let Some((name, consumed)) = parse_object_declaration(&tokens[i..]) {
+            object_stack.push(name.clone());
+            brace_stack.push(Some(name));
+            i += consumed;
+            continue;
+        }
+
+        if let Some((name, expr, consumed)) = parse_build_src_const_definition(&tokens[i..]) {
+            let scope = object_stack.join(".");
+            let full_name = if scope.is_empty() {
+                name.clone()
+            } else {
+                format!("{scope}.{name}")
+            };
+            constants.insert(
+                truncate_field(full_name),
+                BuildSrcConst {
+                    scope: truncate_field(scope),
+                    expr,
+                },
+            );
+            i += consumed;
+            continue;
+        }
+
+        match &tokens[i] {
+            Tok::OpenBrace => brace_stack.push(None),
+            Tok::CloseBrace => {
+                if let Some(marker) = brace_stack.pop()
+                    && marker.is_some()
+                {
+                    object_stack.pop();
+                }
+            }
+            _ => {}
+        }
+
+        i += 1;
+    }
+
+    constants
+}
+
+fn parse_object_declaration(tokens: &[Tok]) -> Option<(String, usize)> {
+    if let [Tok::Ident(keyword), Tok::Ident(name), Tok::OpenBrace, ..] = tokens
+        && keyword == "object"
+    {
+        return Some((truncate_field(name.clone()), 3));
+    }
+    None
+}
+
+fn parse_build_src_const_definition(tokens: &[Tok]) -> Option<(String, BuildSrcExpr, usize)> {
+    let mut cursor = 0;
+
+    while let Some(Tok::Ident(modifier)) = tokens.get(cursor) {
+        if matches!(
+            modifier.as_str(),
+            "private" | "internal" | "public" | "protected"
+        ) {
+            cursor += 1;
+            continue;
+        }
+        break;
+    }
+
+    if !matches!(tokens.get(cursor), Some(Tok::Ident(keyword)) if keyword == "const")
+        || !matches!(tokens.get(cursor + 1), Some(Tok::Ident(keyword)) if keyword == "val")
+    {
+        return None;
+    }
+
+    let Tok::Ident(name) = tokens.get(cursor + 2)? else {
+        return None;
+    };
+    if tokens.get(cursor + 3) != Some(&Tok::Equals) {
+        return None;
+    }
+
+    let expr = match tokens.get(cursor + 4)? {
+        Tok::Str(value) => BuildSrcExpr::Literal(truncate_field(value.clone())),
+        Tok::Ident(value) => BuildSrcExpr::Ref(truncate_field(value.clone())),
+        _ => return None,
+    };
+
+    Some((truncate_field(name.clone()), expr, cursor + 5))
+}
+
+fn resolve_build_src_value(
+    key: &str,
+    constants: &BuildSrcConstMap,
+    visiting: &mut HashSet<String>,
+) -> Option<String> {
+    if !visiting.insert(key.to_string()) {
+        return None;
+    }
+
+    let resolved = constants
+        .get(key)
+        .and_then(|constant| resolve_build_src_expr(constant, constants, visiting));
+    visiting.remove(key);
+    resolved
+}
+
+fn resolve_build_src_expr(
+    constant: &BuildSrcConst,
+    constants: &BuildSrcConstMap,
+    visiting: &mut HashSet<String>,
+) -> Option<String> {
+    match &constant.expr {
+        BuildSrcExpr::Literal(value) => Some(interpolate_build_src_string(
+            value,
+            &constant.scope,
+            constants,
+            visiting,
+        )),
+        BuildSrcExpr::Ref(reference) => {
+            resolve_build_src_symbol(&constant.scope, reference, constants, visiting)
+        }
+    }
+}
+
+fn resolve_build_src_symbol(
+    scope: &str,
+    reference: &str,
+    constants: &BuildSrcConstMap,
+    visiting: &mut HashSet<String>,
+) -> Option<String> {
+    if reference.contains('.') {
+        return resolve_build_src_value(reference, constants, visiting);
+    }
+
+    let mut current_scope = Some(scope);
+    while let Some(scope_name) = current_scope {
+        if !scope_name.is_empty() {
+            let candidate = format!("{scope_name}.{reference}");
+            if let Some(value) = resolve_build_src_value(&candidate, constants, visiting) {
+                return Some(value);
+            }
+        }
+
+        current_scope = scope_name.rsplit_once('.').map(|(parent, _)| parent);
+    }
+
+    resolve_build_src_value(reference, constants, visiting)
+}
+
+fn interpolate_build_src_string(
+    value: &str,
+    scope: &str,
+    constants: &BuildSrcConstMap,
+    visiting: &mut HashSet<String>,
+) -> String {
+    let chars = value.chars().collect::<Vec<_>>();
+    let mut rendered = String::new();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] != '$' {
+            rendered.push(chars[i]);
+            i += 1;
+            continue;
+        }
+
+        if i + 1 >= chars.len() {
+            rendered.push(chars[i]);
+            break;
+        }
+
+        if chars[i + 1] == '{' {
+            let start = i;
+            i += 2;
+            let mut reference = String::new();
+            while i < chars.len() && chars[i] != '}' {
+                reference.push(chars[i]);
+                i += 1;
+            }
+            if i < chars.len() && chars[i] == '}' {
+                i += 1;
+            }
+
+            if let Some(resolved) = resolve_build_src_symbol(scope, &reference, constants, visiting)
+            {
+                rendered.push_str(&resolved);
+            } else {
+                rendered.push_str(&value[start..i]);
+            }
+            continue;
+        }
+
+        let start = i;
+        i += 1;
+        let mut reference = String::new();
+        while i < chars.len() && matches!(chars[i], 'A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '.') {
+            reference.push(chars[i]);
+            i += 1;
+        }
+
+        if reference.is_empty() {
+            rendered.push('$');
+            continue;
+        }
+
+        if let Some(resolved) = resolve_build_src_symbol(scope, &reference, constants, visiting) {
+            rendered.push_str(&resolved);
+        } else {
+            rendered.push_str(&value[start..i]);
+        }
+    }
+
+    truncate_field(rendered)
 }
 
 #[derive(Debug, Clone)]
@@ -1668,6 +2074,101 @@ dependencies {
                 .and_then(|value| value.as_str()),
             Some("mockito-config")
         );
+    }
+
+    #[test]
+    fn test_buildsrc_kotlin_constants_resolve_from_committed_files() {
+        let temp_dir = tempdir().unwrap();
+        let build_src_dir = temp_dir
+            .path()
+            .join("buildSrc/src/main/java/com/example/buildsrc");
+        std::fs::create_dir_all(&build_src_dir).unwrap();
+        std::fs::write(
+            build_src_dir.join("GradleDeps.kt"),
+            r#"
+object GradleDeps {
+    object Kotlin {
+        const val version = "2.0.0"
+        const val gradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$version"
+    }
+}
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            build_src_dir.join("Deps.kt"),
+            r#"
+object Deps {
+    object AndroidX {
+        const val core = "androidx.core:core:1.15.0"
+    }
+
+    object SoLoader {
+        private const val version = "0.11.0"
+        const val soloader = "com.facebook.soloader:soloader:$version"
+    }
+}
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            build_src_dir.join("TestDeps.kt"),
+            r#"
+object TestDeps {
+    const val junit = "junit:junit:4.13.2"
+}
+"#,
+        )
+        .unwrap();
+
+        let build_gradle = temp_dir.path().join("build.gradle");
+        std::fs::write(
+            &build_gradle,
+            r#"
+buildscript {
+    dependencies {
+        classpath GradleDeps.Kotlin.gradlePlugin
+    }
+}
+
+dependencies {
+    implementation Deps.AndroidX.core
+    implementation Deps.SoLoader.soloader
+    implementation project(':fbcore')
+    testImplementation(TestDeps.junit) {
+        because 'exercise parenthesized symbolic refs'
+    }
+}
+"#,
+        )
+        .unwrap();
+
+        let package_data = GradleParser::extract_first_package(&build_gradle);
+
+        assert_eq!(package_data.dependencies.len(), 5);
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref()
+                == Some("pkg:maven/org.jetbrains.kotlin/kotlin-gradle-plugin@2.0.0")
+                && dependency.scope.as_deref() == Some("classpath")
+        }));
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/androidx.core/core@1.15.0")
+                && dependency.scope.as_deref() == Some("implementation")
+        }));
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/com.facebook.soloader/soloader@0.11.0")
+                && dependency.scope.as_deref() == Some("implementation")
+        }));
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/fbcore")
+                && dependency.scope.as_deref() == Some("implementation")
+        }));
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/junit/junit@4.13.2")
+                && dependency.scope.as_deref() == Some("testImplementation")
+                && dependency.is_runtime == Some(false)
+                && dependency.is_optional == Some(true)
+        }));
     }
 
     #[test]
