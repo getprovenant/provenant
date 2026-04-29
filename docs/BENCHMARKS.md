@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 180 of 180 recorded runs, with a **11.7× median speedup** and **11.0× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
+> Provenant is faster on 181 of 181 recorded runs, with a **11.7× median speedup** and **11.1× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -913,6 +913,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `38.15s`; ScanCode `379.55s`
 - Broader .NET/NuGet package and dependency extraction (`105` vs `3` packages, `145` vs `33` dependencies) from many `*.csproj` files plus `Directory.Packages.props` and `Directory.Build.props` across samples, tooling, and test projects, with zero scan errors where ScanCode trips on `TwitterColorEmoji-SVGinOT.ttf`
+
+##### [dotnet/runtime @ d1163e5](https://github.com/dotnet/runtime/tree/d1163e5a8f3f3aaa374993e8b5805911689aba28) — **31.49× faster**
+
+- Files: 57,611
+- Run context: 2026-04-29 · runtime-99690 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `299.53s`; ScanCode `9432.77s`
+- Broader .NET/NuGet and sibling npm package visibility (`2249` vs `5` packages, `983` vs `503` dependencies) across many `*.csproj` files, `Directory.Packages.props`, `Directory.Build.props`, and committed `package-lock.json` inputs, with zero scan-file timeouts where ScanCode aborts on `EncryptedXmlSample4.xml`
 
 ##### [microsoft/onnxruntime @ 97e0a00](https://github.com/microsoft/onnxruntime/tree/97e0a001d43f8783db4507c9b2ac3731dc95a1ed) — **23.89× faster**
 
