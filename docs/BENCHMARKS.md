@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 177 of 177 recorded runs, with a **11.6× median speedup** and **10.9× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
+> Provenant is faster on 177 of 177 recorded runs, with a **11.7× median speedup** and **10.9× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -511,19 +511,19 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `200.80s`; ScanCode `1974.56s`
 - Broader Bazel package and dependency extraction (`1729` vs `1711` packages, `79` vs `14` dependencies) from root and nested `BUILD` files plus direct `MODULE.bazel` dependency visibility, with richer Debian and RPM sidecar package metadata
 
-##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **4.98× faster**
+##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **12.29× faster**
 
-- Files: 236
-- Run context: 2026-04-10 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `14.29s`; ScanCode `71.17s`
-- Cleaner XML author extraction without ScanCode's prose-tainted suffixes such as `A.Meredith Compiler`, while still recovering real names like `Jeremy Siek` and `David Goodger` that ScanCode misses
+- Files: 241
+- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `12.34s`; ScanCode `151.70s`
+- Direct `.gitmodules` package-adjacent visibility (`1` vs `0` file-level package records, plus one raw dependency edge) across the umbrella superproject, cleaner XML author extraction that drops prose-tainted suffixes such as `A.Meredith Compiler`, and Unicode-preserving name normalization for identities such as `René Ferdinand Rivera Morell`, `Ion Gaztañaga`, and `J. López`
 
-##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **8.46× faster**
+##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **6.02× faster**
 
 - Files: 705
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `28.27s`; ScanCode `239.21s`
-- Cleaner GSoC participant-name extraction in `bench/data/gsoc-2018.json`, preserving real names like `Adrián Bazaga` instead of ScanCode's `type' Person name' ...` noise, plus more complete placeholder URL closure on templated GitHub API routes
+- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `35.76s`; ScanCode `215.32s`
+- Cleaner benchmark-corpus author extraction in `bench/data/gsoc-2018.json` and `bench/data/github_events.json`, replacing ScanCode junk such as `type' Person name' AadityaNair` and prose fragments with actual participant names while preserving Unicode identities like `Nils Jørgen Mittet`, plus Unicode-preserving holder normalization for `René Ferdinand Rivera Morell` on build metadata
 
 ##### [catchorg/Catch2 @ 10f6248](https://github.com/catchorg/Catch2/tree/10f62484bff73e3a58a411e2e10b4e1c13cfba9f) — **15.10× faster**
 
