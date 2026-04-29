@@ -1374,6 +1374,47 @@ fn test_refine_author_drops_generated_resource_identifiers() {
 }
 
 #[test]
+fn test_refine_author_drops_markup_feed_identifiers() {
+    assert_eq!(refine_author("doi:10.1038/nature05582"), None);
+    assert_eq!(refine_author("tag:contoso.com,2000"), None);
+    assert_eq!(refine_author("id/1234"), None);
+    assert_eq!(refine_author("jerry@Contoso.com"), None);
+    assert_eq!(refine_author("James 2006-04-25T12:12:12Z"), None);
+    assert_eq!(refine_author("authorauthor"), None);
+    assert_eq!(refine_author("XmlLang en-usabcd"), None);
+}
+
+#[test]
+fn test_refine_copyright_drops_versioninfo_and_dtd_junk() {
+    assert_eq!(
+        refine_copyright("Copyright (c) 2050 VALUE OriginalFilename NativeConsoleApp.exe"),
+        None
+    );
+    assert_eq!(
+        refine_copyright("copyright <!ELEMENT A ( PCDATA) > aaaa"),
+        None
+    );
+    assert_eq!(refine_copyright("Copyright get set"), None);
+    assert_eq!(refine_copyright("copyright public void"), None);
+    assert_eq!(refine_copyright("Copyright clone.Copyright.Text"), None);
+    assert_eq!(
+        refine_copyright("Copyright HeaderType.Content u00AD u00AE"),
+        None
+    );
+}
+
+#[test]
+fn test_refine_holder_drops_versioninfo_and_dtd_junk() {
+    assert_eq!(
+        refine_holder("VALUE OriginalFilename NativeConsoleApp.exe"),
+        None
+    );
+    assert_eq!(refine_holder("PCDATA"), None);
+    assert_eq!(refine_holder("clone.Copyright.Text"), None);
+    assert_eq!(refine_holder("HeaderType.Content u00AD u00AE"), None);
+}
+
+#[test]
 fn test_refine_author_drops_template_token_runs_and_numeric_fragments() {
     assert_eq!(refine_author("AUTH CONTRIBUTORS AUTHS+ + 2660"), None);
     assert_eq!(refine_author("AUTH AUTHS 2730"), None);

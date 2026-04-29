@@ -473,6 +473,7 @@ fn is_junk_c_sign_path_fragment(s: &str) -> bool {
 fn is_junk_copyright_code_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
+    let has_windows_versioninfo_markers = contains_windows_versioninfo_token(trimmed);
     let has_code_markers = lower.contains("string?")
         || lower.contains("bool")
         || lower.contains("final ")
@@ -489,16 +490,30 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower.contains("$template")
         || lower.contains("icondata")
         || lower.contains("static const")
+        || lower.contains("public void")
+        || lower.contains("get set")
+        || lower.contains("assert.equal")
         || lower.contains("classifiers")
         || lower.contains("authors.append")
         || lower == "copyright void"
         || trimmed.contains("??")
+        || contains_member_access_code_token(trimmed)
+        || contains_unicode_escape_token_run(trimmed)
+        || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
+        || has_windows_versioninfo_markers
         || contains_generated_resource_token(trimmed)
         || contains_malformed_spaced_year(trimmed);
     let has_prose_markers = is_obvious_prose_fragment(trimmed);
 
+    if has_windows_versioninfo_markers {
+        return true;
+    }
+
     if !lower.starts_with("copyright") {
+        if lower.starts_with("(c)") && (has_code_markers || has_prose_markers) {
+            return !has_copyright_year(trimmed);
+        }
         return (lower.starts_with("not copyrighted") && !has_copyright_year(trimmed))
             || (lower.contains("copyright") && (has_code_markers || has_prose_markers));
     }
@@ -517,6 +532,7 @@ pub(crate) fn is_junk_holder(s: &str) -> bool {
 fn is_junk_holder_code_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
+    let has_windows_versioninfo_markers = contains_windows_versioninfo_token(trimmed);
     let has_code_markers = lower.contains("string?")
         || lower.contains("bool")
         || lower.contains("final ")
@@ -529,13 +545,21 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || lower.contains("$template")
         || lower.contains("::")
         || lower.contains("static const")
+        || lower.contains("public void")
+        || lower.contains("get set")
+        || lower.contains("assert.equal")
         || lower.contains("icondata")
         || lower.contains("authors.append")
+        || contains_member_access_code_token(trimmed)
+        || contains_unicode_escape_token_run(trimmed)
+        || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
+        || has_windows_versioninfo_markers
         || contains_generated_resource_token(trimmed);
     let has_prose_markers = is_obvious_prose_fragment(trimmed);
 
-    (has_code_markers || has_prose_markers) && !has_copyright_year(trimmed)
+    has_windows_versioninfo_markers
+        || ((has_code_markers || has_prose_markers) && !has_copyright_year(trimmed))
 }
 
 fn is_junk_holder_symbol_garbage(s: &str) -> bool {
@@ -621,6 +645,46 @@ fn contains_generated_resource_token(s: &str) -> bool {
     ASSET_RE.is_match(trimmed)
 }
 
+fn contains_member_access_code_token(s: &str) -> bool {
+    static MEMBER_ACCESS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b(?:[A-Za-z_][A-Za-z0-9_]{1,}\.){1,4}[A-Z][A-Za-z0-9_]{1,}\b").unwrap()
+    });
+
+    MEMBER_ACCESS_RE.is_match(s.trim())
+}
+
+fn contains_unicode_escape_token_run(s: &str) -> bool {
+    static UNICODE_ESCAPE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\bu[0-9a-f]{4}\b").unwrap());
+
+    UNICODE_ESCAPE_RE.is_match(s.trim())
+}
+
+fn contains_windows_versioninfo_token(s: &str) -> bool {
+    static VERSIONINFO_KEY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)\b(?:VALUE\s+)?(?:OriginalFilename|FileDescription|FileVersion|ProductVersion|LegalTrademarks|ProductName|InternalName|CompanyName)\b",
+        )
+        .unwrap()
+    });
+    static VERSIONINFO_FILE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\b[\p{L}0-9_.-]+\.(?:exe|dll|mui|ocx|sys)\b").unwrap());
+
+    let trimmed = s.trim();
+    VERSIONINFO_KEY_RE.is_match(trimmed)
+        && (trimmed.contains("VALUE ")
+            || VERSIONINFO_FILE_RE.is_match(trimmed)
+            || trimmed.to_ascii_lowercase().contains("legaltrademarks"))
+}
+
+fn contains_xml_markup_declaration_token(s: &str) -> bool {
+    let lower = s.to_ascii_lowercase();
+    lower.contains("<!element")
+        || lower.contains("<!attlist")
+        || lower.contains("<!doctype")
+        || lower.contains("pcdata")
+}
+
 fn contains_malformed_spaced_year(s: &str) -> bool {
     static SPACED_YEAR_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"\b(?:19|20)\s+\d{2}\b|\b\d{3}\s+\d{1,2}\b").unwrap());
@@ -702,6 +766,11 @@ pub fn refine_copyright(s: &str) -> Option<String> {
         return None;
     }
     let original = normalize_whitespace(s);
+    if contains_windows_versioninfo_token(&original)
+        || contains_xml_markup_declaration_token(&original)
+    {
+        return None;
+    }
     let mut c = original.clone();
     c = strip_trailing_quote_before_email(&c);
     c = normalize_b_dot_angle_emails(&c);
@@ -808,7 +877,8 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     {
         return None;
     }
-    if is_junk_copyright_of_header(&result)
+    if is_junk_copyright(&result)
+        || is_junk_copyright_of_header(&result)
         || is_junk_copyrighted_works_header(&result)
         || is_junk_copyrighted_software_phrase(&result)
     {
