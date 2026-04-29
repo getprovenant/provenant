@@ -9,6 +9,7 @@ use anyhow::{Context, Result, bail};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
 
+use crate::utils::spdx::combine_license_expressions;
 use crate::version::BUILD_VERSION;
 
 const COMPARISON_MODE: &str = "direct_json";
@@ -1216,24 +1217,47 @@ fn normalize_compare_path(path: &str) -> String {
 
 fn normalize_license_expression(value: &str) -> String {
     let normalized = normalize_text(value);
-    if normalized.contains(" OR ")
-        || normalized.contains(" or ")
-        || normalized.contains(" WITH ")
-        || normalized.contains(" with ")
-    {
-        normalized
-    } else if normalized.contains(" AND ") {
-        let stripped = normalized.replace(['(', ')'], "");
-        let mut parts: Vec<_> = stripped
-            .split(" AND ")
-            .map(str::trim)
-            .filter(|part| !part.is_empty())
-            .collect();
-        parts.sort_unstable();
-        parts.join(" AND ")
-    } else {
-        normalized.replace(['(', ')'], "")
+    if normalized.is_empty() {
+        return normalized;
     }
+
+    let stripped = strip_trivial_outer_parens(&normalized);
+    let canonical =
+        combine_license_expressions(std::iter::once(stripped.clone())).unwrap_or(stripped);
+    strip_trivial_outer_parens(&canonical)
+}
+
+fn strip_trivial_outer_parens(value: &str) -> String {
+    let mut current = value.trim();
+    while has_trivial_outer_parens(current) {
+        current = current[1..current.len() - 1].trim();
+    }
+    current.to_string()
+}
+
+fn has_trivial_outer_parens(value: &str) -> bool {
+    if !(value.starts_with('(') && value.ends_with(')')) {
+        return false;
+    }
+
+    let mut depth = 0usize;
+    for (index, ch) in value.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                if depth == 0 {
+                    return false;
+                }
+                depth -= 1;
+                if depth == 0 && index != value.len() - 1 {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    depth == 0
 }
 
 fn scalar_field_value(entry: &Value, key: &str) -> Option<String> {

@@ -9,6 +9,7 @@ use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
+use provenant::utils::spdx::combine_license_expressions;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::Digest;
@@ -2119,24 +2120,47 @@ fn normalize_compare_path(path: &str) -> String {
 
 fn normalize_license_expression(value: &str) -> String {
     let normalized = normalize_text(value);
-    if normalized.contains(" OR ")
-        || normalized.contains(" or ")
-        || normalized.contains(" WITH ")
-        || normalized.contains(" with ")
-    {
-        normalized
-    } else if normalized.contains(" AND ") {
-        let stripped = normalized.replace(['(', ')'], "");
-        let mut parts: Vec<_> = stripped
-            .split(" AND ")
-            .map(str::trim)
-            .filter(|part| !part.is_empty())
-            .collect();
-        parts.sort_unstable();
-        parts.join(" AND ")
-    } else {
-        normalized.replace(['(', ')'], "")
+    if normalized.is_empty() {
+        return normalized;
     }
+
+    let stripped = strip_trivial_outer_parens(&normalized);
+    let canonical =
+        combine_license_expressions(std::iter::once(stripped.clone())).unwrap_or(stripped);
+    strip_trivial_outer_parens(&canonical)
+}
+
+fn strip_trivial_outer_parens(value: &str) -> String {
+    let mut current = value.trim();
+    while has_trivial_outer_parens(current) {
+        current = current[1..current.len() - 1].trim();
+    }
+    current.to_string()
+}
+
+fn has_trivial_outer_parens(value: &str) -> bool {
+    if !(value.starts_with('(') && value.ends_with(')')) {
+        return false;
+    }
+
+    let mut depth = 0usize;
+    for (index, ch) in value.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                if depth == 0 {
+                    return false;
+                }
+                depth -= 1;
+                if depth == 0 && index != value.len() - 1 {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    depth == 0
 }
 
 fn scalar_field_value(entry: &Value, key: &str) -> Option<String> {
@@ -4625,6 +4649,26 @@ mod tests {
         assert!(policy_values[0].contains("boost-1.0"));
         assert_eq!(clue_values.len(), 1);
         assert!(clue_values[0].contains("license_expression"));
+    }
+
+    #[test]
+    fn normalize_license_expression_ignores_trivial_outer_parentheses() {
+        assert_eq!(
+            normalize_license_expression("(MIT OR Apache-2.0)"),
+            normalize_license_expression("MIT OR Apache-2.0")
+        );
+        assert_eq!(
+            normalize_license_expression("MIT OR Apache-2.0"),
+            normalize_license_expression("Apache-2.0 OR MIT")
+        );
+        assert_eq!(
+            normalize_license_expression("MIT AND Apache-2.0"),
+            normalize_license_expression("Apache-2.0 AND MIT")
+        );
+        assert_eq!(
+            normalize_license_expression("((MIT))"),
+            normalize_license_expression("MIT")
+        );
     }
 
     #[test]

@@ -304,6 +304,70 @@ fn create_compare_json_fixtures_with_file_level_package_fallback() -> (TempDir, 
     )
 }
 
+fn create_compare_json_fixtures_with_equivalent_license_expressions() -> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let scancode_file = temp.path().join("scancode-license-parens.json");
+    let provenant_file = temp.path().join("provenant-license-parens.json");
+
+    fs::write(
+        &scancode_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "license_detections": [{
+                    "license_expression": "(MIT OR Apache-2.0)",
+                    "license_expression_spdx": "(MIT OR Apache-2.0)",
+                    "detection_count": 1
+                }]
+            }],
+            "license_detections": [{
+                "license_expression": "(MIT OR Apache-2.0)",
+                "license_expression_spdx": "(MIT OR Apache-2.0)",
+                "detection_count": 1
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write scancode equivalent-license fixture");
+
+    fs::write(
+        &provenant_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "license_detections": [{
+                    "license_expression": "Apache-2.0 OR MIT",
+                    "license_expression_spdx": "Apache-2.0 OR MIT",
+                    "detection_count": 1
+                }]
+            }],
+            "license_detections": [{
+                "license_expression": "Apache-2.0 OR MIT",
+                "license_expression_spdx": "Apache-2.0 OR MIT",
+                "detection_count": 1
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write provenant equivalent-license fixture");
+
+    (
+        temp,
+        scancode_file.to_string_lossy().to_string(),
+        provenant_file.to_string_lossy().to_string(),
+    )
+}
+
 fn normalize_multi_parser_header(output: &mut Value) {
     let header = output["headers"]
         .as_array_mut()
@@ -991,6 +1055,65 @@ fn compare_subcommand_uses_file_level_package_fallback_without_false_regressions
     assert!(summary_tsv.contains(
         "top-level dependencies comparison skipped: ScanCode dependencies[] empty; files[].package_data[].dependencies present; Provenant dependencies[]"
     ));
+}
+
+#[test]
+fn compare_subcommand_treats_trivial_license_expression_parentheses_as_equal() {
+    let (_temp, scancode_json, provenant_json) =
+        create_compare_json_fixtures_with_equivalent_license_expressions();
+    let artifact_temp = TempDir::new().expect("artifact temp dir");
+    let artifact_dir = artifact_temp.path().join("compare-artifacts");
+
+    let output = provenant_command()
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+            "--artifact-dir",
+            artifact_dir.to_str().expect("utf8 artifact path"),
+        ])
+        .output()
+        .expect("failed to run compare subcommand");
+
+    assert!(output.status.success(), "compare should succeed");
+
+    let summary_path = artifact_dir.join("comparison").join("summary.json");
+    let samples_path = artifact_dir
+        .join("comparison")
+        .join("samples")
+        .join("file_metric_value_differences.json");
+    let deltas_path = artifact_dir
+        .join("comparison")
+        .join("samples")
+        .join("top_level_license_expression_deltas.json");
+
+    let summary: Value =
+        serde_json::from_str(&fs::read_to_string(&summary_path).expect("summary json")).unwrap();
+    let samples: Value =
+        serde_json::from_str(&fs::read_to_string(&samples_path).expect("samples json")).unwrap();
+    let deltas: Value =
+        serde_json::from_str(&fs::read_to_string(&deltas_path).expect("deltas json")).unwrap();
+
+    assert_eq!(
+        summary["comparison_status"].as_str(),
+        Some("no_detected_differences")
+    );
+    assert_eq!(
+        summary["file_metric_summary"]["license_detections"]["missing_in_provenant"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["file_metric_summary"]["license_detections"]["extra_in_provenant"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["top_level_license_expression_delta_count"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(samples["license_detections"], serde_json::json!([]));
+    assert_eq!(deltas, serde_json::json!([]));
 }
 
 #[test]
