@@ -100,6 +100,14 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
         return true;
     }
 
+    if looks_like_markup_data_identifier(trimmed) {
+        return true;
+    }
+
+    if looks_like_markup_attribute_label_value(trimmed) {
+        return true;
+    }
+
     if contains_standalone_at_prefixed_token(trimmed) {
         return true;
     }
@@ -222,7 +230,52 @@ fn looks_like_prose_fragment_author(s: &str) -> bool {
 fn contains_windows_versioninfo_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     trimmed.starts_with("VALUE ")
-        && (trimmed.contains("FileDescription") || trimmed.contains("FileVersion"))
+        && (trimmed.contains("FileDescription")
+            || trimmed.contains("FileVersion")
+            || trimmed.contains("OriginalFilename")
+            || trimmed.contains("ProductVersion")
+            || trimmed.contains("LegalTrademarks"))
+}
+
+fn looks_like_markup_data_identifier(s: &str) -> bool {
+    static BARE_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$").expect("valid bare email regex")
+    });
+    static DOI_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^doi:[^\s]+$").expect("valid doi regex"));
+    static TAG_URI_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^tag:[^,\s]+,\d{4}(?::[^\s]+)?$").expect("valid tag uri regex")
+    });
+    static RELATIVE_ID_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?:id|urn|uuid)/[\p{L}0-9._~:/?#\[\]@!$&'()*+,;=-]+$")
+            .expect("valid relative id regex")
+    });
+    static NAME_WITH_TIMESTAMP_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^[\p{Lu}][\p{L}'._-]+(?:\s+[\p{Lu}][\p{L}'._-]+){0,3}\s+\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}z$",
+        )
+        .expect("valid name timestamp regex")
+    });
+    static DUPLICATED_AUTHOR_WORD_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?:author|name){2,}$").expect("valid duplicated author word regex")
+    });
+
+    let trimmed = s.trim();
+    BARE_EMAIL_RE.is_match(trimmed)
+        || DOI_RE.is_match(trimmed)
+        || TAG_URI_RE.is_match(trimmed)
+        || RELATIVE_ID_RE.is_match(trimmed)
+        || NAME_WITH_TIMESTAMP_RE.is_match(trimmed)
+        || DUPLICATED_AUTHOR_WORD_RE.is_match(trimmed)
+}
+
+fn looks_like_markup_attribute_label_value(s: &str) -> bool {
+    static MARKUP_ATTRIBUTE_LABEL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?:xmllang|xml:lang|xmlns(?::[a-z0-9_.-]+)?)\s+\S+$")
+            .expect("valid markup attribute label regex")
+    });
+
+    MARKUP_ATTRIBUTE_LABEL_RE.is_match(s.trim())
 }
 
 fn looks_like_file_reference_note_author(s: &str) -> bool {

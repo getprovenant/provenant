@@ -391,6 +391,86 @@ pub(in super::super) fn drop_json_code_example_authors(
     });
 }
 
+pub(in super::super) fn drop_markup_element_value_authors(
+    raw_lines: &[&str],
+    authors: &mut Vec<AuthorDetection>,
+) {
+    if raw_lines.is_empty() || authors.is_empty() {
+        return;
+    }
+
+    authors.retain(|author| {
+        let Some(window) =
+            surrounding_author_window(raw_lines, author.start_line.get(), author.end_line.get())
+        else {
+            return true;
+        };
+        !window_contains_markup_element_author_value(&window, &author.author)
+    });
+}
+
+fn window_contains_markup_element_author_value(window: &str, author: &str) -> bool {
+    let normalized = normalize_whitespace(window);
+    if !(normalized.contains('<') && normalized.contains('>')) {
+        return false;
+    }
+
+    let lower = normalized.to_ascii_lowercase();
+    if lower.contains("copyright") || lower.contains("written by") || lower.contains("created by") {
+        return false;
+    }
+
+    let has_author_element = (lower.contains("<author>")
+        || lower.contains("</author>")
+        || lower.contains("<author ")
+        || lower.contains(":author>"))
+        && !lower.contains("author=");
+    if has_author_element {
+        return true;
+    }
+
+    if has_author_element
+        && (lower.contains("<first-name>")
+            || lower.contains("<last-name>")
+            || lower.contains("<first.name>")
+            || lower.contains("<last.name>"))
+    {
+        return true;
+    }
+
+    if lower.contains("xml:lang") && author.trim().starts_with("XmlLang ") {
+        return true;
+    }
+
+    let trimmed_author = author.trim();
+    if trimmed_author.is_empty() {
+        return false;
+    }
+
+    let escaped = regex::escape(trimmed_author);
+    let exact_tag_re = Regex::new(&format!(
+        r"(?is)<(?:name|title|id|email|uri|updated|first-name|last-name|first\.name|last\.name|firstname|surname)\b[^>]*>\s*{}\s*</",
+        escaped
+    ))
+    .expect("valid exact markup data tag regex");
+    if exact_tag_re.is_match(&normalized) {
+        return true;
+    }
+
+    let looks_like_identifier = trimmed_author.contains('@')
+        || trimmed_author.contains("http://")
+        || trimmed_author.contains("https://")
+        || trimmed_author.to_ascii_lowercase().starts_with("doi:")
+        || trimmed_author.to_ascii_lowercase().starts_with("tag:")
+        || trimmed_author.contains('T') && trimmed_author.ends_with('Z');
+
+    looks_like_identifier
+        && (lower.contains("<id>")
+            || lower.contains("<email>")
+            || lower.contains("<uri>")
+            || lower.contains("<updated>"))
+}
+
 fn surrounding_author_window(
     raw_lines: &[&str],
     start_line: usize,
