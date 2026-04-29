@@ -374,6 +374,25 @@ pub fn drop_path_fragment_holders_from_bare_c_code_lines(
 /// (e.g. "Name <email>, Name2").
 pub const YEAR_LIKE_POS_TAGS: &[PosTag] = &[PosTag::Yr, PosTag::YrPlus, PosTag::BareYr];
 
+static MALFORMED_COPYRIGHT_YEAR_RANGE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?ix)^
+            (?:19\d{2}|20\d{2}|19\d{3}|20\d{3})
+            (?:
+                [\.,/\-~]
+                (?:19\d{2}|20\d{2}|19\d{3}|20\d{3}|\d{2}|present|current_year|today\.year)
+            )+
+        $",
+    )
+    .unwrap()
+});
+
+pub fn is_year_like_token(token: &Token) -> bool {
+    YEAR_LIKE_POS_TAGS.contains(&token.tag)
+        || (token.tag == PosTag::Cd
+            && MALFORMED_COPYRIGHT_YEAR_RANGE_RE.is_match(token.value.as_str()))
+}
+
 /// Year-related tree labels whose filtering orphans adjacent commas.
 pub const YEAR_LIKE_LABELS: &[TreeLabel] = &[TreeLabel::YrRange, TreeLabel::YrAnd];
 
@@ -427,7 +446,7 @@ fn collect_holder_filtered_leaves_inner<'a>(
     match node {
         ParseNode::Leaf(token) => {
             if ignored_pos_tags.contains(&token.tag) {
-                if YEAR_LIKE_POS_TAGS.contains(&token.tag) {
+                if is_year_like_token(token) {
                     state.last_was_year_filtered = true;
                 }
                 if matches!(token.tag, PosTag::Email | PosTag::Url | PosTag::Url2) {
@@ -513,7 +532,7 @@ pub fn filter_holder_tokens_with_state<'a>(
 
     for (i, &token) in tokens.iter().enumerate() {
         if non_holder_tags.contains(&token.tag) {
-            if YEAR_LIKE_POS_TAGS.contains(&token.tag) {
+            if is_year_like_token(token) {
                 last_was_year_filtered = true;
             }
             if matches!(token.tag, PosTag::Email | PosTag::Url | PosTag::Url2) {

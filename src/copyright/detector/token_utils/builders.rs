@@ -13,8 +13,8 @@ use crate::copyright::types::{
 use crate::models::LineNumber;
 
 use super::{
-    collect_filtered_leaves, collect_holder_filtered_leaves, normalized_tokens_to_string,
-    strip_all_rights_reserved,
+    collect_filtered_leaves, collect_holder_filtered_leaves, is_year_like_token,
+    normalized_tokens_to_string, strip_all_rights_reserved,
 };
 
 pub fn extract_original_author_additional_contributors(
@@ -96,7 +96,7 @@ pub fn build_holder_from_node(
     let filtered = strip_all_rights_reserved(leaves);
     let allow_single_word_contributors = collect_all_leaves(node)
         .iter()
-        .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+        .any(|t| is_year_like_token(t));
     build_holder_from_tokens(&filtered, allow_single_word_contributors)
 }
 
@@ -133,9 +133,7 @@ pub fn build_holder_from_copyright_node(
         });
     }
 
-    let allow_single_word_contributors = all_leaves
-        .iter()
-        .any(|t| matches!(t.tag, PosTag::Yr | PosTag::YrPlus | PosTag::BareYr));
+    let allow_single_word_contributors = all_leaves.iter().any(|t| is_year_like_token(t));
 
     build_holder_from_tokens(&filtered, allow_single_word_contributors)
 }
