@@ -64,10 +64,11 @@ impl PackageParser for PackageReferenceProjectParser {
         xml_reader.config_mut().trim_text(true);
 
         let mut name = None;
-        let mut fallback_name = path
+        let filename_stem = path
             .file_stem()
             .and_then(|stem| stem.to_str())
             .map(|stem| stem.to_string());
+        let mut assembly_name = None;
         let mut version = None;
         let mut description = None;
         let mut homepage_url = None;
@@ -210,7 +211,7 @@ impl PackageParser for PackageReferenceProjectParser {
                         project_properties.insert(current_element.clone(), text.clone());
                         match current_element.as_str() {
                             "PackageId" => name = Some(text),
-                            "AssemblyName" if fallback_name.is_none() => fallback_name = Some(text),
+                            "AssemblyName" => assembly_name = Some(text),
                             "Version" if version.is_none() => version = Some(text),
                             "PackageVersion" => version = Some(text),
                             "Description" => description = Some(text),
@@ -265,7 +266,7 @@ impl PackageParser for PackageReferenceProjectParser {
             buf.clear();
         }
 
-        let name = name.or(fallback_name);
+        let name = name.or(assembly_name).or(filename_stem);
         let vcs_url = repository_url.map(|url| match repository_type {
             Some(repo_type) if !repo_type.trim().is_empty() => format!("{}+{}", repo_type, url),
             _ => url,

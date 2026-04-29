@@ -1503,6 +1503,42 @@ mod tests {
     }
 
     #[test]
+    fn test_csproj_prefers_package_id_then_assembly_name_then_filename() {
+        let xml = r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><AssemblyName>Assembly.Identity</AssemblyName><Version>1.2.3</Version></PropertyGroup></Project>"#;
+
+        let temp_file = Builder::new()
+            .prefix("filename-wins-wrongly")
+            .suffix(".csproj")
+            .tempfile()
+            .unwrap();
+        std::fs::write(temp_file.path(), xml).unwrap();
+
+        let package_data = PackageReferenceProjectParser::extract_first_package(temp_file.path());
+        assert_eq!(package_data.name.as_deref(), Some("Assembly.Identity"));
+        assert_eq!(package_data.version.as_deref(), Some("1.2.3"));
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:nuget/Assembly.Identity@1.2.3")
+        );
+
+        let xml_with_package_id = r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><PackageId>Package.Identity</PackageId><AssemblyName>Assembly.Identity</AssemblyName><Version>1.2.3</Version></PropertyGroup></Project>"#;
+
+        let temp_file = Builder::new()
+            .prefix("packageid-beats-assembly")
+            .suffix(".csproj")
+            .tempfile()
+            .unwrap();
+        std::fs::write(temp_file.path(), xml_with_package_id).unwrap();
+
+        let package_data = PackageReferenceProjectParser::extract_first_package(temp_file.path());
+        assert_eq!(package_data.name.as_deref(), Some("Package.Identity"));
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:nuget/Package.Identity@1.2.3")
+        );
+    }
+
+    #[test]
     fn test_nupkg_extracts_embedded_license_file_contents() {
         let nuspec = r#"<?xml version="1.0" encoding="utf-8"?>
 <package>
