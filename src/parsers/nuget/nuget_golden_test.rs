@@ -142,6 +142,23 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_package_reference_project_with_property_interpolation() {
+        let test_file = PathBuf::from(
+            "testdata/nuget-golden/package-reference-interpolation/IceRpc.Examples.csproj",
+        );
+        let expected_file = PathBuf::from(
+            "testdata/nuget-golden/package-reference-interpolation/IceRpc.Examples.csproj.expected",
+        );
+
+        let package_data = PackageReferenceProjectParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
+
+    #[test]
     fn test_golden_dotnet_deps_json() {
         let test_file = PathBuf::from("testdata/nuget-golden/deps-json/ExampleApp.deps.json");
         let expected_file =

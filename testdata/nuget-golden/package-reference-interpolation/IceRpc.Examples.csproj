@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>IceRpc.Examples</PackageId>
+    <VersionPrefix>1.4.0</VersionPrefix>
+    <VersionSuffix>preview.3</VersionSuffix>
+    <Version>$(VersionPrefix)-$(VersionSuffix)</Version>
+    <Description>Example app with chained MSBuild property expansion</Description>
+    <PackageProjectUrl>https://example.test/icerpc</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <ResolvedIceRpcVersion>$(VersionPrefix)-$(VersionSuffix)</ResolvedIceRpcVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="IceRpc.Extensions.DependencyInjection" Version="$(ResolvedIceRpcVersion)" />
+    <PackageReference Include="IceRpc.Protobuf" VersionOverride="$(VersionPrefix)-$(VersionSuffix)" />
+  </ItemGroup>
+</Project>

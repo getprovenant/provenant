@@ -1,0 +1,55 @@
+[
+  {
+    "type": "nuget",
+    "name": "IceRpc.Examples",
+    "version": "1.4.0-preview.3",
+    "description": "Example app with chained MSBuild property expansion",
+    "homepage_url": "https://example.test/icerpc",
+    "declared_license_expression": "apache-2.0",
+    "declared_license_expression_spdx": "Apache-2.0",
+    "license_detections": [
+      {
+        "license_expression": "apache-2.0",
+        "license_expression_spdx": "Apache-2.0",
+        "matches": [
+          {
+            "license_expression": "apache-2.0",
+            "license_expression_spdx": "Apache-2.0",
+            "from_file": null,
+            "score": 100.0
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "extracted_license_statement": "Apache-2.0",
+    "dependencies": [
+      {
+        "purl": "pkg:nuget/IceRpc.Extensions.DependencyInjection",
+        "extracted_requirement": "1.4.0-preview.3",
+        "scope": null,
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true
+      },
+      {
+        "purl": "pkg:nuget/IceRpc.Protobuf",
+        "extra_data": {
+          "version_override": "$(VersionPrefix)-$(VersionSuffix)",
+          "version_override_resolved": "1.4.0-preview.3"
+        },
+        "scope": null,
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true
+      }
+    ],
+    "repository_homepage_url": "https://www.nuget.org/packages/IceRpc.Examples/1.4.0-preview.3",
+    "repository_download_url": "https://www.nuget.org/api/v2/package/IceRpc.Examples/1.4.0-preview.3",
+    "api_data_url": "https://api.nuget.org/v3/registration3/icerpc.examples/1.4.0-preview.3.json",
+    "datasource_id": "nuget_csproj",
+    "purl": "pkg:nuget/IceRpc.Examples@1.4.0-preview.3"
+  }
+]
