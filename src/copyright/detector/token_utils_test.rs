@@ -104,3 +104,26 @@ fn test_collect_filtered_leaves_filters_tree_labels() {
     assert_eq!(leaves[0].value, "Copyright");
     assert_eq!(leaves[1].value, "Acme");
 }
+
+#[test]
+fn test_is_year_like_token_accepts_malformed_year_typos_in_ranges() {
+    let malformed_first = Token {
+        value: "20010-2011".to_string(),
+        tag: PosTag::Cd,
+        start_line: LineNumber::ONE,
+    };
+    let malformed_second = Token {
+        value: "2010-20224".to_string(),
+        tag: PosTag::Cd,
+        start_line: LineNumber::ONE,
+    };
+    let unrelated_number = Token {
+        value: "12345-67890".to_string(),
+        tag: PosTag::Cd,
+        start_line: LineNumber::ONE,
+    };
+
+    assert!(is_year_like_token(&malformed_first));
+    assert!(is_year_like_token(&malformed_second));
+    assert!(!is_year_like_token(&unrelated_number));
+}
