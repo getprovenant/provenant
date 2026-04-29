@@ -1822,7 +1822,9 @@ pub(in super::super) fn extract_comment_author_label_authors(
     }
 
     static DOXYGEN_AUTHOR_TAG_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"(?i)^(?:[@\\]author)\s+(?P<who>.+?)\s*$").unwrap());
+        LazyLock::new(|| Regex::new(r"(?i)^\\author\s+(?P<who>.+?)\s*$").unwrap());
+    static YEAR_ONLY_COPY_LINE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?ix)^copyright\s*\(c\)\s*[0-9\s,\-–/]+$").unwrap());
     let normalize_comment_line = |line: &str| {
         line.trim()
             .trim_start_matches(|ch: char| {
@@ -1842,7 +1844,9 @@ pub(in super::super) fn extract_comment_author_label_authors(
                 .map(|m| m.as_str())
                 .unwrap_or("")
                 .trim();
-            if let Some(author) = refine_author_with_optional_handle_suffix(who) {
+            if !(who.contains('<') || who.contains('>') || who.contains('@'))
+                && let Some(author) = refine_author_with_optional_handle_suffix(who)
+            {
                 authors.push(AuthorDetection {
                     author,
                     start_line: LineNumber::new(idx + 1).expect("invalid line number"),
@@ -1865,13 +1869,25 @@ pub(in super::super) fn extract_comment_author_label_authors(
         }
 
         let start_line = LineNumber::new(idx + 1).expect("invalid line number");
+        let previous_is_year_only_copyright =
+            idx > 0 && YEAR_ONLY_COPY_LINE_RE.is_match(&normalize_comment_line(raw_lines[idx - 1]));
 
-        if who.contains('<') && who.contains('>') && who_lower.contains(" at ") {
-            authors.push(AuthorDetection {
-                author: who.to_string(),
-                start_line,
-                end_line: start_line,
-            });
+        if label.eq_ignore_ascii_case("author") {
+            if previous_is_year_only_copyright {
+                continue;
+            }
+
+            if who.contains('<') && who.contains('>') && who_lower.contains(" at ") {
+                authors.push(AuthorDetection {
+                    author: who.to_string(),
+                    start_line,
+                    end_line: start_line,
+                });
+            }
+            continue;
+        }
+
+        if !previous_is_year_only_copyright {
             continue;
         }
 
