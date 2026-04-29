@@ -39,6 +39,18 @@ const FIELD_EXTRAS: &str = "extras";
 const FIELD_DEPENDENCY_GROUPS: &str = "dependency-groups";
 const FIELD_DEV_DEPENDENCIES: &str = "dev-dependencies";
 
+fn preferred_string_field<'a>(
+    project: Option<&'a TomlMap<String, TomlValue>>,
+    poetry: Option<&'a TomlMap<String, TomlValue>>,
+    legacy: Option<&'a TomlMap<String, TomlValue>>,
+    field: &str,
+) -> Option<&'a str> {
+    project
+        .and_then(|table| table.get(field).and_then(|value| value.as_str()))
+        .or_else(|| poetry.and_then(|table| table.get(field).and_then(|value| value.as_str())))
+        .or_else(|| legacy.and_then(|table| table.get(field).and_then(|value| value.as_str())))
+}
+
 pub(super) fn extract(path: &Path) -> Vec<PackageData> {
     let toml_content = match read_toml_file(path) {
         Ok(content) => content,
@@ -57,37 +69,49 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
         .and_then(|value| value.as_table())
         .is_some();
 
-    let project_table =
-        if let Some(project) = toml_content.get(FIELD_PROJECT).and_then(|v| v.as_table()) {
-            project.clone()
-        } else if let Some(tool) = tool_table {
-            if let Some(poetry) = tool.get("poetry").and_then(|v| v.as_table()) {
-                poetry.clone()
-            } else {
+    let project_metadata = toml_content.get(FIELD_PROJECT).and_then(|v| v.as_table());
+    let poetry_metadata = tool_table.and_then(|tool| tool.get("poetry").and_then(|v| v.as_table()));
+    let legacy_metadata = if toml_content.get(FIELD_NAME).is_some() {
+        match toml_content.as_table() {
+            Some(table) => Some(table),
+            None => {
+                warn!("Failed to convert TOML content to table in {:?}", path);
                 return default_package_data(path);
             }
-        } else if toml_content.get(FIELD_NAME).is_some() {
-            match toml_content.as_table() {
-                Some(table) => table.clone(),
-                None => {
-                    warn!("Failed to convert TOML content to table in {:?}", path);
-                    return default_package_data(path);
-                }
-            }
-        } else {
-            return default_package_data(path);
-        };
+        }
+    } else {
+        None
+    };
 
-    let name = project_table
-        .get(FIELD_NAME)
-        .and_then(|v| v.as_str())
+    if project_metadata.is_none() && poetry_metadata.is_none() && legacy_metadata.is_none() {
+        return default_package_data(path);
+    }
+
+    let selected_metadata = project_metadata
+        .or(poetry_metadata)
+        .or(legacy_metadata)
+        .expect("metadata source checked above");
+
+    let name = project_metadata
+        .and_then(|project| project.get(FIELD_NAME).and_then(|v| v.as_str()))
+        .or_else(|| {
+            poetry_metadata.and_then(|poetry| poetry.get(FIELD_NAME).and_then(|v| v.as_str()))
+        })
+        .or_else(|| {
+            legacy_metadata.and_then(|legacy| legacy.get(FIELD_NAME).and_then(|v| v.as_str()))
+        })
         .map(|v| truncate_field(v.to_string()));
 
-    let version = project_table
-        .get(FIELD_VERSION)
-        .and_then(|v| v.as_str())
+    let version = project_metadata
+        .and_then(|project| project.get(FIELD_VERSION).and_then(|v| v.as_str()))
+        .or_else(|| {
+            poetry_metadata.and_then(|poetry| poetry.get(FIELD_VERSION).and_then(|v| v.as_str()))
+        })
+        .or_else(|| {
+            legacy_metadata.and_then(|legacy| legacy.get(FIELD_VERSION).and_then(|v| v.as_str()))
+        })
         .map(String::from);
-    let classifiers = project_table
+    let classifiers = selected_metadata
         .get("classifiers")
         .and_then(|value| value.as_array())
         .map(|values| {
@@ -99,15 +123,18 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
         .unwrap_or_default();
     let (classifier_keywords, license_classifiers) = split_classifiers(&classifiers);
 
-    let extracted_license_statement = extract_raw_license_string(&project_table);
+    let extracted_license_statement = extract_raw_license_string(selected_metadata);
     let (declared_license_expression, declared_license_expression_spdx, license_detections) =
-        normalize_spdx_declared_license(extract_license_expression_candidate(&project_table));
+        normalize_spdx_declared_license(extract_license_expression_candidate(selected_metadata));
 
-    let description = project_table
-        .get(FIELD_DESCRIPTION)
-        .and_then(|value| value.as_str())
-        .map(|value| truncate_field(value.to_string()));
-    let mut keywords = project_table
+    let description = preferred_string_field(
+        project_metadata,
+        poetry_metadata,
+        legacy_metadata,
+        FIELD_DESCRIPTION,
+    )
+    .map(|value| truncate_field(value.to_string()));
+    let mut keywords = selected_metadata
         .get(FIELD_KEYWORDS)
         .and_then(|value| value.as_array())
         .map(|values| {
@@ -124,9 +151,15 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
     }
 
     let mut extra_data = extract_pyproject_extra_data(&toml_content).unwrap_or_default();
-    let urls = extract_urls(&project_table, &mut extra_data);
+    let urls = extract_urls(
+        project_metadata,
+        poetry_metadata,
+        legacy_metadata,
+        &mut extra_data,
+    );
 
-    let (dependencies, optional_dependencies) = extract_dependencies(&project_table, &toml_content);
+    let (dependencies, optional_dependencies) =
+        extract_dependencies(selected_metadata, &toml_content);
 
     let purl = name.as_ref().and_then(|n| {
         let mut package_url = match PackageUrl::new(PythonParser::PACKAGE_TYPE.as_str(), n) {
@@ -182,13 +215,10 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
         name,
         version,
         description,
-        parties: extract_parties(&project_table),
+        parties: extract_parties(selected_metadata),
         keywords,
         homepage_url: urls.homepage_url.or(pypi_homepage_url),
-        download_url: urls
-            .download_url
-            .or_else(|| urls.vcs_url.clone())
-            .or(pypi_download_url),
+        download_url: urls.download_url.or(pypi_download_url),
         bug_tracking_url: urls.bug_tracking_url,
         code_view_url: urls.code_view_url,
         vcs_url: urls.vcs_url,
@@ -245,7 +275,9 @@ fn extract_license_expression_candidate(project: &TomlMap<String, TomlValue>) ->
 }
 
 fn extract_urls(
-    project: &TomlMap<String, TomlValue>,
+    project: Option<&TomlMap<String, TomlValue>>,
+    poetry: Option<&TomlMap<String, TomlValue>>,
+    legacy: Option<&TomlMap<String, TomlValue>>,
     extra_data: &mut HashMap<String, serde_json::Value>,
 ) -> ProjectUrls {
     let mut urls = ProjectUrls {
@@ -257,7 +289,12 @@ fn extract_urls(
         changelog_url: None,
     };
 
-    if let Some(url_table) = project.get(FIELD_URLS).and_then(|v| v.as_table()) {
+    let url_table = project
+        .and_then(|table| table.get(FIELD_URLS).and_then(|v| v.as_table()))
+        .or_else(|| poetry.and_then(|table| table.get(FIELD_URLS).and_then(|v| v.as_table())))
+        .or_else(|| legacy.and_then(|table| table.get(FIELD_URLS).and_then(|v| v.as_table())));
+
+    if let Some(url_table) = url_table {
         let parsed_urls: Vec<(String, String)> = url_table
             .iter()
             .filter_map(|(label, value)| {
@@ -289,17 +326,13 @@ fn extract_urls(
     }
 
     if urls.homepage_url.is_none() {
-        urls.homepage_url = project
-            .get(FIELD_HOMEPAGE)
-            .and_then(|v| v.as_str())
-            .map(String::from);
+        urls.homepage_url =
+            preferred_string_field(project, poetry, legacy, FIELD_HOMEPAGE).map(String::from);
     }
 
     if urls.vcs_url.is_none() {
-        urls.vcs_url = project
-            .get(FIELD_REPOSITORY)
-            .and_then(|v| v.as_str())
-            .map(String::from);
+        urls.vcs_url =
+            preferred_string_field(project, poetry, legacy, FIELD_REPOSITORY).map(String::from);
     }
 
     urls
