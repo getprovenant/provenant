@@ -886,6 +886,51 @@ mod tests {
     }
 
     #[test]
+    fn test_dotnet_deps_json_with_multiple_project_roots_and_no_filename_match_stays_dependency_only()
+     {
+        let json = r#"{
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "App.One/1.0.0": {
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
+        }
+      },
+      "App.Two/2.0.0": {
+        "dependencies": {
+          "Serilog": "2.12.0"
+        }
+      },
+      "Newtonsoft.Json/13.0.1": {},
+      "Serilog/2.12.0": {}
+    }
+  },
+  "libraries": {
+    "App.One/1.0.0": { "type": "project" },
+    "App.Two/2.0.0": { "type": "project" },
+    "Newtonsoft.Json/13.0.1": { "type": "package" },
+    "Serilog/2.12.0": { "type": "package" }
+  }
+}"#;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join("UnknownRoot.deps.json");
+        std::fs::write(&file_path, json).unwrap();
+
+        let package_data = DotNetDepsJsonParser::extract_first_package(&file_path);
+
+        assert_eq!(package_data.name.as_deref(), Some("UnknownRoot"));
+        assert_eq!(package_data.purl.as_deref(), Some("pkg:nuget/UnknownRoot"));
+        assert_eq!(package_data.dependencies.len(), 4);
+        assert!(
+            package_data
+                .dependencies
+                .iter()
+                .all(|dep| dep.is_direct.is_none())
+        );
+    }
+
+    #[test]
     fn test_dotnet_deps_json_malformed_returns_default() {
         let json = r#"{"runtimeTarget": "broken""#;
 

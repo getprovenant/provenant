@@ -294,7 +294,11 @@ fn select_root_library_key(
         return Some(matched.clone());
     }
 
-    project_keys.into_iter().next()
+    if project_keys.len() == 1 {
+        project_keys.into_iter().next()
+    } else {
+        None
+    }
 }
 
 fn split_library_key(key: &str) -> Option<(&str, &str)> {
