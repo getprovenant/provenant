@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 177 of 177 recorded runs, with a **11.7× median speedup** and **10.9× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
+> Provenant is faster on 178 of 178 recorded runs, with a **11.7× median speedup** and **11.0× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -769,6 +769,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `290.44s`; ScanCode `5927.08s`
 - Broader Bazel and mixed-tree dependency extraction (`8202` vs `8056` packages, `1465` vs `700` dependencies) from root and vendored `MODULE.bazel`, many committed `BUILD` files, Python lockfiles, Dockerfiles, and Debian control metadata, plus direct `CITATION.cff` package visibility
+
+##### [ValveSoftware/eigen @ e9c4315](https://github.com/ValveSoftware/eigen/tree/e9c43151265207fd3366bba21cddd61141ff402c) — **18.92× faster**
+
+- Files: 1,784
+- Run context: 2026-04-29 · eigen-48035 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `20.35s`; ScanCode `384.96s`
+- Unicode-preserving holder normalization such as `Désiré Nuentsa-Wakam`, split multi-person holder recovery where ScanCode merges names, and matched BLAS/LAPACK Doxygen author coverage across committed `blas/testing/*.f` and `lapack/*.f` Fortran headers; the remaining ScanCode edge is limited to a few legacy acknowledgments, typoed-year spline headers, and SuperLU/Xerox holder extraction cases
 
 ##### [tokio-rs/tokio @ 5db10f5](https://github.com/tokio-rs/tokio/tree/5db10f538b683fe88d699dfd11be31d193db011c) — **3.31× faster**
 
