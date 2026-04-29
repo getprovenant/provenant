@@ -1137,11 +1137,26 @@ fn test_meta_sdk_license_false_positive_refiner_drops_holder_fragments() {
 
 #[test]
 fn test_meta_sdk_license_false_positive_refiner_drops_copyright_fragment() {
+    let refined = refine_copyright(
+        "copyright, trade secret, trademark, rights of publicity and privacy, and other proprietary rights. 3.2 Third-Party Materials. Our SDK may"
+    )
+    .unwrap();
+    assert!(is_junk_copyright(&refined));
+}
+
+#[test]
+fn test_refine_copyright_preserves_european_community_notice() {
     assert_eq!(
-        refine_copyright(
-            "copyright, trade secret, trademark, rights of publicity and privacy, and other proprietary rights. 3.2 Third-Party Materials. Our SDK may"
-        ),
-        None
+        refine_copyright("(c) the European Community 2007"),
+        Some("(c) the European Community 2007".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_preserves_copyright_prefixed_notice_holder() {
+    assert_eq!(
+        refine_holder("Copyright (c) 1988, 1993"),
+        Some("Copyright (c) 1988, 1993".to_string())
     );
 }
 
