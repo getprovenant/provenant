@@ -1,0 +1,9 @@
+# inspired by Podfiles that keep shared pod versions in a nearby Ruby helper
+require_relative 'PodVersions'
+
+platform :ios, '13.0'
+
+target 'Example' do
+  pod 'FlipperKit', versions['Flipper']
+  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
+end
