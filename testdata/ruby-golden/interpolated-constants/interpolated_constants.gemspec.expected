@@ -1,0 +1,34 @@
+[
+  {
+    "type": "gem",
+    "name": "example-interpolated",
+    "version": "1.2.3",
+    "primary_language": "Ruby",
+    "description": "Interpolated constant fixture",
+    "parties": [
+      {
+        "type": "person",
+        "role": "author",
+        "name": "Example Author",
+        "email": "example@example.com"
+      }
+    ],
+    "homepage_url": "https://example.com/example-interpolated",
+    "download_url": "https://rubygems.org/downloads/example-interpolated-1.2.3.gem",
+    "dependencies": [
+      {
+        "purl": "pkg:gem/json",
+        "extracted_requirement": "~> 2.0",
+        "scope": "runtime",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_direct": true
+      }
+    ],
+    "repository_homepage_url": "https://rubygems.org/gems/example-interpolated/versions/1.2.3",
+    "repository_download_url": "https://rubygems.org/downloads/example-interpolated-1.2.3.gem",
+    "api_data_url": "https://rubygems.org/api/v2/rubygems/example-interpolated/versions/1.2.3.json",
+    "datasource_id": "gemspec",
+    "purl": "pkg:gem/example-interpolated@1.2.3"
+  }
+]
