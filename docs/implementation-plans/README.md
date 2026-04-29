@@ -27,7 +27,7 @@ These topics are implemented. Some remain useful as completed historical records
   - Status: 🟢 Complete — planned production parser/recognizer coverage is implemented; deferred and future-scope items are documented in [PARSER_PLAN.md](package-detection/PARSER_PLAN.md)
 
 - **[PARSER_VERIFICATION_SCORECARD.md](package-detection/PARSER_VERIFICATION_SCORECARD.md)** - Maintained parser-family compare target checklist and verification tracker
-  - Status: 🟢 Canonical reference — use this for current end-to-end parser verification targets and to record which implemented parser families have already been compared against ScanCode
+  - Status: 🟢 Maintained checklist/reference — use this for current parser-family compare targets and verification status; the evergreen compare/benchmark methodology and recorded end-state outcomes live in [`../BENCHMARKS.md`](../BENCHMARKS.md)
 
 - **[ASSEMBLY_PLAN.md](package-detection/ASSEMBLY_PLAN.md)** - Package assembly roadmap
   - Status: 🟢 Complete — All phases done (sibling merge, nested merge, workspace assembly, file reference resolution)

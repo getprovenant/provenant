@@ -6,47 +6,11 @@ The ranked table below mostly follows the implemented ecosystem rows in [`PARSER
 
 ## Required comparison methodology
 
-Use the `xtask` compare workflow for parser verification. Do **not** substitute ad hoc manual scanner invocations for the main parity check.
+Use the repository-supported `xtask compare-outputs` workflow for parser verification. Do **not** substitute ad hoc manual scanner invocations for the main parity check.
 
-Repository-backed target:
+Read the canonical compare/benchmark methodology in [`../../BENCHMARKS.md`](../../BENCHMARKS.md#benchmark-conventions).
 
-```bash
-cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --repo-url https://github.com/org/repo.git --repo-ref <ref> --profile common
-```
-
-Artifact/rootfs-backed target:
-
-```bash
-cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path /path/to/local/target --profile common
-```
-
-Compiled-binary artifact target:
-
-```bash
-cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path /path/to/local/target --profile common-with-compiled
-```
-
-Method rules:
-
-- Run parser-family comparisons with `--profile common`, not `--profile packages`, so package extraction is always evaluated alongside installed-package DB coverage, license, copyright, author, email, URL, and other common-profile detection behavior.
-- Parser-family verification under `--profile common` is full shared-scanner verification, not parser-only verification: fixes may land in package parsing, license detection, copyright/holder/author extraction, email/URL extraction, or other common-profile subsystems when those are the real source of a delta.
-- When a row explicitly calls for compiled-binary verification such as Go build-info samples or cargo-auditable binaries, use `--target-path --profile common-with-compiled` for that local binary lane. In the current table, that applies to the Go row, the Cargo/Rust row, and the compiled Go/cargo-auditable lanes inside row `5a`; the Windows PE `VERSIONINFO` lane in row `5a` and ordinary rootfs, archive, and installed-package DB artifact lanes still use `--target-path --profile common`.
-- Treat any “more output” from either scanner as a claim to verify, not as proof by itself. Additional licenses, license-expression reshaping, copyrights, holders, authors, emails, or URLs only count as improvements when the scanned file text actually supports them.
-- Fix issues where **ScanCode is better than Provenant**.
-- When scanners disagree, inspect the underlying file text enough to decide whether the extra or missing finding is justified. Apply the same rigor to risky license-expression and file-level license-detection deltas that you would apply to package, dependency, author, email, or URL deltas; do not wave them through just because package counts look healthy.
-- Do **not** mark a row `🟢 Verified` while any ScanCode-better deltas remain unresolved for that target. Treat `comparison_status: potential_regressions_detected` as a triage-required signal, not an automatic failure: each such delta must be reviewed and either fixed or documented as not actually worse before the row becomes `🟢 Verified`.
-- Treat top-level license-expression deltas and repeated file-level license mismatches as first-class regression signals. Review every top-level license-expression delta before calling the row verified. If a compare target shows a suspicious cluster where ScanCode consistently reports stronger or more-complete license outcomes on the same files, investigate that pattern just as aggressively as you would a package or dependency regression before calling the row verified.
-- License-delta review is a **blocking verification gate**, not cleanup for later in the pass. Do not defer top-level license-expression or repeated file-level license-detection triage until after package-count or dependency-count review; the compare target is not ready to call verified until that review is done.
-- Fixes found during compare work must be **generic scanner improvements**, not target-specific tuning for one benchmark repository or artifact. If a proposed change only makes a single compare target look better without improving general scan quality, reject it and find the broader root cause instead.
-- Record end-state Provenant-over-ScanCode outcomes in [`../../BENCHMARKS.md`](../../BENCHMARKS.md), not in this table.
-- Do **not** treat normalization improvements as regressions when Provenant is more correct, for example preserving `René` instead of degrading to `Rene`. Parity is the bottom line, not the upper limit.
-- This scorecard's notes column is for **stable priority, scope, target-shape, and watch-out guidance**. It is not a verification-results column.
-- When a row is verified, update the **Status** cell only. Do **not** rewrite the notes column just to capture what verification found.
-- Do **not** narrate the implementation path or the verification outcome in this table. Avoid phrases such as `fixed`, `restored`, `aligned`, `verified reference`, `after`, `triaged`, `reviewed tail`, or `remaining deltas` in row notes.
-- If the planned scope of a row genuinely changes, update the notes column for that planning reason; otherwise keep it stable and put result details in benchmarks, PRs, or saved compare artifacts.
-- When a fix or accepted behavior-shaping change touches shared detection logic, run the relevant regression suites for that subsystem. For example, copyright-detection changes should rerun the copyright goldens; license-detection changes should rerun the license goldens; parser behavior fixes should rerun the narrow parser tests, relevant integration coverage, and any affected compare targets.
-- Any fixed regression or accepted behavior change should gain adequate automated coverage. Add focused parser tests, integration tests, and golden tests where those are the right durable fit.
-- Keep detailed diff analysis in PR descriptions, CI logs, and saved `.provenant/compare-runs/` artifacts rather than bloating this checklist.
+This scorecard remains the maintained checklist for **which targets** to run and **which rows are verified**.
 
 ## Status model
 

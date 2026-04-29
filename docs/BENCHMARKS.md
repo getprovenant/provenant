@@ -1336,6 +1336,19 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Record same-host wall-clock timings for Provenant and ScanCode, plus relative speedup.
 - Record machine information per row. If `run-manifest.json` reports `scancode.cache_hit: true`, use the cached ScanCode raw timing for that target/ref/runtime. Otherwise treat both scanner timings as license-cache-cold because the maintained workflow disables persistent license-cache reuse during actual execution.
 
+### Comparison review discipline
+
+- Treat benchmark verification as a **full shared-scanner compare review**, not a package-count-only check. Under `--profile common`, package extraction, license detection, copyright/holder/author extraction, email extraction, URL extraction, and other shared-scan behavior are all in scope.
+- Treat any “more output” from either scanner as a claim to verify, not as proof by itself. Additional licenses, license-expression reshaping, copyrights, holders, authors, emails, or URLs only count as improvements when the scanned file text actually supports them.
+- Fix issues where **ScanCode is better than Provenant**. Treat `comparison_status: potential_regressions_detected` as a triage-required signal, not an automatic failure or an automatic pass.
+- When scanners disagree, inspect the underlying file text enough to decide whether the extra or missing finding is justified. Apply the same rigor to package, dependency, author, email, URL, copyright, holder, and license-expression deltas.
+- Treat holders and authors as **first-class verification signals**, not cosmetic tail cleanup. Review repeated holder/author mismatches before calling a target complete, and treat obvious Provenant junk such as prose fragments, role labels, malformed metadata blobs, or contact-trailer pollution in holder/author fields as bugs to fix or filter generically.
+- Do **not** count junky holder/author over-extraction as a win just because Provenant reports more names. More holder/author output is only better when the recovered identities are actually supported by the file text and are cleaner than ScanCode’s result.
+- Treat top-level license-expression deltas and repeated file-level license-detection mismatches as blocking regression signals. Do not defer that review until after package or dependency counts look healthy.
+- Do **not** treat normalization improvements as regressions when Provenant is more correct, for example preserving `René` instead of degrading to `Rene`. Parity is the bottom line, not the upper limit.
+- Fixes found during compare work must be **generic scanner improvements**, not target-specific tuning for one benchmark repository or artifact.
+- Any fixed regression or accepted behavior-shaping change should gain adequate automated coverage. Add focused parser tests, integration tests, and golden tests where those are the right durable fit.
+
 ### Row ordering
 
 - Order rows by **target kind first**, because that matches the maintained `compare-outputs` workflow split:
