@@ -1415,6 +1415,46 @@ mod tests {
     }
 
     #[test]
+    fn test_csproj_package_reference_resolves_embedded_property_versions() {
+        let xml = r#"<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <VersionPrefix>1.4.0</VersionPrefix>
+    <VersionSuffix>preview.3</VersionSuffix>
+    <ResolvedIceRpcVersion>$(VersionPrefix)-$(VersionSuffix)</ResolvedIceRpcVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="IceRpc.Extensions.DependencyInjection" Version="$(ResolvedIceRpcVersion)" />
+    <PackageReference Include="IceRpc.Protobuf" VersionOverride="$(VersionPrefix)-$(VersionSuffix)" />
+  </ItemGroup>
+</Project>"#;
+
+        let mut temp_file = Builder::new().suffix(".csproj").tempfile().unwrap();
+        temp_file.write_all(xml.as_bytes()).unwrap();
+
+        let package_data = PackageReferenceProjectParser::extract_first_package(temp_file.path());
+        assert_eq!(package_data.dependencies.len(), 2);
+        assert_eq!(
+            package_data.dependencies[0]
+                .extracted_requirement
+                .as_deref(),
+            Some("1.4.0-preview.3")
+        );
+        let dep_extra = package_data.dependencies[1].extra_data.as_ref().unwrap();
+        assert_eq!(
+            dep_extra
+                .get("version_override")
+                .and_then(|value| value.as_str()),
+            Some("$(VersionPrefix)-$(VersionSuffix)")
+        );
+        assert_eq!(
+            dep_extra
+                .get("version_override_resolved")
+                .and_then(|value| value.as_str()),
+            Some("1.4.0-preview.3")
+        );
+    }
+
+    #[test]
     fn test_csproj_conditioned_property_group_does_not_enable_version_override() {
         let xml = r#"<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">

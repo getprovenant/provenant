@@ -266,7 +266,29 @@ impl PackageParser for PackageReferenceProjectParser {
             buf.clear();
         }
 
-        let name = name.or(assembly_name).or(filename_stem);
+        let resolve_project_property = |value: Option<String>| {
+            value.map(|raw| {
+                let resolved =
+                    resolve_string_property_reference(&raw, &project_properties).unwrap_or(raw);
+                truncate_field(resolved)
+            })
+        };
+
+        let name = resolve_project_property(name)
+            .or(resolve_project_property(assembly_name))
+            .or(filename_stem);
+        let version = resolve_project_property(version);
+        let description = resolve_project_property(description);
+        let homepage_url = resolve_project_property(homepage_url);
+        let authors = resolve_project_property(authors);
+        let repository_url = resolve_project_property(repository_url);
+        let repository_type = resolve_project_property(repository_type);
+        let repository_branch = resolve_project_property(repository_branch);
+        let repository_commit = resolve_project_property(repository_commit);
+        let extracted_license_statement = resolve_project_property(extracted_license_statement);
+        let copyright = resolve_project_property(copyright);
+        let readme_file = resolve_project_property(readme_file);
+        let icon_file = resolve_project_property(icon_file);
         let vcs_url = repository_url.map(|url| match repository_type {
             Some(repo_type) if !repo_type.trim().is_empty() => format!("{}+{}", repo_type, url),
             _ => url,
@@ -375,6 +397,14 @@ fn build_project_file_dependency(
 
     let mut extra_data = serde_json::Map::new();
     insert_extra_string(&mut extra_data, "condition", condition);
+    let resolved_version = version
+        .as_deref()
+        .and_then(|value| resolve_string_property_reference(value, project_properties))
+        .or(version.clone());
+    let resolved_version_override = version_override
+        .as_deref()
+        .and_then(|value| resolve_string_property_reference(value, project_properties));
+
     insert_extra_string(
         &mut extra_data,
         "version_override",
@@ -383,14 +413,12 @@ fn build_project_file_dependency(
     insert_extra_string(
         &mut extra_data,
         "version_override_resolved",
-        version_override
-            .as_deref()
-            .and_then(|value| resolve_string_property_reference(value, project_properties)),
+        resolved_version_override,
     );
 
     Some(Dependency {
         purl: build_nuget_purl(Some(&name), None),
-        extracted_requirement: version,
+        extracted_requirement: resolved_version,
         scope: None,
         is_runtime: Some(true),
         is_optional: Some(false),
