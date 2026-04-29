@@ -134,6 +134,14 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_kotlin_project_properties() {
+        run_golden(
+            "testdata/gradle-golden/kotlin/project-properties/build.gradle.kts",
+            "testdata/gradle-golden/kotlin/project-properties/build.gradle.kts-expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_groovy_no_parens() {
         run_golden(
             "testdata/gradle-golden/groovy/groovy-no-parens/build.gradle",

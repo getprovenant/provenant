@@ -82,8 +82,8 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:maven/com.amazonaws/aws-java-sdk-core@%24%7BawsVer%7D",
-        "extracted_requirement": "${awsVer}",
+        "purl": "pkg:maven/com.amazonaws/aws-java-sdk-core@1.11.49",
+        "extracted_requirement": "1.11.49",
         "scope": "compile",
         "is_runtime": true,
         "is_optional": false,
@@ -93,8 +93,8 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:maven/com.amazonaws/aws-java-sdk@%24%7BawsVer%7D",
-        "extracted_requirement": "${awsVer}",
+        "purl": "pkg:maven/com.amazonaws/aws-java-sdk@1.11.49",
+        "extracted_requirement": "1.11.49",
         "scope": "compile",
         "is_runtime": true,
         "is_optional": false,
@@ -126,8 +126,8 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:maven/com.datastax.cassandra/cassandra-driver-core@%24%7BdatastaxVer%7D",
-        "extracted_requirement": "${datastaxVer}",
+        "purl": "pkg:maven/com.datastax.cassandra/cassandra-driver-core@3.1.0",
+        "extracted_requirement": "3.1.0",
         "scope": "compile",
         "is_runtime": true,
         "is_optional": false,
@@ -148,8 +148,8 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:maven/junit/junit@%24%7BjunitVer%7D",
-        "extracted_requirement": "${junitVer}",
+        "purl": "pkg:maven/junit/junit@4.12",
+        "extracted_requirement": "4.12",
         "scope": "compile",
         "is_runtime": true,
         "is_optional": false,
@@ -159,8 +159,8 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:maven/junit/junit@%24%7BjunitVer%7D",
-        "extracted_requirement": "${junitVer}",
+        "purl": "pkg:maven/junit/junit@4.12",
+        "extracted_requirement": "4.12",
         "scope": "testCompile",
         "is_runtime": false,
         "is_optional": true,
