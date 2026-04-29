@@ -134,7 +134,11 @@ fn parse_gradle_module(json: &Value) -> PackageData {
         .map(|value| truncate_field(value.to_string()));
 
     let (dependencies, file_references, top_level_artifact, variant_metadata) =
-        extract_variant_data(json.get(FIELD_VARIANTS).and_then(Value::as_array));
+        extract_variant_data(
+            json.get(FIELD_VARIANTS).and_then(Value::as_array),
+            name.as_deref(),
+            version.as_deref(),
+        );
 
     let purl = match (namespace.as_deref(), name.as_deref(), version.as_deref()) {
         (Some(namespace), Some(name), version) => build_maven_purl(namespace, name, version),
@@ -233,14 +237,18 @@ fn parse_gradle_module(json: &Value) -> PackageData {
     }
 }
 
-fn extract_variant_data(variants: Option<&Vec<Value>>) -> ExtractedVariantData {
+fn extract_variant_data(
+    variants: Option<&Vec<Value>>,
+    module_name: Option<&str>,
+    version: Option<&str>,
+) -> ExtractedVariantData {
     let mut dependencies = Vec::new();
     let mut file_references = Vec::new();
     let mut variant_metadata = Vec::new();
     let mut seen_dependencies: HashMap<(String, String, Option<String>), ExtractedDependency> =
         HashMap::new();
     let mut seen_files: HashSet<String> = HashSet::new();
-    let mut top_level_artifact: Option<JsonMap<String, Value>> = None;
+    let mut top_level_artifact: Option<(i32, JsonMap<String, Value>)> = None;
 
     for variant in variants
         .into_iter()
@@ -285,50 +293,49 @@ fn extract_variant_data(variants: Option<&Vec<Value>>) -> ExtractedVariantData {
         }
         variant_metadata.push(Value::Object(variant_entry));
 
-        if !is_documentation {
-            if top_level_artifact.is_none() {
-                top_level_artifact = variant
-                    .get(FIELD_FILES)
-                    .and_then(Value::as_array)
-                    .and_then(|files| files.first())
-                    .and_then(Value::as_object)
-                    .cloned();
-            }
-
-            if let Some(files) = variant.get(FIELD_FILES).and_then(Value::as_array) {
-                for file in files
-                    .iter()
-                    .filter_map(Value::as_object)
-                    .take(MAX_ITERATION_COUNT)
+        if !is_documentation && let Some(files) = variant.get(FIELD_FILES).and_then(Value::as_array)
+        {
+            for file in files
+                .iter()
+                .filter_map(Value::as_object)
+                .take(MAX_ITERATION_COUNT)
+            {
+                let artifact_score =
+                    score_top_level_artifact(file, module_name, version, scope.as_deref());
+                if top_level_artifact
+                    .as_ref()
+                    .is_none_or(|(best_score, _)| artifact_score > *best_score)
                 {
-                    let file_path = truncate_field(
-                        file.get("url")
-                            .and_then(Value::as_str)
-                            .or_else(|| file.get("name").and_then(Value::as_str))
-                            .unwrap_or_default()
-                            .to_string(),
-                    );
-                    if file_path.is_empty() || !seen_files.insert(file_path.clone()) {
-                        continue;
-                    }
-                    let (size, sha1, md5, sha256, sha512) = extract_file_hashes(file);
-                    let mut extra_data = HashMap::new();
-                    if let Some(name) = file.get("name").and_then(Value::as_str) {
-                        extra_data.insert(
-                            "name".to_string(),
-                            Value::String(truncate_field(name.to_string())),
-                        );
-                    }
-                    file_references.push(FileReference {
-                        path: file_path,
-                        size,
-                        sha1,
-                        md5,
-                        sha256,
-                        sha512,
-                        extra_data: (!extra_data.is_empty()).then_some(extra_data),
-                    });
+                    top_level_artifact = Some((artifact_score, file.clone()));
                 }
+
+                let file_path = truncate_field(
+                    file.get("url")
+                        .and_then(Value::as_str)
+                        .or_else(|| file.get("name").and_then(Value::as_str))
+                        .unwrap_or_default()
+                        .to_string(),
+                );
+                if file_path.is_empty() || !seen_files.insert(file_path.clone()) {
+                    continue;
+                }
+                let (size, sha1, md5, sha256, sha512) = extract_file_hashes(file);
+                let mut extra_data = HashMap::new();
+                if let Some(name) = file.get("name").and_then(Value::as_str) {
+                    extra_data.insert(
+                        "name".to_string(),
+                        Value::String(truncate_field(name.to_string())),
+                    );
+                }
+                file_references.push(FileReference {
+                    path: file_path,
+                    size,
+                    sha1,
+                    md5,
+                    sha256,
+                    sha512,
+                    extra_data: (!extra_data.is_empty()).then_some(extra_data),
+                });
             }
         }
 
@@ -391,9 +398,64 @@ fn extract_variant_data(variants: Option<&Vec<Value>>) -> ExtractedVariantData {
     (
         dependencies,
         file_references,
-        top_level_artifact,
+        top_level_artifact.map(|(_, artifact)| artifact),
         variant_metadata,
     )
+}
+
+fn score_top_level_artifact(
+    file: &JsonMap<String, Value>,
+    module_name: Option<&str>,
+    version: Option<&str>,
+    scope: Option<&str>,
+) -> i32 {
+    let file_name = file
+        .get("name")
+        .and_then(Value::as_str)
+        .or_else(|| file.get("url").and_then(Value::as_str))
+        .unwrap_or_default()
+        .rsplit('/')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    let mut score = 0;
+
+    if matches!(scope, Some("runtime")) {
+        score += 10;
+    }
+
+    if file_name.ends_with(".jar")
+        || file_name.ends_with(".aar")
+        || file_name.ends_with(".war")
+        || file_name.ends_with(".zip")
+    {
+        score += 30;
+    }
+
+    if file_name.ends_with(".pom") || file_name.ends_with(".module") {
+        score -= 20;
+    }
+
+    if file_name.contains("-sources")
+        || file_name.contains("-source")
+        || file_name.contains("-javadoc")
+        || file_name.contains("-docs")
+        || file_name.contains("-doc")
+        || file_name.contains("-kdoc")
+    {
+        score -= 100;
+    }
+
+    if let (Some(module_name), Some(version)) = (module_name, version) {
+        let module_name = module_name.to_ascii_lowercase();
+        let version = version.to_ascii_lowercase();
+        if file_name.starts_with(&format!("{}-{}.", module_name, version)) {
+            score += 50;
+        }
+    }
+
+    score
 }
 
 fn build_dependency_extra_data(

@@ -338,4 +338,51 @@ mod tests {
         assert!(package_data.name.is_none());
         assert!(package_data.dependencies.is_empty());
     }
+
+    #[test]
+    fn test_extract_prefers_primary_artifact_over_first_file_order() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("artifact-order.module");
+        let content = r#"{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.example",
+    "module": "artifact-order",
+    "version": "1.0.0"
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "artifact-order-1.0.0.pom",
+          "url": "artifact-order-1.0.0.pom",
+          "size": 10,
+          "sha1": "1111111111111111111111111111111111111111"
+        },
+        {
+          "name": "artifact-order-1.0.0.jar",
+          "url": "artifact-order-1.0.0.jar",
+          "size": 20,
+          "sha1": "2222222222222222222222222222222222222222"
+        }
+      ]
+    }
+  ]
+}"#;
+        fs::write(&file_path, content).unwrap();
+
+        let package_data = GradleModuleParser::extract_first_package(&file_path);
+
+        assert_eq!(package_data.size, Some(20));
+        assert_eq!(
+            package_data.sha1,
+            Some(Sha1Digest::from_hex("2222222222222222222222222222222222222222").unwrap())
+        );
+        assert_eq!(package_data.file_references.len(), 2);
+    }
 }
