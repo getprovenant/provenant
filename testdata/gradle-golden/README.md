@@ -93,7 +93,7 @@ The Python ScanCode Toolkit implementation uses **pygmars** (a token-based parse
    implementation libs.androidx.appcompat
    ```
 
-   - **Why partial**: TOML-backed `libs.versions.toml` aliases can now be resolved from nearby catalogs, but arbitrary dotted identifiers (for example `dependencies.lombok` or `Deps.AndroidX.core`) are intentionally ignored unless they are real `libs.*` catalog aliases
+   - **Why partial**: TOML-backed `libs.versions.toml` aliases can now be resolved from nearby catalogs, and committed Kotlin `buildSrc` object constants such as `Deps.AndroidX.core` can be resolved statically when the supporting files are present nearby. Unresolved arbitrary dotted identifiers (for example `dependencies.lombok`) still remain intentionally unsupported.
 
 ## Test Files Status
 
@@ -101,7 +101,7 @@ The Python ScanCode Toolkit implementation uses **pygmars** (a token-based parse
 
 - No parser-only Gradle goldens remain ignored.
 - The cleanup now exercises `groovy4`, `groovy-no-parens`, `kotlin2`, and `end2end` directly instead of masking them behind `#[ignore]`.
-- Additional parser goldens now cover TOML-backed version catalog alias resolution and Gradle POM license metadata extraction.
+- Additional parser goldens now cover TOML-backed version catalog alias resolution, committed `buildSrc` Kotlin constant resolution, and Gradle POM license metadata extraction.
 - Remaining failures, if any, should now represent real parser regressions rather than deferred fixtures.
 
 ## Path Forward: Full Feature Parity
