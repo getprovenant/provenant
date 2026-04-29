@@ -924,15 +924,15 @@ pub fn extract_copyright_c_years_holder_lines(
             if trimmed.is_empty() {
                 continue;
             }
-            let Some(cap) = COPY_C_YEARS_HOLDER_RE.captures(trimmed) else {
+            let normalized = trimmed
+                .trim_start_matches(['*', '/', '#', ';', '%', '!'])
+                .trim_start();
+            let Some(cap) = COPY_C_YEARS_HOLDER_RE.captures(normalized) else {
                 continue;
             };
             let years = cap.name("years").map(|m| m.as_str()).unwrap_or("").trim();
             let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
             if years.is_empty() || holder_raw.is_empty() {
-                continue;
-            }
-            if holder_raw.to_ascii_lowercase().contains("all rights") {
                 continue;
             }
             let raw = format!("Copyright (c) {years} {holder_raw}");
@@ -947,7 +947,8 @@ pub fn extract_copyright_c_years_holder_lines(
                 });
             }
 
-            if let Some(h) = refine_holder_in_copyright_context(holder_raw)
+            if let Some(h) = postprocess_transforms::derive_holder_from_simple_copyright_string(&cr)
+                .or_else(|| refine_holder_in_copyright_context(holder_raw))
                 && seen_h.insert((*ln, h.clone()))
             {
                 holders.push(HolderDetection {
