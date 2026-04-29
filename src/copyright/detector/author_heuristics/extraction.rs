@@ -1821,29 +1821,93 @@ pub(in super::super) fn extract_comment_author_label_authors(
         return authors;
     }
 
-    for (idx, raw_line) in raw_lines.iter().enumerate() {
-        let trimmed = raw_line.trim();
-        let normalized = trimmed
+    static DOXYGEN_AUTHOR_TAG_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?:[@\\]author)\s+(?P<who>.+?)\s*$").unwrap());
+    let normalize_comment_line = |line: &str| {
+        line.trim()
             .trim_start_matches(|ch: char| {
-                ch.is_whitespace() || matches!(ch, '#' | ';' | '/' | '*' | '!' | '-')
+                ch.is_whitespace() || matches!(ch, '#' | ';' | '/' | '*' | '!' | '-' | '>')
             })
-            .trim();
+            .trim()
+            .to_string()
+    };
+
+    for (idx, raw_line) in raw_lines.iter().enumerate() {
+        let normalized = normalize_comment_line(raw_line);
+        let normalized = normalized.as_str();
+
+        if let Some(captures) = DOXYGEN_AUTHOR_TAG_RE.captures(normalized) {
+            let who = captures
+                .name("who")
+                .map(|m| m.as_str())
+                .unwrap_or("")
+                .trim();
+            if let Some(author) = refine_author_with_optional_handle_suffix(who) {
+                authors.push(AuthorDetection {
+                    author,
+                    start_line: LineNumber::new(idx + 1).expect("invalid line number"),
+                    end_line: LineNumber::new(idx + 1).expect("invalid line number"),
+                });
+            }
+            continue;
+        }
+
         let Some((label, who_raw)) = normalized.split_once(':') else {
             continue;
         };
-        if !label.eq_ignore_ascii_case("author") {
+        if !label.eq_ignore_ascii_case("author") && !label.eq_ignore_ascii_case("authors") {
             continue;
         }
         let who = who_raw.trim().trim_end_matches('.').trim();
         let who_lower = who.to_ascii_lowercase();
-        if who.is_empty() || !who.contains('<') || !who.contains('>') || !who_lower.contains(" at ")
-        {
+        if who.is_empty() {
             continue;
         }
+
+        let start_line = LineNumber::new(idx + 1).expect("invalid line number");
+
+        if who.contains('<') && who.contains('>') && who_lower.contains(" at ") {
+            authors.push(AuthorDetection {
+                author: who.to_string(),
+                start_line,
+                end_line: start_line,
+            });
+            continue;
+        }
+
+        let mut segments = vec![who.to_string()];
+        let mut end_line = start_line;
+        let should_collect_following =
+            label.eq_ignore_ascii_case("authors") || who.contains('<') || who.contains('@');
+
+        if should_collect_following {
+            for (offset, next_raw_line) in raw_lines.iter().skip(idx + 1).take(4).enumerate() {
+                let next_normalized = normalize_comment_line(next_raw_line);
+                if next_normalized.is_empty() || next_normalized.contains(':') {
+                    break;
+                }
+                let include = next_normalized.contains('<')
+                    || next_normalized.contains('@')
+                    || next_normalized
+                        .chars()
+                        .find(|ch| !ch.is_whitespace())
+                        .is_some_and(|ch| ch.is_ascii_uppercase());
+                if !include {
+                    break;
+                }
+                segments.push(next_normalized);
+                end_line = LineNumber::new(idx + offset + 2).expect("invalid line number");
+            }
+        }
+
+        let candidate = segments.join(" ");
+        let Some(author) = refine_author_with_optional_handle_suffix(&candidate) else {
+            continue;
+        };
         authors.push(AuthorDetection {
-            author: who.to_string(),
-            start_line: LineNumber::new(idx + 1).expect("invalid line number"),
-            end_line: LineNumber::new(idx + 1).expect("invalid line number"),
+            author,
+            start_line,
+            end_line,
         });
     }
 

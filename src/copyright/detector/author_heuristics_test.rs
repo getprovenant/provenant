@@ -90,6 +90,75 @@ fn test_extract_comment_author_label_authors_keeps_obfuscated_angle_contact() {
 }
 
 #[test]
+fn test_extract_comment_author_label_authors_detects_doxygen_author_tags() {
+    let raw_lines = vec![
+        "*> \\author Univ. of California Berkeley",
+        "*> \\author Univ. of Colorado Denver",
+    ];
+    let authors = extract_comment_author_label_authors(&raw_lines);
+
+    let values: Vec<&str> = authors
+        .iter()
+        .map(|author| author.author.as_str())
+        .collect();
+    assert!(
+        values.contains(&"Univ. of California Berkeley"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Univ. of Colorado Denver"),
+        "authors: {values:?}"
+    );
+}
+
+#[test]
+fn test_detect_doxygen_author_tag_roster_in_comment_block() {
+    let input = concat!(
+        "*  Authors:\n",
+        "*> \\author Univ. of Tennessee\n",
+        "*> \\author Univ. of California Berkeley\n",
+        "*> \\author Univ. of Colorado Denver\n",
+        "*> \\author NAG Ltd.\n",
+    );
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    let values: Vec<&str> = authors
+        .iter()
+        .map(|author| author.author.as_str())
+        .collect();
+    assert!(
+        values.contains(&"Univ. of Tennessee"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Univ. of California Berkeley"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Univ. of Colorado Denver"),
+        "authors: {values:?}"
+    );
+    assert!(values.contains(&"NAG Ltd."), "authors: {values:?}");
+}
+
+#[test]
+fn test_detect_multiline_comment_authors_block_after_year_only_copyright() {
+    let input = concat!(
+        "// Copyright (C) 1997-2001\n",
+        "// Authors: Andrew Lumsdaine <lums@osl.iu.edu>\n",
+        "//          Lie-Quan Lee     <llee@osl.iu.edu>\n",
+    );
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors.iter().any(|author| {
+            author.author == "Andrew Lumsdaine <lums@osl.iu.edu> Lie-Quan Lee <llee@osl.iu.edu>"
+        }),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_extract_collective_author_with_contributors_before_email() {
     let input = "authors = [\"Tokio Contributors <team@tokio.rs>\"]\n";
     let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
