@@ -287,3 +287,47 @@ fn test_doc_doc_no_overabsorb() {
         c
     );
 }
+
+#[test]
+fn test_meta_sdk_license_false_positive_detector_drops_legal_prose_fragments() {
+    let input = concat!(
+        "Copyright © Meta Platform Technologies, LLC and its affiliates. All rights reserved.\n",
+        "1.2.5 alter, restrict, or interfere with the normal operation or functionality of the SDK, the MPT hardware or software, or MPT Approved Products, including, but not limited to: (a) the behavior of the “Meta Quest button” and “XBox button” implemented by the MPT system software; (b) any on-screen messages or information; (c) the behavior of the proximity sensor in the MPT hardware implemented by the MPT system software; (d) any MPT hardware or software security features; (e) any end user's settings; and (f) Health and Safety Warnings;\n",
+        "1.3 Distribution and Sublicense Restrictions. The redistribution and sublicense rights under this Section are further subject to the following restrictions: (1) redistribution of sample source code or other materials must include the following copyright notice: “Copyright © Meta Platform Technologies, LLC and its affiliates. All rights reserved;” and (2) if the sample source code or other materials include a \"License\" or \"Notice\" text file, you must provide a copy of the License or Notice file with the sample code.\n",
+        "3.1 Ownership. As between you and MPT, MPT and/or its affiliates or licensors own all rights, title, and interest, including all Intellectual Property Rights (defined below), in and to the SDK (including associated MPT content and sample code) and all derivatives thereof. MPT reserves all rights not expressly granted under the License. As between you and MPT, you and/or your licensors own all rights, title, and interest in and to your Application, (excluding our SDK), including all Intellectual Property Rights. “Intellectual Property Rights” means any and all worldwide rights under applicable laws of patent, copyright, trade secret, trademark, rights of publicity and privacy, and other proprietary rights.\n",
+        "3.4 Brand Attribution. This Agreement does not grant you or any third party permission to use our trade names, trademarks, service marks, logos, domain names, and other distinctive brand features (collectively, “Brand Features”) except as required for reasonable and customary use in describing the origin of the SDK or reproduction of the copyright notice as required under the License grant.\n",
+        "7.4.2 If you reside in the US or your business is located in the US: You and we agree to arbitrate any claim, cause of action, or dispute between you and us that arises out of or relates to any access or use of the SDK for business or commercial purposes (“commercial claim”). This provision does not cover any commercial claims relating to violations of your or our intellectual property rights, including, but not limited to, copyright infringement, patent infringement, trademark infringement, violations of the brand guidelines, violations of your or our confidential information or trade secrets, or efforts to interfere with our products or engage with our products in unauthorized ways (for example, automated ways).\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    let copyright_values: Vec<&str> = copyrights.iter().map(|c| c.copyright.as_str()).collect();
+    let holder_values: Vec<&str> = holders.iter().map(|h| h.holder.as_str()).collect();
+
+    assert!(
+        copyright_values
+            .contains(&"Copyright (c) Meta Platform Technologies, LLC and its affiliates"),
+        "copyrights: {copyright_values:#?}"
+    );
+    assert!(
+        holder_values.contains(&"Meta Platform Technologies, LLC and its affiliates"),
+        "holders: {holder_values:#?}"
+    );
+    assert!(
+        !copyright_values
+            .iter()
+            .any(|value| value
+                .contains("rights of publicity and privacy, and other proprietary rights")),
+        "copyrights: {copyright_values:#?}"
+    );
+    for unexpected in [
+        "as required",
+        "infringement, patent infringement, trademark infringement, violations of the brand guidelines, violations of your or our confidential",
+        "the behavior of the proximity sensor in the MPT hardware implemented by the MPT system software",
+        "Copyright",
+    ] {
+        assert!(
+            !holder_values.contains(&unexpected),
+            "unexpected holder {unexpected:?} in {holder_values:#?}"
+        );
+    }
+}
