@@ -1,0 +1,14 @@
+buildscript {
+    dependencies {
+        classpath GradleDeps.Kotlin.gradlePlugin
+    }
+}
+
+dependencies {
+    implementation Deps.AndroidX.core
+    implementation Deps.SoLoader.soloader
+    implementation project(':fbcore')
+    testImplementation(TestDeps.junit) {
+        because 'exercise parenthesized symbolic refs'
+    }
+}

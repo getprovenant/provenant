@@ -126,6 +126,14 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_groovy_buildsrc_constants() {
+        run_golden(
+            "testdata/gradle-golden/groovy/buildsrc-constants/build.gradle",
+            "testdata/gradle-golden/groovy/buildsrc-constants/build.gradle-expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_groovy_no_parens() {
         run_golden(
             "testdata/gradle-golden/groovy/groovy-no-parens/build.gradle",
