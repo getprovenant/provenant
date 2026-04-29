@@ -1386,6 +1386,70 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_npm_package_json_with_yarn_lock() {
+        let mut files = vec![
+            create_test_file_info(
+                "project/package.json",
+                DatasourceId::NpmPackageJson,
+                Some("pkg:npm/my-app@1.0.0"),
+                Some("my-app"),
+                Some("1.0.0"),
+                vec![create_test_dependency(
+                    "pkg:npm/rimraf",
+                    Some("~2.5.4"),
+                    None,
+                )],
+            ),
+            create_test_file_info(
+                "project/yarn.lock",
+                DatasourceId::YarnLockV1,
+                None,
+                None,
+                None,
+                vec![create_test_dependency(
+                    "pkg:npm/rimraf@2.5.4",
+                    Some("2.5.4"),
+                    None,
+                )],
+            ),
+        ];
+
+        let result = assemble(&mut files);
+
+        assert_eq!(result.packages.len(), 1);
+        let package = &result.packages[0];
+        assert_eq!(package.name.as_deref(), Some("my-app"));
+        assert!(
+            package
+                .datasource_ids
+                .contains(&DatasourceId::NpmPackageJson)
+        );
+        assert!(package.datasource_ids.contains(&DatasourceId::YarnLockV1));
+        assert!(
+            package
+                .datafile_paths
+                .contains(&"project/package.json".to_string())
+        );
+        assert!(
+            package
+                .datafile_paths
+                .contains(&"project/yarn.lock".to_string())
+        );
+
+        assert_eq!(result.dependencies.len(), 2);
+        assert!(result.dependencies.iter().any(|dep| {
+            dep.purl.as_deref() == Some("pkg:npm/rimraf")
+                && dep.datasource_id == DatasourceId::NpmPackageJson
+                && dep.datafile_path == "project/package.json"
+        }));
+        assert!(result.dependencies.iter().any(|dep| {
+            dep.purl.as_deref() == Some("pkg:npm/rimraf@2.5.4")
+                && dep.datasource_id == DatasourceId::YarnLockV1
+                && dep.datafile_path == "project/yarn.lock"
+        }));
+    }
+
+    #[test]
     fn test_assemble_npm_package_json_skips_mismatched_lockfile() {
         let mut files = vec![
             create_test_file_info(
