@@ -51,31 +51,97 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
     }
 
     let headers_map: HashMap<String, String> = headers.iter().cloned().collect();
-    let bundle_symbolic_name = headers_map.get("Bundle-SymbolicName");
+    let bundle_symbolic_name = headers_map.get("Bundle-SymbolicName").map(|bsn| {
+        if let Some(semicolon_pos) = bsn.find(';') {
+            bsn[..semicolon_pos].trim().to_string()
+        } else {
+            bsn.clone()
+        }
+    });
     let is_osgi = bundle_symbolic_name.is_some();
+    let bundle_version = headers_map.get("Bundle-Version").cloned();
+    let bundle_name = headers_map.get("Bundle-Name").cloned();
+    let implementation_title = headers_map.get("Implementation-Title").cloned();
+    let implementation_version = headers_map.get("Implementation-Version").cloned();
+    let implementation_vendor_id = headers_map.get("Implementation-Vendor-Id").cloned();
+    let inferred_maven_coordinates = infer_meta_inf_maven_coordinates(path);
+    let preferred_maven_identity = if let (Some(namespace), Some(name), Some(version)) = (
+        implementation_vendor_id.clone(),
+        implementation_title.clone(),
+        implementation_version.clone(),
+    ) {
+        Some((namespace, name, version))
+    } else if let (Some(coords), Some(version)) = (
+        inferred_maven_coordinates.as_ref(),
+        implementation_version.clone(),
+    ) {
+        Some((coords.group_id.clone(), coords.artifact_id.clone(), version))
+    } else {
+        None
+    };
 
     if is_osgi {
-        package_data.package_type = Some(PackageType::Osgi);
-        package_data.datasource_id = Some(DatasourceId::JavaOsgiManifest);
+        if let Some((preferred_maven_namespace, preferred_maven_name, preferred_maven_version)) =
+            preferred_maven_identity
+        {
+            package_data.package_type = Some(PackageType::Maven);
+            package_data.datasource_id = Some(DatasourceId::JavaJarManifest);
+            package_data.namespace = Some(preferred_maven_namespace.clone());
+            package_data.name = Some(preferred_maven_name.clone());
+            package_data.version = Some(preferred_maven_version.clone());
+            package_data.purl = Some(build_maven_purl(
+                &preferred_maven_namespace,
+                &preferred_maven_name,
+                Some(&preferred_maven_version),
+                None,
+                None,
+            ));
 
-        if let Some(bsn) = bundle_symbolic_name {
-            let name = if let Some(semicolon_pos) = bsn.find(';') {
-                bsn[..semicolon_pos].trim().to_string()
-            } else {
-                bsn.clone()
-            };
-            package_data.name = Some(name);
+            let mut extra_data = package_data.extra_data.take().unwrap_or_default();
+            if let Some(bundle_symbolic_name) = &bundle_symbolic_name {
+                extra_data.insert(
+                    "osgi_bundle_symbolic_name".to_string(),
+                    serde_json::Value::String(bundle_symbolic_name.clone()),
+                );
+            }
+            if let Some(bundle_name) = &bundle_name {
+                extra_data.insert(
+                    "osgi_bundle_name".to_string(),
+                    serde_json::Value::String(bundle_name.clone()),
+                );
+            }
+            if let Some(bundle_version) = &bundle_version {
+                extra_data.insert(
+                    "osgi_bundle_version".to_string(),
+                    serde_json::Value::String(bundle_version.clone()),
+                );
+            }
+            package_data.extra_data = (!extra_data.is_empty()).then_some(extra_data);
+        } else {
+            package_data.package_type = Some(PackageType::Osgi);
+            package_data.datasource_id = Some(DatasourceId::JavaOsgiManifest);
+
+            if let Some(bsn) = &bundle_symbolic_name {
+                package_data.name = Some(bsn.clone());
+            }
+
+            package_data.version = bundle_version.clone();
+
+            if let (Some(name), Some(version)) = (&package_data.name, &package_data.version) {
+                package_data.purl = Some(format!("pkg:osgi/{}@{}", name, version));
+            }
         }
-
-        package_data.version = headers_map.get("Bundle-Version").cloned();
 
         if let Some(desc) = headers_map.get("Bundle-Description") {
             package_data.description = Some(desc.clone());
-        } else if let Some(name) = headers_map.get("Bundle-Name") {
+        } else if let Some(name) = &bundle_name {
             package_data.description = Some(name.clone());
         }
 
-        if let Some(vendor) = headers_map.get("Bundle-Vendor") {
+        if let Some(vendor) = headers_map
+            .get("Bundle-Vendor")
+            .or_else(|| headers_map.get("Implementation-Vendor"))
+        {
             package_data.parties.push(Party {
                 r#type: Some("organization".to_string()),
                 role: Some("vendor".to_string()),
@@ -108,10 +174,6 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
                 serde_json::Value::String(export_pkg.clone()),
             );
             package_data.extra_data = Some(extra_data);
-        }
-
-        if let (Some(name), Some(version)) = (&package_data.name, &package_data.version) {
-            package_data.purl = Some(format!("pkg:osgi/{}@{}", name, version));
         }
     } else {
         package_data.package_type = Some(PackageType::Maven);

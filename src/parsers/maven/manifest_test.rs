@@ -398,3 +398,96 @@ fn test_osgi_manifest_optional_import_package_dependency() {
     assert_eq!(optional_dep.is_optional, Some(true));
     assert_eq!(optional_dep.is_runtime, Some(true));
 }
+
+#[test]
+fn test_osgi_manifest_with_strong_maven_identity_prefers_maven_package() {
+    let temp_dir = TempDir::new().expect("temp dir");
+    let manifest_dir = temp_dir.path().join("META-INF");
+    fs::create_dir_all(&manifest_dir).expect("create manifest dir");
+    let manifest_path = manifest_dir.join("MANIFEST.MF");
+
+    fs::write(
+        &manifest_path,
+        "Manifest-Version: 1.0\nBundle-ManifestVersion: 2\nBundle-SymbolicName: com.fasterxml.jackson.core.jackson-core\nBundle-Name: Jackson-core\nBundle-Version: 2.18.0\nBundle-Vendor: FasterXML\nImplementation-Title: Jackson-core\nImplementation-Version: 2.18.0\nImplementation-Vendor-Id: com.fasterxml.jackson.core\nImport-Package: org.osgi.framework;version=\"[1.6,2)\"\nRequire-Bundle: com.fasterxml.jackson.annotations;bundle-version=\"2.18.0\"\n",
+    )
+    .expect("write manifest");
+
+    let package = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package.package_type, Some(PackageType::Maven));
+    assert_eq!(package.datasource_id, Some(DatasourceId::JavaJarManifest));
+    assert_eq!(
+        package.namespace,
+        Some("com.fasterxml.jackson.core".to_string())
+    );
+    assert_eq!(package.name, Some("Jackson-core".to_string()));
+    assert_eq!(package.version, Some("2.18.0".to_string()));
+    assert_eq!(
+        package.purl,
+        Some("pkg:maven/com.fasterxml.jackson.core/Jackson-core@2.18.0".to_string())
+    );
+
+    let extra_data = package.extra_data.expect("expected extra data");
+    assert_eq!(
+        extra_data.get("osgi_bundle_symbolic_name"),
+        Some(&serde_json::Value::String(
+            "com.fasterxml.jackson.core.jackson-core".to_string()
+        ))
+    );
+    assert_eq!(
+        extra_data.get("osgi_bundle_name"),
+        Some(&serde_json::Value::String("Jackson-core".to_string()))
+    );
+    assert_eq!(
+        extra_data.get("osgi_bundle_version"),
+        Some(&serde_json::Value::String("2.18.0".to_string()))
+    );
+
+    let import_dep = package
+        .dependencies
+        .iter()
+        .find(|dep| dep.scope.as_deref() == Some("import"))
+        .expect("expected import dependency");
+    assert_eq!(
+        import_dep.purl,
+        Some("pkg:osgi/org.osgi.framework".to_string())
+    );
+
+    let require_dep = package
+        .dependencies
+        .iter()
+        .find(|dep| dep.scope.as_deref() == Some("require-bundle"))
+        .expect("expected require-bundle dependency");
+    assert_eq!(
+        require_dep.purl,
+        Some("pkg:osgi/com.fasterxml.jackson.annotations".to_string())
+    );
+}
+
+#[test]
+fn test_osgi_manifest_without_implementation_version_stays_osgi() {
+    let temp_dir = TempDir::new().expect("temp dir");
+    let manifest_dir = temp_dir.path().join("META-INF");
+    fs::create_dir_all(&manifest_dir).expect("create manifest dir");
+    let manifest_path = manifest_dir.join("MANIFEST.MF");
+
+    fs::write(
+        &manifest_path,
+        "Manifest-Version: 1.0\nBundle-ManifestVersion: 2\nBundle-SymbolicName: com.fasterxml.jackson.core.jackson-core\nBundle-Name: Jackson-core\nBundle-Version: 2.18.0\nBundle-Vendor: FasterXML\nImplementation-Title: Jackson-core\nImplementation-Vendor-Id: com.fasterxml.jackson.core\n",
+    )
+    .expect("write manifest");
+
+    let package = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package.package_type, Some(PackageType::Osgi));
+    assert_eq!(package.datasource_id, Some(DatasourceId::JavaOsgiManifest));
+    assert_eq!(
+        package.name,
+        Some("com.fasterxml.jackson.core.jackson-core".to_string())
+    );
+    assert_eq!(package.version, Some("2.18.0".to_string()));
+    assert_eq!(
+        package.purl,
+        Some("pkg:osgi/com.fasterxml.jackson.core.jackson-core@2.18.0".to_string())
+    );
+}
