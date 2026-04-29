@@ -67,4 +67,65 @@ mod tests {
                 .any(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::GradleLockfile))
         );
     }
+
+    #[test]
+    fn test_gradle_scan_resolves_buildsrc_kotlin_constants() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let build_src_dir = temp_dir
+            .path()
+            .join("buildSrc/src/main/java/com/example/buildsrc");
+        fs::create_dir_all(&build_src_dir).expect("create buildSrc source dir");
+        fs::write(
+            build_src_dir.join("GradleDeps.kt"),
+            r#"
+object GradleDeps {
+    object Android {
+        private const val version = "8.5.2"
+        const val gradlePlugin = "com.android.tools.build:gradle:$version"
+    }
+}
+"#,
+        )
+        .expect("write GradleDeps.kt");
+        fs::write(
+            build_src_dir.join("Deps.kt"),
+            r#"
+object Deps {
+    object AndroidX {
+        const val core = "androidx.core:core:1.15.0"
+    }
+}
+"#,
+        )
+        .expect("write Deps.kt");
+        fs::write(
+            temp_dir.path().join("build.gradle"),
+            r#"
+buildscript {
+    dependencies {
+        classpath GradleDeps.Android.gradlePlugin
+    }
+}
+
+dependencies {
+    implementation Deps.AndroidX.core
+}
+"#,
+        )
+        .expect("write build.gradle");
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        assert!(result.packages.is_empty());
+        assert_dependency_present(
+            &result.dependencies,
+            "pkg:maven/com.android.tools.build/gradle@8.5.2",
+            "build.gradle",
+        );
+        assert_dependency_present(
+            &result.dependencies,
+            "pkg:maven/androidx.core/core@1.15.0",
+            "build.gradle",
+        );
+    }
 }
