@@ -1,13 +1,97 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::PackageParser;
-use super::maven::*;
+use super::super::PackageParser;
+use super::{MavenParser, manifest::*};
 use crate::models::DatasourceId;
 use crate::models::PackageType;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
+
+fn create_temp_manifest(content: &str) -> (TempDir, PathBuf) {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let manifest_path = temp_dir.path().join("MANIFEST.MF");
+
+    fs::write(&manifest_path, content).expect("Failed to write manifest");
+
+    (temp_dir, manifest_path)
+}
+
+#[test]
+fn test_parse_manifest_mf_implementation() {
+    let manifest_path = PathBuf::from("testdata/maven/test2/MANIFEST.MF");
+    let package_data = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package_data.package_type, Some(PackageType::Maven));
+    assert_eq!(
+        package_data.datasource_id,
+        Some(DatasourceId::JavaJarManifest)
+    );
+    assert_eq!(package_data.name, Some("spring-web".to_string()));
+    assert_eq!(package_data.version, Some("5.3.20".to_string()));
+
+    assert_eq!(package_data.parties.len(), 1);
+    let vendor = &package_data.parties[0];
+    assert_eq!(vendor.r#type, Some("organization".to_string()));
+    assert_eq!(vendor.role, Some("vendor".to_string()));
+    assert_eq!(vendor.name, Some("Spring Framework".to_string()));
+}
+
+#[test]
+fn test_parse_manifest_mf_bundle() {
+    let manifest_path = PathBuf::from("testdata/maven/test3/MANIFEST.MF");
+    let package_data = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package_data.package_type, Some(PackageType::Osgi));
+    assert_eq!(
+        package_data.datasource_id,
+        Some(DatasourceId::JavaOsgiManifest)
+    );
+    assert_eq!(package_data.name, Some("com.example.mybundle".to_string()));
+    assert_eq!(package_data.version, Some("2.1.0".to_string()));
+
+    assert_eq!(package_data.parties.len(), 1);
+    let vendor = &package_data.parties[0];
+    assert_eq!(vendor.name, Some("Example Corp".to_string()));
+}
+
+#[test]
+fn test_missing_manifest_mf_preserves_manifest_datasource() {
+    let manifest_path = PathBuf::from("/nonexistent/MANIFEST.MF");
+    let package_data = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package_data.package_type, Some(PackageType::Maven));
+    assert_eq!(
+        package_data.datasource_id,
+        Some(DatasourceId::JavaJarManifest)
+    );
+}
+
+#[test]
+fn test_minimal_manifest_mf_stays_generic_jar() {
+    let content = "Manifest-Version: 1.0\nStart-Class: ${foo.main}\n";
+    let (_temp_dir, manifest_path) = create_temp_manifest(content);
+    let package_data = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package_data.package_type, Some(PackageType::Jar));
+    assert_eq!(
+        package_data.datasource_id,
+        Some(DatasourceId::JavaJarManifest)
+    );
+    assert_eq!(package_data.name, None);
+    assert_eq!(package_data.version, None);
+    assert_eq!(package_data.purl, None);
+}
+
+#[test]
+fn test_is_match_manifest_mf() {
+    let valid_path = PathBuf::from("/some/path/MANIFEST.MF");
+    let invalid_path = PathBuf::from("/some/path/manifest.mf");
+
+    assert!(MavenParser::is_match(&valid_path));
+    assert!(!MavenParser::is_match(&invalid_path));
+}
 
 #[test]
 fn test_osgi_basic_bundle_detection() {
@@ -164,6 +248,33 @@ fn test_non_osgi_manifest_stays_maven() {
     assert_eq!(
         package.parties[0].name,
         Some("Spring Framework".to_string())
+    );
+}
+
+#[test]
+fn test_nested_meta_inf_manifest_path_supplies_namespace() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let manifest_dir = temp_dir
+        .path()
+        .join("META-INF/maven/org.example/nested-lib/META-INF");
+    fs::create_dir_all(&manifest_dir).expect("Failed to create nested META-INF directory");
+
+    let manifest_path = manifest_dir.join("MANIFEST.MF");
+    fs::write(
+        &manifest_path,
+        "Manifest-Version: 1.0\nImplementation-Title: nested-lib\nImplementation-Version: 1.0.0\n",
+    )
+    .expect("Failed to write manifest");
+
+    let package = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package.datasource_id, Some(DatasourceId::JavaJarManifest));
+    assert_eq!(package.namespace, Some("org.example".to_string()));
+    assert_eq!(package.name, Some("nested-lib".to_string()));
+    assert_eq!(package.version, Some("1.0.0".to_string()));
+    assert_eq!(
+        package.purl,
+        Some("pkg:maven/org.example/nested-lib@1.0.0".to_string())
     );
 }
 

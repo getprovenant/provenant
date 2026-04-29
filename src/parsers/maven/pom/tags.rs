@@ -1,0 +1,217 @@
+// SPDX-FileCopyrightText: Provenant contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum KnownTag {
+    Archive,
+    ArtifactId,
+    CiManagement,
+    Classifier,
+    Comments,
+    Connection,
+    Contributor,
+    Contributors,
+    Dependencies,
+    Dependency,
+    DependencyManagement,
+    Description,
+    Developer,
+    DeveloperConnection,
+    Developers,
+    DistributionManagement,
+    DownloadUrl,
+    Email,
+    GroupId,
+    Id,
+    InceptionYear,
+    IssueManagement,
+    Layout,
+    License,
+    MailingList,
+    MailingLists,
+    Message,
+    Module,
+    Modules,
+    Name,
+    Optional,
+    Organization,
+    OrganizationUrl,
+    Packaging,
+    Parent,
+    PluginRepositories,
+    PluginRepository,
+    Post,
+    Properties,
+    Relocation,
+    Repositories,
+    Repository,
+    RelativePath,
+    Scm,
+    Scope,
+    Site,
+    SnapshotRepository,
+    Subscribe,
+    System,
+    SystemPath,
+    Tag,
+    Timezone,
+    Type,
+    Unsubscribe,
+    Url,
+    Version,
+}
+
+impl KnownTag {
+    pub(super) fn as_bytes(self) -> &'static [u8] {
+        match self {
+            Self::Archive => b"archive",
+            Self::ArtifactId => b"artifactId",
+            Self::CiManagement => b"ciManagement",
+            Self::Classifier => b"classifier",
+            Self::Comments => b"comments",
+            Self::Connection => b"connection",
+            Self::Contributor => b"contributor",
+            Self::Contributors => b"contributors",
+            Self::Dependencies => b"dependencies",
+            Self::Dependency => b"dependency",
+            Self::DependencyManagement => b"dependencyManagement",
+            Self::Description => b"description",
+            Self::Developer => b"developer",
+            Self::DeveloperConnection => b"developerConnection",
+            Self::Developers => b"developers",
+            Self::DistributionManagement => b"distributionManagement",
+            Self::DownloadUrl => b"downloadUrl",
+            Self::Email => b"email",
+            Self::GroupId => b"groupId",
+            Self::Id => b"id",
+            Self::InceptionYear => b"inceptionYear",
+            Self::IssueManagement => b"issueManagement",
+            Self::Layout => b"layout",
+            Self::License => b"license",
+            Self::MailingList => b"mailingList",
+            Self::MailingLists => b"mailingLists",
+            Self::Message => b"message",
+            Self::Module => b"module",
+            Self::Modules => b"modules",
+            Self::Name => b"name",
+            Self::Optional => b"optional",
+            Self::Organization => b"organization",
+            Self::OrganizationUrl => b"organizationUrl",
+            Self::Packaging => b"packaging",
+            Self::Parent => b"parent",
+            Self::PluginRepositories => b"pluginRepositories",
+            Self::PluginRepository => b"pluginRepository",
+            Self::Post => b"post",
+            Self::Properties => b"properties",
+            Self::Relocation => b"relocation",
+            Self::Repositories => b"repositories",
+            Self::Repository => b"repository",
+            Self::RelativePath => b"relativePath",
+            Self::Scm => b"scm",
+            Self::Scope => b"scope",
+            Self::Site => b"site",
+            Self::SnapshotRepository => b"snapshotRepository",
+            Self::Subscribe => b"subscribe",
+            Self::System => b"system",
+            Self::SystemPath => b"systemPath",
+            Self::Tag => b"tag",
+            Self::Timezone => b"timezone",
+            Self::Type => b"type",
+            Self::Unsubscribe => b"unsubscribe",
+            Self::Url => b"url",
+            Self::Version => b"version",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum Tag {
+    Known(KnownTag),
+    Other(Vec<u8>),
+}
+
+impl Tag {
+    pub(super) fn from_bytes(bytes: &[u8]) -> Self {
+        let known = match bytes {
+            b"archive" => Some(KnownTag::Archive),
+            b"artifactId" => Some(KnownTag::ArtifactId),
+            b"ciManagement" => Some(KnownTag::CiManagement),
+            b"classifier" => Some(KnownTag::Classifier),
+            b"comments" => Some(KnownTag::Comments),
+            b"connection" => Some(KnownTag::Connection),
+            b"contributor" => Some(KnownTag::Contributor),
+            b"contributors" => Some(KnownTag::Contributors),
+            b"dependencies" => Some(KnownTag::Dependencies),
+            b"dependency" => Some(KnownTag::Dependency),
+            b"dependencyManagement" => Some(KnownTag::DependencyManagement),
+            b"description" => Some(KnownTag::Description),
+            b"developer" => Some(KnownTag::Developer),
+            b"developerConnection" => Some(KnownTag::DeveloperConnection),
+            b"developers" => Some(KnownTag::Developers),
+            b"distributionManagement" => Some(KnownTag::DistributionManagement),
+            b"downloadUrl" => Some(KnownTag::DownloadUrl),
+            b"email" => Some(KnownTag::Email),
+            b"groupId" => Some(KnownTag::GroupId),
+            b"id" => Some(KnownTag::Id),
+            b"inceptionYear" => Some(KnownTag::InceptionYear),
+            b"issueManagement" => Some(KnownTag::IssueManagement),
+            b"layout" => Some(KnownTag::Layout),
+            b"license" => Some(KnownTag::License),
+            b"mailingList" => Some(KnownTag::MailingList),
+            b"mailingLists" => Some(KnownTag::MailingLists),
+            b"message" => Some(KnownTag::Message),
+            b"module" => Some(KnownTag::Module),
+            b"modules" => Some(KnownTag::Modules),
+            b"name" => Some(KnownTag::Name),
+            b"optional" => Some(KnownTag::Optional),
+            b"organization" => Some(KnownTag::Organization),
+            b"organizationUrl" => Some(KnownTag::OrganizationUrl),
+            b"packaging" => Some(KnownTag::Packaging),
+            b"parent" => Some(KnownTag::Parent),
+            b"pluginRepositories" => Some(KnownTag::PluginRepositories),
+            b"pluginRepository" => Some(KnownTag::PluginRepository),
+            b"post" => Some(KnownTag::Post),
+            b"properties" => Some(KnownTag::Properties),
+            b"relocation" => Some(KnownTag::Relocation),
+            b"repositories" => Some(KnownTag::Repositories),
+            b"repository" => Some(KnownTag::Repository),
+            b"relativePath" => Some(KnownTag::RelativePath),
+            b"scm" => Some(KnownTag::Scm),
+            b"scope" => Some(KnownTag::Scope),
+            b"site" => Some(KnownTag::Site),
+            b"snapshotRepository" => Some(KnownTag::SnapshotRepository),
+            b"subscribe" => Some(KnownTag::Subscribe),
+            b"system" => Some(KnownTag::System),
+            b"systemPath" => Some(KnownTag::SystemPath),
+            b"tag" => Some(KnownTag::Tag),
+            b"timezone" => Some(KnownTag::Timezone),
+            b"type" => Some(KnownTag::Type),
+            b"unsubscribe" => Some(KnownTag::Unsubscribe),
+            b"url" => Some(KnownTag::Url),
+            b"version" => Some(KnownTag::Version),
+            _ => None,
+        };
+
+        known
+            .map(Self::Known)
+            .unwrap_or_else(|| Self::Other(bytes.to_vec()))
+    }
+
+    pub(super) fn known(&self) -> Option<KnownTag> {
+        match self {
+            Self::Known(tag) => Some(*tag),
+            Self::Other(_) => None,
+        }
+    }
+
+    pub(super) fn as_bytes(&self) -> &[u8] {
+        match self {
+            Self::Known(tag) => tag.as_bytes(),
+            Self::Other(bytes) => bytes.as_slice(),
+        }
+    }
+
+    pub(super) fn is(&self, tag: KnownTag) -> bool {
+        self.known() == Some(tag)
+    }
+}

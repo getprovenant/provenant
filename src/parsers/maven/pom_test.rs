@@ -255,6 +255,145 @@ mod tests {
     }
 
     #[test]
+    fn test_property_resolution_restores_repository_entries() {
+        let content = r#"
+<project>
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>1.0.0</version>
+    <properties>
+        <repo.id>central</repo.id>
+        <repo.name>Maven Central Repository</repo.name>
+        <repo.url>https://repo1.maven.org/maven2</repo.url>
+        <plugin.repo.id>plugins</plugin.repo.id>
+        <plugin.repo.name>Plugin Releases</plugin.repo.name>
+        <plugin.repo.url>https://repo.example.com/plugins</plugin.repo.url>
+    </properties>
+    <repositories>
+        <repository>
+            <id>${repo.id}</id>
+            <name>${repo.name}</name>
+            <url>${repo.url}</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>${plugin.repo.id}</id>
+            <name>${plugin.repo.name}</name>
+            <url>${plugin.repo.url}</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+        let extra_data = package_data.extra_data.expect("extra_data should exist");
+
+        let repositories = extra_data
+            .get("repositories")
+            .expect("repositories should exist")
+            .as_array()
+            .expect("repositories should be array");
+        assert_eq!(repositories.len(), 1);
+
+        let repository = repositories[0]
+            .as_object()
+            .expect("repository should be object");
+        assert_eq!(repository.get("id").unwrap().as_str().unwrap(), "central");
+        assert_eq!(
+            repository.get("name").unwrap().as_str().unwrap(),
+            "Maven Central Repository"
+        );
+        assert_eq!(
+            repository.get("url").unwrap().as_str().unwrap(),
+            "https://repo1.maven.org/maven2"
+        );
+
+        let plugin_repositories = extra_data
+            .get("plugin_repositories")
+            .expect("plugin_repositories should exist")
+            .as_array()
+            .expect("plugin_repositories should be array");
+        assert_eq!(plugin_repositories.len(), 1);
+
+        let plugin_repository = plugin_repositories[0]
+            .as_object()
+            .expect("plugin repository should be object");
+        assert_eq!(
+            plugin_repository.get("id").unwrap().as_str().unwrap(),
+            "plugins"
+        );
+        assert_eq!(
+            plugin_repository.get("name").unwrap().as_str().unwrap(),
+            "Plugin Releases"
+        );
+        assert_eq!(
+            plugin_repository.get("url").unwrap().as_str().unwrap(),
+            "https://repo.example.com/plugins"
+        );
+    }
+
+    #[test]
+    fn test_property_resolution_restores_mailing_lists() {
+        let content = r#"
+<project>
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>1.0.0</version>
+    <properties>
+        <list.name>Users</list.name>
+        <list.subscribe>users-subscribe@example.com</list.subscribe>
+        <list.unsubscribe>users-unsubscribe@example.com</list.unsubscribe>
+        <list.post>users@example.com</list.post>
+        <list.archive>https://example.com/archive</list.archive>
+    </properties>
+    <mailingLists>
+        <mailingList>
+            <name>${list.name}</name>
+            <subscribe>${list.subscribe}</subscribe>
+            <unsubscribe>${list.unsubscribe}</unsubscribe>
+            <post>${list.post}</post>
+            <archive>${list.archive}</archive>
+        </mailingList>
+    </mailingLists>
+</project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+        let extra_data = package_data.extra_data.expect("extra_data should exist");
+
+        let mailing_lists = extra_data
+            .get("mailing_lists")
+            .expect("mailing_lists should exist")
+            .as_array()
+            .expect("mailing_lists should be array");
+        assert_eq!(mailing_lists.len(), 1);
+
+        let mailing_list = mailing_lists[0]
+            .as_object()
+            .expect("mailing list should be object");
+        assert_eq!(mailing_list.get("name").unwrap().as_str().unwrap(), "Users");
+        assert_eq!(
+            mailing_list.get("subscribe").unwrap().as_str().unwrap(),
+            "users-subscribe@example.com"
+        );
+        assert_eq!(
+            mailing_list.get("unsubscribe").unwrap().as_str().unwrap(),
+            "users-unsubscribe@example.com"
+        );
+        assert_eq!(
+            mailing_list.get("post").unwrap().as_str().unwrap(),
+            "users@example.com"
+        );
+        assert_eq!(
+            mailing_list.get("archive").unwrap().as_str().unwrap(),
+            "https://example.com/archive"
+        );
+    }
+
+    #[test]
     fn test_purl_encodes_at_delimited_version_placeholder() {
         let content = r#"
 <project>
@@ -508,109 +647,6 @@ mod tests {
             package_data.vcs_url,
             Some("git+https://github.com/junit-team/junit5.git".to_string())
         );
-    }
-
-    #[test]
-    fn test_parse_pom_properties() {
-        let pom_props_path = PathBuf::from("testdata/maven/test1/pom.properties");
-        let package_data = MavenParser::extract_first_package(&pom_props_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Maven));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::MavenPomProperties)
-        );
-        assert_eq!(package_data.namespace, Some("com.example.test".to_string()));
-        assert_eq!(package_data.name, Some("test-library".to_string()));
-        assert_eq!(package_data.version, Some("1.2.3".to_string()));
-        assert_eq!(
-            package_data.purl,
-            Some("pkg:maven/com.example.test/test-library@1.2.3".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_manifest_mf_implementation() {
-        let manifest_path = PathBuf::from("testdata/maven/test2/MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Maven));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaJarManifest)
-        );
-        assert_eq!(package_data.name, Some("spring-web".to_string()));
-        assert_eq!(package_data.version, Some("5.3.20".to_string()));
-
-        assert_eq!(package_data.parties.len(), 1);
-        let vendor = &package_data.parties[0];
-        assert_eq!(vendor.r#type, Some("organization".to_string()));
-        assert_eq!(vendor.role, Some("vendor".to_string()));
-        assert_eq!(vendor.name, Some("Spring Framework".to_string()));
-    }
-
-    #[test]
-    fn test_parse_manifest_mf_bundle() {
-        let manifest_path = PathBuf::from("testdata/maven/test3/MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        // This file has Bundle-SymbolicName, so it's detected as OSGi
-        assert_eq!(package_data.package_type, Some(PackageType::Osgi));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaOsgiManifest)
-        );
-        assert_eq!(package_data.name, Some("com.example.mybundle".to_string()));
-        assert_eq!(package_data.version, Some("2.1.0".to_string()));
-
-        assert_eq!(package_data.parties.len(), 1);
-        let vendor = &package_data.parties[0];
-        assert_eq!(vendor.name, Some("Example Corp".to_string()));
-    }
-
-    #[test]
-    fn test_missing_manifest_mf_preserves_manifest_datasource() {
-        let manifest_path = PathBuf::from("/nonexistent/MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Maven));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaJarManifest)
-        );
-    }
-
-    #[test]
-    fn test_minimal_manifest_mf_stays_generic_jar() {
-        let content = "Manifest-Version: 1.0\nStart-Class: ${foo.main}\n";
-        let (_temp_dir, manifest_path) = create_temp_maven_file(content, "MANIFEST.MF");
-        let package_data = MavenParser::extract_first_package(&manifest_path);
-
-        assert_eq!(package_data.package_type, Some(PackageType::Jar));
-        assert_eq!(
-            package_data.datasource_id,
-            Some(DatasourceId::JavaJarManifest)
-        );
-        assert_eq!(package_data.name, None);
-        assert_eq!(package_data.version, None);
-        assert_eq!(package_data.purl, None);
-    }
-
-    #[test]
-    fn test_pom_properties_purl_generation() {
-        let pom_props_path = PathBuf::from("testdata/maven/test4/pom.properties");
-        let package_data = MavenParser::extract_first_package(&pom_props_path);
-
-        assert_eq!(
-            package_data.purl,
-            Some("pkg:maven/org.apache.commons/commons-lang3@3.12.0".to_string())
-        );
-        assert_eq!(
-            package_data.namespace,
-            Some("org.apache.commons".to_string())
-        );
-        assert_eq!(package_data.name, Some("commons-lang3".to_string()));
-        assert_eq!(package_data.version, Some("3.12.0".to_string()));
     }
 
     #[test]
@@ -871,24 +907,6 @@ mod tests {
         if let Some(relative_path) = parent.get("relativePath") {
             assert_eq!(relative_path.as_str().unwrap(), "");
         }
-    }
-
-    #[test]
-    fn test_is_match_pom_properties() {
-        let valid_path = PathBuf::from("/some/path/pom.properties");
-        let invalid_path = PathBuf::from("/some/path/not_pom.properties");
-
-        assert!(MavenParser::is_match(&valid_path));
-        assert!(!MavenParser::is_match(&invalid_path));
-    }
-
-    #[test]
-    fn test_is_match_manifest_mf() {
-        let valid_path = PathBuf::from("/some/path/MANIFEST.MF");
-        let invalid_path = PathBuf::from("/some/path/manifest.mf");
-
-        assert!(MavenParser::is_match(&valid_path));
-        assert!(!MavenParser::is_match(&invalid_path));
     }
 
     #[test]

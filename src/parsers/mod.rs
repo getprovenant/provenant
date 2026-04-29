@@ -184,10 +184,6 @@ mod julia;
 mod julia_test;
 pub(crate) mod license_normalization;
 mod maven;
-#[cfg(test)]
-mod maven_scan_test;
-#[cfg(test)]
-mod maven_test;
 mod meson;
 #[cfg(test)]
 mod meson_scan_test;
@@ -223,8 +219,6 @@ mod opam_scan_test;
 mod os_release;
 #[cfg(test)]
 mod os_release_test;
-#[cfg(test)]
-mod osgi_test;
 mod pep508;
 mod pip_inspect_deplock;
 #[cfg(test)]
