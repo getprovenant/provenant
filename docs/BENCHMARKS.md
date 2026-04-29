@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 179 of 179 recorded runs, with a **11.7× median speedup** and **11.0× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
+> Provenant is faster on 180 of 180 recorded runs, with a **11.7× median speedup** and **11.0× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **18.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -55,6 +55,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `25.23s`; ScanCode `240.24s`
 - Broader Android package visibility (`14` vs `0` file-level package records) across committed Soong `METADATA`, `AndroidManifest.xml`, and `TestApp.apk` surfaces, plus extra `go.work` and Docker metadata detection, with cleaner clue-only handling of bare-word GPL/LGPL, placeholder-author, and URL-shape noise
+
+##### [facebook/fresco @ c991a69](https://github.com/facebook/fresco/tree/c991a692a254358d1cf56c5b4b06e6c5dd96cfab) — **23.42× faster**
+
+- Files: 2,900
+- Run context: 2026-04-29 · fresco-98279 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `21.38s`; ScanCode `500.76s`
+- Richer Android and Gradle dependency extraction (`768` vs `688`) across committed `build.gradle`, nearby Kotlin `buildSrc` constant catalogs, and `AndroidManifest.xml` surfaces, with exact Maven coordinates for symbolic Gradle references such as `Deps.AndroidX.*`, `Deps.Bolts.*`, and `TestDeps.*` where ScanCode emits placeholder-only names like `AndroidX`, `Bolts`, or `junit`, plus direct Android package visibility and cleaner URL normalization
 
 ##### [KhronosGroup/Vulkan-ValidationLayers @ d72c5f5](https://github.com/KhronosGroup/Vulkan-ValidationLayers/tree/d72c5f52886913598d4064fe8d03bf8ac471e215) — **17.97× faster**
 
