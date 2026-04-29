@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::coordinates::{build_maven_purl, infer_meta_inf_maven_coordinates};
 use super::default_package_data;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
@@ -149,14 +150,8 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
             });
         }
 
-        if let Some(path_str) = path.to_str()
-            && let Some(meta_inf_pos) = path_str.find("META-INF/maven/")
-        {
-            let after_maven = &path_str[meta_inf_pos + "META-INF/maven/".len()..];
-            let parts: Vec<&str> = after_maven.split('/').collect();
-            if parts.len() >= 2 {
-                package_data.namespace = Some(parts[0].to_string());
-            }
+        if let Some(coords) = infer_meta_inf_maven_coordinates(path) {
+            package_data.namespace = Some(coords.group_id);
         }
 
         if let (Some(group_id), Some(artifact_id), Some(version)) = (
@@ -164,9 +159,12 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
             &package_data.name,
             &package_data.version,
         ) {
-            package_data.purl = Some(format!(
-                "pkg:maven/{}/{}@{}",
-                group_id, artifact_id, version
+            package_data.purl = Some(build_maven_purl(
+                group_id,
+                artifact_id,
+                Some(version),
+                None,
+                None,
             ));
         } else if package_data.name.is_none() && package_data.version.is_none() {
             package_data.package_type = Some(PackageType::Jar);

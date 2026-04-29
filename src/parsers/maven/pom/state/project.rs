@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::models::{PackageData, Party};
-use crate::parsers::maven::pom::dependencies::build_maven_qualifiers;
+use crate::parsers::maven::coordinates::build_maven_qualifiers;
 use crate::parsers::maven::pom::properties::{PropertyResolver, resolve_option};
 use crate::parsers::maven::pom::tags::KnownTag;
 use std::collections::HashMap;

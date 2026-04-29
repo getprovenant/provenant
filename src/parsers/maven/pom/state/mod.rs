@@ -19,10 +19,11 @@ use self::distribution::DistributionData;
 use self::licenses::LicenseData;
 use self::parent::ParentEntry;
 use self::project::{ProjectDetails, ProjectMetadata};
-use super::super::default_package_data;
-use super::dependencies::{
-    build_maven_download_url, build_maven_purl, build_maven_source_package, build_maven_url,
+use super::super::coordinates::{
+    build_maven_download_url, build_maven_purl, build_maven_repository_url,
+    build_maven_source_package, infer_meta_inf_maven_coordinates,
 };
+use super::super::default_package_data;
 use super::licenses::{MavenLicenseEntry, is_license_like_comment};
 use super::properties::{
     MavenBuiltinPropertyInputs, PropertyResolver, build_builtin_properties, resolve_option,
@@ -503,19 +504,12 @@ impl PomAccumulator {
     }
 
     fn infer_meta_inf_coordinates(&mut self, path: &Path) {
-        if path.to_string_lossy().contains("META-INF/maven/") {
-            let path_str = path.to_string_lossy();
-            if let Some(meta_inf_pos) = path_str.find("META-INF/maven/") {
-                let after_maven = &path_str[meta_inf_pos + "META-INF/maven/".len()..];
-                let parts: Vec<&str> = after_maven.split('/').collect();
-                if parts.len() >= 2 {
-                    if self.package_data.namespace.is_none() {
-                        self.package_data.namespace = Some(parts[0].to_string());
-                    }
-                    if self.package_data.name.is_none() {
-                        self.package_data.name = Some(parts[1].to_string());
-                    }
-                }
+        if let Some(coords) = infer_meta_inf_maven_coordinates(path) {
+            if self.package_data.namespace.is_none() {
+                self.package_data.namespace = Some(coords.group_id);
+            }
+            if self.package_data.name.is_none() {
+                self.package_data.name = Some(coords.artifact_id);
             }
         }
     }
@@ -548,19 +542,18 @@ impl PomAccumulator {
             }
         }
 
-        if self.package_data.namespace.is_some() && self.package_data.name.is_some() {
-            self.package_data.repository_homepage_url = build_maven_url(
-                &self.package_data.namespace,
-                &self.package_data.name,
-                &self.package_data.version,
-                None,
-            );
-
-            if let (Some(group_id), Some(artifact_id), Some(ver)) = (
-                self.package_data.namespace.as_deref(),
-                self.package_data.name.as_deref(),
+        if let (Some(group_id), Some(artifact_id)) = (
+            self.package_data.namespace.as_deref(),
+            self.package_data.name.as_deref(),
+        ) {
+            self.package_data.repository_homepage_url = Some(build_maven_repository_url(
+                group_id,
+                artifact_id,
                 self.package_data.version.as_deref(),
-            ) {
+                None,
+            ));
+
+            if let Some(ver) = self.package_data.version.as_deref() {
                 self.package_data.repository_download_url = Some(build_maven_download_url(
                     group_id,
                     artifact_id,
@@ -572,17 +565,14 @@ impl PomAccumulator {
                 self.package_data.repository_download_url = None;
             }
 
-            if let (Some(name), Some(ver)) = (
-                self.package_data.name.as_deref(),
-                self.package_data.version.as_deref(),
-            ) {
-                let pom_filename = format!("{}-{}.pom", name, ver);
-                self.package_data.api_data_url = build_maven_url(
-                    &self.package_data.namespace,
-                    &self.package_data.name,
-                    &self.package_data.version,
+            if let Some(ver) = self.package_data.version.as_deref() {
+                let pom_filename = format!("{artifact_id}-{ver}.pom");
+                self.package_data.api_data_url = Some(build_maven_repository_url(
+                    group_id,
+                    artifact_id,
+                    Some(ver),
                     Some(&pom_filename),
-                );
+                ));
             }
         }
     }

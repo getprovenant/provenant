@@ -252,6 +252,33 @@ fn test_non_osgi_manifest_stays_maven() {
 }
 
 #[test]
+fn test_nested_meta_inf_manifest_path_supplies_namespace() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let manifest_dir = temp_dir
+        .path()
+        .join("META-INF/maven/org.example/nested-lib/META-INF");
+    fs::create_dir_all(&manifest_dir).expect("Failed to create nested META-INF directory");
+
+    let manifest_path = manifest_dir.join("MANIFEST.MF");
+    fs::write(
+        &manifest_path,
+        "Manifest-Version: 1.0\nImplementation-Title: nested-lib\nImplementation-Version: 1.0.0\n",
+    )
+    .expect("Failed to write manifest");
+
+    let package = MavenParser::extract_first_package(&manifest_path);
+
+    assert_eq!(package.datasource_id, Some(DatasourceId::JavaJarManifest));
+    assert_eq!(package.namespace, Some("org.example".to_string()));
+    assert_eq!(package.name, Some("nested-lib".to_string()));
+    assert_eq!(package.version, Some("1.0.0".to_string()));
+    assert_eq!(
+        package.purl,
+        Some("pkg:maven/org.example/nested-lib@1.0.0".to_string())
+    );
+}
+
+#[test]
 fn test_split_osgi_list_simple() {
     let list = "org.osgi.framework,javax.servlet,javax.sql";
     let result = split_osgi_list(list);

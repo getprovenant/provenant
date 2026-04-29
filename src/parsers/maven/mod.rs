@@ -18,6 +18,7 @@
 //! - Package URL (purl) generation
 //! - Multiple license support (combined with " OR ")
 
+mod coordinates;
 mod manifest;
 mod pom;
 mod properties;

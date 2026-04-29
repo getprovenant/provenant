@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::models::Dependency;
+use crate::parsers::maven::coordinates::build_maven_purl;
 use std::collections::HashMap;
 
 #[derive(Clone, Default)]
@@ -19,126 +20,6 @@ pub(super) struct MavenDependencyData {
 
 pub(super) fn parse_maven_bool(value: Option<&str>) -> bool {
     value.is_some_and(|value| value.trim().eq_ignore_ascii_case("true"))
-}
-
-fn normalize_maven_packaging(packaging: Option<&str>) -> Option<&str> {
-    match packaging.map(str::trim).filter(|value| !value.is_empty()) {
-        Some(
-            "ejb3" | "ear" | "aar" | "apk" | "gem" | "jar" | "nar" | "pom" | "so" | "swc" | "tar"
-            | "tar.gz" | "war" | "xar" | "zip",
-        ) => packaging.map(str::trim),
-        Some(_) => Some("jar"),
-        None => None,
-    }
-}
-
-pub(super) fn build_maven_qualifiers(
-    classifier: Option<&str>,
-    packaging: Option<&str>,
-) -> Option<HashMap<String, String>> {
-    let mut qualifiers = HashMap::new();
-
-    if let Some(classifier) = classifier.filter(|value| !value.trim().is_empty()) {
-        qualifiers.insert("classifier".to_string(), classifier.to_string());
-    }
-
-    if let Some(packaging) = normalize_maven_packaging(packaging)
-        .filter(|value| !value.is_empty() && *value != "jar" && *value != "pom")
-    {
-        qualifiers.insert("type".to_string(), packaging.to_string());
-    }
-
-    (!qualifiers.is_empty()).then_some(qualifiers)
-}
-
-pub(super) fn build_maven_purl(
-    group_id: &str,
-    artifact_id: &str,
-    version: Option<&str>,
-    classifier: Option<&str>,
-    packaging: Option<&str>,
-) -> String {
-    let mut purl = format!(
-        "pkg:maven/{}/{}",
-        percent_encode_purl_component(group_id),
-        percent_encode_purl_component(artifact_id)
-    );
-
-    if let Some(version) = version.filter(|value| !value.trim().is_empty()) {
-        purl.push('@');
-        purl.push_str(&percent_encode_purl_component(version));
-    }
-
-    let qualifiers = build_maven_qualifiers(classifier, packaging);
-    if let Some(qualifiers) = qualifiers {
-        let mut query_parts = Vec::new();
-        if let Some(classifier) = qualifiers.get("classifier") {
-            query_parts.push(format!(
-                "classifier={}",
-                percent_encode_purl_component(classifier)
-            ));
-        }
-        if let Some(type_) = qualifiers.get("type") {
-            query_parts.push(format!("type={}", percent_encode_purl_component(type_)));
-        }
-
-        if !query_parts.is_empty() {
-            purl.push('?');
-            purl.push_str(&query_parts.join("&"));
-        }
-    }
-
-    purl
-}
-
-fn percent_encode_purl_component(value: &str) -> String {
-    let mut encoded = String::with_capacity(value.len());
-
-    for byte in value.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
-                encoded.push(byte as char);
-            }
-            _ => encoded.push_str(&format!("%{byte:02X}")),
-        }
-    }
-
-    encoded
-}
-
-pub(super) fn build_maven_download_url(
-    group_id: &str,
-    artifact_id: &str,
-    version: &str,
-    classifier: Option<&str>,
-    packaging: Option<&str>,
-) -> String {
-    const BASE_URL: &str = "https://repo1.maven.org/maven2";
-    let group_path = group_id.replace('.', "/");
-    let extension = normalize_maven_packaging(packaging)
-        .filter(|value| *value != "pom")
-        .unwrap_or("jar");
-    let classifier_suffix = classifier
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(|value| format!("-{value}"))
-        .unwrap_or_default();
-
-    format!(
-        "{}/{}/{}/{}/{}-{}{}.{}",
-        BASE_URL,
-        group_path,
-        artifact_id,
-        version,
-        artifact_id,
-        version,
-        classifier_suffix,
-        extension
-    )
-}
-
-pub(super) fn build_maven_source_package(namespace: &str, name: &str, version: &str) -> String {
-    build_maven_purl(namespace, name, Some(version), Some("sources"), None)
 }
 
 pub(super) fn dependency_extra_data(
@@ -304,33 +185,4 @@ pub(super) fn is_maven_version_pinned(version_str: &str) -> bool {
     }
 
     true
-}
-
-pub(super) fn build_maven_url(
-    group_id: &Option<String>,
-    artifact_id: &Option<String>,
-    version: &Option<String>,
-    filename: Option<&str>,
-) -> Option<String> {
-    const BASE_URL: &str = "https://repo1.maven.org/maven2";
-
-    let group_id = group_id.as_ref()?;
-    let artifact_id = artifact_id.as_ref()?;
-
-    let group_path = group_id.replace('.', "/");
-    let filename_str = filename.unwrap_or("");
-
-    let url = if let Some(ver) = version {
-        format!(
-            "{}/{}/{}/{}/{}",
-            BASE_URL, group_path, artifact_id, ver, filename_str
-        )
-    } else {
-        format!(
-            "{}/{}/{}/{}",
-            BASE_URL, group_path, artifact_id, filename_str
-        )
-    };
-
-    Some(url)
 }

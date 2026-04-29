@@ -3,10 +3,10 @@
 
 use super::context::DependencyContext;
 use crate::models::Dependency;
+use crate::parsers::maven::coordinates::build_maven_purl;
 use crate::parsers::maven::pom::dependencies::{
-    MavenDependencyData, build_maven_purl, dependency_extra_data,
-    dependency_management_entry_to_value, is_maven_version_pinned, maven_dependency_to_dependency,
-    parse_maven_bool,
+    MavenDependencyData, dependency_extra_data, dependency_management_entry_to_value,
+    is_maven_version_pinned, maven_dependency_to_dependency, parse_maven_bool,
 };
 use crate::parsers::maven::pom::properties::{PropertyResolver, resolve_dependency_data};
 use crate::parsers::maven::pom::tags::{KnownTag, Tag};
