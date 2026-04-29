@@ -210,6 +210,7 @@ static HOLDERS_PREFIXES: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         "at",
         "cppyright",
         "assemblycopyright",
+        "copyright",
         "c",
         "works",
         "present",
@@ -895,7 +896,8 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     {
         return None;
     }
-    if is_post_refine_copyright_code_fragment(&result)
+    if is_junk_copyright(&result)
+        || is_post_refine_copyright_code_fragment(&result)
         || is_junk_copyright_of_header(&result)
         || is_junk_copyrighted_works_header(&result)
         || is_junk_copyrighted_software_phrase(&result)

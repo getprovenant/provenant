@@ -1118,6 +1118,34 @@ fn test_refine_holder_junk_patent_and_treaties_fragments() {
 }
 
 #[test]
+fn test_meta_sdk_license_false_positive_refiner_drops_holder_fragments() {
+    assert_eq!(refine_holder("as required"), None);
+    assert_eq!(
+        refine_holder(
+            "infringement, patent infringement, trademark infringement, violations of the brand guidelines, violations of your or our confidential"
+        ),
+        None
+    );
+    assert_eq!(
+        refine_holder(
+            "the behavior of the proximity sensor in the MPT hardware implemented by the MPT system software"
+        ),
+        None
+    );
+    assert_eq!(refine_holder("“Copyright"), None);
+}
+
+#[test]
+fn test_meta_sdk_license_false_positive_refiner_drops_copyright_fragment() {
+    assert_eq!(
+        refine_copyright(
+            "copyright, trade secret, trademark, rights of publicity and privacy, and other proprietary rights. 3.2 Third-Party Materials. Our SDK may"
+        ),
+        None
+    );
+}
+
+#[test]
 fn test_refine_holder_strips_trailing_x509_dn_fields() {
     assert_eq!(
         refine_holder("Microsoft Corp., OU Microsoft Corporation, CN Microsoft Root"),
