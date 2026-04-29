@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: com.fasterxml.jackson.core.jackson-core
+Bundle-Name: Jackson-core
+Bundle-Version: 2.18.0
+Bundle-Vendor: FasterXML
+Bundle-License: Apache-2.0
+Bundle-DocURL: https://github.com/FasterXML/jackson-core
+Bundle-Description: Core Jackson streaming parser implementation
+Implementation-Title: Jackson-core
+Implementation-Version: 2.18.0
+Implementation-Vendor-Id: com.fasterxml.jackson.core
+Implementation-Vendor: FasterXML
+Import-Package: org.osgi.framework;version="[1.6,2)",com.fasterxml.jackson.core.io;version="2.18.0"
+Require-Bundle: com.fasterxml.jackson.annotations;bundle-version="2.18.0"

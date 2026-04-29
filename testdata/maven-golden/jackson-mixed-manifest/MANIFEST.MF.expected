@@ -1,0 +1,95 @@
+[
+  {
+    "type": "maven",
+    "namespace": "com.fasterxml.jackson.core",
+    "name": "Jackson-core",
+    "version": "2.18.0",
+    "qualifiers": null,
+    "subpath": null,
+    "primary_language": null,
+    "description": "Core Jackson streaming parser implementation",
+    "release_date": null,
+    "parties": [
+      {
+        "type": "organization",
+        "role": "vendor",
+        "name": "FasterXML",
+        "email": null,
+        "url": null,
+        "organization": null,
+        "organization_url": null,
+        "timezone": null
+      }
+    ],
+    "keywords": [],
+    "homepage_url": "https://github.com/FasterXML/jackson-core",
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
+    "code_view_url": null,
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": null,
+    "declared_license_expression_spdx": null,
+    "license_detections": [],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": "Apache-2.0",
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {
+      "osgi_bundle_version": "2.18.0",
+      "osgi_bundle_name": "Jackson-core",
+      "osgi_bundle_symbolic_name": "com.fasterxml.jackson.core.jackson-core"
+    },
+    "dependencies": [
+      {
+        "purl": "pkg:osgi/org.osgi.framework",
+        "extracted_requirement": "[1.6,2)",
+        "scope": "import",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": null
+      },
+      {
+        "purl": "pkg:osgi/com.fasterxml.jackson.core.io",
+        "extracted_requirement": "2.18.0",
+        "scope": "import",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": null
+      },
+      {
+        "purl": "pkg:osgi/com.fasterxml.jackson.annotations",
+        "extracted_requirement": "2.18.0",
+        "scope": "require-bundle",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": null
+      }
+    ],
+    "repository_homepage_url": null,
+    "repository_download_url": null,
+    "api_data_url": null,
+    "datasource_id": "java_jar_manifest",
+    "purl": "pkg:maven/com.fasterxml.jackson.core/Jackson-core@2.18.0"
+  }
+]
