@@ -32,4 +32,12 @@ mod golden_tests {
             "testdata/autotools/another-project/configure.ac.expected.json",
         );
     }
+
+    #[test]
+    fn test_golden_autotools_zlib_style_configure() {
+        run_golden(
+            "testdata/autotools/zlib-ng/configure",
+            "testdata/autotools/zlib-ng/configure.expected.json",
+        );
+    }
 }

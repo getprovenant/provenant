@@ -21,6 +21,11 @@ fn test_is_match() {
         "testdata/autotools/another-project/configure.ac"
     )));
 
+    // Should match zlib-style generated configure header
+    assert!(AutotoolsConfigureParser::is_match(&PathBuf::from(
+        "testdata/autotools/zlib-ng/configure"
+    )));
+
     // Should NOT match a custom non-Autoconf configure script
     assert!(!AutotoolsConfigureParser::is_match(&PathBuf::from(
         "testdata/autotools/non-autoconf-configure/configure"
@@ -85,4 +90,14 @@ fn test_nested_path() {
         package_data.purl.as_deref(),
         Some("pkg:autotools/my-awesome-project")
     );
+}
+
+#[test]
+fn test_zlib_style_configure_header() {
+    let path = PathBuf::from("testdata/autotools/zlib-ng/configure");
+    let package_data = AutotoolsConfigureParser::extract_first_package(&path);
+
+    assert_eq!(package_data.package_type, Some(PackageType::Autotools));
+    assert_eq!(package_data.name, Some("zlib-ng".to_string()));
+    assert_eq!(package_data.purl.as_deref(), Some("pkg:autotools/zlib-ng"));
 }
