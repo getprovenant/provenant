@@ -22,7 +22,8 @@
 //! - Local path dependencies (`:path =>`) are tracked as dependencies
 //! - Graceful error handling with `warn!()` logs
 
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use crate::parser_warn as warn;
@@ -62,7 +63,7 @@ impl PackageParser for PodfileParser {
             }
         };
 
-        let dependencies = extract_dependencies(&content);
+        let dependencies = extract_dependencies_with_context(&content, path.parent());
 
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
@@ -121,22 +122,52 @@ fn default_package_data() -> PackageData {
 }
 
 static POD_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"pod\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?(?:\s*,\s*:git\s*=>\s*['"]([^'"]+)['"])?(?:\s*,\s*:path\s*=>\s*['"]([^'"]+)['"])?"#
-    ).expect("valid regex")
+    Regex::new(r#"^\s*pod\s+['"]([^'"]+)['"](?:\s*,\s*(.+))?$"#).expect("valid regex")
+});
+
+static POD_HASH_LOOKUP_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*['"]([^'"]+)['"]\s*\]"#).expect("valid regex")
+});
+
+static POD_QUOTED_VALUE_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"^\s*['"]([^'"]+)['"]"#).expect("valid regex"));
+
+static POD_OPTION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:^|,\s*):([A-Za-z_][A-Za-z0-9_]*)\s*=>\s*['"]([^'"]+)['"]"#)
+        .expect("valid regex")
+});
+
+static REQUIRE_RELATIVE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?m)^\s*require_relative\s+['"]([^'"]+)['"]"#).expect("valid regex")
+});
+
+static HASH_ASSIGNMENT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?ms)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{(.*?)\}"#).expect("valid regex")
+});
+
+static HASH_ENTRY_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"['"]([^'"]+)['"]\s*=>\s*['"]([^'"]+)['"]"#).expect("valid regex")
 });
 
 /// Extract dependencies from Podfile
+#[cfg(test)]
 fn extract_dependencies(content: &str) -> Vec<Dependency> {
+    extract_dependencies_with_context(content, None)
+}
+
+fn extract_dependencies_with_context(content: &str, base_dir: Option<&Path>) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
+    let contexts = load_podfile_contexts(content, base_dir);
+    let version_hashes = extract_podfile_hash_assignments(&contexts);
 
     for line in content.lines().take(MAX_ITERATION_COUNT) {
         let cleaned_line = pre_process(line);
         if let Some(caps) = POD_PATTERN.captures(&cleaned_line) {
             let name = truncate_field(caps.get(1).map(|m| m.as_str()).unwrap_or("").to_string());
-            let version_req = caps.get(2).map(|m| truncate_field(m.as_str().to_string()));
-            let git_url = caps.get(3).map(|m| truncate_field(m.as_str().to_string()));
-            let local_path = caps.get(4).map(|m| truncate_field(m.as_str().to_string()));
+            let args = caps.get(2).map(|m| m.as_str()).unwrap_or("");
+            let version_req = extract_pod_version_requirement(args, &version_hashes);
+            let git_url = extract_pod_option(args, "git");
+            let local_path = extract_pod_option(args, "path");
 
             if let Some(dep) = create_dependency(name, version_req, git_url, local_path) {
                 dependencies.push(dep);
@@ -186,6 +217,124 @@ fn pre_process(line: &str) -> String {
         line
     };
     line.trim().to_string()
+}
+
+fn extract_pod_version_requirement(
+    args: &str,
+    version_hashes: &HashMap<String, HashMap<String, String>>,
+) -> Option<String> {
+    if args.is_empty() {
+        return None;
+    }
+
+    if let Some(captures) = POD_QUOTED_VALUE_PATTERN.captures(args) {
+        return captures
+            .get(1)
+            .map(|value| truncate_field(value.as_str().to_string()));
+    }
+
+    let captures = POD_HASH_LOOKUP_PATTERN.captures(args)?;
+    let hash_name = captures.get(1)?.as_str();
+    let key = captures.get(2)?.as_str();
+    version_hashes
+        .get(hash_name)
+        .and_then(|entries| entries.get(key))
+        .cloned()
+        .map(truncate_field)
+}
+
+fn extract_pod_option(args: &str, key: &str) -> Option<String> {
+    POD_OPTION_PATTERN.captures_iter(args).find_map(|captures| {
+        (captures.get(1)?.as_str() == key)
+            .then(|| {
+                captures
+                    .get(2)
+                    .map(|value| truncate_field(value.as_str().to_string()))
+            })
+            .flatten()
+    })
+}
+
+fn load_podfile_contexts(content: &str, base_dir: Option<&Path>) -> Vec<String> {
+    let mut contexts = vec![content.to_string()];
+    let Some(base_dir) = base_dir else {
+        return contexts;
+    };
+    let Ok(allowed_root) = base_dir.canonicalize() else {
+        return contexts;
+    };
+
+    for captures in REQUIRE_RELATIVE_PATTERN
+        .captures_iter(content)
+        .take(MAX_ITERATION_COUNT)
+    {
+        let Some(required) = captures.get(1).map(|value| value.as_str()) else {
+            continue;
+        };
+        for candidate in candidate_require_relative_paths(base_dir, required) {
+            let Ok(canonical_candidate) = candidate.canonicalize() else {
+                continue;
+            };
+            if !canonical_candidate.starts_with(&allowed_root) {
+                continue;
+            }
+            if let Ok(required_content) = read_file_to_string(&canonical_candidate, None) {
+                contexts.push(required_content);
+                break;
+            }
+        }
+    }
+
+    contexts
+}
+
+fn candidate_require_relative_paths(base_dir: &Path, required: &str) -> Vec<PathBuf> {
+    let required = if required.ends_with(".rb") {
+        required.to_string()
+    } else {
+        format!("{required}.rb")
+    };
+    vec![base_dir.join(required)]
+}
+
+fn extract_podfile_hash_assignments(
+    contexts: &[String],
+) -> HashMap<String, HashMap<String, String>> {
+    let mut hashes = HashMap::new();
+
+    for context in contexts.iter().take(MAX_ITERATION_COUNT) {
+        for captures in HASH_ASSIGNMENT_PATTERN
+            .captures_iter(context)
+            .take(MAX_ITERATION_COUNT)
+        {
+            let Some(hash_name) = captures.get(1).map(|value| value.as_str().to_string()) else {
+                continue;
+            };
+            let Some(body) = captures.get(2).map(|value| value.as_str()) else {
+                continue;
+            };
+
+            let mut entries = HashMap::new();
+            for entry in HASH_ENTRY_PATTERN
+                .captures_iter(body)
+                .take(MAX_ITERATION_COUNT)
+            {
+                let Some(key) = entry.get(1).map(|value| value.as_str().to_string()) else {
+                    continue;
+                };
+                let Some(value) = entry.get(2).map(|value| value.as_str().to_string()) else {
+                    continue;
+                };
+                entries.insert(key, value);
+            }
+
+            if !entries.is_empty() {
+                hashes.insert(hash_name, entries);
+            }
+        }
+    }
+
+    hashes
 }
 
 crate::register_parser!(
@@ -275,5 +424,46 @@ pod 'Active', '2.0'  # inline comment
         let deps = extract_dependencies(content);
         assert_eq!(deps.len(), 1);
         assert_eq!(deps[0].purl, Some("pkg:cocoapods/Active".to_string()));
+    }
+
+    #[test]
+    fn test_extract_pod_version_from_required_hash() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let version_file = temp_dir.path().join("PodVersions.rb");
+        std::fs::write(
+            &version_file,
+            r#"
+versions = {
+  'Flipper' => '0.125.0',
+}
+"#,
+        )
+        .expect("write version helper");
+        let podfile_path = temp_dir.path().join("Podfile");
+        std::fs::write(
+            &podfile_path,
+            r#"
+require_relative 'PodVersions'
+
+target 'Example' do
+  pod 'FlipperKit', versions['Flipper']
+end
+"#,
+        )
+        .expect("write podfile");
+
+        let package_data = PodfileParser::extract_first_package(&podfile_path);
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:cocoapods/FlipperKit")
+        );
+        assert_eq!(
+            package_data.dependencies[0]
+                .extracted_requirement
+                .as_deref(),
+            Some("0.125.0")
+        );
+        assert_eq!(package_data.dependencies[0].is_pinned, Some(true));
     }
 }
