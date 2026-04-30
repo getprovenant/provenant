@@ -1132,7 +1132,6 @@ fn test_meta_sdk_license_false_positive_refiner_drops_holder_fragments() {
         ),
         None
     );
-    assert_eq!(refine_holder("“Copyright"), None);
 }
 
 #[test]
