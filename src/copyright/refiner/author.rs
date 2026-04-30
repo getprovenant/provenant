@@ -74,6 +74,14 @@ pub fn refine_author(s: &str) -> Option<String> {
         return None;
     }
 
+    if looks_like_generic_field_label_token(&a) {
+        return None;
+    }
+
+    if contains_code_call_fragment(&a) {
+        return None;
+    }
+
     if looks_like_prose_fragment_author(&a) && !had_obfuscated_angle_contact {
         return None;
     }

@@ -568,6 +568,7 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || lower.contains("icondata")
         || lower.contains("authors.append")
         || contains_member_access_code_token(trimmed)
+        || contains_code_call_fragment(trimmed)
         || contains_unicode_escape_token_run(trimmed)
         || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
@@ -692,10 +693,12 @@ fn is_post_refine_copyright_code_fragment(s: &str) -> bool {
 
     contains_windows_versioninfo_token(trimmed)
         || contains_member_access_code_token(trimmed)
+        || contains_code_call_fragment(trimmed)
         || contains_unicode_escape_token_run(trimmed)
         || lower.contains("public void")
         || lower.contains("get set")
         || lower.contains("assert.equal")
+        || is_junk_c_sign_code_expression_fragment(trimmed)
 }
 
 fn contains_unicode_escape_token_run(s: &str) -> bool {
@@ -744,6 +747,143 @@ fn contains_xml_markup_declaration_token(s: &str) -> bool {
         || lower.contains("<!attlist")
         || lower.contains("<!doctype")
         || lower.contains("pcdata")
+}
+
+fn looks_like_generic_field_label_token(s: &str) -> bool {
+    static GENERIC_FIELD_LABEL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^[a-z][a-z0-9]*(?:[_-][a-z0-9]+){1,4}$").expect("valid field label regex")
+    });
+    static GENERIC_FIELD_LABELS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+        HashSet::from([
+            "action",
+            "assignee",
+            "branch",
+            "credits",
+            "current_user",
+            "description",
+            "direction",
+            "options",
+            "owner_name",
+            "params",
+            "placeholder",
+            "project",
+            "ref",
+            "reviewers",
+            "schema",
+            "source",
+            "text",
+            "timeago",
+            "toggle-text",
+            "tooltip",
+            "unique",
+            "username",
+        ])
+    });
+
+    let trimmed = s.trim();
+    if trimmed.is_empty() || trimmed.contains('@') {
+        return false;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    GENERIC_FIELD_LABELS.contains(lower.as_str()) || GENERIC_FIELD_LABEL_RE.is_match(trimmed)
+}
+
+fn contains_code_call_fragment(s: &str) -> bool {
+    static CODE_CALL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?x)
+            \b[a-z_][A-Za-z0-9_]*(?:[&.]\w+)*\s*\([^)]*\)
+            |\b[a-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*
+            |\b[A-Za-z_][A-Za-z0-9_]*\s+\.\.\.[A-Za-z_][A-Za-z0-9_]*
+            |\b[a-z_][A-Za-z0-9_]*&\.[A-Za-z_][A-Za-z0-9_]*
+            |\b[a-z_][A-Za-z0-9_]*\s*:\w+
+            ",
+        )
+        .expect("valid code call fragment regex")
+    });
+
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.contains("http://") || lower.contains("https://") || lower.contains("www.") {
+        return false;
+    }
+
+    CODE_CALL_RE.is_match(trimmed)
+}
+
+fn looks_like_translation_or_ui_phrase(s: &str) -> bool {
+    let trimmed = s.trim();
+    if trimmed.is_empty()
+        || has_copyright_year(trimmed)
+        || trimmed.contains('@')
+        || trimmed.contains("http://")
+        || trimmed.contains("https://")
+    {
+        return false;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.contains("msgid") || lower.contains("msgstr") {
+        return true;
+    }
+
+    let has_ui_legal_noun = lower.contains("copyright")
+        || lower.contains("trademark")
+        || lower.contains("placeholder")
+        || lower.contains("schema")
+        || lower.contains("project")
+        || lower.contains("credits");
+    if !has_ui_legal_noun {
+        return false;
+    }
+
+    let words: Vec<&str> = lower.split_whitespace().collect();
+    words.len() <= 8
+        && words.iter().all(|word| {
+            word.chars().all(|ch| {
+                ch.is_ascii_lowercase()
+                    || ch.is_ascii_digit()
+                    || matches!(ch, '_' | '-' | ',' | '.' | ':' | ';' | '/' | '\'' | '’')
+            })
+        })
+}
+
+fn looks_like_lowercase_enum_blob(s: &str) -> bool {
+    static LOWERCASE_ENUM_BLOB_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^[a-z][a-z0-9_-]*(?:\s+\d+)?(?:,\s*[a-z][a-z0-9_-]*(?:\s+\d+)?){1,6}$")
+            .expect("valid enum blob regex")
+    });
+
+    LOWERCASE_ENUM_BLOB_RE.is_match(s.trim())
+}
+
+fn is_junk_c_sign_code_expression_fragment(s: &str) -> bool {
+    static LEADING_LOWERCASE_MEMBER_ACCESS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^[a-z_]{1,2}[.:,]").expect("valid leading member access regex")
+    });
+
+    let trimmed = s.trim();
+    let Some(tail) = trimmed.strip_prefix("(c)") else {
+        return false;
+    };
+
+    if has_copyright_year(trimmed) {
+        return false;
+    }
+
+    let tail = tail.trim();
+    let first_word = tail
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .trim_matches(|ch: char| !ch.is_alphanumeric() && ch != '_');
+    let looks_like_lowercase_member_access = LEADING_LOWERCASE_MEMBER_ACCESS_RE.is_match(tail);
+
+    matches!(first_word, "and" | "const" | "let" | "puts" | "var")
+        || looks_like_lowercase_member_access
+        || contains_code_call_fragment(tail)
+        || looks_like_lowercase_enum_blob(tail)
 }
 
 fn contains_malformed_spaced_year(s: &str) -> bool {
@@ -2128,6 +2268,13 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = h.trim().to_string();
 
     if looks_like_credit_file_reference_note(&h) || looks_like_document_form_reference(&h) {
+        return None;
+    }
+
+    if looks_like_generic_field_label_token(&h)
+        || looks_like_translation_or_ui_phrase(&h)
+        || looks_like_lowercase_enum_blob(&h)
+    {
         return None;
     }
 
