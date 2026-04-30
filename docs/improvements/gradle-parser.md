@@ -9,6 +9,7 @@ Rust now goes beyond the current Python ScanCode Gradle handling in several conc
 3. resolves TOML-backed `libs.versions.toml` version-catalog aliases such as `libs.androidx.appcompat` to real Maven package identifiers
 4. preserves parent path segments for local project dependencies like `project(":libs:download")`
 5. merges all discovered `dependencies {}` blocks in a build file instead of only parsing the first one
+6. parses Kotlin DSL quoted configuration names such as `"implementation"("io.ktor:ktor-client-core:3.2.3")` instead of dropping those central dependency declarations
 
 ## Python Status
 
@@ -52,10 +53,16 @@ Rust now goes beyond the current Python ScanCode Gradle handling in several conc
 - Rust now parses every discovered `dependencies {}` block in a single `build.gradle` / `build.gradle.kts` file instead of stopping after the first block.
 - This includes repeated top-level blocks and later nested blocks that the current token parser already recognizes lexically.
 
+### Kotlin DSL quoted configuration names
+
+- Kotlin DSL also allows configuration names to be called as quoted strings, for example `"implementation"("group:artifact:version")` and `"implementation"(project(":core"))`.
+- Rust now treats these quoted configuration names the same way it treats unquoted identifiers, including ordinary Maven coordinates, nested `project(":...")` references, and trailing exclusion closures.
+- This keeps centralized multi-project Gradle builds scannable when they route module dependencies through root-level `project(":module") { dependencies { ... } }` blocks using quoted Kotlin DSL configuration calls.
+
 ### Template POM guardrail
 
 - Rust also skips placeholder-only Maven coordinates like `${groupId}` / `${artifactId}` / `${version}` instead of emitting junk package identifiers.
 
 ## Coverage
 
-Coverage spans scope classification, all discovered dependency-block parsing, version-catalog alias resolution, Gradle POM license extraction, and placeholder-coordinate guardrails.
+Coverage spans scope classification, all discovered dependency-block parsing, Kotlin DSL quoted configuration names, version-catalog alias resolution, Gradle POM license extraction, and placeholder-coordinate guardrails.

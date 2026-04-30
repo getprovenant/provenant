@@ -47,13 +47,19 @@ The current Rust implementation uses a custom token-based parser and supports th
    "testImplementation"(project(":utils:test-utils"))
    ```
 
-7. **Limited malformed-string recovery**:
+7. **Quoted Kotlin DSL configuration names**:
+
+   ```kotlin
+   "implementation"("io.ktor:ktor-client-core:$ktorVersion")
+   ```
+
+8. **Limited malformed-string recovery**:
 
    ```groovy
    implementation "com.fasterxml.jackson:jackson-bom:2.12.2'
    ```
 
-8. **Multiple `dependencies {}` blocks in one build file**:
+9. **Multiple `dependencies {}` blocks in one build file**:
 
    ```groovy
    dependencies {
@@ -101,7 +107,7 @@ The Python ScanCode Toolkit implementation uses **pygmars** (a token-based parse
 
 - No parser-only Gradle goldens remain ignored.
 - The cleanup now exercises `groovy4`, `groovy-no-parens`, `kotlin2`, and `end2end` directly instead of masking them behind `#[ignore]`.
-- Additional parser goldens now cover TOML-backed version catalog alias resolution, committed `buildSrc` Kotlin constant resolution, and Gradle POM license metadata extraction.
+- Additional parser goldens now cover TOML-backed version catalog alias resolution, committed `buildSrc` Kotlin constant resolution, Kotlin DSL quoted configuration names, and Gradle POM license metadata extraction.
 - Remaining failures, if any, should now represent real parser regressions rather than deferred fixtures.
 
 ## Path Forward: Full Feature Parity
