@@ -611,6 +611,9 @@ ScanCode: 1879.48s</title></rect>
     <rect x="854.98" y="208.23" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/scancode-toolkit @ 6570c13
 Files: 64369
 ScanCode: 7214.43s</title></rect>
+    <rect x="856.03" y="218.55" width="8" height="8" fill="#d97706" rx="1.5"><title>gitlabhq/gitlabhq @ 48dc2f5
+Files: 65359
+ScanCode: 5798.22s</title></rect>
     <rect x="879.98" y="188.22" width="8" height="8" fill="#d97706" rx="1.5"><title>torvalds/linux @ b42ed3b
 Files: 92523
 ScanCode: 11017.99s</title></rect>
@@ -1165,6 +1168,9 @@ Provenant: 61.49s</title></circle>
     <circle cx="858.98" cy="335.12" r="4.5" fill="#2563eb"><title>aboutcode-org/scancode-toolkit @ 6570c13
 Files: 64369
 Provenant: 535.40s</title></circle>
+    <circle cx="860.03" cy="372.43" r="4.5" fill="#2563eb"><title>gitlabhq/gitlabhq @ 48dc2f5
+Files: 65359
+Provenant: 243.06s</title></circle>
     <circle cx="883.98" cy="348.76" r="4.5" fill="#2563eb"><title>torvalds/linux @ b42ed3b
 Files: 92523
 Provenant: 401.15s</title></circle>
