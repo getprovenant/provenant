@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 183 of 183 recorded runs, with a **11.9× median speedup** and **11.1× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 184 of 184 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -459,6 +459,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `145.05s`; ScanCode `1879.67s`
 - Broader Gradle package and dependency extraction (`73` vs `68` packages, `1675` vs `1541` dependencies) from committed `build.gradle`, `build.gradle.kts`, `gradle.lockfile`, and `.module` metadata across docs and test fixtures
+
+##### [yairm210/Unciv @ d54f33c](https://github.com/yairm210/Unciv/tree/d54f33c881ad2de1ac7136540f59ad8596143ce5) — **19.54× faster**
+
+- Files: 4,057
+- Run context: 2026-04-30 · Unciv-90826 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `21.96s`; ScanCode `429.19s`
+- Far broader Gradle dependency extraction (`51` vs `6` dependencies) from the root multi-project `build.gradle.kts`, module-local `android/build.gradle.kts`, and `buildSrc/build.gradle.kts`, with concrete version recovery for property-backed Kotlin DSL quoted configuration calls such as `"implementation"("io.ktor:ktor-client-core:$ktorVersion")`, `"implementation"("com.badlogicgames.gdx:gdx-tools:$gdxVersion")`, and `classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")` where ScanCode leaves `$kotlinVersion` / `$gdxVersion` unresolved and misses most of the centralized root build graph
 
 ##### [playframework/playframework @ c2c114f](https://github.com/playframework/playframework/tree/c2c114ff31eff1557bef65cc3f586fbc53c974a6) — **18.23× faster**
 
