@@ -122,6 +122,7 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use object::pe;
     use tempfile::TempDir;
 
     use crate::cache::build_collection_exclude_patterns;
@@ -1696,6 +1697,94 @@ mod tests {
                 }),
             "license expression: {:?}",
             scanned.license_expression
+        );
+    }
+
+    #[test]
+    fn scanner_detects_license_from_windows_executable_security_notice() {
+        fn synthetic_pe_with_security_notice(notice: &str) -> Vec<u8> {
+            let cert_payload = notice
+                .encode_utf16()
+                .flat_map(|unit| unit.to_le_bytes())
+                .collect::<Vec<_>>();
+            let cert_len = (8 + cert_payload.len()) as u32;
+            let mut cert = Vec::new();
+            cert.extend_from_slice(&cert_len.to_le_bytes());
+            cert.extend_from_slice(&0x0200u16.to_le_bytes());
+            cert.extend_from_slice(&0x0002u16.to_le_bytes());
+            cert.extend_from_slice(&cert_payload);
+            while !cert.len().is_multiple_of(8) {
+                cert.push(0);
+            }
+
+            let offset = 0x200usize;
+            let size = cert.len();
+            let optional_header_size = 224usize;
+            let pe_header_offset = 0x80usize;
+            let nt_headers_offset = pe_header_offset + 4;
+            let optional_header_offset = nt_headers_offset + 20;
+            let data_directory_offset = optional_header_offset + 96;
+            let security_directory_offset =
+                data_directory_offset + pe::IMAGE_DIRECTORY_ENTRY_SECURITY * 8;
+            let total_len = offset + size;
+            let mut bytes = vec![0u8; total_len];
+
+            bytes[0..2].copy_from_slice(b"MZ");
+            bytes[0x3c..0x40].copy_from_slice(&(pe_header_offset as u32).to_le_bytes());
+            bytes[pe_header_offset..pe_header_offset + 4].copy_from_slice(b"PE\0\0");
+
+            bytes[nt_headers_offset..nt_headers_offset + 2]
+                .copy_from_slice(&0x014cu16.to_le_bytes());
+            bytes[nt_headers_offset + 16..nt_headers_offset + 18]
+                .copy_from_slice(&(optional_header_size as u16).to_le_bytes());
+
+            bytes[optional_header_offset..optional_header_offset + 2]
+                .copy_from_slice(&0x010bu16.to_le_bytes());
+            bytes[optional_header_offset + 92..optional_header_offset + 96]
+                .copy_from_slice(&16u32.to_le_bytes());
+            bytes[security_directory_offset..security_directory_offset + 4]
+                .copy_from_slice(&(offset as u32).to_le_bytes());
+            bytes[security_directory_offset + 4..security_directory_offset + 8]
+                .copy_from_slice(&(size as u32).to_le_bytes());
+            bytes[offset..offset + size].copy_from_slice(&cert);
+
+            bytes
+        }
+
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let file_path = temp_dir.path().join("signed.dll");
+        let fixture = synthetic_pe_with_security_notice(
+            "use of this Certificate constitutes acceptance of the DigiCert CP/CPS and the Relying Party Agreement which limit liability and are incorporated herein by reference.",
+        );
+        fs::write(&file_path, fixture).expect("write PE fixture");
+
+        let progress = Arc::new(ScanProgress::new(ProgressMode::Quiet));
+        let collected = collect_paths(temp_dir.path(), 0, &[]);
+        let engine =
+            Arc::new(LicenseDetectionEngine::from_embedded().expect("initialize license engine"));
+        let result = process_collected(
+            &collected,
+            progress,
+            Some(engine),
+            LicenseScanOptions::default(),
+            &TextDetectionOptions::default(),
+        );
+        let scanned = result
+            .files
+            .into_iter()
+            .find(|entry| {
+                entry.file_type == FileType::File && entry.path == file_path.to_string_lossy()
+            })
+            .expect("scanned file entry");
+
+        assert!(
+            scanned
+                .license_expression
+                .as_deref()
+                .is_some_and(|expression| expression.contains("proprietary-license")),
+            "license expression: {:?}, detections: {:#?}",
+            scanned.license_expression,
+            scanned.license_detections
         );
     }
 

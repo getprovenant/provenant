@@ -14,6 +14,7 @@ use packageurl::PackageUrl;
 use crate::models::{DatasourceId, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::register_parser;
+use crate::utils::file::extract_printable_strings;
 
 use super::ParsePackagesResult;
 use super::license_normalization::{
@@ -85,31 +86,34 @@ pub(crate) fn extract_windows_executable_metadata_text(bytes: &[u8]) -> Option<S
         Ok(FileKind::Pe32) => parse_pe_version_info::<pe::ImageNtHeaders32>(bytes),
         Ok(FileKind::Pe64) => parse_pe_version_info::<pe::ImageNtHeaders64>(bytes),
         _ => return None,
-    }?;
+    };
     let fallback_strings = extract_utf16_version_string_fallback(bytes);
+    let security_notice_lines = extract_windows_security_directory_notice_lines(bytes);
 
     let mut lines = Vec::new();
-    for string_table in &parsed.string_tables {
-        for key in [
-            "ProductName",
-            "FileDescription",
-            "CompanyName",
-            "LegalCopyright",
-            "License",
-            "LegalTrademarks",
-            "LegalTrademarks1",
-            "LegalTrademarks2",
-            "LegalTrademarks3",
-            "Comments",
-            "URL",
-            "WWW",
-        ] {
-            if let Some(value) = string_table.get(key).map(|value| value.trim())
-                && !value.is_empty()
-            {
-                let line = format!("{key}: {value}");
-                if !lines.contains(&line) {
-                    lines.push(line);
+    if let Some(parsed) = &parsed {
+        for string_table in &parsed.string_tables {
+            for key in [
+                "ProductName",
+                "FileDescription",
+                "CompanyName",
+                "LegalCopyright",
+                "License",
+                "LegalTrademarks",
+                "LegalTrademarks1",
+                "LegalTrademarks2",
+                "LegalTrademarks3",
+                "Comments",
+                "URL",
+                "WWW",
+            ] {
+                if let Some(value) = string_table.get(key).map(|value| value.trim())
+                    && !value.is_empty()
+                {
+                    let line = format!("{key}: {value}");
+                    if !lines.contains(&line) {
+                        lines.push(line);
+                    }
                 }
             }
         }
@@ -141,14 +145,192 @@ pub(crate) fn extract_windows_executable_metadata_text(bytes: &[u8]) -> Option<S
         }
     }
 
-    if let Some(version) = parsed.fixed.and_then(|fixed| fixed.product_version) {
+    if let Some(version) = parsed
+        .and_then(|fixed| fixed.fixed)
+        .and_then(|fixed| fixed.product_version)
+    {
         let line = format!("ProductVersion: {version}");
         if !lines.contains(&line) {
             lines.push(line);
         }
     }
 
+    for line in security_notice_lines {
+        if !lines.contains(&line) {
+            lines.push(line);
+        }
+    }
+
     (!lines.is_empty()).then(|| lines.join("\n"))
+}
+
+fn extract_windows_security_directory_notice_lines(bytes: &[u8]) -> Vec<String> {
+    match FileKind::parse(bytes) {
+        Ok(FileKind::Pe32) => {
+            extract_windows_security_directory_notice_lines_for::<pe::ImageNtHeaders32>(bytes)
+        }
+        Ok(FileKind::Pe64) => {
+            extract_windows_security_directory_notice_lines_for::<pe::ImageNtHeaders64>(bytes)
+        }
+        _ => Vec::new(),
+    }
+}
+
+fn extract_windows_security_directory_notice_lines_for<Pe: object::read::pe::ImageNtHeaders>(
+    bytes: &[u8],
+) -> Vec<String> {
+    let Ok(pe) = object::read::pe::PeFile::<Pe>::parse(bytes) else {
+        return Vec::new();
+    };
+    let Some(data_dir) = pe.data_directory(pe::IMAGE_DIRECTORY_ENTRY_SECURITY) else {
+        return Vec::new();
+    };
+    let (offset, size) = data_dir.address_range();
+    let offset = offset as usize;
+    let size = size as usize;
+    if size == 0 {
+        return Vec::new();
+    }
+    let Some(end) = offset.checked_add(size) else {
+        return Vec::new();
+    };
+    let Some(security_bytes) = bytes.get(offset..end) else {
+        return Vec::new();
+    };
+
+    let mut lines = Vec::new();
+    let mut cursor = 0usize;
+    let mut count = 0usize;
+    while cursor + 8 <= security_bytes.len() && count < MAX_ITERATION_COUNT {
+        count += 1;
+        let length = u32::from_le_bytes([
+            security_bytes[cursor],
+            security_bytes[cursor + 1],
+            security_bytes[cursor + 2],
+            security_bytes[cursor + 3],
+        ]) as usize;
+        if length < 8 {
+            break;
+        }
+        let Some(blob) = security_bytes.get(cursor + 8..cursor + length) else {
+            break;
+        };
+        collect_security_directory_notice_lines(blob, &mut lines);
+        cursor += (length + 7) & !7;
+    }
+
+    if lines.is_empty() {
+        collect_security_directory_notice_lines(security_bytes, &mut lines);
+    }
+
+    lines
+}
+
+fn collect_security_directory_notice_lines(bytes: &[u8], lines: &mut Vec<String>) {
+    for candidate in [
+        extract_printable_strings(bytes),
+        extract_relaxed_ascii_text(bytes),
+        extract_relaxed_utf16_text(bytes, true),
+        extract_relaxed_utf16_text(bytes, false),
+    ] {
+        for line in extract_legal_notice_sentences(&candidate) {
+            if !lines.contains(&line) {
+                lines.push(line);
+            }
+        }
+    }
+}
+
+fn extract_relaxed_ascii_text(bytes: &[u8]) -> String {
+    let mut text = String::with_capacity(bytes.len());
+    let mut pending_space = false;
+    for &byte in bytes {
+        if matches!(byte, 0x20..=0x7e) {
+            if pending_space && !text.is_empty() && !text.ends_with(' ') {
+                text.push(' ');
+            }
+            text.push(byte as char);
+            pending_space = false;
+        } else if !text.is_empty() {
+            pending_space = true;
+        }
+    }
+    text
+}
+
+fn extract_relaxed_utf16_text(bytes: &[u8], little_endian: bool) -> String {
+    let units = bytes
+        .chunks_exact(2)
+        .map(|chunk| {
+            if little_endian {
+                u16::from_le_bytes([chunk[0], chunk[1]])
+            } else {
+                u16::from_be_bytes([chunk[0], chunk[1]])
+            }
+        })
+        .collect::<Vec<_>>();
+    let decoded = String::from_utf16_lossy(&units);
+    let mut text = String::with_capacity(decoded.len());
+    let mut pending_space = false;
+    for ch in decoded.chars() {
+        if ch.is_ascii_graphic() || ch == ' ' {
+            if pending_space && !text.is_empty() && !text.ends_with(' ') {
+                text.push(' ');
+            }
+            text.push(ch);
+            pending_space = false;
+        } else if !text.is_empty() {
+            pending_space = true;
+        }
+    }
+    text
+}
+
+fn extract_legal_notice_sentences(text: &str) -> Vec<String> {
+    fn looks_like_legal_notice(sentence: &str) -> bool {
+        let lower = sentence.to_ascii_lowercase();
+        let word_count = sentence
+            .split_whitespace()
+            .filter(|word| word.chars().any(|ch| ch.is_ascii_alphabetic()))
+            .count();
+        if word_count < 6 {
+            return false;
+        }
+        [
+            "certificate constitutes acceptance",
+            "relying party agreement",
+            "all rights reserved",
+            "rights reserved",
+            "proprietary",
+            "private",
+            "limit liability",
+            "terms and conditions",
+            "licensed under",
+            "license",
+        ]
+        .iter()
+        .any(|marker| lower.contains(marker))
+    }
+
+    let mut sentences = Vec::new();
+    let mut current = String::new();
+    for ch in text.chars() {
+        current.push(ch);
+        if matches!(ch, '.' | ';') {
+            let sentence = current.split_whitespace().collect::<Vec<_>>().join(" ");
+            let sentence = sentence.trim();
+            if sentence.len() >= 24 && looks_like_legal_notice(sentence) {
+                sentences.push(sentence.to_string());
+            }
+            current.clear();
+        }
+    }
+    let sentence = current.split_whitespace().collect::<Vec<_>>().join(" ");
+    let sentence = sentence.trim();
+    if sentence.len() >= 24 && looks_like_legal_notice(sentence) {
+        sentences.push(sentence.to_string());
+    }
+    sentences
 }
 
 fn parse_windows_executable_bytes(path: &Path, bytes: &[u8]) -> Vec<PackageData> {
@@ -876,6 +1058,7 @@ mod tests {
 
     use super::{
         FixedVersionInfo, ParsedVersionInfo, build_windows_executable_package, decode_utf16_bytes,
+        extract_legal_notice_sentences, extract_relaxed_utf16_text,
         extract_utf16_version_string_fallback, extract_windows_executable_metadata_text,
         merge_parsed_version_infos, parse_fixed_version_info, parse_version_info_bytes,
         preferred_windows_version_strings_with_fallback, read_u32_le,
@@ -946,6 +1129,85 @@ mod tests {
             text.contains("License: This program is free software"),
             "{text}"
         );
+    }
+
+    #[test]
+    fn extracts_legal_notice_sentences_from_relaxed_utf16_text() {
+        let notice = "use of this Certificate constitutes acceptance of the DigiCert CP/CPS and the Relying Party Agreement which limit liability and are incorporated herein by reference.";
+        let bytes = notice
+            .encode_utf16()
+            .flat_map(|unit| unit.to_le_bytes())
+            .collect::<Vec<_>>();
+
+        let text = extract_relaxed_utf16_text(&bytes, true);
+        let lines = extract_legal_notice_sentences(&text);
+
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("DigiCert CP/CPS")
+                    && line.contains("Relying Party Agreement")),
+            "lines={lines:?}"
+        );
+    }
+
+    #[test]
+    fn extracts_windows_executable_metadata_text_from_security_directory_notice() {
+        let phrase = "use of this Certificate constitutes acceptance of the DigiCert CP/CPS and the Relying Party Agreement which limit liability and are incorporated herein by reference.";
+        let cert_payload = phrase
+            .encode_utf16()
+            .flat_map(|unit| unit.to_le_bytes())
+            .collect::<Vec<_>>();
+        let cert_len = (8 + cert_payload.len()) as u32;
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&cert_len.to_le_bytes());
+        bytes.extend_from_slice(&0x0200u16.to_le_bytes());
+        bytes.extend_from_slice(&0x0002u16.to_le_bytes());
+        bytes.extend_from_slice(&cert_payload);
+
+        let mut aligned = bytes.clone();
+        while !aligned.len().is_multiple_of(8) {
+            aligned.push(0);
+        }
+
+        let offset = 0x200usize;
+        let size = aligned.len();
+        let optional_header_size = 224usize;
+        let pe_header_offset = 0x80usize;
+        let nt_headers_offset = pe_header_offset + 4;
+        let optional_header_offset = nt_headers_offset + 20;
+        let data_directory_offset = optional_header_offset + 96;
+        let security_directory_offset =
+            data_directory_offset + pe::IMAGE_DIRECTORY_ENTRY_SECURITY * 8;
+        let total_len = offset + size;
+        let mut pe_bytes = vec![0u8; total_len];
+
+        pe_bytes[0..2].copy_from_slice(b"MZ");
+        pe_bytes[0x3c..0x40].copy_from_slice(&(pe_header_offset as u32).to_le_bytes());
+        pe_bytes[pe_header_offset..pe_header_offset + 4].copy_from_slice(b"PE\0\0");
+
+        pe_bytes[nt_headers_offset..nt_headers_offset + 2]
+            .copy_from_slice(&0x014cu16.to_le_bytes());
+        pe_bytes[nt_headers_offset + 16..nt_headers_offset + 18]
+            .copy_from_slice(&(optional_header_size as u16).to_le_bytes());
+
+        pe_bytes[optional_header_offset..optional_header_offset + 2]
+            .copy_from_slice(&0x010bu16.to_le_bytes());
+        pe_bytes[optional_header_offset + 92..optional_header_offset + 96]
+            .copy_from_slice(&16u32.to_le_bytes());
+        pe_bytes[security_directory_offset..security_directory_offset + 4]
+            .copy_from_slice(&(offset as u32).to_le_bytes());
+        pe_bytes[security_directory_offset + 4..security_directory_offset + 8]
+            .copy_from_slice(&(size as u32).to_le_bytes());
+        pe_bytes[offset..offset + size].copy_from_slice(&aligned);
+
+        let text =
+            extract_windows_executable_metadata_text(&pe_bytes).expect("security metadata text");
+        assert!(
+            text.contains("use of this Certificate constitutes acceptance"),
+            "{text}"
+        );
+        assert!(text.contains("DigiCert CP/CPS"), "{text}");
     }
 
     #[test]
