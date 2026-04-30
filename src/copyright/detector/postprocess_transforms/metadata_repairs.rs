@@ -110,6 +110,44 @@ pub fn drop_markup_declaration_and_versioninfo_copyrights_and_holders(
     });
 }
 
+pub fn drop_quoted_inline_notice_examples(
+    raw_lines: &[&str],
+    copyrights: &mut Vec<CopyrightDetection>,
+    holders: &mut Vec<HolderDetection>,
+) {
+    if raw_lines.is_empty() {
+        return;
+    }
+
+    let is_inline_notice_example_line = |line_number: usize| {
+        raw_lines
+            .get(line_number.saturating_sub(1))
+            .is_some_and(|line| {
+                let lower = line.to_ascii_lowercase();
+                lower.contains("following copyright notice")
+                    || lower.contains("following copyright notice:")
+            })
+    };
+
+    let mut dropped_spans: HashSet<(usize, usize)> = HashSet::new();
+    copyrights.retain(|copyright| {
+        let drop = copyright.start_line == copyright.end_line
+            && is_inline_notice_example_line(copyright.start_line.get());
+        if drop {
+            dropped_spans.insert((copyright.start_line.get(), copyright.end_line.get()));
+        }
+        !drop
+    });
+
+    holders.retain(|holder| {
+        if dropped_spans.contains(&(holder.start_line.get(), holder.end_line.get())) {
+            return false;
+        }
+        !(holder.start_line == holder.end_line
+            && is_inline_notice_example_line(holder.start_line.get()))
+    });
+}
+
 fn span_has_markup_declaration_or_versioninfo(
     raw_lines: &[&str],
     start_line: usize,
