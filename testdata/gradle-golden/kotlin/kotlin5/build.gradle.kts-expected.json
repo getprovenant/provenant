@@ -4,7 +4,7 @@
     "namespace": null,
     "name": null,
     "version": null,
-    "qualifiers": {},
+    "qualifiers": null,
     "subpath": null,
     "primary_language": null,
     "description": null,
@@ -35,8 +35,20 @@
     "file_references": [],
     "is_private": false,
     "is_virtual": false,
-    "extra_data": {},
-    "dependencies": [],
+    "extra_data": null,
+    "dependencies": [
+      {
+        "purl": "pkg:maven/jquery/jquery@3.2.1%40js",
+        "extracted_requirement": "3.2.1@js",
+        "scope": "js",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": true,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": null
+      }
+    ],
     "repository_homepage_url": null,
     "repository_download_url": null,
     "api_data_url": null,
