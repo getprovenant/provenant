@@ -24,6 +24,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = strip_initials_before_angle_email(&a);
     a = normalize_obfuscated_angle_contact(&a);
     a = strip_trailing_comma_year_after_angle_email(&a);
+    a = strip_trailing_comma_year(&a);
     a = strip_trailing_comma_month_year(&a);
     a = strip_trailing_comma_email_matching_name(&a);
     a = strip_trailing_comma_and(&a);
@@ -31,6 +32,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = truncate_caller_specificaly_clause(&a);
     a = truncate_json_metadata_tail(&a);
     a = truncate_distribution_metadata_tail(&a);
+    a = truncate_better_known_as_clause(&a);
     a = normalize_slash_spacing(&a);
     a = normalize_slash_author_pairs(&a);
     a = strip_trailing_status_works(&a);
@@ -721,6 +723,19 @@ fn strip_trailing_comma_year_after_angle_email(s: &str) -> String {
     s.to_string()
 }
 
+fn strip_trailing_comma_year(s: &str) -> String {
+    static COMMA_YEAR_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^(?P<prefix>.+?),\s*(?P<year>19\d{2}|20\d{2})\s*$").unwrap());
+    let trimmed = s.trim();
+    if let Some(cap) = COMMA_YEAR_RE.captures(trimmed) {
+        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+        if !prefix.is_empty() && prefix.chars().any(|ch| ch.is_alphabetic()) {
+            return prefix.to_string();
+        }
+    }
+    s.to_string()
+}
+
 fn strip_trailing_comma_month_year(s: &str) -> String {
     static COMMA_MM_YYYY_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^(?P<prefix>.+),\s*\d{1,2}/\d{4}\s*$").unwrap());
@@ -800,6 +815,19 @@ fn truncate_branched_from_clause(s: &str) -> String {
         LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>.+?)\s+Branched\s+from\b.*$").unwrap());
     let trimmed = s.trim();
     if let Some(cap) = BRANCHED_RE.captures(trimmed) {
+        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+        if !prefix.is_empty() {
+            return prefix.to_string();
+        }
+    }
+    s.to_string()
+}
+
+fn truncate_better_known_as_clause(s: &str) -> String {
+    static BETTER_KNOWN_AS_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>.+?),\s*better\s+known\s+as\b.*$").unwrap());
+    let trimmed = s.trim();
+    if let Some(cap) = BETTER_KNOWN_AS_RE.captures(trimmed) {
         let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
         if !prefix.is_empty() {
             return prefix.to_string();

@@ -1430,6 +1430,19 @@ fn test_refine_author_keeps_obfuscated_angle_contact_author() {
 }
 
 #[test]
+fn test_refine_author_strips_trailing_comma_year() {
+    let result = refine_author("Paul Vixie, 1996");
+    assert_eq!(result, Some("Paul Vixie".to_string()));
+}
+
+#[test]
+fn test_refine_author_strips_better_known_as_clause() {
+    let result =
+        refine_author("Alexander Peslyak, better known as Solar Designer <solar at openwall.com>");
+    assert_eq!(result, Some("Alexander Peslyak".to_string()));
+}
+
+#[test]
 fn test_refine_author_strips_distribution_metadata_tails() {
     assert_eq!(
         refine_author("Armin Ronacher Author-email armin.ronacher@active-4.com"),
