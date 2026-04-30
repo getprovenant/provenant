@@ -437,6 +437,9 @@ ScanCode: 194.82s</title></rect>
     <rect x="656.74" y="353.11" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/terminal @ 84ae7ad
 Files: 3625
 ScanCode: 336.14s</title></rect>
+    <rect x="657.08" y="332.02" width="8" height="8" fill="#d97706" rx="1.5"><title>dotnet/extensions @ 7171956
+Files: 3643
+ScanCode: 525.35s</title></rect>
     <rect x="657.46" y="339.67" width="8" height="8" fill="#d97706" rx="1.5"><title>renovatebot/renovate @ 91a7213
 Files: 3663
 ScanCode: 446.79s</title></rect>
@@ -982,6 +985,9 @@ Provenant: 23.75s</title></circle>
     <circle cx="660.74" cy="483.64" r="4.5" fill="#2563eb"><title>microsoft/terminal @ 84ae7ad
 Files: 3625
 Provenant: 23.10s</title></circle>
+    <circle cx="661.08" cy="466.87" r="4.5" fill="#2563eb"><title>dotnet/extensions @ 7171956
+Files: 3643
+Provenant: 32.94s</title></circle>
     <circle cx="661.46" cy="482.35" r="4.5" fill="#2563eb"><title>renovatebot/renovate @ 91a7213
 Files: 3663
 Provenant: 23.74s</title></circle>
