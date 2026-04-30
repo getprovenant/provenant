@@ -329,6 +329,9 @@ ScanCode: 127.50s</title></rect>
     <rect x="575.19" y="386.04" width="8" height="8" fill="#d97706" rx="1.5"><title>commercialhaskell/stack @ cb6070f
 Files: 1110
 ScanCode: 167.47s</title></rect>
+    <rect x="575.87" y="373.63" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/regorus @ 7f42115
+Files: 1121
+ScanCode: 217.76s</title></rect>
     <rect x="577.87" y="383.06" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
 ScanCode: 178.35s</title></rect>
@@ -877,6 +880,9 @@ Provenant: 10.40s</title></circle>
     <circle cx="579.19" cy="502.52" r="4.5" fill="#2563eb"><title>commercialhaskell/stack @ cb6070f
 Files: 1110
 Provenant: 15.49s</title></circle>
+    <circle cx="579.87" cy="500.14" r="4.5" fill="#2563eb"><title>microsoft/regorus @ 7f42115
+Files: 1121
+Provenant: 16.29s</title></circle>
     <circle cx="581.87" cy="505.77" r="4.5" fill="#2563eb"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
 Provenant: 14.46s</title></circle>
@@ -985,9 +991,9 @@ Provenant: 23.75s</title></circle>
     <circle cx="660.74" cy="483.64" r="4.5" fill="#2563eb"><title>microsoft/terminal @ 84ae7ad
 Files: 3625
 Provenant: 23.10s</title></circle>
-    <circle cx="661.08" cy="466.87" r="4.5" fill="#2563eb"><title>dotnet/extensions @ 7171956
+    <circle cx="661.08" cy="475.33" r="4.5" fill="#2563eb"><title>dotnet/extensions @ 7171956
 Files: 3643
-Provenant: 32.94s</title></circle>
+Provenant: 27.54s</title></circle>
     <circle cx="661.46" cy="482.35" r="4.5" fill="#2563eb"><title>renovatebot/renovate @ 91a7213
 Files: 3663
 Provenant: 23.74s</title></circle>
