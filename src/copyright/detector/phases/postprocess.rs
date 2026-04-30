@@ -600,6 +600,9 @@ fn run_final_variant_and_cleanup_repairs(
     super::postprocess_transforms::drop_json_description_metadata_copyrights_and_holders(
         raw_lines, copyrights, holders,
     );
+    super::postprocess_transforms::drop_quoted_inline_notice_examples(
+        raw_lines, copyrights, holders,
+    );
     super::postprocess_transforms::drop_markup_declaration_and_versioninfo_copyrights_and_holders(
         raw_lines, copyrights, holders,
     );
