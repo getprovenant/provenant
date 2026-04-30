@@ -608,6 +608,287 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_nuget_cpm_uses_composed_central_versions() {
+        let mut props_file = create_test_file_info(
+            "repo/Directory.Packages.props",
+            DatasourceId::NugetDirectoryPackagesProps,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        props_file.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "property_values".to_string(),
+                json!({
+                    "ManagePackageVersionsCentrally": "true",
+                    "VersionPrefix": "1.4.0",
+                    "VersionSuffix": "preview.3"
+                }),
+            ),
+            (
+                "package_versions".to_string(),
+                json!([
+                    {
+                        "name": "Newtonsoft.Json",
+                        "version": "$(VersionPrefix)-$(VersionSuffix)",
+                        "condition": null
+                    }
+                ]),
+            ),
+        ]));
+
+        let mut files = vec![
+            create_test_file_info(
+                "repo/src/app/Contoso.Utility.csproj",
+                DatasourceId::NugetCsproj,
+                Some("pkg:nuget/Contoso.Utility@1.0.0"),
+                Some("Contoso.Utility"),
+                Some("1.0.0"),
+                vec![create_test_dependency(
+                    "pkg:nuget/Newtonsoft.Json",
+                    None,
+                    None,
+                )],
+            ),
+            props_file,
+        ];
+
+        let result = assemble(&mut files);
+        assert_eq!(
+            result.dependencies[0].extracted_requirement.as_deref(),
+            Some("1.4.0-preview.3")
+        );
+    }
+
+    #[test]
+    fn test_assemble_nuget_cpm_uses_optional_suffix_composed_central_versions() {
+        let mut props_file = create_test_file_info(
+            "repo/Directory.Packages.props",
+            DatasourceId::NugetDirectoryPackagesProps,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        props_file.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "property_values".to_string(),
+                json!({
+                    "ManagePackageVersionsCentrally": "true",
+                    "RegorusPackageVersion": "0.9.1",
+                    "RegorusPackageVersionSuffix": "-$(VersionSuffix)"
+                }),
+            ),
+            (
+                "package_versions".to_string(),
+                json!([
+                    {
+                        "name": "Microsoft.Regorus",
+                        "version": "$(RegorusPackageVersion)$(RegorusPackageVersionSuffix)",
+                        "condition": null
+                    }
+                ]),
+            ),
+        ]));
+
+        let mut files = vec![
+            create_test_file_info(
+                "repo/src/app/Contoso.Utility.csproj",
+                DatasourceId::NugetCsproj,
+                Some("pkg:nuget/Contoso.Utility@1.0.0"),
+                Some("Contoso.Utility"),
+                Some("1.0.0"),
+                vec![create_test_dependency(
+                    "pkg:nuget/Microsoft.Regorus",
+                    None,
+                    None,
+                )],
+            ),
+            props_file,
+        ];
+
+        let result = assemble(&mut files);
+        assert_eq!(
+            result.dependencies[0].extracted_requirement.as_deref(),
+            Some("0.9.1")
+        );
+    }
+
+    #[test]
+    fn test_assemble_nuget_cpm_leaves_composed_version_unresolved_when_all_properties_missing() {
+        let mut props_file = create_test_file_info(
+            "repo/Directory.Packages.props",
+            DatasourceId::NugetDirectoryPackagesProps,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        props_file.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "property_values".to_string(),
+                json!({
+                    "ManagePackageVersionsCentrally": "true"
+                }),
+            ),
+            (
+                "package_versions".to_string(),
+                json!([
+                    {
+                        "name": "Newtonsoft.Json",
+                        "version": "$(VersionPrefix)-$(VersionSuffix)",
+                        "condition": null
+                    }
+                ]),
+            ),
+        ]));
+
+        let mut files = vec![
+            create_test_file_info(
+                "repo/src/app/Contoso.Utility.csproj",
+                DatasourceId::NugetCsproj,
+                Some("pkg:nuget/Contoso.Utility@1.0.0"),
+                Some("Contoso.Utility"),
+                Some("1.0.0"),
+                vec![create_test_dependency(
+                    "pkg:nuget/Newtonsoft.Json",
+                    None,
+                    None,
+                )],
+            ),
+            props_file,
+        ];
+
+        let result = assemble(&mut files);
+        assert!(result.dependencies[0].extracted_requirement.is_none());
+    }
+
+    #[test]
+    fn test_assemble_nuget_cpm_leaves_partially_unresolved_composed_versions_empty() {
+        let mut props_file = create_test_file_info(
+            "repo/Directory.Packages.props",
+            DatasourceId::NugetDirectoryPackagesProps,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        props_file.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "property_values".to_string(),
+                json!({
+                    "ManagePackageVersionsCentrally": "true",
+                    "VersionPrefix": "1.4.0"
+                }),
+            ),
+            (
+                "package_versions".to_string(),
+                json!([
+                    {
+                        "name": "Newtonsoft.Json",
+                        "version": "$(VersionPrefix)-$(VersionSuffix)",
+                        "condition": null
+                    }
+                ]),
+            ),
+        ]));
+
+        let mut files = vec![
+            create_test_file_info(
+                "repo/src/app/Contoso.Utility.csproj",
+                DatasourceId::NugetCsproj,
+                Some("pkg:nuget/Contoso.Utility@1.0.0"),
+                Some("Contoso.Utility"),
+                Some("1.0.0"),
+                vec![create_test_dependency(
+                    "pkg:nuget/Newtonsoft.Json",
+                    None,
+                    None,
+                )],
+            ),
+            props_file,
+        ];
+
+        let result = assemble(&mut files);
+        assert!(result.dependencies[0].extracted_requirement.is_none());
+    }
+
+    #[test]
+    fn test_assemble_nuget_cpm_preserves_imported_versions_when_local_raw_versions_exist() {
+        let mut props_file = create_test_file_info(
+            "repo/Directory.Packages.props",
+            DatasourceId::NugetDirectoryPackagesProps,
+            None,
+            None,
+            None,
+            vec![create_test_central_dependency(
+                "pkg:nuget/Microsoft.Regorus",
+                Some("0.9.1"),
+                Some(HashMap::from([(
+                    "version_expression".to_string(),
+                    json!("$(RegorusPackageVersion)$(RegorusPackageVersionSuffix)"),
+                )])),
+            )],
+        );
+        props_file.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "property_values".to_string(),
+                json!({
+                    "ManagePackageVersionsCentrally": "true",
+                    "VersionPrefix": "1.4.0",
+                    "VersionSuffix": "preview.3"
+                }),
+            ),
+            (
+                "package_versions".to_string(),
+                json!([
+                    {
+                        "name": "Newtonsoft.Json",
+                        "version": "$(VersionPrefix)-$(VersionSuffix)",
+                        "condition": null
+                    }
+                ]),
+            ),
+        ]));
+
+        let mut files = vec![
+            create_test_file_info(
+                "repo/src/app/Contoso.Utility.csproj",
+                DatasourceId::NugetCsproj,
+                Some("pkg:nuget/Contoso.Utility@1.0.0"),
+                Some("Contoso.Utility"),
+                Some("1.0.0"),
+                vec![
+                    create_test_dependency("pkg:nuget/Newtonsoft.Json", None, None),
+                    create_test_dependency("pkg:nuget/Microsoft.Regorus", None, None),
+                ],
+            ),
+            props_file,
+        ];
+
+        let result = assemble(&mut files);
+        assert_eq!(result.dependencies.len(), 2);
+
+        let newtonsoft = result
+            .dependencies
+            .iter()
+            .find(|dependency| dependency.purl.as_deref() == Some("pkg:nuget/Newtonsoft.Json"))
+            .expect("missing Newtonsoft.Json dependency");
+        assert_eq!(
+            newtonsoft.extracted_requirement.as_deref(),
+            Some("1.4.0-preview.3")
+        );
+
+        let regorus = result
+            .dependencies
+            .iter()
+            .find(|dependency| dependency.purl.as_deref() == Some("pkg:nuget/Microsoft.Regorus"))
+            .expect("missing Microsoft.Regorus dependency");
+        assert_eq!(regorus.extracted_requirement.as_deref(), Some("0.9.1"));
+    }
+
+    #[test]
     fn test_assemble_nuget_cpm_uses_directory_build_props_for_version_override() {
         let mut build_props = create_test_file_info(
             "repo/src/Directory.Build.props",

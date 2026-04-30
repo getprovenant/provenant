@@ -3,7 +3,20 @@
 
 use std::collections::{HashMap, HashSet};
 
-pub(super) fn resolve_string_property_reference(
+struct ResolvedPropertyText {
+    rendered: String,
+    resolved_substitutions: usize,
+}
+
+fn is_safe_optional_property_omission(prev: Option<char>, next: Option<char>) -> bool {
+    match (prev, next) {
+        (Some(prev), None) => prev.is_ascii_alphanumeric(),
+        (None, Some(next)) => next.is_ascii_alphanumeric(),
+        _ => false,
+    }
+}
+
+pub(crate) fn resolve_string_property_reference(
     value: &str,
     properties: &HashMap<String, String>,
 ) -> Option<String> {
@@ -13,7 +26,13 @@ pub(super) fn resolve_string_property_reference(
     }
 
     let mut visiting = HashSet::new();
-    resolve_property_text(trimmed, properties, &mut visiting, 0)
+    let resolved = resolve_property_text(trimmed, properties, &mut visiting, 0)?;
+    let rendered = resolved.rendered.trim();
+    if rendered.is_empty() {
+        None
+    } else {
+        Some(rendered.to_string())
+    }
 }
 
 fn resolve_property_text(
@@ -21,21 +40,27 @@ fn resolve_property_text(
     properties: &HashMap<String, String>,
     visiting: &mut HashSet<String>,
     depth: usize,
-) -> Option<String> {
+) -> Option<ResolvedPropertyText> {
     if depth >= 10 {
         return None;
     }
 
     if !value.contains("$(") {
-        return Some(value.to_string());
+        return Some(ResolvedPropertyText {
+            rendered: value.to_string(),
+            resolved_substitutions: 0,
+        });
     }
 
     let bytes = value.as_bytes();
     let mut index = 0;
     let mut rendered = String::with_capacity(value.len());
+    let mut resolved_substitutions = 0;
+    let mut had_property_reference = false;
 
     while index < bytes.len() {
         if bytes[index] == b'$' && index + 1 < bytes.len() && bytes[index + 1] == b'(' {
+            had_property_reference = true;
             let start = index + 2;
             let relative_end = value[start..].find(')')?;
             let end = start + relative_end;
@@ -44,10 +69,21 @@ fn resolve_property_text(
                 return None;
             }
 
-            let raw_value = properties.get(property_name)?;
-            let resolved = resolve_property_text(raw_value, properties, visiting, depth + 1)?;
+            let raw_value = properties.get(property_name);
+            let resolved = raw_value
+                .and_then(|raw| resolve_property_text(raw, properties, visiting, depth + 1));
             visiting.remove(property_name);
-            rendered.push_str(&resolved);
+
+            if let Some(resolved) = resolved {
+                rendered.push_str(&resolved.rendered);
+                resolved_substitutions += resolved.resolved_substitutions.max(1);
+            } else if !is_safe_optional_property_omission(
+                rendered.chars().last(),
+                value[end + 1..].chars().next(),
+            ) {
+                return None;
+            }
+
             index = end + 1;
             continue;
         }
@@ -56,10 +92,17 @@ fn resolve_property_text(
         index += 1;
     }
 
-    Some(rendered)
+    if had_property_reference && resolved_substitutions == 0 {
+        return None;
+    }
+
+    Some(ResolvedPropertyText {
+        rendered,
+        resolved_substitutions,
+    })
 }
 
-pub(super) fn resolve_bool_property_reference(
+pub(crate) fn resolve_bool_property_reference(
     value: Option<&str>,
     properties: &HashMap<String, String>,
 ) -> Option<bool> {
@@ -67,7 +110,7 @@ pub(super) fn resolve_bool_property_reference(
     Some(resolved.eq_ignore_ascii_case("true"))
 }
 
-pub(super) fn resolve_optional_property_value(
+pub(crate) fn resolve_optional_property_value(
     value: Option<&str>,
     properties: &HashMap<String, String>,
 ) -> Option<String> {
@@ -76,7 +119,7 @@ pub(super) fn resolve_optional_property_value(
         return None;
     }
 
-    if value.starts_with("$(") && value.ends_with(')') {
+    if value.contains("$(") {
         resolve_string_property_reference(value, properties)
     } else {
         Some(value.to_string())

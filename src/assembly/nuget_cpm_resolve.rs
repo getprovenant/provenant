@@ -8,6 +8,19 @@ use serde_json::Value as JsonValue;
 
 use crate::models::{DatasourceId, Dependency, FileInfo, PackageData, TopLevelDependency};
 
+struct ResolvedPropertyText {
+    rendered: String,
+    resolved_substitutions: usize,
+}
+
+fn is_safe_optional_property_omission(prev: Option<char>, next: Option<char>) -> bool {
+    match (prev, next) {
+        (Some(prev), None) => prev.is_ascii_alphanumeric(),
+        (None, Some(next)) => next.is_ascii_alphanumeric(),
+        _ => false,
+    }
+}
+
 #[derive(Default)]
 struct ResolvedCpmData {
     dependencies: Vec<Dependency>,
@@ -250,7 +263,7 @@ fn resolve_effective_directory_packages_props(
             .dependencies
             .extend(package_data.dependencies.iter().cloned());
     } else {
-        let dependencies = raw_versions
+        let reconstructed_dependencies = raw_versions
             .into_iter()
             .filter_map(|(name, version, condition)| {
                 let resolved_version =
@@ -258,8 +271,13 @@ fn resolve_effective_directory_packages_props(
                 build_central_dependency(name, resolved_version, version, condition)
             })
             .collect::<Vec<_>>();
-        replace_matching_dependencies(&mut resolved.dependencies, &dependencies);
-        resolved.dependencies.extend(dependencies);
+
+        let mut merged_dependencies = package_data.dependencies.clone();
+        replace_matching_dependencies(&mut merged_dependencies, &reconstructed_dependencies);
+        merged_dependencies.extend(reconstructed_dependencies);
+
+        replace_matching_dependencies(&mut resolved.dependencies, &merged_dependencies);
+        resolved.dependencies.extend(merged_dependencies);
     }
 
     resolved
@@ -424,10 +442,7 @@ fn resolve_recorded_directory_packages_import(
         return None;
     }
 
-    let candidate = PathBuf::from(trimmed);
-    if candidate.file_name().and_then(|name| name.to_str()) != Some("Directory.Packages.props") {
-        return None;
-    }
+    let candidate = resolve_msbuild_props_import_path(current_path, trimmed)?;
 
     if candidate.is_absolute() {
         props_by_path.contains_key(&candidate).then_some(candidate)
@@ -458,10 +473,7 @@ fn resolve_recorded_directory_build_import(
         return None;
     }
 
-    let candidate = PathBuf::from(trimmed);
-    if candidate.file_name().and_then(|name| name.to_str()) != Some("Directory.Build.props") {
-        return None;
-    }
+    let candidate = resolve_msbuild_props_import_path(current_path, trimmed)?;
 
     if candidate.is_absolute() {
         props_by_path.contains_key(&candidate).then_some(candidate)
@@ -479,6 +491,15 @@ fn is_get_path_of_file_above_directory_packages_import(project: &str) -> bool {
 fn is_get_path_of_file_above_directory_build_import(project: &str) -> bool {
     project.replace(' ', "")
         == "$([MSBuild]::GetPathOfFileAbove(Directory.Build.props,$(MSBuildThisFileDirectory)..))"
+}
+
+fn resolve_msbuild_props_import_path(current_path: &Path, project: &str) -> Option<PathBuf> {
+    let current_dir = current_path.parent()?;
+    let current_dir_prefix = format!("{}{}", current_dir.display(), std::path::MAIN_SEPARATOR);
+    let normalized = project
+        .replace("$(MSBuildThisFileDirectory)", &current_dir_prefix)
+        .replace('\\', "/");
+    Some(PathBuf::from(normalized.trim()))
 }
 
 fn is_central_package_management_enabled(package_data: &ResolvedCpmData) -> bool {
@@ -735,14 +756,85 @@ fn resolve_string_property_reference(
     properties: &HashMap<String, String>,
 ) -> Option<String> {
     let trimmed = value.trim();
-    if let Some(property_name) = trimmed
-        .strip_prefix("$(")
-        .and_then(|value| value.strip_suffix(')'))
-    {
-        properties.get(property_name).cloned()
-    } else {
-        Some(trimmed.to_string())
+    if trimmed.is_empty() {
+        return None;
     }
+
+    let mut visiting = HashSet::new();
+    let resolved = resolve_property_text(trimmed, properties, &mut visiting, 0)?;
+    let rendered = resolved.rendered.trim();
+    if rendered.is_empty() {
+        None
+    } else {
+        Some(rendered.to_string())
+    }
+}
+
+fn resolve_property_text(
+    value: &str,
+    properties: &HashMap<String, String>,
+    visiting: &mut HashSet<String>,
+    depth: usize,
+) -> Option<ResolvedPropertyText> {
+    if depth >= 10 {
+        return None;
+    }
+
+    if !value.contains("$(") {
+        return Some(ResolvedPropertyText {
+            rendered: value.to_string(),
+            resolved_substitutions: 0,
+        });
+    }
+
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    let mut rendered = String::with_capacity(value.len());
+    let mut resolved_substitutions = 0;
+    let mut had_property_reference = false;
+
+    while index < bytes.len() {
+        if bytes[index] == b'$' && index + 1 < bytes.len() && bytes[index + 1] == b'(' {
+            had_property_reference = true;
+            let start = index + 2;
+            let relative_end = value[start..].find(')')?;
+            let end = start + relative_end;
+            let property_name = value[start..end].trim();
+            if property_name.is_empty() || !visiting.insert(property_name.to_string()) {
+                return None;
+            }
+
+            let raw_value = properties.get(property_name);
+            let resolved = raw_value
+                .and_then(|raw| resolve_property_text(raw, properties, visiting, depth + 1));
+            visiting.remove(property_name);
+
+            if let Some(resolved) = resolved {
+                rendered.push_str(&resolved.rendered);
+                resolved_substitutions += resolved.resolved_substitutions.max(1);
+            } else if !is_safe_optional_property_omission(
+                rendered.chars().last(),
+                value[end + 1..].chars().next(),
+            ) {
+                return None;
+            }
+
+            index = end + 1;
+            continue;
+        }
+
+        rendered.push(bytes[index] as char);
+        index += 1;
+    }
+
+    if had_property_reference && resolved_substitutions == 0 {
+        return None;
+    }
+
+    Some(ResolvedPropertyText {
+        rendered,
+        resolved_substitutions,
+    })
 }
 
 fn resolve_bool_property_reference(
@@ -762,7 +854,7 @@ fn resolve_optional_property_value(
         return None;
     }
 
-    if value.starts_with("$(") && value.ends_with(')') {
+    if value.contains("$(") {
         resolve_string_property_reference(value, properties)
     } else {
         Some(value.to_string())
