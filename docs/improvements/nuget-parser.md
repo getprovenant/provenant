@@ -4,7 +4,7 @@
 
 Rust now goes beyond the released Python ScanCode NuGet support in six concrete ways:
 
-1. parses additional NuGet and Visual Studio manifests (`project.json`, `project.lock.json`, and PackageReference project files)
+1. parses additional NuGet and Visual Studio manifests (legacy `project.json`, `project.lock.json`, and PackageReference project files)
 2. parses `.deps.json` runtime dependency graphs from built .NET outputs
 3. preserves modern nuspec license hints (`license_type`, `license_file`) instead of collapsing everything to deprecated `licenseUrl` fallbacks
 4. reads archive-backed license file contents from `.nupkg` files when the nuspec points at a packaged license file
@@ -13,7 +13,7 @@ Rust now goes beyond the released Python ScanCode NuGet support in six concrete 
 
 ## Python Status
 
-- Released ScanCode handles `.nuspec`, `.nupkg`, and `packages.lock.json`, but not `project.json`, `project.lock.json`, PackageReference project files, standalone `Directory.Packages.props`, or `.deps.json` runtime graphs.
+- Released ScanCode handles `.nuspec`, `.nupkg`, and `packages.lock.json`, but not legacy `project.json`, `project.lock.json`, PackageReference project files, standalone `Directory.Packages.props`, or `.deps.json` runtime graphs.
 - Upstream enhancement issues explicitly ask for these extra manifests and modern nuspec/license improvements.
 - Python also keeps NuGet party `type` empty and does not extract packaged license file contents from `.nupkg` archives.
 
@@ -21,7 +21,7 @@ Rust now goes beyond the released Python ScanCode NuGet support in six concrete 
 
 ### Extra manifest support
 
-- `project.json` now extracts package metadata plus direct and framework-specific dependencies.
+- Legacy `project.json` manifests now extract package metadata plus direct and framework-specific dependencies.
 - `project.lock.json` now extracts dependency groups from `projectFileDependencyGroups`.
 - PackageReference `.csproj`, `.vbproj`, and `.fsproj` files now extract package metadata and `<PackageReference>` dependencies.
 - `Directory.Packages.props` now extracts central `PackageVersion` declarations as dependency metadata, including `Condition`, central-package-management feature flags, and composed property-backed version expressions such as `$(VersionPrefix)-$(VersionSuffix)` when the bounded property chain is statically known.
