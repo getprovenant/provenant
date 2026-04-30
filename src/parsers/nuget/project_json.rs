@@ -13,6 +13,21 @@ use super::{
     insert_extra_string,
 };
 
+const NUGET_PROJECT_JSON_KEYS: &[&str] = &[
+    "dependencies",
+    "frameworks",
+    "runtimes",
+    "supports",
+    "imports",
+    "tools",
+    "commands",
+    "scripts",
+    "buildOptions",
+    "packOptions",
+    "publishOptions",
+    "compilationOptions",
+];
+
 pub struct ProjectJsonParser;
 
 impl PackageParser for ProjectJsonParser {
@@ -33,6 +48,10 @@ impl PackageParser for ProjectJsonParser {
             }
         };
 
+        if !looks_like_probable_nuget_project_json_text(&content) {
+            return Vec::new();
+        }
+
         let parsed: serde_json::Value = match serde_json::from_str(&content) {
             Ok(value) => value,
             Err(e) => {
@@ -40,6 +59,10 @@ impl PackageParser for ProjectJsonParser {
                 return vec![default_package_data(Some(DatasourceId::NugetProjectJson))];
             }
         };
+
+        if !looks_like_probable_nuget_project_json_value(&parsed) {
+            return Vec::new();
+        }
 
         vec![parse_project_json_manifest(&parsed)]
     }
@@ -183,6 +206,22 @@ fn parse_project_json_manifest(parsed: &serde_json::Value) -> PackageData {
     }
 }
 
+fn looks_like_probable_nuget_project_json_text(content: &str) -> bool {
+    NUGET_PROJECT_JSON_KEYS
+        .iter()
+        .any(|key| content.contains(&format!("\"{key}\"")))
+}
+
+fn looks_like_probable_nuget_project_json_value(parsed: &serde_json::Value) -> bool {
+    let Some(object) = parsed.as_object() else {
+        return false;
+    };
+
+    NUGET_PROJECT_JSON_KEYS
+        .iter()
+        .any(|key| object.contains_key(*key))
+}
+
 fn parse_project_json_dependency(
     dependency_name: &str,
     dependency_spec: &serde_json::Value,
@@ -302,7 +341,7 @@ fn parse_project_lock_dependency(entry: &str, scope: Option<String>) -> Option<D
 }
 
 crate::register_parser!(
-    ".NET project.json manifest",
+    "Legacy .NET project.json manifest",
     &["**/project.json"],
     "nuget",
     "C#",

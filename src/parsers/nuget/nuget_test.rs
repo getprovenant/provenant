@@ -29,6 +29,16 @@ mod tests {
         (temp_dir, path)
     }
 
+    fn write_project_json(contents: &str) -> (TempDir, PathBuf) {
+        let temp_dir = Builder::new()
+            .prefix("nuget-project-json")
+            .tempdir()
+            .unwrap();
+        let path = temp_dir.path().join("project.json");
+        std::fs::write(&path, contents).unwrap();
+        (temp_dir, path)
+    }
+
     #[test]
     fn test_packages_config_is_match() {
         assert!(PackagesConfigParser::is_match(&PathBuf::from(
@@ -612,6 +622,48 @@ mod tests {
             package_data.dependencies[2].extra_data.as_ref().unwrap()["type"],
             "build"
         );
+    }
+
+    #[test]
+    fn test_project_json_ignores_non_nuget_gitlab_style_metadata() {
+        let json = r#"{
+  "name": "Project name",
+  "description": "Generic GitLab export fixture",
+  "import_type": "gitlab_project",
+  "creator_id": 123,
+  "visibility_level": 10,
+  "archived": false
+}"#;
+
+        let (_temp_dir, path) = write_project_json(json);
+
+        assert!(ProjectJsonParser::extract_packages(&path).is_empty());
+    }
+
+    #[test]
+    fn test_project_json_ignores_invalid_non_nuget_content() {
+        let (_temp_dir, path) = write_project_json("{\"invalid\" json}");
+
+        assert!(ProjectJsonParser::extract_packages(&path).is_empty());
+    }
+
+    #[test]
+    fn test_project_json_keeps_fallback_for_malformed_probable_nuget_manifest() {
+        let json = r#"{
+  "dependencies": {
+    "Newtonsoft.Json":
+}"#;
+
+        let (_temp_dir, path) = write_project_json(json);
+        let packages = ProjectJsonParser::extract_packages(&path);
+
+        assert_eq!(packages.len(), 1);
+        assert_eq!(
+            packages[0].datasource_id,
+            Some(DatasourceId::NugetProjectJson)
+        );
+        assert_eq!(packages[0].name, None);
+        assert!(packages[0].dependencies.is_empty());
     }
 
     #[test]
