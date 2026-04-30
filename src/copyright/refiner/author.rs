@@ -727,6 +727,9 @@ fn strip_trailing_comma_year(s: &str) -> String {
     static COMMA_YEAR_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^(?P<prefix>.+?),\s*(?P<year>19\d{2}|20\d{2})\s*$").unwrap());
     let trimmed = s.trim();
+    if looks_like_markup_data_identifier(trimmed) {
+        return s.to_string();
+    }
     if let Some(cap) = COMMA_YEAR_RE.captures(trimmed) {
         let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
         if !prefix.is_empty() && prefix.chars().any(|ch| ch.is_alphabetic()) {
