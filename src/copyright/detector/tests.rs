@@ -122,6 +122,27 @@ fn test_dash_obfuscated_email_is_kept_in_copyright() {
 }
 
 #[test]
+fn test_lowercase_username_angle_email_copyright_without_year_is_extracted() {
+    let input = "Copyright (C) kpcyrd, <kpcyrd@archlinux.org>\n";
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights.iter().any(|c| {
+            c.copyright == "Copyright (c) kpcyrd, <kpcyrd@archlinux.org>"
+                || c.copyright == "Copyright (C) kpcyrd, <kpcyrd@archlinux.org>"
+        }),
+        "copyrights: {:?}",
+        copyrights.iter().map(|c| &c.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "kpcyrd"),
+        "holders: {:?}",
+        holders.iter().map(|h| &h.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_trailing_copy_year_suffix_is_kept() {
     let input = "Copyright base-x contributors (c) 2016";
 
