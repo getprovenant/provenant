@@ -469,19 +469,9 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
             && let Some(end) = find_matching_paren(tokens, i + 1)
         {
             let inner = &tokens[i + 2..end];
-            if let Some(Tok::Ident(inner_fn)) = inner.first()
-                && inner_fn == "project"
-                && inner.len() > 1
-                && inner[1] == Tok::OpenParen
-                && let Some(project_end) = find_matching_paren(inner, 1)
-            {
-                let project_tokens = &inner[2..project_end];
-                if let Some(rd) = parse_project_ref(project_tokens, scope_name) {
-                    deps.push(rd);
-                }
-                i = end + 1;
-                continue;
-            }
+            parse_paren_content(scope_name, inner, &mut deps);
+            i = end + 1;
+            continue;
         }
 
         let scope_name = match &tokens[i] {
@@ -2553,7 +2543,7 @@ dependencies {
     }
 
     #[test]
-    fn test_kotlin_quoted_scope_not_extracted() {
+    fn test_kotlin_quoted_scope_string_dependency_extracted() {
         let content = r#"
 dependencies {
     "js"("jquery:jquery:3.2.1@js")
@@ -2561,7 +2551,12 @@ dependencies {
 "#;
         let tokens = lex(content);
         let deps = extract_dependencies(&tokens);
-        assert_eq!(deps.len(), 0);
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].scope, Some("js".to_string()));
+        assert_eq!(
+            deps[0].purl,
+            Some("pkg:maven/jquery/jquery@3.2.1%40js".to_string())
+        );
     }
 
     #[test]
@@ -2587,6 +2582,25 @@ subprojects {
                 .and_then(|data| data.get("project_path"))
                 .and_then(|value| value.as_str()),
             Some("utils:test-utils")
+        );
+    }
+
+    #[test]
+    fn test_kotlin_quoted_scope_string_dependency_with_closure_extracted() {
+        let content = r#"
+dependencies {
+    "implementation"("com.badlogicgames.gdx:gdx-tools:1.14.0") {
+        exclude("com.badlogicgames.gdx", "gdx-backend-lwjgl")
+    }
+}
+"#;
+        let tokens = lex(content);
+        let deps = extract_dependencies(&tokens);
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].scope, Some("implementation".to_string()));
+        assert_eq!(
+            deps[0].purl,
+            Some("pkg:maven/com.badlogicgames.gdx/gdx-tools@1.14.0".to_string())
         );
     }
 

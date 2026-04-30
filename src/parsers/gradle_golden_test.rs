@@ -202,6 +202,14 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_kotlin_quoted_scope() {
+        run_golden(
+            "testdata/gradle-golden/kotlin/quoted-scope/build.gradle.kts",
+            "testdata/gradle-golden/kotlin/quoted-scope/build.gradle.kts-expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_groovy_and_kotlin2() {
         run_golden(
             "testdata/gradle-golden/kotlin/groovy-and-kotlin2/build.gradle.kts",
