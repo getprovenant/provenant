@@ -300,7 +300,7 @@ pub fn extract_lowercase_username_angle_email_copyrights(
 ) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
     static USER_EMAIL_COPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"^[Cc]opyright\s*(?:\([Cc]\)\s*)?(19\d{2}|20\d{2})\s+([a-z0-9][a-z0-9_\-]{2,63})\s*<\s*([^>\s]+@[^>\s]+)\s*>\s*[\.,;:]*\s*$",
+            r"^[Cc]opyright\s*(?:\([Cc]\)\s*)?(?:(19\d{2}|20\d{2})\s+)?([a-z0-9][a-z0-9_\-]{2,63})\s*(,?)\s*<\s*([^>\s]+@[^>\s]+)\s*>\s*[\.,;:]*\s*$",
         )
         .unwrap()
     });
@@ -317,12 +317,18 @@ pub fn extract_lowercase_username_angle_email_copyrights(
 
             let year = cap.get(1).map(|m| m.as_str()).unwrap_or("").trim();
             let user = cap.get(2).map(|m| m.as_str()).unwrap_or("").trim();
-            let email = cap.get(3).map(|m| m.as_str()).unwrap_or("").trim();
-            if year.is_empty() || user.is_empty() || email.is_empty() {
+            let comma = cap.get(3).map(|m| m.as_str()).unwrap_or("").trim();
+            let email = cap.get(4).map(|m| m.as_str()).unwrap_or("").trim();
+            if user.is_empty() || email.is_empty() {
                 continue;
             }
 
-            let cr_raw = format!("Copyright (c) {year} {user} <{email}>");
+            let separator = if comma == "," { "," } else { "" };
+            let cr_raw = if year.is_empty() {
+                format!("Copyright (c) {user}{separator} <{email}>")
+            } else {
+                format!("Copyright (c) {year} {user}{separator} <{email}>")
+            };
             if let Some(cr) = refine_copyright(&cr_raw) {
                 copyrights.push(CopyrightDetection {
                     copyright: cr,
@@ -347,7 +353,7 @@ pub fn extract_lowercase_username_paren_email_copyrights(
 ) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
     static USER_EMAIL_PARENS_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"\b[Cc]opyright\s*(?:\([Cc]\)\s*)?(19\d{2}|20\d{2})\s+([a-z0-9][a-z0-9_\-]{2,63})\s*\(\s*([^\)\s]+@[^\)\s]+)\s*\)",
+            r"\b[Cc]opyright\s*(?:\([Cc]\)\s*)?(?:(19\d{2}|20\d{2})\s+)?([a-z0-9][a-z0-9_\-]{2,63})\s*\(\s*([^\)\s]+@[^\)\s]+)\s*\)",
         )
         .unwrap()
     });
@@ -361,11 +367,15 @@ pub fn extract_lowercase_username_paren_email_copyrights(
                 let year = cap.get(1).map(|m| m.as_str()).unwrap_or("").trim();
                 let user = cap.get(2).map(|m| m.as_str()).unwrap_or("").trim();
                 let email = cap.get(3).map(|m| m.as_str()).unwrap_or("").trim();
-                if year.is_empty() || user.is_empty() || email.is_empty() {
+                if user.is_empty() || email.is_empty() {
                     continue;
                 }
 
-                let cr_raw = format!("copyright {year} {user} ({email})");
+                let cr_raw = if year.is_empty() {
+                    format!("copyright {user} ({email})")
+                } else {
+                    format!("copyright {year} {user} ({email})")
+                };
                 if let Some(cr) = refine_copyright(&cr_raw) {
                     copyrights.push(CopyrightDetection {
                         copyright: cr,
