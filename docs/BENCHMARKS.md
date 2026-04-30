@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 184 of 184 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 185 of 185 recorded runs, with a **12.1× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -978,6 +978,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `21.23s`; ScanCode `84.94s`
 - Matched Composer package coverage (`40` vs `40`) and dependency extraction (`324` vs `324`) across `composer.json` and `composer.lock`, with more specific pinned dependency identities in committed fixtures, safer URL credential stripping, and Unicode-preserving author normalization
+
+##### [gitlabhq/gitlabhq @ 48dc2f5](https://github.com/gitlabhq/gitlabhq/tree/48dc2f58ef713ec3ad4ef81fb03dbb09f9933f7c) — **23.86× faster**
+
+- Files: 65,359
+- Run context: 2026-04-30 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `243.06s`; ScanCode `5798.22s`
+- Far broader dependency extraction (`9383` vs `6764`) across the repo-root `Gemfile`, the nested gemspec and `Gemfile.lock` tree, and mixed Go or npm sidecar manifests, with real gem versions resolved from local Ruby constants where ScanCode leaves placeholder `::VERSION` literals and with GitLab export `project.json` fixtures kept out of NuGet output
 
 ##### [laravel/framework @ a3960e8](https://github.com/laravel/framework/tree/a3960e8ff8ae2daa7ff609a245c51d9fe0aca684) — **7.34× faster**
 
