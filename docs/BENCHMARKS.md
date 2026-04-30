@@ -574,11 +574,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `31.31s`; ScanCode `533.84s`
 - Matched Go package coverage (`2` vs `2`) with slightly richer dependency extraction (`652` vs `651`) from vendored `mkdocs-reqs.txt` and committed Python sidecar requirements, while preserving Go module inventory parity on the root `go.mod` and `go.sum` surfaces
 
-##### [curl/curl @ 40d57c9](https://github.com/curl/curl/tree/40d57c9f588c42ed3f75fe0ba9b12aa18170a404) — **10.57× faster**
+##### [curl/curl @ 2bb5c9b](https://github.com/curl/curl/tree/2bb5c9b5552d37f08a439f2bec400009321d325c) — **14.87× faster**
 
-- Files: 4,195
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `23.00s`; ScanCode `243.12s`
+- Files: 4,266
+- Run context: 2026-04-30 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `40.75s`; ScanCode `606.05s`
 - Matched ScanCode's file-level Autotools `configure.ac` coverage while promoting one top-level Autotools package (`1` vs `0`), with the real `pkg:autotools/curl` identity instead of a generic input placeholder, plus extra Docker package and dependency visibility from the committed `Dockerfile`
 
 ##### [Debian/apt @ 6b12812](https://github.com/Debian/apt/tree/6b128124271e94bdb0f4e7850d9286170d712b04) — **15.11× faster**
