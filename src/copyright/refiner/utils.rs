@@ -221,11 +221,7 @@ pub fn strip_some_punct(s: &str) -> String {
     if s.is_empty() {
         return s.to_string();
     }
-    let s = s.trim_matches(
-        &[
-            ',', '\'', '"', '“', '”', '‘', '’', '}', '{', '-', '_', ':', ';', '&', '@', '!',
-        ][..],
-    );
+    let s = s.trim_matches(&[',', '\'', '"', '}', '{', '-', '_', ':', ';', '&', '@', '!'][..]);
     let s = s.trim_start_matches(&['.', '>', ')', ']', '\\', '/'][..]);
     let is_urlish = (s.contains("http://") || s.contains("https://") || s.contains("ftp://"))
         && s.ends_with('/');
