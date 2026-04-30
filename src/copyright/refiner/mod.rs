@@ -494,6 +494,14 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower.contains("public void")
         || lower.contains("get set")
         || lower.contains("assert.equal")
+        || lower.contains("console.writeline")
+        || lower.contains("regexoptions.")
+        || lower.contains("pass. group")
+        || lower.contains("group 0 (")
+        || lower.contains("encoding.ascii")
+        || lower.contains("clonetextcontent")
+        || lower.contains("getobjectforiunknown")
+        || contains_embedded_file_reference_prose(trimmed)
         || lower.contains("classifiers")
         || lower.contains("authors.append")
         || lower == "copyright void"
@@ -549,6 +557,14 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || lower.contains("public void")
         || lower.contains("get set")
         || lower.contains("assert.equal")
+        || lower.contains("console.writeline")
+        || lower.contains("regexoptions.")
+        || lower.contains("pass. group")
+        || lower.contains("group 0 (")
+        || lower.contains("encoding.ascii")
+        || lower.contains("clonetextcontent")
+        || lower.contains("getobjectforiunknown")
+        || contains_embedded_file_reference_prose(trimmed)
         || lower.contains("icondata")
         || lower.contains("authors.append")
         || contains_member_access_code_token(trimmed)
@@ -649,7 +665,17 @@ fn contains_generated_resource_token(s: &str) -> bool {
 fn contains_member_access_code_token(s: &str) -> bool {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
-    if lower.contains("http://") || lower.contains("https://") || lower.contains("www.") {
+    if lower.contains("http://")
+        || lower.contains("https://")
+        || lower.contains("www.")
+        || lower.contains(".com")
+        || lower.contains(".org")
+        || lower.contains(".net")
+        || lower.contains(".edu")
+        || lower.contains(".gov")
+        || lower.contains(".io")
+        || lower.contains(".dev")
+    {
         return false;
     }
 
@@ -677,6 +703,22 @@ fn contains_unicode_escape_token_run(s: &str) -> bool {
         LazyLock::new(|| Regex::new(r"(?i)\bu[0-9a-f]{4}\b").unwrap());
 
     UNICODE_ESCAPE_RE.is_match(s.trim())
+}
+
+fn contains_embedded_file_reference_prose(s: &str) -> bool {
+    static FILE_REFERENCE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\b[A-Za-z0-9_.-]+\.(?:txt|md|rst|yml|yaml|json|xml|html|cs|c|cpp|h|rs)\b")
+            .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    FILE_REFERENCE_RE.is_match(trimmed)
+        && (lower.contains("update ")
+            || lower.contains("copy of the")
+            || lower.contains("notice file")
+            || lower.contains("license file")
+            || lower.contains("provide a copy"))
 }
 
 fn contains_windows_versioninfo_token(s: &str) -> bool {

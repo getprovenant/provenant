@@ -261,6 +261,60 @@ fn test_unicode_escape_c_marker_line_is_not_detected_as_copyright_or_holder() {
 }
 
 #[test]
+fn test_regexoptions_holder_token_is_not_detected() {
+    let text = "RegexOptions.None";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_encoding_ascii_holder_token_is_not_detected() {
+    let text = "Some-Header3 Encoding.ASCII";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_api_member_access_holder_token_is_not_detected() {
+    let text = "FeedUtils.CloneTextContent";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_marshal_api_holder_token_is_not_detected() {
+    let text = "Marshal.GetObjectForIUnknown(i) ComObject obj";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_console_writeline_holder_token_is_not_detected() {
+    let text = "header Console.WriteLine $'.NET Xml Serialization Generation Utility";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_file_reference_prose_copyright_token_is_not_detected() {
+    let text = "copyright and update THIRD-PARTY-NOTICES.TXT.";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
 fn test_detect_copyright_does_not_absorb_unexpected_as_represented() {
     let text = "Copyright 1993 United States Government as represented by the\nDirector, National Security Agency.";
     let (c, h, _a) = detect_copyrights_from_text(text);
@@ -310,6 +364,23 @@ fn test_meta_sdk_license_false_positive_detector_drops_legal_prose_fragments() {
     );
     assert!(
         holder_values.contains(&"Meta Platform Technologies, LLC and its affiliates"),
+        "holders: {holder_values:#?}"
+    );
+    assert_eq!(
+        copyright_values
+            .iter()
+            .filter(|value| **value
+                == "Copyright (c) Meta Platform Technologies, LLC and its affiliates")
+            .count(),
+        1,
+        "copyrights: {copyright_values:#?}"
+    );
+    assert_eq!(
+        holder_values
+            .iter()
+            .filter(|value| **value == "Meta Platform Technologies, LLC and its affiliates")
+            .count(),
+        1,
         "holders: {holder_values:#?}"
     );
     assert!(
