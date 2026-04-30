@@ -6,6 +6,7 @@ use super::special_cases::process_directory;
 use super::spill::{FileInfoSpillStore, MemoryMode, retain_or_spill_chunk};
 use crate::license_detection::LicenseDetectionEngine;
 use crate::models::FileInfo;
+use crate::parsers::with_parser_scan_root;
 use crate::progress::ScanProgress;
 use crate::scanner::collect::CollectedPaths;
 use crate::scanner::{LicenseScanOptions, ProcessResult, TextDetectionOptions};
@@ -23,14 +24,16 @@ pub fn process_collected(
         .files
         .par_iter()
         .map(|(path, metadata)| {
-            let file_entry = process_file(
-                path,
-                metadata,
-                progress.as_ref(),
-                license_engine.clone(),
-                license_options,
-                text_options,
-            );
+            let file_entry = with_parser_scan_root(collected.scan_root(), || {
+                process_file(
+                    path,
+                    metadata,
+                    progress.as_ref(),
+                    license_engine.clone(),
+                    license_options,
+                    text_options,
+                )
+            });
             progress.file_completed(path, metadata.len(), &file_entry.scan_diagnostics);
             file_entry
         })
@@ -62,14 +65,16 @@ pub fn process_collected_sequential(
         Vec::with_capacity(collected.files.len() + collected.directories.len());
 
     for (path, metadata) in &collected.files {
-        let file_entry = process_file(
-            path,
-            metadata,
-            progress.as_ref(),
-            license_engine.clone(),
-            license_options,
-            text_options,
-        );
+        let file_entry = with_parser_scan_root(collected.scan_root(), || {
+            process_file(
+                path,
+                metadata,
+                progress.as_ref(),
+                license_engine.clone(),
+                license_options,
+                text_options,
+            )
+        });
         progress.file_completed(path, metadata.len(), &file_entry.scan_diagnostics);
         all_files.push(file_entry);
     }
@@ -114,14 +119,16 @@ pub fn process_collected_with_memory_limit(
         let processed_chunk: Vec<FileInfo> = chunk
             .par_iter()
             .map(|(path, metadata)| {
-                let file_entry = process_file(
-                    path,
-                    metadata,
-                    progress.as_ref(),
-                    license_engine.clone(),
-                    license_options,
-                    text_options,
-                );
+                let file_entry = with_parser_scan_root(collected.scan_root(), || {
+                    process_file(
+                        path,
+                        metadata,
+                        progress.as_ref(),
+                        license_engine.clone(),
+                        license_options,
+                        text_options,
+                    )
+                });
                 progress.file_completed(path, metadata.len(), &file_entry.scan_diagnostics);
                 file_entry
             })
@@ -184,14 +191,16 @@ pub fn process_collected_with_memory_limit_sequential(
     for chunk in collected.files.chunks(chunk_size) {
         let mut processed_chunk: Vec<FileInfo> = Vec::with_capacity(chunk.len());
         for (path, metadata) in chunk {
-            let file_entry = process_file(
-                path,
-                metadata,
-                progress.as_ref(),
-                license_engine.clone(),
-                license_options,
-                text_options,
-            );
+            let file_entry = with_parser_scan_root(collected.scan_root(), || {
+                process_file(
+                    path,
+                    metadata,
+                    progress.as_ref(),
+                    license_engine.clone(),
+                    license_options,
+                    text_options,
+                )
+            });
             progress.file_completed(path, metadata.len(), &file_entry.scan_diagnostics);
             processed_chunk.push(file_entry);
         }

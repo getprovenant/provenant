@@ -40,6 +40,17 @@ impl CollectedPaths {
     pub fn directory_count(&self) -> usize {
         self.directories.len()
     }
+
+    pub fn scan_root(&self) -> Option<&Path> {
+        self.directories
+            .first()
+            .map(|(path, _)| path.as_path())
+            .or_else(|| {
+                self.files
+                    .first()
+                    .and_then(|(path, _)| path.parent().or(Some(path.as_path())))
+            })
+    }
 }
 
 pub fn collect_paths<P: AsRef<Path>>(
@@ -323,5 +334,23 @@ fn merge_collected(accumulator: &mut CollectionAccumulator, collected: Collected
         if accumulator.dir_seen.insert(path.clone()) {
             accumulator.directories.push((path, metadata));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::collect_paths;
+    use std::fs;
+
+    #[test]
+    fn file_scan_root_uses_parent_directory() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let file_path = temp_dir.path().join("Directory.Packages.props");
+        fs::write(&file_path, "<Project />").expect("write props file");
+
+        let collected = collect_paths(&file_path, 0, &[]);
+        assert_eq!(collected.file_count(), 1);
+        assert_eq!(collected.directory_count(), 0);
+        assert_eq!(collected.scan_root(), Some(temp_dir.path()));
     }
 }

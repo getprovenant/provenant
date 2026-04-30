@@ -329,6 +329,7 @@ use crate::parsers::utils::MAX_ITERATION_COUNT;
 thread_local! {
     static PARSER_DIAGNOSTIC_STACK: RefCell<Vec<Vec<ScanDiagnostic>>> = const { RefCell::new(Vec::new()) };
     static PARSER_LICENSE_ENGINE_STACK: RefCell<Vec<Option<Arc<LicenseDetectionEngine>>>> = const { RefCell::new(Vec::new()) };
+    static PARSER_SCAN_ROOT_STACK: RefCell<Vec<Option<std::path::PathBuf>>> = const { RefCell::new(Vec::new()) };
 }
 
 #[derive(Debug, Default)]
@@ -410,6 +411,21 @@ where
 
 pub(crate) fn active_parser_license_engine() -> Option<Arc<LicenseDetectionEngine>> {
     PARSER_LICENSE_ENGINE_STACK.with(|stack| stack.borrow().last().cloned().flatten())
+}
+
+pub(crate) fn active_parser_scan_root() -> Option<std::path::PathBuf> {
+    PARSER_SCAN_ROOT_STACK.with(|stack| stack.borrow().last().cloned().flatten())
+}
+
+pub(crate) fn with_parser_scan_root<T>(scan_root: Option<&Path>, f: impl FnOnce() -> T) -> T {
+    PARSER_SCAN_ROOT_STACK.with(|stack| {
+        stack.borrow_mut().push(scan_root.map(Path::to_path_buf));
+    });
+    let result = f();
+    PARSER_SCAN_ROOT_STACK.with(|stack| {
+        stack.borrow_mut().pop();
+    });
+    result
 }
 
 pub(crate) fn record_parser_diagnostic(message: String, severity: DiagnosticSeverity) -> bool {
