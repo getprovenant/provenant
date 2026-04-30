@@ -1624,6 +1624,20 @@ fn test_refine_holder_drops_compare_triage_code_fragments() {
 }
 
 #[test]
+fn test_refine_holder_drops_translation_and_placeholder_labels() {
+    assert_eq!(refine_holder("trademark msgstr"), None);
+    assert_eq!(refine_holder("trademark violation msgstr"), None);
+    assert_eq!(refine_holder("project"), None);
+    assert_eq!(refine_holder("placeholder"), None);
+}
+
+#[test]
+fn test_refine_holder_drops_lowercase_enum_blobs() {
+    assert_eq!(refine_holder("malware 7, other"), None);
+    assert_eq!(refine_holder("copyright 6, malware 7, other"), None);
+}
+
+#[test]
 fn test_refine_holder_keeps_plain_dotted_org_names() {
     assert_eq!(refine_holder("abc.org"), Some("abc.org".to_string()));
     assert_eq!(refine_holder("ibm.com"), Some("ibm.com".to_string()));
@@ -1667,6 +1681,16 @@ fn test_refine_copyright_strips_trailing_batch_comment_marker() {
 fn test_refine_copyright_drops_compare_triage_code_fragments() {
     assert!(is_junk_copyright("(c) contributor, path"));
     assert!(is_junk_copyright("(c) final cProvider"));
+}
+
+#[test]
+fn test_refine_copyright_drops_c_sign_code_expressions() {
+    assert_eq!(refine_copyright("(c) c.filePath, c"), None);
+    assert_eq!(
+        refine_copyright("(c) puts Candidate foundational flow changes"),
+        None
+    );
+    assert_eq!(refine_copyright("(c) and I have not modified it"), None);
 }
 
 // ── refine_author ────────────────────────────────────────────────
@@ -1858,6 +1882,24 @@ fn test_refine_author_keeps_name_with_parenthesized_url() {
 #[test]
 fn test_refine_author_drops_the_current_user_phrase() {
     assert_eq!(refine_author("the current user"), None);
+}
+
+#[test]
+fn test_refine_author_drops_generic_field_labels_and_template_tokens() {
+    assert_eq!(refine_author("current_user"), None);
+    assert_eq!(refine_author("username"), None);
+    assert_eq!(refine_author("created-at"), None);
+    assert_eq!(refine_author("gl-link"), None);
+}
+
+#[test]
+fn test_refine_author_drops_code_call_and_graphql_fragments() {
+    assert_eq!(refine_author("params.delete(:author)"), None);
+    assert_eq!(
+        refine_author("expand_author_with_user_emails(author)"),
+        None
+    );
+    assert_eq!(refine_author("UserWithType ...UserAvailability"), None);
 }
 
 #[test]
