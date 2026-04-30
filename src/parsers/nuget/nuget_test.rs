@@ -1098,7 +1098,9 @@ mod tests {
         )
         .unwrap();
 
-        let package_data = CentralPackageManagementPropsParser::extract_first_package(&child_props);
+        let package_data = crate::parsers::with_parser_scan_root(Some(temp_dir.path()), || {
+            CentralPackageManagementPropsParser::extract_first_package(&child_props)
+        });
         assert_eq!(package_data.dependencies.len(), 1);
         assert_eq!(
             package_data.dependencies[0]
@@ -1123,6 +1125,120 @@ mod tests {
                 "$([MSBuild]::GetPathOfFileAbove(Directory.Packages.props, $(MSBuildThisFileDirectory)..))"
             )
         );
+    }
+
+    #[test]
+    fn test_directory_packages_props_respects_active_scan_root_for_parent_imports() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let root_props = temp_dir.path().join("Directory.Packages.props");
+        std::fs::write(
+            &root_props,
+            r#"<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <NewtonsoftJsonVersion>13.0.3</NewtonsoftJsonVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+  </ItemGroup>
+</Project>"#,
+        )
+        .unwrap();
+
+        let child_dir = temp_dir.path().join("src");
+        std::fs::create_dir_all(&child_dir).unwrap();
+        let child_props = child_dir.join("Directory.Packages.props");
+        std::fs::write(
+            &child_props,
+            r#"<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove(Directory.Packages.props, $(MSBuildThisFileDirectory)..))" />
+</Project>"#,
+        )
+        .unwrap();
+
+        let package_data = crate::parsers::with_parser_scan_root(Some(&child_dir), || {
+            CentralPackageManagementPropsParser::extract_first_package(&child_props)
+        });
+        assert!(package_data.dependencies.is_empty());
+    }
+
+    #[test]
+    fn test_directory_packages_props_resolves_composed_property_versions() {
+        let xml = r#"<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <VersionPrefix>1.4.0</VersionPrefix>
+    <VersionSuffix>preview.3</VersionSuffix>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="$(VersionPrefix)-$(VersionSuffix)" />
+  </ItemGroup>
+</Project>"#;
+
+        let (_temp_dir, path) = write_directory_packages_props(xml);
+
+        let package_data = CentralPackageManagementPropsParser::extract_first_package(&path);
+        assert_eq!(package_data.dependencies.len(), 1);
+        let dep = &package_data.dependencies[0];
+        assert_eq!(dep.purl.as_deref(), Some("pkg:nuget/Newtonsoft.Json"));
+        assert_eq!(
+            dep.extracted_requirement.as_deref(),
+            Some("1.4.0-preview.3")
+        );
+        let extra = dep.extra_data.as_ref().unwrap();
+        assert_eq!(
+            extra
+                .get("version_expression")
+                .and_then(|value| value.as_str()),
+            Some("$(VersionPrefix)-$(VersionSuffix)")
+        );
+    }
+
+    #[test]
+    fn test_directory_packages_props_resolves_optional_suffix_composition() {
+        let xml = r#"<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <RegorusPackageVersion>0.9.1</RegorusPackageVersion>
+    <RegorusPackageVersionSuffix Condition="'$(VersionSuffix)' != ''">-$(VersionSuffix)</RegorusPackageVersionSuffix>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.Regorus" Version="$(RegorusPackageVersion)$(RegorusPackageVersionSuffix)" />
+  </ItemGroup>
+</Project>"#;
+
+        let (_temp_dir, path) = write_directory_packages_props(xml);
+
+        let package_data = CentralPackageManagementPropsParser::extract_first_package(&path);
+        assert_eq!(package_data.dependencies.len(), 1);
+        let dep = &package_data.dependencies[0];
+        assert_eq!(dep.purl.as_deref(), Some("pkg:nuget/Microsoft.Regorus"));
+        assert_eq!(dep.extracted_requirement.as_deref(), Some("0.9.1"));
+        let extra = dep.extra_data.as_ref().unwrap();
+        assert_eq!(
+            extra
+                .get("version_expression")
+                .and_then(|value| value.as_str()),
+            Some("$(RegorusPackageVersion)$(RegorusPackageVersionSuffix)")
+        );
+    }
+
+    #[test]
+    fn test_directory_packages_props_leaves_partially_unresolved_composed_versions_empty() {
+        let xml = r#"<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <VersionPrefix>1.4.0</VersionPrefix>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="$(VersionPrefix)-$(VersionSuffix)" />
+  </ItemGroup>
+</Project>"#;
+
+        let (_temp_dir, path) = write_directory_packages_props(xml);
+
+        let package_data = CentralPackageManagementPropsParser::extract_first_package(&path);
+        assert!(package_data.dependencies.is_empty());
     }
 
     #[test]
@@ -1154,7 +1270,9 @@ mod tests {
         )
         .unwrap();
 
-        let package_data = DirectoryBuildPropsParser::extract_first_package(&child_props);
+        let package_data = crate::parsers::with_parser_scan_root(Some(temp_dir.path()), || {
+            DirectoryBuildPropsParser::extract_first_package(&child_props)
+        });
         assert_eq!(package_data.package_type, Some(PackageType::Nuget));
         assert_eq!(
             package_data.datasource_id,
@@ -1259,7 +1377,7 @@ mod tests {
     }
 
     #[test]
-    fn test_directory_packages_props_ignores_non_cpm_import_targets() {
+    fn test_directory_packages_props_extracts_versions_from_imported_props_files() {
         let temp_dir = tempfile::tempdir().unwrap();
         let build_props = temp_dir.path().join("Directory.Build.props");
         std::fs::write(
@@ -1289,14 +1407,149 @@ mod tests {
         )
         .unwrap();
 
-        let package_data = CentralPackageManagementPropsParser::extract_first_package(&child_props);
-        assert_eq!(package_data.dependencies.len(), 0);
+        let package_data = crate::parsers::with_parser_scan_root(Some(temp_dir.path()), || {
+            CentralPackageManagementPropsParser::extract_first_package(&child_props)
+        });
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:nuget/Newtonsoft.Json")
+        );
+        assert_eq!(
+            package_data.dependencies[0]
+                .extracted_requirement
+                .as_deref(),
+            Some("13.0.3")
+        );
         assert!(
             package_data
                 .extra_data
                 .as_ref()
                 .and_then(|data| data.get("import_projects"))
-                .is_none()
+                .and_then(|value| value.as_array())
+                .is_some_and(|values| !values.is_empty())
+        );
+    }
+
+    #[test]
+    fn test_directory_packages_props_extracts_versions_from_msbuild_this_file_directory_imports() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let packages_dir = temp_dir.path().join("eng").join("packages");
+        std::fs::create_dir_all(&packages_dir).unwrap();
+        let general_props = packages_dir.join("General.props");
+        std::fs::write(
+            &general_props,
+            r#"<Project>
+  <PropertyGroup>
+    <ManageVersions>true</ManageVersions>
+    <NewtonsoftJsonVersion>13.0.3</NewtonsoftJsonVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+  </ItemGroup>
+</Project>"#,
+        )
+        .unwrap();
+
+        let root_props = temp_dir.path().join("Directory.Packages.props");
+        std::fs::write(
+            &root_props,
+            r#"<Project>
+  <Import Project="$(MSBuildThisFileDirectory)\eng\packages\General.props" />
+</Project>"#,
+        )
+        .unwrap();
+
+        let package_data = crate::parsers::with_parser_scan_root(Some(temp_dir.path()), || {
+            CentralPackageManagementPropsParser::extract_first_package(&root_props)
+        });
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:nuget/Newtonsoft.Json")
+        );
+        assert_eq!(
+            package_data.dependencies[0]
+                .extracted_requirement
+                .as_deref(),
+            Some("13.0.3")
+        );
+        assert_eq!(
+            package_data
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("import_projects"))
+                .and_then(|value| value.as_array())
+                .and_then(|values| values.first())
+                .and_then(|value| value.as_str()),
+            Some("$(MSBuildThisFileDirectory)\\eng\\packages\\General.props")
+        );
+    }
+
+    #[test]
+    fn test_directory_packages_props_does_not_follow_external_props_imports() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let external_dir = tempfile::tempdir().unwrap();
+        let external_props = external_dir.path().join("General.props");
+        std::fs::write(
+            &external_props,
+            r#"<Project>
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>"#,
+        )
+        .unwrap();
+
+        let root_props = temp_dir.path().join("Directory.Packages.props");
+        std::fs::write(
+            &root_props,
+            format!(
+                "<Project>\n  <Import Project=\"{}\" />\n</Project>",
+                external_props.display()
+            ),
+        )
+        .unwrap();
+
+        let package_data = CentralPackageManagementPropsParser::extract_first_package(&root_props);
+        assert!(package_data.dependencies.is_empty());
+    }
+
+    #[test]
+    fn test_directory_build_props_does_not_follow_external_props_imports() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let external_dir = tempfile::tempdir().unwrap();
+        let external_props = external_dir.path().join("General.props");
+        std::fs::write(
+            &external_props,
+            r#"<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>"#,
+        )
+        .unwrap();
+
+        let root_props = temp_dir.path().join("Directory.Build.props");
+        std::fs::write(
+            &root_props,
+            format!(
+                "<Project>\n  <Import Project=\"{}\" />\n</Project>",
+                external_props.display()
+            ),
+        )
+        .unwrap();
+
+        let package_data = DirectoryBuildPropsParser::extract_first_package(&root_props);
+        let extra_data = package_data
+            .extra_data
+            .as_ref()
+            .expect("missing extra_data");
+        assert!(
+            extra_data
+                .get("property_values")
+                .and_then(|value| value.as_object())
+                .is_none_or(|map| map.is_empty())
         );
     }
 

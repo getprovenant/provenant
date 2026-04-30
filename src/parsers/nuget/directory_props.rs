@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
+use crate::parsers::active_parser_scan_root;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 
@@ -28,8 +29,9 @@ impl PackageParser for DirectoryBuildPropsParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
+        let allowed_root = detect_props_resolution_root(path);
         vec![match (
-            resolve_directory_build_props(path, &mut RecursionGuard::new()),
+            resolve_directory_build_props(path, &allowed_root, &mut RecursionGuard::new()),
             parse_directory_build_props_file(path),
         ) {
             (Ok(data), Ok(raw)) => build_directory_build_props_package_data(data, raw),
@@ -49,8 +51,9 @@ impl PackageParser for CentralPackageManagementPropsParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
+        let allowed_root = detect_props_resolution_root(path);
         vec![match (
-            resolve_directory_packages_props(path, &mut RecursionGuard::new()),
+            resolve_directory_packages_props(path, &allowed_root, &mut RecursionGuard::new()),
             parse_directory_packages_props_file(path),
         ) {
             (Ok(data), Ok(raw)) => build_directory_packages_package_data(data, raw),
@@ -147,6 +150,7 @@ fn build_directory_packages_dependency(
 
 fn resolve_directory_packages_props(
     path: &Path,
+    allowed_root: &Path,
     guard: &mut RecursionGuard<PathBuf>,
 ) -> Result<CentralPackagePropsData, String> {
     if guard.exceeded() {
@@ -165,12 +169,15 @@ fn resolve_directory_packages_props(
     let mut merged = CentralPackagePropsData::default();
 
     for import_project in &raw.import_projects {
-        let Some(import_path) =
-            resolve_import_project_for_directory_packages(path, import_project, &HashMap::new())
-        else {
+        let Some(import_path) = resolve_import_project_for_directory_packages(
+            path,
+            import_project,
+            allowed_root,
+            &HashMap::new(),
+        ) else {
             continue;
         };
-        let imported = resolve_directory_packages_props(&import_path, guard)?;
+        let imported = resolve_directory_packages_props(&import_path, allowed_root, guard)?;
         merge_central_package_props(&mut merged, imported);
     }
 
@@ -219,6 +226,7 @@ fn resolve_directory_packages_props(
 
 fn resolve_directory_build_props(
     path: &Path,
+    allowed_root: &Path,
     guard: &mut RecursionGuard<PathBuf>,
 ) -> Result<BuildPropsData, String> {
     if guard.exceeded() {
@@ -237,12 +245,15 @@ fn resolve_directory_build_props(
     let mut merged = BuildPropsData::default();
 
     for import_project in &raw.import_projects {
-        let Some(import_path) =
-            resolve_import_project_for_directory_build(path, import_project, &HashMap::new())
-        else {
+        let Some(import_path) = resolve_import_project_for_directory_build(
+            path,
+            import_project,
+            allowed_root,
+            &HashMap::new(),
+        ) else {
             continue;
         };
-        let imported = resolve_directory_build_props(&import_path, guard)?;
+        let imported = resolve_directory_build_props(&import_path, allowed_root, guard)?;
         merge_build_props_data(&mut merged, imported);
     }
 
@@ -744,7 +755,7 @@ fn is_supported_directory_packages_import(project: &str) -> bool {
     }
 
     let candidate = PathBuf::from(trimmed);
-    candidate.file_name().and_then(|name| name.to_str()) == Some("Directory.Packages.props")
+    candidate.extension().and_then(|ext| ext.to_str()) == Some("props")
 }
 
 fn is_supported_directory_build_import(project: &str) -> bool {
@@ -758,7 +769,7 @@ fn is_supported_directory_build_import(project: &str) -> bool {
     }
 
     let candidate = PathBuf::from(trimmed);
-    candidate.file_name().and_then(|name| name.to_str()) == Some("Directory.Build.props")
+    candidate.extension().and_then(|ext| ext.to_str()) == Some("props")
 }
 
 fn is_get_path_of_file_above_import(project: &str) -> bool {
@@ -776,6 +787,7 @@ fn is_get_path_of_file_above_build_import(project: &str) -> bool {
 fn resolve_import_project_for_directory_build(
     current_path: &Path,
     project: &str,
+    allowed_root: &Path,
     known_props_paths: &HashMap<PathBuf, &PackageData>,
 ) -> Option<PathBuf> {
     let trimmed = project.trim();
@@ -783,12 +795,13 @@ fn resolve_import_project_for_directory_build(
         let start_dir = current_path.parent()?.parent()?;
         for ancestor in start_dir.ancestors() {
             let candidate = ancestor.join("Directory.Build.props");
-            if known_props_paths.is_empty() {
-                if candidate.exists() {
-                    return Some(candidate);
-                }
-            } else if known_props_paths.contains_key(&candidate) {
-                return Some(candidate);
+            if let Some(resolved) = resolve_checked_props_import(
+                candidate,
+                current_path,
+                allowed_root,
+                known_props_paths,
+            ) {
+                return Some(resolved);
             }
         }
         return None;
@@ -798,25 +811,8 @@ fn resolve_import_project_for_directory_build(
         return None;
     }
 
-    let candidate = PathBuf::from(trimmed);
-    if candidate.is_absolute() {
-        if known_props_paths.is_empty() {
-            candidate.exists().then_some(candidate)
-        } else {
-            known_props_paths
-                .contains_key(&candidate)
-                .then_some(candidate)
-        }
-    } else {
-        let resolved = current_path.parent()?.join(candidate);
-        if known_props_paths.is_empty() {
-            resolved.exists().then_some(resolved)
-        } else {
-            known_props_paths
-                .contains_key(&resolved)
-                .then_some(resolved)
-        }
-    }
+    let candidate = resolve_msbuild_props_import_path(current_path, trimmed)?;
+    resolve_checked_props_import(candidate, current_path, allowed_root, known_props_paths)
 }
 
 fn merge_build_props_data(target: &mut BuildPropsData, source: BuildPropsData) {
@@ -838,6 +834,7 @@ fn merge_build_props_data(target: &mut BuildPropsData, source: BuildPropsData) {
 fn resolve_import_project_for_directory_packages(
     current_path: &Path,
     project: &str,
+    allowed_root: &Path,
     known_props_paths: &HashMap<PathBuf, &PackageData>,
 ) -> Option<PathBuf> {
     let trimmed = project.trim();
@@ -845,12 +842,13 @@ fn resolve_import_project_for_directory_packages(
         let start_dir = current_path.parent()?.parent()?;
         for ancestor in start_dir.ancestors() {
             let candidate = ancestor.join("Directory.Packages.props");
-            if known_props_paths.is_empty() {
-                if candidate.exists() {
-                    return Some(candidate);
-                }
-            } else if known_props_paths.contains_key(&candidate) {
-                return Some(candidate);
+            if let Some(resolved) = resolve_checked_props_import(
+                candidate,
+                current_path,
+                allowed_root,
+                known_props_paths,
+            ) {
+                return Some(resolved);
             }
         }
         return None;
@@ -860,25 +858,53 @@ fn resolve_import_project_for_directory_packages(
         return None;
     }
 
-    let candidate = PathBuf::from(trimmed);
-    if candidate.is_absolute() {
-        if known_props_paths.is_empty() {
-            candidate.exists().then_some(candidate)
-        } else {
-            known_props_paths
-                .contains_key(&candidate)
-                .then_some(candidate)
-        }
+    let candidate = resolve_msbuild_props_import_path(current_path, trimmed)?;
+    resolve_checked_props_import(candidate, current_path, allowed_root, known_props_paths)
+}
+
+fn resolve_msbuild_props_import_path(current_path: &Path, project: &str) -> Option<PathBuf> {
+    let current_dir = current_path.parent()?;
+    let current_dir_prefix = format!("{}{}", current_dir.display(), std::path::MAIN_SEPARATOR);
+    let normalized = project
+        .replace("$(MSBuildThisFileDirectory)", &current_dir_prefix)
+        .replace('\\', "/");
+    Some(PathBuf::from(normalized.trim()))
+}
+
+fn resolve_checked_props_import(
+    candidate: PathBuf,
+    current_path: &Path,
+    allowed_root: &Path,
+    known_props_paths: &HashMap<PathBuf, &PackageData>,
+) -> Option<PathBuf> {
+    let resolved = if candidate.is_absolute() {
+        candidate
     } else {
-        let resolved = current_path.parent()?.join(candidate);
-        if known_props_paths.is_empty() {
-            resolved.exists().then_some(resolved)
-        } else {
-            known_props_paths
-                .contains_key(&resolved)
-                .then_some(resolved)
-        }
+        current_path.parent()?.join(candidate)
+    };
+
+    let canonical_allowed_root = allowed_root.canonicalize().ok()?;
+    let canonical_resolved = resolved.canonicalize().ok()?;
+    if !canonical_resolved.starts_with(&canonical_allowed_root) {
+        return None;
     }
+
+    if known_props_paths.is_empty() {
+        Some(canonical_resolved)
+    } else {
+        known_props_paths
+            .contains_key(&canonical_resolved)
+            .then_some(canonical_resolved)
+    }
+}
+
+fn detect_props_resolution_root(path: &Path) -> PathBuf {
+    if let Some(scan_root) = active_parser_scan_root() {
+        return scan_root;
+    }
+    path.parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| path.to_path_buf())
 }
 
 crate::register_parser!(
