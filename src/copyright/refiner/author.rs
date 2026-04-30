@@ -60,6 +60,10 @@ pub fn refine_author(s: &str) -> Option<String> {
         return None;
     }
 
+    if looks_like_translation_placeholder_author(&a) {
+        return None;
+    }
+
     if !a.chars().any(|ch| ch.is_alphabetic()) {
         return None;
     }
@@ -290,12 +294,39 @@ fn looks_like_file_reference_note_author(s: &str) -> bool {
         )
         .unwrap()
     });
+    static CREDIT_FILE_REFERENCE_NOTE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^
+            (?:see|see\ also|refer\ to|consult)
+            \s+
+            (?:the\s+)?
+            (?:authors?|credits?)
+            \s+file
+            $
+            ",
+        )
+        .unwrap()
+    });
 
     let trimmed = s.trim();
+    if CREDIT_FILE_REFERENCE_NOTE_RE.is_match(trimmed) {
+        return true;
+    }
     FILE_REFERENCE_NOTE_RE
         .captures(trimmed)
         .and_then(|caps| caps.name("target").map(|m| m.as_str()))
         .is_some_and(|target| target.chars().any(|ch| ch.is_ascii_alphabetic()))
+}
+
+fn looks_like_translation_placeholder_author(s: &str) -> bool {
+    static AUTHOR_PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?iu)^[\p{L}\p{M}][\p{L}\p{M}\s._'-]{0,32}[:：]\s*author$")
+            .expect("valid translation author placeholder regex")
+    });
+
+    let trimmed = s.trim();
+    trimmed.eq_ignore_ascii_case("Requires translation") || AUTHOR_PLACEHOLDER_RE.is_match(trimmed)
 }
 
 fn contains_no_copyright_clause(s: &str) -> bool {

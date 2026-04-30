@@ -139,6 +139,14 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
         refine_author("Flutter and Dart have told us they plan to work contributors"),
         None
     );
+    assert_eq!(refine_author("Requires translation"), None);
+    assert_eq!(refine_author("Autor: author"), None);
+    assert_eq!(refine_author("Auctor: author"), None);
+    assert_eq!(refine_author("See AUTHORS file"), None);
+    assert_eq!(
+        refine_author("Author: Jane Doe"),
+        Some("Jane Doe".to_string())
+    );
 }
 
 #[test]
@@ -147,6 +155,16 @@ fn test_refine_holder_discards_symbol_table_run_junk() {
         refine_holder("(r), & 175, & 176, & 177, & 178, & 179, & 180, & 181, & 182, & 183"),
         None
     );
+}
+
+#[test]
+fn test_refine_holder_drops_authors_file_reference_note() {
+    assert_eq!(refine_holder("See AUTHORS file"), None);
+}
+
+#[test]
+fn test_refine_holder_drops_document_form_reference_noise() {
+    assert_eq!(refine_holder("Office FL-108"), None);
 }
 
 // ── strip_some_punct ─────────────────────────────────────────────
@@ -467,6 +485,19 @@ fn test_refine_copyright_keeps_confidential_and_proprietary_phrase() {
         result,
         Some("(c) Example Corp. and affiliates. Confidential and proprietary".to_string())
     );
+}
+
+#[test]
+fn test_refine_copyright_strips_trailing_authors_file_reference_clause() {
+    assert_eq!(
+        refine_copyright("Copyright 2015 See AUTHORS file"),
+        Some("Copyright 2015".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_drops_document_form_reference_noise() {
+    assert_eq!(refine_copyright("Copyright Office FL-108"), None);
 }
 
 #[test]

@@ -881,6 +881,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_inc_after_today_year_placeholder(&c);
     c = truncate_trailing_boilerplate(&c);
     c = strip_trailing_author_label(&c);
+    c = strip_trailing_credit_file_reference_clause(&c);
     c = strip_trailing_isc_after_inc(&c);
     c = strip_trailing_caps_after_company_suffix(&c);
     c = strip_trailing_javadoc_tags(&c);
@@ -938,6 +939,9 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     {
         return None;
     }
+    if looks_like_document_form_reference(&result) {
+        return None;
+    }
     if is_post_refine_copyright_code_fragment(&result)
         || is_junk_copyright_of_header(&result)
         || is_junk_copyrighted_works_header(&result)
@@ -989,6 +993,64 @@ fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
     }
 
     prefix.to_string()
+}
+
+fn strip_trailing_credit_file_reference_clause(s: &str) -> String {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !(lower.starts_with("copyright") || lower.starts_with("(c)")) {
+        return s.to_string();
+    }
+
+    for marker in [
+        " see authors file",
+        " see author file",
+        " see credits file",
+        " see credit file",
+        " refer to authors file",
+        " refer to credits file",
+        " consult authors file",
+        " consult credits file",
+    ] {
+        if let Some(index) = lower.find(marker) {
+            let prefix = trimmed[..index]
+                .trim_end_matches(&[',', ';', ':', ' '][..])
+                .trim();
+            if prefix.chars().any(|ch| ch.is_ascii_digit()) {
+                return prefix.to_string();
+            }
+        }
+    }
+
+    s.to_string()
+}
+
+fn looks_like_credit_file_reference_note(s: &str) -> bool {
+    static CREDIT_FILE_REFERENCE_NOTE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^
+            (?:see|see\ also|refer\ to|consult)
+            \s+
+            (?:the\s+)?
+            (?:authors?|credits?)
+            \s+file
+            $
+            ",
+        )
+        .unwrap()
+    });
+
+    CREDIT_FILE_REFERENCE_NOTE_RE.is_match(s.trim())
+}
+
+fn looks_like_document_form_reference(s: &str) -> bool {
+    static DOCUMENT_FORM_REFERENCE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?:copyright\s+)?office\s+[A-Z]{1,6}-\d{1,6}[A-Z]?$")
+            .expect("valid document form reference regex")
+    });
+
+    DOCUMENT_FORM_REFERENCE_RE.is_match(s.trim())
 }
 
 fn strip_trailing_secondary_angle_email_after_comma(s: &str) -> String {
@@ -2064,6 +2126,10 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_single_digit_token(&h);
     h = strip_trailing_period(&h);
     h = h.trim().to_string();
+
+    if looks_like_credit_file_reference_note(&h) || looks_like_document_form_reference(&h) {
+        return None;
+    }
 
     let lower = h.to_lowercase();
     if h.trim_end_matches('.').eq_ignore_ascii_case("YOUR NAME") {
