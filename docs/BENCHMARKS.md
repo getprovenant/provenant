@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 182 of 182 recorded runs, with a **11.8× median speedup** and **11.1× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 183 of 183 recorded runs, with a **11.9× median speedup** and **11.1× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -914,12 +914,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `38.15s`; ScanCode `379.55s`
 - Broader .NET/NuGet package and dependency extraction (`105` vs `3` packages, `145` vs `33` dependencies) from many `*.csproj` files plus `Directory.Packages.props` and `Directory.Build.props` across samples, tooling, and test projects, with zero scan errors where ScanCode trips on `TwitterColorEmoji-SVGinOT.ttf`
 
-##### [dotnet/extensions @ 7171956](https://github.com/dotnet/extensions/tree/7171956b4fbafdd5e44ca8ca1ceed72c0d6bbb66) — **15.95× faster**
+##### [dotnet/extensions @ 7171956](https://github.com/dotnet/extensions/tree/7171956b4fbafdd5e44ca8ca1ceed72c0d6bbb66) — **19.08× faster**
 
 - Files: 3,643
-- Run context: 2026-04-30 · extensions-60029 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `32.94s`; ScanCode `525.35s`
-- Broader .NET/NuGet package and dependency extraction (`162` vs `2` packages, `1161` vs `690` dependencies) across many `*.csproj` files, `Directory.Packages.props`, `Directory.Build.props`, and imported `eng/packages/*.props` central-version surfaces, with Unicode-preserving holder normalization and safer URL normalization across notices and docs
+- Run context: 2026-04-30 · extensions-9749 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `27.54s`; ScanCode `525.35s`
+- Broader .NET/NuGet package and dependency extraction (`162` vs `2` packages, `1161` vs `690` dependencies) across many `*.csproj` files, `Directory.Packages.props`, `Directory.Build.props`, and imported `eng/packages/*.props` / `Tests.props` / `Tools.props` central-version surfaces, with root and nested central package manifests carrying resolved package-version dependency metadata instead of empty imported-props placeholders
 
 ##### [dotnet/runtime @ d1163e5](https://github.com/dotnet/runtime/tree/d1163e5a8f3f3aaa374993e8b5805911689aba28) — **31.49× faster**
 
@@ -934,6 +934,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `54.99s`; ScanCode `1313.69s`
 - Broader mixed-repository package and dependency extraction (`45` vs `1` packages, `3607` vs `80` dependencies) from `cmake/vcpkg.json` plus committed `cmake/vcpkg-ports/*/vcpkg.json` manifests, with the large `package-lock.json` license-count gap reduced with any residual license delta concentrated in ONNX model fixtures that still stay scan-error-free and explicit vcpkg package identities where ScanCode stays manifest-blind
+
+##### [microsoft/regorus @ 7f42115](https://github.com/microsoft/regorus/tree/7f42115b6338999efd13916e89b81ac278bc6273) — **13.37× faster**
+
+- Files: 1,121
+- Run context: 2026-04-30 · regorus-348 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `16.29s`; ScanCode `217.76s`
+- Broader mixed Rust/.NET/Ruby package and dependency extraction (`19` vs `14` packages, `1253` vs `1238` dependencies) across committed `bindings/csharp/Directory.Packages.props`, consumer `*.csproj`, and Ruby sidecar manifests, with resolved `Microsoft.Regorus` central package version `0.9.1` propagated from same-file property composition instead of leaving the CPM expression unresolved
 
 ##### [microsoft/terminal @ 84ae7ad](https://github.com/microsoft/terminal/tree/84ae7adec6b3975314d8ca73d8f0bf2128ae59e2) — **14.55× faster**
 
