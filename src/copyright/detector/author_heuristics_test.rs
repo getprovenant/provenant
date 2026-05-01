@@ -183,6 +183,34 @@ fn test_extract_toml_singular_author_array_with_handle() {
 }
 
 #[test]
+fn test_extract_toml_singular_author_array_with_comma_handle_suffix() {
+    let input = "authors = [\"RustCrypto Developers, zer0x64\"]\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors.iter().any(|a| a.author == "RustCrypto Developers"),
+        "authors: {authors:?}"
+    );
+    assert!(
+        !authors
+            .iter()
+            .any(|a| a.author == "RustCrypto Developers, zer0x64"),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
+fn test_extract_toml_singular_author_array_keeps_company_suffix() {
+    let input = "authors = [\"Jane Street Group, LLC\"]\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors.iter().any(|a| a.author == "Jane Street Group, LLC"),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_extract_created_by_author_with_handle() {
     let input = "Created by Tom Breloff (@tbreloff)\n";
     let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);

@@ -102,6 +102,7 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
     assert_eq!(refine_author("review"), None);
     assert_eq!(refine_author("reviewer"), None);
     assert_eq!(refine_author("volunteers"), None);
+    assert_eq!(refine_author("Automatically generated"), None);
     assert_eq!(refine_author("Guide"), None);
     assert_eq!(refine_author("maintainers with write access"), None);
     assert_eq!(refine_author("schedule and monitor workflows"), None);
@@ -711,6 +712,19 @@ fn test_refine_copyright_keeps_plain_email_after_comma() {
     assert_eq!(
         result,
         Some("Parts (c) 1999 David Airlie, airlied@linux.ie".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_keeps_year_range_angle_email_suffix() {
+    let result = refine_copyright(
+        "Copyright (c) 2021-2023 Sebastian Ramacher <sebastian.ramacher@ait.ac.at>",
+    );
+    assert_eq!(
+        result,
+        Some(
+            "Copyright (c) 2021-2023 Sebastian Ramacher <sebastian.ramacher@ait.ac.at>".to_string()
+        )
     );
 }
 
