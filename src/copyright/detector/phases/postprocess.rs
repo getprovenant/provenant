@@ -151,6 +151,14 @@ fn run_author_extraction_and_repairs(
     seen.dedup_new_authors(&mut new_a, 0);
     authors.extend(new_a);
 
+    let mut new_a = super::author_heuristics::extract_plaintext_roster_by_authors(prepared_cache);
+    seen.dedup_new_authors(&mut new_a, 0);
+    authors.extend(new_a);
+
+    let mut new_a = super::author_heuristics::extract_written_on_top_of_by_authors(content);
+    seen.dedup_new_authors(&mut new_a, 0);
+    authors.extend(new_a);
+
     let mut new_a = super::author_heuristics::extract_json_excerpt_developed_by_authors(content);
     seen.dedup_new_authors(&mut new_a, 0);
     authors.extend(new_a);

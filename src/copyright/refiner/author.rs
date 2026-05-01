@@ -27,6 +27,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = strip_trailing_comma_year(&a);
     a = strip_trailing_comma_month_year(&a);
     a = strip_trailing_comma_email_matching_name(&a);
+    a = truncate_trailing_clause_after_contact(&a);
     a = strip_trailing_comma_and(&a);
     a = truncate_bug_reports_clause(&a);
     a = truncate_caller_specificaly_clause(&a);
@@ -1025,6 +1026,39 @@ fn strip_trailing_comma_email_matching_name(s: &str) -> String {
 
     if !name_key.is_empty() && (local_key == name_key || local_key.contains(&name_key)) {
         return name.to_string();
+    }
+
+    s.to_string()
+}
+
+fn truncate_trailing_clause_after_contact(s: &str) -> String {
+    static CONTACT_TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"^(?P<prefix>.+?(?:<[^>\s]+@[^>\s]+>|\((?:[^\)\s]+@[^\)\s]+|https?://[^\)\s]+)\)))\s*(?:\.\s*|\s+)(?P<tail>.+)$",
+        )
+        .expect("valid contact-tail truncation regex")
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = CONTACT_TAIL_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    let tail = cap.name("tail").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || tail.is_empty() {
+        return s.to_string();
+    }
+
+    let tail_lower = tail.to_ascii_lowercase();
+    let prose_like_tail = [
+        "the ", "a ", "an ", "i ", "since ", "this ", "these ", "those ", "is ", "was ", "visit ",
+        "for ",
+    ]
+    .iter()
+    .any(|prefix_text| tail_lower.starts_with(prefix_text));
+
+    if prose_like_tail {
+        return prefix.to_string();
     }
 
     s.to_string()

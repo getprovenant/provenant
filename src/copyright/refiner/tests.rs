@@ -150,6 +150,22 @@ fn test_refine_author_drops_generic_role_and_prose_fragments() {
 }
 
 #[test]
+fn test_refine_author_truncates_trailing_prose_after_contact() {
+    assert_eq!(
+        refine_author("Mark Brown <broonie@sirena.org.uk>. The -d tempdir option"),
+        Some("Mark Brown <broonie@sirena.org.uk>".to_string())
+    );
+    assert_eq!(
+        refine_author("Ryan Haksi (//cryogen@infoserve.net) I need random access"),
+        Some("Ryan Haksi (//cryogen@infoserve.net)".to_string())
+    );
+    assert_eq!(
+        refine_author("Jean-Loup Gailly <gzip@prep.ai.mit.edu> . Since this"),
+        Some("Jean-Loup Gailly <gzip@prep.ai.mit.edu>".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_discards_symbol_table_run_junk() {
     assert_eq!(
         refine_holder("(r), & 175, & 176, & 177, & 178, & 179, & 180, & 181, & 182, & 183"),

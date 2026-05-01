@@ -371,6 +371,127 @@ pub(in super::super) fn extract_dash_bullet_attribution_authors(
         .collect()
 }
 
+fn looks_like_plaintext_roster_author_candidate(who: &str) -> bool {
+    let trimmed = who.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if trimmed.contains('@') || trimmed.contains("http://") || trimmed.contains("https://") {
+        return true;
+    }
+
+    let words: Vec<&str> = trimmed.split_whitespace().collect();
+    (2..=5).contains(&words.len())
+        && words
+            .iter()
+            .all(|word| looks_like_contributed_person_name_token(word))
+        && !words
+            .iter()
+            .any(|word| is_contributed_non_person_token(word))
+}
+
+pub(in super::super) fn extract_plaintext_roster_by_authors(
+    prepared_cache: &PreparedLines<'_>,
+) -> Vec<AuthorDetection> {
+    if prepared_cache.is_empty() {
+        return Vec::new();
+    }
+
+    static PATH_ROSTER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^\s*(?:[^\s:]+/[^\s]*|[^\s:]+/)\s+by\s+(?P<who>.+)$").unwrap()
+    });
+    static DATE_ROSTER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^\s*(?:[A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2})\s+by\s+(?P<who>.+)$",
+        )
+        .unwrap()
+    });
+    static INCLUDES_BY_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^\s*includes?\b.+?\bby\s+(?P<who>.+)$").unwrap());
+    static CONTINUATION_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^\s*and\s+(?P<who>.+)$").unwrap());
+
+    let mut authors = Vec::new();
+    let mut allow_continuation = false;
+
+    for line in prepared_cache.iter_non_empty() {
+        let trimmed = line.raw.trim();
+        let mut matched_roster = false;
+        let mut matched_continuation = false;
+        let who = if let Some(cap) = PATH_ROSTER_RE.captures(trimmed) {
+            matched_roster = true;
+            cap.name("who").map(|m| m.as_str().trim())
+        } else if let Some(cap) = DATE_ROSTER_RE.captures(trimmed) {
+            matched_roster = true;
+            cap.name("who").map(|m| m.as_str().trim())
+        } else if let Some(cap) = INCLUDES_BY_RE.captures(trimmed) {
+            matched_roster = true;
+            cap.name("who").map(|m| m.as_str().trim())
+        } else if allow_continuation {
+            matched_continuation = true;
+            CONTINUATION_RE
+                .captures(trimmed)
+                .and_then(|cap| cap.name("who").map(|m| m.as_str().trim()))
+        } else {
+            None
+        };
+
+        allow_continuation = matched_roster || (matched_continuation && who.is_some());
+
+        let Some(who) = who else {
+            continue;
+        };
+        let who = trim_attribution_tail(who);
+        if !looks_like_plaintext_roster_author_candidate(&who) {
+            continue;
+        }
+        let Some(author) = refine_author(&who) else {
+            continue;
+        };
+        authors.push(AuthorDetection {
+            author,
+            start_line: line.line_number,
+            end_line: line.line_number,
+        });
+    }
+
+    authors
+}
+
+pub(in super::super) fn extract_written_on_top_of_by_authors(
+    content: &str,
+) -> Vec<AuthorDetection> {
+    if content.is_empty() {
+        return Vec::new();
+    }
+
+    static WRITTEN_ON_TOP_OF_BY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?is)\bwritten\s+on\s+top\s+of\b.{0,400}?\bby\s+(?P<who>(?:[^<\n]{0,160}?<[^>\s]+@[^>\s]+>|[^\(\n]{0,160}?\((?:[^\)\s]+@[^\)\s]+|https?://[^\)\s]+)\)|[A-Z][\p{L}'.-]+(?:\s+[A-Z][\p{L}'.-]+){0,5}))(?:(?:\s*,\s*(?:is|was)\b)|[.;,]|$)",
+        )
+        .unwrap()
+    });
+
+    WRITTEN_ON_TOP_OF_BY_RE
+        .captures_iter(content)
+        .filter_map(|line| {
+            let whole = line.get(0)?;
+            let who = line.name("who").map(|m| m.as_str()).unwrap_or("").trim();
+            if who.is_empty() {
+                return None;
+            }
+            let author = refine_author(who)?;
+            let line_number = line_number_for_offset(content, whole.start());
+            Some(AuthorDetection {
+                author,
+                start_line: line_number,
+                end_line: line_number,
+            })
+        })
+        .collect()
+}
+
 pub(in super::super) fn extract_name_contributed_authors(
     prepared_cache: &PreparedLines<'_>,
 ) -> Vec<AuthorDetection> {

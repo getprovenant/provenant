@@ -591,6 +591,80 @@ fn test_dash_bullet_changelog_lines_extract_individual_authors() {
 }
 
 #[test]
+fn test_plaintext_roster_lines_extract_individual_authors() {
+    let input = concat!(
+        "ada/        by Dmitriy Anisimkov <anisimkov@yahoo.com>\n",
+        "        Support for Ada\n",
+        "iostream3/  by Ludwig Schwardt <schwardt@sun.ac.za>\n",
+        "            and Kevin Ruland <kevin@rodin.wustl.edu>\n",
+        "            and Mark Adler <madler@alumni.caltech.edu>\n",
+        "minizip/    by Gilles Vollant <info@winimage.com>\n",
+        "        Includes Zip64 support by Mathias Svensson <mathias@result42.com>\n",
+        "pascal/     by Bob Dellaca <bobdl@xtra.co.nz> et al.\n",
+        "        Support for Pascal\n",
+    );
+
+    let (_c, _h, authors) = super::super::detect_copyrights_from_text(input);
+    let values: Vec<&str> = authors
+        .iter()
+        .map(|author| author.author.as_str())
+        .collect();
+
+    assert!(
+        values.contains(&"Dmitriy Anisimkov <anisimkov@yahoo.com>"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Ludwig Schwardt <schwardt@sun.ac.za>"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Kevin Ruland <kevin@rodin.wustl.edu>"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Mark Adler <madler@alumni.caltech.edu>"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Gilles Vollant <info@winimage.com>"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Mathias Svensson <mathias@result42.com>"),
+        "authors: {values:?}"
+    );
+    assert!(
+        values.contains(&"Bob Dellaca <bobdl@xtra.co.nz> et al"),
+        "authors: {values:?}"
+    );
+    assert!(
+        !values
+            .iter()
+            .any(|value| *value == "Support for Ada" || *value == "Support for Pascal"),
+        "authors: {values:?}"
+    );
+}
+
+#[test]
+fn test_written_on_top_of_line_extracts_author() {
+    let input = concat!(
+        "An experimental package to read and write files in the .zip format, written on top of\n",
+        "zlib by Gilles Vollant <info@winimage.com>, is available in the\n",
+        "contrib/minizip directory of zlib.\n",
+    );
+
+    let (_c, _h, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .any(|author| author.author == "Gilles Vollant <info@winimage.com>"),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_author_colon_dash_bullet_hwmon_roster_extracts_individual_authors() {
     let input = "Authors:\n\t- Mark M. Hoffman <mhoffman@lightlink.com>\n\t- Ported to 2.6 by Eric J. Bowersox <ericb@aspsys.com>\n\t- Adapted to 2.6.20 by Carsten Emde <ce@osadl.org>\n\t- Modified for mainline integration by Hans J. Koch <hjk@hansjkoch.de>\n";
 
