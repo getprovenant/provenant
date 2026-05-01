@@ -43,6 +43,31 @@ pub fn add_missing_holders_from_email_bearing_copyrights(
         .collect()
 }
 
+pub fn add_missing_holders_from_lowercase_hyphenated_url_copyrights(
+    copyrights: &[CopyrightDetection],
+) -> Vec<HolderDetection> {
+    static LOWERCASE_HYPHENATED_URL_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^copyright\s*\(c\)\s+(?P<name>[a-z0-9]+(?:-[a-z0-9]+)+)\s*,\s*https?://\S+\s*$",
+        )
+        .unwrap()
+    });
+
+    copyrights
+        .iter()
+        .filter_map(|c| {
+            let cap = LOWERCASE_HYPHENATED_URL_COPY_RE.captures(c.copyright.trim())?;
+            let holder_raw = cap.name("name").map(|m| m.as_str()).unwrap_or("").trim();
+            let holder = refine_holder_in_copyright_context(holder_raw)?;
+            Some(HolderDetection {
+                holder,
+                start_line: c.start_line,
+                end_line: c.end_line,
+            })
+        })
+        .collect()
+}
+
 pub fn normalize_email_copyright_holder_candidate(raw_name: &str) -> String {
     static LEADING_COPY_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?i)^\(c\)\s+").unwrap());

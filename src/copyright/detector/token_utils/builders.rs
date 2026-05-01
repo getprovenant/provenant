@@ -244,7 +244,7 @@ pub fn build_holder_from_tokens(
     if tokens.is_empty() {
         return None;
     }
-    let node_string = normalized_tokens_to_string(tokens);
+    let node_string = normalized_tokens_to_string(tokens).replace(" ,", ",");
     let refined = if allow_single_word_contributors {
         refine_holder_in_copyright_context(&node_string)?
     } else {

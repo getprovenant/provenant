@@ -36,6 +36,11 @@ fn run_initial_detection_repairs(
         &holders[..],
     );
     holders.extend(new_h);
+    let new_h =
+        super::postprocess_transforms::add_missing_holders_from_lowercase_hyphenated_url_copyrights(
+            &copyrights[..],
+        );
+    holders.extend(new_h);
     super::postprocess_transforms::extend_bare_c_year_detections_to_line_end_for_multi_c_lines(
         prepared_cache,
         copyrights,
