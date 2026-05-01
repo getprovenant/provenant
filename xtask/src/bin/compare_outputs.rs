@@ -2653,27 +2653,15 @@ fn top_level_license_detection_identities(item: &Value) -> BTreeSet<String> {
         return BTreeSet::from([top_level_expr]);
     };
 
-    let has_concrete_reference_match = reference_matches.iter().any(|match_item| {
-        match_item
-            .get("license_expression_spdx")
-            .or_else(|| match_item.get("license_expression"))
-            .and_then(Value::as_str)
-            .map(normalize_license_expression)
-            .is_some_and(|expr| !is_unknown_license_reference(&expr))
-    });
-
     let identities: BTreeSet<String> = reference_matches
         .iter()
-        .filter_map(|match_item| {
+        .map(|match_item| {
             let match_expr = match_item
                 .get("license_expression_spdx")
                 .or_else(|| match_item.get("license_expression"))
                 .and_then(Value::as_str)
                 .map(normalize_license_expression)
                 .unwrap_or_else(|| "<unknown>".to_string());
-            if has_concrete_reference_match && is_unknown_license_reference(&match_expr) {
-                return None;
-            }
             let path = match_item
                 .get("from_file")
                 .and_then(Value::as_str)
@@ -2684,7 +2672,7 @@ fn top_level_license_detection_identities(item: &Value) -> BTreeSet<String> {
             } else {
                 top_level_expr.as_str()
             };
-            Some(format!("{identity_expr}@{path}"))
+            format!("{identity_expr}@{path}")
         })
         .collect();
 
@@ -4925,45 +4913,6 @@ mod tests {
         let counts = top_level_counts(&value);
 
         assert_eq!(counts.count("license_detections"), 1);
-    }
-
-    #[test]
-    fn top_level_counts_ignore_unknown_reference_when_concrete_match_exists() {
-        let value = json!({
-            "license_detections": [
-                {
-                    "license_expression_spdx": "MIT OR Apache-2.0",
-                    "reference_matches": [
-                        {
-                            "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
-                            "from_file": "README.md"
-                        },
-                        {
-                            "license_expression_spdx": "MIT OR Apache-2.0",
-                            "from_file": "README.md"
-                        }
-                    ]
-                },
-                {
-                    "license_expression_spdx": "MIT",
-                    "reference_matches": [
-                        {
-                            "license_expression_spdx": "MIT",
-                            "from_file": "README.md"
-                        }
-                    ]
-                }
-            ],
-            "packages": [],
-            "dependencies": [],
-            "files": [],
-            "license_references": [],
-            "license_rule_references": []
-        });
-
-        let counts = top_level_counts(&value);
-
-        assert_eq!(counts.count("license_detections"), 2);
     }
 
     #[test]
