@@ -1120,10 +1120,10 @@ fn resources_by_path(value: &Value) -> BTreeMap<String, Value> {
         .into_iter()
         .flatten()
         .filter_map(|entry| {
-            entry
-                .get("path")
-                .and_then(Value::as_str)
-                .map(|path| (normalize_compare_path(path), entry.clone()))
+            entry.get("path").and_then(Value::as_str).and_then(|path| {
+                let normalized = normalize_compare_path(path);
+                (normalized != "<root>").then_some((normalized, entry.clone()))
+            })
         })
         .collect()
 }
@@ -1155,9 +1155,7 @@ fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
                     .and_then(Value::as_str)
                     .map(normalize_license_expression),
                 "license_clues" | "license_policy" => Some(canonical_value_string(item)),
-                "package_data" => package_identity(item)
-                    .map(str::to_string)
-                    .or_else(|| package_fallback_identity(item)),
+                "package_data" => package_metric_identity(item),
                 "copyrights" => item
                     .get("copyright")
                     .and_then(Value::as_str)
@@ -1188,6 +1186,26 @@ fn package_identity(item: &Value) -> Option<&str> {
     item.get("purl")
         .and_then(Value::as_str)
         .or_else(|| item.get("package_url").and_then(Value::as_str))
+}
+
+fn package_metric_identity(item: &Value) -> Option<String> {
+    if is_cargo_lock_placeholder_like(item) {
+        return Some("type=cargo|datasource_id=cargo_lock".to_string());
+    }
+
+    package_identity(item)
+        .map(str::to_string)
+        .or_else(|| package_fallback_identity(item))
+}
+
+fn is_cargo_lock_placeholder_like(item: &Value) -> bool {
+    let datasource = item.get("datasource_id").and_then(Value::as_str);
+    let package_type = item
+        .get("type")
+        .or_else(|| item.get("package_type"))
+        .and_then(Value::as_str);
+
+    datasource == Some("cargo_lock") && package_type == Some("cargo")
 }
 
 fn package_fallback_identity(item: &Value) -> Option<String> {
@@ -1689,10 +1707,7 @@ fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
                 .and_then(Value::as_str)
                 .map(normalize_license_expression)
                 .unwrap_or_else(|| "<unknown>".to_string());
-            let count = item
-                .get("detection_count")
-                .and_then(Value::as_i64)
-                .unwrap_or(1);
+            let count = top_level_license_detection_count(item) as i64;
             let entry = counter.entry(key).or_insert((0_i64, 0_i64));
             if label == "scancode" {
                 entry.0 += count;
@@ -1712,6 +1727,43 @@ fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
             }))
         })
         .collect()
+}
+
+fn top_level_license_detection_count(item: &Value) -> usize {
+    let Some(reference_matches) = item.get("reference_matches").and_then(Value::as_array) else {
+        return item
+            .get("detection_count")
+            .and_then(Value::as_u64)
+            .map(|value| value as usize)
+            .unwrap_or(1);
+    };
+
+    let identities: BTreeSet<String> = reference_matches
+        .iter()
+        .map(|match_item| {
+            let expr = match_item
+                .get("license_expression_spdx")
+                .or_else(|| match_item.get("license_expression"))
+                .and_then(Value::as_str)
+                .map(normalize_license_expression)
+                .unwrap_or_else(|| "<unknown>".to_string());
+            let path = match_item
+                .get("from_file")
+                .and_then(Value::as_str)
+                .map(normalize_compare_path)
+                .unwrap_or_else(|| "<unknown>".to_string());
+            format!("{expr}@{path}")
+        })
+        .collect();
+
+    if identities.is_empty() {
+        item.get("detection_count")
+            .and_then(Value::as_u64)
+            .map(|value| value as usize)
+            .unwrap_or(1)
+    } else {
+        identities.len()
+    }
 }
 
 fn top_level_package_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDifferenceEntry> {

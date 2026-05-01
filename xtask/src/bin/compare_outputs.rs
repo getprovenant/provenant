@@ -2024,10 +2024,10 @@ fn resources_by_path(value: &Value) -> BTreeMap<String, Value> {
         .into_iter()
         .flatten()
         .filter_map(|entry| {
-            entry
-                .get("path")
-                .and_then(Value::as_str)
-                .map(|path| (normalize_compare_path(path), entry.clone()))
+            entry.get("path").and_then(Value::as_str).and_then(|path| {
+                let normalized = normalize_compare_path(path);
+                (normalized != "<root>").then_some((normalized, entry.clone()))
+            })
         })
         .collect()
 }
@@ -2059,9 +2059,7 @@ fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
                     .and_then(Value::as_str)
                     .map(normalize_license_expression),
                 "license_clues" | "license_policy" => Some(canonical_value_string(item)),
-                "package_data" => package_identity(item)
-                    .map(str::to_string)
-                    .or_else(|| package_fallback_identity(item)),
+                "package_data" => package_metric_identity(item),
                 "copyrights" => item
                     .get("copyright")
                     .and_then(Value::as_str)
@@ -2078,7 +2076,10 @@ fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
                     .get("email")
                     .and_then(Value::as_str)
                     .map(str::to_string),
-                "urls" => item.get("url").and_then(Value::as_str).map(str::to_string),
+                "urls" => item
+                    .get("url")
+                    .and_then(Value::as_str)
+                    .map(normalize_url_value),
                 "scan_errors" => scan_error_identity(item).map(str::to_string),
                 _ => None,
             }?;
@@ -2092,6 +2093,26 @@ fn package_identity(item: &Value) -> Option<&str> {
     item.get("purl")
         .and_then(Value::as_str)
         .or_else(|| item.get("package_url").and_then(Value::as_str))
+}
+
+fn package_metric_identity(item: &Value) -> Option<String> {
+    if is_cargo_lock_placeholder_like(item) {
+        return Some("type=cargo|datasource_id=cargo_lock".to_string());
+    }
+
+    package_identity(item)
+        .map(str::to_string)
+        .or_else(|| package_fallback_identity(item))
+}
+
+fn is_cargo_lock_placeholder_like(item: &Value) -> bool {
+    let datasource = item.get("datasource_id").and_then(Value::as_str);
+    let package_type = item
+        .get("type")
+        .or_else(|| item.get("package_type"))
+        .and_then(Value::as_str);
+
+    datasource == Some("cargo_lock") && package_type == Some("cargo")
 }
 
 fn package_fallback_identity(item: &Value) -> Option<String> {
@@ -2138,6 +2159,16 @@ fn normalize_compare_path(path: &str) -> String {
             .trim_start_matches("input/")
             .to_string()
     }
+}
+
+fn normalize_url_value(value: &str) -> String {
+    let normalized = normalize_text(value);
+    if let Some(stripped) = normalized.strip_suffix('/')
+        && (stripped.starts_with("http://") || stripped.starts_with("https://"))
+    {
+        return stripped.to_string();
+    }
+    normalized
 }
 
 fn normalize_license_expression(value: &str) -> String {
@@ -2496,7 +2527,7 @@ fn top_level_counts(value: &Value) -> TopLevelCounts {
             ("dependencies", dependency_count as i64),
             (
                 "license_detections",
-                array_len(value, "license_detections") as i64,
+                top_level_license_detection_count(value) as i64,
             ),
             (
                 "license_references",
@@ -2519,6 +2550,20 @@ fn top_level_counts(value: &Value) -> TopLevelCounts {
             ),
         ]),
     }
+}
+
+fn top_level_license_detection_count(value: &Value) -> usize {
+    value
+        .get("license_detections")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .flat_map(top_level_license_detection_identities)
+                .collect::<BTreeSet<_>>()
+                .len()
+        })
+        .unwrap_or(0)
 }
 
 fn file_entry_count(value: &Value) -> usize {
@@ -2580,7 +2625,7 @@ fn file_package_data_dependency_count(value: &Value) -> usize {
 }
 
 fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
-    let mut counter = BTreeMap::new();
+    let mut counter: BTreeMap<String, (BTreeSet<String>, BTreeSet<String>)> = BTreeMap::new();
     for (label, value) in [("scancode", scancode), ("provenant", provenant)] {
         for item in value
             .get("license_detections")
@@ -2595,19 +2640,90 @@ fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
                 .and_then(Value::as_str)
                 .map(normalize_license_expression)
                 .unwrap_or_else(|| "<unknown>".to_string());
-            let count = item
-                .get("detection_count")
-                .and_then(Value::as_i64)
-                .unwrap_or(1);
-            let entry = counter.entry(key).or_insert((0_i64, 0_i64));
+            let entry = counter
+                .entry(key)
+                .or_insert_with(|| (BTreeSet::new(), BTreeSet::new()));
+            let identities = top_level_license_detection_identities(item);
             if label == "scancode" {
-                entry.0 += count;
+                entry.0.extend(identities);
             } else {
-                entry.1 += count;
+                entry.1.extend(identities);
             }
         }
     }
-    counter.into_iter().filter_map(|(key, (sc, pr))| (sc != pr).then_some(json!({"license_expression": key, "scancode": sc, "provenant": pr, "delta": pr - sc}))).collect()
+    counter
+        .into_iter()
+        .filter_map(|(key, (sc, pr))| {
+            let sc = sc.len() as i64;
+            let pr = pr.len() as i64;
+            (sc != pr).then_some(json!({
+                "license_expression": key,
+                "scancode": sc,
+                "provenant": pr,
+                "delta": pr - sc
+            }))
+        })
+        .collect()
+}
+
+fn top_level_license_detection_identities(item: &Value) -> BTreeSet<String> {
+    let top_level_expr = item
+        .get("license_expression_spdx")
+        .or_else(|| item.get("license_expression"))
+        .or_else(|| item.get("identifier"))
+        .and_then(Value::as_str)
+        .map(normalize_license_expression)
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "<unknown>".to_string());
+
+    let Some(reference_matches) = item.get("reference_matches").and_then(Value::as_array) else {
+        return BTreeSet::from([top_level_expr]);
+    };
+
+    let has_concrete_reference_match = reference_matches.iter().any(|match_item| {
+        match_item
+            .get("license_expression_spdx")
+            .or_else(|| match_item.get("license_expression"))
+            .and_then(Value::as_str)
+            .map(normalize_license_expression)
+            .is_some_and(|expr| !is_unknown_license_reference(&expr))
+    });
+
+    let identities: BTreeSet<String> = reference_matches
+        .iter()
+        .filter_map(|match_item| {
+            let match_expr = match_item
+                .get("license_expression_spdx")
+                .or_else(|| match_item.get("license_expression"))
+                .and_then(Value::as_str)
+                .map(normalize_license_expression)
+                .unwrap_or_else(|| "<unknown>".to_string());
+            if has_concrete_reference_match && is_unknown_license_reference(&match_expr) {
+                return None;
+            }
+            let path = match_item
+                .get("from_file")
+                .and_then(Value::as_str)
+                .map(normalize_compare_path)
+                .unwrap_or_else(|| "<unknown>".to_string());
+            let identity_expr = if is_unknown_license_reference(&top_level_expr) {
+                match_expr.as_str()
+            } else {
+                top_level_expr.as_str()
+            };
+            Some(format!("{identity_expr}@{path}"))
+        })
+        .collect();
+
+    if identities.is_empty() {
+        BTreeSet::from([top_level_expr])
+    } else {
+        identities
+    }
+}
+
+fn is_unknown_license_reference(expr: &str) -> bool {
+    expr == "<unknown>" || expr.starts_with("LicenseRef-scancode-unknown-license-reference")
 }
 
 fn top_level_package_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDifferenceEntry> {
@@ -4801,6 +4917,154 @@ mod tests {
         assert!(policy_values[0].contains("boost-1.0"));
         assert_eq!(clue_values.len(), 1);
         assert!(clue_values[0].contains("license_expression"));
+    }
+
+    #[test]
+    fn metric_values_normalize_trailing_slash_urls() {
+        let entry = json!({
+            "urls": [
+                {"url": "https://docs.rs/serde/latest/serde/"},
+                {"url": "https://keepachangelog.com/en/1.0.0"}
+            ]
+        });
+
+        let values = metric_values(&entry, "urls");
+
+        assert_eq!(
+            values,
+            vec![
+                "https://docs.rs/serde/latest/serde".to_string(),
+                "https://keepachangelog.com/en/1.0.0".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn top_level_counts_deduplicate_license_detection_reference_match_identities() {
+        let value = json!({
+            "license_detections": [
+                {
+                    "license_expression_spdx": "Apache-2.0 OR MIT",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "Apache-2.0 OR MIT",
+                            "from_file": "README.md"
+                        }
+                    ]
+                },
+                {
+                    "license_expression_spdx": "MIT OR Apache-2.0",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "MIT OR Apache-2.0",
+                            "from_file": "README.md"
+                        }
+                    ]
+                }
+            ],
+            "packages": [],
+            "dependencies": [],
+            "files": [],
+            "license_references": [],
+            "license_rule_references": []
+        });
+
+        let counts = top_level_counts(&value);
+
+        assert_eq!(counts.count("license_detections"), 1);
+    }
+
+    #[test]
+    fn top_level_counts_ignore_unknown_reference_when_concrete_match_exists() {
+        let value = json!({
+            "license_detections": [
+                {
+                    "license_expression_spdx": "MIT OR Apache-2.0",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
+                            "from_file": "README.md"
+                        },
+                        {
+                            "license_expression_spdx": "MIT OR Apache-2.0",
+                            "from_file": "README.md"
+                        }
+                    ]
+                },
+                {
+                    "license_expression_spdx": "MIT",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "MIT",
+                            "from_file": "README.md"
+                        }
+                    ]
+                }
+            ],
+            "packages": [],
+            "dependencies": [],
+            "files": [],
+            "license_references": [],
+            "license_rule_references": []
+        });
+
+        let counts = top_level_counts(&value);
+
+        assert_eq!(counts.count("license_detections"), 2);
+    }
+
+    #[test]
+    fn top_level_license_deltas_ignore_nested_reference_expression_variants() {
+        let scancode = json!({
+            "license_detections": [
+                {
+                    "license_expression_spdx": "MIT OR Apache-2.0",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "MIT OR Apache-2.0",
+                            "from_file": "README.md"
+                        }
+                    ]
+                },
+                {
+                    "license_expression_spdx": "MIT OR Apache-2.0",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "MIT OR Apache-2.0",
+                            "from_file": "Cargo.toml"
+                        }
+                    ]
+                }
+            ]
+        });
+        let provenant = json!({
+            "license_detections": [
+                {
+                    "license_expression_spdx": "Apache-2.0 OR MIT",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "MIT",
+                            "from_file": "README.md"
+                        },
+                        {
+                            "license_expression_spdx": "Apache-2.0 OR MIT",
+                            "from_file": "README.md"
+                        }
+                    ]
+                },
+                {
+                    "license_expression_spdx": "Apache-2.0 OR MIT",
+                    "reference_matches": [
+                        {
+                            "license_expression_spdx": "Apache-2.0 OR MIT",
+                            "from_file": "Cargo.toml"
+                        }
+                    ]
+                }
+            ]
+        });
+
+        assert!(top_level_license_deltas(&scancode, &provenant).is_empty());
     }
 
     #[test]
