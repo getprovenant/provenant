@@ -293,6 +293,12 @@ pub fn detect_copyrights_from_text_with_deadline(
         extend_leading_dash_suffixes(group, &mut copyrights[..], &mut holders[..]);
         extend_dash_obfuscated_email_suffixes(&raw_lines, group, &mut copyrights[..], &holders[..]);
         extend_trailing_copy_year_suffixes(&raw_lines, group, &mut copyrights[..]);
+        extend_trailing_lowercase_holder_suffixes(
+            &raw_lines,
+            group,
+            &mut copyrights[..],
+            &mut holders,
+        );
         extend_w3c_registered_org_list_suffixes(group, &mut copyrights[..], &mut holders[..]);
         extend_software_in_the_public_interest_holder(group, &mut copyrights, &mut holders);
     }
@@ -394,8 +400,8 @@ use postprocess_transforms::{
     extend_authors_see_url_copyrights, extend_dash_obfuscated_email_suffixes,
     extend_leading_dash_suffixes, extend_multiline_copyright_c_no_year_names,
     extend_multiline_copyright_c_year_holder_continuations, extend_trailing_copy_year_suffixes,
-    extend_w3c_registered_org_list_suffixes, refine_final_copyrights,
-    restore_linux_foundation_copyrights_from_raw_lines,
+    extend_trailing_lowercase_holder_suffixes, extend_w3c_registered_org_list_suffixes,
+    refine_final_copyrights, restore_linux_foundation_copyrights_from_raw_lines,
 };
 pub(super) use token_utils::collect_all_leaves;
 use token_utils::{

@@ -1242,6 +1242,68 @@ pub fn extend_trailing_copy_year_suffixes(
     }
 }
 
+pub fn extend_trailing_lowercase_holder_suffixes(
+    raw_lines: &[&str],
+    group: &[(usize, String)],
+    copyrights: &mut [CopyrightDetection],
+    holders: &mut Vec<HolderDetection>,
+) {
+    static LOWERCASE_TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?x)^\s*(?i:copyright)\s*\((?i:c)\)\s*
+            (?P<years>(?:19\d{2}|20\d{2})(?:\s*[-–/]\s*(?:19\d{2}|20\d{2}|\d{2}|present|current_year|today\.year))*)
+            \s+(?P<holder>[a-z][a-z0-9._-]{1,63})
+            \.?\s*$",
+        )
+        .unwrap()
+    });
+
+    for (ln, _) in group {
+        let Some(raw) = raw_lines.get(ln.saturating_sub(1)) else {
+            continue;
+        };
+        let Some(cap) = LOWERCASE_TAIL_RE.captures(raw) else {
+            continue;
+        };
+        let years = cap.name("years").map(|m| m.as_str()).unwrap_or("").trim();
+        let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
+        if years.is_empty() || holder_raw.is_empty() {
+            continue;
+        }
+
+        let Some(refined_full) = refine_copyright(raw.trim()) else {
+            continue;
+        };
+        let Some(refined_holder) = refine_holder_in_copyright_context(holder_raw) else {
+            continue;
+        };
+
+        for c in copyrights
+            .iter_mut()
+            .filter(|c| c.start_line.get() == *ln && c.end_line.get() == *ln)
+        {
+            if c.copyright == refined_full {
+                continue;
+            }
+            if c.copyright.to_ascii_lowercase().starts_with("copyright")
+                && c.copyright.contains(years)
+            {
+                c.copyright = refined_full.clone();
+            }
+        }
+
+        if !holders.iter().any(|h| {
+            h.start_line.get() == *ln && h.end_line.get() == *ln && h.holder == refined_holder
+        }) {
+            holders.push(HolderDetection {
+                holder: refined_holder.clone(),
+                start_line: LineNumber::new(*ln).expect("invalid line number"),
+                end_line: LineNumber::new(*ln).expect("invalid line number"),
+            });
+        }
+    }
+}
+
 pub fn extend_w3c_registered_org_list_suffixes(
     group: &[(usize, String)],
     copyrights: &mut [CopyrightDetection],

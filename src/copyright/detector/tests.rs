@@ -242,6 +242,26 @@ fn test_current_year_placeholder_copyright_holder_detected() {
 }
 
 #[test]
+fn test_lowercase_project_name_after_present_year_range_is_kept() {
+    let input = "Copyright (c) 2015-present i18next";
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2015-present i18next"),
+        "copyrights: {:?}",
+        copyrights.iter().map(|c| &c.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "i18next"),
+        "holders: {:?}",
+        holders.iter().map(|h| &h.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_copyright_prefix_preserved_multiline_debian() {
     let input = "Copyright:\n\n    Copyright \u{00A9} 1999-2009  Red Hat, Inc.\n    Copyright \u{00A9} 1998       Tom Tromey\n    Copyright \u{00A9} 1999       Free Software Foundation, Inc.";
     let (c, _h, _a) = detect_copyrights_from_text(input);

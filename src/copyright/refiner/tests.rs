@@ -1723,6 +1723,11 @@ fn test_refine_copyright_keeps_affiliate_s_parenthetical_phrase() {
 }
 
 #[test]
+fn test_is_junk_copyright_drops_html_entity_regex_fragments() {
+    assert!(is_junk_copyright("(c) 169 reg 174 hellip 8230 x2F 47 /g"));
+}
+
+#[test]
 fn test_refine_copyright_strips_trailing_javadoc_tags() {
     let result = refine_copyright("copyright 2005 Michal Migurski @version 1.0");
     assert_eq!(result, Some("copyright 2005 Michal Migurski".to_string()));

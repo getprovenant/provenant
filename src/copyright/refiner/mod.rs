@@ -508,6 +508,7 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || trimmed.contains("??")
         || contains_member_access_code_token(trimmed)
         || contains_unicode_escape_token_run(trimmed)
+        || contains_html_entity_decoder_artifact(trimmed)
         || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
         || has_windows_versioninfo_markers
@@ -570,6 +571,7 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || contains_member_access_code_token(trimmed)
         || contains_code_call_fragment(trimmed)
         || contains_unicode_escape_token_run(trimmed)
+        || contains_html_entity_decoder_artifact(trimmed)
         || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
         || has_windows_versioninfo_markers
@@ -647,6 +649,21 @@ fn contains_regex_or_template_marker(s: &str) -> bool {
         || trimmed.contains("^ ")
         || trimmed.contains(" d+")
         || trimmed.contains(" ?")
+}
+
+fn contains_html_entity_decoder_artifact(s: &str) -> bool {
+    let lower = s.to_ascii_lowercase();
+    lower.contains("u00a0")
+        || lower.contains("hellip")
+        || lower.contains("x2f")
+        || lower.contains("reg 174")
+        || lower.contains("copy 169")
+        || lower.contains("&ndash")
+        || lower.contains("&mdash")
+        || lower.contains("&trade")
+        || lower.contains("&copy")
+        || lower.contains("&#169")
+        || lower.contains("&#174")
 }
 
 fn contains_generated_resource_token(s: &str) -> bool {
