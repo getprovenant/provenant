@@ -581,7 +581,14 @@ fn has_alternative_license_notice(matches: &[LicenseMatch], source_text: Option<
         .join("\n")
         .to_ascii_lowercase();
 
-    region.contains("alternatively") && region.contains("may be used under the terms of")
+    let python_alternative_notice =
+        region.contains("alternatively") && region.contains("may be used under the terms of");
+    let rust_dual_license_notice = (region.contains("licensed under either of")
+        && region.contains("at your option"))
+        || region.contains("dual-licensed under")
+        || region.contains("dual licensed under");
+
+    python_alternative_notice || rust_dual_license_notice
 }
 
 fn is_supplemental_alternative_match(expression: &str) -> bool {
@@ -1572,6 +1579,125 @@ mod tests {
         assert_eq!(
             result.as_deref(),
             Ok("(Apache-2.0 OR BSL-1.0) AND LicenseRef-scancode-warranty-disclaimer")
+        );
+    }
+
+    #[test]
+    fn test_determine_spdx_expression_uses_or_for_rust_dual_license_notice() {
+        let mut apache_choice = create_test_match_full(
+            "apache-2.0",
+            "3-seq",
+            3,
+            3,
+            MatchScore::from_percentage(100.0),
+            16,
+            16,
+            100.0,
+            100,
+            "apache-2.0_910.RULE",
+        );
+        apache_choice.license_expression = "apache-2.0".to_string();
+        apache_choice.license_expression_spdx = Some("Apache-2.0".to_string());
+
+        let mut mit_choice = create_test_match_full(
+            "mit",
+            "3-seq",
+            4,
+            4,
+            MatchScore::from_percentage(100.0),
+            3,
+            3,
+            100.0,
+            100,
+            "mit_14.RULE",
+        );
+        mit_choice.license_expression = "mit".to_string();
+        mit_choice.license_expression_spdx = Some("MIT".to_string());
+
+        let mut apache_reference = create_test_match_full(
+            "apache-2.0",
+            "2-aho",
+            10,
+            10,
+            MatchScore::from_percentage(100.0),
+            2,
+            2,
+            100.0,
+            100,
+            "apache-2.0_57.RULE",
+        );
+        apache_reference.license_expression = "apache-2.0".to_string();
+        apache_reference.license_expression_spdx = Some("Apache-2.0".to_string());
+
+        let notice = concat!(
+            "## License\n\n",
+            "Licensed under either of:\n\n",
+            " * Apache License, Version 2.0\n",
+            " * MIT license\n\n",
+            "at your option.\n\n",
+            "### Contribution\n\n",
+            "Unless you explicitly state otherwise, any contribution intentionally submitted\n",
+            "for inclusion in the work by you, as defined in the Apache-2.0 license, shall be\n",
+            "dual licensed as above, without any additional terms or conditions.\n",
+        );
+
+        let result =
+            determine_spdx_expression(&[apache_choice, mit_choice, apache_reference], Some(notice));
+
+        assert!(
+            matches!(
+                result.as_deref(),
+                Ok("Apache-2.0 OR MIT") | Ok("MIT OR Apache-2.0")
+            ),
+            "result: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_determine_spdx_expression_uses_or_for_dual_licensed_under_notice() {
+        let mut mit_choice = create_test_match_full(
+            "mit",
+            "3-seq",
+            3,
+            3,
+            MatchScore::from_percentage(100.0),
+            3,
+            3,
+            100.0,
+            100,
+            "mit_14.RULE",
+        );
+        mit_choice.license_expression = "mit".to_string();
+        mit_choice.license_expression_spdx = Some("MIT".to_string());
+
+        let mut mit_or_apache = create_test_match_full(
+            "mit OR apache-2.0",
+            "3-seq",
+            3,
+            3,
+            MatchScore::from_percentage(85.71),
+            6,
+            6,
+            100.0,
+            100,
+            "mit_or_apache-2.0_22.RULE",
+        );
+        mit_or_apache.license_expression = "mit OR apache-2.0".to_string();
+        mit_or_apache.license_expression_spdx = Some("MIT OR Apache-2.0".to_string());
+
+        let notice = concat!(
+            "## License\n\n",
+            "This project is dual-licensed under MIT and Apache 2.0.\n",
+        );
+
+        let result = determine_spdx_expression(&[mit_choice, mit_or_apache], Some(notice));
+
+        assert!(
+            matches!(
+                result.as_deref(),
+                Ok("Apache-2.0 OR MIT") | Ok("MIT OR Apache-2.0")
+            ),
+            "result: {result:?}"
         );
     }
 

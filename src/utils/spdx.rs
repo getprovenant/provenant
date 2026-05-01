@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::license_detection::expression::{
-    LicenseExpression, parse_expression, simplify_expression,
+    LicenseExpression, expression_to_string, parse_expression, simplify_expression,
     simplify_expression_preserving_structure,
 };
 
@@ -30,6 +30,48 @@ pub fn combine_license_expressions_preserving_structure(
     expressions: impl IntoIterator<Item = String>,
 ) -> Option<String> {
     combine_license_expressions_with_relation_and_mode(expressions, ExpressionRelation::And, true)
+}
+
+pub fn select_primary_license_expression(
+    expressions: impl IntoIterator<Item = String>,
+) -> Option<String> {
+    let mut unique = Vec::new();
+
+    for expression in expressions {
+        let trimmed = expression.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if !unique.iter().any(|existing: &String| existing == trimmed) {
+            unique.push(trimmed.to_string());
+        }
+    }
+
+    if unique.is_empty() {
+        return None;
+    }
+
+    if unique.len() == 1 {
+        return unique.into_iter().next();
+    }
+
+    let joined: Vec<String> = unique
+        .iter()
+        .filter(|expression| is_joined_expression(expression))
+        .cloned()
+        .collect();
+
+    if joined.len() != 1 {
+        return None;
+    }
+
+    let candidate = &joined[0];
+    unique
+        .iter()
+        .filter(|expression| *expression != candidate)
+        .all(|expression| expression_covers(candidate, expression))
+        .then(|| candidate.clone())
 }
 
 pub(crate) fn combine_license_expressions_with_relation_preserving_structure(
@@ -239,6 +281,91 @@ fn wrap_compound_expression(expression: &str) -> String {
     }
 }
 
+fn is_joined_expression(expression: &str) -> bool {
+    let upper = expression.to_ascii_uppercase();
+    upper.contains(" AND ") || upper.contains(" OR ") || upper.contains(" WITH ")
+}
+
+fn expression_covers(container: &str, contained: &str) -> bool {
+    let Ok(parsed_container) = parse_expression(container) else {
+        return false;
+    };
+    let Ok(parsed_contained) = parse_expression(contained) else {
+        return false;
+    };
+
+    let simplified_container = simplify_expression(&parsed_container);
+    let simplified_contained = simplify_expression(&parsed_contained);
+
+    expression_covers_ast(&simplified_container, &simplified_contained)
+}
+
+fn expression_covers_ast(container: &LicenseExpression, contained: &LicenseExpression) -> bool {
+    if expression_to_string(container) == expression_to_string(contained) {
+        return true;
+    }
+
+    match (container, contained) {
+        (LicenseExpression::And { .. }, LicenseExpression::And { .. }) => {
+            let container_args = flat_and_args(container);
+            let contained_args = flat_and_args(contained);
+            contained_args.iter().all(|contained_arg| {
+                container_args.iter().any(|container_arg| {
+                    expression_to_string(container_arg) == expression_to_string(contained_arg)
+                })
+            })
+        }
+        (LicenseExpression::Or { .. }, LicenseExpression::Or { .. }) => {
+            let container_args = flat_or_args(container);
+            let contained_args = flat_or_args(contained);
+            contained_args.iter().all(|contained_arg| {
+                container_args.iter().any(|container_arg| {
+                    expression_to_string(container_arg) == expression_to_string(contained_arg)
+                })
+            })
+        }
+        (LicenseExpression::And { .. }, _) => {
+            flat_and_args(container).iter().any(|container_arg| {
+                expression_to_string(container_arg) == expression_to_string(contained)
+            })
+        }
+        (LicenseExpression::Or { .. }, _) => flat_or_args(container).iter().any(|container_arg| {
+            expression_to_string(container_arg) == expression_to_string(contained)
+        }),
+        _ => false,
+    }
+}
+
+fn flat_and_args(expr: &LicenseExpression) -> Vec<&LicenseExpression> {
+    let mut args = Vec::new();
+    collect_flat_args(expr, true, &mut args);
+    args
+}
+
+fn flat_or_args(expr: &LicenseExpression) -> Vec<&LicenseExpression> {
+    let mut args = Vec::new();
+    collect_flat_args(expr, false, &mut args);
+    args
+}
+
+fn collect_flat_args<'a>(
+    expr: &'a LicenseExpression,
+    and_operator: bool,
+    args: &mut Vec<&'a LicenseExpression>,
+) {
+    match expr {
+        LicenseExpression::And { left, right } if and_operator => {
+            collect_flat_args(left, and_operator, args);
+            collect_flat_args(right, and_operator, args);
+        }
+        LicenseExpression::Or { left, right } if !and_operator => {
+            collect_flat_args(left, and_operator, args);
+            collect_flat_args(right, and_operator, args);
+        }
+        _ => args.push(expr),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,5 +429,36 @@ mod tests {
         );
 
         assert_eq!(result.as_deref(), Some("MIT"));
+    }
+
+    #[test]
+    fn select_primary_license_expression_prefers_joined_expression_covering_fragment() {
+        let result = select_primary_license_expression(vec![
+            "Apache-2.0 OR MIT".to_string(),
+            "Apache-2.0".to_string(),
+        ]);
+
+        assert_eq!(result.as_deref(), Some("Apache-2.0 OR MIT"));
+    }
+
+    #[test]
+    fn select_primary_license_expression_prefers_joined_expression_covering_all_singles() {
+        let result = select_primary_license_expression(vec![
+            "MIT".to_string(),
+            "Apache-2.0 OR MIT".to_string(),
+            "Apache-2.0".to_string(),
+        ]);
+
+        assert_eq!(result.as_deref(), Some("Apache-2.0 OR MIT"));
+    }
+
+    #[test]
+    fn select_primary_license_expression_returns_none_when_joined_expression_does_not_cover_rest() {
+        let result = select_primary_license_expression(vec![
+            "Apache-2.0 OR MIT".to_string(),
+            "GPL-2.0-only".to_string(),
+        ]);
+
+        assert_eq!(result, None);
     }
 }
