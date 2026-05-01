@@ -125,6 +125,9 @@ ScanCode: 89.38s</title></rect>
     <rect x="215.47" y="425.14" width="8" height="8" fill="#d97706" rx="1.5"><title>archlinux/packaging/packages/grep @ 29d2e10
 Files: 6
 ScanCode: 73.20s</title></rect>
+    <rect x="257.23" y="426.75" width="8" height="8" fill="#d97706" rx="1.5"><title>Amanieu/atomic-rs @ 44c213a
+Files: 11
+ScanCode: 70.75s</title></rect>
     <rect x="257.23" y="327.58" width="8" height="8" fill="#d97706" rx="1.5"><title>Windows 10 KB5049993 cumulative update extracted snapshot
 Files: 11
 ScanCode: 577.11s</title></rect>
@@ -143,6 +146,9 @@ ScanCode: 73.99s</title></rect>
     <rect x="346.19" y="491.51" width="8" height="8" fill="#d97706" rx="1.5"><title>ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4
 Files: 40
 ScanCode: 17.97s</title></rect>
+    <rect x="349.56" y="424.02" width="8" height="8" fill="#d97706" rx="1.5"><title>marshallpierce/rust-base64 @ 13f4fe8
+Files: 42
+ScanCode: 74.96s</title></rect>
     <rect x="362.93" y="430.28" width="8" height="8" fill="#d97706" rx="1.5"><title>conda-forge/pandas-feedstock @ 4063b72
 Files: 51
 ScanCode: 65.66s</title></rect>
@@ -688,6 +694,9 @@ Provenant: 24.22s</title></circle>
     <circle cx="219.47" cy="521.94" r="4.5" fill="#2563eb"><title>archlinux/packaging/packages/grep @ 29d2e10
 Files: 6
 Provenant: 10.27s</title></circle>
+    <circle cx="261.23" cy="524.30" r="4.5" fill="#2563eb"><title>Amanieu/atomic-rs @ 44c213a
+Files: 11
+Provenant: 9.77s</title></circle>
     <circle cx="261.23" cy="400.68" r="4.5" fill="#2563eb"><title>Windows 10 KB5049993 cumulative update extracted snapshot
 Files: 11
 Provenant: 133.69s</title></circle>
@@ -706,6 +715,9 @@ Provenant: 11.06s</title></circle>
     <circle cx="350.19" cy="520.89" r="4.5" fill="#2563eb"><title>ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4
 Files: 40
 Provenant: 10.50s</title></circle>
+    <circle cx="353.56" cy="522.96" r="4.5" fill="#2563eb"><title>marshallpierce/rust-base64 @ 13f4fe8
+Files: 42
+Provenant: 10.05s</title></circle>
     <circle cx="366.93" cy="530.00" r="4.5" fill="#2563eb"><title>conda-forge/pandas-feedstock @ 4063b72
 Files: 51
 Provenant: 8.66s</title></circle>
