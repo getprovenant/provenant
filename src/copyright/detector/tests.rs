@@ -1035,6 +1035,42 @@ fn test_detect_spdx_filecopyrighttext_contributors_to_project() {
 }
 
 #[test]
+fn test_detect_affiliates_parenthetical_holder() {
+    let input = "Copyright (C) 2016-2018 HERE Global B.V. and its affiliate(s).";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright
+                == "Copyright (c) 2016-2018 HERE Global B.V. and its affiliate(s)"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter()
+            .any(|ho| ho.holder == "HERE Global B.V. and its affiliate(s)"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_lowercase_company_with_inc_holder() {
+    let input = "\"Copyright 2011 craigslist, inc.\"";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright 2011 craigslist, inc"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|ho| ho.holder == "craigslist, inc"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_detect_contributors_as_noted_in_authors_file() {
     let input = "Copyright (c) 2020 Contributors as noted in the AUTHORS file";
     let (c, h, _a) = detect_copyrights_from_text(input);

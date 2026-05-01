@@ -1644,6 +1644,50 @@ fn test_refine_holder_keeps_plain_dotted_org_names() {
 }
 
 #[test]
+fn test_refine_holder_keeps_collective_company_contributors_phrase() {
+    let input = "Digia Plc and/or its subsidiary(-ies) and other contributors";
+    assert_eq!(refine_holder(input), Some(input.to_string()));
+}
+
+#[test]
+fn test_refine_holder_keeps_affiliate_s_parenthetical_phrase() {
+    let input = "HERE Global B.V. and its affiliate(s)";
+    assert_eq!(refine_holder(input), Some(input.to_string()));
+}
+
+#[test]
+fn test_refine_holder_keeps_lowercase_hyphenated_project_name_in_copyright_context() {
+    assert_eq!(
+        refine_holder_in_copyright_context("dynamic-evaluation"),
+        Some("dynamic-evaluation".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("rds-snapshot-encrypted"),
+        Some("rds-snapshot-encrypted".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_strips_lowercase_handle_angle_email() {
+    assert_eq!(
+        refine_holder("dead_horse <dead_horse@qq.com>"),
+        Some("dead_horse".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_keeps_lowercase_company_with_inc_suffix() {
+    assert_eq!(
+        refine_holder_in_copyright_context("craigslist, inc."),
+        Some("craigslist, inc.".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("craigslist, inc"),
+        Some("craigslist, inc".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_strips_trailing_placeholder_dollar() {
     assert_eq!(
         refine_holder("Markus Franz Xaver Johannes Oberhumer $"),
@@ -1659,6 +1703,22 @@ fn test_refine_copyright_strips_see_authors_suffix() {
     assert_eq!(
         result,
         Some("Copyright (c) 2000 Carsten Haitzler and various contributors".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_strips_everyone_is_permitted_to_copy_clause() {
+    let result =
+        refine_copyright("Copyright (C) 2001 Project Mayo. Everyone is permitted to copy a");
+    assert_eq!(result, Some("Copyright (C) 2001 Project Mayo".to_string()));
+}
+
+#[test]
+fn test_refine_copyright_keeps_affiliate_s_parenthetical_phrase() {
+    let input = "Copyright (C) 2016-2018 HERE Global B.V. and its affiliate(s).";
+    assert_eq!(
+        refine_copyright(input),
+        Some("Copyright (C) 2016-2018 HERE Global B.V. and its affiliate(s)".to_string())
     );
 }
 

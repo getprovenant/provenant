@@ -10,11 +10,52 @@ use super::super::token_utils::{
 };
 use super::*;
 use crate::copyright::candidates::collect_candidate_lines;
+use crate::copyright::detector::{NON_HOLDER_LABELS, NON_HOLDER_POS_TAGS};
 use crate::copyright::lexer::get_tokens;
 use crate::copyright::parser::parse;
 use crate::copyright::refiner::refine_holder_in_copyright_context;
 use crate::copyright::types::{PosTag, Token, TreeLabel};
 use crate::models::LineNumber;
+
+#[test]
+fn test_build_holder_from_node_keeps_lowercase_company_suffix() {
+    let text = "\"Copyright 2011 craigslist, inc.\"";
+    let prepared = super::super::super::prepare::prepare_text_line(text);
+    let tokens = get_tokens(&[(1, prepared)]);
+    let tree = parse(tokens);
+
+    let copyright_node = tree
+        .iter()
+        .find(|node| {
+            matches!(
+                node.label(),
+                Some(TreeLabel::Copyright) | Some(TreeLabel::Copyright2)
+            )
+        })
+        .expect("Should parse a COPYRIGHT node");
+
+    let leaves =
+        collect_holder_filtered_leaves(copyright_node, NON_HOLDER_LABELS, NON_HOLDER_POS_TAGS);
+    let filtered = strip_all_rights_reserved(leaves);
+    let holder_string = normalized_tokens_to_string(&filtered);
+    let refined = refine_holder_in_copyright_context(&holder_string);
+    let detection = super::super::token_utils::build_holder_from_node(
+        copyright_node,
+        NON_HOLDER_LABELS,
+        NON_HOLDER_POS_TAGS,
+    );
+
+    assert_eq!(
+        refined,
+        Some("craigslist, inc".to_string()),
+        "holder_string={holder_string:?} tree={tree:#?}"
+    );
+    assert_eq!(
+        detection.map(|d| d.holder),
+        Some("craigslist, inc".to_string()),
+        "holder_string={holder_string:?} tree={tree:#?}"
+    );
+}
 
 #[test]
 fn test_extract_from_tree_nodes_builds_hall_holder_tokens() {
