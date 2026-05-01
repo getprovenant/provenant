@@ -142,6 +142,13 @@ fn ranges_overlap(
 }
 
 fn is_binary_string_copyright_candidate(text: &str) -> bool {
+    if text
+        .chars()
+        .any(|ch| ch.is_control() && !ch.is_whitespace())
+    {
+        return false;
+    }
+
     if contains_year(text) {
         return true;
     }
@@ -163,6 +170,10 @@ fn is_binary_string_copyright_candidate(text: &str) -> bool {
         return false;
     }
 
+    if !contains_year(text) && has_suspicious_binary_digit_noise(original_tail) {
+        return false;
+    }
+
     let alpha_tokens: Vec<&str> = tail
         .split_whitespace()
         .filter(|token| token.chars().any(|c| c.is_alphabetic()))
@@ -177,6 +188,10 @@ fn is_binary_string_copyright_candidate(text: &str) -> bool {
 
     if !has_explicit_copyright_marker(text) {
         return false;
+    }
+
+    if original_tail.chars().any(|ch| ch.is_ascii_digit()) {
+        return has_plausible_digit_bearing_holder(original_tail);
     }
 
     has_binary_name_like_shape(original_tail)
@@ -196,6 +211,68 @@ fn extract_binary_string_author_supplements(text_content: &str) -> Vec<AuthorDet
     }
 
     authors
+}
+
+fn has_suspicious_binary_digit_noise(text: &str) -> bool {
+    let tokens: Vec<&str> = text
+        .split_whitespace()
+        .filter(|token| !token.is_empty())
+        .collect();
+    if tokens.is_empty() {
+        return false;
+    }
+
+    let digit_tokens: Vec<&str> = tokens
+        .iter()
+        .copied()
+        .filter(|token| token.chars().any(|ch| ch.is_ascii_digit()))
+        .collect();
+    if digit_tokens.is_empty() {
+        return false;
+    }
+
+    let weak_digit_tokens = digit_tokens
+        .iter()
+        .filter(|token| token.chars().filter(|ch| ch.is_ascii_alphabetic()).count() < 2)
+        .count();
+    let has_symbolic_token = tokens.iter().any(|token| {
+        token.chars().any(|ch| {
+            !ch.is_ascii_alphanumeric()
+                && !matches!(ch, '.' | '\'' | '&' | '-' | '_' | ',' | '(' | ')')
+        })
+    });
+
+    (has_symbolic_token && weak_digit_tokens > 0)
+        || (digit_tokens.len() >= 2 && weak_digit_tokens == digit_tokens.len())
+}
+
+fn has_plausible_digit_bearing_holder(text: &str) -> bool {
+    let tokens: Vec<&str> = text
+        .split_whitespace()
+        .filter(|token| token.chars().any(|ch| ch.is_ascii_alphabetic()))
+        .collect();
+    if tokens.is_empty() {
+        return false;
+    }
+
+    let has_company_suffix = tokens
+        .iter()
+        .any(|token| is_company_like_suffix(token.trim_matches(|ch: char| !ch.is_alphanumeric())));
+    let uppercase_like = tokens
+        .iter()
+        .filter(|token| {
+            token
+                .chars()
+                .find(|ch| ch.is_ascii_alphabetic())
+                .is_some_and(|ch| ch.is_ascii_uppercase())
+        })
+        .count();
+    let strong_digit_token = tokens.iter().any(|token| {
+        token.chars().any(|ch| ch.is_ascii_digit())
+            && token.chars().filter(|ch| ch.is_ascii_alphabetic()).count() >= 2
+    });
+
+    strong_digit_token && (has_company_suffix || uppercase_like >= 1)
 }
 
 fn extract_patch_header_author_supplements(text_content: &str) -> Vec<AuthorDetection> {

@@ -17,6 +17,52 @@ fn test_binary_string_copyright_candidate_rejects_gibberish_holder_text() {
 }
 
 #[test]
+fn test_binary_string_copyright_candidate_rejects_control_char_gibberish() {
+    let gibberish = "(c) K0\u{000e}q6 b$L";
+    assert!(!is_binary_string_copyright_candidate(gibberish));
+}
+
+#[test]
+fn test_binary_string_copyright_candidate_rejects_digit_bearing_gibberish_without_year() {
+    let gibberish = "(c) K0 b$L";
+    assert!(!is_binary_string_copyright_candidate(gibberish));
+}
+
+#[test]
+fn test_binary_string_copyright_candidate_keeps_digit_bearing_company_name_without_year() {
+    let notice = "Copyright (c) 3Com Corporation";
+    assert!(is_binary_string_copyright_candidate(notice));
+}
+
+#[test]
+fn test_extract_copyright_information_drops_binary_string_gibberish_notice() {
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("fixture.blb"),
+        "(c) K0\n b$L",
+        120.0,
+        true,
+    );
+
+    let file = builder
+        .name("fixture.blb".to_string())
+        .base_name("fixture".to_string())
+        .extension(".blb".to_string())
+        .path("fixture.blb".to_string())
+        .file_type(FileType::File)
+        .size(9)
+        .build()
+        .expect("builder should produce file info");
+    assert!(
+        file.copyrights.is_empty(),
+        "copyrights: {:?}",
+        file.copyrights
+    );
+}
+
+#[test]
 fn test_binary_string_copyright_candidate_keeps_real_notice() {
     let notice = "Copyright nexB and others (c) 2012";
     assert!(is_binary_string_copyright_candidate(notice));
