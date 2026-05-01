@@ -2076,10 +2076,7 @@ fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
                     .get("email")
                     .and_then(Value::as_str)
                     .map(str::to_string),
-                "urls" => item
-                    .get("url")
-                    .and_then(Value::as_str)
-                    .map(normalize_url_value),
+                "urls" => item.get("url").and_then(Value::as_str).map(str::to_string),
                 "scan_errors" => scan_error_identity(item).map(str::to_string),
                 _ => None,
             }?;
@@ -2096,23 +2093,9 @@ fn package_identity(item: &Value) -> Option<&str> {
 }
 
 fn package_metric_identity(item: &Value) -> Option<String> {
-    if is_cargo_lock_placeholder_like(item) {
-        return Some("type=cargo|datasource_id=cargo_lock".to_string());
-    }
-
     package_identity(item)
         .map(str::to_string)
         .or_else(|| package_fallback_identity(item))
-}
-
-fn is_cargo_lock_placeholder_like(item: &Value) -> bool {
-    let datasource = item.get("datasource_id").and_then(Value::as_str);
-    let package_type = item
-        .get("type")
-        .or_else(|| item.get("package_type"))
-        .and_then(Value::as_str);
-
-    datasource == Some("cargo_lock") && package_type == Some("cargo")
 }
 
 fn package_fallback_identity(item: &Value) -> Option<String> {
@@ -2159,16 +2142,6 @@ fn normalize_compare_path(path: &str) -> String {
             .trim_start_matches("input/")
             .to_string()
     }
-}
-
-fn normalize_url_value(value: &str) -> String {
-    let normalized = normalize_text(value);
-    if let Some(stripped) = normalized.strip_suffix('/')
-        && (stripped.starts_with("http://") || stripped.starts_with("https://"))
-    {
-        return stripped.to_string();
-    }
-    normalized
 }
 
 fn normalize_license_expression(value: &str) -> String {
@@ -4917,26 +4890,6 @@ mod tests {
         assert!(policy_values[0].contains("boost-1.0"));
         assert_eq!(clue_values.len(), 1);
         assert!(clue_values[0].contains("license_expression"));
-    }
-
-    #[test]
-    fn metric_values_normalize_trailing_slash_urls() {
-        let entry = json!({
-            "urls": [
-                {"url": "https://docs.rs/serde/latest/serde/"},
-                {"url": "https://keepachangelog.com/en/1.0.0"}
-            ]
-        });
-
-        let values = metric_values(&entry, "urls");
-
-        assert_eq!(
-            values,
-            vec![
-                "https://docs.rs/serde/latest/serde".to_string(),
-                "https://keepachangelog.com/en/1.0.0".to_string(),
-            ]
-        );
     }
 
     #[test]
