@@ -4,10 +4,9 @@ what:
   - holders_summary
 copyrights:
   - Copyright (c) 2001 Project
-  - Copyright (c) 2001 Project Mayo. Everyone is permitted to copy a
+  - Copyright (c) 2001 Project Mayo
 holders:
-  - Project
-  - Project Mayo. Everyone is permitted to copy
+  - Project Mayo
 holders_summary:
   - value: Project Mayo
     count: 1
