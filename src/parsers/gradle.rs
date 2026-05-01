@@ -439,6 +439,12 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
             );
             break;
         }
+
+        if let Some(next_index) = parse_control_flow_block(tokens, i, &mut deps) {
+            i = next_index;
+            continue;
+        }
+
         // Skip nested blocks (closures like `{ transitive = true }`)
         if tokens[i] == Tok::OpenBrace {
             let mut depth = 1;
@@ -623,6 +629,37 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
     }
 
     deps
+}
+
+fn parse_control_flow_block(tokens: &[Tok], start: usize, deps: &mut Vec<RawDep>) -> Option<usize> {
+    let Tok::Ident(keyword) = tokens.get(start)? else {
+        return None;
+    };
+
+    if keyword != "if" && keyword != "else" {
+        return None;
+    }
+
+    let mut block_start = start + 1;
+    if keyword == "if" {
+        if tokens.get(block_start) != Some(&Tok::OpenParen) {
+            return None;
+        }
+        let cond_end = find_matching_paren(tokens, block_start)?;
+        block_start = cond_end + 1;
+    } else if let Some(Tok::Ident(next)) = tokens.get(block_start)
+        && next == "if"
+    {
+        return parse_control_flow_block(tokens, block_start, deps);
+    }
+
+    if tokens.get(block_start) != Some(&Tok::OpenBrace) {
+        return None;
+    }
+
+    let block_end = find_matching_brace(tokens, block_start)?;
+    deps.extend(parse_block(&tokens[block_start + 1..block_end]));
+    Some(block_end + 1)
 }
 
 fn is_skip_keyword(name: &str) -> bool {
@@ -2362,6 +2399,40 @@ dependencies {
             dependency.purl.as_deref() == Some("pkg:maven/io.ktor/ktor-server-test-host@2.3.10")
                 && dependency.extracted_requirement.as_deref() == Some("2.3.10")
                 && dependency.scope.as_deref() == Some("testImplementation")
+        }));
+    }
+
+    #[test]
+    fn test_conditional_dependencies_inside_if_blocks_are_extracted() {
+        let temp_dir = tempdir().unwrap();
+        let build_gradle = temp_dir.path().join("build.gradle");
+        std::fs::write(
+            &build_gradle,
+            r#"
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}
+"#,
+        )
+        .unwrap();
+
+        let package_data = GradleParser::extract_first_package(&build_gradle);
+
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/com.facebook.react/react-android")
+                && dependency.scope.as_deref() == Some("implementation")
+        }));
+        assert!(package_data.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/com.facebook.react/hermes-android")
+                && dependency.scope.as_deref() == Some("implementation")
         }));
     }
 
