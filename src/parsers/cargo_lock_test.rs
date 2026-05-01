@@ -475,4 +475,46 @@ checksum = "serde-checksum"
         );
         assert_eq!(benchsuite_dep.is_direct, Some(true));
     }
+
+    #[test]
+    fn test_extract_workspace_lockfile_omits_arbitrary_package_identity() {
+        let content = r#"
+[[package]]
+name = "aead-stream"
+version = "0.6.0-rc.3"
+dependencies = ["serde 1.0.228"]
+
+[[package]]
+name = "workspace-tool"
+version = "0.1.0"
+
+[[package]]
+name = "serde"
+version = "1.0.228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "serde-checksum"
+"#;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let lock_path = temp_dir.path().join("Cargo.lock");
+        std::fs::write(&lock_path, content).unwrap();
+
+        let package_data = CargoLockParser::extract_first_package(&lock_path);
+
+        assert_eq!(package_data.datasource_id, Some(DatasourceId::CargoLock));
+        assert_eq!(package_data.package_type, Some(PackageType::Cargo));
+        assert_eq!(package_data.name, None);
+        assert_eq!(package_data.version, None);
+        assert_eq!(package_data.purl, None);
+
+        let dependency_purls: Vec<_> = package_data
+            .dependencies
+            .iter()
+            .filter_map(|dep| dep.purl.as_deref())
+            .collect();
+
+        assert!(dependency_purls.contains(&"pkg:cargo/aead-stream@0.6.0-rc.3"));
+        assert!(dependency_purls.contains(&"pkg:cargo/workspace-tool@0.1.0"));
+        assert!(dependency_purls.contains(&"pkg:cargo/serde@1.0.228"));
+    }
 }

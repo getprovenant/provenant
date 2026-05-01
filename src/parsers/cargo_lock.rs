@@ -63,19 +63,20 @@ impl PackageParser for CargoLockParser {
             }
         };
 
-        let root_package = select_root_package(packages);
+        let identity_package = select_identity_package(packages);
+        let dependency_root_package = select_dependency_root_package(packages);
 
-        let name = root_package
+        let name = identity_package
             .and_then(|p| p.get("name"))
             .and_then(|v| v.as_str())
             .map(|s| truncate_field(s.to_string()));
 
-        let version = root_package
+        let version = identity_package
             .and_then(|p| p.get("version"))
             .and_then(|v| v.as_str())
             .map(|s| truncate_field(s.to_string()));
 
-        let checksum = root_package
+        let checksum = identity_package
             .and_then(|p| p.get("checksum"))
             .and_then(|v| v.as_str())
             .map(|s| truncate_field(s.to_string()));
@@ -92,7 +93,7 @@ impl PackageParser for CargoLockParser {
             _ => (None, None),
         };
 
-        let dependencies = extract_all_dependencies(packages, root_package);
+        let dependencies = extract_all_dependencies(packages, dependency_root_package);
 
         let purl = match (&name, &version) {
             (Some(n), Some(v)) => PackageUrl::new("cargo", n).ok().and_then(|mut p| {
@@ -167,12 +168,26 @@ fn read_cargo_lock(path: &Path) -> Result<Value, String> {
     toml::from_str(&content).map_err(|e| format!("Failed to parse TOML: {}", e))
 }
 
-fn select_root_package(packages: &[Value]) -> Option<&toml::map::Map<String, Value>> {
+fn select_dependency_root_package(packages: &[Value]) -> Option<&toml::map::Map<String, Value>> {
     packages
         .iter()
         .filter_map(|package| package.as_table())
         .find(|table| table.get("source").is_none())
         .or_else(|| packages.first().and_then(|package| package.as_table()))
+}
+
+fn select_identity_package(packages: &[Value]) -> Option<&toml::map::Map<String, Value>> {
+    let local_packages: Vec<_> = packages
+        .iter()
+        .filter_map(|package| package.as_table())
+        .filter(|table| table.get("source").is_none())
+        .collect();
+
+    match local_packages.as_slice() {
+        [only] => Some(*only),
+        [] => packages.first().and_then(|package| package.as_table()),
+        _ => None,
+    }
 }
 
 fn extract_all_dependencies(
