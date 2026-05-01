@@ -87,6 +87,8 @@ const JUNK_URLS: &[&str] = &[
     "http://www.w3.org/markup/dtd/xhtml-rdfa-1.dtd",
     "http://www.w3.org/1999/02/22-rdf-syntax-ns",
     "http://www.w3.org/1999/xhtml",
+    // Keep xlink namespace URLs: they appear in shipped SVGs and are real referenced URLs,
+    // unlike the broader XML namespace/schema noise filtered below.
     "http://www.w3.org/1999/xmlschema",
     "http://www.w3.org/1999/xmlschema-instance",
     "http://www.w3.org/2000/svg",

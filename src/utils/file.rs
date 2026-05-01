@@ -50,6 +50,8 @@ const MAX_IMAGE_METADATA_TEXT_BYTES: usize = 32 * 1024;
 const BINARY_CONTROL_CHAR_THRESHOLD_DIVISOR: usize = 10;
 const LARGE_OPAQUE_BINARY_SKIP_BYTES: usize = 512 * 1024;
 const JSON_VALIDATION_MAX_BYTES: usize = 4 * 1024 * 1024;
+const MAX_XMP_PACKET_BYTES: usize = 256 * 1024;
+const MAX_PDF_TEXT_EXTRACTION_BYTES: usize = 32 * 1024 * 1024;
 const PLAIN_TEXT_EXTENSIONS: &[&str] = &[
     "rst", "rest", "md", "txt", "log", "json", "xml", "yaml", "yml", "toml", "ini",
 ];
@@ -140,10 +142,13 @@ pub(crate) fn augment_license_detection_text<'a>(path: &Path, text: &'a str) -> 
     }
 
     let mut hints = Vec::new();
+    let has_dual_license_notice = has_dual_license_notice_text(text);
     if text.contains("CC BY 4.0") || text.contains("creativecommons.org/licenses/by/4.0") {
         hints.push("Creative Commons Attribution 4.0 International License".to_string());
     }
-    if text.contains("Apache License (Version 2.0)") || text.contains("Apache License, Version 2.0")
+    if !has_dual_license_notice
+        && (text.contains("Apache License (Version 2.0)")
+            || text.contains("Apache License, Version 2.0"))
     {
         hints.push(
             "Licensed under the Apache License, Version 2.0. http://www.apache.org/licenses/LICENSE-2.0"
@@ -151,7 +156,9 @@ pub(crate) fn augment_license_detection_text<'a>(path: &Path, text: &'a str) -> 
         );
     }
 
-    hints.extend(extract_shields_license_badge_hints(text));
+    if !has_dual_license_notice {
+        hints.extend(extract_shields_license_badge_hints(text));
+    }
 
     if hints.is_empty() {
         Cow::Borrowed(text)
@@ -207,6 +214,13 @@ fn extract_shields_license_badge_hints(text: &str) -> Vec<String> {
     hints.sort();
     hints.dedup();
     hints
+}
+
+fn has_dual_license_notice_text(text: &str) -> bool {
+    let lower = text.to_ascii_lowercase();
+    (lower.contains("licensed under either of") && lower.contains("at your option"))
+        || lower.contains("dual-licensed under")
+        || lower.contains("dual licensed under")
 }
 
 fn canonical_shields_license_hint(candidate: &str) -> String {
@@ -285,9 +299,13 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
         return (String::new(), ExtractedTextKind::None, None);
     }
 
-    if !large_opaque_binary {
+    let is_svg_text = lower_extension(path).as_deref() == Some("svg")
+        || detected_format.media_type() == "image/svg+xml";
+    let should_try_decoded_text = looks_like_textual_bytes(bytes) || is_svg_text;
+
+    if !large_opaque_binary && should_try_decoded_text {
         let decoded = decode_bytes_to_string(bytes);
-        if !decoded.is_empty() {
+        if !decoded.is_empty() && (is_svg_text || looks_like_decoded_text(&decoded)) {
             let combined =
                 combine_extracted_text_fragments(windows_executable_metadata_text, decoded);
             return (combined, ExtractedTextKind::Decoded, None);
@@ -409,12 +427,27 @@ fn decode_utf16_units(bytes: &[u8], is_le: bool, require_text_shape: bool) -> Op
         return (!decoded.contains('\0')).then_some(decoded);
     }
 
+    if !looks_like_decoded_text(&decoded) {
+        return None;
+    }
+
+    Some(decoded)
+}
+
+fn looks_like_decoded_text(decoded: &str) -> bool {
+    if decoded
+        .chars()
+        .any(|ch| ch.is_control() && !matches!(ch, '\n' | '\r' | '\t'))
+    {
+        return false;
+    }
+
     let visible = decoded
         .chars()
         .filter(|ch| !ch.is_control() || matches!(ch, '\n' | '\r' | '\t'))
         .count();
     if visible < 3 || decoded.contains('\0') {
-        return None;
+        return false;
     }
 
     let alpha = decoded.chars().filter(|ch| ch.is_alphabetic()).count();
@@ -447,11 +480,7 @@ fn decode_utf16_units(bytes: &[u8], is_le: bool, require_text_shape: bool) -> Op
     let whitespace = decoded.chars().filter(|ch| ch.is_whitespace()).count();
 
     let textish = alpha + punctuation + whitespace;
-    if textish + (visible / 5) < visible || (alpha == 0 && punctuation < 2) {
-        return None;
-    }
-
-    Some(decoded)
+    textish + (visible / 5) >= visible && (alpha > 0 || punctuation >= 2)
 }
 
 fn detect_utf16_endianness(bytes: &[u8]) -> Option<bool> {
@@ -1675,7 +1704,7 @@ fn extract_raw_xmp_packet(bytes: &[u8], format: ImageFormat) -> Option<Vec<u8>> 
     if let Ok(mut decoder) = reader.into_decoder()
         && let Ok(Some(xmp)) = decoder.xmp_metadata()
     {
-        return Some(xmp);
+        return (xmp.len() <= MAX_XMP_PACKET_BYTES).then_some(xmp);
     }
 
     match format {
@@ -1744,12 +1773,15 @@ fn parse_png_itxt_xmp(data: &[u8]) -> Option<Vec<u8>> {
 
     let text_bytes = &data[cursor..];
     if compression_flag == 1 {
-        let mut decoder = ZlibDecoder::new(text_bytes);
+        let decoder = ZlibDecoder::new(text_bytes);
         let mut decoded = Vec::new();
-        decoder.read_to_end(&mut decoded).ok()?;
-        Some(decoded)
+        decoder
+            .take((MAX_XMP_PACKET_BYTES + 1) as u64)
+            .read_to_end(&mut decoded)
+            .ok()?;
+        (decoded.len() <= MAX_XMP_PACKET_BYTES).then_some(decoded)
     } else {
-        Some(text_bytes.to_vec())
+        (text_bytes.len() <= MAX_XMP_PACKET_BYTES).then(|| text_bytes.to_vec())
     }
 }
 
@@ -1926,6 +1958,16 @@ fn normalize_metadata_value(value: &str) -> String {
 fn extract_pdf_text(path: &Path, bytes: &[u8]) -> (String, Option<String>) {
     if bytes.len() < 5 || &bytes[..5] != b"%PDF-" {
         return (String::new(), None);
+    }
+
+    if bytes.len() > MAX_PDF_TEXT_EXTRACTION_BYTES {
+        return (
+            String::new(),
+            Some(format!(
+                "PDF text extraction skipped because file exceeds {} bytes",
+                MAX_PDF_TEXT_EXTRACTION_BYTES
+            )),
+        );
     }
 
     let mut failures = Vec::new();
@@ -2209,13 +2251,15 @@ pub fn extract_printable_strings(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use image::ImageFormat;
     use std::path::Path;
 
     use crate::copyright::detect_copyrights;
 
     use super::{
-        ExtractedTextKind, LARGE_OPAQUE_BINARY_SKIP_BYTES, classify_file_info,
-        extract_printable_strings, extract_text_for_detection,
+        ExtractedTextKind, LARGE_OPAQUE_BINARY_SKIP_BYTES, MAX_PDF_TEXT_EXTRACTION_BYTES,
+        MAX_XMP_PACKET_BYTES, classify_file_info, extract_printable_strings,
+        extract_raw_xmp_packet, extract_text_for_detection,
         extract_text_for_detection_with_diagnostics, format_metadata_field, format_xmp_value,
         is_non_actionable_pdf_failure, normalize_mime_type, normalize_pdf_heading_comparison_text,
         values_to_text, windows_metadata_or_empty_result,
@@ -2321,6 +2365,23 @@ mod tests {
 
         assert_eq!(kind, ExtractedTextKind::Pdf);
         assert!(text.contains("Redistribution and use in source and binary forms"));
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_skips_oversized_pdf_payload() {
+        let mut bytes = b"%PDF-1.7\n".to_vec();
+        bytes.resize(MAX_PDF_TEXT_EXTRACTION_BYTES + 1, b'0');
+
+        let (text, kind, scan_error) =
+            extract_text_for_detection_with_diagnostics(Path::new("oversized.pdf"), &bytes);
+
+        assert!(text.is_empty());
+        assert_eq!(kind, ExtractedTextKind::None);
+        assert!(
+            scan_error
+                .as_deref()
+                .is_some_and(|message| message.contains("PDF text extraction skipped"))
+        );
     }
 
     #[test]
@@ -2505,6 +2566,26 @@ mod tests {
         assert_ne!(kind, ExtractedTextKind::None);
         assert!(text.contains("asn@redhat.com"));
         assert!(text.contains("https://publicsuffix.org/"));
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_avoids_latin1_decode_for_binary_blob_noise() {
+        let bytes = vec![
+            0x28, 0x63, 0x29, 0x20, 0x4b, 0x30, 0x0e, 0x71, 0x86, 0x20, 0x62, 0x24, 0x4c,
+        ];
+
+        let (text, kind) = extract_text_for_detection(Path::new("fixture.blb"), &bytes);
+
+        assert_eq!(kind, ExtractedTextKind::BinaryStrings);
+        assert_eq!(text, "(c) K0\n b$L");
+    }
+
+    #[test]
+    fn test_extract_raw_xmp_packet_rejects_oversized_png_itxt_payload() {
+        let xmp = "A".repeat(MAX_XMP_PACKET_BYTES + 1);
+        let bytes = build_png_with_xmp(&xmp);
+
+        assert!(extract_raw_xmp_packet(&bytes, ImageFormat::Png).is_none());
     }
 
     #[test]
