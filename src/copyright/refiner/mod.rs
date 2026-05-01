@@ -749,10 +749,7 @@ fn contains_xml_markup_declaration_token(s: &str) -> bool {
         || lower.contains("pcdata")
 }
 
-fn looks_like_generic_field_label_token(s: &str) -> bool {
-    static GENERIC_FIELD_LABEL_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"^[a-z][a-z0-9]*(?:[_-][a-z0-9]+){1,4}$").expect("valid field label regex")
-    });
+fn is_explicit_generic_field_label_token(s: &str) -> bool {
     static GENERIC_FIELD_LABELS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         HashSet::from([
             "action",
@@ -786,18 +783,39 @@ fn looks_like_generic_field_label_token(s: &str) -> bool {
     }
 
     let lower = trimmed.to_ascii_lowercase();
-    GENERIC_FIELD_LABELS.contains(lower.as_str()) || GENERIC_FIELD_LABEL_RE.is_match(trimmed)
+    GENERIC_FIELD_LABELS.contains(lower.as_str())
+}
+
+fn looks_like_generic_field_label_shape(s: &str) -> bool {
+    static GENERIC_FIELD_LABEL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^[a-z][a-z0-9]*(?:[_-][a-z0-9]+){1,4}$").expect("valid field label regex")
+    });
+
+    let trimmed = s.trim();
+    if trimmed.is_empty() || trimmed.contains('@') {
+        return false;
+    }
+
+    GENERIC_FIELD_LABEL_RE.is_match(trimmed)
+}
+
+fn looks_like_generic_field_label_token(s: &str) -> bool {
+    is_explicit_generic_field_label_token(s) || looks_like_generic_field_label_shape(s)
 }
 
 fn contains_code_call_fragment(s: &str) -> bool {
+    static NATURAL_PAREN_VARIANT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b[a-z][a-z-]{5,}\((?:-)?[a-z-]{1,8}\)(?:$|[^A-Za-z0-9_])")
+            .expect("valid natural parenthetical variant regex")
+    });
     static CODE_CALL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
             r"(?x)
-            \b[a-z_][A-Za-z0-9_]*(?:[&.]\w+)*\s*\([^)]*\)
+            \b[a-z_][A-Za-z0-9_]*(?:[&.]\w+)*\([^)]*\)
             |\b[a-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*
             |\b[A-Za-z_][A-Za-z0-9_]*\s+\.\.\.[A-Za-z_][A-Za-z0-9_]*
             |\b[a-z_][A-Za-z0-9_]*&\.[A-Za-z_][A-Za-z0-9_]*
-            |\b[a-z_][A-Za-z0-9_]*\s*:\w+
+            |\b[a-z_][A-Za-z0-9_]*:[a-z_][A-Za-z0-9_]*
             ",
         )
         .expect("valid code call fragment regex")
@@ -806,6 +824,15 @@ fn contains_code_call_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
     if lower.contains("http://") || lower.contains("https://") || lower.contains("www.") {
+        return false;
+    }
+
+    if NATURAL_PAREN_VARIANT_RE.is_match(trimmed)
+        && !trimmed.contains("::")
+        && !trimmed.contains(':')
+        && !trimmed.contains('&')
+        && !trimmed.contains('_')
+    {
         return false;
     }
 
@@ -838,7 +865,7 @@ fn looks_like_translation_or_ui_phrase(s: &str) -> bool {
         return false;
     }
 
-    let words: Vec<&str> = lower.split_whitespace().collect();
+    let words: Vec<&str> = trimmed.split_whitespace().collect();
     words.len() <= 8
         && words.iter().all(|word| {
             word.chars().all(|ch| {
@@ -849,6 +876,52 @@ fn looks_like_translation_or_ui_phrase(s: &str) -> bool {
         })
 }
 
+fn strip_trailing_lowercase_handle_angle_email(s: &str) -> String {
+    static HANDLE_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^(?P<name>[a-z0-9][a-z0-9._-]{1,63})\s*<\s*(?P<email>[^>\s]+@[^>\s]+)\s*>\s*$",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = HANDLE_EMAIL_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    cap.name("name")
+        .map(|m| m.as_str().trim().to_string())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| s.to_string())
+}
+
+fn is_lowercase_handle_angle_email(s: &str) -> bool {
+    static HANDLE_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^(?P<name>[a-z0-9][a-z0-9._-]{1,63})\s*<\s*(?P<email>[^>\s]+@[^>\s]+)\s*>\s*$",
+        )
+        .unwrap()
+    });
+
+    HANDLE_EMAIL_RE.is_match(s.trim())
+}
+
+fn strip_trailing_everyone_is_permitted_to_copy_clause(s: &str) -> String {
+    static EVERYONE_PERMITTED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?P<prefix>.+?)\.\s+Everyone\s+is\s+permitted\s+to\s+copy\b.*$").unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = EVERYONE_PERMITTED_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    cap.name("prefix")
+        .map(|m| m.as_str().trim().to_string())
+        .filter(|prefix| !prefix.is_empty())
+        .unwrap_or_else(|| s.to_string())
+}
+
 fn looks_like_lowercase_enum_blob(s: &str) -> bool {
     static LOWERCASE_ENUM_BLOB_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"^[a-z][a-z0-9_-]*(?:\s+\d+)?(?:,\s*[a-z][a-z0-9_-]*(?:\s+\d+)?){1,6}$")
@@ -856,6 +929,23 @@ fn looks_like_lowercase_enum_blob(s: &str) -> bool {
     });
 
     LOWERCASE_ENUM_BLOB_RE.is_match(s.trim())
+}
+
+fn looks_like_lowercase_company_suffix_holder(s: &str) -> bool {
+    static LOWERCASE_COMPANY_SUFFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^[a-z][a-z0-9._-]*
+            (?:\s+[a-z0-9._-]+)*
+            ,\s*
+            (?:inc|corp|co|ltd|llc|gmbh|sarl|bv|b\.v|ag)
+            \.?$
+            ",
+        )
+        .expect("valid lowercase company suffix regex")
+    });
+
+    LOWERCASE_COMPANY_SUFFIX_RE.is_match(s.trim())
 }
 
 fn is_junk_c_sign_code_expression_fragment(s: &str) -> bool {
@@ -1020,6 +1110,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_paren_at_without_domain(&c);
     c = strip_trailing_inc_after_today_year_placeholder(&c);
     c = truncate_trailing_boilerplate(&c);
+    c = strip_trailing_everyone_is_permitted_to_copy_clause(&c);
     c = strip_trailing_author_label(&c);
     c = strip_trailing_credit_file_reference_clause(&c);
     c = strip_trailing_isc_after_inc(&c);
@@ -2180,6 +2271,8 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     };
 
     let mut h = s.replace("build.year", " ");
+    let had_lowercase_handle_angle_email = is_lowercase_handle_angle_email(&h);
+    h = strip_trailing_lowercase_handle_angle_email(&h);
     h = strip_trailing_quote_before_email(&h);
     h = strip_nickname_quotes(&h);
     h = strip_leading_author_label_in_holder(&h);
@@ -2203,6 +2296,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_by_person_clause_after_company(&h);
     h = strip_trailing_division_of_company_suffix(&h);
     h = strip_leading_product_operating_system_title(&h);
+    h = strip_trailing_everyone_is_permitted_to_copy_clause(&h);
     h = strip_trailing_et_al(&h);
     h = strip_trailing_authors_clause(&h);
     h = strip_trailing_document_authors_clause(&h);
@@ -2271,9 +2365,13 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
         return None;
     }
 
-    if looks_like_generic_field_label_token(&h)
+    if (is_explicit_generic_field_label_token(&h)
+        || (!in_copyright_context
+            && !had_lowercase_handle_angle_email
+            && looks_like_generic_field_label_shape(&h)))
         || looks_like_translation_or_ui_phrase(&h)
-        || looks_like_lowercase_enum_blob(&h)
+        || (looks_like_lowercase_enum_blob(&h)
+            && !(in_copyright_context && looks_like_lowercase_company_suffix_holder(&h)))
     {
         return None;
     }
