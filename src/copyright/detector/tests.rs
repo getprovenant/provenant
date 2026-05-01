@@ -915,6 +915,21 @@ fn test_detect_copyright_with_short_holder_and_trailing_punct_email() {
 }
 
 #[test]
+fn test_detect_copyright_with_year_range_and_angle_email_keeps_email() {
+    let input = "Copyright (c) 2021-2023 Sebastian Ramacher <sebastian.ramacher@ait.ac.at>";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(c.len(), 1, "Should detect one copyright, got: {:?}", c);
+    assert_eq!(
+        c[0].copyright, "Copyright (c) 2021-2023 Sebastian Ramacher <sebastian.ramacher@ait.ac.at>",
+        "Copyright text: {:?}",
+        c[0].copyright
+    );
+    assert_eq!(h.len(), 1, "Should detect one holder, got: {:?}", h);
+    assert_eq!(h[0].holder, "Sebastian Ramacher");
+}
+
+#[test]
 fn test_detect_copyright_with_malformed_first_year_range() {
     let input = "Copyright (C) 20010-2011 Hauke Heibel <hauke.heibel@gmail.com>";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(input);

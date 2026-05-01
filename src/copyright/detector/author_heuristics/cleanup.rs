@@ -39,6 +39,17 @@ pub(in super::super) fn refine_author_with_optional_handle_suffix(
 ) -> Option<String> {
     static TRAILING_HANDLE_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"\s*\(@[A-Za-z0-9_.-]+\)\s*$").unwrap());
+    static TRAILING_COMMA_HANDLE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?x)
+                ^(?P<base>.+?),
+                \s*
+                (?P<handle>@?[A-Za-z0-9_.-]+)
+                \s*$
+            ",
+        )
+        .unwrap()
+    });
 
     let trimmed = candidate.trim();
     if trimmed.is_empty() {
@@ -48,6 +59,29 @@ pub(in super::super) fn refine_author_with_optional_handle_suffix(
     let without_handle = TRAILING_HANDLE_RE.replace(trimmed, "").trim().to_string();
     if without_handle != trimmed {
         return refine_author(&without_handle);
+    }
+
+    if let Some(captures) = TRAILING_COMMA_HANDLE_RE.captures(trimmed) {
+        let base = captures
+            .name("base")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        let handle = captures
+            .name("handle")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        let bare_handle = handle.trim_start_matches('@');
+        let looks_like_handle = !bare_handle.is_empty()
+            && (handle.starts_with('@')
+                || bare_handle.chars().any(|ch| ch.is_ascii_digit())
+                || bare_handle
+                    .chars()
+                    .all(|ch| !ch.is_ascii_alphabetic() || ch.is_ascii_lowercase()));
+        if looks_like_handle {
+            return refine_author(base);
+        }
     }
 
     refine_author(trimmed)

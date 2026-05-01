@@ -177,6 +177,7 @@ static AUTHORS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         "performing",
         "volunteer",
         "volunteers",
+        "automatically generated",
         "donald becker",
     ]
     .into_iter()
@@ -1170,10 +1171,30 @@ pub fn refine_copyright(s: &str) -> Option<String> {
         }
     }
 
+    static YEAR_RANGE_ANGLE_EMAIL_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+                ^copyright\s*\(c\)\s+
+                (?:19\d{2}|20\d{2}|\?\?\?\?)
+                (?:\s*[-–/]\s*(?:\d{2,4}|\?\?\?\?))?
+                (?:\s*,\s*(?:19\d{2}|20\d{2}|\?\?\?\?))*
+                \s+.+?<[^>\s]+@[^>\s]+>\.?$
+            ",
+        )
+        .unwrap()
+    });
+    if YEAR_RANGE_ANGLE_EMAIL_COPY_RE.is_match(original.as_str()) && !result.contains('@') {
+        let restored = strip_trailing_period(&original);
+        let restored = restored.trim().to_string();
+        if !restored.is_empty() {
+            return Some(restored);
+        }
+    }
+
     static YEAR_ONLY_WITH_OBF_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
             r"(?ix)^copyright\s*\(c\)\s*(?:19\d{2}|20\d{2})\s+[a-z0-9][a-z0-9._-]{0,63}\s+at\s+[a-z0-9][a-z0-9._-]{0,63}\s+dot\s+[a-z]{2,12}$",
-        )
+            )
         .unwrap()
     });
     if YEAR_ONLY_WITH_OBF_EMAIL_RE.is_match(result.as_str()) {
