@@ -26,7 +26,7 @@ use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::json;
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::path::Path;
 use toml::Value;
 
@@ -184,8 +184,52 @@ fn select_identity_package(packages: &[Value]) -> Option<&toml::map::Map<String,
         .collect();
 
     match local_packages.as_slice() {
-        [only] => Some(*only),
         [] => packages.first().and_then(|package| package.as_table()),
+        [only] => Some(*only),
+        _ => select_unique_root_like_local_package(&local_packages),
+    }
+}
+
+fn select_unique_root_like_local_package<'a>(
+    local_packages: &[&'a toml::map::Map<String, Value>],
+) -> Option<&'a toml::map::Map<String, Value>> {
+    let local_keys: HashSet<(String, String)> = local_packages
+        .iter()
+        .filter_map(|table| package_key_from_table(table))
+        .map(|(name, version)| (name.to_string(), version.to_string()))
+        .collect();
+
+    let referenced_local_keys: HashSet<(String, String)> = local_packages
+        .iter()
+        .flat_map(|table| {
+            table
+                .get("dependencies")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter_map(|dep| {
+                    let parsed = parse_dependency_string(dep);
+                    (!parsed.name.is_empty() && !parsed.version.is_empty())
+                        .then(|| (parsed.name.to_string(), parsed.version.to_string()))
+                })
+                .filter(|key| local_keys.contains(key))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    let root_candidates: Vec<_> = local_packages
+        .iter()
+        .copied()
+        .filter(|table| {
+            package_key_from_table(table).is_some_and(|(name, version)| {
+                !referenced_local_keys.contains(&(name.to_string(), version.to_string()))
+            })
+        })
+        .collect();
+
+    match root_candidates.as_slice() {
+        [only] => Some(*only),
         _ => None,
     }
 }

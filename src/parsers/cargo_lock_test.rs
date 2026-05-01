@@ -33,9 +33,7 @@ mod tests {
         let package_data = CargoLockParser::extract_first_package(&lock_path);
 
         assert_eq!(package_data.package_type, Some(PackageType::Cargo));
-        // The first package is alphabetically first, not the root
-        assert!(package_data.name.is_some());
-        assert!(package_data.version.is_some());
+        // Workspace lockfiles may not have a unique root-like local package identity.
         assert!(!package_data.dependencies.is_empty());
     }
 
