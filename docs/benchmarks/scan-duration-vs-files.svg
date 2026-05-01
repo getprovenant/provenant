@@ -206,6 +206,9 @@ ScanCode: 87.31s</title></rect>
     <rect x="475.18" y="444.77" width="8" height="8" fill="#d97706" rx="1.5"><title>libevent/libevent @ 4829651
 Files: 260
 ScanCode: 48.32s</title></rect>
+    <rect x="475.44" y="397.66" width="8" height="8" fill="#d97706" rx="1.5"><title>madler/zlib @ f9dd600
+Files: 261
+ScanCode: 130.94s</title></rect>
     <rect x="476.75" y="420.44" width="8" height="8" fill="#d97706" rx="1.5"><title>r-lib/devtools @ a3447b9
 Files: 266
 ScanCode: 80.85s</title></rect>
@@ -766,6 +769,9 @@ Provenant: 12.01s</title></circle>
     <circle cx="479.18" cy="515.90" r="4.5" fill="#2563eb"><title>libevent/libevent @ 4829651
 Files: 260
 Provenant: 11.67s</title></circle>
+    <circle cx="479.44" cy="519.30" r="4.5" fill="#2563eb"><title>madler/zlib @ f9dd600
+Files: 261
+Provenant: 10.86s</title></circle>
     <circle cx="480.75" cy="526.73" r="4.5" fill="#2563eb"><title>r-lib/devtools @ a3447b9
 Files: 266
 Provenant: 9.28s</title></circle>
