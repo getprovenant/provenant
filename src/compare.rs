@@ -1189,23 +1189,9 @@ fn package_identity(item: &Value) -> Option<&str> {
 }
 
 fn package_metric_identity(item: &Value) -> Option<String> {
-    if is_cargo_lock_placeholder_like(item) {
-        return Some("type=cargo|datasource_id=cargo_lock".to_string());
-    }
-
     package_identity(item)
         .map(str::to_string)
         .or_else(|| package_fallback_identity(item))
-}
-
-fn is_cargo_lock_placeholder_like(item: &Value) -> bool {
-    let datasource = item.get("datasource_id").and_then(Value::as_str);
-    let package_type = item
-        .get("type")
-        .or_else(|| item.get("package_type"))
-        .and_then(Value::as_str);
-
-    datasource == Some("cargo_lock") && package_type == Some("cargo")
 }
 
 fn package_fallback_identity(item: &Value) -> Option<String> {
