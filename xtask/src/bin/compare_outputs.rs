@@ -1501,8 +1501,10 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     let sc_top = top_level_counts(&scancode);
     let pr_top = top_level_counts(&provenant);
     let license_deltas = top_level_license_deltas(&scancode, &provenant);
-    let top_level_regressions_map = top_level_regressions(&sc_top, &pr_top, true);
-    let top_level_higher_counts = top_level_regressions(&pr_top, &sc_top, false);
+    let top_level_scancode_favored_differences =
+        top_level_directional_differences(&sc_top, &pr_top);
+    let top_level_provenant_favored_differences =
+        top_level_directional_differences(&pr_top, &sc_top);
     let skipped_comparisons = skipped_comparisons(&sc_top, &pr_top);
 
     let mut file_metric_summary = Map::new();
@@ -1566,15 +1568,17 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         &output_only_path_note("Provenant", "resource", only_findings_active),
     ));
 
-    let mut potential_regressions =
-        scancode_only_output_paths.len() + top_level_regressions_map.len();
-    let mut potential_higher = provenant_only_output_paths.len() + top_level_higher_counts.len();
+    let mut scancode_favored_signal_count =
+        scancode_only_output_paths.len() + top_level_scancode_favored_differences.len();
+    let mut provenant_favored_signal_count =
+        provenant_only_output_paths.len() + top_level_provenant_favored_differences.len();
+    let mut non_directional_signal_count = 0;
     if info_mode {
-        potential_regressions += scancode_only_output_resource_paths.len();
-        potential_higher += provenant_only_output_resource_paths.len();
+        scancode_favored_signal_count += scancode_only_output_resource_paths.len();
+        provenant_favored_signal_count += provenant_only_output_resource_paths.len();
     }
     if row2_mode {
-        potential_regressions += row2_top_level_differences.len();
+        non_directional_signal_count += row2_top_level_differences.len();
     }
     for metric in metrics {
         let missing = value_differences[metric]
@@ -1595,14 +1599,14 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             }),
         );
         if metric == "scan_errors" {
-            potential_regressions += higher_counts[metric].len();
-            potential_regressions += extra;
-            potential_higher += missing;
+            scancode_favored_signal_count += higher_counts[metric].len();
+            scancode_favored_signal_count += extra;
+            provenant_favored_signal_count += missing;
         } else {
-            potential_regressions += lower_counts[metric].len();
-            potential_higher += higher_counts[metric].len();
-            potential_regressions += missing;
-            potential_higher += extra;
+            scancode_favored_signal_count += lower_counts[metric].len();
+            provenant_favored_signal_count += higher_counts[metric].len();
+            scancode_favored_signal_count += missing;
+            provenant_favored_signal_count += extra;
         }
         rows.push(tsv_row(
             &format!("{metric}_lower_counts"),
@@ -1643,7 +1647,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             }),
         );
         if info_mode {
-            potential_regressions += differences;
+            non_directional_signal_count += differences;
         }
         rows.push(tsv_row(
             &format!("info_{metric}_value_differences"),
@@ -1663,7 +1667,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             }),
         );
         if row2_mode {
-            potential_regressions += differences;
+            non_directional_signal_count += differences;
         }
         rows.push(tsv_row(
             &format!("classify_{metric}_value_differences"),
@@ -1683,7 +1687,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             }),
         );
         if row2_mode {
-            potential_regressions += differences;
+            non_directional_signal_count += differences;
         }
         rows.push(tsv_row(
             &format!("row2_{metric}_value_differences"),
@@ -1760,15 +1764,16 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         }),
     );
     if top_level_package_skip_reason.is_none() {
-        potential_regressions += top_level_package_missing;
-        potential_higher += top_level_package_extra;
+        scancode_favored_signal_count += top_level_package_missing;
+        provenant_favored_signal_count += top_level_package_extra;
     }
     if top_level_dependency_skip_reason.is_none() {
-        potential_regressions += top_level_dependency_missing;
-        potential_higher += top_level_dependency_extra;
+        scancode_favored_signal_count += top_level_dependency_missing;
+        provenant_favored_signal_count += top_level_dependency_extra;
     }
-    potential_regressions += raw_dependency_missing;
-    potential_higher += raw_dependency_extra;
+    scancode_favored_signal_count += raw_dependency_missing;
+    provenant_favored_signal_count += raw_dependency_extra;
+    non_directional_signal_count += license_deltas.len();
     rows.push(tsv_row(
         "top_level_packages_missing_in_provenant",
         top_level_package_missing as i64,
@@ -1827,10 +1832,11 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         "expressions with different top-level detection counts",
     ));
 
-    let comparison_status = if potential_regressions > 0 {
-        "potential_regressions_detected"
-    } else if potential_higher > 0 || !license_deltas.is_empty() {
-        "differences_detected"
+    let comparison_status = if scancode_favored_signal_count > 0
+        || provenant_favored_signal_count > 0
+        || non_directional_signal_count > 0
+    {
+        "review_required"
     } else {
         "no_detected_differences"
     };
@@ -1915,6 +1921,11 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
 
     let summary = json!({
         "comparison_status": comparison_status,
+        "comparison_signal_summary": {
+            "scancode_favored": scancode_favored_signal_count,
+            "provenant_favored": provenant_favored_signal_count,
+            "non_directional": non_directional_signal_count,
+        },
         "top_level_counts": {
             "scancode": sc_top.counts_json(),
             "provenant": pr_top.counts_json(),
@@ -1955,8 +1966,8 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         "classify_metric_summary": classify_metric_summary,
         "row2_metric_summary": row2_metric_summary,
         "row2_top_level_section_difference_count": row2_top_level_differences.len(),
-        "top_level_regressions": top_level_regressions_map,
-        "top_level_higher_counts": top_level_higher_counts,
+        "top_level_scancode_favored_differences": top_level_scancode_favored_differences,
+        "top_level_provenant_favored_differences": top_level_provenant_favored_differences,
         "top_level_license_expression_delta_count": license_deltas.len(),
         "sample_artifacts": BTreeMap::from(sample_paths.map(|(name, path)| (name.to_string(), path.display().to_string()))),
     });
@@ -2602,7 +2613,7 @@ fn top_level_license_deltas(scancode: &Value, provenant: &Value) -> Vec<Value> {
 fn top_level_package_differences(scancode: &Value, provenant: &Value) -> Vec<ValueDifferenceEntry> {
     let sc_top = top_level_counts(scancode);
     let pr_top = top_level_counts(provenant);
-    if !count_delta_is_hard_regression_comparable("packages", &sc_top, &pr_top) {
+    if !count_delta_is_directly_comparable("packages", &sc_top, &pr_top) {
         return Vec::new();
     }
 
@@ -2644,7 +2655,7 @@ fn top_level_dependency_differences(
 ) -> Vec<ValueDifferenceEntry> {
     let sc_top = top_level_counts(scancode);
     let pr_top = top_level_counts(provenant);
-    if !count_delta_is_hard_regression_comparable("dependencies", &sc_top, &pr_top) {
+    if !count_delta_is_directly_comparable("dependencies", &sc_top, &pr_top) {
         return Vec::new();
     }
 
@@ -2804,10 +2815,9 @@ fn dependency_identity(item: &Value) -> Option<String> {
     }
 }
 
-fn top_level_regressions(
+fn top_level_directional_differences(
     left: &TopLevelCounts,
     right: &TopLevelCounts,
-    left_is_scancode: bool,
 ) -> BTreeMap<String, i64> {
     let mut output = BTreeMap::new();
     for key in [
@@ -2817,16 +2827,12 @@ fn top_level_regressions(
         "license_references",
         "license_rule_references",
     ] {
-        if !count_delta_is_hard_regression_comparable(key, left, right) {
+        if !count_delta_is_directly_comparable(key, left, right) {
             continue;
         }
         let left_value = left.count(key);
         let right_value = right.count(key);
-        if left_is_scancode {
-            if right_value < left_value {
-                output.insert(key.to_string(), left_value - right_value);
-            }
-        } else if left_value > right_value {
+        if left_value > right_value {
             output.insert(key.to_string(), left_value - right_value);
         }
     }
@@ -2836,7 +2842,7 @@ fn top_level_regressions(
 fn skipped_comparisons(left: &TopLevelCounts, right: &TopLevelCounts) -> BTreeMap<String, String> {
     ["packages", "dependencies"]
         .into_iter()
-        .filter(|metric| !count_delta_is_hard_regression_comparable(metric, left, right))
+        .filter(|metric| !count_delta_is_directly_comparable(metric, left, right))
         .map(|metric| {
             (
                 metric.to_string(),
@@ -2846,7 +2852,7 @@ fn skipped_comparisons(left: &TopLevelCounts, right: &TopLevelCounts) -> BTreeMa
         .collect()
 }
 
-fn count_delta_is_hard_regression_comparable(
+fn count_delta_is_directly_comparable(
     key: &str,
     left: &TopLevelCounts,
     right: &TopLevelCounts,
@@ -2884,7 +2890,7 @@ fn top_level_count_note(
         return "top-level count".to_string();
     }
 
-    if count_delta_is_hard_regression_comparable(metric, scancode, provenant) {
+    if count_delta_is_directly_comparable(metric, scancode, provenant) {
         return "top-level count".to_string();
     }
 

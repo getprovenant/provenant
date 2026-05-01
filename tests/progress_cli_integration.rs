@@ -976,8 +976,27 @@ fn compare_subcommand_writes_artifacts_and_summary() {
         serde_json::from_str(&fs::read_to_string(&summary_path).expect("summary json")).unwrap();
     assert_eq!(
         summary["comparison_status"].as_str(),
-        Some("potential_regressions_detected")
+        Some("review_required")
     );
+    assert!(
+        summary
+            .get("comparison_signal_summary")
+            .and_then(|value| value.get("scancode_favored"))
+            .and_then(Value::as_u64)
+            .is_some()
+    );
+    assert!(
+        summary
+            .get("top_level_scancode_favored_differences")
+            .is_some()
+    );
+    assert!(
+        summary
+            .get("top_level_provenant_favored_differences")
+            .is_some()
+    );
+    assert!(summary.get("top_level_regressions").is_none());
+    assert!(summary.get("top_level_higher_counts").is_none());
 }
 
 #[test]
