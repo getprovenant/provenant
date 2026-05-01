@@ -302,10 +302,19 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
     let is_svg_text = lower_extension(path).as_deref() == Some("svg")
         || detected_format.media_type() == "image/svg+xml";
     let should_try_decoded_text = looks_like_textual_bytes(bytes) || is_svg_text;
+    let decoded_is_utf8 = std::str::from_utf8(bytes).is_ok();
+    let path_suggests_text = ext.as_deref().is_some_and(|extension| {
+        PLAIN_TEXT_EXTENSIONS.contains(&extension) || detect_language(path, bytes).is_some()
+    });
 
     if !large_opaque_binary && should_try_decoded_text {
         let decoded = decode_bytes_to_string(bytes);
-        if !decoded.is_empty() && (is_svg_text || looks_like_decoded_text(&decoded)) {
+        if !decoded.is_empty()
+            && (is_svg_text
+                || decoded_is_utf8
+                || path_suggests_text
+                || looks_like_decoded_text(&decoded))
+        {
             let combined =
                 combine_extracted_text_fragments(windows_executable_metadata_text, decoded);
             return (combined, ExtractedTextKind::Decoded, None);
@@ -2674,6 +2683,23 @@ mod tests {
 
         assert_eq!(kind, ExtractedTextKind::Decoded);
         assert!(text.contains("creativecommons.org/licenses/publicdomain"));
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_preserves_blank_comment_lines_in_utf8_source() {
+        let path = Path::new("testdata/plugin_email_url/files/IMarkerActionFilter.java");
+        let bytes = std::fs::read(path).expect("failed to read java fixture");
+
+        let (text, kind) = extract_text_for_detection(path, &bytes);
+
+        assert_eq!(kind, ExtractedTextKind::Decoded);
+        let lines: Vec<_> = text.lines().collect();
+        assert_eq!(lines.get(2).copied(), Some(" *"));
+        assert_eq!(
+            lines.get(3).copied(),
+            Some(" *https://github.com/rpm-software-management")
+        );
+        assert_eq!(lines.get(5).copied(), Some("https://gitlab.com/Conan_Kudo"));
     }
 
     #[test]
