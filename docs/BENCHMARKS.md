@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 189 of 189 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 190 of 190 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
