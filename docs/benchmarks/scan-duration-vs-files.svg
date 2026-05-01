@@ -218,6 +218,9 @@ ScanCode: 130.94s</title></rect>
     <rect x="476.75" y="420.44" width="8" height="8" fill="#d97706" rx="1.5"><title>r-lib/devtools @ a3447b9
 Files: 266
 ScanCode: 80.85s</title></rect>
+    <rect x="477.26" y="419.74" width="8" height="8" fill="#d97706" rx="1.5"><title>rustcrypto/aeads @ 9d05d81
+Files: 268
+ScanCode: 82.06s</title></rect>
     <rect x="479.04" y="416.95" width="8" height="8" fill="#d97706" rx="1.5"><title>Plack/Plack @ b3984f1
 Files: 275
 ScanCode: 87.06s</title></rect>
@@ -787,6 +790,9 @@ Provenant: 10.86s</title></circle>
     <circle cx="480.75" cy="526.73" r="4.5" fill="#2563eb"><title>r-lib/devtools @ a3447b9
 Files: 266
 Provenant: 9.28s</title></circle>
+    <circle cx="481.26" cy="522.92" r="4.5" fill="#2563eb"><title>rustcrypto/aeads @ 9d05d81
+Files: 268
+Provenant: 10.06s</title></circle>
     <circle cx="483.04" cy="523.01" r="4.5" fill="#2563eb"><title>Plack/Plack @ b3984f1
 Files: 275
 Provenant: 10.04s</title></circle>

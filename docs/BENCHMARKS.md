@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 189 of 189 recorded runs, with a **12.1× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 189 of 189 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -523,7 +523,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 11
 - Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `9.77s`; ScanCode `70.75s`
-- Matched Cargo package and dependency coverage (`1` vs `1` packages, `5` vs `5` dependencies) with zero reduced shared-profile compare deltas, including exact README dual-license and URL handling on the maintained common profile
+- Matched Cargo package and dependency coverage (`1` vs `1` packages, `5` vs `5` dependencies) while preserving the repository's `Apache-2.0 OR MIT` README license semantics and normalizing docs.rs and Keep a Changelog links without trailing-slash drift
 
 ##### [bazelbuild/bazel @ eb5aeaa](https://github.com/bazelbuild/bazel/tree/eb5aeaaa23d52601a2aca11ff6fd1a74ea97f0d6) — **9.83× faster**
 
@@ -782,7 +782,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 42
 - Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `10.05s`; ScanCode `74.96s`
-- Matched Cargo workspace package and dependency coverage (`2` vs `2` packages, `190` vs `190` dependencies) with zero reduced shared-profile compare deltas, including exact README dual-license and URL handling across the root manifest and docs surfaces
+- Matched Cargo workspace package and dependency coverage (`2` vs `2` packages, `190` vs `190` dependencies) while preserving the repository's dual-license README and manifest semantics, recovering SVG-linked URL evidence, and avoiding trailing-slash URL drift across the docs surfaces
 
 ##### [rust-lang/cargo @ b54fe55](https://github.com/rust-lang/cargo/tree/b54fe551a982d75d299e0d54daeac70cb854eef0) — **8.35× faster**
 
@@ -797,6 +797,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-12 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `61.49s`; ScanCode `1879.48s`
 - Largely matched native-tree package and dependency extraction (`341` vs `344` packages, `5771` vs `5921` dependencies) with better nested Cargo lock dependency visibility across mixed workspaces, additional Nix package visibility, and more specific versioned Cargo package identities where ScanCode emits generic lockfile rows or versionless crate names
+
+##### [rustcrypto/aeads @ 9d05d81](https://github.com/rustcrypto/aeads/tree/9d05d810c81719a8859d960220a637da8a2cdcd1) — **8.16× faster**
+
+- Files: 268
+- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `10.06s`; ScanCode `82.06s`
+- Matched Cargo workspace package and dependency coverage (`14` vs `14` packages, `209` vs `209` dependencies) while preserving the member-crate `Apache-2.0 OR MIT` README semantics, keeping archived NCC Group review URLs intact in `aes-gcm` and `chacha20poly1305`, surfacing a concrete `mgm` lockfile package identity where ScanCode stays anonymous, and filtering weak `team of volunteers` SECURITY.md maintainer prose out of author output
 
 ##### [systemd/systemd @ 89d705a](https://github.com/systemd/systemd/tree/89d705a892b3476de14e548f3f9b0af96207d4b0) — **23.26× faster**
 
