@@ -118,19 +118,35 @@ impl OutputFileInfo {
     }
 
     pub(crate) fn detected_license_expression_spdx(&self) -> Option<String> {
-        crate::utils::spdx::combine_license_expressions_preserving_structure(
-            self.license_detections
+        {
+            let expressions: Vec<String> = self
+                .license_detections
                 .iter()
                 .filter(|detection| !detection.license_expression_spdx.is_empty())
-                .map(|detection| detection.license_expression_spdx.clone()),
-        )
+                .map(|detection| detection.license_expression_spdx.clone())
+                .collect();
+            crate::utils::spdx::select_primary_license_expression(expressions.clone()).or_else(
+                || {
+                    crate::utils::spdx::combine_license_expressions_preserving_structure(
+                        expressions,
+                    )
+                },
+            )
+        }
         .or_else(|| {
-            crate::utils::spdx::combine_license_expressions_preserving_structure(
-                self.package_data
-                    .iter()
-                    .flat_map(|package_data| package_data.license_detections.iter())
-                    .filter(|detection| !detection.license_expression_spdx.is_empty())
-                    .map(|detection| detection.license_expression_spdx.clone()),
+            let expressions: Vec<String> = self
+                .package_data
+                .iter()
+                .flat_map(|package_data| package_data.license_detections.iter())
+                .filter(|detection| !detection.license_expression_spdx.is_empty())
+                .map(|detection| detection.license_expression_spdx.clone())
+                .collect();
+            crate::utils::spdx::select_primary_license_expression(expressions.clone()).or_else(
+                || {
+                    crate::utils::spdx::combine_license_expressions_preserving_structure(
+                        expressions,
+                    )
+                },
             )
         })
         .or_else(|| {

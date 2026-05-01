@@ -135,6 +135,12 @@ pub(super) fn extract_license_information(
                 &text_content,
                 &model_detections,
             ));
+            expand_dual_licensed_under_readme_choice_detections(
+                path,
+                &text_content,
+                &mut model_detections,
+            );
+            prune_redundant_readme_conjunctive_detections(path, &mut model_detections);
 
             if !model_detections.is_empty() {
                 let expressions: Vec<String> = model_detections
@@ -144,10 +150,14 @@ pub(super) fn extract_license_information(
                     .collect();
 
                 if !expressions.is_empty() {
-                    let combined =
+                    let combined = crate::utils::spdx::select_primary_license_expression(
+                        expressions.clone(),
+                    )
+                    .or_else(|| {
                         crate::utils::spdx::combine_license_expressions_preserving_structure(
                             expressions,
-                        );
+                        )
+                    });
                     if let Some(expr) = combined {
                         file_info_builder.license_expression(Some(expr));
                     }
@@ -553,6 +563,196 @@ fn is_legal_notice_like_path(path: &Path) -> bool {
                 || base_name.starts_with(pattern)
                 || base_name.ends_with(pattern)
         })
+}
+
+fn prune_redundant_readme_conjunctive_detections(
+    path: &Path,
+    detections: &mut Vec<PublicLicenseDetection>,
+) {
+    if !is_readme_like_path(path) || detections.len() < 2 {
+        return;
+    }
+
+    let concrete_ranges: Vec<(usize, usize)> = detections
+        .iter()
+        .filter(|detection| !detection_is_unknown_reference(detection))
+        .filter_map(detection_line_range)
+        .collect();
+
+    let alternative_key_sets: Vec<(HashSet<String>, (usize, usize))> = detections
+        .iter()
+        .filter_map(|detection| {
+            let expression = detection_expression_ast(detection)?;
+            expression_contains_or(&expression).then_some((detection, expression))
+        })
+        .filter_map(|(detection, expression)| {
+            let range = detection_line_range(detection)?;
+            Some((
+                expression
+                    .license_keys()
+                    .into_iter()
+                    .map(|key| key.to_ascii_lowercase())
+                    .collect(),
+                range,
+            ))
+        })
+        .collect();
+
+    if alternative_key_sets.is_empty() {
+        return;
+    }
+
+    detections.retain(|detection| {
+        if detection_is_unknown_reference(detection)
+            && let Some((start, end)) = detection_line_range(detection)
+            && concrete_ranges.iter().any(|(other_start, other_end)| {
+                ranges_overlap(start, end, *other_start, *other_end)
+            })
+        {
+            return false;
+        }
+
+        let Some(expression) = detection_expression_ast(detection) else {
+            return true;
+        };
+
+        if expression_contains_or(&expression) || !expression_contains_and(&expression) {
+            return true;
+        }
+
+        let Some((start, end)) = detection_line_range(detection) else {
+            return true;
+        };
+
+        let keys: HashSet<String> = expression
+            .license_keys()
+            .into_iter()
+            .map(|key| key.to_ascii_lowercase())
+            .collect();
+
+        !alternative_key_sets
+            .iter()
+            .any(|(candidate_keys, (other_start, other_end))| {
+                *candidate_keys == keys && ranges_overlap(start, end, *other_start, *other_end)
+            })
+    });
+}
+
+fn expand_dual_licensed_under_readme_choice_detections(
+    path: &Path,
+    text_content: &str,
+    detections: &mut Vec<PublicLicenseDetection>,
+) {
+    if !is_readme_like_path(path) || !has_dual_licensed_under_notice_text(text_content) {
+        return;
+    }
+
+    let mut extras = Vec::new();
+
+    for detection in detections.iter() {
+        if !detection.license_expression_spdx.contains(" OR ") {
+            continue;
+        }
+
+        let Some((start, end)) = detection_line_range(detection) else {
+            continue;
+        };
+
+        for detection_match in &detection.matches {
+            let single_spdx = detection_match.license_expression_spdx.trim();
+            if single_spdx.is_empty()
+                || single_spdx.contains(" OR ")
+                || single_spdx.contains(" AND ")
+                || single_spdx.contains(" WITH ")
+            {
+                continue;
+            }
+
+            let already_present = detections.iter().chain(extras.iter()).any(|existing| {
+                existing.license_expression_spdx == single_spdx
+                    && detection_line_range(existing).is_some_and(|range| range == (start, end))
+            });
+            if already_present {
+                continue;
+            }
+
+            extras.push(PublicLicenseDetection {
+                license_expression: detection_match.license_expression.clone(),
+                license_expression_spdx: detection_match.license_expression_spdx.clone(),
+                matches: vec![detection_match.clone()],
+                detection_log: detection.detection_log.clone(),
+                identifier: None,
+            });
+        }
+    }
+
+    detections.extend(extras);
+}
+
+fn is_readme_like_path(path: &Path) -> bool {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(|stem| stem.eq_ignore_ascii_case("readme"))
+}
+
+fn has_dual_licensed_under_notice_text(text: &str) -> bool {
+    let lower = text.to_ascii_lowercase();
+    lower.contains("dual-licensed under") || lower.contains("dual licensed under")
+}
+
+fn detection_expression_ast(
+    detection: &PublicLicenseDetection,
+) -> Option<crate::license_detection::expression::LicenseExpression> {
+    let expression = if !detection.license_expression_spdx.is_empty() {
+        detection.license_expression_spdx.as_str()
+    } else if !detection.license_expression.is_empty() {
+        detection.license_expression.as_str()
+    } else {
+        return None;
+    };
+
+    parse_expression(expression).ok()
+}
+
+fn detection_is_unknown_reference(detection: &PublicLicenseDetection) -> bool {
+    detection.license_expression == "unknown-license-reference"
+        || detection.license_expression_spdx == "LicenseRef-scancode-unknown-license-reference"
+}
+
+fn detection_line_range(detection: &PublicLicenseDetection) -> Option<(usize, usize)> {
+    let start = detection.matches.iter().map(|m| m.start_line.get()).min()?;
+    let end = detection.matches.iter().map(|m| m.end_line.get()).max()?;
+    Some((start, end))
+}
+
+fn ranges_overlap(a_start: usize, a_end: usize, b_start: usize, b_end: usize) -> bool {
+    a_start <= b_end && b_start <= a_end
+}
+
+fn expression_contains_or(
+    expression: &crate::license_detection::expression::LicenseExpression,
+) -> bool {
+    match expression {
+        crate::license_detection::expression::LicenseExpression::Or { .. } => true,
+        crate::license_detection::expression::LicenseExpression::And { left, right }
+        | crate::license_detection::expression::LicenseExpression::With { left, right } => {
+            expression_contains_or(left) || expression_contains_or(right)
+        }
+        _ => false,
+    }
+}
+
+fn expression_contains_and(
+    expression: &crate::license_detection::expression::LicenseExpression,
+) -> bool {
+    match expression {
+        crate::license_detection::expression::LicenseExpression::And { .. } => true,
+        crate::license_detection::expression::LicenseExpression::Or { left, right }
+        | crate::license_detection::expression::LicenseExpression::With { left, right } => {
+            expression_contains_and(left) || expression_contains_and(right)
+        }
+        _ => false,
+    }
 }
 
 fn match_has_exact_reference_url(

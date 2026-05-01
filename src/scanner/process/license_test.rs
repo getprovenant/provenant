@@ -4,7 +4,7 @@
 use super::{
     LicenseExtractionInput, MAX_OUTPUT_MATCHED_TEXT_BYTES, MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH,
     compute_percentage_of_license_text, convert_detection_to_model, extract_license_information,
-    promote_legal_notice_low_quality_detections,
+    promote_legal_notice_low_quality_detections, prune_redundant_readme_conjunctive_detections,
 };
 use crate::license_detection::LicenseDetection as InternalLicenseDetection;
 use crate::license_detection::LicenseDetectionEngine;
@@ -14,7 +14,10 @@ use crate::license_detection::models::License;
 use crate::license_detection::models::position_span::PositionSpan;
 use crate::license_detection::models::{LicenseMatch, MatchCoordinates, MatcherKind, RuleKind};
 use crate::license_detection::query::Query;
-use crate::models::{FileInfoBuilder, LineNumber, MatchScore, ScanDiagnostic};
+use crate::models::{
+    FileInfoBuilder, LicenseDetection as PublicLicenseDetection, LineNumber, Match, MatchScore,
+    ScanDiagnostic,
+};
 use crate::scanner::LicenseScanOptions;
 use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
@@ -109,6 +112,37 @@ fn make_internal_notice_match(
         coordinates: MatchCoordinates::query_region(PositionSpan::empty()),
         candidate_resemblance: 0.0,
         candidate_containment: 0.0,
+    }
+}
+
+fn make_public_detection(
+    expr: &str,
+    expr_spdx: &str,
+    start_line: usize,
+    end_line: usize,
+) -> PublicLicenseDetection {
+    PublicLicenseDetection {
+        license_expression: expr.to_string(),
+        license_expression_spdx: expr_spdx.to_string(),
+        matches: vec![Match {
+            license_expression: expr.to_string(),
+            license_expression_spdx: expr_spdx.to_string(),
+            from_file: Some("README.md".to_string()),
+            start_line: LineNumber::new(start_line).unwrap(),
+            end_line: LineNumber::new(end_line).unwrap(),
+            matcher: Some("3-seq".to_string()),
+            score: MatchScore::MAX,
+            matched_length: Some(1),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: Some("test.RULE".to_string()),
+            rule_url: None,
+            matched_text: None,
+            referenced_filenames: None,
+            matched_text_diagnostics: None,
+        }],
+        detection_log: Vec::new(),
+        identifier: None,
     }
 }
 
@@ -425,6 +459,21 @@ fn test_promote_legal_notice_low_quality_detections_ignores_true_clue_rules() {
     promote_legal_notice_low_quality_detections(&mut detections, std::path::Path::new("NOTICE"));
 
     assert!(detections[1].license_expression.is_none());
+}
+
+#[test]
+fn test_prune_redundant_readme_conjunctive_detections_keeps_non_overlapping_and_notice() {
+    let mut detections = vec![
+        make_public_detection("apache-2.0 OR mit", "Apache-2.0 OR MIT", 10, 12),
+        make_public_detection("apache-2.0 AND mit", "Apache-2.0 AND MIT", 40, 42),
+    ];
+
+    prune_redundant_readme_conjunctive_detections(
+        std::path::Path::new("README.md"),
+        &mut detections,
+    );
+
+    assert_eq!(detections.len(), 2, "detections: {detections:#?}");
 }
 
 #[test]
