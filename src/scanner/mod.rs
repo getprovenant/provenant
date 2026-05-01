@@ -1849,6 +1849,109 @@ mod tests {
     }
 
     #[test]
+    fn scanner_prefers_dual_license_readme_expression_over_supplemental_mentions() {
+        let scanned = scan_single_file_with_license_engine(
+            "README.md",
+            concat!(
+                "## License\n\n",
+                "Licensed under either of:\n\n",
+                " * [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)\n",
+                " * [MIT license](https://opensource.org/licenses/MIT)\n\n",
+                "at your option.\n\n",
+                "### Contribution\n\n",
+                "Unless you explicitly state otherwise, any contribution intentionally submitted\n",
+                "for inclusion in the work by you, as defined in the Apache-2.0 license, shall be\n",
+                "dual licensed as above, without any additional terms or conditions.\n",
+            ),
+            &TextDetectionOptions::default(),
+        );
+
+        assert!(
+            matches!(
+                scanned.license_expression.as_deref(),
+                Some("Apache-2.0 OR MIT") | Some("MIT OR Apache-2.0")
+            ),
+            "license expression: {:?}",
+            scanned.license_expression
+        );
+        assert!(
+            !scanned
+                .license_detections
+                .iter()
+                .any(|detection| detection.license_expression_spdx == "Apache-2.0"),
+            "detections: {:?}",
+            scanned.license_detections
+        );
+    }
+
+    #[test]
+    fn scanner_drops_redundant_conjunctive_readme_detection_when_or_notice_exists() {
+        let scanned = scan_single_file_with_license_engine(
+            "README.md",
+            concat!(
+                "## License\n\n",
+                "Licensed under either of:\n\n",
+                " * [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)\n",
+                " * [MIT license](https://opensource.org/licenses/MIT)\n\n",
+                "at your option.\n\n",
+                "### Contribution\n\n",
+                "Unless you explicitly state otherwise, any contribution intentionally submitted\n",
+                "for inclusion in the work by you, as defined in the Apache-2.0 license, shall be\n",
+                "dual licensed as above, without any additional terms or conditions.\n\n",
+                "[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg\n",
+            ),
+            &TextDetectionOptions::default(),
+        );
+
+        assert!(
+            !scanned
+                .license_detections
+                .iter()
+                .any(|detection| { detection.license_expression_spdx == "Apache-2.0 AND MIT" })
+        );
+    }
+
+    #[test]
+    fn scanner_drops_unknown_placeholder_from_dual_license_readme_notice() {
+        let scanned = scan_single_file_with_license_engine(
+            "README.md",
+            concat!(
+                "## License\n\n",
+                "This project is dual-licensed under MIT and Apache 2.0.\n",
+            ),
+            &TextDetectionOptions::default(),
+        );
+
+        assert!(
+            matches!(
+                scanned.license_expression.as_deref(),
+                Some("Apache-2.0 OR MIT") | Some("MIT OR Apache-2.0")
+            ),
+            "license expression: {:?}",
+            scanned.license_expression
+        );
+        assert!(scanned.license_detections.iter().any(|detection| {
+            detection
+                .license_expression_spdx
+                .contains("Apache-2.0 OR MIT")
+                || detection
+                    .license_expression_spdx
+                    .contains("MIT OR Apache-2.0")
+        }));
+        assert!(!scanned.license_detections.iter().any(|detection| {
+            detection.license_expression_spdx == "LicenseRef-scancode-unknown-license-reference"
+        }));
+        assert!(
+            scanned
+                .license_detections
+                .iter()
+                .any(|detection| detection.license_expression_spdx == "MIT"),
+            "detections: {:?}",
+            scanned.license_detections
+        );
+    }
+
+    #[test]
     fn scanner_sets_is_source_only_when_info_enabled() {
         let without_info = TextDetectionOptions {
             collect_info: false,
