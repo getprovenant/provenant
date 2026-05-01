@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 185 of 185 recorded runs, with a **12.1× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 186 of 186 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -869,6 +869,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `37.11s`; ScanCode `849.94s`
 - Far broader Dart/Flutter monorepo package and dependency extraction (`293` vs `201` packages, `2087` vs `1167` dependencies) from many package and example `pubspec.yaml` manifests plus committed podspec and Android `build.gradle.kts` inputs, with contributor-roster visibility across `AUTHORS` files that ScanCode leaves empty
+
+##### [i18next/react-i18next @ cb20d18](https://github.com/i18next/react-i18next/tree/cb20d1886bbb113f8005c4324e962e161a449ab9) — **13.77× faster**
+
+- Files: 590
+- Run context: 2026-05-01 · react-i18next-4977 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `14.82s`; ScanCode `204.00s`
+- Broader mixed-surface package and dependency extraction (`17` vs `1` packages, `21579` vs `911` dependencies) across committed example-app `package.json`, React Native CocoaPods `Podfile`, Android `AndroidManifest.xml`, Gemfile, NuGet `packages.config`, and Buck surfaces, with concrete Flipper coordinates where ScanCode preserves `${FLIPPER_VERSION}` placeholders and Unicode-preserving author normalization for `Jan Mühlemann`
 
 ##### [Mantle/Mantle @ 2a8e212](https://github.com/Mantle/Mantle/tree/2a8e2123a3931038179ee06105c9e6ec336b12ea) — **11.03× faster**
 
