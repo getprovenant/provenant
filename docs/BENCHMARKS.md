@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
 
-> Provenant is faster on 187 of 187 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 189 of 189 recorded runs, with a **12.1× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -518,6 +518,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `11.49s`; ScanCode `76.28s`
 - Direct Arch source-package visibility on committed `.SRCINFO` (`1` vs `0` file-level package records) with broader dependency extraction (`26` vs `0`) across runtime, make, check, and optional package metadata, plus copyright and holder recovery on the repo-owned `LICENSE` and `REUSE.toml` surfaces that ScanCode leaves empty
 
+##### [Amanieu/atomic-rs @ 44c213a](https://github.com/Amanieu/atomic-rs/tree/44c213a73cb4e5c4cf04fd6fd6f76dc95092aebf) — **7.24× faster**
+
+- Files: 11
+- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `9.77s`; ScanCode `70.75s`
+- Matched Cargo package and dependency coverage (`1` vs `1` packages, `5` vs `5` dependencies) with zero reduced shared-profile compare deltas, including exact README dual-license and URL handling on the maintained common profile
+
 ##### [bazelbuild/bazel @ eb5aeaa](https://github.com/bazelbuild/bazel/tree/eb5aeaaa23d52601a2aca11ff6fd1a74ea97f0d6) — **9.83× faster**
 
 - Files: 11,496
@@ -769,6 +776,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `13.65s`; ScanCode `168.27s`
 - Broader RPM package and dependency extraction (`352` vs `327` packages, `1441` vs `0` dependencies) from committed `.rpm` fixture trees and sibling `.spec` metadata, with normalized RPM header license expressions and cleaner rejection of config or doc false positives such as `baseurl` and `doxygen. Using` as holder or author data
+
+##### [marshallpierce/rust-base64 @ 13f4fe8](https://github.com/marshallpierce/rust-base64/tree/13f4fe86e565b3a8ed9402d3b8b1bcf83ab9817c) — **7.46× faster**
+
+- Files: 42
+- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `10.05s`; ScanCode `74.96s`
+- Matched Cargo workspace package and dependency coverage (`2` vs `2` packages, `190` vs `190` dependencies) with zero reduced shared-profile compare deltas, including exact README dual-license and URL handling across the root manifest and docs surfaces
 
 ##### [rust-lang/cargo @ b54fe55](https://github.com/rust-lang/cargo/tree/b54fe551a982d75d299e0d54daeac70cb854eef0) — **8.35× faster**
 
