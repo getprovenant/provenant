@@ -28,13 +28,8 @@ fn reserve_local_port() -> u16 {
 fn wait_for_http_status(port: u16, path: &str, expected: u16) -> String {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        if let Ok(response) = raw_http_request(port, path) {
-            let status = response
-                .lines()
-                .next()
-                .and_then(|line| line.split_whitespace().nth(1))
-                .and_then(|code| code.parse::<u16>().ok())
-                .expect("status code should be present");
+        if let Ok(response) = raw_http_request(port, "GET", path, None, None) {
+            let status = response_status(&response);
             if status == expected {
                 return response;
             }
@@ -48,16 +43,36 @@ fn wait_for_http_status(port: u16, path: &str, expected: u16) -> String {
     }
 }
 
-fn raw_http_request(port: u16, path: &str) -> std::io::Result<String> {
+fn raw_http_request(
+    port: u16,
+    method: &str,
+    path: &str,
+    body: Option<&str>,
+    content_type: Option<&str>,
+) -> std::io::Result<String> {
     let mut stream = TcpStream::connect(("127.0.0.1", port))?;
+    let body = body.unwrap_or("");
+    let content_type_header = content_type
+        .map(|value| format!("Content-Type: {value}\r\n"))
+        .unwrap_or_default();
     write!(
         stream,
-        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+        "{method} {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n{content_type_header}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
     )?;
     stream.flush()?;
     let mut response = String::new();
     stream.read_to_string(&mut response)?;
     Ok(response)
+}
+
+fn response_status(response: &str) -> u16 {
+    response
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|code| code.parse::<u16>().ok())
+        .expect("status code should be present")
 }
 
 fn response_json_body(response: &str) -> Value {
@@ -560,17 +575,38 @@ fn serve_shell_exposes_health_and_version_endpoints() {
         provenant::version::BUILD_VERSION
     );
 
-    let scans =
-        raw_http_request(port, "/v1/scans").expect("scan placeholder request should succeed");
+    let (_temp, scan_dir) = create_scan_fixture();
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "paths",
+            "paths": [scan_dir],
+        },
+        "options": {
+            "collect_info": true,
+        }
+    })
+    .to_string();
+
+    let scans = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("sync scan request should succeed");
     let scans_json = response_json_body(&scans);
-    let scans_status = scans
-        .lines()
-        .next()
-        .and_then(|line| line.split_whitespace().nth(1))
-        .and_then(|code| code.parse::<u16>().ok())
-        .expect("scan placeholder should return a status");
-    assert_eq!(scans_status, 501);
-    assert_eq!(scans_json["status"], "not_implemented");
+    assert_eq!(response_status(&scans), 200);
+    assert_eq!(scans_json["headers"].as_array().map(Vec::len), Some(1));
+    assert!(
+        scans_json["files"]
+            .as_array()
+            .expect("files should be an array")
+            .iter()
+            .any(|file| file["path"]
+                .as_str()
+                .is_some_and(|path| path.ends_with("a.txt")))
+    );
 
     child.kill().expect("serve child should terminate");
     child.wait().expect("serve child wait should succeed");
