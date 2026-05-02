@@ -109,6 +109,8 @@ cargo build --release --no-default-features
 
 The published crate name is `provenant-cli`, while the library target is imported as `provenant`.
 
+For the supported high-level Rust embedding path, see the [Library Guide](docs/LIBRARY_GUIDE.md).
+
 If you want the smallest dependency surface and do not need RPM SQLite database parsing:
 
 ```toml
@@ -207,6 +209,7 @@ Output architecture and compatibility approach are documented in:
 
 ## Documentation
 
+- **[Library Guide](docs/LIBRARY_GUIDE.md)** - Programmatic embedding guidance for using Provenant from Rust
 - **[Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Best starting point for navigating the docs set
 - **[CLI Guide](docs/CLI_GUIDE.md)** - Common workflows and important flag combinations
 - **[Provenant and ScanCode Toolkit](docs/SCANCODE_COMPARISON.md)** - Relationship, trust model, and high-level comparison notes

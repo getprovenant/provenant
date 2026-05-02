@@ -5,6 +5,7 @@ This index helps you find the right documentation for your needs.
 ## For Users
 
 - **[README.md](../README.md)** - Installation, usage, and quick start
+- **[LIBRARY_GUIDE.md](LIBRARY_GUIDE.md)** - Programmatic embedding guidance for using Provenant from Rust
 - **[CLI_GUIDE.md](CLI_GUIDE.md)** - Command-line workflows and important flag combinations
 - **[SCANCODE_COMPARISON.md](SCANCODE_COMPARISON.md)** - Provenant's relationship to ScanCode Toolkit and high-level comparison notes
 - **[MIGRATING_FROM_SCANCODE.md](MIGRATING_FROM_SCANCODE.md)** - Practical migration notes for ScanCode users, especially power-user workflows
@@ -44,6 +45,7 @@ docs/
 ├── SCANCODE_COMPARISON.md             # Evergreen: Provenant vs. ScanCode positioning
 ├── BENCHMARKS.md                      # Evergreen: Benchmark methodology and recorded compare runs
 ├── CLI_GUIDE.md                       # Evergreen: User-facing CLI workflows
+├── LIBRARY_GUIDE.md                   # Evergreen: User-facing Rust embedding guide
 ├── ARCHITECTURE.md                    # Evergreen: System design
 ├── LICENSE_DETECTION_ARCHITECTURE.md  # Evergreen: License-detection subsystem
 ├── RELEASING.md                       # Evergreen: Maintainer release process
@@ -84,6 +86,9 @@ docs/
 **...learn CLI usage and flag combinations**
 → [CLI_GUIDE.md](CLI_GUIDE.md)
 
+**...use Provenant as a Rust library**
+→ [LIBRARY_GUIDE.md](LIBRARY_GUIDE.md)
+
 **...understand Provenant's relationship to ScanCode Toolkit**
 → [SCANCODE_COMPARISON.md](SCANCODE_COMPARISON.md)
 
@@ -117,6 +122,7 @@ docs/
 
 - **ARCHITECTURE.md** - Updated as architecture evolves
 - **CLI_GUIDE.md** - Updated as the public CLI workflows evolve
+- **LIBRARY_GUIDE.md** - Updated as the supported Rust embedding surface evolves
 - **SCANCODE_COMPARISON.md** - Updated as positioning, trust model, or comparison guidance evolves
 - **MIGRATING_FROM_SCANCODE.md** - Updated as the practical migration surface for ScanCode users evolves
 - **BENCHMARKS.md** - Updated as maintained benchmark examples and methodology evolve
@@ -132,6 +138,7 @@ docs/
 ### Canonical Ownership Rules
 
 - **Current user-facing CLI behavior** lives in `README.md` and `CLI_GUIDE.md`.
+- **Current user-facing Rust embedding guidance** lives in `README.md` and `LIBRARY_GUIDE.md`.
 - **Current architecture and maintainer contracts** live in evergreen docs such as `ARCHITECTURE.md`, `LICENSE_DETECTION_ARCHITECTURE.md`, `HOW_TO_ADD_A_PARSER.md`, and `TESTING_STRATEGY.md`.
 - **Generated support coverage** lives in `SUPPORTED_FORMATS.md`.
 - **Historical rationale** lives in `adr/`.
