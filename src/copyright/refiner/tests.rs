@@ -729,6 +729,17 @@ fn test_refine_copyright_keeps_year_range_angle_email_suffix() {
 }
 
 #[test]
+fn test_refine_copyright_strips_trailing_by_person_after_holder() {
+    let result = refine_copyright(
+        "Copyright (C) 2004 Nokia Corporation by Tony Lindrgen <tony@atomide.com>",
+    );
+    assert_eq!(
+        result,
+        Some("Copyright (C) 2004 Nokia Corporation".to_string())
+    );
+}
+
+#[test]
 fn test_refine_copyright_strips_fsf_address_tail() {
     let result = refine_copyright(
         "Copyright (c) 1989 Free Software Foundation, Inc. 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA",

@@ -76,9 +76,10 @@ pub(in super::super) fn refine_author_with_optional_handle_suffix(
         let looks_like_handle = !bare_handle.is_empty()
             && (handle.starts_with('@')
                 || bare_handle.chars().any(|ch| ch.is_ascii_digit())
-                || bare_handle
-                    .chars()
-                    .all(|ch| !ch.is_ascii_alphabetic() || ch.is_ascii_lowercase()));
+                || (bare_handle.len() >= 3
+                    && bare_handle
+                        .chars()
+                        .all(|ch| !ch.is_ascii_alphabetic() || ch.is_ascii_lowercase())));
         if looks_like_handle {
             return refine_author(base);
         }
