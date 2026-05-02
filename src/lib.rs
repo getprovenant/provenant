@@ -9,8 +9,9 @@
 //!
 //! The main entry points are:
 //!
-//! - [`collect_paths`] to discover files in a directory tree
-//! - [`process_collected`] to scan collected files in parallel
+//! - [`workflow::scan_path`] and [`workflow::scan_paths`] for the supported high-level embedding flow
+//! - [`collect_paths`] to discover files in a directory tree when you need lower-level control
+//! - [`process_collected`] to scan collected files in parallel when you are assembling the pipeline manually
 //! - [`OutputFormat`], [`OutputWriter`], and [`write_output_file`] to serialize scan results
 //! - [`parsers`] and [`models`] for lower-level package parsing and result inspection
 //!
@@ -30,6 +31,7 @@
 
 extern crate self as provenance;
 
+pub(crate) mod app;
 pub mod assembly;
 pub mod cache;
 pub mod cli;
@@ -54,7 +56,9 @@ pub(crate) mod test_support;
 pub(crate) mod time;
 pub mod utils;
 pub mod version;
+pub mod workflow;
 
+pub use cli::ProcessMode;
 pub use models::{ExtraData, FileInfo, FileType, Header, Output, SystemEnvironment};
 pub use output::{
     OutputFormat, OutputWriteConfig, OutputWriter, write_output_file, writer_for_format,
