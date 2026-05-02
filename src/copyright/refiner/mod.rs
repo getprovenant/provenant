@@ -158,7 +158,6 @@ static AUTHORS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         "compatible",
         "guice",
         "incorporated",
-        "ds",
         "guide",
         "grants",
         "recommend",
@@ -1176,7 +1175,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
             r"(?ix)
                 ^copyright\s*\(c\)\s+
                 (?:19\d{2}|20\d{2}|\?\?\?\?)
-                (?:\s*[-–/]\s*(?:\d{2,4}|\?\?\?\?))?
+                \s*[-–/]\s*(?:\d{2,4}|\?\?\?\?)
                 (?:\s*,\s*(?:19\d{2}|20\d{2}|\?\?\?\?))*
                 \s+.+?<[^>\s]+@[^>\s]+>\.?$
             ",
