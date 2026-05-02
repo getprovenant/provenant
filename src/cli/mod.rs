@@ -14,6 +14,7 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use yaml_serde::Value as YamlValue;
 
+use crate::app::request::{InputMode, OutputTarget, ScanRequest};
 use crate::license_detection::DEFAULT_LICENSEDB_URL_TEMPLATE;
 use crate::output::OutputFormat;
 use crate::scanner::MemoryMode;
@@ -561,15 +562,8 @@ fn parse_max_in_memory(value: &str) -> Result<MemoryMode, String> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct OutputTarget {
-    pub format: OutputFormat,
-    pub file: String,
-    pub custom_template: Option<String>,
-}
-
 impl ScanArgs {
-    pub fn output_targets(&self) -> Vec<OutputTarget> {
+    pub(crate) fn output_targets(&self) -> Vec<OutputTarget> {
         let mut targets = Vec::new();
 
         if let Some(file) = &self.output_json {
@@ -663,7 +657,7 @@ impl ScanArgs {
         targets
     }
 
-    pub fn output_header_options(&self) -> JsonMap<String, JsonValue> {
+    pub(crate) fn output_header_options(&self) -> JsonMap<String, JsonValue> {
         let mut options = JsonMap::new();
         if !self.dir_path.is_empty() {
             options.insert(
@@ -819,6 +813,80 @@ impl ScanArgs {
         }
 
         options
+    }
+}
+
+impl From<&ScanArgs> for ScanRequest {
+    fn from(cli: &ScanArgs) -> Self {
+        Self {
+            input_paths: cli.dir_path.clone(),
+            input_mode: if cli.from_json {
+                InputMode::FromJson
+            } else {
+                InputMode::Native
+            },
+            output_targets: cli.output_targets(),
+            output_header_options: cli.output_header_options(),
+            progress_mode: if cli.quiet {
+                crate::progress::ProgressMode::Quiet
+            } else if cli.verbose {
+                crate::progress::ProgressMode::Verbose
+            } else {
+                crate::progress::ProgressMode::Default
+            },
+            process_mode: cli.processes,
+            timeout_seconds: cli.timeout,
+            quiet: cli.quiet,
+            verbose: cli.verbose,
+            strip_root: cli.strip_root,
+            full_root: cli.full_root,
+            exclude: cli.exclude.clone(),
+            include: cli.include.clone(),
+            paths_files: cli.paths_file.clone(),
+            respect_process_cache_env: true,
+            cache_dir: cli.cache_dir.clone(),
+            cache_clear: cli.cache_clear,
+            incremental: cli.incremental,
+            max_depth: cli.max_depth,
+            max_in_memory: cli.max_in_memory,
+            info: cli.info,
+            package: cli.package,
+            system_package: cli.system_package,
+            package_in_compiled: cli.package_in_compiled,
+            package_only: cli.package_only,
+            no_assemble: cli.no_assemble,
+            license_dataset_path: cli.license_dataset_path.clone(),
+            reindex: cli.reindex,
+            no_license_index_cache: cli.no_license_index_cache,
+            license_text: cli.license_text,
+            license_text_diagnostics: cli.license_text_diagnostics,
+            license_diagnostics: cli.license_diagnostics,
+            unknown_licenses: cli.unknown_licenses,
+            license_score: cli.license_score,
+            license_url_template: cli.license_url_template.clone(),
+            filter_clues: cli.filter_clues,
+            ignore_author: cli.ignore_author.clone(),
+            ignore_copyright_holder: cli.ignore_copyright_holder.clone(),
+            only_findings: cli.only_findings,
+            mark_source: cli.mark_source,
+            classify: cli.classify,
+            summary: cli.summary,
+            license_clarity_score: cli.license_clarity_score,
+            license_references: cli.license_references,
+            license_policy: cli.license_policy.clone(),
+            tallies: cli.tallies,
+            tallies_key_files: cli.tallies_key_files,
+            tallies_with_details: cli.tallies_with_details,
+            facet: cli.facet.clone(),
+            tallies_by_facet: cli.tallies_by_facet,
+            generated: cli.generated,
+            license: cli.license,
+            copyright: cli.copyright,
+            email: cli.email,
+            max_email: cli.max_email,
+            url: cli.url,
+            max_url: cli.max_url,
+        }
     }
 }
 

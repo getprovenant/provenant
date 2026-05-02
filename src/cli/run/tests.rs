@@ -2,8 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::app::request::ScanRequest;
+use crate::app::scan_pipeline::{
+    collect_top_level_license_detections_for_mode, compile_regex_patterns,
+};
+use crate::app::scan_plan::{configured_scan_names, effective_timeout_seconds};
+use crate::app::scan_runtime::{
+    NativeScanSelection, build_paths_file_warning_messages, prepare_cache_config,
+    resolve_native_scan_selection,
+};
+use crate::assembly;
 use crate::cli::ProcessMode;
 use crate::models::{LineNumber, MatchScore};
+use crate::scan_result_shaping::{apply_only_findings_filter, normalize_paths};
 use serde_json::json;
 use std::fs;
 use std::path::Path;
@@ -45,7 +56,12 @@ fn configured_scan_names_only_lists_enabled_non_license_scans() {
         "README.md",
     ])
     .unwrap();
-    assert_eq!(configured_scan_names(&package_cli), "packages");
+    let package_request = ScanRequest::from(
+        package_cli
+            .scan_args()
+            .expect("scan args should be present"),
+    );
+    assert_eq!(configured_scan_names(&package_request), "packages");
 
     let package_only_cli = crate::cli::Cli::try_parse_from([
         "provenant",
@@ -55,7 +71,12 @@ fn configured_scan_names_only_lists_enabled_non_license_scans() {
         "README.md",
     ])
     .unwrap();
-    assert_eq!(configured_scan_names(&package_only_cli), "packages");
+    let package_only_request = ScanRequest::from(
+        package_only_cli
+            .scan_args()
+            .expect("scan args should be present"),
+    );
+    assert_eq!(configured_scan_names(&package_only_request), "packages");
 
     let mixed_cli = crate::cli::Cli::try_parse_from([
         "provenant",
@@ -66,7 +87,9 @@ fn configured_scan_names_only_lists_enabled_non_license_scans() {
         "README.md",
     ])
     .unwrap();
-    assert_eq!(configured_scan_names(&mixed_cli), "info, emails");
+    let mixed_request =
+        ScanRequest::from(mixed_cli.scan_args().expect("scan args should be present"));
+    assert_eq!(configured_scan_names(&mixed_request), "info, emails");
 }
 
 #[test]
@@ -81,7 +104,8 @@ fn configured_scan_names_keeps_license_first_when_enabled() {
     ])
     .unwrap();
 
-    assert_eq!(configured_scan_names(&cli), "licenses, packages");
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    assert_eq!(configured_scan_names(&request), "licenses, packages");
 }
 
 #[test]
@@ -1002,8 +1026,13 @@ fn progress_mode_from_cli_maps_quiet_verbose_default() {
     let default_cli =
         crate::cli::Cli::try_parse_from(["provenant", "--json-pp", "scan.json", "sample-dir"])
             .unwrap();
+    let default_request = ScanRequest::from(
+        default_cli
+            .scan_args()
+            .expect("scan args should be present"),
+    );
     assert_eq!(
-        progress_mode_from_cli(&default_cli),
+        default_request.progress_mode,
         crate::progress::ProgressMode::Default
     );
 
@@ -1015,8 +1044,10 @@ fn progress_mode_from_cli_maps_quiet_verbose_default() {
         "sample-dir",
     ])
     .unwrap();
+    let quiet_request =
+        ScanRequest::from(quiet_cli.scan_args().expect("scan args should be present"));
     assert_eq!(
-        progress_mode_from_cli(&quiet_cli),
+        quiet_request.progress_mode,
         crate::progress::ProgressMode::Quiet
     );
 
@@ -1028,8 +1059,13 @@ fn progress_mode_from_cli_maps_quiet_verbose_default() {
         "sample-dir",
     ])
     .unwrap();
+    let verbose_request = ScanRequest::from(
+        verbose_cli
+            .scan_args()
+            .expect("scan args should be present"),
+    );
     assert_eq!(
-        progress_mode_from_cli(&verbose_cli),
+        verbose_request.progress_mode,
         crate::progress::ProgressMode::Verbose
     );
 }
@@ -1043,7 +1079,8 @@ fn prepare_cache_for_scan_defaults_to_scan_root_cache_directory_without_creating
     let cli =
         crate::cli::Cli::try_parse_from(["provenant", "--json-pp", "scan.json", "sample-dir"])
             .unwrap();
-    let config = prepare_cache_config(Some(&scan_root), &cli).unwrap();
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let config = prepare_cache_config(Some(&scan_root), &request).unwrap();
 
     assert_eq!(config.root_dir(), CacheConfig::default_root_dir(&scan_root));
     assert!(!config.incremental_enabled());
@@ -1070,7 +1107,8 @@ fn prepare_cache_for_scan_respects_cache_dir_and_cache_clear() {
         "sample-dir",
     ])
     .unwrap();
-    let config = prepare_cache_config(Some(&scan_root), &cli).unwrap();
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let config = prepare_cache_config(Some(&scan_root), &request).unwrap();
 
     assert_eq!(config.root_dir(), explicit_cache_dir);
     assert!(!stale_file.exists());
@@ -1090,7 +1128,8 @@ fn prepare_cache_for_scan_creates_incremental_dir_when_enabled() {
         "sample-dir",
     ])
     .unwrap();
-    let config = prepare_cache_config(Some(&scan_root), &cli).unwrap();
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let config = prepare_cache_config(Some(&scan_root), &request).unwrap();
 
     assert!(config.incremental_enabled());
     assert!(config.incremental_dir().exists());
@@ -1107,7 +1146,8 @@ fn prepare_cache_config_without_scan_root_uses_non_scan_default() {
     ])
     .unwrap();
 
-    let config = prepare_cache_config(None, &cli).unwrap();
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let config = prepare_cache_config(None, &request).unwrap();
 
     assert_eq!(
         config.root_dir(),
@@ -1278,7 +1318,8 @@ fn resolve_native_scan_selection_uses_paths_file_under_explicit_root() {
     ])
     .expect("cli parse should succeed");
 
-    let result = resolve_native_scan_selection(&cli);
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let result = resolve_native_scan_selection(&request);
 
     let NativeScanSelection {
         scan_path: resolved_root,
@@ -1328,7 +1369,8 @@ fn resolve_native_scan_selection_errors_when_paths_file_keeps_no_existing_entrie
     ])
     .expect("cli parse should succeed");
 
-    let error = resolve_native_scan_selection(&cli).expect_err("selection should fail");
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let error = resolve_native_scan_selection(&request).expect_err("selection should fail");
     assert!(
         error
             .to_string()
