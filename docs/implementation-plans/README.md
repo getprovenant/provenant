@@ -17,6 +17,11 @@ implementation-plans/
 
 ## Active Plans
 
+### Infrastructure (`infrastructure/`)
+
+- **[SERVE_PLAN.md](infrastructure/SERVE_PLAN.md)** - End-to-end plan and shell rollout for `provenant serve`
+  - Status: 🟡 Active — tracks the current serve-shell contract until the service surface is stable enough to move into evergreen docs
+
 ## Historical Rollout Records and Reference Documents
 
 These topics are implemented. Some remain useful as completed historical records, while others point to the evergreen maintainer document that now owns the live contract.
