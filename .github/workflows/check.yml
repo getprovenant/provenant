@@ -173,6 +173,7 @@ jobs:
           cargo run --quiet --locked --bin provenant -- show-attribution | Out-Null
           cargo run --quiet --locked --bin provenant -- export-license-dataset --help | Out-Null
           cargo run --quiet --locked --bin provenant -- scan --help | Out-Null
+          cargo run --quiet --locked --bin provenant -- serve --help | Out-Null
           cargo run --quiet --locked --bin provenant -- compare --help | Out-Null
 
   intel-macos-build-smoke:
@@ -202,6 +203,7 @@ jobs:
           cargo run --quiet --locked --bin provenant -- show-attribution > /dev/null
           cargo run --quiet --locked --bin provenant -- export-license-dataset --help > /dev/null
           cargo run --quiet --locked --bin provenant -- scan --help > /dev/null
+          cargo run --quiet --locked --bin provenant -- serve --help > /dev/null
           cargo run --quiet --locked --bin provenant -- compare --help > /dev/null
 
   rust-sharded-tests:
