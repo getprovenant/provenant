@@ -144,6 +144,8 @@ pub struct Cli {
 pub enum Command {
     /// Scan files or existing ScanCode-style JSON inputs.
     Scan(Box<ScanArgs>),
+    /// Run the long-lived HTTP service.
+    Serve(ServeArgs),
     /// Compare ScanCode and Provenant JSON outputs to review migration-confidence deltas.
     Compare(CompareArgs),
     /// Show attribution notices for embedded license detection data.
@@ -187,6 +189,13 @@ impl CompatibilityMode {
             Self::Scancode => "scancode",
         }
     }
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ServeArgs {
+    /// Bind the service shell to HOST:PORT.
+    #[arg(long = "bind", value_name = "ADDR", default_value = "127.0.0.1:8080")]
+    pub bind: String,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -522,9 +531,10 @@ impl Cli {
     pub(crate) fn scan_args(&self) -> Option<&ScanArgs> {
         match &self.command {
             Command::Scan(scan_args) => Some(scan_args.as_ref()),
-            Command::Compare(_) | Command::ShowAttribution | Command::ExportLicenseDataset(_) => {
-                None
-            }
+            Command::Serve(_)
+            | Command::Compare(_)
+            | Command::ShowAttribution
+            | Command::ExportLicenseDataset(_) => None,
         }
     }
 }
@@ -553,6 +563,7 @@ where
     if matches!(
         first.as_ref(),
         "scan"
+            | "serve"
             | "compare"
             | "show-attribution"
             | "export-license-dataset"
@@ -1071,6 +1082,17 @@ mod tests {
     }
 
     #[test]
+    fn test_parses_serve_subcommand() {
+        let parsed = Cli::try_parse_from(["provenant", "serve", "--bind", "127.0.0.1:9090"])
+            .expect("serve subcommand should parse");
+
+        match parsed.command {
+            Command::Serve(args) => assert_eq!(args.bind, "127.0.0.1:9090"),
+            other => panic!("expected serve subcommand, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn test_compare_subcommand_allows_default_artifact_dir() {
         let parsed = Cli::try_parse_from([
             "provenant",
@@ -1364,6 +1386,7 @@ mod tests {
         let help = Cli::command().render_help().to_string();
 
         assert!(help.contains("scan"));
+        assert!(help.contains("serve"));
         assert!(help.contains("compare"));
         assert!(help.contains("show-attribution"));
         assert!(help.contains("export-license-dataset"));
