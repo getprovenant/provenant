@@ -8,6 +8,7 @@ use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
 use crate::output::{OutputWriteConfig, write_output_file};
 use crate::progress::ScanProgress;
+use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
 use anyhow::{Result, anyhow};
 use chrono::Utc;
@@ -24,6 +25,9 @@ pub fn run() -> Result<()> {
         Command::ShowAttribution => {
             print!("{}", include_str!("../../../NOTICE"));
             return Ok(());
+        }
+        Command::Serve(args) => {
+            return run_serve_shell(args);
         }
         Command::Compare(args) => {
             let result = compare_json_files(

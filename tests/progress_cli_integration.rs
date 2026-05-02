@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::fs;
+use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
 use std::process::Command;
+use std::process::Stdio;
+use std::time::{Duration, Instant};
 
 use regex::Regex;
 use serde_json::Value;
@@ -12,6 +16,56 @@ fn provenant_command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_provenant"));
     command.current_dir(env!("CARGO_MANIFEST_DIR"));
     command
+}
+
+fn reserve_local_port() -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind temp port");
+    let port = listener.local_addr().expect("local addr").port();
+    drop(listener);
+    port
+}
+
+fn wait_for_http_status(port: u16, path: &str, expected: u16) -> String {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Ok(response) = raw_http_request(port, path) {
+            let status = response
+                .lines()
+                .next()
+                .and_then(|line| line.split_whitespace().nth(1))
+                .and_then(|code| code.parse::<u16>().ok())
+                .expect("status code should be present");
+            if status == expected {
+                return response;
+            }
+        }
+
+        assert!(
+            Instant::now() < deadline,
+            "timed out waiting for {path} to return {expected}"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+fn raw_http_request(port: u16, path: &str) -> std::io::Result<String> {
+    let mut stream = TcpStream::connect(("127.0.0.1", port))?;
+    write!(
+        stream,
+        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+    )?;
+    stream.flush()?;
+    let mut response = String::new();
+    stream.read_to_string(&mut response)?;
+    Ok(response)
+}
+
+fn response_json_body(response: &str) -> Value {
+    let body = response
+        .split("\r\n\r\n")
+        .nth(1)
+        .expect("http response should contain body");
+    serde_json::from_str(body).expect("response body should be valid json")
 }
 
 fn create_scan_fixture() -> (TempDir, String) {
@@ -464,6 +518,89 @@ fn version_flag_reports_git_aware_build_version() {
         .expect("version line should include a version token");
 
     assert_eq!(reported_version, provenant::version::BUILD_VERSION);
+}
+
+#[test]
+fn serve_help_renders_usage() {
+    let output = provenant_command()
+        .args(["serve", "--help"])
+        .output()
+        .expect("failed to run provenant serve --help");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("help output should be utf-8");
+    assert!(stdout.contains("long-lived HTTP service"));
+    assert!(stdout.contains("--bind <ADDR>"));
+}
+
+#[test]
+fn serve_shell_exposes_health_and_version_endpoints() {
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let livez = wait_for_http_status(port, "/livez", 200);
+    let livez_json = response_json_body(&livez);
+    assert_eq!(livez_json["status"], "ok");
+
+    let readyz = wait_for_http_status(port, "/readyz", 200);
+    let readyz_json = response_json_body(&readyz);
+    assert_eq!(readyz_json["status"], "ready");
+    assert_eq!(readyz_json["api_version"], "v1");
+
+    let version = wait_for_http_status(port, "/version", 200);
+    let version_json = response_json_body(&version);
+    assert_eq!(version_json["service"], "provenant-serve");
+    assert_eq!(version_json["api_version"], "v1");
+    assert_eq!(
+        version_json["tool_version"],
+        provenant::version::BUILD_VERSION
+    );
+
+    let scans =
+        raw_http_request(port, "/v1/scans").expect("scan placeholder request should succeed");
+    let scans_json = response_json_body(&scans);
+    let scans_status = scans
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|code| code.parse::<u16>().ok())
+        .expect("scan placeholder should return a status");
+    assert_eq!(scans_status, 501);
+    assert_eq!(scans_json["status"], "not_implemented");
+
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_fails_cleanly_on_occupied_port() {
+    let port = reserve_local_port();
+    let mut first = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn first serve shell");
+
+    let _ = wait_for_http_status(port, "/livez", 200);
+
+    let second = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .output()
+        .expect("failed to run second serve shell");
+
+    assert!(!second.status.success());
+    let stderr = String::from_utf8(second.stderr).expect("stderr should be utf-8");
+    assert!(
+        stderr.contains("Failed to bind provenant serve"),
+        "stderr was: {stderr}"
+    );
+
+    first.kill().expect("first serve child should terminate");
+    first.wait().expect("first serve child wait should succeed");
 }
 
 #[test]

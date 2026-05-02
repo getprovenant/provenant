@@ -51,6 +51,7 @@ pub(crate) mod post_processing;
 pub mod progress;
 pub(crate) mod scan_result_shaping;
 pub mod scanner;
+pub(crate) mod serve;
 #[cfg(test)]
 pub(crate) mod test_support;
 pub(crate) mod time;
