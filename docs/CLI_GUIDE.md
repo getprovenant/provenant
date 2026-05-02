@@ -21,6 +21,16 @@ Bare `provenant ...` still defaults to scan mode for backward compatibility, but
 
 This guide does **not** try to repeat every scan flag from `scan --help`. Instead, it focuses on the workflows most users actually need.
 
+## `provenant serve`
+
+Provenant also ships a long-lived HTTP service shell:
+
+```sh
+provenant serve --help
+```
+
+Today that shell is primarily for process lifecycle, health/readiness checks, and the stable service namespace. The current end-to-end service contract lives in [`implementation-plans/infrastructure/SERVE_PLAN.md`](implementation-plans/infrastructure/SERVE_PLAN.md).
+
 ## Start Here: A Strong Default Scan
 
 If you are starting a new scan and want a strong default, start with pretty JSON and explicitly ask for the scan types you care about:
@@ -615,7 +625,7 @@ generic replacement for normal scanning.
 
 ## Where to Go Next
 
-- Run `provenant --help` for the command tree, `provenant scan --help` for the full scan CLI surface, and `provenant compare --help` for JSON comparison options
+- Run `provenant --help` for the command tree, `provenant scan --help` for the full scan CLI surface, `provenant serve --help` for the service shell, and `provenant compare --help` for JSON comparison options
 - See [README.md](../README.md) for installation and quick start
 - See [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md) for supported package and ecosystem coverage
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for implementation details

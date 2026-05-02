@@ -154,6 +154,12 @@ For the complete scan-flag surface, run:
 provenant scan --help
 ```
 
+For the current service shell surface, run:
+
+```sh
+provenant serve --help
+```
+
 For guided workflows and important flag combinations, see the [CLI Guide](docs/CLI_GUIDE.md).
 
 ### Example
@@ -212,6 +218,7 @@ Output architecture and compatibility approach are documented in:
 - **[Library Guide](docs/LIBRARY_GUIDE.md)** - Programmatic embedding guidance for using Provenant from Rust
 - **[Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Best starting point for navigating the docs set
 - **[CLI Guide](docs/CLI_GUIDE.md)** - Common workflows and important flag combinations
+- **[`provenant serve` plan](docs/implementation-plans/infrastructure/SERVE_PLAN.md)** - Current service contract and intended end-to-end self-hosted HTTP surface
 - **[Provenant and ScanCode Toolkit](docs/SCANCODE_COMPARISON.md)** - Relationship, trust model, and high-level comparison notes
 - **[Migrating from ScanCode Toolkit](docs/MIGRATING_FROM_SCANCODE.md)** - Practical migration notes for ScanCode users, especially power-user workflows
 - **[Architecture](docs/ARCHITECTURE.md)** - System design, processing pipeline, and design decisions
