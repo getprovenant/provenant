@@ -157,7 +157,7 @@ fn is_included_path_requires_explicit_recursive_wildcard_for_subtrees() {
 }
 
 #[test]
-fn resolve_native_scan_inputs_builds_common_prefix_and_synthetic_includes() {
+fn resolve_native_scan_inputs_builds_common_prefix_and_relative_synthetic_includes() {
     let temp_dir = tempfile::tempdir().expect("tempdir");
     let parent = temp_dir.path().join("src");
     fs::create_dir_all(parent.join("foo")).expect("create foo dir");
@@ -174,8 +174,8 @@ fn resolve_native_scan_inputs_builds_common_prefix_and_synthetic_includes() {
     assert_eq!(
         includes,
         vec![
-            SelectedPath::Subtree("src/foo".to_string()),
-            SelectedPath::Exact("src/bar/baz".to_string())
+            SelectedPath::Subtree("foo".to_string()),
+            SelectedPath::Exact("bar/baz".to_string())
         ]
     );
 }
@@ -196,8 +196,33 @@ fn resolve_native_scan_inputs_uses_component_aware_prefix_for_siblings() {
     assert_eq!(
         includes,
         vec![
-            SelectedPath::Subtree("src/bar".to_string()),
-            SelectedPath::Subtree("src/baz".to_string())
+            SelectedPath::Subtree("bar".to_string()),
+            SelectedPath::Subtree("baz".to_string())
+        ]
+    );
+}
+
+#[test]
+fn resolve_native_scan_inputs_allows_absolute_inputs_under_common_parent() {
+    let temp_dir = tempfile::tempdir().expect("tempdir");
+    let scan_root = temp_dir.path().join("repo");
+    let left = scan_root.join("left");
+    let right = scan_root.join("right");
+    fs::create_dir_all(&left).expect("create left dir");
+    fs::create_dir_all(&right).expect("create right dir");
+
+    let result = resolve_native_scan_inputs(&[
+        left.to_string_lossy().to_string(),
+        right.to_string_lossy().to_string(),
+    ]);
+
+    let (resolved_root, includes) = result.expect("absolute sibling inputs should resolve");
+    assert_eq!(resolved_root, scan_root.to_string_lossy());
+    assert_eq!(
+        includes,
+        vec![
+            SelectedPath::Subtree("left".to_string()),
+            SelectedPath::Subtree("right".to_string())
         ]
     );
 }

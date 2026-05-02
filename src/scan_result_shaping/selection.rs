@@ -32,28 +32,33 @@ pub(crate) fn resolve_native_scan_inputs(inputs: &[String]) -> Result<(String, V
         return Ok((inputs[0].clone(), Vec::new()));
     }
 
-    if inputs.iter().any(|path| Path::new(path).is_absolute()) {
-        return Err(anyhow!(
-            "Invalid inputs: all input paths must be relative when using multiple inputs"
-        ));
-    }
-
-    let common_prefix = common_path_prefix(inputs)
-        .unwrap_or_else(|| PathBuf::from("."))
-        .to_string_lossy()
-        .to_string();
-    if common_prefix != "." && !Path::new(&common_prefix).is_dir() {
+    let common_prefix = common_path_prefix(inputs).unwrap_or_else(|| PathBuf::from("."));
+    let scan_root = common_prefix.to_string_lossy().to_string();
+    if scan_root != "." && !common_prefix.is_dir() {
         return Err(anyhow!(
             "Invalid inputs: all input paths must share a common single parent directory"
         ));
     }
 
-    let synthetic_includes = inputs
-        .iter()
-        .map(|path| build_selected_path(path, Path::new(path).is_dir()))
-        .collect();
+    let mut synthetic_includes = Vec::new();
+    for input in inputs {
+        let input_path = Path::new(input);
+        let relative_input = if scan_root == "." {
+            input_path
+        } else {
+            input_path
+                .strip_prefix(&common_prefix)
+                .unwrap_or(input_path)
+        };
 
-    Ok((common_prefix, synthetic_includes))
+        let selection = build_selected_path(&relative_input.to_string_lossy(), input_path.is_dir());
+        if matches!(selection, SelectedPath::Subtree(ref path) if path.is_empty()) {
+            return Ok((scan_root, Vec::new()));
+        }
+        synthetic_includes.push(selection);
+    }
+
+    Ok((scan_root, synthetic_includes))
 }
 
 #[derive(Debug)]
