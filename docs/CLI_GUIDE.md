@@ -29,7 +29,7 @@ Provenant also ships a long-lived HTTP service shell:
 provenant serve --help
 ```
 
-Today that shell is primarily for process lifecycle, health/readiness checks, and the stable service namespace. The current end-to-end service contract lives in [`implementation-plans/infrastructure/SERVE_PLAN.md`](implementation-plans/infrastructure/SERVE_PLAN.md).
+`provenant serve` starts a long-lived HTTP service with `/livez`, `/readyz`, `/version`, and synchronous `POST /v1/scans` support for local-path inputs (`input.type=paths`).
 
 ## Start Here: A Strong Default Scan
 

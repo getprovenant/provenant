@@ -1,15 +1,15 @@
 # `provenant serve` Plan and Contract
 
-> **Status**: 🟡 Active implementation plan — this document defines the current `provenant serve` contract and the intended end-to-end service surface
-> **Current contract owner**: this plan for the in-flight service contract, with future migration to evergreen runtime and user-facing docs once the surface stabilizes
-> **Priority**: P1 — define the full self-hosted service shape up front and implement it incrementally against that contract
+> **Status**: 🟡 Active implementation plan — this document defines the intended end-state `provenant serve` contract
+> **Current contract owner**: this plan until the service contract graduates into evergreen runtime and user-facing docs
+> **Priority**: P1 — define the full self-hosted service shape up front
 > **Tracking issue**: [`#834`](https://github.com/mstykow/provenant/issues/834)
 
 ## Overview
 
 `provenant serve` is the planned **self-hosted long-lived HTTP scanner service** built on top of the shared app/workflow pipeline introduced in the stacked base PR.
 
-This document defines the **end-state service contract** first. Implementation can land in smaller stacked slices, but the contract described here is the target those slices are working toward.
+This document defines the **end-state service contract**.
 
 ## Product goals
 
@@ -25,28 +25,7 @@ This document defines the **end-state service contract** first. Implementation c
 - a second independent scan implementation path that bypasses `src/app/*` and `execute_request(...)`
 - immediate inclusion of auth, tenancy, quotas, billing, or persistence concerns in the core scanner contract
 
-## Scope of this slice
-
-### Included now
-
-- `provenant serve --bind <HOST:PORT>`
-- a persistent HTTP listener suitable for local development and container-style hosting
-- `GET /livez`
-- `GET /readyz`
-- `GET /version`
-- explicit `501 Not Implemented` placeholder responses for `/v1/scans...`
-
-### Explicit exclusions
-
-- no scan submission endpoint yet
-- no upload transport or object-store integration yet
-- no auth, tenancy, quotas, or API keys
-- no async job queue or persistence model
-- no AWS-specific infrastructure code
-
 ## Intended end-to-end service surface
-
-This section describes the intended final shape of `provenant serve`, not just the currently implemented subset.
 
 ### Deployment model
 
@@ -66,7 +45,6 @@ Lambda is not the primary target for `provenant serve`. If a Lambda adapter is a
 
 - health and operator endpoints are unversioned: `/livez`, `/readyz`, `/version`
 - scanner API endpoints live under `/v1/...`
-- the current implementation slice already reserves `/v1/scans...` so the shell matches the intended stable namespace from the outset
 
 ### Intended scan API families
 
@@ -77,7 +55,7 @@ The intended scanner surface includes:
 - `GET /v1/jobs/{id}` — async job status lookup if an async model is added
 - `GET /v1/jobs/{id}/result` — result retrieval for persisted async jobs if that model is added
 
-Synchronous scan execution is the minimum required service capability. Async jobs remain part of the intended end-state contract, but can follow after the synchronous route exists.
+Synchronous scan execution is the minimum required service capability. Async jobs are part of the intended end-state contract for larger or longer-running workloads.
 
 ### Intended input modes
 
@@ -88,12 +66,10 @@ The final service should support these request shapes:
 3. **object reference input** (for example S3-backed references) for larger hosted workflows
 4. **trusted local-path scanning** only where the operator intentionally deploys the service with local filesystem authority
 
-The first real scan endpoint should choose the smallest safe subset explicitly rather than implying support for all of them.
-
 ### Sync vs async intent
 
-- synchronous scans should be the first real scan mode added
-- async jobs are a planned extension, not a prerequisite for the first executable scan endpoint
+- synchronous scans provide the baseline request/response interaction for bounded workloads
+- async jobs provide the scalable path for larger workloads and remote object-backed processing
 - the API contract should remain explicit about which routes are sync-only and which require persisted job state
 
 ### End-state layering
@@ -129,7 +105,7 @@ Expected states:
 - `503` with `{"status":"warming"}` while startup warm initialization is still pending
 - `503` with `{"status":"failed", ...}` if warm initialization fails
 
-Current warm initialization is intentionally lightweight and only proves the shell can initialize the embedded license-detection metadata needed by the future scan API.
+Readiness should only flip to `200` after the service has completed the warm initialization required for serving scan requests reliably.
 
 ### `GET /version`
 
@@ -149,42 +125,36 @@ Status code: `200`
 
 ### `/v1/scans`
 
-Purpose: the stable scanner namespace, currently reserved during the shell-only slice.
+Purpose: stable scanner namespace for synchronous scan execution.
 
-Current behavior in this slice:
+### `POST /v1/scans`
 
-- any request under `/v1/scans...` returns `501 Not Implemented`
-- response body makes it explicit that scan routes are not implemented in this shell yet
-
-This keeps the shell aligned with the intended end-state namespace from the start instead of introducing a throwaway version prefix.
-
-### Intended future `POST /v1/scans`
-
-This route is part of the intended end-state contract. Its design should follow these rules:
+This route should follow these rules:
 
 - request body names the scan mode and input transport explicitly
 - response body returns the same Provenant/ScanCode-compatible scan result model already produced by the shared pipeline
 - the route is a thin transport adapter over the shared app/workflow execution path
+- the route should support the bounded synchronous scan contract directly, without forcing async job orchestration for small or medium requests
 
-The first implementation should keep this route synchronous and narrow in transport support.
+### `POST /v1/scans:async`
 
-## Current implemented subset
+This route should accept scan requests that exceed the desired synchronous execution envelope and return a job handle.
 
-The code in the current stacked slice implements only the service shell portion of the end-state contract:
+### `GET /v1/jobs/{id}`
 
-- `provenant serve --bind <HOST:PORT>`
-- `GET /livez`
-- `GET /readyz`
-- `GET /version`
-- `501 Not Implemented` responses under `/v1/scans...`
+This route should expose async job state, including terminal success/failure, without requiring clients to infer job semantics from transport errors.
 
-The full scan routes described above remain part of the contract, but are not yet wired in this slice.
+### `GET /v1/jobs/{id}/result`
 
-## Acceptance checks for this shell
+This route should return the completed scan result for async jobs using the same output contract as synchronous scans.
+
+## Acceptance checks
 
 - `provenant serve --bind 127.0.0.1:0` starts successfully
 - `GET /livez` returns `200`
 - `GET /readyz` eventually returns `200`
 - `GET /version` returns `200` and includes `api_version` plus `tool_version`
-- requests under `/v1/scans` return `501`
+- `POST /v1/scans` accepts a bounded synchronous scan request and returns a scan result using the shared Provenant output contract
+- `POST /v1/scans:async` returns a durable job handle for larger workloads
+- `GET /v1/jobs/{id}` and `GET /v1/jobs/{id}/result` return stable async status/result contracts
 - starting a second shell on an occupied port exits non-zero with a deterministic bind failure

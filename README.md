@@ -26,6 +26,7 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 - Broader package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), including beyond-parity parsers and improvements in overlapping parser families
 - [Documented parser and detection fixes](docs/improvements/README.md) that reduce noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
 - Native workflows such as `--incremental` cache reuse and `--paths-file` rooted file lists for CI or changed-file scans
+- A self-hosted `provenant serve` HTTP service mode for integrations that would otherwise need to manage CLI subprocesses
 - Single self-contained binary for simpler installation and CI use
 - [ScanCode-compatible](docs/SCANCODE_COMPARISON.md) workflows and output formats, including ScanCode-style JSON, SPDX, CycloneDX, YAML, JSON Lines, HTML, and custom templates
 - [Security-first](docs/adr/0004-security-first-parsing.md) static parsing with explicit safeguards and compatibility-focused tradeoffs where needed
@@ -218,7 +219,6 @@ Output architecture and compatibility approach are documented in:
 - **[Library Guide](docs/LIBRARY_GUIDE.md)** - Programmatic embedding guidance for using Provenant from Rust
 - **[Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Best starting point for navigating the docs set
 - **[CLI Guide](docs/CLI_GUIDE.md)** - Common workflows and important flag combinations
-- **[`provenant serve` plan](docs/implementation-plans/infrastructure/SERVE_PLAN.md)** - Current service contract and intended end-to-end self-hosted HTTP surface
 - **[Provenant and ScanCode Toolkit](docs/SCANCODE_COMPARISON.md)** - Relationship, trust model, and high-level comparison notes
 - **[Migrating from ScanCode Toolkit](docs/MIGRATING_FROM_SCANCODE.md)** - Practical migration notes for ScanCode users, especially power-user workflows
 - **[Architecture](docs/ARCHITECTURE.md)** - System design, processing pipeline, and design decisions
