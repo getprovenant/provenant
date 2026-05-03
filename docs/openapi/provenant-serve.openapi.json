@@ -128,6 +128,161 @@
           }
         }
       }
+    },
+    "/v1/scans:async": {
+      "post": {
+        "summary": "Submit an asynchronous scan job",
+        "operationId": "postAsyncScan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncScanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Scan job accepted for bounded background execution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncScanAcceptedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid HTTP request or malformed JSON body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service has no remaining async admission capacity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}": {
+      "get": {
+        "summary": "Inspect asynchronous job state",
+        "operationId": "getAsyncJobStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current async job state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncJobStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Async job was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}/result": {
+      "get": {
+        "summary": "Fetch completed asynchronous job result",
+        "operationId": "getAsyncJobResult",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Completed ScanCode-compatible scan result output.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Current ScanCode-compatible output JSON returned by the shared Provenant output schema."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Async job was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Async job has not completed yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Async job completed with a failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -217,6 +372,103 @@
           "message",
           "api_version"
         ]
+      },
+      "AsyncJobState": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "AsyncJobState",
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed"
+        ]
+      },
+      "AsyncScanAcceptedResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "AsyncScanAcceptedResponse",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/$defs/AsyncJobState"
+          },
+          "status_url": {
+            "type": "string"
+          },
+          "result_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "job_id",
+          "state",
+          "status_url",
+          "result_url"
+        ],
+        "$defs": {
+          "AsyncJobState": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed"
+            ]
+          }
+        }
+      },
+      "AsyncJobStatusResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "AsyncJobStatusResponse",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/$defs/AsyncJobState"
+          },
+          "result_ready": {
+            "type": "boolean"
+          },
+          "allocated_processors": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "job_id",
+          "state",
+          "result_ready"
+        ],
+        "$defs": {
+          "AsyncJobState": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed"
+            ]
+          }
+        }
       },
       "SyncScanRequest": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
