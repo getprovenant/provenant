@@ -15,13 +15,6 @@ implementation-plans/
 └── infrastructure/        # Plugin system, caching, progress tracking
 ```
 
-## Active Plans
-
-### Infrastructure (`infrastructure/`)
-
-- **[SERVE_PLAN.md](infrastructure/SERVE_PLAN.md)** - End-to-end plan and shell rollout for `provenant serve`
-  - Status: 🟡 Active — tracks the planned end-state `provenant serve` contract until the service surface is stable enough to move into evergreen docs
-
 ## Historical Rollout Records and Reference Documents
 
 These topics are implemented. Some remain useful as completed historical records, while others point to the evergreen maintainer document that now owns the live contract.
@@ -63,6 +56,9 @@ These topics are implemented. Some remain useful as completed historical records
   - Status: 🟢 Complete — shaping-specific CLI behavior now lives in `src/scan_result_shaping/`, scanner path selection, and the main orchestration pipeline; remaining non-shaping parity follow-up is tracked in adjacent plans
 
 ### Infrastructure (`infrastructure/`)
+
+- **[SERVE_PLAN.md](infrastructure/SERVE_PLAN.md)** - End-to-end `provenant serve` rollout and contract record
+  - Status: 🟢 Complete — the planned sync/async self-hosted service contract is implemented, and the live user-facing HTTP surface now lives in [`../SERVE_API_GUIDE.md`](../SERVE_API_GUIDE.md)
 
 - **[CACHING_PLAN.md](infrastructure/CACHING_PLAN.md)** - Incremental scanning
   - Status: 🟢 Complete — incremental scanning, XDG cache defaults, and cache lock coordination are implemented; the plan remains as the rollout record
