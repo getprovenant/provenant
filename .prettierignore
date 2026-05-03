@@ -24,3 +24,4 @@ testdata/**
 # Generated files (if any)
 *.min.js
 *.min.json
+docs/openapi/provenant-serve.openapi.json
