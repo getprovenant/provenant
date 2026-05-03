@@ -141,7 +141,9 @@
             "type": "string"
           }
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       },
       "ServeReadinessResponse": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -152,16 +154,27 @@
             "type": "string"
           },
           "api_version": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "spdx_license_list_version": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "message": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       },
       "ServeVersionResponse": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -178,7 +191,11 @@
             "type": "string"
           }
         },
-        "required": ["service", "api_version", "tool_version"]
+        "required": [
+          "service",
+          "api_version",
+          "tool_version"
+        ]
       },
       "ServeErrorResponse": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -195,7 +212,11 @@
             "type": "string"
           }
         },
-        "required": ["status", "message", "api_version"]
+        "required": [
+          "status",
+          "message",
+          "api_version"
+        ]
       },
       "SyncScanRequest": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -242,7 +263,9 @@
             }
           }
         },
-        "required": ["input"],
+        "required": [
+          "input"
+        ],
         "$defs": {
           "SyncScanInput": {
             "type": "object",
@@ -257,11 +280,16 @@
                 }
               }
             },
-            "required": ["type", "paths"]
+            "required": [
+              "type",
+              "paths"
+            ]
           },
           "SyncInputTransport": {
             "type": "string",
-            "enum": ["paths"]
+            "enum": [
+              "paths"
+            ]
           },
           "SyncScanOptions": {
             "type": "object",
@@ -408,7 +436,9 @@
                     "const": "disabled"
                   }
                 },
-                "required": ["type"]
+                "required": [
+                  "type"
+                ]
               },
               {
                 "type": "object",
@@ -418,7 +448,9 @@
                     "const": "embedded"
                   }
                 },
-                "required": ["type"]
+                "required": [
+                  "type"
+                ]
               },
               {
                 "type": "object",
@@ -431,7 +463,10 @@
                     "const": "directory"
                   }
                 },
-                "required": ["type", "path"]
+                "required": [
+                  "type",
+                  "path"
+                ]
               }
             ]
           }
@@ -452,11 +487,16 @@
             }
           }
         },
-        "required": ["type", "paths"],
+        "required": [
+          "type",
+          "paths"
+        ],
         "$defs": {
           "SyncInputTransport": {
             "type": "string",
-            "enum": ["paths"]
+            "enum": [
+              "paths"
+            ]
           }
         }
       },
@@ -464,7 +504,9 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "SyncInputTransport",
         "type": "string",
-        "enum": ["paths"]
+        "enum": [
+          "paths"
+        ]
       },
       "SyncLicenseSource": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -478,7 +520,9 @@
                 "const": "disabled"
               }
             },
-            "required": ["type"]
+            "required": [
+              "type"
+            ]
           },
           {
             "type": "object",
@@ -488,7 +532,9 @@
                 "const": "embedded"
               }
             },
-            "required": ["type"]
+            "required": [
+              "type"
+            ]
           },
           {
             "type": "object",
@@ -501,7 +547,10 @@
                 "const": "directory"
               }
             },
-            "required": ["type", "path"]
+            "required": [
+              "type",
+              "path"
+            ]
           }
         ]
       },
@@ -652,7 +701,9 @@
                     "const": "disabled"
                   }
                 },
-                "required": ["type"]
+                "required": [
+                  "type"
+                ]
               },
               {
                 "type": "object",
@@ -662,7 +713,9 @@
                     "const": "embedded"
                   }
                 },
-                "required": ["type"]
+                "required": [
+                  "type"
+                ]
               },
               {
                 "type": "object",
@@ -675,7 +728,10 @@
                     "const": "directory"
                   }
                 },
-                "required": ["type", "path"]
+                "required": [
+                  "type",
+                  "path"
+                ]
               }
             ]
           }
