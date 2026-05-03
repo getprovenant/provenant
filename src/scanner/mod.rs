@@ -449,7 +449,7 @@ mod tests {
             scanned
                 .copyrights
                 .iter()
-                .any(|c| c.copyright == "Copyright 2022 The Kubernetes Authors"),
+                .any(|c| c.copyright == "Copyright 2022 The Kubernetes Authors."),
             "copyrights: {:#?}",
             scanned.copyrights
         );
