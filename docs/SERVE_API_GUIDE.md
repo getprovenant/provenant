@@ -146,18 +146,27 @@ Upload input is a bounded JSON upload path for smaller archives, SBOMs, or other
 
 The payload is base64 encoded and identified by a file name. Archive uploads use the same archive extraction behavior as remote URL inputs.
 
-```json
+One practical shell workflow is:
+
+```sh
+CONTENT_BASE64=$(base64 < snapshot.zip | tr -d '\n')
+
+curl -sS \
+  -X POST http://127.0.0.1:8080/v1/scans \
+  -H 'Content-Type: application/json' \
+  --data-binary @- <<EOF
 {
   "input": {
     "type": "upload",
     "filename": "snapshot.zip",
-    "content_base64": "UEsDB..."
+    "content_base64": "${CONTENT_BASE64}"
   },
   "options": {
     "detect_license": { "type": "embedded" },
     "detect_packages": true
   }
 }
+EOF
 ```
 
 The response body is the same ScanCode-compatible JSON shape Provenant already exposes through its existing output schema.
