@@ -1559,6 +1559,7 @@ mod tests {
                 vec![],
                 vec![Copyright {
                     copyright: "Copyright (c) Example".to_string(),
+                    normalized_copyright: None,
                     start_line: LineNumber::ONE,
                     end_line: LineNumber::ONE,
                 }],

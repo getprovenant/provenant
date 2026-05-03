@@ -54,7 +54,13 @@ pub(super) fn extract_copyright_information(
         copyrights
             .into_iter()
             .map(|c| Copyright {
-                copyright: c.copyright,
+                normalized_copyright: Some(c.copyright.clone()),
+                copyright: render_raw_copyright_from_text(
+                    text_content,
+                    c.start_line,
+                    c.end_line,
+                    c.copyright.as_str(),
+                ),
                 start_line: c.start_line,
                 end_line: c.end_line,
             })
@@ -88,6 +94,132 @@ pub(super) fn extract_copyright_information(
             })
             .collect::<Vec<Author>>(),
     );
+}
+
+fn render_raw_copyright_from_text(
+    text_content: &str,
+    start_line: LineNumber,
+    end_line: LineNumber,
+    fallback: &str,
+) -> String {
+    let raw_lines: Vec<&str> = text_content.lines().collect();
+    let start_index = start_line.get().saturating_sub(1);
+    let end_index = end_line.get();
+    let Some(span) = raw_lines.get(start_index..end_index) else {
+        return fallback.to_string();
+    };
+
+    let rendered = span
+        .iter()
+        .map(|line| strip_common_comment_wrappers(line.trim()))
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let rendered = rendered.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    if rendered.is_empty() {
+        fallback.to_string()
+    } else {
+        project_native_copyright_value(&rendered, fallback)
+    }
+}
+
+fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
+    let rendered = rendered.trim();
+    let fallback = fallback.trim();
+    if rendered.is_empty() || fallback.is_empty() {
+        return fallback.to_string();
+    }
+
+    let rendered_lower = rendered.to_ascii_lowercase();
+    let fallback_lower = fallback.to_ascii_lowercase();
+    let Some(start) = rendered_lower.find(&fallback_lower) else {
+        return fallback.to_string();
+    };
+    let end = start + fallback.len();
+    let suffix = rendered[end..].trim();
+    let Some(native_suffix) = normalize_native_suffix(suffix) else {
+        return fallback.to_string();
+    };
+
+    if native_suffix.is_empty() {
+        fallback.to_string()
+    } else if native_suffix
+        .chars()
+        .next()
+        .is_some_and(|ch| matches!(ch, '.' | ',' | ';' | ':'))
+    {
+        format!("{fallback}{native_suffix}")
+    } else {
+        format!("{fallback} {native_suffix}")
+    }
+}
+
+fn normalize_native_suffix(suffix: &str) -> Option<String> {
+    if suffix.is_empty() {
+        return Some(String::new());
+    }
+
+    let normalized = suffix.split_whitespace().collect::<Vec<_>>().join(" ");
+    let trimmed = normalized.trim();
+    if trimmed.is_empty() {
+        return Some(String::new());
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    let punctuation_only = trimmed
+        .chars()
+        .all(|ch| matches!(ch, '.' | ',' | ';' | ':'));
+    if punctuation_only {
+        return Some(trimmed.to_string());
+    }
+
+    let all_rights_variants = [
+        "all rights reserved",
+        ". all rights reserved",
+        ", all rights reserved",
+        "; all rights reserved",
+        ": all rights reserved",
+        "all rights reserved.",
+        ". all rights reserved.",
+        ", all rights reserved.",
+        "; all rights reserved.",
+        ": all rights reserved.",
+    ];
+    if all_rights_variants.contains(&lower.as_str()) {
+        return Some(trimmed.to_string());
+    }
+
+    None
+}
+
+fn strip_common_comment_wrappers(line: &str) -> String {
+    let mut trimmed = line.trim();
+
+    loop {
+        let next = trimmed
+            .strip_prefix("///")
+            .or_else(|| trimmed.strip_prefix("//!"))
+            .or_else(|| trimmed.strip_prefix("//"))
+            .or_else(|| trimmed.strip_prefix("/*"))
+            .or_else(|| trimmed.strip_prefix('*'))
+            .or_else(|| trimmed.strip_prefix('#'))
+            .map(str::trim_start);
+        let Some(next) = next else {
+            break;
+        };
+        if next == trimmed {
+            break;
+        }
+        trimmed = next;
+    }
+
+    trimmed = trimmed.trim_end();
+    if let Some(stripped) = trimmed.strip_suffix("*/") {
+        trimmed = stripped.trim_end();
+    }
+
+    trimmed.to_string()
 }
 
 fn prune_binary_string_detections(

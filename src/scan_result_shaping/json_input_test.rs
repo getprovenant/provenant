@@ -121,6 +121,50 @@ fn load_scan_from_json_accepts_minimal_real_scancode_file_entries() {
 }
 
 #[test]
+fn load_scan_from_json_reconstructs_normalized_copyrights_from_raw_output() {
+    let temp_path = std::env::temp_dir().join("provenant-from-json-raw-copyright-test.json");
+    let content = json!({
+        "headers": [{"errors": [], "warnings": []}],
+        "files": [
+            {
+                "path": "README",
+                "type": "file",
+                "size": 10,
+                "copyrights": [
+                    {
+                        "copyright": "Copyright 2024 Example Corp. All rights reserved.",
+                        "start_line": 1,
+                        "end_line": 1
+                    }
+                ],
+                "license_detections": [],
+                "license_clues": [],
+                "scan_errors": []
+            }
+        ],
+        "license_detections": [],
+        "packages": [],
+        "dependencies": []
+    });
+    fs::write(&temp_path, content.to_string()).expect("write json fixture");
+
+    let parsed = load_scan_from_json(temp_path.to_str().expect("utf-8 path"))
+        .expect("raw copyright JSON should load");
+    let file = crate::models::FileInfo::try_from(&parsed.files[0]).expect("file conversion");
+
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright 2024 Example Corp. All rights reserved."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("Copyright 2024 Example Corp.")
+    );
+
+    let _ = fs::remove_file(temp_path);
+}
+
+#[test]
 fn normalize_loaded_json_scan_applies_strip_root_per_loaded_input() {
     let mut loaded = JsonScanInput {
         headers: vec![JsonHeaderInput {

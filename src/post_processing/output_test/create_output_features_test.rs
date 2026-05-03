@@ -478,6 +478,7 @@ fn create_output_promotes_package_metadata_without_summary_flags() {
     license.for_packages = vec![PackageUid::from_raw(package_uid.clone())];
     license.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];

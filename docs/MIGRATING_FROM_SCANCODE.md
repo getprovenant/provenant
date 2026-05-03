@@ -100,7 +100,19 @@ Provenant keeps these fields unset when the datasource does not actually prove t
 
 If you diff raw JSON semantically, this is one of the most important intentional differences to know.
 
-### 5. Parser behavior may be better than ScanCode in some ecosystems
+### 5. File-level copyright text is raw by default
+
+When you enable `--copyright`, Provenant preserves file-level copyright text more faithfully in the existing `files[].copyrights[].copyright` field, including wording and punctuation that ScanCode commonly strips from its emitted value.
+
+This is intentional. Provenant treats source-faithful copyright text as the better default for compliance review and auditability, while still keeping normalized copyright semantics internally for grouping and tallies.
+
+If your downstream workflow needs the historic ScanCode-style rendered value in the same field, use:
+
+```sh
+provenant scan --json-pp scan.json --copyright --compat-mode scancode /path/to/project
+```
+
+### 6. Parser behavior may be better than ScanCode in some ecosystems
 
 Provenant includes many documented parser fixes and beyond-parity improvements, for example in:
 
@@ -114,7 +126,7 @@ These are not random incompatibilities; they are documented behavior improvement
 
 See [Beyond-Parity Improvements](improvements/README.md) for the full index.
 
-### 6. Path selection is split more explicitly between patterns and exact rooted paths
+### 7. Path selection is split more explicitly between patterns and exact rooted paths
 
 If you previously relied on `--include` as a rough way to express “scan this subtree”, pay close attention to Provenant's newer split here.
 
@@ -150,6 +162,8 @@ provenant compare \
   --scancode-json scancode.json \
   --provenant-json provenant.json
 ```
+
+`provenant compare` is aware of this intentional copyright-rendering difference and normalizes it for parity review, so a raw-default Provenant scan should not produce noisy compare failures solely because it preserved `All rights reserved` or punctuation.
 
 By default, `compare` creates a timestamped artifact directory in the current working directory so
 you can inspect:

@@ -19,6 +19,7 @@ The copyright detection engine in Provenant is a **complete rewrite** of Python 
 13. **✨ Enhanced**: Deterministic canonicalization for conflicting byte-identical HTML fixtures
 14. **✨ Enhanced**: EXIF/XMP image metadata clue scanning for supported image formats
 15. **✨ Enhanced**: Dedicated font metadata text extraction can now feed the shared clue pipeline for supported TTF/OTF files
+16. **✨ Enhanced**: Source-faithful file-level copyright output by default, with opt-in ScanCode-style rendering for parity-sensitive consumers
 
 ## Improvement 1: Extended Year Range (Bug Fix)
 
@@ -195,13 +196,39 @@ Two upstream HTML fixtures (`url_in_html-detail_9_html.html` and `html_incorrect
 
 **Impact**: Higher semantic quality, deterministic behavior, and simpler maintenance than fixture-name-dependent parity hacks.
 
+## Improvement 10: Source-Faithful Copyright Output by Default (Enhanced)
+
+### Problem
+
+ScanCode-style emitted copyright strings commonly strip:
+
+- trailing `All rights reserved`
+- punctuation that is present in the source notice
+
+That normalization is operationally convenient for grouping, but it is not required for modern copyright validity and it weakens audit fidelity in compliance workflows.
+
+### Our Rust Implementation
+
+Provenant now keeps two internal views of a detected file-level copyright statement:
+
+- a **less-normalized rendered value** used by default in `files[].copyrights[].copyright`
+- a **normalized compatibility** value used for tallies, clue filtering, and the opt-in `--compat-mode scancode`
+
+This preserves the existing field shape while separating evidence preservation from compatibility-oriented normalization.
+
+### Why This Is Better
+
+- Compliance reviewers can see the wording that was actually present in the file.
+- Phrases such as `All rights reserved` are not silently erased from the default evidence surface.
+- Punctuation remains visible where it helps verify the original notice.
+- Parity-sensitive workflows can still opt back into ScanCode-style rendering explicitly.
+
 ## Coverage
 
 Coverage includes unit-level detector behavior and golden regression coverage for the major copyright, holder, and author outputs.
 
 ## What Users Should Expect
 
-- **Default behavior**: Results are designed to closely match Python ScanCode for common copyright patterns.
 - **Intentional differences**: Some outputs are intentionally improved (for example Unicode name preservation and bug-fix correctness changes).
 - **Determinism guarantee**: Identical input bytes produce identical output; fixture names do not influence detection.
 - **Edge-case differences**: Some outputs still differ intentionally where Rust chooses a more accurate or more deterministic result.

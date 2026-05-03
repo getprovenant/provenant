@@ -36,6 +36,15 @@ pub struct Output {
 
 impl From<&crate::models::Output> for Output {
     fn from(value: &crate::models::Output) -> Self {
+        Self::from_with_compat_mode(value, crate::cli::CompatibilityMode::Native)
+    }
+}
+
+impl Output {
+    pub fn from_with_compat_mode(
+        value: &crate::models::Output,
+        mode: crate::cli::CompatibilityMode,
+    ) -> Self {
         Self {
             summary: value.summary.as_ref().map(OutputSummary::from),
             tallies: value.tallies.as_ref().map(OutputTallies::from),
@@ -56,7 +65,11 @@ impl From<&crate::models::Output> for Output {
                 .iter()
                 .map(OutputTopLevelLicenseDetection::from)
                 .collect(),
-            files: value.files.iter().map(OutputFileInfo::from).collect(),
+            files: value
+                .files
+                .iter()
+                .map(|file| OutputFileInfo::from_with_compat_mode(file, mode))
+                .collect(),
             license_references: value
                 .license_references
                 .iter()

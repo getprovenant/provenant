@@ -172,6 +172,22 @@ pub struct ExportLicenseDatasetArgs {
     pub dir: String,
 }
 
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CompatibilityMode {
+    #[default]
+    Native,
+    Scancode,
+}
+
+impl CompatibilityMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Native => "native",
+            Self::Scancode => "scancode",
+        }
+    }
+}
+
 #[derive(Args, Debug, Clone)]
 #[command(
     group(
@@ -330,6 +346,15 @@ pub struct ScanArgs {
     /// Scan input for application package and dependency manifests, lockfiles and related data
     #[arg(short = 'p', long)]
     pub package: bool,
+
+    /// Select a compatibility bundle for intentional Provenant-vs-ScanCode behavior differences.
+    #[arg(
+        long = "compat-mode",
+        visible_alias = "compat",
+        value_enum,
+        default_value_t = CompatibilityMode::Native
+    )]
+    pub compat_mode: CompatibilityMode,
 
     /// Scan input for installed system package databases (RPM, dpkg, apk, etc.)
     #[arg(long = "system-package")]
@@ -690,6 +715,12 @@ impl ScanArgs {
             self.custom_template.as_ref(),
         );
         push_bool_option(&mut flags, "--copyright", self.copyright);
+        if self.compat_mode != CompatibilityMode::Native {
+            flags.push((
+                "--compat-mode".to_string(),
+                JsonValue::String(self.compat_mode.as_str().to_string()),
+            ));
+        }
         push_string_option(&mut flags, "--cyclonedx", self.output_cyclonedx.as_ref());
         push_string_option(
             &mut flags,
@@ -1121,6 +1152,28 @@ mod tests {
                 JsonValue::String("*.git*".to_string()),
                 JsonValue::String("target/*".to_string()),
             ]))
+        );
+        assert!(!options.contains_key("--compat-mode"));
+    }
+
+    #[test]
+    fn test_compat_mode_parses_and_is_recorded_when_non_default() {
+        let parsed = Cli::try_parse_from([
+            "provenant",
+            "--json-pp",
+            "scan.json",
+            "--copyright",
+            "--compat-mode",
+            "scancode",
+            "samples",
+        ])
+        .expect("cli parse should succeed");
+
+        assert_eq!(parsed.compat_mode, CompatibilityMode::Scancode);
+        let options = parsed.output_header_options();
+        assert_eq!(
+            options.get("--compat-mode"),
+            Some(&JsonValue::String("scancode".to_string()))
         );
     }
 

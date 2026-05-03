@@ -38,6 +38,7 @@ fn compute_tallies_counts_file_findings_and_missing_values() {
     }];
     mit_file.copyrights = vec![Copyright {
         copyright: "Copyright (c) Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -106,6 +107,7 @@ fn compute_tallies_counts_file_findings_and_missing_values() {
     ];
     dual_license_file.copyrights = vec![Copyright {
         copyright: "Copyright (c) Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -155,6 +157,7 @@ fn compute_key_file_tallies_only_counts_key_files_and_drops_missing_values() {
     key_license.license_expression = Some("apache-2.0".to_string());
     key_license.copyrights = vec![Copyright {
         copyright: "Copyright (c) Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -541,6 +544,7 @@ fn compute_tallies_ignores_legal_file_copyright_holder_and_author_noise() {
     legal.is_legal = true;
     legal.copyrights = vec![Copyright {
         copyright: "copyright and related or neighboring rights".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -588,6 +592,7 @@ fn compute_key_file_tallies_excludes_legal_file_copyrights_holders_and_languages
     legal.programming_language = Some("Text".to_string());
     legal.copyrights = vec![Copyright {
         copyright: "copyright and related or neighboring rights".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -605,6 +610,7 @@ fn compute_tallies_normalizes_jboss_style_copyright_and_holder_values() {
     let mut source = file("project/src/lib.java");
     source.copyrights = vec![Copyright {
         copyright: "Copyright 2005, JBoss Inc., and individual contributors as indicated by the @authors tag".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -632,6 +638,7 @@ fn compute_tallies_strips_leading_years_from_copyright_tallies() {
     let mut source = file("project/src/zlib.h");
     source.copyrights = vec![Copyright {
         copyright: "Copyright (c) 1995-2013 Jean-loup Gailly and Mark Adler".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];

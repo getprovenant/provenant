@@ -712,7 +712,7 @@ fn compute_declared_holders(
                         file.copyrights
                             .iter()
                             .filter_map(|copyright| {
-                                summary_holder_from_copyright(&copyright.copyright)
+                                summary_holder_from_copyright(copyright.normalized_text())
                                     .map(|holder| canonicalize_summary_holder_display(&holder))
                             })
                             .collect::<Vec<_>>()
