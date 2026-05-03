@@ -29,7 +29,7 @@ Provenant also ships a long-lived HTTP service shell:
 provenant serve --help
 ```
 
-`provenant serve` starts a long-lived HTTP service with `/livez`, `/readyz`, `/version`, and synchronous `POST /v1/scans` support for operator-mode local paths plus remote-ingestion inputs (`input.type=repository`, `url`, and bounded `upload`). For request/response examples, see the [Serve API Guide](SERVE_API_GUIDE.md).
+`provenant serve` starts a long-lived HTTP service with `/livez`, `/readyz`, `/version`, synchronous `POST /v1/scans`, asynchronous `POST /v1/scans:async`, and async job polling via `/v1/jobs/{id}` plus `/v1/jobs/{id}/result`. It supports operator-mode local paths plus remote-ingestion inputs (`input.type=repository`, `url`, and bounded `upload`). For request/response examples, see the [Serve API Guide](SERVE_API_GUIDE.md).
 
 ## Start Here: A Strong Default Scan
 

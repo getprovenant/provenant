@@ -22,6 +22,9 @@ The current service surface includes:
 - `GET /readyz`
 - `GET /version`
 - synchronous `POST /v1/scans`
+- asynchronous `POST /v1/scans:async`
+- `GET /v1/jobs/{id}`
+- `GET /v1/jobs/{id}/result`
 
 ## Check service health
 
@@ -159,6 +162,68 @@ The payload is base64 encoded and identified by a file name. Archive uploads use
 
 The response body is the same ScanCode-compatible JSON shape Provenant already exposes through its existing output schema.
 
+## Run an asynchronous scan
+
+Send the same JSON request shape to `POST /v1/scans:async` when you want a durable job handle instead of waiting for the final scan result on the submission request.
+
+Example:
+
+```sh
+curl -sS \
+  -X POST http://127.0.0.1:8080/v1/scans:async \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input": {
+      "type": "url",
+      "url": "https://github.com/aboutcode-org/scancode.io/archive/refs/heads/main.zip"
+    },
+    "options": {
+      "detect_license": { "type": "embedded" },
+      "detect_packages": true,
+      "collect_info": true
+    }
+  }'
+```
+
+Expected acceptance shape:
+
+```json
+{
+  "status": "accepted",
+  "job_id": "job-7d0f4d8a0d784264a8fe632fe3ffc4fd",
+  "state": "pending",
+  "status_url": "/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd",
+  "result_url": "/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd/result"
+}
+```
+
+The service may keep the job in `pending` until bounded execution capacity is available. Once it starts work, the job moves to `running`, and then to `succeeded` or `failed`.
+
+Check job state:
+
+```sh
+curl -sS http://127.0.0.1:8080/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd
+```
+
+Example status response:
+
+```json
+{
+  "job_id": "job-7d0f4d8a0d784264a8fe632fe3ffc4fd",
+  "state": "running",
+  "result_ready": false,
+  "allocated_processors": 4
+}
+```
+
+Fetch the completed result:
+
+```sh
+curl -sS http://127.0.0.1:8080/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd/result
+```
+
+Before completion, `GET /v1/jobs/{id}/result` returns a non-success `job_not_ready` error. After completion, it returns the same ScanCode-compatible JSON shape as the synchronous route.
+
 ## Common request options
 
 The request body currently supports scan options that map onto the shared Provenant scan pipeline, including:
@@ -201,12 +266,13 @@ The first practical default is usually a local-path equivalent of CLI `-clupe`:
 
 The current API surface is intentionally narrow:
 
-- only synchronous `POST /v1/scans` is implemented
-- sync inputs currently support local paths, repository refs, remote URLs, and bounded JSON uploads
-- async routes are not implemented yet
+- synchronous and asynchronous scan submission use the same request body shape
+- inputs currently support local paths, repository refs, remote URLs, and bounded JSON uploads
+- async jobs run under bounded background execution and may wait in `pending` before starting
 - upload input is JSON-only and bounded; multipart upload is not implemented
 - remote URL input currently supports only `http` and `https`
-- auth, job persistence, and async job APIs are not implemented yet
+- auth is not implemented
+- async job state and result retention are bounded in-memory service state, not durable external persistence
 
 ## Machine-readable contract
 
