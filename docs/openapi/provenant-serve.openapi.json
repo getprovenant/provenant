@@ -1,0 +1,686 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Provenant Serve API",
+    "version": "v1",
+    "description": "Current machine-readable contract for the implemented `provenant serve` HTTP API surface."
+  },
+  "paths": {
+    "/livez": {
+      "get": {
+        "summary": "Liveness probe",
+        "operationId": "getLivez",
+        "responses": {
+          "200": {
+            "description": "Process is alive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeLivenessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readiness probe",
+        "operationId": "getReadyz",
+        "responses": {
+          "200": {
+            "description": "Service is ready to accept scan requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeReadinessResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is still warming or startup failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeReadinessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "summary": "Version metadata",
+        "operationId": "getVersion",
+        "responses": {
+          "200": {
+            "description": "Current service and tool version metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeVersionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/scans": {
+      "post": {
+        "summary": "Run a synchronous scan",
+        "operationId": "postSyncScan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncScanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ScanCode-compatible scan result output.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Current ScanCode-compatible output JSON returned by the shared Provenant output schema."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid HTTP request or malformed JSON body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request is well-formed but cannot be executed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ServeLivenessResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "ServeLivenessResponse",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": ["status"]
+      },
+      "ServeReadinessResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "ServeReadinessResponse",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "api_version": {
+            "type": ["string", "null"]
+          },
+          "spdx_license_list_version": {
+            "type": ["string", "null"]
+          },
+          "message": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["status"]
+      },
+      "ServeVersionResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "ServeVersionResponse",
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "api_version": {
+            "type": "string"
+          },
+          "tool_version": {
+            "type": "string"
+          }
+        },
+        "required": ["service", "api_version", "tool_version"]
+      },
+      "ServeErrorResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "ServeErrorResponse",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "api_version": {
+            "type": "string"
+          }
+        },
+        "required": ["status", "message", "api_version"]
+      },
+      "SyncScanRequest": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "SyncScanRequest",
+        "type": "object",
+        "properties": {
+          "input": {
+            "$ref": "#/$defs/SyncScanInput"
+          },
+          "options": {
+            "$ref": "#/$defs/SyncScanOptions",
+            "default": {
+              "collect_info": false,
+              "detect_license": {
+                "type": "disabled"
+              },
+              "detect_packages": false,
+              "detect_system_packages": false,
+              "detect_packages_in_compiled": false,
+              "detect_copyrights": false,
+              "detect_emails": false,
+              "detect_urls": false,
+              "detect_generated": false,
+              "include": [],
+              "exclude": [],
+              "strip_root": false,
+              "full_root": false,
+              "license_text": false,
+              "license_text_diagnostics": false,
+              "license_diagnostics": false,
+              "unknown_licenses": false,
+              "license_score": 0,
+              "only_findings": false,
+              "mark_source": false,
+              "classify": false,
+              "summary": false,
+              "license_clarity_score": false,
+              "license_references": false,
+              "tallies": false,
+              "tallies_key_files": false,
+              "tallies_with_details": false,
+              "facets": [],
+              "tallies_by_facet": false
+            }
+          }
+        },
+        "required": ["input"],
+        "$defs": {
+          "SyncScanInput": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "$ref": "#/$defs/SyncInputTransport"
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["type", "paths"]
+          },
+          "SyncInputTransport": {
+            "type": "string",
+            "enum": ["paths"]
+          },
+          "SyncScanOptions": {
+            "type": "object",
+            "properties": {
+              "collect_info": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_license": {
+                "$ref": "#/$defs/SyncLicenseSource",
+                "default": {
+                  "type": "disabled"
+                }
+              },
+              "detect_packages": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_system_packages": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_packages_in_compiled": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_copyrights": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_emails": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_urls": {
+                "type": "boolean",
+                "default": false
+              },
+              "detect_generated": {
+                "type": "boolean",
+                "default": false
+              },
+              "include": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "exclude": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "strip_root": {
+                "type": "boolean",
+                "default": false
+              },
+              "full_root": {
+                "type": "boolean",
+                "default": false
+              },
+              "license_text": {
+                "type": "boolean",
+                "default": false
+              },
+              "license_text_diagnostics": {
+                "type": "boolean",
+                "default": false
+              },
+              "license_diagnostics": {
+                "type": "boolean",
+                "default": false
+              },
+              "unknown_licenses": {
+                "type": "boolean",
+                "default": false
+              },
+              "license_score": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0,
+                "maximum": 255,
+                "default": 0
+              },
+              "only_findings": {
+                "type": "boolean",
+                "default": false
+              },
+              "mark_source": {
+                "type": "boolean",
+                "default": false
+              },
+              "classify": {
+                "type": "boolean",
+                "default": false
+              },
+              "summary": {
+                "type": "boolean",
+                "default": false
+              },
+              "license_clarity_score": {
+                "type": "boolean",
+                "default": false
+              },
+              "license_references": {
+                "type": "boolean",
+                "default": false
+              },
+              "tallies": {
+                "type": "boolean",
+                "default": false
+              },
+              "tallies_key_files": {
+                "type": "boolean",
+                "default": false
+              },
+              "tallies_with_details": {
+                "type": "boolean",
+                "default": false
+              },
+              "facets": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "tallies_by_facet": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          },
+          "SyncLicenseSource": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "disabled"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "embedded"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "directory"
+                  }
+                },
+                "required": ["type", "path"]
+              }
+            ]
+          }
+        }
+      },
+      "SyncScanInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "SyncScanInput",
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/$defs/SyncInputTransport"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["type", "paths"],
+        "$defs": {
+          "SyncInputTransport": {
+            "type": "string",
+            "enum": ["paths"]
+          }
+        }
+      },
+      "SyncInputTransport": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "SyncInputTransport",
+        "type": "string",
+        "enum": ["paths"]
+      },
+      "SyncLicenseSource": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "SyncLicenseSource",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "disabled"
+              }
+            },
+            "required": ["type"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "embedded"
+              }
+            },
+            "required": ["type"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "directory"
+              }
+            },
+            "required": ["type", "path"]
+          }
+        ]
+      },
+      "SyncScanOptions": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "SyncScanOptions",
+        "type": "object",
+        "properties": {
+          "collect_info": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_license": {
+            "$ref": "#/$defs/SyncLicenseSource",
+            "default": {
+              "type": "disabled"
+            }
+          },
+          "detect_packages": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_system_packages": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_packages_in_compiled": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_copyrights": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_emails": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_urls": {
+            "type": "boolean",
+            "default": false
+          },
+          "detect_generated": {
+            "type": "boolean",
+            "default": false
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "strip_root": {
+            "type": "boolean",
+            "default": false
+          },
+          "full_root": {
+            "type": "boolean",
+            "default": false
+          },
+          "license_text": {
+            "type": "boolean",
+            "default": false
+          },
+          "license_text_diagnostics": {
+            "type": "boolean",
+            "default": false
+          },
+          "license_diagnostics": {
+            "type": "boolean",
+            "default": false
+          },
+          "unknown_licenses": {
+            "type": "boolean",
+            "default": false
+          },
+          "license_score": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0,
+            "maximum": 255,
+            "default": 0
+          },
+          "only_findings": {
+            "type": "boolean",
+            "default": false
+          },
+          "mark_source": {
+            "type": "boolean",
+            "default": false
+          },
+          "classify": {
+            "type": "boolean",
+            "default": false
+          },
+          "summary": {
+            "type": "boolean",
+            "default": false
+          },
+          "license_clarity_score": {
+            "type": "boolean",
+            "default": false
+          },
+          "license_references": {
+            "type": "boolean",
+            "default": false
+          },
+          "tallies": {
+            "type": "boolean",
+            "default": false
+          },
+          "tallies_key_files": {
+            "type": "boolean",
+            "default": false
+          },
+          "tallies_with_details": {
+            "type": "boolean",
+            "default": false
+          },
+          "facets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "tallies_by_facet": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "$defs": {
+          "SyncLicenseSource": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "disabled"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "embedded"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "directory"
+                  }
+                },
+                "required": ["type", "path"]
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

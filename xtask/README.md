@@ -22,6 +22,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 | `update-copyright-golden`    | Maintain copyright golden YAML fixtures with parity-gated or Rust-owned update modes.                                                       |
 | `update-license-golden`      | Maintain license golden YAML fixtures with parity-gated or Rust-owned update modes.                                                         |
 | `validate-urls`              | Validate URLs in production docs and Rust docstrings.                                                                                       |
+| `generate-serve-openapi`     | Regenerate the checked-in OpenAPI document for `provenant serve`.                                                                           |
 | `generate-supported-formats` | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
 | `generate-benchmark-chart`   | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
 | `generate-index-artifact`    | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
@@ -346,6 +347,17 @@ Examples:
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin generate-supported-formats
 cargo run --manifest-path xtask/Cargo.toml --bin generate-supported-formats -- --check
+```
+
+## `generate-serve-openapi`
+
+`generate-serve-openapi` regenerates the checked-in OpenAPI document for the current `provenant serve` API surface.
+
+Examples:
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml --bin generate-serve-openapi
+cargo run --manifest-path xtask/Cargo.toml --bin generate-serve-openapi -- --check
 ```
 
 ## `generate-benchmark-chart`
