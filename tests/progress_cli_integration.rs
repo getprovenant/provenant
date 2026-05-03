@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::fs;
+use std::io::Cursor;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::path::Path;
 use std::process::Command;
 use std::process::Stdio;
 use std::time::{Duration, Instant};
 
+use base64::Engine;
 use regex::Regex;
 use serde_json::Value;
 use tempfile::TempDir;
+use zip::write::SimpleFileOptions;
 
 fn provenant_command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_provenant"));
@@ -90,6 +94,87 @@ fn create_scan_fixture() -> (TempDir, String) {
     fs::write(scan_dir.join("a.txt"), "hello cache@example.com\n")
         .expect("failed to write fixture file");
     (temp, scan_dir.to_string_lossy().to_string())
+}
+
+fn create_zip_archive_bytes(entries: &[(&str, &str)]) -> Vec<u8> {
+    let cursor = Cursor::new(Vec::new());
+    let mut zip = zip::ZipWriter::new(cursor);
+    let options = SimpleFileOptions::default();
+    for (path, contents) in entries {
+        zip.start_file(path, options)
+            .expect("failed to start zip entry");
+        zip.write_all(contents.as_bytes())
+            .expect("failed to write zip entry");
+    }
+    zip.finish()
+        .expect("failed to finish zip archive")
+        .into_inner()
+}
+
+fn spawn_static_http_server(
+    body: Vec<u8>,
+    content_type: &'static str,
+) -> (u16, std::thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind fixture server");
+    let port = listener.local_addr().expect("fixture server addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept fixture request");
+        let mut request_buffer = [0u8; 4096];
+        let _ = stream.read(&mut request_buffer);
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        )
+        .expect("write fixture headers");
+        stream.write_all(&body).expect("write fixture body");
+        stream.flush().expect("flush fixture response");
+    });
+    (port, handle)
+}
+
+fn git(dir: &Path, args: &[&str]) {
+    let output = Command::new("git")
+        .current_dir(dir)
+        .args(args)
+        .output()
+        .expect("failed to execute git command");
+    assert!(
+        output.status.success(),
+        "git {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn git_output(dir: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .current_dir(dir)
+        .args(args)
+        .output()
+        .expect("failed to execute git command");
+    assert!(
+        output.status.success(),
+        "git {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn create_repository_fixture() -> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create repo temp dir");
+    let repo_dir = temp.path().join("repo");
+    fs::create_dir_all(&repo_dir).expect("failed to create repo dir");
+    git(&repo_dir, &["init"]);
+    git(&repo_dir, &["config", "user.name", "Test User"]);
+    git(&repo_dir, &["config", "user.email", "test@example.com"]);
+    fs::write(repo_dir.join("README.md"), "repository fixture\n")
+        .expect("failed to write repo fixture");
+    git(&repo_dir, &["add", "README.md"]);
+    git(&repo_dir, &["commit", "-m", "initial"]);
+    let sha = git_output(&repo_dir, &["rev-parse", "HEAD"]);
+    (temp, format!("file://{}", repo_dir.display()), sha)
 }
 
 fn create_mit_license_fixture() -> (TempDir, String) {
@@ -607,6 +692,200 @@ fn serve_shell_exposes_health_and_version_endpoints() {
                 .as_str()
                 .is_some_and(|path| path.ends_with("a.txt")))
     );
+
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_scans_repository_input() {
+    let (_repo_temp, repo_url, repo_sha) = create_repository_fixture();
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "repository",
+            "url": repo_url,
+            "ref": repo_sha,
+        },
+        "options": {
+            "collect_info": true,
+        }
+    })
+    .to_string();
+
+    let response = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("repository scan request should succeed");
+
+    assert_eq!(response_status(&response), 200);
+    let response_json = response_json_body(&response);
+    let file_paths: Vec<_> = response_json["files"]
+        .as_array()
+        .expect("files should be an array")
+        .iter()
+        .filter_map(|file| file["path"].as_str())
+        .collect();
+    assert!(
+        file_paths.contains(&"README.md"),
+        "response paths were: {file_paths:?}"
+    );
+
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_scans_remote_url_archive_input() {
+    let zip_bytes = create_zip_archive_bytes(&[("repo-main/README.md", "downloaded fixture\n")]);
+    let (fixture_port, fixture_handle) = spawn_static_http_server(zip_bytes, "application/zip");
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "url",
+            "url": format!("http://127.0.0.1:{fixture_port}/repo.zip"),
+        },
+        "options": {
+            "collect_info": true,
+        }
+    })
+    .to_string();
+
+    let response = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("URL scan request should succeed");
+
+    assert_eq!(response_status(&response), 200);
+    let response_json = response_json_body(&response);
+    let file_paths: Vec<_> = response_json["files"]
+        .as_array()
+        .expect("files should be an array")
+        .iter()
+        .filter_map(|file| file["path"].as_str())
+        .collect();
+    assert!(
+        file_paths.contains(&"repo-main/README.md"),
+        "response paths were: {file_paths:?}"
+    );
+    assert!(
+        file_paths
+            .iter()
+            .all(|path| !path.contains("tmp") && !path.contains("var/folders")),
+        "temporary staging leaked into response paths: {file_paths:?}"
+    );
+
+    fixture_handle.join().expect("fixture server should exit");
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_scans_uploaded_archive_input() {
+    let archive_bytes = create_zip_archive_bytes(&[("upload-root/LICENSE", "uploaded fixture\n")]);
+    let encoded = base64::engine::general_purpose::STANDARD.encode(archive_bytes);
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "upload",
+            "filename": "upload.zip",
+            "content_base64": encoded,
+        },
+        "options": {
+            "collect_info": true,
+        }
+    })
+    .to_string();
+
+    let response = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("upload scan request should succeed");
+
+    assert_eq!(response_status(&response), 200);
+    let response_json = response_json_body(&response);
+    let file_paths: Vec<_> = response_json["files"]
+        .as_array()
+        .expect("files should be an array")
+        .iter()
+        .filter_map(|file| file["path"].as_str())
+        .collect();
+    assert!(
+        file_paths.contains(&"upload-root/LICENSE"),
+        "response paths were: {file_paths:?}"
+    );
+
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_rejects_non_http_url_input() {
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "url",
+            "url": "file:///tmp/input.txt",
+        }
+    })
+    .to_string();
+
+    let response = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("invalid URL scan request should return an error response");
+
+    assert_eq!(response_status(&response), 422);
+    let response_json = response_json_body(&response);
+    assert_eq!(response_json["status"], "invalid_scan_request");
 
     child.kill().expect("serve child should terminate");
     child.wait().expect("serve child wait should succeed");

@@ -45,16 +45,23 @@ pub struct SyncScanRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct SyncScanInput {
-    #[serde(rename = "type")]
-    pub transport: SyncInputTransport,
-    pub paths: Vec<String>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum SyncInputTransport {
-    Paths,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SyncScanInput {
+    Paths {
+        paths: Vec<String>,
+    },
+    Repository {
+        url: String,
+        #[serde(rename = "ref")]
+        reference: String,
+    },
+    Url {
+        url: String,
+    },
+    Upload {
+        filename: String,
+        content_base64: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -260,7 +267,6 @@ pub fn openapi_document() -> Value {
                 "ServeErrorResponse": schema_json::<ServeErrorResponse>(),
                 "SyncScanRequest": schema_json::<SyncScanRequest>(),
                 "SyncScanInput": schema_json::<SyncScanInput>(),
-                "SyncInputTransport": schema_json::<SyncInputTransport>(),
                 "SyncLicenseSource": schema_json::<SyncLicenseSource>(),
                 "SyncScanOptions": schema_json::<SyncScanOptions>()
             }
