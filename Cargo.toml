@@ -143,6 +143,7 @@ ruff_python_parser = { version = "0.15.8", package = "rustpython-ruff_python_par
 rusqlite = { version = "0.39.0", features = ["bundled"], optional = true }
 rustc_version_runtime = "0.3.0"
 rusty-axml = "0.2.1"
+schemars = { version = "1.2.1", features = ["derive"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha1 = "0.11.0"
