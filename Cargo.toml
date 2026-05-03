@@ -136,6 +136,7 @@ quick-xml = "0.39.2"
 rancor = "0.1.1"
 rayon = { workspace = true }
 regex = { workspace = true }
+reqwest = { version = "0.13.3", default-features = false, features = ["blocking", "native-tls"] }
 rkyv = { workspace = true, features = ["smallvec-1"] }
 rpm = { version = "0.23.1", default-features = false, features = ["payload", "gzip-compression", "xz-compression", "zstd-compression", "bzip2-compression"] }
 ruff_python_ast = { version = "0.15.8", package = "rustpython-ruff_python_ast" }
