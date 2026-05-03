@@ -26,7 +26,7 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 - Broader package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), including beyond-parity parsers and improvements in overlapping parser families
 - [Documented parser and detection fixes](docs/improvements/README.md) that reduce noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
 - Native workflows such as `--incremental` cache reuse and `--paths-file` rooted file lists for CI or changed-file scans
-- A self-hosted `provenant serve` HTTP service for remote and polyglot integrations that would otherwise need to manage CLI subprocesses or pre-stage only server-local paths
+- A self-hosted `provenant serve` HTTP service with warm process reuse, remote-friendly inputs, and async job handling for automation. See the [Serve API Guide](docs/SERVE_API_GUIDE.md)
 - Single self-contained binary for simpler installation and CI use
 - [ScanCode-compatible](docs/SCANCODE_COMPARISON.md) workflows and output formats, including ScanCode-style JSON, SPDX, CycloneDX, YAML, JSON Lines, HTML, and custom templates
 - [Security-first](docs/adr/0004-security-first-parsing.md) static parsing with explicit safeguards and compatibility-focused tradeoffs where needed
