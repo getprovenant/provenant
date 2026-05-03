@@ -49,13 +49,23 @@ Expected shapes:
 
 Send JSON to `POST /v1/scans` with `Content-Type: application/json`.
 
-The currently supported input mode is:
+The currently supported input modes are:
 
 - `input.type = "paths"`
+- `input.type = "repository"`
+- `input.type = "url"`
+- `input.type = "upload"`
 
-That means the service reads one or more trusted local paths visible to the host or container running `provenant serve`.
+That means the service can:
 
-This current input mode is best suited to same-host or operator-controlled deployments where the service already has filesystem access to the scan target.
+- read one or more trusted local paths visible to the host or container running `provenant serve`
+- shallow-fetch a repository ref into temporary local staging before scanning it
+- download a bounded remote HTTP(S) artifact or text resource into temporary local staging before scanning it
+- accept a bounded JSON upload payload and materialize it locally before scanning it
+
+Local-path input is best suited to same-host or operator-controlled deployments where the service already has filesystem access to the scan target.
+
+### Local-path input
 
 Example:
 
@@ -76,6 +86,75 @@ curl -sS \
       "detect_urls": true
     }
   }'
+```
+
+### Repository input
+
+Repository input is the simplest way to say “scan this repo at this ref” over the current sync API.
+
+```sh
+curl -sS \
+  -X POST http://127.0.0.1:8080/v1/scans \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input": {
+      "type": "repository",
+      "url": "https://github.com/aboutcode-org/scancode.io.git",
+      "ref": "main"
+    },
+    "options": {
+      "detect_license": { "type": "embedded" },
+      "detect_packages": true,
+      "detect_copyrights": true,
+      "detect_emails": true,
+      "detect_urls": true
+    }
+  }'
+```
+
+### Remote URL input
+
+Remote URL input fetches a bounded HTTP(S) resource into temporary local staging before scanning it.
+
+For supported archive URLs such as `.zip`, `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`, or `.tar.xz`, the service extracts the archive before scanning it. Other URLs are scanned as the downloaded file as-is.
+
+```sh
+curl -sS \
+  -X POST http://127.0.0.1:8080/v1/scans \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input": {
+      "type": "url",
+      "url": "https://github.com/aboutcode-org/scancode.io/archive/refs/heads/main.zip"
+    },
+    "options": {
+      "detect_license": { "type": "embedded" },
+      "detect_packages": true,
+      "detect_copyrights": true,
+      "detect_emails": true,
+      "detect_urls": true
+    }
+  }'
+```
+
+### Upload input
+
+Upload input is a bounded JSON upload path for smaller archives, SBOMs, or other artifacts when pushing content directly is simpler than exposing a URL.
+
+The payload is base64 encoded and identified by a file name. Archive uploads use the same archive extraction behavior as remote URL inputs.
+
+```json
+{
+  "input": {
+    "type": "upload",
+    "filename": "snapshot.zip",
+    "content_base64": "UEsDB..."
+  },
+  "options": {
+    "detect_license": { "type": "embedded" },
+    "detect_packages": true
+  }
+}
 ```
 
 The response body is the same ScanCode-compatible JSON shape Provenant already exposes through its existing output schema.
@@ -123,9 +202,11 @@ The first practical default is usually a local-path equivalent of CLI `-clupe`:
 The current API surface is intentionally narrow:
 
 - only synchronous `POST /v1/scans` is implemented
-- only local-path input mode (`input.type = "paths"`) is implemented
+- sync inputs currently support local paths, repository refs, remote URLs, and bounded JSON uploads
 - async routes are not implemented yet
-- repository inputs, upload inputs, remote URL inputs, auth, and job persistence are not implemented yet
+- upload input is JSON-only and bounded; multipart upload is not implemented
+- remote URL input currently supports only `http` and `https`
+- auth, job persistence, and async job APIs are not implemented yet
 
 ## Machine-readable contract
 
