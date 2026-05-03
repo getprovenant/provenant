@@ -47,6 +47,27 @@ fn wait_for_http_status(port: u16, path: &str, expected: u16) -> String {
     }
 }
 
+fn wait_for_job_state(port: u16, path: &str, expected: &str) -> Value {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if let Ok(response) = raw_http_request(port, "GET", path, None, None)
+            && response_status(&response) == 200
+        {
+            let json = response_json_body(&response);
+            if json["state"] == expected {
+                return json;
+            }
+            assert_ne!(json["state"], "failed", "async job failed: {json}");
+        }
+
+        assert!(
+            Instant::now() < deadline,
+            "timed out waiting for {path} to reach state {expected}"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
 fn raw_http_request(
     port: u16,
     method: &str,
@@ -850,6 +871,140 @@ fn serve_shell_scans_uploaded_archive_input() {
         file_paths.contains(&"upload-root/LICENSE"),
         "response paths were: {file_paths:?}"
     );
+
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_runs_async_url_scan_and_returns_result() {
+    let zip_bytes = create_zip_archive_bytes(&[("repo-main/README.md", "downloaded fixture\n")]);
+    let (fixture_port, fixture_handle) = spawn_static_http_server(zip_bytes, "application/zip");
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "url",
+            "url": format!("http://127.0.0.1:{fixture_port}/repo.zip"),
+        },
+        "options": {
+            "collect_info": true,
+        }
+    })
+    .to_string();
+
+    let accepted = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans:async",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("async URL scan request should succeed");
+
+    assert_eq!(response_status(&accepted), 202);
+    let accepted_json = response_json_body(&accepted);
+    assert_eq!(accepted_json["status"], "accepted");
+    assert!(matches!(
+        accepted_json["state"].as_str(),
+        Some("pending" | "running" | "succeeded")
+    ));
+
+    let status_url = accepted_json["status_url"]
+        .as_str()
+        .expect("status_url should be a string")
+        .to_string();
+    let result_url = accepted_json["result_url"]
+        .as_str()
+        .expect("result_url should be a string")
+        .to_string();
+
+    let early_result = raw_http_request(port, "GET", &result_url, None, None)
+        .expect("early async result request should return an HTTP response");
+    assert_eq!(response_status(&early_result), 409);
+    let early_result_json = response_json_body(&early_result);
+    assert_eq!(early_result_json["status"], "job_not_ready");
+
+    let final_status = wait_for_job_state(port, &status_url, "succeeded");
+    assert_eq!(final_status["result_ready"], true);
+
+    let result = wait_for_http_status(port, &result_url, 200);
+    let response_json = response_json_body(&result);
+    let file_paths: Vec<_> = response_json["files"]
+        .as_array()
+        .expect("files should be an array")
+        .iter()
+        .filter_map(|file| file["path"].as_str())
+        .collect();
+    assert!(
+        file_paths.contains(&"repo-main/README.md"),
+        "response paths were: {file_paths:?}"
+    );
+    assert!(
+        file_paths
+            .iter()
+            .all(|path| !path.contains("tmp") && !path.contains("var/folders")),
+        "temporary staging leaked into response paths: {file_paths:?}"
+    );
+
+    fixture_handle.join().expect("fixture server should exit");
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_reports_async_job_failure_without_internal_details() {
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "url",
+            "url": "file:///tmp/input.txt",
+        }
+    })
+    .to_string();
+
+    let accepted = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans:async",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("async invalid URL scan request should return acceptance response");
+
+    assert_eq!(response_status(&accepted), 202);
+    let accepted_json = response_json_body(&accepted);
+    let status_url = accepted_json["status_url"]
+        .as_str()
+        .expect("status_url should be a string")
+        .to_string();
+    let result_url = accepted_json["result_url"]
+        .as_str()
+        .expect("result_url should be a string")
+        .to_string();
+
+    let final_status = wait_for_job_state(port, &status_url, "failed");
+    assert_eq!(final_status["message"], "async scan job failed");
+
+    let result = wait_for_http_status(port, &result_url, 422);
+    let result_json = response_json_body(&result);
+    assert_eq!(result_json["status"], "job_failed");
+    assert_eq!(result_json["message"], "async scan job failed");
 
     child.kill().expect("serve child should terminate");
     child.wait().expect("serve child wait should succeed");
