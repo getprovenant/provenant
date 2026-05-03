@@ -268,27 +268,82 @@
         ],
         "$defs": {
           "SyncScanInput": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "$ref": "#/$defs/SyncInputTransport"
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "paths"
+                  }
+                },
+                "required": [
+                  "type",
+                  "paths"
+                ]
               },
-              "paths": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
+              {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "ref": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "repository"
+                  }
+                },
+                "required": [
+                  "type",
+                  "url",
+                  "ref"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "url"
+                  }
+                },
+                "required": [
+                  "type",
+                  "url"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": "string"
+                  },
+                  "content_base64": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "upload"
+                  }
+                },
+                "required": [
+                  "type",
+                  "filename",
+                  "content_base64"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "paths"
-            ]
-          },
-          "SyncInputTransport": {
-            "type": "string",
-            "enum": [
-              "paths"
             ]
           },
           "SyncScanOptions": {
@@ -475,37 +530,82 @@
       "SyncScanInput": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "SyncScanInput",
-        "type": "object",
-        "properties": {
-          "type": {
-            "$ref": "#/$defs/SyncInputTransport"
-          },
-          "paths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "type",
-          "paths"
-        ],
-        "$defs": {
-          "SyncInputTransport": {
-            "type": "string",
-            "enum": [
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "type": {
+                "type": "string",
+                "const": "paths"
+              }
+            },
+            "required": [
+              "type",
               "paths"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "ref": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "repository"
+              }
+            },
+            "required": [
+              "type",
+              "url",
+              "ref"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "url"
+              }
+            },
+            "required": [
+              "type",
+              "url"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "content_base64": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "upload"
+              }
+            },
+            "required": [
+              "type",
+              "filename",
+              "content_base64"
+            ]
           }
-        }
-      },
-      "SyncInputTransport": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "SyncInputTransport",
-        "type": "string",
-        "enum": [
-          "paths"
         ]
       },
       "SyncLicenseSource": {

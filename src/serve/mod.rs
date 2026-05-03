@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod ingest;
+
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
@@ -11,17 +13,20 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use serde_json::json;
+use tempfile::TempDir;
 
 use crate::cli::ServeArgs;
 use crate::license_detection::LicenseDetectionEngine;
 use crate::serve_api::{
     API_VERSION, ServeErrorResponse, ServeLivenessResponse, ServeReadinessResponse,
-    ServeVersionResponse, SyncInputTransport, SyncLicenseSource, SyncScanRequest,
+    ServeVersionResponse, SyncLicenseSource, SyncScanRequest,
 };
 use crate::version::BUILD_VERSION;
 use crate::workflow::{LicenseSource, ScanOptions, scan_paths};
+use ingest::prepare_sync_input;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_REQUEST_BODY_BYTES: usize = 24 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ServeConfig {
@@ -181,6 +186,13 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<HttpRequest> {
         .transpose()?
         .unwrap_or(0);
 
+    if content_length > MAX_REQUEST_BODY_BYTES {
+        return Err(anyhow!(
+            "request body exceeds max size of {} bytes",
+            MAX_REQUEST_BODY_BYTES
+        ));
+    }
+
     let mut body = vec![0; content_length];
     if content_length > 0 {
         reader.read_exact(&mut body)?;
@@ -199,6 +211,13 @@ struct HttpResponse {
     status_code: u16,
     reason: &'static str,
     body: String,
+}
+
+#[derive(Debug)]
+struct SyncScanExecution {
+    paths: Vec<PathBuf>,
+    options: ScanOptions,
+    _staging_dir: Option<TempDir>,
 }
 
 fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpResponse {
@@ -307,7 +326,7 @@ fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
         }
     };
 
-    let (paths, options) = match build_sync_scan_execution(sync_request) {
+    let execution = match build_sync_scan_execution(sync_request) {
         Ok(execution) => execution,
         Err(error) => {
             return error_response(
@@ -319,7 +338,10 @@ fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
         }
     };
 
-    match scan_paths(paths.iter().map(|path| path.as_path()), &options) {
+    match scan_paths(
+        execution.paths.iter().map(|path| path.as_path()),
+        &execution.options,
+    ) {
         Ok(output) => serialize_response(200, "OK", &crate::output_schema::Output::from(&output)),
         Err(error) => error_response(
             422,
@@ -334,21 +356,8 @@ fn decode_sync_scan_request(body: &[u8]) -> Result<SyncScanRequest> {
     serde_json::from_slice(body).context("request body must be valid JSON")
 }
 
-fn build_sync_scan_execution(request: SyncScanRequest) -> Result<(Vec<PathBuf>, ScanOptions)> {
-    if !matches!(request.input.transport, SyncInputTransport::Paths) {
-        return Err(anyhow!("only input.type=paths is currently supported"));
-    }
-
-    if request.input.paths.is_empty() {
-        return Err(anyhow!("input.paths must contain at least one path"));
-    }
-
-    let paths: Vec<PathBuf> = request.input.paths.into_iter().map(PathBuf::from).collect();
-    for path in &paths {
-        if !path.exists() {
-            return Err(anyhow!("input path does not exist: {}", path.display()));
-        }
-    }
+fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecution> {
+    let prepared_input = prepare_sync_input(request.input)?;
 
     let mut options = ScanOptions::default();
     options.collect_info = request.options.collect_info;
@@ -366,8 +375,13 @@ fn build_sync_scan_execution(request: SyncScanRequest) -> Result<(Vec<PathBuf>, 
     options.detect_generated = request.options.detect_generated;
     options.include = request.options.include;
     options.exclude = request.options.exclude;
-    options.strip_root = request.options.strip_root;
-    options.full_root = request.options.full_root;
+    if prepared_input.strip_staging_root {
+        options.strip_root = true;
+        options.full_root = false;
+    } else {
+        options.strip_root = request.options.strip_root;
+        options.full_root = request.options.full_root;
+    }
     options.license_text = request.options.license_text;
     options.license_text_diagnostics = request.options.license_text_diagnostics;
     options.license_diagnostics = request.options.license_diagnostics;
@@ -385,7 +399,11 @@ fn build_sync_scan_execution(request: SyncScanRequest) -> Result<(Vec<PathBuf>, 
     options.facets = request.options.facets;
     options.tallies_by_facet = request.options.tallies_by_facet;
 
-    Ok((paths, options))
+    Ok(SyncScanExecution {
+        paths: prepared_input.paths,
+        options,
+        _staging_dir: prepared_input.staging_dir,
+    })
 }
 
 fn json_response(status_code: u16, reason: &'static str, body: serde_json::Value) -> HttpResponse {
@@ -491,10 +509,7 @@ mod tests {
     #[test]
     fn decode_sync_scan_request_rejects_empty_paths() {
         let error = build_sync_scan_execution(SyncScanRequest {
-            input: SyncScanInput {
-                transport: SyncInputTransport::Paths,
-                paths: Vec::new(),
-            },
+            input: SyncScanInput::Paths { paths: Vec::new() },
             options: SyncScanOptions::default(),
         })
         .expect_err("empty paths should fail");
@@ -504,6 +519,19 @@ mod tests {
                 .to_string()
                 .contains("input.paths must contain at least one path")
         );
+    }
+
+    #[test]
+    fn url_input_requires_http_or_https() {
+        let error = build_sync_scan_execution(SyncScanRequest {
+            input: SyncScanInput::Url {
+                url: "file:///tmp/input.txt".to_string(),
+            },
+            options: SyncScanOptions::default(),
+        })
+        .expect_err("unsupported URL scheme should fail");
+
+        assert!(error.to_string().contains("http or https"));
     }
 
     #[test]
@@ -530,5 +558,30 @@ mod tests {
         let response = handle_sync_scan_request(&request);
         assert_eq!(response.status_code, 415);
         assert!(response.body.contains("unsupported_media_type"));
+    }
+
+    #[test]
+    fn parse_http_request_rejects_oversized_body() {
+        let request = format!(
+            "POST /v1/scans HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: {}\r\n\r\n",
+            MAX_REQUEST_BODY_BYTES + 1
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind listener");
+        let address = listener.local_addr().expect("listener address");
+
+        let handle = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("accept connection");
+            let mut stream = stream;
+            parse_http_request(&mut stream).expect_err("oversized request should fail")
+        });
+
+        let mut client = TcpStream::connect(address).expect("connect client");
+        client
+            .write_all(request.as_bytes())
+            .expect("write request bytes");
+        client.flush().expect("flush request bytes");
+
+        let error = handle.join().expect("join parser thread");
+        assert!(error.to_string().contains("request body exceeds max size"));
     }
 }
