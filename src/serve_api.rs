@@ -37,6 +37,35 @@ pub struct ServeErrorResponse {
     pub api_version: String,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AsyncJobState {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct AsyncScanAcceptedResponse {
+    pub status: String,
+    pub job_id: String,
+    pub state: AsyncJobState,
+    pub status_url: String,
+    pub result_url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct AsyncJobStatusResponse {
+    pub job_id: String,
+    pub state: AsyncJobState,
+    pub result_ready: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allocated_processors: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SyncScanRequest {
     pub input: SyncScanInput,
@@ -257,6 +286,137 @@ pub fn openapi_document() -> Value {
                         }
                     }
                 }
+            },
+            "/v1/scans:async": {
+                "post": {
+                    "summary": "Submit an asynchronous scan job",
+                    "operationId": "postAsyncScan",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/SyncScanRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "202": {
+                            "description": "Scan job accepted for bounded background execution.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AsyncScanAcceptedResponse"}
+                                }
+                            }
+                        },
+                        "400": {
+                            "description": "Invalid HTTP request or malformed JSON body.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        },
+                        "415": {
+                            "description": "Unsupported media type.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        },
+                        "503": {
+                            "description": "Service has no remaining async admission capacity.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/v1/jobs/{id}": {
+                "get": {
+                    "summary": "Inspect asynchronous job state",
+                    "operationId": "getAsyncJobStatus",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": {"type": "string"}
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Current async job state.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AsyncJobStatusResponse"}
+                                }
+                            }
+                        },
+                        "404": {
+                            "description": "Async job was not found.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/v1/jobs/{id}/result": {
+                "get": {
+                    "summary": "Fetch completed asynchronous job result",
+                    "operationId": "getAsyncJobResult",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": {"type": "string"}
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Completed ScanCode-compatible scan result output.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "description": "Current ScanCode-compatible output JSON returned by the shared Provenant output schema."
+                                    }
+                                }
+                            }
+                        },
+                        "404": {
+                            "description": "Async job was not found.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        },
+                        "409": {
+                            "description": "Async job has not completed yet.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        },
+                        "422": {
+                            "description": "Async job completed with a failure.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "components": {
@@ -265,6 +425,9 @@ pub fn openapi_document() -> Value {
                 "ServeReadinessResponse": schema_json::<ServeReadinessResponse>(),
                 "ServeVersionResponse": schema_json::<ServeVersionResponse>(),
                 "ServeErrorResponse": schema_json::<ServeErrorResponse>(),
+                "AsyncJobState": schema_json::<AsyncJobState>(),
+                "AsyncScanAcceptedResponse": schema_json::<AsyncScanAcceptedResponse>(),
+                "AsyncJobStatusResponse": schema_json::<AsyncJobStatusResponse>(),
                 "SyncScanRequest": schema_json::<SyncScanRequest>(),
                 "SyncScanInput": schema_json::<SyncScanInput>(),
                 "SyncLicenseSource": schema_json::<SyncLicenseSource>(),

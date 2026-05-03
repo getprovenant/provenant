@@ -3,7 +3,7 @@
 
 mod ingest;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 use std::path::PathBuf;
@@ -14,12 +14,15 @@ use std::time::Duration;
 use anyhow::{Context, Result, anyhow};
 use serde_json::json;
 use tempfile::TempDir;
+use uuid::Uuid;
 
+use crate::ProcessMode;
 use crate::cli::ServeArgs;
 use crate::license_detection::LicenseDetectionEngine;
 use crate::serve_api::{
-    API_VERSION, ServeErrorResponse, ServeLivenessResponse, ServeReadinessResponse,
-    ServeVersionResponse, SyncLicenseSource, SyncScanRequest,
+    API_VERSION, AsyncJobState, AsyncJobStatusResponse, AsyncScanAcceptedResponse,
+    ServeErrorResponse, ServeLivenessResponse, ServeReadinessResponse, ServeVersionResponse,
+    SyncLicenseSource, SyncScanRequest,
 };
 use crate::version::BUILD_VERSION;
 use crate::workflow::{LicenseSource, ScanOptions, scan_paths};
@@ -27,6 +30,8 @@ use ingest::prepare_sync_input;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_REQUEST_BODY_BYTES: usize = 24 * 1024 * 1024;
+const DEFAULT_ASYNC_MAX_PROCESSORS_PER_JOB: usize = 4;
+const DEFAULT_ASYNC_RETAINED_TERMINAL_JOBS: usize = 64;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ServeConfig {
@@ -57,6 +62,64 @@ enum ReadinessState {
 #[derive(Debug)]
 struct ServeState {
     readiness: Arc<Mutex<ReadinessState>>,
+    jobs: AsyncJobController,
+}
+
+#[derive(Debug, Clone)]
+struct AsyncJobController {
+    inner: Arc<Mutex<AsyncJobControllerState>>,
+    processor_budget: usize,
+    max_processors_per_job: usize,
+    max_retained_terminal_jobs: usize,
+}
+
+#[derive(Debug)]
+struct AsyncJobControllerState {
+    active_processors: usize,
+    jobs: HashMap<String, AsyncJobRecord>,
+    pending: VecDeque<PendingAsyncJob>,
+    completed: VecDeque<String>,
+}
+
+#[derive(Debug)]
+struct PendingAsyncJob {
+    job_id: String,
+    request: SyncScanRequest,
+}
+
+#[derive(Debug)]
+struct AsyncJobRecord {
+    state: AsyncJobState,
+    allocated_processors: Option<usize>,
+    result_body: Option<String>,
+    error_message: Option<String>,
+}
+
+#[derive(Debug)]
+struct DispatchedAsyncJob {
+    job_id: String,
+    request: SyncScanRequest,
+    allocated_processors: usize,
+}
+
+#[derive(Debug, Clone)]
+struct AsyncJobSnapshot {
+    job_id: String,
+    state: AsyncJobState,
+    allocated_processors: Option<usize>,
+    error_message: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct AsyncJobResultSnapshot {
+    state: AsyncJobState,
+    result_body: Option<String>,
+    error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum AsyncSubmitError {
+    QueueFull,
 }
 
 #[derive(Debug)]
@@ -65,6 +128,229 @@ struct HttpRequest {
     path: String,
     headers: HashMap<String, String>,
     body: Vec<u8>,
+}
+
+impl AsyncJobController {
+    fn new() -> Self {
+        let processor_budget = default_async_processor_budget();
+        Self::with_limits(
+            processor_budget,
+            processor_budget.clamp(1, DEFAULT_ASYNC_MAX_PROCESSORS_PER_JOB),
+            DEFAULT_ASYNC_RETAINED_TERMINAL_JOBS,
+        )
+    }
+
+    fn with_limits(
+        processor_budget: usize,
+        max_processors_per_job: usize,
+        max_retained_terminal_jobs: usize,
+    ) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(AsyncJobControllerState {
+                active_processors: 0,
+                jobs: HashMap::new(),
+                pending: VecDeque::new(),
+                completed: VecDeque::new(),
+            })),
+            processor_budget: processor_budget.max(1),
+            max_processors_per_job: max_processors_per_job.max(1),
+            max_retained_terminal_jobs: max_retained_terminal_jobs.max(1),
+        }
+    }
+
+    fn submit(
+        &self,
+        request: SyncScanRequest,
+    ) -> std::result::Result<AsyncScanAcceptedResponse, AsyncSubmitError> {
+        let (response, dispatches) = {
+            let mut inner = self
+                .inner
+                .lock()
+                .expect("serve async job lock should not be poisoned");
+            if inner.non_terminal_jobs() >= self.max_non_terminal_jobs() {
+                return Err(AsyncSubmitError::QueueFull);
+            }
+
+            let job_id = format!("job-{}", Uuid::new_v4().simple());
+            inner.jobs.insert(job_id.clone(), AsyncJobRecord::pending());
+            inner.pending.push_back(PendingAsyncJob {
+                job_id: job_id.clone(),
+                request,
+            });
+            let dispatches = self.schedule_locked(&mut inner);
+            let snapshot = inner
+                .status_snapshot(&job_id)
+                .expect("submitted async job should be present");
+            (
+                AsyncScanAcceptedResponse {
+                    status: "accepted".to_string(),
+                    job_id: job_id.clone(),
+                    state: snapshot.state,
+                    status_url: format!("/v1/jobs/{job_id}"),
+                    result_url: format!("/v1/jobs/{job_id}/result"),
+                },
+                dispatches,
+            )
+        };
+
+        self.spawn_dispatches(dispatches);
+        Ok(response)
+    }
+
+    fn status_snapshot(&self, job_id: &str) -> Option<AsyncJobSnapshot> {
+        self.inner
+            .lock()
+            .expect("serve async job lock should not be poisoned")
+            .status_snapshot(job_id)
+    }
+
+    fn result_snapshot(&self, job_id: &str) -> Option<AsyncJobResultSnapshot> {
+        self.inner
+            .lock()
+            .expect("serve async job lock should not be poisoned")
+            .result_snapshot(job_id)
+    }
+
+    fn max_non_terminal_jobs(&self) -> usize {
+        self.processor_budget.saturating_mul(4).max(4)
+    }
+
+    fn schedule_locked(&self, inner: &mut AsyncJobControllerState) -> Vec<DispatchedAsyncJob> {
+        let mut dispatches = Vec::new();
+
+        while !inner.pending.is_empty() {
+            let available_processors = self
+                .processor_budget
+                .saturating_sub(inner.active_processors);
+            if available_processors == 0 {
+                break;
+            }
+
+            let allocated_processors = available_processors.min(self.max_processors_per_job).max(1);
+            let PendingAsyncJob { job_id, request } = inner
+                .pending
+                .pop_front()
+                .expect("pending async job should still exist");
+            let record = inner
+                .jobs
+                .get_mut(&job_id)
+                .expect("queued async job should have metadata");
+            record.state = AsyncJobState::Running;
+            record.allocated_processors = Some(allocated_processors);
+            record.error_message = None;
+            inner.active_processors += allocated_processors;
+            dispatches.push(DispatchedAsyncJob {
+                job_id,
+                request,
+                allocated_processors,
+            });
+        }
+
+        dispatches
+    }
+
+    fn spawn_dispatches(&self, dispatches: Vec<DispatchedAsyncJob>) {
+        for dispatched in dispatches {
+            let controller = self.clone();
+            thread::spawn(move || controller.run_job(dispatched));
+        }
+    }
+
+    fn run_job(&self, dispatched: DispatchedAsyncJob) {
+        let result = run_async_scan_request(dispatched.request, dispatched.allocated_processors);
+        let follow_up_dispatches = {
+            let mut inner = self
+                .inner
+                .lock()
+                .expect("serve async job lock should not be poisoned");
+            inner.active_processors = inner
+                .active_processors
+                .saturating_sub(dispatched.allocated_processors);
+
+            let record = inner
+                .jobs
+                .get_mut(&dispatched.job_id)
+                .expect("running async job should have metadata");
+            match result {
+                Ok(result_body) => {
+                    record.state = AsyncJobState::Succeeded;
+                    record.result_body = Some(result_body);
+                    record.error_message = None;
+                }
+                Err(error) => {
+                    eprintln!("serve async job {} failed: {error}", dispatched.job_id);
+                    record.state = AsyncJobState::Failed;
+                    record.result_body = None;
+                    record.error_message = Some("async scan job failed".to_string());
+                }
+            }
+
+            inner.completed.push_back(dispatched.job_id.clone());
+            inner.evict_completed_jobs(self.max_retained_terminal_jobs);
+
+            self.schedule_locked(&mut inner)
+        };
+
+        self.spawn_dispatches(follow_up_dispatches);
+    }
+}
+
+impl AsyncJobControllerState {
+    fn non_terminal_jobs(&self) -> usize {
+        self.jobs
+            .values()
+            .filter(|job| matches!(job.state, AsyncJobState::Pending | AsyncJobState::Running))
+            .count()
+    }
+
+    fn status_snapshot(&self, job_id: &str) -> Option<AsyncJobSnapshot> {
+        self.jobs.get(job_id).map(|job| AsyncJobSnapshot {
+            job_id: job_id.to_string(),
+            state: job.state,
+            allocated_processors: job.allocated_processors,
+            error_message: job.error_message.clone(),
+        })
+    }
+
+    fn result_snapshot(&self, job_id: &str) -> Option<AsyncJobResultSnapshot> {
+        self.jobs.get(job_id).map(|job| AsyncJobResultSnapshot {
+            state: job.state,
+            result_body: job.result_body.clone(),
+            error_message: job.error_message.clone(),
+        })
+    }
+
+    fn evict_completed_jobs(&mut self, max_retained_terminal_jobs: usize) {
+        while self.completed.len() > max_retained_terminal_jobs {
+            let Some(job_id) = self.completed.pop_front() else {
+                break;
+            };
+            self.jobs.remove(&job_id);
+        }
+    }
+}
+
+impl AsyncJobRecord {
+    fn pending() -> Self {
+        Self {
+            state: AsyncJobState::Pending,
+            allocated_processors: None,
+            result_body: None,
+            error_message: None,
+        }
+    }
+}
+
+impl AsyncJobSnapshot {
+    fn into_status_response(self) -> AsyncJobStatusResponse {
+        AsyncJobStatusResponse {
+            job_id: self.job_id,
+            state: self.state,
+            result_ready: matches!(self.state, AsyncJobState::Succeeded),
+            allocated_processors: self.allocated_processors,
+            message: self.error_message,
+        }
+    }
 }
 
 pub(crate) fn run(args: &ServeArgs) -> Result<()> {
@@ -84,7 +370,10 @@ pub(crate) fn run(args: &ServeArgs) -> Result<()> {
         local_addr
     );
 
-    let state = ServeState { readiness };
+    let state = ServeState {
+        readiness,
+        jobs: AsyncJobController::new(),
+    };
     serve_forever(listener, state)
 }
 
@@ -125,6 +414,11 @@ fn serve_forever(listener: TcpListener, state: ServeState) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn default_async_processor_budget() -> usize {
+    let cpus = thread::available_parallelism().map_or(1, |count| count.get());
+    if cpus > 1 { cpus - 1 } else { 1 }
 }
 
 fn handle_connection(mut stream: TcpStream, state: &ServeState) -> Result<()> {
@@ -227,6 +521,35 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
         .expect("serve readiness lock should not be poisoned")
         .clone();
 
+    if let Some(job_route) = parse_job_route(&request.path) {
+        return match job_route {
+            JobRoute::Status(job_id) => {
+                if request.method == "GET" {
+                    handle_job_status_request(job_id, state)
+                } else {
+                    error_response(
+                        405,
+                        "Method Not Allowed",
+                        "method_not_allowed",
+                        format!("use GET /v1/jobs/{job_id} to inspect async job state"),
+                    )
+                }
+            }
+            JobRoute::Result(job_id) => {
+                if request.method == "GET" {
+                    handle_job_result_request(job_id, state)
+                } else {
+                    error_response(
+                        405,
+                        "Method Not Allowed",
+                        "method_not_allowed",
+                        format!("use GET /v1/jobs/{job_id}/result to fetch async job output"),
+                    )
+                }
+            }
+        };
+    }
+
     match (request.method.as_str(), request.path.as_str()) {
         ("GET", "/livez") => serialize_response(
             200,
@@ -285,17 +608,12 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
             "method_not_allowed",
             "use POST /v1/scans for synchronous scan execution".to_string(),
         ),
+        ("POST", "/v1/scans:async") => handle_async_scan_request(request, state),
         (_, "/v1/scans:async") => error_response(
-            501,
-            "Not Implemented",
-            "not_implemented",
-            "async scan routes are not implemented yet".to_string(),
-        ),
-        (_, path) if path.starts_with("/v1/jobs/") => error_response(
-            501,
-            "Not Implemented",
-            "not_implemented",
-            "async job routes are not implemented yet".to_string(),
+            405,
+            "Method Not Allowed",
+            "method_not_allowed",
+            "use POST /v1/scans:async for asynchronous scan submission".to_string(),
         ),
         _ => json_response(
             404,
@@ -306,24 +624,9 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
 }
 
 fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
-    if !request
-        .headers
-        .get("content-type")
-        .is_some_and(|value| value.starts_with("application/json"))
-    {
-        return error_response(
-            415,
-            "Unsupported Media Type",
-            "unsupported_media_type",
-            "POST /v1/scans requires Content-Type: application/json".to_string(),
-        );
-    }
-
-    let sync_request = match decode_sync_scan_request(&request.body) {
+    let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans") {
         Ok(sync_request) => sync_request,
-        Err(error) => {
-            return error_response(400, "Bad Request", "invalid_request", error.to_string());
-        }
+        Err(response) => return response,
     };
 
     let execution = match build_sync_scan_execution(sync_request) {
@@ -338,11 +641,12 @@ fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
         }
     };
 
-    match scan_paths(
-        execution.paths.iter().map(|path| path.as_path()),
-        &execution.options,
-    ) {
-        Ok(output) => serialize_response(200, "OK", &crate::output_schema::Output::from(&output)),
+    match execute_scan_execution(execution) {
+        Ok(body) => HttpResponse {
+            status_code: 200,
+            reason: "OK",
+            body,
+        },
         Err(error) => error_response(
             422,
             "Unprocessable Entity",
@@ -352,8 +656,96 @@ fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
     }
 }
 
+fn handle_async_scan_request(request: &HttpRequest, state: &ServeState) -> HttpResponse {
+    let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans:async") {
+        Ok(sync_request) => sync_request,
+        Err(response) => return response,
+    };
+
+    match state.jobs.submit(sync_request) {
+        Ok(response) => serialize_response(202, "Accepted", &response),
+        Err(AsyncSubmitError::QueueFull) => error_response(
+            503,
+            "Service Unavailable",
+            "server_busy",
+            "async job queue is full; try again later".to_string(),
+        ),
+    }
+}
+
+fn handle_job_status_request(job_id: &str, state: &ServeState) -> HttpResponse {
+    match state.jobs.status_snapshot(job_id) {
+        Some(snapshot) => serialize_response(200, "OK", &snapshot.into_status_response()),
+        None => error_response(
+            404,
+            "Not Found",
+            "job_not_found",
+            format!("async job {job_id} was not found"),
+        ),
+    }
+}
+
+fn handle_job_result_request(job_id: &str, state: &ServeState) -> HttpResponse {
+    let Some(snapshot) = state.jobs.result_snapshot(job_id) else {
+        return error_response(
+            404,
+            "Not Found",
+            "job_not_found",
+            format!("async job {job_id} was not found"),
+        );
+    };
+
+    match snapshot.state {
+        AsyncJobState::Succeeded => HttpResponse {
+            status_code: 200,
+            reason: "OK",
+            body: snapshot
+                .result_body
+                .expect("successful async job should retain result body"),
+        },
+        AsyncJobState::Pending | AsyncJobState::Running => error_response(
+            409,
+            "Conflict",
+            "job_not_ready",
+            format!(
+                "async job {job_id} is currently {}",
+                async_job_state_label(snapshot.state)
+            ),
+        ),
+        AsyncJobState::Failed => error_response(
+            422,
+            "Unprocessable Entity",
+            "job_failed",
+            snapshot
+                .error_message
+                .unwrap_or_else(|| format!("async job {job_id} failed")),
+        ),
+    }
+}
+
 fn decode_sync_scan_request(body: &[u8]) -> Result<SyncScanRequest> {
     serde_json::from_slice(body).context("request body must be valid JSON")
+}
+
+fn decode_scan_request_from_http(
+    request: &HttpRequest,
+    route_label: &str,
+) -> std::result::Result<SyncScanRequest, HttpResponse> {
+    if !request
+        .headers
+        .get("content-type")
+        .is_some_and(|value| value.starts_with("application/json"))
+    {
+        return Err(error_response(
+            415,
+            "Unsupported Media Type",
+            "unsupported_media_type",
+            format!("{route_label} requires Content-Type: application/json"),
+        ));
+    }
+
+    decode_sync_scan_request(&request.body)
+        .map_err(|error| error_response(400, "Bad Request", "invalid_request", error.to_string()))
 }
 
 fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecution> {
@@ -404,6 +796,52 @@ fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecuti
         options,
         _staging_dir: prepared_input.staging_dir,
     })
+}
+
+fn execute_scan_execution(execution: SyncScanExecution) -> Result<String> {
+    let output = scan_paths(
+        execution.paths.iter().map(|path| path.as_path()),
+        &execution.options,
+    )?;
+    serde_json::to_string(&crate::output_schema::Output::from(&output))
+        .context("scan result should serialize")
+}
+
+fn run_async_scan_request(request: SyncScanRequest, allocated_processors: usize) -> Result<String> {
+    let mut execution = build_sync_scan_execution(request)?;
+    execution.options.process_mode = if allocated_processors <= 1 {
+        ProcessMode::SequentialWithTimeouts
+    } else {
+        ProcessMode::Parallel(allocated_processors)
+    };
+    execute_scan_execution(execution)
+}
+
+fn async_job_state_label(state: AsyncJobState) -> &'static str {
+    match state {
+        AsyncJobState::Pending => "pending",
+        AsyncJobState::Running => "running",
+        AsyncJobState::Succeeded => "succeeded",
+        AsyncJobState::Failed => "failed",
+    }
+}
+
+enum JobRoute<'a> {
+    Status(&'a str),
+    Result(&'a str),
+}
+
+fn parse_job_route(path: &str) -> Option<JobRoute<'_>> {
+    let suffix = path.strip_prefix("/v1/jobs/")?;
+    if let Some(job_id) = suffix.strip_suffix("/result") {
+        return is_valid_job_id(job_id).then_some(JobRoute::Result(job_id));
+    }
+
+    is_valid_job_id(suffix).then_some(JobRoute::Status(suffix))
+}
+
+fn is_valid_job_id(job_id: &str) -> bool {
+    !job_id.is_empty() && !job_id.contains('/')
 }
 
 fn json_response(status_code: u16, reason: &'static str, body: serde_json::Value) -> HttpResponse {
@@ -461,12 +899,34 @@ mod tests {
     use super::*;
     use crate::serve_api::{SyncScanInput, SyncScanOptions};
 
+    fn dummy_async_request() -> SyncScanRequest {
+        SyncScanRequest {
+            input: SyncScanInput::Paths {
+                paths: vec!["/tmp".to_string()],
+            },
+            options: SyncScanOptions::default(),
+        }
+    }
+
     fn ready_state() -> ServeState {
         ServeState {
             readiness: Arc::new(Mutex::new(ReadinessState::Ready {
                 spdx_license_list_version: "3.28".to_string(),
             })),
+            jobs: AsyncJobController::with_limits(2, 2, 8),
         }
+    }
+
+    fn ready_state_with_job(job_id: &str, record: AsyncJobRecord) -> ServeState {
+        let state = ready_state();
+        state
+            .jobs
+            .inner
+            .lock()
+            .expect("test async job lock should not be poisoned")
+            .jobs
+            .insert(job_id.to_string(), record);
+        state
     }
 
     #[test]
@@ -494,7 +954,7 @@ mod tests {
     }
 
     #[test]
-    fn scan_routes_return_not_implemented_contract() {
+    fn async_scan_route_requires_post() {
         let request = HttpRequest {
             method: "GET".to_string(),
             path: "/v1/scans:async".to_string(),
@@ -502,8 +962,169 @@ mod tests {
             body: Vec::new(),
         };
         let response = response_for_request(&request, &ready_state());
-        assert_eq!(response.status_code, 501);
-        assert!(response.body.contains("not_implemented"));
+        assert_eq!(response.status_code, 405);
+        assert!(response.body.contains("method_not_allowed"));
+    }
+
+    #[test]
+    fn pending_job_status_reports_pending_state() {
+        let state = ready_state_with_job("job-1", AsyncJobRecord::pending());
+        let request = HttpRequest {
+            method: "GET".to_string(),
+            path: "/v1/jobs/job-1".to_string(),
+            headers: HashMap::new(),
+            body: Vec::new(),
+        };
+
+        let response = response_for_request(&request, &state);
+        assert_eq!(response.status_code, 200);
+        assert!(response.body.contains("\"state\":\"pending\""));
+        assert!(response.body.contains("\"result_ready\":false"));
+    }
+
+    #[test]
+    fn pending_job_result_reports_not_ready() {
+        let state = ready_state_with_job("job-2", AsyncJobRecord::pending());
+        let request = HttpRequest {
+            method: "GET".to_string(),
+            path: "/v1/jobs/job-2/result".to_string(),
+            headers: HashMap::new(),
+            body: Vec::new(),
+        };
+
+        let response = response_for_request(&request, &state);
+        assert_eq!(response.status_code, 409);
+        assert!(response.body.contains("job_not_ready"));
+    }
+
+    #[test]
+    fn completed_job_result_returns_stored_body() {
+        let state = ready_state_with_job(
+            "job-3",
+            AsyncJobRecord {
+                state: AsyncJobState::Succeeded,
+                allocated_processors: Some(2),
+                result_body: Some("{\"status\":\"ok\"}".to_string()),
+                error_message: None,
+            },
+        );
+        let request = HttpRequest {
+            method: "GET".to_string(),
+            path: "/v1/jobs/job-3/result".to_string(),
+            headers: HashMap::new(),
+            body: Vec::new(),
+        };
+
+        let response = response_for_request(&request, &state);
+        assert_eq!(response.status_code, 200);
+        assert_eq!(response.body, "{\"status\":\"ok\"}");
+    }
+
+    #[test]
+    fn failed_job_result_returns_failure_contract() {
+        let state = ready_state_with_job(
+            "job-4",
+            AsyncJobRecord {
+                state: AsyncJobState::Failed,
+                allocated_processors: Some(1),
+                result_body: None,
+                error_message: Some("async scan job failed".to_string()),
+            },
+        );
+        let request = HttpRequest {
+            method: "GET".to_string(),
+            path: "/v1/jobs/job-4/result".to_string(),
+            headers: HashMap::new(),
+            body: Vec::new(),
+        };
+
+        let response = response_for_request(&request, &state);
+        assert_eq!(response.status_code, 422);
+        assert!(response.body.contains("job_failed"));
+        assert!(response.body.contains("async scan job failed"));
+    }
+
+    #[test]
+    fn async_job_controller_rejects_submit_when_queue_is_full() {
+        let controller = AsyncJobController::with_limits(1, 1, 8);
+        {
+            let mut inner = controller
+                .inner
+                .lock()
+                .expect("test async job lock should not be poisoned");
+            for index in 0..controller.max_non_terminal_jobs() {
+                inner
+                    .jobs
+                    .insert(format!("job-{index}"), AsyncJobRecord::pending());
+            }
+        }
+
+        let result = controller.submit(dummy_async_request());
+        assert!(matches!(result, Err(AsyncSubmitError::QueueFull)));
+    }
+
+    #[test]
+    fn scheduler_leaves_extra_jobs_pending_when_budget_is_exhausted() {
+        let controller = AsyncJobController::with_limits(4, 2, 8);
+        let mut inner = AsyncJobControllerState {
+            active_processors: 0,
+            jobs: HashMap::new(),
+            pending: VecDeque::new(),
+            completed: VecDeque::new(),
+        };
+
+        for job_id in ["job-a", "job-b", "job-c"] {
+            inner
+                .jobs
+                .insert(job_id.to_string(), AsyncJobRecord::pending());
+            inner.pending.push_back(PendingAsyncJob {
+                job_id: job_id.to_string(),
+                request: dummy_async_request(),
+            });
+        }
+
+        let dispatches = controller.schedule_locked(&mut inner);
+        assert_eq!(dispatches.len(), 2);
+        assert_eq!(inner.active_processors, 4);
+        assert_eq!(inner.pending.len(), 1);
+        assert_eq!(inner.jobs["job-a"].state, AsyncJobState::Running);
+        assert_eq!(inner.jobs["job-b"].state, AsyncJobState::Running);
+        assert_eq!(inner.jobs["job-c"].state, AsyncJobState::Pending);
+    }
+
+    #[test]
+    fn completed_jobs_are_evicted_when_retention_limit_is_exceeded() {
+        let mut inner = AsyncJobControllerState {
+            active_processors: 0,
+            jobs: HashMap::from([
+                (
+                    "job-old".to_string(),
+                    AsyncJobRecord {
+                        state: AsyncJobState::Succeeded,
+                        allocated_processors: Some(1),
+                        result_body: Some("old".to_string()),
+                        error_message: None,
+                    },
+                ),
+                (
+                    "job-new".to_string(),
+                    AsyncJobRecord {
+                        state: AsyncJobState::Succeeded,
+                        allocated_processors: Some(1),
+                        result_body: Some("new".to_string()),
+                        error_message: None,
+                    },
+                ),
+            ]),
+            pending: VecDeque::new(),
+            completed: VecDeque::from(["job-old".to_string(), "job-new".to_string()]),
+        };
+
+        inner.evict_completed_jobs(1);
+
+        assert!(!inner.jobs.contains_key("job-old"));
+        assert!(inner.jobs.contains_key("job-new"));
+        assert_eq!(inner.completed.len(), 1);
     }
 
     #[test]
