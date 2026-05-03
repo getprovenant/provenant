@@ -1,15 +1,15 @@
-# `provenant serve` Plan and Contract
+# `provenant serve` Rollout Record and Contract
 
-> **Status**: 🟡 Active implementation plan — this document defines the intended end-state `provenant serve` contract
+> **Status**: 🟢 Complete historical rollout record — this document records the implemented end-state `provenant serve` contract
 > **Related docs**: [`../../SERVE_API_GUIDE.md`](../../SERVE_API_GUIDE.md) for the implemented HTTP surface and [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) for runtime placement
 > **Priority**: P1 — define the full self-hosted service shape up front
 > **Tracking issue**: [`#834`](https://github.com/mstykow/provenant/issues/834)
 
 ## Overview
 
-`provenant serve` is the planned **self-hosted long-lived HTTP scanner service** built on top of the shared app/workflow pipeline introduced in the stacked base PR.
+`provenant serve` is the implemented **self-hosted long-lived HTTP scanner service** built on top of the shared app/workflow pipeline introduced in the stacked base PR.
 
-This document defines the **end-state service contract**.
+This document records the **implemented end-state service contract**.
 
 ## Product goals
 
