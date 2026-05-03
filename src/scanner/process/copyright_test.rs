@@ -63,6 +63,62 @@ fn test_extract_copyright_information_drops_binary_string_gibberish_notice() {
 }
 
 #[test]
+fn test_extract_copyright_information_preserves_raw_text_and_normalized_shadow() {
+    let text = "/* Copyright 2024 Example Corp. All rights reserved. */\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("fixture.c"), text, 120.0, false);
+
+    let file = builder
+        .name("fixture.c".to_string())
+        .base_name("fixture".to_string())
+        .extension(".c".to_string())
+        .path("fixture.c".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(file.copyrights.len(), 1);
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright 2024 Example Corp. All rights reserved."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("Copyright 2024 Example Corp.")
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_multiline_native_projection_avoids_comment_wrappers() {
+    let text = "/*\n * Copyright 2024 Example Corp.\n * All rights reserved.\n */\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("fixture.c"), text, 120.0, false);
+
+    let file = builder
+        .name("fixture.c".to_string())
+        .base_name("fixture".to_string())
+        .extension(".c".to_string())
+        .path("fixture.c".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(file.copyrights.len(), 1);
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright 2024 Example Corp. All rights reserved."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("Copyright 2024 Example Corp.")
+    );
+}
+
+#[test]
 fn test_binary_string_copyright_candidate_keeps_real_notice() {
     let notice = "Copyright nexB and others (c) 2012";
     assert!(is_binary_string_copyright_candidate(notice));

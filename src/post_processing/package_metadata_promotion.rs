@@ -22,7 +22,7 @@ pub(super) fn promote_package_metadata_from_key_files(
                 .iter()
                 .filter_map(|index| files.get(index.0))
                 .flat_map(|file| file.copyrights.iter())
-                .map(|copyright| copyright.copyright.clone())
+                .map(|copyright| copyright.normalized_text().to_string())
                 .next();
         }
 

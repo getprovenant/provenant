@@ -67,6 +67,8 @@ conservative default for vague notices such as plain `See LICENSE`, but it allow
 ancestor lookup for explicit **root directory of this source tree** / project-root notices so
 vendored or nested source trees can resolve their own root `LICENSE` files.
 
+Another intentional difference is file-level copyright rendering. Provenant keeps a less-normalized copyright string by default in `files[].copyrights[].copyright` instead of matching ScanCode's more normalized emitted string. This is a compliance-fidelity improvement, not a schema fork: the field shape stays the same, and users who need strict ScanCode-style rendering can opt back in with `--compat-mode scancode`.
+
 ## Related Docs
 
 - [README](../README.md) for installation, usage, and positioning

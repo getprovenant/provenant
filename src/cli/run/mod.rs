@@ -621,7 +621,8 @@ pub fn run() -> Result<()> {
     });
     progress.finish_finalize();
 
-    let output_schema_output = crate::output_schema::Output::from(&output);
+    let output_schema_output =
+        crate::output_schema::Output::from_with_compat_mode(&output, cli.compat_mode);
     progress.start_output();
     for target in cli.output_targets() {
         let output_config = OutputWriteConfig {

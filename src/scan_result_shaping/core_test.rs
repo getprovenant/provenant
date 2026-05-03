@@ -76,6 +76,7 @@ fn only_findings_drops_directories_without_findings() {
     let mut files = vec![dir("project"), file("project/a.txt"), file("project/b.txt")];
     files[2].copyrights = vec![Copyright {
         copyright: "Copyright Example".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -153,11 +154,13 @@ fn filter_redundant_clues_keeps_distinct_line_ranges_and_dedupes_copyrights_and_
     files[0].copyrights = vec![
         Copyright {
             copyright: "Copyright Example".to_string(),
+            normalized_copyright: None,
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
         },
         Copyright {
             copyright: "Copyright Example".to_string(),
+            normalized_copyright: None,
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
         },
@@ -209,6 +212,7 @@ fn filter_redundant_clues_with_rules_suppresses_ignorable_rule_and_cross_clues()
     }];
     files[0].copyrights = vec![Copyright {
         copyright: "Copyright Example Corp".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::new(2).unwrap(),
         end_line: LineNumber::new(2).unwrap(),
     }];
@@ -304,6 +308,7 @@ fn filter_redundant_clues_suppresses_cross_clues_without_license_rules() {
     let mut files = vec![file("project/a.txt")];
     files[0].copyrights = vec![Copyright {
         copyright: "Copyright Example <legal@example.com> https://example.com".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::new(2).unwrap(),
         end_line: LineNumber::new(2).unwrap(),
     }];

@@ -280,6 +280,47 @@ fn test_json_contract_includes_detailed_tallies_for_files_and_directories() {
 }
 
 #[test]
+fn test_json_copyright_rendering_respects_compat_mode() {
+    let mut file = sample_plain_text_file(
+        "notice.c",
+        "notice",
+        ".c",
+        "scan/src/notice.c",
+        10,
+        EMPTY_SHA1,
+        vec![],
+    );
+    file.copyrights = vec![Copyright {
+        copyright: "Copyright 2024 Example Corp. All rights reserved.".to_string(),
+        normalized_copyright: Some("Copyright 2024 Example Corp.".to_string()),
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+
+    let output = sample_output_with_sections(1, 0, vec![], vec![], vec![file]);
+
+    let native_json = serde_json::to_value(OutputSchemaOutput::from_with_compat_mode(
+        &output,
+        provenant::cli::CompatibilityMode::Native,
+    ))
+    .expect("native output should serialize");
+    let scancode_json = serde_json::to_value(OutputSchemaOutput::from_with_compat_mode(
+        &output,
+        provenant::cli::CompatibilityMode::Scancode,
+    ))
+    .expect("compat output should serialize");
+
+    assert_eq!(
+        native_json["files"][0]["copyrights"][0]["copyright"],
+        Value::String("Copyright 2024 Example Corp. All rights reserved.".to_string())
+    );
+    assert_eq!(
+        scancode_json["files"][0]["copyrights"][0]["copyright"],
+        Value::String("Copyright 2024 Example Corp.".to_string())
+    );
+}
+
+#[test]
 fn test_json_contract_includes_facets_and_tallies_by_facet() {
     let mut core_file = sample_plain_text_file(
         "README",
@@ -1776,6 +1817,7 @@ fn sample_html_simple_output() -> Output {
         vec![],
         vec![Copyright {
             copyright: "Copyright (c) 2000 ACME, Inc.".to_string(),
+            normalized_copyright: None,
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
         }],

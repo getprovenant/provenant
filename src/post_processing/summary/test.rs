@@ -64,6 +64,7 @@ fn key_file_license_clues_feed_summary_without_mutating_package_license_provenan
     }];
     license_file.copyrights = vec![Copyright {
         copyright: "Copyright (c) 2019 Chef Software Inc.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -635,6 +636,7 @@ fn compute_summary_resolves_joined_primary_license_without_ambiguity() {
     readme.license_expression = Some("apache-2.0 AND (apache-2.0 OR mit)".to_string());
     readme.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -716,6 +718,7 @@ fn compute_summary_penalizes_conflicting_non_key_licenses_without_false_ambiguit
     readme.is_top_level = true;
     readme.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -857,6 +860,24 @@ fn compute_summary_prefers_package_copyright_holders_over_package_resource_holde
             count: 1,
         }]
     );
+}
+
+#[test]
+fn compute_summary_legal_key_file_holder_fallback_uses_normalized_copyright_text() {
+    let mut license = file("codebase/LICENSE");
+    license.is_legal = true;
+    license.is_key_file = true;
+    license.is_top_level = true;
+    license.copyrights = vec![Copyright {
+        copyright: "Copyright Example Corp. All rights reserved.".to_string(),
+        normalized_copyright: Some("Copyright Example Corp.".to_string()),
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+
+    let summary = compute_summary(&[license], &[]).expect("summary exists");
+
+    assert_eq!(summary.declared_holder.as_deref(), Some("Example Corp."));
 }
 
 #[test]
@@ -1157,6 +1178,7 @@ fn compute_summary_joins_multiple_holders_from_single_top_level_license_file() {
     }];
     license.copyrights = vec![Copyright {
         copyright: "Copyright Mort Bay and Sun Microsystems.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -1190,6 +1212,7 @@ fn compute_score_mode_ignores_package_declared_license_without_key_file_license_
     package_json.for_packages = vec![package.package_uid.clone()];
     package_json.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -1213,6 +1236,7 @@ fn compute_score_mode_without_license_text_returns_zero_with_copyright_only() {
     package_json.for_packages = vec![package.package_uid.clone()];
     package_json.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -1273,6 +1297,7 @@ fn compute_score_mode_uses_single_joined_expression_without_ambiguity() {
     }];
     cargo.copyrights = vec![Copyright {
         copyright: "Copyright The Rand Project Developers.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
@@ -1387,6 +1412,7 @@ fn compute_score_mode_does_not_treat_with_expression_as_covering_base_license() 
     }];
     manifest.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
+        normalized_copyright: None,
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];

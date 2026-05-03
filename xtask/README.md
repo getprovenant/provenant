@@ -148,6 +148,7 @@ CLI arguments:
 - `--profile packages`: convenience shorthand for `-p --strip-root`.
 - In scan-target mode, pass either a supported `--profile` or explicit shared scan flags after `--`.
 - Direct-json mode compares the provided JSON files as-is and does not accept `--profile` or explicit scan flags after `--`.
+- Compare reduction still applies compatibility-aware in-memory normalization for known intentional differences such as Provenant's raw-default file-level copyright rendering, so parity review does not fail noisily just because Provenant preserved `All rights reserved` or punctuation in the saved JSON.
 
 ### What It Does
 
@@ -258,7 +259,7 @@ CLI arguments:
 
 `ics` here refers to the Android Ice Cream Sandwich (Android 4.0) fixture corpus from ScanCode reference tests.
 
-Important distinction: this command is a maintenance/sync tool. Golden tests compare Rust detector output to local Rust-owned fixture YAMLs; `--list-mismatches` compares Rust detector output to Python reference expectations to decide whether a sync is parity-safe.
+Important distinction: this command is a maintenance/sync tool. Golden tests compare Rust detector output to local Rust-owned fixture YAMLs; `--list-mismatches` compares Rust detector output to Python reference expectations to decide whether a sync is parity-safe. This remains detector-level parity work; the newer file-level output rendering difference is handled separately in output and compare tests.
 
 Expected workflow:
 

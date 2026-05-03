@@ -167,7 +167,7 @@ pub(super) fn copyright_values(file: &FileInfo) -> Vec<String> {
 
     file.copyrights
         .iter()
-        .map(|copyright| normalize_tally_copyright_value(&copyright.copyright))
+        .map(|copyright| normalize_tally_copyright_value(copyright.normalized_text()))
         .collect()
 }
 

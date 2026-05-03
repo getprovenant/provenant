@@ -593,8 +593,18 @@ pub struct Match {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Copyright {
     pub copyright: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalized_copyright: Option<String>,
     pub start_line: LineNumber,
     pub end_line: LineNumber,
+}
+
+impl Copyright {
+    pub fn normalized_text(&self) -> &str {
+        self.normalized_copyright
+            .as_deref()
+            .unwrap_or(self.copyright.as_str())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

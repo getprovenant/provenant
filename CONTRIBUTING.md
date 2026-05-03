@@ -50,6 +50,7 @@ Before making non-trivial changes, read the docs that own the part of the system
 Repo-specific expectations:
 
 - Preserve behavior and parity, especially when using the ScanCode reference as a behavioral spec.
+- When a surface intentionally diverges from ScanCode (for example raw-default file-level copyright rendering), preserve and test both the default Provenant contract and the explicit `--compat-mode scancode` lane.
 - Keep parsing static and bounded. Do not execute package-manager code, project code, or shell commands to recover metadata.
 - Use `cargo add`, `cargo remove`, and targeted `cargo update` instead of editing Rust dependencies by hand.
 - Do not add dependencies lightly; make sure they clearly justify their maintenance cost.

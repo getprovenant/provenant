@@ -45,6 +45,13 @@ Parsers still MUST NOT:
 
 Parsers MAY populate `declared_license_expression`, `declared_license_expression_spdx`, and deterministic parser-side `license_detections` when the source field is a bounded, trustworthy declared-license surface such as an SPDX-expression-compatible manifest field.
 
+For file-level copyright detection specifically, Provenant now keeps two internal views once a finding is materialized:
+
+- a **less-normalized rendered value** used for default file-level output
+- a **normalized compatibility value** used for shaping, tallies, and ScanCode-compat output mode
+
+This keeps the public field shape stable while separating evidence preservation from compatibility-oriented normalization.
+
 Most package extraction in Provenant is path-owned and flows through `PackageParser` or
 recognizer registration. A small set of scanner-owned exceptions can exist when the package surface
 is content-aware rather than filename-aware. The current example is compiled-binary package
@@ -86,7 +93,7 @@ Provenant follows the same broad stage model as ScanCode, but the concrete imple
 - **Package Assembly**: Sibling and nested merge strategies for combining related manifests
 - **Text Detection**: License detection (n-gram matching), copyright detection (4-stage pipeline), email/URL extraction
 - **Post-Processing**: Summarization, tallies, classification
-- **Output Schema**: Dedicated serde-enabled types in `src/output_schema/` that define the ScanCode-compatible JSON schema, separate from internal domain types
+- **Output Schema**: Dedicated serde-enabled types in `src/output_schema/` that define the ScanCode-compatible JSON schema, separate from internal domain types and explicit projection decisions such as copyright rendering mode
 - **Output**: JSON, JSON Lines, YAML, HTML, SPDX (TV/RDF), CycloneDX (JSON/XML), Debian copyright, and custom templates
 - **Testing Infrastructure**: Doctests, unit tests, golden tests, parser-local scanner/assembly contract tests, and system integration tests
 - **Infrastructure**: Caching, enhanced progress tracking, static integration points

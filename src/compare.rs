@@ -1140,6 +1140,37 @@ fn normalize_text(value: &str) -> String {
     value.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn normalize_compare_copyright_value(value: &str) -> String {
+    let normalized = normalize_text(value);
+    if normalized.is_empty() {
+        return normalized;
+    }
+
+    let mut out = strip_compare_all_rights_reserved(&normalized)
+        .trim()
+        .to_string();
+    while out.ends_with(['.', ',', ';', ':']) {
+        out.pop();
+        out = out.trim_end().to_string();
+    }
+    out
+}
+
+fn strip_compare_all_rights_reserved(value: &str) -> String {
+    let lower = value.to_ascii_lowercase();
+    let marker = "all rights reserved";
+    if let Some(idx) = lower.rfind(marker) {
+        let tail = lower[idx + marker.len()..].trim();
+        if tail.is_empty() || tail.chars().all(|ch| matches!(ch, '.' | ',' | ';' | ':')) {
+            return value[..idx]
+                .trim_end_matches([' ', '.', ',', ';', ':'])
+                .trim_end()
+                .to_string();
+        }
+    }
+    value.to_string()
+}
+
 fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
     let Some(values) = entry.get(metric).and_then(Value::as_array) else {
         return Vec::new();
@@ -1159,7 +1190,7 @@ fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
                 "copyrights" => item
                     .get("copyright")
                     .and_then(Value::as_str)
-                    .map(str::to_string),
+                    .map(normalize_compare_copyright_value),
                 "holders" => item
                     .get("holder")
                     .and_then(Value::as_str)
@@ -2085,4 +2116,42 @@ fn tsv_row(metric: &str, scancode: i64, provenant: i64, delta: i64, notes: &str)
         delta.to_string(),
         notes.to_string(),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn metric_values_normalize_raw_copyrights_for_compare() {
+        let entry = json!({
+            "copyrights": [
+                {
+                    "copyright": "Copyright 2024 Example Corp. All rights reserved."
+                }
+            ]
+        });
+
+        assert_eq!(
+            metric_values(&entry, "copyrights"),
+            vec!["Copyright 2024 Example Corp.".to_string()]
+        );
+    }
+
+    #[test]
+    fn metric_values_normalize_punctuation_only_copyright_differences() {
+        let entry = json!({
+            "copyrights": [
+                {
+                    "copyright": "Copyright 2024 Example Corp.;"
+                }
+            ]
+        });
+
+        assert_eq!(
+            metric_values(&entry, "copyrights"),
+            vec!["Copyright 2024 Example Corp".to_string()]
+        );
+    }
 }

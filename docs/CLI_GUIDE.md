@@ -48,6 +48,16 @@ If you also want copyright, holder, and author detection, add `--copyright`:
 provenant scan --json-pp scan.json --license --copyright --package /path/to/project
 ```
 
+By default, Provenant preserves file-level copyright text more faithfully in `files[].copyrights[].copyright` instead of silently normalizing it to ScanCode's historic emitted value.
+
+If you need the ScanCode-style rendered value in that same field for a parity-sensitive pipeline, add:
+
+```sh
+provenant scan --json-pp scan.json --license --copyright --compat-mode scancode /path/to/project
+```
+
+Use the default native mode for compliance review and auditability. Use `--compat-mode scancode` when a downstream system expects ScanCode-like file-level copyright strings specifically.
+
 ## Important Mental Model: Detections Are Opt-In
 
 Like modern ScanCode, Provenant does not assume every scan should collect every kind of data.
@@ -383,6 +393,8 @@ This is especially useful for:
 - merging or reshaping multiple prior JSON scans
 
 Important: `--from-json` is for reshaping existing results. It is not a second scan pass, and scan-time options such as fresh detection flags are intentionally restricted in this mode.
+
+Also note that `--from-json` cannot recover newer native-only evidence details that were never serialized in the original JSON. For example, replaying older ScanCode-style or compatibility-mode JSON cannot reconstruct the newer less-normalized file-level copyright text without rescanning the original files.
 
 ### 15. "I want a codebase-level summary instead of reading raw file-by-file results"
 

@@ -285,7 +285,7 @@ pub(crate) fn filter_redundant_clues_with_rules(
 ) {
     for file in files.iter_mut() {
         dedupe_vec_by_key(&mut file.copyrights, |c| {
-            (c.copyright.clone(), c.start_line, c.end_line)
+            (c.normalized_text().to_string(), c.start_line, c.end_line)
         });
         dedupe_vec_by_key(&mut file.holders, |h| {
             (h.holder.clone(), h.start_line, h.end_line)
@@ -312,7 +312,7 @@ fn filter_license_aware_clues(file: &mut FileInfo, clue_rule_lookup: Option<&Clu
         .map(|copyright| IgnorableSpan {
             start_line: copyright.start_line,
             end_line: copyright.end_line,
-            values: vec![copyright.copyright.clone()],
+            values: vec![copyright.normalized_text().to_string()],
             allow_substring: true,
         })
         .collect::<Vec<_>>();
@@ -396,7 +396,7 @@ fn filter_license_aware_clues(file: &mut FileInfo, clue_rule_lookup: Option<&Clu
             &rule_ignorables.ignorable_copyrights,
             copyright.start_line,
             copyright.end_line,
-            copyright.copyright.as_str(),
+            copyright.normalized_text(),
             false,
         )
     });

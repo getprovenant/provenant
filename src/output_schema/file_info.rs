@@ -256,6 +256,15 @@ impl Serialize for OutputFileInfo {
 
 impl From<&crate::models::FileInfo> for OutputFileInfo {
     fn from(value: &crate::models::FileInfo) -> Self {
+        Self::from_with_compat_mode(value, crate::cli::CompatibilityMode::Native)
+    }
+}
+
+impl OutputFileInfo {
+    pub fn from_with_compat_mode(
+        value: &crate::models::FileInfo,
+        mode: crate::cli::CompatibilityMode,
+    ) -> Self {
         Self {
             name: value.name.clone(),
             base_name: value.base_name.clone(),
@@ -284,7 +293,11 @@ impl From<&crate::models::FileInfo> for OutputFileInfo {
                 .collect(),
             license_clues: value.license_clues.iter().map(OutputMatch::from).collect(),
             percentage_of_license_text: value.percentage_of_license_text,
-            copyrights: value.copyrights.iter().map(OutputCopyright::from).collect(),
+            copyrights: value
+                .copyrights
+                .iter()
+                .map(|copyright| OutputCopyright::from_with_compat_mode(copyright, mode))
+                .collect(),
             holders: value.holders.iter().map(OutputHolder::from).collect(),
             authors: value.authors.iter().map(OutputAuthor::from).collect(),
             emails: value.emails.iter().map(OutputEmail::from).collect(),
