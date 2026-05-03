@@ -161,6 +161,8 @@ For the current service shell surface, run:
 provenant serve --help
 ```
 
+For the HTTP request/response contract and examples, see the [Serve API Guide](docs/SERVE_API_GUIDE.md).
+
 For guided workflows and important flag combinations, see the [CLI Guide](docs/CLI_GUIDE.md).
 
 ### Example
@@ -217,6 +219,7 @@ Output architecture and compatibility approach are documented in:
 ## Documentation
 
 - **[Library Guide](docs/LIBRARY_GUIDE.md)** - Programmatic embedding guidance for using Provenant from Rust
+- **[Serve API Guide](docs/SERVE_API_GUIDE.md)** - HTTP API usage, examples, and current service contract for `provenant serve`
 - **[Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Best starting point for navigating the docs set
 - **[CLI Guide](docs/CLI_GUIDE.md)** - Common workflows and important flag combinations
 - **[Provenant and ScanCode Toolkit](docs/SCANCODE_COMPARISON.md)** - Relationship, trust model, and high-level comparison notes

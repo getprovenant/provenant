@@ -10,7 +10,7 @@ Use it when you want to:
 
 If you mainly want shell workflows and output files, start with the [CLI Guide](CLI_GUIDE.md).
 
-This guide covers the Rust embedding surface only. If you want long-lived HTTP access instead of in-process Rust embedding, use `provenant serve`.
+This guide covers the Rust embedding surface only. If you want long-lived HTTP access instead of in-process Rust embedding, see the [Serve API Guide](SERVE_API_GUIDE.md).
 
 ## Dependency setup
 
