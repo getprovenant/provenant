@@ -42,6 +42,10 @@ name = "generate-benchmark-chart"
 path = "src/bin/generate_benchmark_chart.rs"
 
 [[bin]]
+name = "generate-serve-openapi"
+path = "src/bin/generate_serve_openapi.rs"
+
+[[bin]]
 name = "generate-legalese-artifact"
 path = "src/bin/generate_legalese_artifact/main.rs"
 
