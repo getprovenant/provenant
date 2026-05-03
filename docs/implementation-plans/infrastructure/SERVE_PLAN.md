@@ -1,7 +1,7 @@
 # `provenant serve` Plan and Contract
 
 > **Status**: 🟡 Active implementation plan — this document defines the intended end-state `provenant serve` contract
-> **Current contract owner**: this plan until the service contract graduates into evergreen runtime and user-facing docs
+> **Current contract owner**: [`../../SERVE_API_GUIDE.md`](../../SERVE_API_GUIDE.md) for the current user-facing HTTP API surface and [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) for runtime placement
 > **Priority**: P1 — define the full self-hosted service shape up front
 > **Tracking issue**: [`#834`](https://github.com/mstykow/provenant/issues/834)
 
