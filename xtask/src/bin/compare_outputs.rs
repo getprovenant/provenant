@@ -4923,7 +4923,7 @@ mod tests {
 
         assert_eq!(
             metric_values(&entry, "copyrights"),
-            vec!["Copyright 2024 Example Corp.".to_string()]
+            vec!["Copyright 2024 Example Corp".to_string()]
         );
     }
 
