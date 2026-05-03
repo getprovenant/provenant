@@ -55,6 +55,8 @@ The currently supported input mode is:
 
 That means the service reads one or more trusted local paths visible to the host or container running `provenant serve`.
 
+This current input mode is best suited to same-host or operator-controlled deployments where the service already has filesystem access to the scan target.
+
 Example:
 
 ```sh
@@ -123,7 +125,7 @@ The current API surface is intentionally narrow:
 - only synchronous `POST /v1/scans` is implemented
 - only local-path input mode (`input.type = "paths"`) is implemented
 - async routes are not implemented yet
-- object-store inputs, uploads, auth, and job persistence are not implemented yet
+- repository inputs, upload inputs, remote URL inputs, auth, and job persistence are not implemented yet
 
 ## Machine-readable contract
 
