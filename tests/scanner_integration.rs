@@ -675,7 +675,7 @@ fn test_scanner_detects_copyrights_in_pdf_text() {
     assert!(
         file.copyrights
             .iter()
-            .any(|c| c.copyright == "Copyright 2024 Example Corp."),
+            .any(|c| c.copyright == "Copyright 2024 Example Corp. All rights reserved."),
         "copyrights: {:?}",
         file.copyrights
     );
