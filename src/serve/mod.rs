@@ -10,15 +10,17 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
-use serde::Deserialize;
 use serde_json::json;
 
 use crate::cli::ServeArgs;
 use crate::license_detection::LicenseDetectionEngine;
+use crate::serve_api::{
+    API_VERSION, ServeErrorResponse, ServeLivenessResponse, ServeReadinessResponse,
+    ServeVersionResponse, SyncInputTransport, SyncLicenseSource, SyncScanRequest,
+};
 use crate::version::BUILD_VERSION;
 use crate::workflow::{LicenseSource, ScanOptions, scan_paths};
 
-const API_VERSION: &str = "v1";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone)]
@@ -58,104 +60,6 @@ struct HttpRequest {
     path: String,
     headers: HashMap<String, String>,
     body: Vec<u8>,
-}
-
-#[derive(Debug, Deserialize)]
-struct SyncScanRequest {
-    input: SyncScanInput,
-    #[serde(default)]
-    options: SyncScanOptions,
-}
-
-#[derive(Debug, Deserialize)]
-struct SyncScanInput {
-    #[serde(rename = "type")]
-    transport: SyncInputTransport,
-    paths: Vec<String>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum SyncInputTransport {
-    Paths,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum SyncLicenseSource {
-    Disabled,
-    Embedded,
-    Directory { path: String },
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
-struct SyncScanOptions {
-    collect_info: bool,
-    detect_license: SyncLicenseSource,
-    detect_packages: bool,
-    detect_system_packages: bool,
-    detect_packages_in_compiled: bool,
-    detect_copyrights: bool,
-    detect_emails: bool,
-    detect_urls: bool,
-    detect_generated: bool,
-    include: Vec<String>,
-    exclude: Vec<String>,
-    strip_root: bool,
-    full_root: bool,
-    license_text: bool,
-    license_text_diagnostics: bool,
-    license_diagnostics: bool,
-    unknown_licenses: bool,
-    license_score: u8,
-    only_findings: bool,
-    mark_source: bool,
-    classify: bool,
-    summary: bool,
-    license_clarity_score: bool,
-    license_references: bool,
-    tallies: bool,
-    tallies_key_files: bool,
-    tallies_with_details: bool,
-    facets: Vec<String>,
-    tallies_by_facet: bool,
-}
-
-impl Default for SyncScanOptions {
-    fn default() -> Self {
-        Self {
-            collect_info: false,
-            detect_license: SyncLicenseSource::Disabled,
-            detect_packages: false,
-            detect_system_packages: false,
-            detect_packages_in_compiled: false,
-            detect_copyrights: false,
-            detect_emails: false,
-            detect_urls: false,
-            detect_generated: false,
-            include: Vec::new(),
-            exclude: Vec::new(),
-            strip_root: false,
-            full_root: false,
-            license_text: false,
-            license_text_diagnostics: false,
-            license_diagnostics: false,
-            unknown_licenses: false,
-            license_score: 0,
-            only_findings: false,
-            mark_source: false,
-            classify: false,
-            summary: false,
-            license_clarity_score: false,
-            license_references: false,
-            tallies: false,
-            tallies_key_files: false,
-            tallies_with_details: false,
-            facets: Vec::new(),
-            tallies_by_facet: false,
-        }
-    }
 }
 
 pub(crate) fn run(args: &ServeArgs) -> Result<()> {
@@ -305,36 +209,55 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
         .clone();
 
     match (request.method.as_str(), request.path.as_str()) {
-        ("GET", "/livez") => json_response(200, "OK", json!({ "status": "ok" })),
-        ("GET", "/readyz") => match readiness {
-            ReadinessState::Pending => {
-                json_response(503, "Service Unavailable", json!({ "status": "warming" }))
-            }
-            ReadinessState::Ready {
-                spdx_license_list_version,
-            } => json_response(
-                200,
-                "OK",
-                json!({
-                    "status": "ready",
-                    "api_version": API_VERSION,
-                    "spdx_license_list_version": spdx_license_list_version,
-                }),
-            ),
-            ReadinessState::Failed { message } => json_response(
-                503,
-                "Service Unavailable",
-                json!({ "status": "failed", "message": message }),
-            ),
-        },
-        ("GET", "/version") => json_response(
+        ("GET", "/livez") => serialize_response(
             200,
             "OK",
-            json!({
-                "service": "provenant-serve",
-                "api_version": API_VERSION,
-                "tool_version": BUILD_VERSION,
-            }),
+            &ServeLivenessResponse {
+                status: "ok".to_string(),
+            },
+        ),
+        ("GET", "/readyz") => match readiness {
+            ReadinessState::Pending => serialize_response(
+                503,
+                "Service Unavailable",
+                &ServeReadinessResponse {
+                    status: "warming".to_string(),
+                    api_version: None,
+                    spdx_license_list_version: None,
+                    message: None,
+                },
+            ),
+            ReadinessState::Ready {
+                spdx_license_list_version,
+            } => serialize_response(
+                200,
+                "OK",
+                &ServeReadinessResponse {
+                    status: "ready".to_string(),
+                    api_version: Some(API_VERSION.to_string()),
+                    spdx_license_list_version: Some(spdx_license_list_version),
+                    message: None,
+                },
+            ),
+            ReadinessState::Failed { message } => serialize_response(
+                503,
+                "Service Unavailable",
+                &ServeReadinessResponse {
+                    status: "failed".to_string(),
+                    api_version: None,
+                    spdx_license_list_version: None,
+                    message: Some(message),
+                },
+            ),
+        },
+        ("GET", "/version") => serialize_response(
+            200,
+            "OK",
+            &ServeVersionResponse {
+                service: "provenant-serve".to_string(),
+                api_version: API_VERSION.to_string(),
+                tool_version: BUILD_VERSION.to_string(),
+            },
         ),
         ("POST", "/v1/scans") => handle_sync_scan_request(request),
         (_, "/v1/scans") => error_response(
@@ -491,14 +414,14 @@ fn error_response(
     status: &'static str,
     message: String,
 ) -> HttpResponse {
-    json_response(
+    serialize_response(
         status_code,
         reason,
-        json!({
-            "status": status,
-            "message": message,
-            "api_version": API_VERSION,
-        }),
+        &ServeErrorResponse {
+            status: status.to_string(),
+            message,
+            api_version: API_VERSION.to_string(),
+        },
     )
 }
 
@@ -518,6 +441,7 @@ fn write_http_response(stream: &mut TcpStream, response: HttpResponse) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::serve_api::{SyncScanInput, SyncScanOptions};
 
     fn ready_state() -> ServeState {
         ServeState {

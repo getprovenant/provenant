@@ -52,6 +52,8 @@ pub mod progress;
 pub(crate) mod scan_result_shaping;
 pub mod scanner;
 pub(crate) mod serve;
+#[doc(hidden)]
+pub mod serve_api;
 #[cfg(test)]
 pub(crate) mod test_support;
 pub(crate) mod time;
