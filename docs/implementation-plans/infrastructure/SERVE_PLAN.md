@@ -105,6 +105,20 @@ The intended priority is therefore:
 
 In practice, this means path-based operator scans, some small uploads, and some bounded remote URL scans may fit the synchronous route, while repository scans and larger remote fetches are expected to lean heavily on the async route.
 
+### Async execution and admission control
+
+Async job submission should not imply that every request immediately starts a full-power scan.
+
+The service should own execution scheduling explicitly:
+
+- async submissions should enter a service-managed queue or equivalent pending state when execution capacity is not yet available
+- the service should enforce a bounded number of concurrently running scan jobs instead of starting an unbounded number of scans in parallel
+- the service should treat maximum running jobs and per-scan processing parallelism as service- or operator-controlled execution limits rather than caller-controlled API contract fields
+- the service should prefer queueing and backpressure over CPU oversubscription when multiple clients submit expensive scans concurrently
+- async job state should make queued or pending work visible so callers can distinguish "accepted but not running yet" from active execution and terminal completion
+
+This matters because the shared scan pipeline can use most available CPUs for a single scan. In a long-lived API deployment, allowing multiple requests to each claim near-host-wide parallelism would overload the service. The intended contract is therefore create-submit-poll-fetch with bounded execution. The service should be free to run more than one async scan when configured capacity allows it, but it should not hard-wire a policy of launching every accepted job immediately at maximum local parallelism.
+
 ### CLI vs service boundary
 
 `provenant serve` should not exist merely as “the CLI, but over HTTP.”
@@ -192,9 +206,15 @@ This route should accept scan requests that exceed the desired synchronous execu
 
 This is the preferred route family for repository scans, larger uploads, slower remote URL fetches, and other workloads where fetch and staging are part of the request lifecycle.
 
+Accepted jobs may remain queued or pending until service execution capacity is available. The route is an admission point into bounded background execution, not a promise that every accepted request begins scanning immediately.
+
+The end-state contract should permit more than one job to run concurrently when the service has been configured with capacity for that, while still allowing conservative deployments to keep tighter limits.
+
 ### `GET /v1/jobs/{id}`
 
 This route should expose async job state, including terminal success/failure, without requiring clients to infer job semantics from transport errors.
+
+The status surface should make at least pending, running, succeeded, and failed states explicit.
 
 ### `GET /v1/jobs/{id}/result`
 
@@ -211,6 +231,9 @@ This route should return the completed scan result for async jobs using the same
 - the service continues to support trusted local-path scans only as an explicit operator-mode transport
 - `POST /v1/scans:async` returns a durable job handle for larger workloads
 - `GET /v1/jobs/{id}` and `GET /v1/jobs/{id}/result` return stable async status/result contracts
+- async submission remains safe under multiple concurrent client requests because the service queues or otherwise bounds background execution instead of launching an unbounded number of scans immediately
+- async job status can represent queued or pending work before execution begins
+- the async contract does not force a single-running-job policy; it allows multiple concurrent jobs when service-configured execution limits permit that safely
 - at least one repository-driven or remote-URL-driven input flow works cleanly for ECS/Fargate-style deployments without requiring callers to pre-mount files onto the scanner host
 - the async API is straightforward to drive from external CI, webhook, or cron-based automation without requiring a built-in scheduler
 - starting a second shell on an occupied port exits non-zero with a deterministic bind failure
