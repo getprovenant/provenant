@@ -47,13 +47,13 @@ Choose Provenant when you want:
 
 ## Compatibility and Verification Evidence
 
-Provenant does not treat "compatible" as a vague marketing claim. Public verification work and maintained references live in:
+Provenant does not treat "compatible" as a vague marketing claim. Public verification references live in:
 
-- [Output Format Parity Scorecard](implementation-plans/output/PARITY_SCORECARD.md)
 - [Package Detection Verification Benchmarks](BENCHMARKS.md)
+- [Testing Strategy](TESTING_STRATEGY.md)
 - [xtask compare-outputs workflow](../xtask/README.md)
 
-Those documents track what has already been compared against ScanCode, provide the maintained package-detection verification record, and point to the saved verification artifacts used to review remaining gaps.
+Those documents describe how parity is verified, record benchmark-backed comparisons, and point to the compare-run workflows and artifacts used for review.
 
 One important nuance in that comparison work is that Provenant distinguishes between ScanCode's
 formal schema contract and ScanCode's common emitted defaults. For dependency booleans such as
@@ -68,6 +68,8 @@ ancestor lookup for explicit **root directory of this source tree** / project-ro
 vendored or nested source trees can resolve their own root `LICENSE` files.
 
 Another intentional difference is file-level copyright rendering. Provenant keeps a less-normalized copyright string by default in `files[].copyrights[].copyright` instead of matching ScanCode's more normalized emitted string. This is a compliance-fidelity improvement, not a schema fork: the field shape stays the same, and users who need strict ScanCode-style rendering can opt back in with `--compat-mode scancode`.
+
+Another difference is the `--info` file-metadata surface. Provenant exposes the same high-level workflow, but its `mime_type`, `file_type`, and source/script or text/binary classification fields are produced by bounded Rust-side detectors and heuristics rather than ScanCode's libmagic/typecode/Pygments stack. In practice, that means the CLI surface is present, but some metadata strings and edge-case classifications-particularly for ambiguous extensionless text files and long-tail formats-differ.
 
 ## Related Docs
 
