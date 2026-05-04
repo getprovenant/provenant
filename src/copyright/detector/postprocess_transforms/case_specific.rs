@@ -896,27 +896,25 @@ pub fn add_confidential_short_variants_late(
     }
 
     static CONF_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?i)^copyright\s+(?P<year>\d{4})\s+confidential\s+information\b").unwrap()
+        Regex::new(
+            r"(?i)^copyright\s+(?P<year>\d{4})\s+confidential(?:[\s,;:.\-]+information|[\s,;:.\-]+proprietary|[\s,;:.\-]+and[\s,;:.\-]+proprietary)\b",
+        )
+        .unwrap()
     });
 
-    copyrights
+    let new_copyrights = copyrights
         .iter()
         .filter_map(|c| {
             let cap = CONF_RE.captures(c.copyright.as_str())?;
             let year = cap.name("year").map(|m| m.as_str()).unwrap_or("").trim();
             let short_c = refine_copyright(&format!("Copyright {year} Confidential"))?;
-            Some((
-                CopyrightDetection {
-                    copyright: short_c,
-                    start_line: c.start_line,
-                    end_line: c.end_line,
-                },
-                HolderDetection {
-                    holder: "Confidential".to_string(),
-                    start_line: c.start_line,
-                    end_line: c.end_line,
-                },
-            ))
+            Some(CopyrightDetection {
+                copyright: short_c,
+                start_line: c.start_line,
+                end_line: c.end_line,
+            })
         })
-        .unzip()
+        .collect();
+
+    (new_copyrights, Vec::new())
 }

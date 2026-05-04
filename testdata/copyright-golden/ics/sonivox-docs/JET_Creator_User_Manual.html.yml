@@ -1,21 +1,10 @@
 what:
   - copyrights
   - holders
-  - holders_summary
 copyrights:
   - Copyright (c) 2009 The Android Open Source Project
   - Copyright 2009 Confidential
   - Copyright 2009 Sonic Network, Inc.
 holders:
-  - Confidential
   - Sonic Network, Inc.
   - The Android Open Source Project
-holders_summary:
-  - value: Android Open Source Project
-    count: 1
-  - value: Confidential
-    count: 1
-  - value: Sonic Network, Inc.
-    count: 1
-  - value: Confidential Information techdoc.dot <o:LastAuthor> Jennifer Hruska </o:LastAuthor>
-    count: 1

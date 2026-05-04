@@ -134,7 +134,7 @@ fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
     let rendered_lower = rendered.to_ascii_lowercase();
     let fallback_lower = fallback.to_ascii_lowercase();
     let Some(start) = rendered_lower.find(&fallback_lower) else {
-        return fallback.to_string();
+        return rendered.to_string();
     };
     let end = start + fallback.len();
     let suffix = rendered[end..].trim();
@@ -202,6 +202,7 @@ fn strip_common_comment_wrappers(line: &str) -> String {
             .or_else(|| trimmed.strip_prefix("//!"))
             .or_else(|| trimmed.strip_prefix("//"))
             .or_else(|| trimmed.strip_prefix("/*"))
+            .or_else(|| trimmed.strip_prefix("<!--"))
             .or_else(|| trimmed.strip_prefix('*'))
             .or_else(|| trimmed.strip_prefix('#'))
             .map(str::trim_start);
@@ -216,6 +217,9 @@ fn strip_common_comment_wrappers(line: &str) -> String {
 
     trimmed = trimmed.trim_end();
     if let Some(stripped) = trimmed.strip_suffix("*/") {
+        trimmed = stripped.trim_end();
+    }
+    if let Some(stripped) = trimmed.strip_suffix("-->") {
         trimmed = stripped.trim_end();
     }
 

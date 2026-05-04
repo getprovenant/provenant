@@ -76,6 +76,85 @@ fn test_copyright_span_does_not_absorb_following_lint_directive_line() {
 }
 
 #[test]
+fn test_html_comment_copyright_does_not_absorb_following_body_text() {
+    let input = concat!(
+        "<!-- Copyright 2008 ABCD, LLC. -->\n",
+        "<html>\n",
+        "<body>\n",
+        "Periodic Manager\n",
+        "</body>\n",
+        "</html>\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    let cs: Vec<String> = copyrights.into_iter().map(|c| c.copyright).collect();
+    let hs: Vec<String> = holders.into_iter().map(|h| h.holder).collect();
+
+    assert!(
+        cs.iter().any(|c| c == "Copyright 2008 ABCD, LLC."),
+        "copyrights: {cs:#?}"
+    );
+    assert!(
+        !cs.iter().any(|c| c.contains("Periodic Manager")),
+        "copyrights: {cs:#?}"
+    );
+    assert!(hs.iter().any(|h| h == "ABCD, LLC."), "holders: {hs:#?}");
+    assert!(
+        !hs.iter().any(|h| h.contains("Periodic Manager")),
+        "holders: {hs:#?}"
+    );
+}
+
+#[test]
+fn test_html_comment_noise_does_not_extend_plain_copyright_line() {
+    let input = concat!(
+        "Copyright 2024 Example Corp.\n",
+        "<!-- sponsors end -->\n",
+        "<div>body</div>\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    let cs: Vec<String> = copyrights.into_iter().map(|c| c.copyright).collect();
+    let hs: Vec<String> = holders.into_iter().map(|h| h.holder).collect();
+
+    assert!(
+        cs.iter().any(|c| c == "Copyright 2024 Example Corp."),
+        "copyrights: {cs:#?}"
+    );
+    assert!(
+        !cs.iter()
+            .any(|c| c.contains("sponsors end") || c.contains("body")),
+        "copyrights: {cs:#?}"
+    );
+    assert!(hs.iter().any(|h| h == "Example Corp."), "holders: {hs:#?}");
+}
+
+#[test]
+fn test_consecutive_html_comment_copyright_lines_keep_continuation_only() {
+    let input = concat!(
+        "<!-- Copyright 2024 Example Corp. -->\n",
+        "<!-- All rights reserved. -->\n",
+        "<!-- sponsors end -->\n",
+        "<div>body</div>\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    let cs: Vec<String> = copyrights.into_iter().map(|c| c.copyright).collect();
+    let hs: Vec<String> = holders.into_iter().map(|h| h.holder).collect();
+
+    assert!(
+        cs.iter().any(|c| c == "Copyright 2024 Example Corp."),
+        "copyrights: {cs:#?}"
+    );
+    assert!(
+        !cs.iter()
+            .any(|c| c.contains("sponsors end") || c.contains("body")),
+        "copyrights: {cs:#?}"
+    );
+    assert!(hs.iter().any(|h| h == "Example Corp."), "holders: {hs:#?}");
+}
+
+#[test]
 fn test_detect_arch_floppy_h_bare_1995_dropped_for_x86() {
     let content =
         "* Copyright (C) 1995\n */\n#ifndef _ASM_X86_FLOPPY_H\n#define _ASM_X86_FLOPPY_H\n";
