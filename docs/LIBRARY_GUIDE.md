@@ -16,14 +16,28 @@ This guide covers the Rust embedding surface only. If you want long-lived HTTP a
 
 The published package is `provenant-cli`, but the library target is imported as `provenant`.
 
+This guide owns the Rust embedding dependency and feature guidance. The root [README](../README.md) stays at the quick-start level and links here for embedding-specific setup.
+
 If you want the smallest default dependency surface, start with:
 
 ```toml
 [dependencies]
-provenant = { package = "provenant-cli", version = "<current-version>", default-features = false }
+provenant = { package = "provenant-cli", version = "<VERSION>", default-features = false }
 ```
 
-If you need RPM SQLite parsing, opt back into the `rpm-sqlite` feature explicitly.
+Replace `<VERSION>` with the current crates.io release.
+
+If you need RPM SQLite parsing, opt back into the `rpm-sqlite` feature explicitly:
+
+```toml
+[dependencies]
+provenant = { package = "provenant-cli", version = "<VERSION>", default-features = false, features = ["rpm-sqlite"] }
+```
+
+For most embedders, the relevant Cargo features are:
+
+- `rpm-sqlite` - enables RPM SQLite database parsing and pulls in `rusqlite`
+- `golden-tests` - repository and CI-oriented test coverage, not usually needed for downstream embedding
 
 ## Start here: scan a path from Rust
 

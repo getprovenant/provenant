@@ -35,7 +35,7 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 ## Project Status
 
 > **Status:** active, usable, and under rapid development.
-> Provenant already supports production-style scanning workflows and many ScanCode-compatible outputs, while compatibility gaps and edge cases are still being closed.
+> Provenant already supports many common production-style scanning workflows and ScanCode-compatible outputs, while compatibility-sensitive gaps and edge cases are still being closed.
 
 ## Relationship to ScanCode
 
@@ -98,43 +98,13 @@ cargo build --release
 
 Cargo places the compiled binary under `target/release/`.
 
-The default build enables the `rpm-sqlite` Cargo feature, which keeps native RPM SQLite database parsing available.
-If you do not need that parser-or you are embedding Provenant in a project that cannot currently absorb the `rusqlite` dependency-you can build without default features:
-
-```sh
-cargo build --release --no-default-features
-```
-
 > **Note**: The binary includes a built-in compact license index. The `reference/scancode-toolkit/` submodule is only needed for developers updating the embedded license data, using maintainer commands that depend on it, or maintaining Provenant's built-in license dataset.
 
 ### Use as a Library
 
 The published crate name is `provenant-cli`, while the library target is imported as `provenant`.
 
-For the supported high-level Rust embedding path, see the [Library Guide](docs/LIBRARY_GUIDE.md).
-
-If you want the smallest dependency surface and do not need RPM SQLite database parsing:
-
-```toml
-[dependencies]
-provenant = { package = "provenant-cli", version = "0.0.12", default-features = false }
-```
-
-If you do need RPM SQLite parsing, opt back into the feature explicitly:
-
-```toml
-[dependencies]
-provenant = { package = "provenant-cli", version = "0.0.12", default-features = false, features = ["rpm-sqlite"] }
-```
-
-### Cargo Features
-
-Provenant currently exposes these Cargo features:
-
-| Feature        | Default | Purpose                                                                              |
-| -------------- | ------- | ------------------------------------------------------------------------------------ |
-| `rpm-sqlite`   | Yes     | Enables RPM SQLite database parsing and pulls in `rusqlite`.                         |
-| `golden-tests` | No      | Compiles the repository's slower golden-test suites for maintainer and CI workflows. |
+For the supported high-level Rust embedding path, dependency setup, and embedding-specific feature choices such as `rpm-sqlite`, see the [Library Guide](docs/LIBRARY_GUIDE.md).
 
 ## Usage
 
