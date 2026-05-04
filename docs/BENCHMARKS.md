@@ -1276,14 +1276,14 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `22.19s`; ScanCode `66.94s`
 - Matched shipped Debian package coverage (`1` vs `1`) with broader dependency extraction (`9` vs `0`) from the archive control metadata, plus the correct `pkg:deb` `arch=amd64` qualifier where ScanCode uses the nonstandard `architecture` key
 
-##### [bash 5.3.9 .pkg +COMPACT_MANIFEST sample @ sha256:37207e8](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/All/Hashed/bash-5.3.9~37207e82d6.pkg) — **7.27× faster**
+##### [bash 5.3.9 .pkg +COMPACT_MANIFEST sample @ sha256:37207e8](https://github.com/FreeBSD/freebsd-ports/commit/f77f497167a5dbca6c685f40dbdc90f2e7713223) — **7.27× faster**
 
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `9.39s`; ScanCode `68.27s`
 - Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `GPL-3.0-or-later` declared-license reporting and a single top-level declared-license detection instead of ScanCode's duplicated GPL row
 
-##### [curl 8.19.0_2 .pkg +COMPACT_MANIFEST sample @ sha256:b78b1ff](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/All/Hashed/curl-8.19.0_2~b78b1ff26d.pkg) — **7.14× faster**
+##### [curl 8.19.0_2 .pkg +COMPACT_MANIFEST sample @ sha256:b78b1ff](https://github.com/FreeBSD/freebsd-ports/commit/b889b19eb5e30e1c77d57d0e43977b4af9a0cbb5) — **7.14× faster**
 
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
@@ -1336,7 +1336,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Release binaries and extracted app snapshots
 
-##### [Apache Tomcat 10.1.52 extracted release snapshot](https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.52/bin/apache-tomcat-10.1.52.tar.gz) — **10.64× faster**
+##### [Apache Tomcat 10.1.52 extracted release snapshot](https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.52/bin/) — **10.64× faster**
 
 - Files: 643
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc

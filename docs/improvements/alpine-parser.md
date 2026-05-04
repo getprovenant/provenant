@@ -215,7 +215,7 @@ Coverage includes SHA1 decoding, provider extraction, APKBUILD metadata parsing,
 
 ### Alpine Documentation
 
-- [Alpine Package Format](https://wiki.alpinelinux.org/wiki/Apk_spec)
-- [Installed Database Format](https://wiki.alpinelinux.org/wiki/Apk_spec#Installed_Database_V2)
+- [Alpine Package Format](https://github.com/alpinelinux/apk-tools/blob/master/doc/apk-v2.5.scd)
+- [Installed Database Format](https://github.com/alpinelinux/apk-tools/blob/master/doc/apk-package.5.scd)
 
 SHA1 decoding and provider extraction are both part of the parser behavior described above.

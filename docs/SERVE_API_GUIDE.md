@@ -28,10 +28,18 @@ The current service surface includes:
 
 ## Check service health
 
+For the shell examples below, set a base URL for the service you are querying:
+
 ```sh
-curl -sS http://127.0.0.1:8080/livez
-curl -sS http://127.0.0.1:8080/readyz
-curl -sS http://127.0.0.1:8080/version
+HOST=127.0.0.1
+PORT=8080
+SERVE_BASE_URL="http://${HOST}:${PORT}"
+```
+
+```sh
+curl -sS "${SERVE_BASE_URL}/livez"
+curl -sS "${SERVE_BASE_URL}/readyz"
+curl -sS "${SERVE_BASE_URL}/version"
 ```
 
 Expected shapes:
@@ -74,7 +82,7 @@ Example:
 
 ```sh
 curl -sS \
-  -X POST http://127.0.0.1:8080/v1/scans \
+  -X POST "${SERVE_BASE_URL}/v1/scans" \
   -H 'Content-Type: application/json' \
   -d '{
     "input": {
@@ -97,7 +105,7 @@ Repository input is the simplest way to say “scan this repo at this ref” ove
 
 ```sh
 curl -sS \
-  -X POST http://127.0.0.1:8080/v1/scans \
+  -X POST "${SERVE_BASE_URL}/v1/scans" \
   -H 'Content-Type: application/json' \
   -d '{
     "input": {
@@ -123,7 +131,7 @@ For supported archive URLs such as `.zip`, `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`
 
 ```sh
 curl -sS \
-  -X POST http://127.0.0.1:8080/v1/scans \
+  -X POST "${SERVE_BASE_URL}/v1/scans" \
   -H 'Content-Type: application/json' \
   -d '{
     "input": {
@@ -152,7 +160,7 @@ One practical shell workflow is:
 CONTENT_BASE64=$(base64 < snapshot.zip | tr -d '\n')
 
 curl -sS \
-  -X POST http://127.0.0.1:8080/v1/scans \
+  -X POST "${SERVE_BASE_URL}/v1/scans" \
   -H 'Content-Type: application/json' \
   --data-binary @- <<EOF
 {
@@ -179,7 +187,7 @@ Example:
 
 ```sh
 curl -sS \
-  -X POST http://127.0.0.1:8080/v1/scans:async \
+  -X POST "${SERVE_BASE_URL}/v1/scans:async" \
   -H 'Content-Type: application/json' \
   -d '{
     "input": {
@@ -211,7 +219,7 @@ The service may keep the job in `pending` until bounded execution capacity is av
 Check job state:
 
 ```sh
-curl -sS http://127.0.0.1:8080/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd
+curl -sS "${SERVE_BASE_URL}/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd"
 ```
 
 Example status response:
@@ -228,7 +236,7 @@ Example status response:
 Fetch the completed result:
 
 ```sh
-curl -sS http://127.0.0.1:8080/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd/result
+curl -sS "${SERVE_BASE_URL}/v1/jobs/job-7d0f4d8a0d784264a8fe632fe3ffc4fd/result"
 ```
 
 Before completion, `GET /v1/jobs/{id}/result` returns a non-success `job_not_ready` error. After completion, it returns the same ScanCode-compatible JSON shape as the synchronous route.
