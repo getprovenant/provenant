@@ -362,7 +362,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin generate-serve-openapi -- --che
 
 ## `generate-benchmark-chart`
 
-`generate-benchmark-chart` regenerates `docs/benchmarks/scan-duration-vs-files.svg` and refreshes the headline benchmark summary stats in `docs/BENCHMARKS.md` from the benchmark timing rows in that document.
+`generate-benchmark-chart` regenerates `docs/scan-duration-vs-files.svg` and refreshes the headline benchmark summary stats in `docs/BENCHMARKS.md` from the benchmark timing rows in that document.
 
 The command computes and prints:
 

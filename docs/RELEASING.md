@@ -15,9 +15,9 @@ Before cutting a release, make sure you have:
 - A clean working tree
 - The `reference/scancode-toolkit/` submodule initialized via `./setup.sh`
 - `cargo-release` installed locally
-- `cargo-deny` installed locally if you want to run the full dependency policy preflight
 - A valid crates.io login in your Cargo credentials
 - GPG signing configured for git tags
+- A green `CI` workflow run for the exact commit you plan to release
 
 Install `cargo-release` if needed:
 
@@ -33,27 +33,9 @@ cargo login
 
 ## Preflight Checks
 
-Before the actual release, verify the repository is in good shape:
+The primary pre-release quality gate is the GitHub `CI` workflow in `.github/workflows/check.yml`. Start from a commit where that workflow is already green.
 
-```sh
-npm ci
-npm run check:docs
-npm run validate:urls
-cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo check --all --verbose
-cargo test --doc --release --verbose
-./scripts/check_dependency_policy.sh
-cargo test --lib --release --verbose -- --skip _scan_test::
-cargo test --lib --release --verbose _scan_test::
-cargo test --test scanner_integration --release --verbose
-cargo test --test output_format_golden --release --verbose
-cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-supported-formats -- --check
-./scripts/check_release_version_sync.sh
-./scripts/check_scancode_output_format_sync.sh
-```
-
-The GitHub `Quality Checks` workflow is the primary pre-release quality gate. It verifies the embedded license index, ScanCode output-format version sync, dependency policy via `cargo-deny`, crate size, manifest sorting, unused dependencies, golden-test shards, Windows and Intel macOS build smoke, and the split integration-test matrix defined in `.github/workflows/check.yml`. It is best to start from a branch and commit state where that workflow is already green. The tag-triggered release workflow adds final embedded-license-index and output-format-sync verification before it builds and publishes release artifacts.
+Use targeted local checks only when you need extra confidence before tagging. For example, `npm run check:docs`, `npm run validate:urls`, or a focused Rust test command can help verify the specific area you just changed without duplicating the full CI matrix locally.
 
 ## Release Commands
 
@@ -79,25 +61,13 @@ Supported release types:
 
 On every release attempt, the script:
 
-1. Checks that the ScanCode reference submodule is present.
-2. Fetches the latest `origin/develop` for `reference/scancode-toolkit`.
-3. Updates the submodule checkout if the upstream commit changed.
-4. Verifies that Provenant's output-format version is still aligned with the pinned ScanCode submodule and stops early if contract updates are required.
-5. Regenerates `resources/license_detection/license_index.zst` from the pinned ScanCode dataset plus the checked-in build policy manifest at `resources/license_detection/index_build_policy.toml` and any local overlay files under `resources/license_detection/overlay/`.
-6. In `--execute` mode, commits that license-data refresh as `chore: update license rules/licenses to latest` with `git commit -s` when needed.
-7. Confirms the overall release once, then runs the `cargo release` step subcommands in order: `version`, `replace`, `hook`, manual `git commit -s`, then `publish`, `tag`, and `push` with cargo-release's per-step confirmations suppressed.
+1. verifies a clean working tree and initialized ScanCode reference submodule
+2. updates the pinned ScanCode checkout from `origin/develop` and regenerates the embedded license index artifact
+3. checks ScanCode output-format version sync before continuing
+4. in `--execute` mode, commits any license-data refresh with `git commit -s`
+5. runs the `cargo release` flow for versioning, publishing, tagging, and pushing
 
-The repository is configured so the `cargo release` steps used by `release.sh`:
-
-- Rewrites `CITATION.cff` so its `version` field matches the release version
-- Regenerates the workspace `Cargo.lock` after bumping the crate version and before creating the release commit
-- Creates a GPG-signed tag `vX.Y.Z`
-- Publishes the crate to crates.io
-- Pushes the commit and tag to GitHub
-
-The release commit created by `release.sh` is intentionally versionless
-(`chore: release`) and is written with `git commit -s` so the release flow stays
-DCO compliant.
+The exact `cargo release` behavior comes from `[package.metadata.release]` in `Cargo.toml`, including the `CITATION.cff` version replacement, `Cargo.lock` regeneration, signed tag creation, and publish/push behavior. The release commit written by `release.sh` stays versionless (`chore: release`) and DCO-signed.
 
 ## GitHub Release Automation
 
@@ -105,19 +75,9 @@ Pushing the `vX.Y.Z` tag triggers `.github/workflows/release.yml`.
 
 That workflow:
 
-- Builds release binaries for:
-  - `x86_64-unknown-linux-gnu`
-  - `aarch64-unknown-linux-gnu`
-  - `x86_64-apple-darwin`
-  - `aarch64-apple-darwin`
-  - `x86_64-pc-windows-msvc`
+- Builds release binaries for Linux, macOS (Intel and Apple Silicon), and Windows
 - Re-runs embedded license index verification as a final release-time safeguard before building artifacts
-- Packages each build with platform-first asset names so archives sort by operating system on the release page:
-  - `provenant-linux-x86_64.tar.gz`
-  - `provenant-linux-aarch64.tar.gz`
-  - `provenant-macos-x86_64.tar.gz`
-  - `provenant-macos-aarch64.tar.gz`
-  - `provenant-windows-x86_64.zip`
+- Packages each build under the `provenant-<platform>-<arch>` naming scheme
 - Generates SHA256 checksum files
 - Creates a GitHub Release and uploads all generated assets
 

@@ -7,7 +7,7 @@
 ## Python Reference Status
 
 - Explicit selected-file scans still lean on argv expansion, include filters, or cwd-sensitive multi-input behavior.
-- The upstream issue history shows the same pain point recurring for pull-request and changed-file workflows, especially when tooling must run from a fixed location instead of the repository root.
+- Pull-request and changed-file workflows are awkward when tooling must run from a fixed location instead of the repository root.
 - There is still no settled first-class rooted path-list input that lets users say “scan this one tree, but only these listed files/directories” without shell glue.
 
 This document is the landing zone for stable, user-visible CLI workflow improvements that go beyond the Python reference implementation.

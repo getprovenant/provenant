@@ -9,7 +9,7 @@ use clap::Parser;
 use regex::Regex;
 
 const BENCHMARKS_PATH: &str = "docs/BENCHMARKS.md";
-const SVG_PATH: &str = "docs/benchmarks/scan-duration-vs-files.svg";
+const SVG_PATH: &str = "docs/scan-duration-vs-files.svg";
 const WIDTH: f64 = 1080.0;
 const HEIGHT: f64 = 720.0;
 const PLOT_LEFT: f64 = 96.0;

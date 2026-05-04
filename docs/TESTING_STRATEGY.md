@@ -404,32 +404,11 @@ Golden suites are gated behind the `golden-tests` feature flag, so local ignored
 
 ### CI/CD
 
-Quality gates run automatically on:
+Quality gates run automatically in CI on pushes to `main` and on pull requests, with local pre-commit checks handled by Lefthook.
 
-- Every commit (via Lefthook pre-commit hooks: formatting, linting, dependency policy, and docs/file-quality checks)
-- Every push to main
-- Every pull request
+The CI workflow in `.github/workflows/check.yml` is the canonical source for the exact job matrix and command lines. It currently splits code quality, doctests, library tests, smoke checks, parser contract and integration suites, and golden-test shards so the heavy Rust test layers do not all sit on one critical path.
 
-The full test suites run in CI on pushes and pull requests. All tests must pass before merging. CI uses a minimal split so the heaviest Rust test layers no
-longer sit on the same critical path as the main Rust quality job, without introducing lots of tiny shards.
-Commands:
-
-- **Rust Quality**
-  - `cargo fmt --all -- --check`
-  - `cargo clippy --all-targets --all-features -- -D warnings`
-  - `cargo check --all --verbose`
-  - `cargo test --doc --release --verbose`
-  - `./scripts/check_dependency_policy.sh`
-- **Rust Library Tests**
-  - `cargo test --lib --release --verbose -- --skip _scan_test::`
-- **Rust Scan/Integration Tests**
-  - `cargo test --lib --release --verbose _scan_test::`
-  - `cargo test --test scanner_integration --release --verbose`
-  - `cargo test --test scanner_copyright_credits --release --verbose`
-  - `cargo test --test progress_cli_integration --release --verbose`
-  - `cargo test --test output_format_golden --release --verbose`
-- **Golden Tests**
-  - targeted `cargo test ... --features golden-tests <filter>` commands via the existing golden-test shard matrix in `.github/workflows/check.yml`
+For local work, prefer the narrowest command that proves your change and use `xtask/README.md` plus the owning test file or suite as the command reference, rather than mirroring the full CI matrix in this document.
 
 ---
 

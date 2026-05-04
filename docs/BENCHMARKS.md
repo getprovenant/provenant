@@ -10,7 +10,7 @@ Provenant and ScanCode are run on the same repository or artifact with the maint
 
 The chart below uses a log-log scatter plot: file count on the x-axis, wall-clock duration in seconds on the y-axis, and both scanners on the same numeric axes. That keeps tiny artifact snapshots and very large repository scans readable in one view without flattening the smaller runs.
 
-![Scan duration vs. file count for Provenant and ScanCode](benchmarks/scan-duration-vs-files.svg)
+![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
 > Provenant is faster on 190 of 190 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
@@ -1461,16 +1461,4 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Bad: `Fixed nested requirements parsing and triaged the remaining tail.`
 - Good: `Broader Python dependency extraction from uv.lock and nested requirements inputs, with safer URL credential stripping.`
 
-## How to extend this document
-
-After adding or editing benchmark rows in this document, rerun `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart` so the checked-in headline stats and SVG both reflect the latest timing data.
-
-For each new benchmark example, record:
-
-1. target URL or artifact identity, with the resolved ref/SHA embedded in the target link when applicable
-2. the run-context entry: benchmark date plus machine information; keep the full compare-run `run_id` in `.provenant/compare-runs/<run-id>/run-manifest.json` or the saved artifact path, but do not copy that slug/PID suffix into the human-facing benchmark entry
-3. a timing bullet that shows Provenant total time and ScanCode total time; keep the relative speedup in the title and quick index label
-4. a final notes bullet that records the end-state Provenant advantage over ScanCode, written as the current user-visible outcome rather than the path taken to get there
-5. if a reviewed non-regression difference matters, rewrite it as an advantage (`safer credential stripping`, `more correct Unicode preservation`) or leave it out of the final notes bullet and keep the detailed triage in PRs or saved compare artifacts
-6. if verification uncovered a regression or required a behavior change, add or update the appropriate automated coverage before treating the benchmark as complete, including focused parser tests, integration tests, and golden tests where appropriate
-7. place the entry under the appropriate example heading and keep alphabetical ordering by target label within that heading
+After adding or editing benchmark rows in this document, rerun `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart` so the checked-in headline stats and SVG stay in sync.
