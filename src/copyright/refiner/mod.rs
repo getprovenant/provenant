@@ -1225,7 +1225,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
         return None;
     }
     if is_post_refine_copyright_code_fragment(&result)
-        || is_junk_copyright(&result)
+        || is_explicit_junk_copyright_phrase(&result)
         || is_junk_copyright_of_header(&result)
         || is_junk_copyrighted_works_header(&result)
         || is_junk_copyrighted_software_phrase(&result)
@@ -1237,6 +1237,15 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     } else {
         Some(result)
     }
+}
+
+fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
+    matches!(
+        s.trim().to_ascii_lowercase().as_str(),
+        "copyright exclude"
+            | "copyright doctrines of fair use, fair dealing, or other equivalents"
+            | "copyright doctrines of fair use, fair dealing, or other equivalents."
+    )
 }
 
 fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {

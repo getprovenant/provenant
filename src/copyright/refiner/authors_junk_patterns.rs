@@ -91,6 +91,7 @@ pub(super) static AUTHORS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^gives unlimited$",
         r"(?i)^word assigns past and future changes\b",
         r"(?i)^maintainers\s*<[^>]+>\s+from\s+https?://\S+$",
+        r"(?i)^maintainers\s*<[^>]+>$",
         r"(?i)^versions,\s+and$",
         r"(?i)^versions$",
         r"(?i)^makes$",
