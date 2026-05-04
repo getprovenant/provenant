@@ -1,37 +1,30 @@
 ---
 name: verify-parser
-description: Verify a package parser ecosystem against ScanCode using compare-outputs, fix regressions, record benchmarks, and update the scorecard.
+description: Verify a package parser ecosystem against ScanCode using compare-outputs, fix regressions, and record benchmark-backed results.
 ---
 
 # Verify a Parser Ecosystem
 
-This skill drives the end-to-end verification workflow for a package parser ecosystem listed in the PARSER_VERIFICATION_SCORECARD. It runs `compare-outputs` against candidate repositories, triages and fixes regressions, records results in BENCHMARKS.md, and updates the scorecard.
-
-If a scorecard row explicitly says there is no ScanCode parity target or calls for a different verification shape, follow that row-specific note instead of forcing the default `compare-outputs` workflow.
+This skill drives the end-to-end verification workflow for a package parser ecosystem. It runs `compare-outputs` against representative repositories or artifacts, triages and fixes regressions, and records durable results in `docs/BENCHMARKS.md` when the target belongs in the maintained benchmark set.
 
 ## Source documents
 
-- **Scorecard**: `docs/implementation-plans/package-detection/PARSER_VERIFICATION_SCORECARD.md` — the verification backlog with candidate targets and methodology rules
 - **Benchmarks**: `docs/BENCHMARKS.md` — the maintained reference for recorded compare-outputs runs, timing, and end-state advantages
 - **xtask commands**: `xtask/README.md` — CLI reference for `compare-outputs`, `update-parser-golden`, `update-copyright-golden`, `update-license-golden`
 - **AGENTS.md**: repo-level contributor guardrails
 
 ## Workflow
 
-### Step 1: Read the scorecard row
+### Step 1: Select representative verification targets
 
-Identify the scorecard row for the target ecosystem. Note:
+Choose the target ecosystem's verification inputs from the current task context:
 
-- Priority number and ecosystem name
-- Status (`⚪ Planned` or `🟢 Verified`)
-- All candidate targets (repos, artifact paths, compiled-binary lanes)
-- Priority and scope notes — these contain stable guidance about what to watch for
+- Prefer user-provided or issue-linked repositories/artifacts when available.
+- Reuse existing `docs/BENCHMARKS.md` targets for the same ecosystem when they are still representative.
+- Prefer stable repository snapshots (commit SHA or tag), not moving branches.
+- Use artifact/rootfs or compiled-binary targets only when the ecosystem meaningfully depends on those surfaces.
 
-Do **not** rewrite the notes column during verification. Only the Status cell should change.
-
-### Step 2: Run compare-outputs for each candidate target, in sequence
-
-Unless the scorecard row explicitly says to use a different verification method:
+### Step 2: Run compare-outputs for each selected target, in sequence
 
 For repository-backed targets:
 
@@ -54,7 +47,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- \
   --target-path /path/to/local/target --profile common-with-compiled
 ```
 
-**Always use `--profile common`** (not `--profile packages`) so package extraction is evaluated alongside license, copyright, author, email, URL, and other common-profile detection behavior. Use `--profile common-with-compiled` only when the scorecard row explicitly calls for compiled-binary verification.
+**Always use `--profile common`** (not `--profile packages`) so package extraction is evaluated alongside license, copyright, author, email, URL, and other common-profile detection behavior. Use `--profile common-with-compiled` only when the selected target actually requires compiled-binary verification.
 
 Find a recent commit SHA or tag for `--repo-ref`. Do not use branch names — they are not stable.
 
@@ -67,14 +60,14 @@ After each compare-outputs run, inspect the artifacts under `.provenant/compare-
 - `comparison/samples/*.json` — detailed per-field diff samples
 - `raw/provenant.json` and `raw/scancode.json` — full scanner outputs
 
-**Triage rules** (from the scorecard methodology):
+**Triage rules**:
 
 1. Treat `comparison_status: review_required` as a triage-required signal, not an automatic failure.
 2. Treat any "more output" from either scanner as a claim to verify — not proof by itself.
 3. When scanners disagree, inspect the underlying file text to decide whether the extra or missing finding is justified.
 4. Apply the same rigor to license-expression and file-level license-detection deltas as to package, dependency, author, email, or URL deltas.
 5. Treat top-level license-expression deltas and repeated file-level license mismatches as first-class regression signals.
-6. Do **not** mark a row `🟢 Verified` while any ScanCode-better deltas remain unresolved.
+6. Do **not** treat a target as verification-complete while any ScanCode-better deltas remain unresolved.
 
 **Classification categories**:
 
@@ -102,7 +95,7 @@ When ScanCode produces better output than Provenant:
 
 ### Step 5: Record the benchmark row
 
-For each verified target, add a row to `docs/BENCHMARKS.md`:
+For each target that belongs in the durable benchmark record, add or refresh a row in `docs/BENCHMARKS.md`:
 
 **Repository-backed targets** go in the "Repository-backed targets" section.
 **Artifact/rootfs-backed targets** go in the "Artifact/rootfs-backed targets" section.
@@ -131,13 +124,13 @@ Within each section, sort rows **alphabetically by target label**.
 - When claiming much broader package/dependency counts, include a **short causal explanation** naming the main surfaces driving the gap.
 - Preferred sentence shape: **"Broader/richer/safer/more correct X ..., plus Y ..., with Z ..."**.
 
-### Step 6: Update the scorecard
+### Step 6: Record the verification outcome
 
-When all candidate targets for the row have been verified:
+When representative targets have been verified:
 
-1. Change the Status cell from `⚪ Planned` to `🟢 Verified`.
-2. Do **not** modify the notes column unless the planned scope of the row genuinely changed.
-3. Do **not** narrate the implementation path or verification outcome in the table.
+1. Add or refresh the relevant `docs/BENCHMARKS.md` row when the target materially improves the maintained package-detection evidence.
+2. If a target is useful for one PR or issue but does not belong in the durable benchmark record, keep the outcome in the PR, issue, or saved compare artifacts instead of creating a new permanent checklist.
+3. Do **not** narrate the implementation path in `docs/BENCHMARKS.md`; keep the entry focused on the end-state comparison and user-visible outcome.
 
 ### Step 7: Check for golden changes
 
@@ -201,18 +194,17 @@ Keep validation tightly scoped. Prefer the narrowest useful owning test target/f
 - Using a branch name instead of a commit SHA for `--repo-ref` — not reproducible.
 - Treating ScanCode-better output as "acceptable noise" without inspecting the underlying file text.
 - Making target-specific fixes that only improve one benchmark without addressing the general root cause.
-- Rewriting the scorecard notes column to capture verification narrative instead of keeping it stable.
 - Forgetting to run regression suites after fixing shared detection logic.
 - Writing BENCHMARKS.md advantages as implementation history instead of present-tense end-state comparison.
 - Updating golden expected files just to make tests pass without documenting why the new output is correct.
 
 ## Per-ecosystem watch points
 
-The scorecard notes column contains stable guidance per row. Common cross-ecosystem patterns to watch:
+Use the target ecosystem's current issue/PR context plus the existing BENCHMARKS examples as guidance. Common cross-ecosystem patterns to watch:
 
 - **Package count deltas**: Verify whether extra/missing packages are real parser regressions or just fixture noise.
 - **License-expression deltas**: ScanCode often collapses compound expressions; Provenant may be more specific.
 - **Copyright/author noise**: Large doc/test trees generate many weak detections. Focus on genuine regressions.
 - **Dependency scope**: Lockfile vs manifest precedence differences are ecosystem-specific.
 - **Vendored/generated files**: Exclude from triage unless they expose a real parser bug.
-- **Compiled-binary lanes**: Only used when the scorecard row explicitly calls for them (`common-with-compiled`).
+- **Compiled-binary lanes**: Only use `common-with-compiled` when the selected target actually depends on compiled-binary package extraction.

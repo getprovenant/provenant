@@ -405,16 +405,16 @@ If a Python ScanCode parser exists, compare behavior against it. Validate at lea
 If no Python reference exists, validate against the authoritative format spec and real-world
 fixtures from that ecosystem.
 
-For implemented parser families, record representative end-to-end `compare-outputs` references in
-[`docs/BENCHMARKS.md`](BENCHMARKS.md).
+For implemented parser families, keep representative end-to-end verification references in
+[`docs/BENCHMARKS.md`](BENCHMARKS.md) when they materially improve the benchmark-backed
+package-detection record.
 
 If the Rust parser intentionally improves on the Python behavior, document the improvement briefly in
-`docs/improvements/<ecosystem>-parser.md`. Keep that doc focused on the behavior difference, not as
-an implementation diary.
+`docs/improvements/<ecosystem>-parser.md`. Keep that doc focused on the behavior difference rather
+than the implementation story.
 
-Add a row for the new ecosystem to
-[`docs/implementation-plans/package-detection/PARSER_VERIFICATION_SCORECARD.md`](implementation-plans/package-detection/PARSER_VERIFICATION_SCORECARD.md)
-so verification progress can be tracked alongside existing parsers.
+Use the `compare-outputs`, benchmark, and golden-maintenance workflows documented in
+[`../xtask/README.md`](../xtask/README.md) to capture and review parser verification work.
 
 ## Common failure modes in this repo
 
@@ -448,7 +448,8 @@ Before considering a new parser complete, make sure all of these are true:
 - every new datasource is classified in `src/assembly/assemblers.rs`
 - file-reference ownership is wired when the parser emits `PackageData.file_references`
 - `docs/SUPPORTED_FORMATS.md` is regenerated and staged (pre-commit hook checks this)
-- scorecard row added to `docs/implementation-plans/package-detection/PARSER_VERIFICATION_SCORECARD.md`
+- parser verification used the relevant workflows from `../xtask/README.md`, with maintained
+  references added to `docs/BENCHMARKS.md` when the results belong in the recorded benchmark set
 - behavior has been validated against the Python reference or authoritative spec
 
 For intentionally scanner-gated detector surfaces such as compiled-binary package extraction,

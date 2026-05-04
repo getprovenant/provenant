@@ -260,11 +260,9 @@ For implemented parser families, the main end-to-end parity workflow is `compare
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --repo-url https://github.com/org/repo.git --repo-ref <ref> --profile common
 ```
 
-Record representative `compare-outputs` references in `docs/BENCHMARKS.md`.
-
 If the Rust parser intentionally improves on Python behavior, document the improvement in `docs/improvements/<ecosystem>-parser.md`.
 
-Add a scorecard row to `docs/implementation-plans/package-detection/PARSER_VERIFICATION_SCORECARD.md`.
+Record representative verification evidence in `docs/BENCHMARKS.md` when the target materially improves the maintained package-detection record.
 
 Regenerate supported formats and verify:
 
@@ -288,8 +286,7 @@ Before considering a parser complete, verify ALL of the following:
 - [ ] Every new datasource is classified in `src/assembly/assemblers.rs`
 - [ ] File-reference ownership is wired when the parser emits `PackageData.file_references`
 - [ ] `docs/SUPPORTED_FORMATS.md` is regenerated and staged
-- [ ] Representative `compare-outputs` references are recorded in `docs/BENCHMARKS.md`
-- [ ] Scorecard row added to `docs/implementation-plans/package-detection/PARSER_VERIFICATION_SCORECARD.md`
+- [ ] Representative verification evidence is recorded in `docs/BENCHMARKS.md` when the target belongs in the maintained benchmark set
 - [ ] Behavior has been validated against the Python reference or authoritative spec
 
 ## Common failure modes
