@@ -2060,6 +2060,35 @@ fn normalize_compare_copyright_value(value: &str) -> String {
     out
 }
 
+fn normalize_compare_url_value(value: &str) -> String {
+    let normalized = normalize_text(value);
+    if normalized.is_empty() {
+        return normalized;
+    }
+
+    let Ok(parsed) = url::Url::parse(&normalized) else {
+        return normalized;
+    };
+
+    if parsed.cannot_be_a_base() {
+        return normalized;
+    }
+
+    let prefix_end = normalized
+        .find('?')
+        .or_else(|| normalized.find('#'))
+        .unwrap_or(normalized.len());
+    let prefix = &normalized[..prefix_end];
+    let suffix = &normalized[prefix_end..];
+
+    let trimmed_prefix = prefix.trim_end_matches('/');
+    if trimmed_prefix.is_empty() {
+        normalized
+    } else {
+        format!("{trimmed_prefix}{suffix}")
+    }
+}
+
 fn strip_compare_all_rights_reserved(value: &str) -> String {
     let lower = value.to_ascii_lowercase();
     let marker = "all rights reserved";
@@ -2107,7 +2136,10 @@ fn metric_values(entry: &Value, metric: &str) -> Vec<String> {
                     .get("email")
                     .and_then(Value::as_str)
                     .map(str::to_string),
-                "urls" => item.get("url").and_then(Value::as_str).map(str::to_string),
+                "urls" => item
+                    .get("url")
+                    .and_then(Value::as_str)
+                    .map(normalize_compare_url_value),
                 "scan_errors" => scan_error_identity(item).map(str::to_string),
                 _ => None,
             }?;
@@ -4940,6 +4972,24 @@ mod tests {
         assert_eq!(
             metric_values(&entry, "copyrights"),
             vec!["Copyright 2024 Example Corp".to_string()]
+        );
+    }
+
+    #[test]
+    fn metric_values_ignore_trailing_slash_only_url_differences() {
+        let entry = json!({
+            "urls": [
+                {"url": "http://mozilla.org/MPL/2.0/"},
+                {"url": "https://example.com/foo/?a=1"}
+            ]
+        });
+
+        assert_eq!(
+            metric_values(&entry, "urls"),
+            vec![
+                "http://mozilla.org/MPL/2.0".to_string(),
+                "https://example.com/foo?a=1".to_string()
+            ]
         );
     }
 
