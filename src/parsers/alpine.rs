@@ -2084,7 +2084,7 @@ crate::register_parser!(
     &["**/lib/apk/db/installed", "**/*.apk"],
     "alpine",
     "",
-    Some("https://wiki.alpinelinux.org/wiki/Apk_spec"),
+    Some("https://github.com/alpinelinux/apk-tools/blob/master/doc/apk-v2.5.scd"),
 );
 
 crate::register_parser!(
@@ -2092,5 +2092,5 @@ crate::register_parser!(
     &["**/APKBUILD"],
     "alpine",
     "Shell",
-    Some("https://wiki.alpinelinux.org/wiki/APKBUILD_Reference"),
+    Some("https://github.com/alpinelinux/abuild/blob/master/APKBUILD.5.scd"),
 );

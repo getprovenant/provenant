@@ -1321,7 +1321,7 @@ crate::register_parser!(
     "android",
     "",
     Some(
-        "https://android.googlesource.com/platform/build/soong/+/refs/heads/main/licenses/metadata/metadata_file.proto"
+        "https://android.googlesource.com/platform/build/soong/+/refs/heads/main/compliance/project_metadata_proto/project_metadata.proto"
     ),
 );
 
