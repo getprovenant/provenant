@@ -1241,11 +1241,14 @@ fn interpolate_gradle_string(value: &str, properties: &HashMap<String, String>) 
 }
 
 fn resolve_gradle_buildsrc_symbolic_refs(path: &Path, raw_dependencies: &mut [RawDep]) {
-    let Some(build_src_dir) = find_build_src_dir(path) else {
-        return;
-    };
-    let Some(constants) = load_build_src_constants(&build_src_dir) else {
-        return;
+    let ancestor_build_src_dir = find_build_src_dir(path);
+    let ancestor_constants = ancestor_build_src_dir
+        .as_deref()
+        .and_then(load_build_src_constants);
+    let sibling_build_src_tiers = if ancestor_build_src_dir.is_none() {
+        find_nearby_sibling_build_src_tiers(path)
+    } else {
+        Vec::new()
     };
 
     for raw in raw_dependencies.iter_mut() {
@@ -1253,9 +1256,16 @@ fn resolve_gradle_buildsrc_symbolic_refs(path: &Path, raw_dependencies: &mut [Ra
             continue;
         };
 
-        let mut visiting = HashSet::new();
-        let Some(resolved) = resolve_build_src_value(symbolic_ref, &constants, &mut visiting)
-        else {
+        let resolved = ancestor_constants
+            .as_ref()
+            .and_then(|constants| {
+                let mut visiting = HashSet::new();
+                resolve_build_src_value(symbolic_ref, constants, &mut visiting)
+            })
+            .or_else(|| {
+                resolve_nearby_sibling_build_src_value(symbolic_ref, &sibling_build_src_tiers)
+            });
+        let Some(resolved) = resolved else {
             continue;
         };
         if !resolved.contains(':') {
@@ -1276,6 +1286,87 @@ fn find_build_src_dir(path: &Path) -> Option<PathBuf> {
             return Some(build_src_dir);
         }
     }
+    None
+}
+
+fn find_nearby_sibling_build_src_tiers(path: &Path) -> Vec<Vec<PathBuf>> {
+    let mut tiers = Vec::new();
+
+    for ancestor in path.ancestors().skip(1).take(MAX_ITERATION_COUNT) {
+        let sibling_dirs = collect_sibling_build_src_dirs(ancestor, path);
+        if !sibling_dirs.is_empty() {
+            tiers.push(sibling_dirs);
+        }
+    }
+
+    tiers
+}
+
+fn collect_sibling_build_src_dirs(ancestor: &Path, current_path: &Path) -> Vec<PathBuf> {
+    if !ancestor.is_dir() {
+        return Vec::new();
+    }
+
+    let Ok(entries) = std::fs::read_dir(ancestor) else {
+        return Vec::new();
+    };
+
+    let mut build_src_dirs = Vec::new();
+    for entry in entries.flatten().take(MAX_ITERATION_COUNT) {
+        let child_dir = entry.path();
+        if !child_dir.is_dir() || current_path.starts_with(&child_dir) {
+            continue;
+        }
+
+        let build_src_dir = child_dir.join("buildSrc");
+        if !build_src_dir.is_dir() || !has_gradle_settings_file(&child_dir) {
+            continue;
+        }
+
+        build_src_dirs.push(build_src_dir);
+    }
+
+    build_src_dirs.sort();
+    build_src_dirs
+}
+
+fn has_gradle_settings_file(dir: &Path) -> bool {
+    dir.join("settings.gradle").is_file() || dir.join("settings.gradle.kts").is_file()
+}
+
+fn resolve_nearby_sibling_build_src_value(
+    symbolic_ref: &str,
+    sibling_build_src_tiers: &[Vec<PathBuf>],
+) -> Option<String> {
+    for sibling_build_src_dirs in sibling_build_src_tiers.iter().take(MAX_ITERATION_COUNT) {
+        let mut resolved_value: Option<String> = None;
+
+        for build_src_dir in sibling_build_src_dirs.iter().take(MAX_ITERATION_COUNT) {
+            let Some(constants) = load_build_src_constants(build_src_dir) else {
+                continue;
+            };
+
+            let mut visiting = HashSet::new();
+            let Some(candidate) = resolve_build_src_value(symbolic_ref, &constants, &mut visiting)
+            else {
+                continue;
+            };
+            if !candidate.contains(':') {
+                continue;
+            }
+
+            match &resolved_value {
+                None => resolved_value = Some(candidate),
+                Some(existing) if existing == &candidate => {}
+                Some(_) => return None,
+            }
+        }
+
+        if resolved_value.is_some() {
+            return resolved_value;
+        }
+    }
+
     None
 }
 
