@@ -2348,6 +2348,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_leading_portions_comma(&h);
     h = strip_trailing_paren_identifier(&h);
     h = strip_trailing_company_name_placeholder(&h);
+    h = strip_trailing_confidentiality_qualifier(&h);
 
     if in_copyright_context {
         h = strip_trailing_short_surname_paren_list_in_holder(&h);
@@ -2441,6 +2442,41 @@ fn strip_trailing_but_suffix(s: &str) -> String {
     cap.name("prefix")
         .map(|m| m.as_str().trim_end().to_string())
         .unwrap_or_else(|| s.to_string())
+}
+
+fn strip_trailing_confidentiality_qualifier(s: &str) -> String {
+    static TRAILING_CONFIDENTIALITY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?)
+            (?:[\s,;:.\-–—]+)?
+            confidential
+            (?:
+                [\s,;:.\-]+information
+              | [\s,;:.\-]+proprietary
+              | [\s,;:.\-]+and[\s,;:.\-]+proprietary
+            )
+            \.?
+            $
+            ",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = TRAILING_CONFIDENTIALITY_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || !prefix_has_holder_words(prefix) {
+        return s.to_string();
+    }
+
+    prefix
+        .trim_end_matches([',', ';', ':', '.', '-', '–', '—', ' '])
+        .trim()
+        .to_string()
 }
 
 fn strip_trailing_division_of_company_suffix(s: &str) -> String {

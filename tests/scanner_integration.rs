@@ -1148,6 +1148,64 @@ fn test_scanner_ignores_xml_namespace_garbage_in_copyright_detection() {
 }
 
 #[test]
+fn test_scanner_detects_single_line_xml_comment_copyright_header() {
+    use tempfile::TempDir;
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_path = temp_dir.path();
+    let content_path = test_path.join("strings.xml");
+    fs::write(
+        &content_path,
+        concat!(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+            "<!-- (c) Foo Platforms, Inc. and affiliates. Confidential and proprietary. -->\n",
+            "<resources>\n",
+            "    <string name=\"app_name\">Example</string>\n",
+            "</resources>\n",
+        ),
+    )
+    .expect("Failed to write XML fixture");
+
+    let patterns: Vec<Pattern> = vec![];
+    let engine = create_license_detection_engine();
+    let options = TextDetectionOptions {
+        collect_info: false,
+        detect_packages: false,
+        detect_application_packages: false,
+        detect_system_packages: false,
+        detect_packages_in_compiled: false,
+        detect_copyrights: true,
+        detect_generated: false,
+        detect_emails: false,
+        detect_urls: false,
+        max_emails: 50,
+        max_urls: 50,
+        timeout_seconds: 120.0,
+    };
+
+    let result = scan(test_path, 10, &patterns, engine, false, Some(&options));
+
+    let file = result
+        .files
+        .iter()
+        .find(|f| f.file_type == FileType::File && f.path.ends_with("strings.xml"))
+        .expect("Should find XML fixture file");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "(c) Foo Platforms, Inc. and affiliates. Confidential and proprietary."
+    );
+    assert_eq!(file.holders[0].holder, "Foo Platforms, Inc. and affiliates");
+}
+
+#[test]
 fn test_scanner_detects_copyrights_in_windows_dll_strings() {
     use tempfile::TempDir;
 

@@ -293,6 +293,11 @@ pub fn prepare_text_line(line: &str) -> String {
     // that have already been handled above).
     s = s.replace("/*", " ").replace("*/", " ");
 
+    // Strip XML/HTML comment delimiters before generic tag stripping so
+    // single-line resource headers such as `<!-- (c) Foo -->` stay visible
+    // to the detector instead of disappearing as markup.
+    s = s.replace("<!--", " ").replace("-->", " ");
+
     // ── Copyright symbol normalization ──
     // Must happen BEFORE aggressive # and % removal so that HTML numeric
     // entities (&#169;, &#xa9;, etc.) and backslash escapes (\\XA9) are
@@ -993,6 +998,20 @@ mod tests {
         assert!(result.contains("Foo"), "got: {result}");
         assert!(result.contains("& Bar"), "got: {result}");
         assert!(!result.contains("<name>"), "got: {result}");
+    }
+
+    #[test]
+    fn test_single_line_xml_comment_preserves_copyright_notice() {
+        let result = prepare_text_line(
+            "<!-- (c) Foo Platforms, Inc. and affiliates. Confidential and proprietary. -->",
+        );
+
+        assert!(!result.contains("<!--"), "got: {result}");
+        assert!(!result.contains("-->"), "got: {result}");
+        assert_eq!(
+            result,
+            "(c) Foo Platforms, Inc. and affiliates. Confidential and proprietary."
+        );
     }
 
     #[test]

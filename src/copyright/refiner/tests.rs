@@ -973,6 +973,25 @@ fn test_refine_holder_basic() {
 }
 
 #[test]
+fn test_refine_holder_strips_trailing_confidentiality_qualifiers() {
+    assert_eq!(
+        refine_holder("Motorola, Inc. - Motorola Confidential Proprietary"),
+        Some("Motorola, Inc. - Motorola".to_string())
+    );
+    assert_eq!(
+        refine_holder("Foo Platforms, Inc. and affiliates. Confidential and proprietary."),
+        Some("Foo Platforms, Inc. and affiliates".to_string())
+    );
+    assert_eq!(
+        refine_holder("Acme Confidential, Proprietary"),
+        Some("Acme".to_string())
+    );
+    assert_eq!(refine_holder("Confidential"), None);
+    assert_eq!(refine_holder("Confidential Information"), None);
+    assert_eq!(refine_holder("Confidential, Proprietary"), None);
+}
+
+#[test]
 fn test_refine_holder_removes_embedded_url_token() {
     let result = refine_holder("the http://wtforms.simplecodes.com WTForms Team");
     assert_eq!(result, Some("the WTForms Team".to_string()));

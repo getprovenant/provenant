@@ -261,12 +261,20 @@ pub fn extract_mso_document_properties_copyrights(
 
     static DESC_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?is)<o:Description>(?P<desc>.*?)</o:Description>").unwrap());
+    static AUTHOR_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?is)<o:Author>(?P<author>[^<]+)</o:Author>").unwrap());
     static TEMPLATE_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?is)<o:Template>(?P<tmpl>[^<]+)</o:Template>").unwrap());
     static LAST_AUTHOR_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?is)<o:LastAuthor>(?P<last>[^<]+)</o:LastAuthor>").unwrap());
     static COPY_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)^copyright\s+(?P<year>\d{4})(?:\s+(?P<tail>.+))?$").unwrap()
+    });
+    static CONFIDENTIAL_TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)\bconfidential(?:[\s,;:.\-]+information|[\s,;:.\-]+proprietary|[\s,;:.\-]+and[\s,;:.\-]+proprietary)\b",
+        )
+        .unwrap()
     });
 
     let lower = content.to_ascii_lowercase();
@@ -275,12 +283,16 @@ pub fn extract_mso_document_properties_copyrights(
     }
 
     let mut desc: Option<(usize, String)> = None;
+    let mut author_line: Option<usize> = None;
     let mut tmpl: Option<String> = None;
     let mut last: Option<String> = None;
     let mut last_line: Option<usize> = None;
 
     for (idx, raw) in content.lines().enumerate() {
         let ln = idx + 1;
+        if author_line.is_none() && AUTHOR_RE.is_match(raw) {
+            author_line = Some(ln);
+        }
         if desc.is_none()
             && let Some(cap) = DESC_RE.captures(raw)
         {
@@ -326,30 +338,39 @@ pub fn extract_mso_document_properties_copyrights(
         return;
     }
     let tail = cap.name("tail").map(|m| m.as_str()).unwrap_or("").trim();
-    let is_confidential = tail
-        .to_ascii_lowercase()
-        .contains("confidential information");
+    let refined_tail_holder = refine_holder_in_copyright_context(tail);
+    let is_confidential = CONFIDENTIAL_TAIL_RE.is_match(tail) && refined_tail_holder.is_none();
 
-    let (copy, hold) = if is_confidential {
+    let (copy, hold, use_desc_span_only) = if is_confidential {
         let holder = token_utils::normalize_whitespace(&format!(
             "{tail} {template} <o:LastAuthor> {last_author} </o:LastAuthor>"
         ));
         let c = token_utils::normalize_whitespace(&format!("Copyright {year} {holder}"));
-        (c, holder)
+        (c, holder, false)
+    } else if CONFIDENTIAL_TAIL_RE.is_match(tail) {
+        let holder = refined_tail_holder.unwrap_or_else(|| tail.to_string());
+        let c = token_utils::normalize_whitespace(&format!("Copyright {year} {tail}"));
+        (c, holder, true)
     } else {
         let holder =
             token_utils::normalize_whitespace(&format!("{template} o:LastAuthor {last_author}"));
         let c = token_utils::normalize_whitespace(&format!("Copyright {year} {holder}"));
-        (c, holder)
+        (c, holder, false)
     };
 
     let end_line = last_line.unwrap_or(desc_line);
+    let metadata_start_line = author_line.unwrap_or(desc_line).min(desc_line);
+    let detection_end_line = if use_desc_span_only {
+        desc_line
+    } else {
+        end_line
+    };
 
     let copy_refined = refine_copyright(&copy).unwrap_or_else(|| copy.clone());
     let holder_refined = refine_holder_in_copyright_context(&hold).unwrap_or_else(|| hold.clone());
 
     if !is_confidential {
-        let ckey = (desc_line, end_line, copy_refined.clone());
+        let ckey = (desc_line, detection_end_line, copy_refined.clone());
         if !copyrights
             .iter()
             .any(|c| (c.start_line.get(), c.end_line.get(), c.copyright.clone()) == ckey)
@@ -357,10 +378,10 @@ pub fn extract_mso_document_properties_copyrights(
             copyrights.push(CopyrightDetection {
                 copyright: copy_refined,
                 start_line: LineNumber::new(desc_line).expect("valid"),
-                end_line: LineNumber::new(end_line).expect("valid"),
+                end_line: LineNumber::new(detection_end_line).expect("valid"),
             });
         }
-        let hkey = (desc_line, end_line, holder_refined.clone());
+        let hkey = (desc_line, detection_end_line, holder_refined.clone());
         if !holders
             .iter()
             .any(|h| (h.start_line.get(), h.end_line.get(), h.holder.clone()) == hkey)
@@ -368,7 +389,7 @@ pub fn extract_mso_document_properties_copyrights(
             holders.push(HolderDetection {
                 holder: holder_refined,
                 start_line: LineNumber::new(desc_line).expect("valid"),
-                end_line: LineNumber::new(end_line).expect("valid"),
+                end_line: LineNumber::new(detection_end_line).expect("valid"),
             });
         }
     }
@@ -381,16 +402,21 @@ pub fn extract_mso_document_properties_copyrights(
     let shadow_non_confidential =
         token_utils::normalize_whitespace(&format!("{last_author} Copyright {year}"));
     copyrights.retain(|c| {
-        !token_utils::normalize_whitespace(&c.copyright)
-            .eq_ignore_ascii_case(&shadow_non_confidential)
+        let within_metadata_span =
+            c.start_line.get() >= metadata_start_line && c.end_line.get() <= end_line;
+        !(within_metadata_span
+            && token_utils::normalize_whitespace(&c.copyright)
+                .eq_ignore_ascii_case(&shadow_non_confidential))
     });
     holders.retain(|h| {
-        !token_utils::normalize_whitespace(&h.holder).eq_ignore_ascii_case(&last_author)
+        let within_metadata_span =
+            h.start_line.get() >= metadata_start_line && h.end_line.get() <= end_line;
+        !(within_metadata_span
+            && token_utils::normalize_whitespace(&h.holder).eq_ignore_ascii_case(&last_author))
     });
 
     if is_confidential {
         let short_c = format!("Copyright {year} Confidential");
-        let short_h = "Confidential".to_string();
         if let Some(rc) = refine_copyright(&short_c)
             && !copyrights.iter().any(|c| {
                 c.start_line.get() == desc_line
@@ -400,15 +426,6 @@ pub fn extract_mso_document_properties_copyrights(
         {
             copyrights.push(CopyrightDetection {
                 copyright: rc,
-                start_line: LineNumber::new(desc_line).expect("valid"),
-                end_line: LineNumber::new(desc_line).expect("valid"),
-            });
-        }
-        if !holders.iter().any(|h| {
-            h.start_line.get() == desc_line && h.end_line.get() == desc_line && h.holder == short_h
-        }) {
-            holders.push(HolderDetection {
-                holder: short_h,
                 start_line: LineNumber::new(desc_line).expect("valid"),
                 end_line: LineNumber::new(desc_line).expect("valid"),
             });

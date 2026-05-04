@@ -1382,11 +1382,17 @@ fn test_fixture_sample_py_motorola_holder_has_dash_variant_only() {
     let content =
         fs::read_to_string("testdata/copyright-golden/copyrights/sample_py-py.py").unwrap();
 
-    let (_c, h, _a) = detect_copyrights_from_text(&content);
+    let (c, h, _a) = detect_copyrights_from_text(&content);
+    let cs: Vec<&str> = c.iter().map(|d| d.copyright.as_str()).collect();
     let hs: Vec<&str> = h.iter().map(|d| d.holder.as_str()).collect();
 
     assert!(
-        hs.contains(&"Motorola, Inc. - Motorola Confidential Proprietary"),
+        cs.contains(&"Copyright 2006 (c), Motorola, Inc. - Motorola Confidential Proprietary"),
+        "copyrights: {cs:?}"
+    );
+    assert!(hs.contains(&"Motorola, Inc. - Motorola"), "holders: {hs:?}");
+    assert!(
+        !hs.contains(&"Motorola, Inc. - Motorola Confidential Proprietary"),
         "holders: {hs:?}"
     );
     assert!(

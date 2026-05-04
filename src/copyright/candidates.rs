@@ -397,6 +397,7 @@ where
     let mut debian_header_only_copyright_next_copy_needs_prefix: bool = false;
 
     let mut prev_prepared_is_copy_start_with_year = false;
+    let mut prev_was_single_line_markup_comment = false;
 
     for (ln, line) in numbered_lines {
         let line = line.as_ref();
@@ -423,6 +424,7 @@ where
             in_copyright = 0;
             previous_chars = None;
             prev_prepared_is_copy_start_with_year = false;
+            prev_was_single_line_markup_comment = false;
             continue;
         }
 
@@ -441,6 +443,7 @@ where
                 if in_copyright == 0 && !candidates.is_empty() {
                     groups.push(std::mem::take(&mut candidates));
                     previous_chars = None;
+                    prev_was_single_line_markup_comment = false;
                 }
             }
             continue;
@@ -454,12 +457,32 @@ where
                 if in_copyright == 0 && !candidates.is_empty() {
                     groups.push(std::mem::take(&mut candidates));
                     previous_chars = None;
+                    prev_was_single_line_markup_comment = false;
                 }
             }
             continue;
         }
 
         let co = chars_only(line);
+
+        if in_copyright > 0 && prev_was_single_line_markup_comment {
+            let prepared = prepare_text_line(line);
+            let is_single_line_markup_comment = is_single_line_markup_comment_line(line);
+            if !is_markup_comment_continuation_line(
+                prepared.trim_start(),
+                previous_chars.as_deref(),
+                is_single_line_markup_comment,
+            ) {
+                if !candidates.is_empty() {
+                    groups.push(std::mem::take(&mut candidates));
+                }
+                in_copyright = 0;
+                previous_chars = None;
+                prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
+                continue;
+            }
+        }
 
         if is_end_of_statement(&co) {
             let prepared = prepare_text_line(line);
@@ -491,6 +514,7 @@ where
             in_copyright = 0;
             previous_chars = None;
             prev_prepared_is_copy_start_with_year = prepared_is_copy_start_with_year;
+            prev_was_single_line_markup_comment = false;
         } else if hints::is_candidate(line)
             || co.contains("http")
             || is_raw_versioned_project_banner_line(line)
@@ -511,6 +535,7 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
                 continue;
             }
 
@@ -555,6 +580,7 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = prepared_is_copy_start_with_year;
+                prev_was_single_line_markup_comment = false;
                 continue;
             }
 
@@ -568,6 +594,7 @@ where
             {
                 in_copyright = 2;
                 previous_chars = Some(prepared_chars);
+                prev_was_single_line_markup_comment = is_single_line_markup_comment_line(line);
                 continue;
             }
 
@@ -584,6 +611,8 @@ where
                         let prefixed_chars = chars_only(&prefixed);
                         candidates.push((ln, prefixed));
                         previous_chars = Some(prefixed_chars);
+                        prev_was_single_line_markup_comment =
+                            is_single_line_markup_comment_line(line);
                         continue;
                     }
                 }
@@ -592,11 +621,47 @@ where
             candidates.push((ln, prepared));
             previous_chars = Some(prepared_chars);
             prev_prepared_is_copy_start_with_year = prepared_is_copy_start_with_year;
+            prev_was_single_line_markup_comment = is_single_line_markup_comment_line(line);
         } else if in_copyright > 0 {
             // Inside a copyright block — check if we should continue or break.
             let prepared = prepare_text_line(line);
             let trimmed = prepared.trim_start();
             let lower = trimmed.to_ascii_lowercase();
+            let is_single_line_markup_comment = is_single_line_markup_comment_line(line);
+
+            if is_single_line_markup_comment
+                && !is_markup_comment_continuation_line(
+                    trimmed,
+                    previous_chars.as_deref(),
+                    is_single_line_markup_comment,
+                )
+            {
+                if !candidates.is_empty() {
+                    groups.push(std::mem::take(&mut candidates));
+                }
+                in_copyright = 0;
+                previous_chars = None;
+                prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
+                continue;
+            }
+
+            if prev_was_single_line_markup_comment
+                && !is_markup_comment_continuation_line(
+                    trimmed,
+                    previous_chars.as_deref(),
+                    is_single_line_markup_comment,
+                )
+            {
+                if !candidates.is_empty() {
+                    groups.push(std::mem::take(&mut candidates));
+                }
+                in_copyright = 0;
+                previous_chars = None;
+                prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
+                continue;
+            }
 
             if is_noncopyright_at_directive_line(trimmed) {
                 if !candidates.is_empty() {
@@ -605,6 +670,7 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
                 continue;
             }
 
@@ -625,6 +691,7 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
                 continue;
             }
             if is_obvious_code_line(line) && !has_copyright_indicators(line) {
@@ -634,6 +701,7 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
                 continue;
             }
 
@@ -650,6 +718,7 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
                 continue;
             }
             if co.is_empty() {
@@ -664,9 +733,11 @@ where
                         in_copyright = 0;
                         previous_chars = None;
                         prev_prepared_is_copy_start_with_year = false;
+                        prev_was_single_line_markup_comment = false;
                     } else {
                         candidates.push((ln, prepare_text_line(line)));
                         in_copyright -= 1;
+                        prev_was_single_line_markup_comment = false;
                     }
                 } else {
                     // No previous chars recorded — break.
@@ -676,6 +747,7 @@ where
                     in_copyright = 0;
                     previous_chars = None;
                     prev_prepared_is_copy_start_with_year = false;
+                    prev_was_single_line_markup_comment = false;
                 }
             } else if is_tabular_noise_line(line) {
                 if !candidates.is_empty() {
@@ -684,9 +756,11 @@ where
                 in_copyright = 0;
                 previous_chars = None;
                 prev_prepared_is_copy_start_with_year = false;
+                prev_was_single_line_markup_comment = false;
             } else {
                 candidates.push((ln, prepare_text_line(line)));
                 in_copyright -= 1;
+                prev_was_single_line_markup_comment = is_single_line_markup_comment;
             }
         } else if !candidates.is_empty() {
             // Not in copyright and line is not a candidate — yield what we have.
@@ -694,6 +768,7 @@ where
             in_copyright = 0;
             previous_chars = None;
             prev_prepared_is_copy_start_with_year = false;
+            prev_was_single_line_markup_comment = false;
         }
     }
 
@@ -776,6 +851,31 @@ fn is_standalone_comment_line(line: &str) -> bool {
         return true;
     }
     false
+}
+
+fn is_single_line_markup_comment_line(line: &str) -> bool {
+    let t = line.trim();
+    t.starts_with("<!--") && t.ends_with("-->")
+}
+
+fn is_markup_comment_continuation_line(
+    prepared_trimmed: &str,
+    previous_chars: Option<&str>,
+    is_single_line_markup_comment: bool,
+) -> bool {
+    if !is_single_line_markup_comment {
+        return false;
+    }
+    if has_copyright_indicators(prepared_trimmed) {
+        return true;
+    }
+
+    let lower = prepared_trimmed.to_ascii_lowercase();
+    let chars = chars_only(prepared_trimmed);
+    is_end_of_statement(&chars)
+        || previous_chars.is_some_and(ends_with_continuation)
+        || lower.starts_with("and ")
+        || lower.starts_with("by ")
 }
 
 fn is_year_only_copy_marker_line(prepared: &str) -> bool {
@@ -998,6 +1098,22 @@ mod tests {
         assert_eq!(groups.len(), 1, "groups: {groups:?}");
         // Both copyright line and "all rights reserved" should be in same group.
         assert_eq!(groups[0].len(), 2);
+    }
+
+    #[test]
+    fn test_collect_consecutive_html_comment_continuation_stops_before_noise() {
+        let lines = vec![
+            (1, "<!-- Copyright 2024 Example Corp. -->".to_string()),
+            (2, "<!-- All rights reserved. -->".to_string()),
+            (3, "<!-- sponsors end -->".to_string()),
+            (4, "<div>body</div>".to_string()),
+        ];
+        let groups = collect_candidate_lines(lines);
+
+        assert_eq!(groups.len(), 1, "groups: {groups:?}");
+        assert_eq!(groups[0].len(), 2, "groups: {groups:?}");
+        assert_eq!(groups[0][0].0, 1);
+        assert_eq!(groups[0][1].0, 2);
     }
 
     #[test]

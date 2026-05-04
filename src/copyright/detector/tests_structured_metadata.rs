@@ -307,17 +307,61 @@ fn test_mso_document_properties_confidential_does_not_emit_template_lastauthor_v
         "copyrights: {:?}",
         copyrights
     );
-    assert!(
-        holders.iter().any(|h| h.holder == "Confidential"),
-        "holders: {:?}",
-        holders
-    );
+    assert!(holders.is_empty(), "holders: {:?}", holders);
     assert!(
         !copyrights.iter().any(|c| c
             .copyright
             .contains("techdoc.dot o:LastAuthor Jennifer Hruska")),
         "copyrights: {:?}",
         copyrights
+    );
+    assert!(
+        !holders.iter().any(|h| h
+            .holder
+            .contains("techdoc.dot o:LastAuthor Jennifer Hruska")),
+        "holders: {:?}",
+        holders
+    );
+}
+
+#[test]
+fn test_mso_document_properties_confidential_and_proprietary_uses_confidential_path() {
+    let content = "<o:Description>Copyright 2009 Confidential and proprietary</o:Description>\n<o:Template>techdoc.dot</o:Template>\n<o:LastAuthor>Jennifer Hruska</o:LastAuthor>";
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright 2009 Confidential"),
+        "copyrights: {:?}",
+        copyrights
+    );
+    assert!(holders.is_empty(), "holders: {:?}", holders);
+    assert!(
+        !copyrights.iter().any(|c| c
+            .copyright
+            .contains("techdoc.dot o:LastAuthor Jennifer Hruska")),
+        "copyrights: {:?}",
+        copyrights
+    );
+}
+
+#[test]
+fn test_mso_document_properties_holder_with_confidential_suffix_keeps_holder() {
+    let content = "<o:Description>Copyright 2009 Acme Confidential, Proprietary</o:Description>\n<o:Template>techdoc.dot</o:Template>\n<o:LastAuthor>Jennifer Hruska</o:LastAuthor>";
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright 2009 Acme Confidential, Proprietary"),
+        "copyrights: {:?}",
+        copyrights
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Acme"),
+        "holders: {:?}",
+        holders
     );
     assert!(
         !holders.iter().any(|h| h

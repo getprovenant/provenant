@@ -763,8 +763,12 @@ pub fn extract_confidential_proprietary_copyrights(
         )
             .unwrap()
     });
-    static CONFIDENTIAL_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"(?i)\bconfidential\s+proprietary\b").unwrap());
+    static CONFIDENTIAL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)\bconfidential(?:[\s,;:.\-]+proprietary|[\s,;:.\-]+and[\s,;:.\-]+proprietary)\b",
+        )
+        .unwrap()
+    });
     static MOTOROLA_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
             r"(?i)^[^A-Za-z0-9]*copyright\s+(?P<year>(?:19\d{2}|20\d{2}))\s*\(c\)\s*,\s*(?P<holder>.+?)\s*$",
