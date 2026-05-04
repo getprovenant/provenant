@@ -9,6 +9,9 @@ use regex::Regex;
 pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     let patterns = [
         r"(?i)^licenses?,\s+and/or\b",
+        r"(?i)^exclude$",
+        r"(?i)^with the$",
+        r"(?i)^.+,\s+.+\band\s+their\s+employees$",
         r"(?i)^holders?,\s*authors\b",
         r"(?i)^notice,\s+and\b",
         r"(?i)^notice,\s+in\b",

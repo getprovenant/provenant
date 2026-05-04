@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 190 of 190 recorded runs, with a **12.0× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 191 of 191 recorded runs, with a **12.1× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -818,6 +818,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `290.44s`; ScanCode `5927.08s`
 - Broader Bazel and mixed-tree dependency extraction (`8202` vs `8056` packages, `1465` vs `700` dependencies) from root and vendored `MODULE.bazel`, many committed `BUILD` files, Python lockfiles, Dockerfiles, and Debian control metadata, plus direct `CITATION.cff` package visibility
+
+##### [PX4/eigen @ 7cf1c01](https://github.com/PX4/eigen/tree/7cf1c0179eb0f5499dfc1bffbd229783a7865fe1) — **19.96× faster**
+
+- Files: 1,672
+- Run context: 2026-05-04 · eigen-62479 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `16.12s`; ScanCode `321.68s`
+- Cleaner copyright, holder, and author recovery on this manifest-free native source tree, with structured `Copyright Notice (...)` extraction, normalized `Author / Project / Copyright` header splitting, rejection of `.krazy` control-file and disclaimer-list junk, and Unicode-preserving party normalization
 
 ##### [ValveSoftware/eigen @ e9c4315](https://github.com/ValveSoftware/eigen/tree/e9c43151265207fd3366bba21cddd61141ff402c) — **19.84× faster**
 

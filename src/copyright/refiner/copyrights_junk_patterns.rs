@@ -9,6 +9,8 @@ use regex::Regex;
 pub(super) static COPYRIGHTS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     let patterns = [
         r"(?i)^copyright \(c\)$",
+        r"(?i)^copyright exclude$",
+        r"(?i)^copyright doctrines of fair use, fair dealing, or other equivalents\.?$",
         r"(?i)^\(c\) by$",
         r"(?i)\(c\) [a-zA-Z][a-z] \(c\)",
         r"(?i)^copyright holder or simply",

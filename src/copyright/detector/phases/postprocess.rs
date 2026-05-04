@@ -378,6 +378,16 @@ fn run_mid_pipeline_repairs(
     seen.dedup_new_holders(holders, h_before);
     seen.dedup_new_authors(authors, a_before);
 
+    let c_before = copyrights.len();
+    let h_before = holders.len();
+    let a_before = authors.len();
+    super::postprocess_transforms::split_author_project_copyright_metadata_blocks(
+        copyrights, holders, authors,
+    );
+    seen.dedup_new_copyrights(copyrights, c_before);
+    seen.dedup_new_holders(holders, h_before);
+    seen.dedup_new_authors(authors, a_before);
+
     super::postprocess_transforms::drop_static_char_string_copyrights(content, copyrights, holders);
     super::postprocess_transforms::drop_combined_period_holders(holders);
     super::pattern_extract::drop_shadowed_prefix_holders(holders);

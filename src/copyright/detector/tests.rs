@@ -181,6 +181,25 @@ fn test_added_copyright_year_for_line_is_extracted() {
 }
 
 #[test]
+fn test_structured_copyright_notice_with_year_is_extracted() {
+    let input = "Minpack Copyright Notice (1999) University of Chicago. All rights reserved\n";
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright Notice (1999) University of Chicago"),
+        "copyrights: {:?}",
+        copyrights.iter().map(|c| &c.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "University of Chicago"),
+        "holders: {:?}",
+        holders.iter().map(|h| &h.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_author_prefix_dedup_keeps_short_email_list() {
     let input = "Author(s): gthomas, sorin@netappi.com\nContributors: gthomas, sorin@netappi.com, andrew.lunn@ascom.ch\n";
     let (_c, _h, authors) = detect_copyrights_from_text(input);
