@@ -134,6 +134,14 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_groovy_sibling_buildsrc_constants() {
+        run_golden(
+            "testdata/gradle-golden/groovy/sibling-buildsrc/consumer/build.gradle",
+            "testdata/gradle-golden/groovy/sibling-buildsrc/consumer/build.gradle-expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_kotlin_project_properties() {
         run_golden(
             "testdata/gradle-golden/kotlin/project-properties/build.gradle.kts",

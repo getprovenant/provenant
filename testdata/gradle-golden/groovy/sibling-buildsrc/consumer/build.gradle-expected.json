@@ -1,0 +1,18 @@
+[
+  {
+    "type": "maven",
+    "dependencies": [
+      {
+        "purl": "pkg:maven/com.example.libs/core@1.2.3",
+        "extracted_requirement": "1.2.3",
+        "scope": "implementation",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": true,
+        "is_direct": true,
+        "resolved_package": {}
+      }
+    ],
+    "datasource_id": "build_gradle"
+  }
+]
