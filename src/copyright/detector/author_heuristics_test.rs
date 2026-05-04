@@ -159,6 +159,46 @@ fn test_detect_multiline_comment_authors_block_after_year_only_copyright() {
 }
 
 #[test]
+fn test_detect_explicit_author_label_roster_with_company_suffix() {
+    let input = "// Author    : Antoine YESSAYAN, Paul RASCLE, EDF\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .any(|author| author.author == "Antoine YESSAYAN, Paul RASCLE, EDF"),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
+fn test_split_author_project_copyright_metadata_block() {
+    let input = concat!(
+        "// Author    : Antoine YESSAYAN, Paul RASCLE, EDF\n",
+        "// Project   : SALOME\n",
+        "// Copyright : EDF 2001\n",
+    );
+    let (copyrights, holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .any(|author| author.author == "Antoine YESSAYAN, Paul RASCLE, EDF"),
+        "authors: {authors:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .any(|copyright| copyright.copyright == "Copyright EDF 2001"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|holder| holder.holder == "EDF"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
 fn test_extract_collective_author_with_contributors_before_email() {
     let input = "authors = [\"Tokio Contributors <team@tokio.rs>\"]\n";
     let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);

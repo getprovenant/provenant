@@ -330,3 +330,74 @@ pub fn split_written_by_copyrights_into_holder_prefixed_clauses(
     holders.retain(|h| h.holder != "Julian Cowley");
     authors.retain(|a| a.author != "Linus Torvalds" && a.author != "Theodore Ts'o");
 }
+
+pub fn split_author_project_copyright_metadata_blocks(
+    copyrights: &mut [CopyrightDetection],
+    holders: &mut Vec<HolderDetection>,
+    authors: &mut Vec<AuthorDetection>,
+) {
+    static AUTHOR_PROJECT_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^Author\s+(?P<author>.+?)
+            (?:\s+Project\s+(?P<project>.+?))?
+            \s+Copyright\s+(?P<holder>.+?)\s+(?P<year>\d{4})
+            $",
+        )
+        .unwrap()
+    });
+
+    for copyright in copyrights.iter_mut() {
+        let current = copyright.copyright.clone();
+        let Some(cap) = AUTHOR_PROJECT_COPY_RE.captures(current.as_str()) else {
+            continue;
+        };
+
+        let author_raw = cap.name("author").map(|m| m.as_str()).unwrap_or("").trim();
+        let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
+        let year = cap.name("year").map(|m| m.as_str()).unwrap_or("").trim();
+        if author_raw.is_empty() || holder_raw.is_empty() || year.is_empty() {
+            continue;
+        }
+
+        let author = crate::copyright::refiner::refine_author(author_raw)
+            .unwrap_or_else(|| normalize_whitespace(author_raw));
+        if !author.is_empty()
+            && !authors.iter().any(|existing| {
+                existing.author == author && existing.start_line == copyright.start_line
+            })
+        {
+            authors.push(AuthorDetection {
+                author,
+                start_line: copyright.start_line,
+                end_line: copyright.start_line,
+            });
+        }
+
+        if let Some(refined) = refine_copyright(&format!("Copyright {holder_raw} {year}")) {
+            copyright.copyright = refined;
+        }
+
+        let Some(refined_holder) = refine_holder_in_copyright_context(holder_raw) else {
+            continue;
+        };
+
+        holders.retain(|holder| {
+            !(holder.start_line == copyright.start_line
+                && holder.end_line == copyright.end_line
+                && holder.holder.contains(author_raw))
+        });
+
+        if !holders.iter().any(|holder| {
+            holder.holder == refined_holder
+                && holder.start_line == copyright.start_line
+                && holder.end_line == copyright.end_line
+        }) {
+            holders.push(HolderDetection {
+                holder: refined_holder,
+                start_line: copyright.start_line,
+                end_line: copyright.end_line,
+            });
+        }
+    }
+}

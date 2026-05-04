@@ -27,12 +27,14 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = strip_trailing_comma_year(&a);
     a = strip_trailing_comma_month_year(&a);
     a = strip_trailing_comma_email_matching_name(&a);
+    a = truncate_trailing_from_clause_after_angle_contact(&a);
     a = truncate_trailing_clause_after_contact(&a);
     a = strip_trailing_comma_and(&a);
     a = truncate_bug_reports_clause(&a);
     a = truncate_caller_specificaly_clause(&a);
     a = truncate_json_metadata_tail(&a);
     a = truncate_distribution_metadata_tail(&a);
+    a = truncate_generated_month_year_clause(&a);
     a = truncate_better_known_as_clause(&a);
     a = normalize_slash_spacing(&a);
     a = normalize_slash_author_pairs(&a);
@@ -644,6 +646,31 @@ fn truncate_distribution_metadata_tail(s: &str) -> String {
     prefix.to_string()
 }
 
+fn truncate_generated_month_year_clause(s: &str) -> String {
+    static GENERATED_MONTH_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?)
+            \s+Generated\s+
+            (?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)
+            (?:\s*,?\s*(?:19\d{2}|20\d{2}))?
+            \s*$",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = GENERATED_MONTH_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+
+    prefix.to_string()
+}
+
 fn looks_like_generated_resource_identifier(s: &str) -> bool {
     let trimmed = s.trim();
     if trimmed.is_empty() || trimmed.contains(' ') {
@@ -1052,7 +1079,7 @@ fn truncate_trailing_clause_after_contact(s: &str) -> String {
     let tail_lower = tail.to_ascii_lowercase();
     let prose_like_tail = [
         "the ", "a ", "an ", "i ", "since ", "this ", "these ", "those ", "is ", "was ", "visit ",
-        "for ",
+        "for ", "from ",
     ]
     .iter()
     .any(|prefix_text| tail_lower.starts_with(prefix_text));
@@ -1062,6 +1089,22 @@ fn truncate_trailing_clause_after_contact(s: &str) -> String {
     }
 
     s.to_string()
+}
+
+fn truncate_trailing_from_clause_after_angle_contact(s: &str) -> String {
+    static FROM_CLAUSE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>.+?<[^>]*@[^>]*>)\s+from\b.*$").unwrap());
+
+    let trimmed = s.trim();
+    let Some(cap) = FROM_CLAUSE_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+
+    prefix.to_string()
 }
 
 fn strip_trailing_status_works(s: &str) -> String {

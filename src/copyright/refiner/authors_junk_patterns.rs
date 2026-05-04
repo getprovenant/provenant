@@ -104,6 +104,8 @@ pub(super) static AUTHORS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^the task'?s numa mempolicy\b.*$",
         r"(?i)^the authors laboriously took the trouble\b.*$",
         r"(?i)^laboriously took the trouble\b.*$",
+        r"(?i)^the code itself\b.*$",
+        r"(?i)^.+\bis a software package provided by\b.*$",
         r"(?i)^support\s+for\b.*$",
         r"(?i)^addresses\s+\.+.*$",
     ];

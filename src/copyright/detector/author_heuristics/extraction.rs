@@ -1282,7 +1282,9 @@ pub(in super::super) fn extract_author_colon_blocks(
             }
         }
         let combined_raw = segments.join(" ");
-        let Some(combined) = refine_author_with_optional_handle_suffix(&combined_raw) else {
+        let Some(combined) = refine_author_with_optional_handle_suffix(&combined_raw)
+            .or_else(|| refine_explicit_author_label_roster(&combined_raw))
+        else {
             line_number = line_number.next();
             continue;
         };
@@ -1361,6 +1363,50 @@ fn sanitize_author_colon_tail(tail: &str) -> Option<String> {
     }
 
     Some(trimmed.to_string())
+}
+
+fn refine_explicit_author_label_roster(candidate: &str) -> Option<String> {
+    let trimmed = normalize_whitespace(candidate.trim());
+    if !trimmed.contains(',') {
+        return None;
+    }
+
+    let parts: Vec<&str> = trimmed
+        .split(',')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect();
+    if parts.len() < 2 {
+        return None;
+    }
+
+    let has_placeholder = parts.iter().any(|part| {
+        part.eq_ignore_ascii_case("package author") || part.eq_ignore_ascii_case("package authors")
+    });
+    if has_placeholder {
+        return None;
+    }
+
+    let first_two_rosterish = parts.iter().take(2).all(|part| {
+        let words: Vec<&str> = part.split_whitespace().collect();
+        if words.is_empty() {
+            return false;
+        }
+
+        if words.len() >= 2 {
+            return words
+                .iter()
+                .all(|word| word.chars().any(|ch| ch.is_alphabetic()));
+        }
+
+        part.chars()
+            .all(|ch| !ch.is_alphabetic() || ch.is_ascii_uppercase())
+    });
+    if !first_two_rosterish {
+        return None;
+    }
+
+    Some(trimmed)
 }
 
 fn is_author_metadata_line(line: &str) -> bool {

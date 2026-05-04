@@ -441,11 +441,23 @@ static HOLDERS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
 
 /// Return true if `s` matches any known junk copyright pattern.
 pub fn is_junk_copyright(s: &str) -> bool {
+    if looks_like_structured_copyright_notice_with_year(s) {
+        return false;
+    }
+
     COPYRIGHTS_JUNK_PATTERNS.iter().any(|re| re.is_match(s))
         || is_junk_copyright_scan_phrase(s)
         || is_junk_copyright_code_fragment(s)
         || is_junk_copyright_symbol_garbage(s)
         || is_junk_c_sign_path_fragment(s)
+}
+
+fn looks_like_structured_copyright_notice_with_year(s: &str) -> bool {
+    static STRUCTURED_NOTICE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^copyright\s+notice\s*\(\s*(?:19\d{2}|20\d{2})\s*\)\s+.+$").unwrap()
+    });
+
+    STRUCTURED_NOTICE_RE.is_match(s.trim())
 }
 
 fn has_copyright_year(s: &str) -> bool {
@@ -1091,6 +1103,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_paren_email_after_c_by(&c);
     c = strip_trailing_for_clause_after_email(&c);
     c = strip_trailing_at_affiliation(&c);
+    c = strip_trailing_single_letter_obfuscated_email_phrase(&c);
     c = strip_trailing_obfuscated_email_after_dash(&c);
     c = strip_url_token_between_years_and_holder(&c);
     c = strip_obfuscated_angle_emails(&c);
@@ -1120,6 +1133,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_paren_identifier(&c);
     c = strip_trailing_company_name_placeholder(&c);
     c = strip_trailing_company_co_ltd(&c);
+    c = strip_trailing_heavily_based_clause(&c);
     c = strip_trailing_obfuscated_email_in_angle_brackets_after_copyright(&c);
     c = strip_trailing_linux_ag_location_in_copyright(&c);
     c = strip_trailing_by_person_clause_after_company(&c);
@@ -1211,6 +1225,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
         return None;
     }
     if is_post_refine_copyright_code_fragment(&result)
+        || is_junk_copyright(&result)
         || is_junk_copyright_of_header(&result)
         || is_junk_copyrighted_works_header(&result)
         || is_junk_copyrighted_software_phrase(&result)
@@ -1261,6 +1276,76 @@ fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
     }
 
     prefix.to_string()
+}
+
+fn strip_trailing_single_letter_obfuscated_email_phrase(s: &str) -> String {
+    static SINGLE_LETTER_OBF_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?)
+            \s+
+            (?P<user>[a-z0-9][a-z0-9._-]{0,63})
+            \s+a\s+
+            (?P<domain>[a-z0-9][a-z0-9._-]{0,63})
+            \s+
+            (?P<tld>com|org|net|edu|gov|mil|io|co|us|uk|de|fr|jp|cn|in|info|biz|me|tv|ca|au)
+            \s*$",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = SINGLE_LETTER_OBF_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    let user = cap.name("user").map(|m| m.as_str()).unwrap_or("").trim();
+    let domain = cap.name("domain").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || user.is_empty() || domain.is_empty() {
+        return s.to_string();
+    }
+
+    let prefix_tokens: HashSet<String> = prefix
+        .split_whitespace()
+        .map(|token| {
+            token
+                .trim_matches(|c: char| !c.is_alphanumeric() && c != '-' && c != '_')
+                .to_ascii_lowercase()
+        })
+        .filter(|token| token.len() >= 2)
+        .collect();
+
+    if prefix_tokens.contains(&user.to_ascii_lowercase())
+        && prefix_tokens.contains(&domain.to_ascii_lowercase())
+    {
+        return prefix.to_string();
+    }
+
+    s.to_string()
+}
+
+fn strip_trailing_heavily_based_clause(s: &str) -> String {
+    static HEAVILY_BASED_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>.+?)\s+Heavily(?:\s+based\b.*)?$").unwrap());
+
+    let trimmed = s.trim();
+    let Some(cap) = HEAVILY_BASED_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+
+    let lower = prefix.to_ascii_lowercase();
+    if lower.starts_with("copyright") || lower.starts_with("(c)") || prefix_has_holder_words(prefix)
+    {
+        return prefix.to_string();
+    }
+
+    s.to_string()
 }
 
 fn strip_trailing_credit_file_reference_clause(s: &str) -> String {
@@ -2319,6 +2404,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
         h = strip_trailing_email_token(&h);
         h = strip_trailing_obfuscated_email_phrase_in_holder(&h);
     }
+    h = strip_trailing_single_letter_obfuscated_email_phrase(&h);
     h = strip_parenthesized_emails(&h);
     h = strip_trailing_parenthesized_url_or_domain(&h);
     h = strip_contributor_parens_after_org(&h);
@@ -2349,6 +2435,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_paren_identifier(&h);
     h = strip_trailing_company_name_placeholder(&h);
     h = strip_trailing_confidentiality_qualifier(&h);
+    h = strip_trailing_heavily_based_clause(&h);
 
     if in_copyright_context {
         h = strip_trailing_short_surname_paren_list_in_holder(&h);

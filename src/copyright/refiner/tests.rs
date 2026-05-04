@@ -2055,3 +2055,84 @@ fn test_refine_holder_drops_css_selector_noise() {
     assert_eq!(refine_holder("Legal Notice"), None);
     assert_eq!(refine_holder("color 666666"), None);
 }
+
+#[test]
+fn test_refine_author_strips_generated_month_year_and_from_lib_tail() {
+    assert_eq!(
+        refine_author("Intel Corporation Generated November"),
+        Some("Intel Corporation".to_string())
+    );
+    assert_eq!(
+        refine_author("L. Plagne <laurent.plagne@edf.fr > from boost lib"),
+        Some("L. Plagne <laurent.plagne@edf.fr >".to_string())
+    );
+}
+
+#[test]
+fn test_refine_author_drops_code_itself_and_lapack_package_prose() {
+    assert_eq!(
+        refine_author(
+            "the code itself Stefan I. Larimore and Timothy A. Davis (davis@cise.ufl.edu), University of Florida. The algorithm was in collaboration with John Gilbert, Xerox PARC, and Esmond Ng, Oak Ridge National Laboratory"
+        ),
+        None
+    );
+    assert_eq!(
+        refine_author(
+            "LAPACK is a software package provided by Univ. of Tennessee, Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd"
+        ),
+        None
+    );
+}
+
+#[test]
+fn test_refine_holder_drops_exclude_disclaimer_and_trailing_heavily() {
+    assert_eq!(refine_holder("EXCLUDE"), None);
+    assert_eq!(refine_holder("with the"), None);
+    assert_eq!(
+        refine_holder(
+            "THE UNITED STATES, THE UNITED STATES DEPARTMENT OF ENERGY, AND THEIR EMPLOYEES"
+        ),
+        None
+    );
+    assert_eq!(
+        refine_holder("Konstantinos Margaritis Heavily"),
+        Some("Konstantinos Margaritis".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_and_copyright_strip_single_letter_obfuscated_email_tail() {
+    assert_eq!(
+        refine_holder("Mark Borgerding mark a borgerding net"),
+        Some("Mark Borgerding".to_string())
+    );
+    assert_eq!(
+        refine_copyright("Copyright (c) 2009 Mark Borgerding mark a borgerding net"),
+        Some("Copyright (c) 2009 Mark Borgerding".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_drops_exclude_and_mpl_fair_use_noise() {
+    assert_eq!(refine_copyright("copyright EXCLUDE"), None);
+    assert_eq!(
+        refine_copyright("copyright doctrines of fair use, fair dealing, or other equivalents"),
+        None
+    );
+}
+
+#[test]
+fn test_refine_copyright_strips_trailing_heavily_based_clause() {
+    assert_eq!(
+        refine_copyright("Copyright (c) 2010 Konstantinos Margaritis <markos@freevec.org> Heavily"),
+        Some("Copyright (c) 2010 Konstantinos Margaritis <markos@freevec.org>".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_keeps_structured_copyright_notice_with_year() {
+    assert_eq!(
+        refine_copyright("Copyright Notice (1999) University of Chicago"),
+        Some("Copyright Notice (1999) University of Chicago".to_string())
+    );
+}
