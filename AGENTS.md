@@ -1,180 +1,116 @@
 # Agent Guidelines for Provenant
 
-This guide provides essential information for AI coding agents working on the `Provenant` codebase - a high-performance Rust tool for detecting licenses, copyrights, and package metadata in source code.
+This file is for evergreen repo-specific guardrails and recurring agent gotchas. It intentionally duplicates a small set of high-value facts from the canonical docs so those facts stay in agent context even when an agent does not read further. Keep long procedures and fast-changing workflow detail in the canonical docs instead of fully restating them here.
 
-## Documentation Map
+## Start Here
 
-- **Architecture & Design Decisions**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - System design, components, principles
-- **Contributor Workflow & Compliance**: [`CONTRIBUTING.md`](CONTRIBUTING.md) - Canonical contributor expectations including DCO sign-off and SPDX header policy
-- **Documentation Index**: [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) - Best entry point for navigating the broader docs set
-- **How-To Guides**: [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md) - Step-by-step guide for adding new parsers
-- **Architectural Decision Records**: [`docs/adr/README.md`](docs/adr/README.md) - Index of accepted decisions covering parser architecture, extraction boundaries, golden tests, security, auto-generated docs, assembly, embedded license data, output schema separation, and large-parser structure
-- **Beyond-Parity Features**: [`docs/improvements/`](docs/improvements/) - Index of parser and subsystem improvements beyond Python parity
-- **License Detection Architecture**: [`docs/LICENSE_DETECTION_ARCHITECTURE.md`](docs/LICENSE_DETECTION_ARCHITECTURE.md) - Current license detection architecture, embedded index flow, and maintainer workflow
-- **Maintainer Workflows**: [`xtask/README.md`](xtask/README.md) - Canonical list of Rust-based maintainer commands from `xtask/Cargo.toml`, including benchmarking, output comparison, golden-fixture maintenance, and artifact generation
-- **Supported Formats**: [`docs/SUPPORTED_FORMATS.md`](docs/SUPPORTED_FORMATS.md) - Auto-generated list of all supported package formats
-- **API Reference**: Run `cargo doc --open` - Complete API documentation
-- **This File**: Repo-specific agent guardrails and durable contributor conventions
+- [`README.md`](README.md) for the project overview, user-facing setup, and CLI entry points.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) for the main contributor workflow, local setup, hooks, commit/PR conventions, DCO, and license-header policy.
+- [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) when you need to find which document owns a topic.
+
+Important baseline facts to remember on every run:
+
+- `README.md` is user-facing; `CONTRIBUTING.md` is the main contributor workflow document.
+- Contributor setup is dual-stack: Rust toolchain plus Node.js `>=24` with `npm`.
+- The usual local bootstrap is `npm run setup`.
+- `npm run hooks:run` runs the full pre-commit hook suite on all files.
+- `npm run check:docs` is the default validation entry point for documentation-only changes.
+
+Before making non-trivial changes, read the document that owns the surface you are touching:
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for overall system design, parser/assembly boundaries, and scanner-owned exceptions.
+- [`docs/LICENSE_DETECTION_ARCHITECTURE.md`](docs/LICENSE_DETECTION_ARCHITECTURE.md) for license-index, dataset, cache, and detection-pipeline details.
+- [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md) for parser workflow, registration, datasource wiring, and assembly/file-reference integration.
+- [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) for test layers and validation expectations.
+- [`xtask/README.md`](xtask/README.md) for maintainer workflows such as compare runs, golden maintenance, generated artifacts, and benchmark helpers.
 
 ## Project Context
 
-**Provenant** is an independent Rust implementation for ScanCode-aligned workflows that aims for strong compatibility while fixing bugs and using Rust-specific strengths. The original Python codebase is available as an optional reference submodule at `reference/scancode-toolkit/`.
+Provenant is an independent Rust implementation for ScanCode-aligned workflows. The goal is strong compatibility users can trust, while using Rust to improve correctness, safety, performance, and maintainability.
 
-### Core Philosophy: Correctness and Feature Parity Above All
+Routine scans use the embedded license index. The `reference/scancode-toolkit/` submodule is mainly needed for parity research, embedded-license-data maintenance, and maintainer workflows that depend on upstream material.
 
-The primary goal is functional parity users can trust. When implementing features:
-
-- **Maximize correctness and feature parity**: Every feature, edge case, and requirement from the original must be preserved
-- **Effort is irrelevant**: Take whatever time and effort needed to get it right. No shortcuts, no compromises
-- **Zero tolerance for bugs**: Identify bugs in the original Python code and fix them in the Rust implementation
-- **Leverage Rust advantages**: Use Rust's type system, ownership model, and ecosystem to create more robust, performant code
-- **Never cut corners**: Proper error handling, comprehensive tests, and thorough edge case coverage are non-negotiable
-
-### Using the Reference Submodule
-
-Use the reference submodule as a behavioral specification for parity work: study the original implementation, tests, outputs, and known bugs to understand what must be preserved. Do **not** port it line by line. Use it to learn **what** the Rust implementation must do, not **how** it should be written. Routine scans use the embedded license index, so the submodule is mainly needed for parity research, embedded-license-data maintenance, and maintainer workflows that depend on upstream material. For deeper contributor guidance, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md).
+Use the Python ScanCode codebase as a behavioral specification, not as an implementation template. Preserve behavior and edge cases, but write the Rust implementation idiomatically.
 
 When an upstream test fixture is needed for Provenant tests, copy it into Provenant-owned `testdata/` and reference that local copy. Do **not** make tests or golden fixtures depend directly on paths under `reference/scancode-toolkit/`.
 
-### Security and Extraction Boundaries
+## Run-Every-Time Guardrails
 
-- Keep parsing static and bounded: do not execute package-manager code, project code, or shell commands to recover metadata.
-- Keep package extraction separate from broader detection work: parsers may normalize trustworthy declared package-license metadata, but file-content license/copyright detection belongs to the detection pipeline.
-- Not every package surface belongs in `PackageParser`: content-aware or opt-in surfaces such as compiled-binary package extraction can be scanner-owned exceptions. Follow the existing exception pattern instead of forcing everything through path-based parser registration.
+- Keep parsing static and bounded. Do not execute package-manager code, project code, or shell commands to recover metadata.
+- Preserve behavior and parity where users depend on it. If Provenant intentionally diverges, preserve and test the explicit Provenant contract and any documented compatibility lane.
+- Keep package extraction separate from broader detection work. Parsers may normalize trustworthy declared package-license metadata, but file-content license and copyright detection belong to the detection pipeline.
+- Parsers are file-local extractors. Cross-file ownership, topology-aware workspace handling, and file-reference resolution belong in assembly unless an existing documented scanner-owned exception says otherwise.
+- Prefer honest unknowns over guessed compatibility defaults. If a datasource does not prove dependency intent such as `is_runtime`, `is_optional`, `is_direct`, or `is_pinned`, leave it unset.
+- Use `cargo add`, `cargo remove`, and targeted `cargo update` instead of editing Rust dependencies by hand. Do not add dependencies lightly, and check maintenance health before introducing a new one.
+- Treat contributor tooling as dual-stack: Rust plus Node/npm-managed hooks and doc tooling. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`package.json`](package.json) for the current bootstrap and helper commands.
 
-## Workflow Entry Points
+## Frequent Agent Gotchas
 
-Treat the executable sources of truth as canonical:
+- Scan commands need at least one explicit output flag such as `--json-pp -` or `--json out.json`.
+- Detections are opt-in. Flags such as `--license`, `--package`, `--copyright`, `--info`, `--email`, and `--url` change what the scan actually collects.
+- Default file-level copyright output is more source-faithful than historic ScanCode rendering; use `--compat-mode scancode` when a parity-sensitive workflow needs the ScanCode-style rendered value.
+- `--package-only` is not a synonym for `--package`; it is a narrower fast path with different output semantics.
+- Prefer `--paths-file` when you already have an explicit rooted file list. Use `--include` for glob-style filtering inside a scan root. `--paths-file` requires exactly one native scan root and is not the same as `--from-json` reshaping.
+- The shared cache root is used for both incremental scan state and the license-index cache. Cache flags can materially change repeat-run behavior and benchmark fairness.
+- [`docs/SUPPORTED_FORMATS.md`](docs/SUPPORTED_FORMATS.md) is auto-generated and must not be edited manually.
 
-- [`README.md`](README.md) for local setup, bootstrap, and routine developer commands
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) for contributor policy, DCO requirements, and license-header workflow
-- [`package.json`](package.json) for documentation formatting/lint scripts
-- [`xtask/README.md`](xtask/README.md) for maintainer workflows such as benchmarking, compare runs, golden maintenance, and generated artifacts
-- [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) for test-layer definitions and current command guidance
+Use [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md) for current CLI workflows and flag combinations.
 
-## Dependency Management
+## Testing and Validation Defaults
 
-- Use `cargo` to manage Rust dependencies instead of editing `Cargo.toml` by hand. Prefer `cargo add`, `cargo remove`, and targeted `cargo update` commands so `Cargo.toml` and `Cargo.lock` stay in sync.
-- Always use the latest available dependency version unless there is a documented repository-specific reason not to.
-- Do not add dependencies lightly. Before adding a new dependency, confirm that it clearly earns its weight in maintenance and complexity cost.
-- Before adding a new dependency, always check its maintenance status (recent releases, active maintenance, ecosystem health/reputation, and any obvious long-term support concerns).
+Keep local validation tightly scoped. This repository has many slow and specialized tests, so default to the smallest command that proves your change and let CI handle the broader matrix.
 
-## Testing and Validation
+- Prefer focused commands such as `cargo test --doc`, `cargo test --test <suite_name>`, `cargo test --lib <filter>`, or `cargo test --features golden-tests <filter>` when those match the change.
+- Prefer exact test paths or narrowly owned suites over broad substring filters.
+- Avoid broad local commands such as `cargo test`, `cargo test --all`, `cargo test --lib`, or unfiltered golden suites unless there is no narrower way to validate the change.
+- For documentation-only changes, use the docs checks from [`CONTRIBUTING.md`](CONTRIBUTING.md) / [`package.json`](package.json).
+- Do not update golden expected files just to make a failing test pass; fix the implementation unless the new output is intentional and documented.
+- For parser and golden-covered work, make sure new or updated `.expected` fixtures are actually generated and committed when the change is intentional.
+- All checks must pass before merging, even if CI is the place that runs the full matrix.
 
-Local runs must stay tightly scoped. This repository has many slow and specialized tests, so default to the smallest command that proves the change you just made and let CI handle the broader matrix.
-
-- Prefer exact test paths over substring filters.
-- Avoid broad local commands such as `cargo test`, `cargo test --all`, `cargo test --lib`, or unfiltered golden suites unless the user explicitly asked for them or there is no narrower way to validate shared infrastructure.
-- Only run golden tests locally when the change directly affects golden-covered behavior, and keep them narrowly targeted.
-- Do not update golden expected files just to make a failing test pass; fix the implementation unless the new output is intentionally better and documented.
-
-For exact command patterns and test-layer definitions, see [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
+For parser work, Layer 3 scanner/assembly contract tests are the default expectation when downstream package, dependency, assembly, or file-link behavior matters. Parser-only tests and parser goldens do not cover the full scanner-wired contract by themselves. See [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
 
 ## Code Quality Guardrails
 
-Let the repository formatters and linters enforce mechanical style. Keep human guidance here focused on semantics and maintainability:
-
-- Avoid `.unwrap()` in library code unless panic is genuinely intended.
-- Do not use `#[allow(dead_code)]` just to silence dead code; remove unused code or wire it correctly.
-- Do not suppress clippy warnings as a shortcut. Suppressions are only acceptable for genuine false positives and must be permanent, justified, and commented.
+- Avoid `.unwrap()` in library code unless a panic is genuinely intended.
+- Do not use `#[allow(dead_code)]` or clippy suppressions as a shortcut. Suppressions should be rare, permanent, and justified in comments.
 - Use comments to explain non-obvious intent or tradeoffs, not to restate the code.
+- Use `Path` and `PathBuf` for filesystem paths instead of string concatenation, and watch for `\n` vs `\r\n` sensitivity in tests.
+- When touching scanner concurrency or shared-state code, preserve thread safety and parallel-processing assumptions.
 
-## Adding or Changing Package Parsers
+## Parser and Detection Work
 
-Use [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md) as the canonical guide for parser work. It covers parser invariants, registration in `src/parsers/mod.rs`, parser metadata registration, datasource wiring, dependency-semantics guardrails, assembly/file-reference integration, and validation against the Python reference or authoritative format specs.
+Treat [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md) as the canonical guide for parser work. In particular, remember these recurring failure modes:
 
-## CI/CD
+- A parser that is not registered in `src/parsers/mod.rs` will never be called by scanner dispatch.
+- `datasource_id` must be set on every production path, including parse-error and fallback returns.
+- Use `crate::parser_warn!` for parser failures so diagnostics land in structured scan output.
+- Every new datasource must be classified for assembly accounting.
+- If a parser emits `PackageData.file_references`, assembly ownership for resolution must also be wired.
+- Parser changes that affect supported-surface metadata must keep parser metadata registration and generated docs in sync.
+- One `PackageType` can map to multiple datasource IDs; use datasource IDs for file-format-level assembly behavior.
 
-Canonical hook and CI definitions live in [`lefthook.yml`](lefthook.yml), [`package.json`](package.json), and [`.github/workflows/check.yml`](.github/workflows/check.yml), with helper scripts in [`scripts/`](scripts/). Agents should treat the full CI workflow as CI's job, not the default local workflow. Local iteration should stay focused on the exact tests and checks needed for the files and behavior under change.
+For parity-sensitive parser work, use the compare and benchmark workflows in [`xtask/README.md`](xtask/README.md) instead of relying on ad hoc raw diffs.
 
-**All checks must pass before merging.**
+## Architecture Reminder
 
-### Commits and Pull Request Titles
-
-- Write git commit messages in Conventional Commits format: `type(scope): short summary` when a scope adds clarity, or `type: short summary` otherwise. Mark breaking changes with `!` when needed.
-- Prefer lowercase conventional types such as `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`, `perf`, and `chore`, and keep the summary imperative, concise, and focused on what was accomplished and why.
-- Use the same Conventional Commits format for pull request titles so the PR title is squash-merge ready and consistent with release/changelog tooling.
-
-### Opening Pull Requests
-
-- Use [`.github/pull_request_template.md`](.github/pull_request_template.md) for every agent-authored PR. The final PR body should follow its section structure, complete the applicable sections, and omit sections that do not apply.
-- With `gh`, use `--template .github/pull_request_template.md` only for interactive/editor-driven PR creation. When supplying `--body` or `--body-file`, do **not** combine them with `--template`; instead, render the template structure manually into the provided body.
-- Keep PR scope disciplined. For ecosystem/parser work, prefer one ecosystem family per PR and do not hide unrelated refactors inside the same review unit.
-
-### Contributor Compliance Metadata
-
-- Inbound contributions use the Developer Certificate of Origin (DCO) 1.1. Agent-authored commits should include a matching sign-off via `git commit -s`, and rewritten commits must preserve that trailer. See [`DCO`](DCO) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for the canonical policy text.
-- First-party code and automation files in the repo's allowlisted rollout carry SPDX-style headers using `SPDX-FileCopyrightText: Provenant contributors` and `SPDX-License-Identifier: Apache-2.0`.
-- Header scope is configured centrally in [`.license-headers.toml`](.license-headers.toml). Do not add headers to excluded paths such as `reference/**`, `testdata/**`, `resources/license_detection/**`, or generated docs unless the policy is intentionally expanded.
-- Use the standalone license-header tool documented in [`tools/license-headers/README.md`](tools/license-headers/README.md) to check or repair headers. Lefthook checks staged in-scope files without mutating them; CI verifies the full configured scope.
-
-## Performance and Architecture
-
-For scanner/assembly architecture, concurrency assumptions, benchmark workflows, and compare-output workflows, use [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`xtask/README.md`](xtask/README.md) as the canonical sources.
-
-Keep these architectural mental models in mind when changing core behavior:
-
-- Provenant keeps ScanCode-like high-level stages, but wires them statically through Rust traits and explicit pipeline stages rather than a runtime plugin system.
-- Parsers are file-local extractors. Cross-file ownership, topology-aware workspace handling, and file-reference resolution belong in assembly unless an existing documented scanner-owned exception says otherwise.
-- Parsers should prefer honest unknowns over guessed compatibility defaults. If a datasource does not prove dependency intent such as `is_runtime`, `is_optional`, `is_direct`, or `is_pinned`, leave it unset and keep any compatibility normalization as an explicit output-layer decision.
 - Internal domain types and the public ScanCode-compatible output schema are intentionally separate. Put domain semantics in `src/models/` and output-shaping concerns in `src/output_schema/`.
 
-## Common Pitfalls
+## Contributor Compliance Reminders
 
-1. **Taking shortcuts or porting Python line-by-line**: Preserve behavior, not implementation details. Study the tests and edge cases, then implement the Rust version properly.
-2. **Datasource ID mistakes**: Setting `datasource_id: None`, choosing the wrong `DatasourceId` variant, or missing an error-path assignment breaks assembly. See [Datasource IDs: The Assembly Bridge](#datasource-ids-the-assembly-bridge).
-3. **License data workflow confusion**: Routine scans use the embedded license index. Run `./setup.sh` when parity work, embedded-license-data maintenance, or other maintainer workflows need the reference submodule.
-4. **Cross-platform paths**: Use `Path` and `PathBuf`, not string concatenation
-5. **Line endings**: Be careful with `\n` vs `\r\n` in tests
-6. **Unwrap in library code**: Use `?` or `match` instead
-7. **Breaking parallel processing**: Ensure modifications maintain thread safety
-8. **Incomplete testing**: Every feature needs comprehensive test coverage including edge cases
-9. **Suppressing clippy warnings**: Never use `#[allow(...)]` or `#[expect(...)]` to ignore clippy errors or warnings as a shortcut or temporary workaround. Clippy suppressions are only acceptable when the lint is genuinely a false positive and the suppression is intended to be permanent. Every suppression must include a comment explaining why it is justified. If clippy flags something, fix the code properly.
+- Sign off authored commits with `git commit -s` to satisfy the DCO policy.
+- Use Conventional Commits format for commit messages and pull request titles.
+- Keep PR scope disciplined. For ecosystem or parser work, prefer one ecosystem family per PR.
+- Follow [`.github/pull_request_template.md`](.github/pull_request_template.md) for agent-authored PRs and omit sections that do not apply.
+- When creating PRs with `gh`, do not combine `--template` with `--body` or `--body-file`; if you script the PR body, render the template structure manually.
+- License-header scope and repair/check commands are owned by [`CONTRIBUTING.md`](CONTRIBUTING.md), [`tools/license-headers/README.md`](tools/license-headers/README.md), and [`.license-headers.toml`](.license-headers.toml).
 
-## Porting Features from Original ScanCode
+## Documentation Ownership Notes
 
-When porting behavior from the Python reference, use it as the spec for requirements, edge cases, outputs, and known bugs — never as a line-by-line implementation template.
+- Keep evergreen contributor and architecture docs under [`docs/`](docs/).
+- Do not edit generated docs such as [`docs/SUPPORTED_FORMATS.md`](docs/SUPPORTED_FORMATS.md) by hand; use the owning generation command.
+- Parser changes can require regenerating `docs/SUPPORTED_FORMATS.md`; the pre-commit hook checks this and stages the updated file when applicable.
+- For release, benchmark, compare-output, and artifact-generation workflows, use [`xtask/README.md`](xtask/README.md).
+- If you are unsure which document owns a topic, start with [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md).
 
-### Porting Guardrails
-
-1. **Research exhaustively**: read the original implementation, tests, and documentation before designing the Rust version.
-2. **Aim for feature parity, not code parity**: preserve behavior and output semantics while using idiomatic Rust.
-3. **Design for correctness**: use strong types, explicit error handling, and tests that cover edge cases and bug fixes from the original.
-4. **Document intentional differences**: if Rust diverges behaviorally, explain why and add tests that demonstrate the improvement.
-5. **For parser-specific implementation rules**: follow [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md).
-
-### Quality Checklist
-
-Before considering a feature complete:
-
-- [ ] The targeted behavior and edge cases for this change are preserved or intentionally improved
-- [ ] All edge cases from original tests are covered
-- [ ] Known bugs from original are fixed (and tested)
-- [ ] Error handling is comprehensive and explicit
-- [ ] Code is idiomatic Rust (passes `clippy` without warnings — no suppressed lints unless permanently justified)
-- [ ] Real-world testdata produces correct output
-- [ ] Golden test expected files are unchanged unless output genuinely improved (documented)
-- [ ] Documentation explains any intentional behavioral differences
-
-## Datasource IDs: The Assembly Bridge
-
-`datasource_id` is the file-format-level bridge between parsers and assembly. It is **not** the same as `package_type`: one package type can map to many datasource IDs.
-
-Guardrails:
-
-- **Always set `datasource_id`** on every production path, including error and fallback returns.
-- **Use the correct enum variant** for the exact file format being parsed.
-- **Handle multi-datasource parsers explicitly** when one parser supports multiple file formats.
-- **Add new datasource variants and assembly wiring together** so sibling/related files can merge correctly.
-- **Use canonical spellings for serialization** (e.g., `NugetNuspec` → `"nuget_nuspec"`, `RpmSpecfile` → `"rpm_specfile"`).
-- **Add legacy deserialization aliases** with `#[serde(alias = "...")]` when correcting upstream typos to maintain backward compatibility with `--from-json`.
-
-For the full datasource and assembly workflow, see [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md#step-6-add-assembly-support-if-applicable).
-
-## Additional Notes
-
-- **Rust toolchain**: Version pinned in `rust-toolchain.toml`
-- **Output format**: ScanCode Toolkit-compatible JSON with `OUTPUT_FORMAT_VERSION`
-- **License detection**: Uses an embedded license index built from the upstream ScanCode rules dataset plus Provenant's checked-in build policy and overlay files; see [`docs/LICENSE_DETECTION_ARCHITECTURE.md`](docs/LICENSE_DETECTION_ARCHITECTURE.md) for current detection behavior and maintenance workflow
-- **Exclusion patterns**: Supports glob patterns (e.g., `*.git*`, `node_modules/*`)
-- **Git submodules**: `reference/scancode-toolkit/` remains the behavioral reference for parity work and embedded-license-data maintenance, but routine scans use the embedded index
+If you believe you found a security issue, follow [`SECURITY.md`](SECURITY.md) and avoid public disclosure first.
