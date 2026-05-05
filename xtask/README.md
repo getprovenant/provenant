@@ -125,6 +125,7 @@ It supports two input modes:
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --help
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --repo-url https://github.com/org/repo.git --repo-ref main --profile common
+cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --repo-url https://github.com/org/repo.git --repo-ref <sha> --profile common --build-mode fast-iteration
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path /path/to/local/directory --profile common-with-compiled
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --repo-url https://github.com/org/repo.git --repo-ref v1.2.3 --profile licenses
 cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path /path/to/local/directory --profile packages
@@ -143,19 +144,21 @@ CLI arguments:
 - `--scancode-json PATH`: compare an existing ScanCode output JSON directly, without rerunning ScanCode.
 - `--provenant-json PATH`: compare an existing Provenant output JSON directly, without rerunning Provenant.
 - `--scancode-cache-identity ID`: optional with `--target-path`; opt in to shared ScanCode cache reuse for a caller-asserted local snapshot identity.
+- `--build-mode optimized|fast-iteration`: choose how scan-target mode builds the local Provenant binary. The default `optimized` mode uses `cargo build --release` for benchmark-grade timing. `fast-iteration` uses `cargo build --profile ci-release` for quicker output-focused reruns while you are still triaging changes.
 - `--profile common`: convenience shorthand for `-clupe --system-package --strip-root --processes 4`.
 - `--profile common-with-compiled`: convenience shorthand for `-clupe --system-package --package-in-compiled --strip-root`.
 - `--profile licenses`: convenience shorthand for `-l --strip-root`.
 - `--profile packages`: convenience shorthand for `-p --strip-root`.
 - In scan-target mode, pass either a supported `--profile` or explicit shared scan flags after `--`.
 - Direct-json mode compares the provided JSON files as-is and does not accept `--profile` or explicit scan flags after `--`.
+- Build mode only matters in scan-target mode because direct-json mode compares already-produced raw outputs without rebuilding Provenant.
 - Compare reduction still applies compatibility-aware in-memory normalization for known intentional differences such as Provenant's raw-default file-level copyright rendering, so parity review does not fail noisily just because Provenant preserved `All rights reserved` or punctuation in the saved JSON.
 
 ### What It Does
 
 1. Creates a per-run artifact directory under `.provenant/compare-runs/`.
 2. In scan-target mode, either scans the local directory in place or resolves `--repo-url` + `--repo-ref` through a shared repo cache.
-3. In scan-target mode, builds Provenant in release mode.
+3. In scan-target mode, builds Provenant in the selected build mode (`optimized` by default via `cargo build --release`; `fast-iteration` via `cargo build --profile ci-release`).
 4. In scan-target mode, updates or creates a shared shallow repo cache under `.provenant/repo-cache/`, fetches only the requested ref at depth 1, resolves it to a full commit SHA, and materializes a detached checkout for the run.
 5. In scan-target mode, resolves the ScanCode runtime identity and, on cache misses, ensures a local Docker-backed ScanCode runtime exists by building the image from `reference/scancode-toolkit` if needed.
 6. In scan-target mode, reuses cached ScanCode raw artifacts when available, otherwise runs ScanCode alongside Provenant with the same shared scan profile and ephemeral license-cache directories.
@@ -195,6 +198,9 @@ Optional diagnostic logs when available:
 - Stdout is reserved for progress, a reduced summary table, and the saved artifact paths.
 - ScanCode currently runs via Docker on all platforms for this workflow because that is the reproducible runtime path verified in this repository.
 - Direct-json mode skips Docker, Provenant binary builds, cache preparation, and scanner execution. It compares the provided raw JSON files exactly as supplied.
+- Use the default `--build-mode optimized` whenever the run's timing may be recorded in `docs/BENCHMARKS.md` or compared seriously against ScanCode wall-clock numbers.
+- Use `--build-mode fast-iteration` when you only need a quicker compare rerun to see whether a code change affected output. Before recording benchmark timing or refreshing a benchmark entry, rerun the target in the default optimized mode.
+- When ScanCode caching is enabled, `compare-outputs` prewrites the cache manifest before the Docker run starts. If an outer wrapper times out after ScanCode has begun but the container keeps running, wait for that container first and only salvage the finished `raw/scancode.json` (and `raw/scancode-stdout.txt` when present) into the printed ScanCode cache directory when `docker wait` exits `0`. If the container exits non-zero, do **not** populate the cache from that run.
 - When `compare-outputs` actually executes either scanner, it disables persistent license-cache reuse for fairness: Provenant runs with `--no-license-index-cache`, and ScanCode uses container-local ephemeral cache directories.
 - `compare-outputs` passes the same shared scan args to both scanners. The `common` profile includes installed package database coverage and fixes the shared worker count at `--processes 4`, which is usually a no-op on ordinary source repositories but matters for extracted rootfs/container trees and other artifact targets. Use `common-with-compiled` when you also want Go/Rust compiled-binary package extraction in the shared scan profile.
 - Direct-json mode infers whether info/classify/summary-style sections should be compared from the JSON contents themselves, so it does not require replaying the original scan flags just to unlock those diffs.

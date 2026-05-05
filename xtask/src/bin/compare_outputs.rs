@@ -15,9 +15,10 @@ use serde_json::{Map, Value, json};
 use sha2::Digest;
 
 use provenant_xtask::common::{
-    ScanProfile, derive_repo_name_from_url, ensure_release_binary, now_run_id, project_root,
-    read_binary_version, realpath, render_tsv_table, resolve_git_worktree_identity,
-    resolve_scan_args, sanitize_label, shell_join, write_pretty_json, write_tsv,
+    ProvenantBuildMode, ScanProfile, cargo_binary_path, derive_repo_name_from_url,
+    ensure_binary_for_build_mode, now_run_id, project_root, read_binary_version, realpath,
+    render_tsv_table, resolve_git_worktree_identity, resolve_scan_args, sanitize_label, shell_join,
+    write_pretty_json, write_tsv,
 };
 use provenant_xtask::manifests::{
     CommandInvocation, CommandsManifest, CompareArtifactsManifest, CompareRunManifest,
@@ -45,6 +46,8 @@ struct Args {
     repo_ref: Option<String>,
     #[arg(long, value_enum)]
     profile: Option<ScanProfile>,
+    #[arg(long, value_enum, default_value_t = ProvenantBuildMode::Optimized)]
+    build_mode: ProvenantBuildMode,
     scan_args: Vec<String>,
 }
 
@@ -87,6 +90,7 @@ struct ContextState {
     repo_manifest: RepoManifest,
     worktree_retained_after_run: bool,
     profile_name: Option<String>,
+    provenant_build_mode: ProvenantBuildMode,
     scan_args: Vec<String>,
     provenant_bin: PathBuf,
     provenant_json: PathBuf,
@@ -261,8 +265,17 @@ fn main() -> Result<()> {
             let checkout = prepare_target(&mut context, &args)?;
             println!();
 
-            println!("[3/6] Ensuring Provenant release binary...");
-            ensure_release_binary(&context.project_root, &context.provenant_bin, "provenant")?;
+            println!(
+                "[3/6] Ensuring Provenant {} binary (cargo profile: {})...",
+                context.provenant_build_mode.display_name(),
+                context.provenant_build_mode.cargo_profile()
+            );
+            ensure_binary_for_build_mode(
+                &context.project_root,
+                &context.provenant_bin,
+                "provenant",
+                context.provenant_build_mode,
+            )?;
             println!();
 
             resolve_provenant_runtime_identity(&mut context)?;
@@ -307,6 +320,11 @@ fn main() -> Result<()> {
             if let Some(profile_name) = &context.profile_name {
                 println!("  Profile:       {profile_name}");
             }
+            println!(
+                "  Build mode:    {} (cargo profile: {})",
+                context.provenant_build_mode.display_name(),
+                context.provenant_build_mode.cargo_profile()
+            );
             println!("  Provenant:     {}", context.provenant_version);
             if let Some(revision) = &context.provenant_runtime_revision {
                 println!("  Provenant rev: {revision}");
@@ -447,6 +465,12 @@ fn prepare_context(
     let artifact_root = project_root.join(".provenant/compare-runs");
     let scancode_cache_root = project_root.join(".provenant/scancode-cache");
     let scancode_submodule_dir = project_root.join("reference/scancode-toolkit");
+
+    if compare_mode == CompareMode::DirectJson && args.build_mode != ProvenantBuildMode::Optimized {
+        bail!(
+            "direct JSON mode does not build Provenant and only supports the default --build-mode optimized"
+        );
+    }
 
     let (
         target_dir,
@@ -690,8 +714,9 @@ fn prepare_context(
         repo_manifest,
         worktree_retained_after_run,
         profile_name,
+        provenant_build_mode: args.build_mode,
         scan_args,
-        provenant_bin: project_root.join("target/release/provenant"),
+        provenant_bin: cargo_binary_path(&project_root, args.build_mode, "provenant"),
         provenant_json: raw_dir.join("provenant.json"),
         provenant_stdout: raw_dir.join("provenant-stdout.txt"),
         provenant_version: DIRECT_JSON_MODE_PLACEHOLDER.to_string(),
@@ -1061,6 +1086,7 @@ fn run_scancode(context: &mut ContextState) -> Result<()> {
             }
         }
     }
+    prepare_pending_scancode_cache_entry(context)?;
     let args = build_scancode_docker_args(context);
     println!(
         "  {}",
@@ -3146,6 +3172,10 @@ fn write_manifest(context: &ContextState) -> Result<()> {
         commands,
         provenant: ProvenantManifest {
             version: context.provenant_version.clone(),
+            build_mode: (context.compare_mode == CompareMode::ScanTarget)
+                .then(|| context.provenant_build_mode.display_name().to_string()),
+            cargo_profile: (context.compare_mode == CompareMode::ScanTarget)
+                .then(|| context.provenant_build_mode.cargo_profile().to_string()),
             runtime_revision: context.provenant_runtime_revision.clone(),
             runtime_dirty: context.provenant_runtime_dirty,
             runtime_diff_hash: context.provenant_runtime_diff_hash.clone(),
@@ -3568,12 +3598,7 @@ fn persist_scancode_cache_entry(context: &ContextState) -> Result<()> {
     let Some(cache_dir) = &context.scancode_cache_dir else {
         return Ok(());
     };
-    fs::create_dir_all(cache_dir).with_context(|| {
-        format!(
-            "failed to create ScanCode cache dir {}",
-            cache_dir.display()
-        )
-    })?;
+    prepare_pending_scancode_cache_entry(context)?;
     materialize_file(&context.scancode_json, &cache_json_path(cache_dir))?;
     let cache_stdout = if context.scancode_stdout.is_file() {
         let cache_stdout = cache_stdout_path(cache_dir);
@@ -3597,6 +3622,36 @@ fn persist_scancode_cache_entry(context: &ContextState) -> Result<()> {
         docker_memory_swap_limit: scancode_docker_memory_swap_limit(context).map(str::to_string),
         scancode_json: cache_json_path(cache_dir),
         scancode_stdout: cache_stdout,
+    };
+    write_pretty_json(&cache_manifest_path(cache_dir), &manifest)?;
+    Ok(())
+}
+
+fn prepare_pending_scancode_cache_entry(context: &ContextState) -> Result<()> {
+    let Some(cache_dir) = &context.scancode_cache_dir else {
+        return Ok(());
+    };
+    fs::create_dir_all(cache_dir).with_context(|| {
+        format!(
+            "failed to create ScanCode cache dir {}",
+            cache_dir.display()
+        )
+    })?;
+    let manifest = ScancodeCacheEntryManifest {
+        cache_key: context.scancode_cache_key.clone().unwrap_or_default(),
+        cache_identity: effective_scancode_cache_identity(context).map(str::to_string),
+        target_label: context.target_label.clone(),
+        target_revision: context.target_revision.clone(),
+        repo_url: context.repo_manifest.url.clone(),
+        scan_args: build_scancode_cli_args(context),
+        scancode_image: context.scancode_image.clone(),
+        scancode_runtime_revision: context.scancode_runtime_revision.clone(),
+        scancode_runtime_dirty: context.scancode_runtime_dirty,
+        scancode_runtime_diff_hash: context.scancode_runtime_diff_hash.clone(),
+        docker_memory_limit: scancode_docker_memory_limit(context).map(str::to_string),
+        docker_memory_swap_limit: scancode_docker_memory_swap_limit(context).map(str::to_string),
+        scancode_json: cache_json_path(cache_dir),
+        scancode_stdout: None,
     };
     write_pretty_json(&cache_manifest_path(cache_dir), &manifest)?;
     Ok(())
@@ -3695,6 +3750,7 @@ mod tests {
             repo_manifest: RepoManifest::new(None, None, None, None),
             worktree_retained_after_run: true,
             profile_name: Some("common".to_string()),
+            provenant_build_mode: ProvenantBuildMode::Optimized,
             scan_args: vec![
                 "-clupe".to_string(),
                 "--system-package".to_string(),
@@ -3780,6 +3836,37 @@ mod tests {
         assert!(scancode_cache_complete(&cache_dir));
 
         let _ = fs::remove_dir_all(&cache_dir);
+    }
+
+    #[test]
+    fn prepare_pending_scancode_cache_entry_writes_manifest_before_json_exists() {
+        let temp_root = unique_temp_dir("pending-cache-manifest");
+        let cache_dir = temp_root.join("cache");
+        fs::create_dir_all(&temp_root).unwrap();
+
+        let mut context = test_context();
+        context.target_scancode_cache_identity = Some("chromium@2befda78".to_string());
+        context.scancode_cache_dir = Some(cache_dir.clone());
+        context.scancode_cache_key = Some(build_scancode_cache_key(&context).unwrap());
+
+        prepare_pending_scancode_cache_entry(&context).unwrap();
+
+        assert!(cache_manifest_path(&cache_dir).is_file());
+        assert!(!cache_json_path(&cache_dir).exists());
+
+        let manifest: ScancodeCacheEntryManifest =
+            serde_json::from_str(&fs::read_to_string(cache_manifest_path(&cache_dir)).unwrap())
+                .unwrap();
+        assert_eq!(
+            manifest.cache_key,
+            context.scancode_cache_key.clone().unwrap()
+        );
+        assert_eq!(
+            manifest.cache_identity.as_deref(),
+            Some("chromium@2befda78")
+        );
+
+        let _ = fs::remove_dir_all(&temp_root);
     }
 
     #[test]
@@ -4310,6 +4397,7 @@ mod tests {
             scancode_cache_identity: Some("fixture@rev".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4358,6 +4446,7 @@ mod tests {
             scancode_cache_identity: Some("fixture@rev".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4408,6 +4497,7 @@ mod tests {
             scancode_cache_identity: Some("   ".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4435,6 +4525,7 @@ mod tests {
             scancode_cache_identity: Some("pair@rev".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4484,6 +4575,7 @@ mod tests {
             scancode_cache_identity: Some("pair@rev".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4561,6 +4653,7 @@ mod tests {
             scancode_cache_identity: None,
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4582,6 +4675,71 @@ mod tests {
     }
 
     #[test]
+    fn prepare_context_uses_fast_iteration_binary_path_when_requested() {
+        let temp_root = unique_temp_dir("fast-iteration-context");
+        fs::create_dir_all(&temp_root).unwrap();
+        let fixture = temp_root.join("fixture.txt");
+        fs::write(&fixture, "fixture").unwrap();
+
+        let args = Args {
+            repo_url: None,
+            target_path: vec![fixture.clone()],
+            scancode_json: None,
+            provenant_json: None,
+            scancode_cache_identity: Some("fixture@rev".to_string()),
+            repo_ref: None,
+            profile: None,
+            build_mode: ProvenantBuildMode::FastIteration,
+            scan_args: Vec::new(),
+        };
+
+        let context =
+            prepare_context(&args, CompareMode::ScanTarget, vec!["-p".to_string()]).unwrap();
+
+        assert_eq!(
+            context.provenant_build_mode,
+            ProvenantBuildMode::FastIteration
+        );
+        assert!(
+            context
+                .provenant_bin
+                .ends_with("target/ci-release/provenant")
+        );
+
+        let _ = fs::remove_dir_all(&temp_root);
+        let _ = fs::remove_dir_all(&context.run_dir);
+    }
+
+    #[test]
+    fn prepare_context_rejects_fast_iteration_build_mode_in_direct_json_mode() {
+        let temp_root = unique_temp_dir("direct-json-build-mode");
+        fs::create_dir_all(&temp_root).unwrap();
+        let scancode = temp_root.join("scancode.json");
+        let provenant = temp_root.join("provenant.json");
+        fs::write(&scancode, "{}\n").unwrap();
+        fs::write(&provenant, "{}\n").unwrap();
+
+        let args = Args {
+            repo_url: None,
+            target_path: Vec::new(),
+            scancode_json: Some(scancode),
+            provenant_json: Some(provenant),
+            scancode_cache_identity: None,
+            repo_ref: None,
+            profile: None,
+            build_mode: ProvenantBuildMode::FastIteration,
+            scan_args: Vec::new(),
+        };
+
+        let error = prepare_context(&args, CompareMode::DirectJson, Vec::new())
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("does not build Provenant"));
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
     fn compare_mode_requires_complete_direct_json_pair() {
         let args = Args {
             repo_url: None,
@@ -4591,6 +4749,7 @@ mod tests {
             scancode_cache_identity: None,
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4608,6 +4767,7 @@ mod tests {
             scancode_cache_identity: None,
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4632,6 +4792,7 @@ mod tests {
             scancode_cache_identity: None,
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4692,6 +4853,8 @@ mod tests {
             manifest["provenant"]["version"],
             DIRECT_JSON_MODE_PLACEHOLDER
         );
+        assert!(manifest["provenant"]["build_mode"].is_null());
+        assert!(manifest["provenant"]["cargo_profile"].is_null());
 
         let _ = fs::remove_dir_all(&temp_root);
     }
@@ -4869,6 +5032,7 @@ mod tests {
             scancode_cache_identity: None,
             repo_ref: None,
             profile: Some(ScanProfile::Common),
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 
@@ -4906,6 +5070,7 @@ mod tests {
             scancode_cache_identity: Some("fixture@rev".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: vec![
                 "--from-json".to_string(),
                 "--license-policy".to_string(),
@@ -5116,6 +5281,7 @@ mod tests {
             scancode_cache_identity: Some("dirs@rev".to_string()),
             repo_ref: None,
             profile: None,
+            build_mode: ProvenantBuildMode::Optimized,
             scan_args: Vec::new(),
         };
 

@@ -96,6 +96,8 @@ pub struct ScancodeManifest {
 #[derive(Debug, Clone, Serialize)]
 pub struct ProvenantManifest {
     pub version: String,
+    pub build_mode: Option<String>,
+    pub cargo_profile: Option<String>,
     pub runtime_revision: Option<String>,
     pub runtime_dirty: bool,
     pub runtime_diff_hash: Option<String>,
