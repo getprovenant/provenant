@@ -336,6 +336,8 @@ fn write_manifest(context: &BenchContext) -> Result<()> {
         scan_args: context.scan_args.clone(),
         provenant: ProvenantManifest {
             version: context.provenant_version.clone(),
+            build_mode: Some("optimized".to_string()),
+            cargo_profile: Some("release".to_string()),
             runtime_revision: context.provenant_runtime_revision.clone(),
             runtime_dirty: context.provenant_runtime_dirty,
             runtime_diff_hash: context.provenant_runtime_diff_hash.clone(),

@@ -21,6 +21,12 @@ pub enum ScanProfile {
     Packages,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub enum ProvenantBuildMode {
+    Optimized,
+    FastIteration,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TargetSource {
     TargetPath,
@@ -67,6 +73,33 @@ impl ScanProfile {
             Self::CommonWithCompiled => "common-with-compiled",
             Self::Licenses => "licenses",
             Self::Packages => "packages",
+        }
+    }
+}
+
+impl ProvenantBuildMode {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Optimized => "optimized",
+            Self::FastIteration => "fast-iteration",
+        }
+    }
+
+    pub fn cargo_profile(self) -> &'static str {
+        match self {
+            Self::Optimized => "release",
+            Self::FastIteration => "ci-release",
+        }
+    }
+
+    pub fn target_dir_name(self) -> &'static str {
+        self.cargo_profile()
+    }
+
+    pub fn cargo_build_args(self) -> &'static [&'static str] {
+        match self {
+            Self::Optimized => &["build", "--release"],
+            Self::FastIteration => &["build", "--profile", "ci-release"],
         }
     }
 }
@@ -283,10 +316,26 @@ pub fn read_binary_version(binary: &Path) -> Result<String> {
     Ok(version.to_string())
 }
 
-pub fn ensure_release_binary(project_root: &Path, binary: &Path, label: &str) -> Result<()> {
+pub fn cargo_binary_path(
+    project_root: &Path,
+    build_mode: ProvenantBuildMode,
+    binary_name: &str,
+) -> PathBuf {
+    project_root
+        .join("target")
+        .join(build_mode.target_dir_name())
+        .join(binary_name)
+}
+
+pub fn ensure_binary_for_build_mode(
+    project_root: &Path,
+    binary: &Path,
+    label: &str,
+    build_mode: ProvenantBuildMode,
+) -> Result<()> {
     let output = Command::new("cargo")
         .current_dir(project_root)
-        .args(["build", "--release"])
+        .args(build_mode.cargo_build_args())
         .output()
         .with_context(|| format!("failed to build {label}"))?;
     let combined = format!(
@@ -300,12 +349,26 @@ pub fn ensure_release_binary(project_root: &Path, binary: &Path, label: &str) ->
         println!("  {line}");
     }
     if !output.status.success() {
-        anyhow::bail!("cargo build --release failed for {label}");
+        let command = shell_join(
+            &std::iter::once("cargo".to_string())
+                .chain(
+                    build_mode
+                        .cargo_build_args()
+                        .iter()
+                        .map(|arg| (*arg).to_string()),
+                )
+                .collect::<Vec<_>>(),
+        );
+        anyhow::bail!("{command} failed for {label}");
     }
     if !binary.is_file() {
         anyhow::bail!("{label} binary not found at {}", binary.display());
     }
     Ok(())
+}
+
+pub fn ensure_release_binary(project_root: &Path, binary: &Path, label: &str) -> Result<()> {
+    ensure_binary_for_build_mode(project_root, binary, label, ProvenantBuildMode::Optimized)
 }
 
 pub fn run_and_capture(
@@ -440,7 +503,8 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        ScanProfile, read_binary_version, resolve_git_worktree_identity, resolve_scan_args,
+        ProvenantBuildMode, ScanProfile, cargo_binary_path, read_binary_version,
+        resolve_git_worktree_identity, resolve_scan_args,
     };
 
     fn git(dir: &Path, args: &[&str]) {
@@ -462,6 +526,7 @@ mod tests {
         git(temp.path(), &["init"]);
         git(temp.path(), &["config", "user.name", "Test User"]);
         git(temp.path(), &["config", "user.email", "test@example.com"]);
+        git(temp.path(), &["config", "commit.gpgsign", "false"]);
         fs::write(temp.path().join("tracked.txt"), "hello\n").unwrap();
         git(temp.path(), &["add", "tracked.txt"]);
         git(temp.path(), &["commit", "-m", "init"]);
@@ -531,6 +596,36 @@ mod tests {
                 "--package-in-compiled".to_string(),
                 "--strip-root".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn provenant_build_modes_map_to_expected_profiles_and_paths() {
+        assert_eq!(ProvenantBuildMode::Optimized.display_name(), "optimized");
+        assert_eq!(ProvenantBuildMode::Optimized.cargo_profile(), "release");
+        assert_eq!(
+            ProvenantBuildMode::Optimized.cargo_build_args(),
+            ["build", "--release"]
+        );
+        assert_eq!(
+            ProvenantBuildMode::FastIteration.display_name(),
+            "fast-iteration"
+        );
+        assert_eq!(
+            ProvenantBuildMode::FastIteration.cargo_profile(),
+            "ci-release"
+        );
+        assert_eq!(
+            ProvenantBuildMode::FastIteration.cargo_build_args(),
+            ["build", "--profile", "ci-release"]
+        );
+        assert_eq!(
+            cargo_binary_path(
+                Path::new("/tmp/project"),
+                ProvenantBuildMode::FastIteration,
+                "provenant"
+            ),
+            Path::new("/tmp/project/target/ci-release/provenant")
         );
     }
 
