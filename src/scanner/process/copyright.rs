@@ -5,7 +5,10 @@ use super::binary_text::{
     extract_named_author_from_binary_line, has_binary_name_like_shape, has_excessive_at_noise,
     has_sufficient_alphabetic_content, is_binary_string_author_candidate, is_company_like_suffix,
 };
-use crate::copyright::{self, AuthorDetection, CopyrightDetection, HolderDetection, refine_author};
+use crate::copyright::{
+    self, AuthorDetection, CopyrightDetection, HolderDetection, prepare_text_line, refine_author,
+    refine_copyright,
+};
 use crate::models::{Author, Copyright, FileInfoBuilder, Holder, LineNumber};
 use regex::Regex;
 use std::collections::HashSet;
@@ -119,9 +122,73 @@ fn render_raw_copyright_from_text(
 
     if rendered.is_empty() {
         fallback.to_string()
+    } else if let Some(projected) = project_wrapped_copyright_value(&rendered, fallback) {
+        projected
+    } else if let Some(projected) = project_suspicious_native_copyright_value(&rendered) {
+        projected
     } else {
         project_native_copyright_value(&rendered, fallback)
     }
+}
+
+fn project_wrapped_copyright_value(rendered: &str, _fallback: &str) -> Option<String> {
+    static VALUE_LEGALCOPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            ^VALUE\s+"LegalCopyright"\s*,\s*"(?P<value>[^"]+)"
+            (?:\s+"\\0")?\s*$
+            "#,
+        )
+        .expect("valid LegalCopyright wrapper regex")
+    });
+    static ASSIGNMENT_COPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            ^(?:PRODUCT_COPYRIGHT|INFOPLIST_KEY_NSHumanReadableCopyright)
+            \s*=\s*(?P<value>.+?)\s*;?\s*$
+            "#,
+        )
+        .expect("valid assignment copyright wrapper regex")
+    });
+    static APPLICATION_LEGALESE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?ix)^applicationLegalese\s*:\s*(?P<value>.+?)\s*,?\s*$"#)
+            .expect("valid applicationLegalese wrapper regex")
+    });
+    static MARKUP_TEXT_COPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            \btext\s*=\s*(?:"(?P<dq>[^"]+)"|'(?P<sq>[^']+)')
+            "#,
+        )
+        .expect("valid markup text copyright wrapper regex")
+    });
+
+    let extracted = if let Some(captures) = VALUE_LEGALCOPYRIGHT_RE.captures(rendered) {
+        captures
+            .name("value")
+            .map(|m| m.as_str().trim().to_string())
+    } else if let Some(captures) = ASSIGNMENT_COPYRIGHT_RE.captures(rendered) {
+        captures
+            .name("value")
+            .map(|m| m.as_str().trim().trim_matches(&['\'', '"'][..]).to_string())
+    } else if let Some(captures) = APPLICATION_LEGALESE_RE.captures(rendered) {
+        captures
+            .name("value")
+            .map(|m| m.as_str().trim().trim_matches(&['\'', '"'][..]).to_string())
+    } else if let Some(captures) = MARKUP_TEXT_COPYRIGHT_RE.captures(rendered) {
+        captures
+            .name("dq")
+            .or_else(|| captures.name("sq"))
+            .map(|m| m.as_str().trim().to_string())
+    } else {
+        None
+    }?;
+
+    let projected = prepare_text_line(&extracted)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    Some(projected)
 }
 
 fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
@@ -134,6 +201,9 @@ fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
     let rendered_lower = rendered.to_ascii_lowercase();
     let fallback_lower = fallback.to_ascii_lowercase();
     let Some(start) = rendered_lower.find(&fallback_lower) else {
+        if refine_copyright(rendered).as_deref() == Some(fallback) {
+            return preserve_native_suffix_for_semantic_match(rendered, fallback);
+        }
         return rendered.to_string();
     };
     let end = start + fallback.len();
@@ -153,6 +223,40 @@ fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
     } else {
         format!("{fallback} {native_suffix}")
     }
+}
+
+fn preserve_native_suffix_for_semantic_match(rendered: &str, fallback: &str) -> String {
+    let lower = rendered.to_ascii_lowercase();
+    if lower.contains("all rights reserved") {
+        let sep = if fallback.ends_with(['.', ',', ';', ':']) {
+            ""
+        } else {
+            "."
+        };
+        return format!("{fallback}{sep} All rights reserved.");
+    }
+
+    fallback.to_string()
+}
+
+fn project_suspicious_native_copyright_value(rendered: &str) -> Option<String> {
+    let lower = rendered.to_ascii_lowercase();
+    let looks_suspicious = lower.ends_with(" or")
+        || lower.contains(" and is licensed under ")
+        || lower.contains(" are derived from ")
+        || lower.contains(" it is hereby released to the")
+        || lower.contains(", et al")
+        || lower.contains(" cest ")
+        || lower.contains(" ce?st ")
+        || (lower.contains(':') && lower.contains(" edt "))
+        || (lower.contains(':') && lower.contains(" cest"));
+    if !looks_suspicious {
+        return None;
+    }
+
+    let prepared = prepare_text_line(rendered);
+    let refined = refine_copyright(&prepared)?;
+    (refined != rendered.trim()).then_some(refined)
 }
 
 fn normalize_native_suffix(suffix: &str) -> Option<String> {

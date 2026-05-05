@@ -1549,6 +1549,55 @@ fn test_refine_copyright_drops_versioninfo_and_dtd_junk() {
 }
 
 #[test]
+fn test_refine_copyright_strips_flutter_wrapper_context() {
+    assert_eq!(
+        refine_copyright("applicationLegalese: '© 2014 The Flutter Authors',"),
+        Some("(c) 2014 The Flutter Authors".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            "PRODUCT_COPYRIGHT = Copyright © 2014 The Flutter Authors. All rights reserved."
+        ),
+        Some("Copyright (c) 2014 The Flutter Authors".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            r#"<label opaque="NO" text="© 2018 The Flutter Authors. All rights reserved." />"#
+        ),
+        Some("(c) 2018 The Flutter Authors".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            r#"VALUE "LegalCopyright", "Copyright (C) {{year}} {{organization}}. All rights reserved." "\0""#
+        ),
+        None
+    );
+}
+
+#[test]
+fn test_refine_copyright_drops_flutter_generated_code_fragments() {
+    assert_eq!(
+        refine_copyright(
+            r#"<i class="material-icons-sharp md-36">copyright</i> &#x2014; material icon named "copyright" (sharp)."#
+        ),
+        None
+    );
+    assert_eq!(
+        refine_copyright("verifyEntry(mapping, 'KeyC', <String>[r'c', r'C', r'©', r'¢'], 'c');"),
+        None
+    );
+    assert_eq!(refine_copyright("r'u3 u©g˝g' r'v2˚kk' r'w2ÂzÅz'"), None);
+}
+
+#[test]
+fn test_refine_copyright_strips_all_rights_reserved_clause() {
+    assert_eq!(
+        refine_copyright("Copyright 2024 Apple Inc. All rights reserved."),
+        Some("Copyright 2024 Apple Inc.".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_drops_versioninfo_and_dtd_junk() {
     assert_eq!(
         refine_holder("VALUE OriginalFilename NativeConsoleApp.exe"),
@@ -1557,6 +1606,14 @@ fn test_refine_holder_drops_versioninfo_and_dtd_junk() {
     assert_eq!(refine_holder("PCDATA"), None);
     assert_eq!(refine_holder("clone.Copyright.Text"), None);
     assert_eq!(refine_holder("HeaderType.Content u00AD u00AE"), None);
+}
+
+#[test]
+fn test_refine_holder_drops_flutter_generated_code_fragments() {
+    assert_eq!(refine_holder("x2014 material icon named"), None);
+    assert_eq!(refine_holder("r'¢"), None);
+    assert_eq!(refine_holder("void"), None);
+    assert_eq!(refine_holder("organization"), None);
 }
 
 #[test]
@@ -2134,5 +2191,33 @@ fn test_refine_copyright_keeps_structured_copyright_notice_with_year() {
     assert_eq!(
         refine_copyright("Copyright Notice (1999) University of Chicago"),
         Some("Copyright Notice (1999) University of Chicago".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_strips_locale_timestamp_before_year() {
+    assert_eq!(
+        refine_copyright("Copyright (C) EDF R&D, lun sep 30 14:23:19 CEST 2002"),
+        Some("Copyright (C) EDF R&D 2002".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_strips_locale_timestamp_suffix() {
+    assert_eq!(
+        refine_holder("EDF R&D, lun sep 30 14:23:19 CEST"),
+        Some("EDF R&D".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_strips_trailing_prose_clauses() {
+    assert_eq!(
+        refine_holder("Alexander Peslyak and it is hereby released to the"),
+        Some("Alexander Peslyak".to_string())
+    );
+    assert_eq!(
+        refine_holder("Andreas Dilger, are derived from libpng-0.88"),
+        Some("Andreas Dilger".to_string())
     );
 }

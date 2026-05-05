@@ -187,6 +187,202 @@ fn test_extract_copyright_information_xml_comment_projection_preserves_native_sy
 }
 
 #[test]
+fn test_extract_copyright_information_strips_flutter_wrapper_assignments() {
+    let text = "PRODUCT_COPYRIGHT = Copyright © 2014 The Flutter Authors. All rights reserved.\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("AppInfo.xcconfig"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("AppInfo.xcconfig".to_string())
+        .base_name("AppInfo".to_string())
+        .extension(".xcconfig".to_string())
+        .path("AppInfo.xcconfig".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright (c) 2014 The Flutter Authors. All rights reserved."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("Copyright (c) 2014 The Flutter Authors")
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_strips_flutter_application_legalese_wrapper() {
+    let text = "applicationLegalese: '© 2014 The Flutter Authors',\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("about.dart"), text, 120.0, false);
+
+    let file = builder
+        .name("about.dart".to_string())
+        .base_name("about".to_string())
+        .extension(".dart".to_string())
+        .path("about.dart".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.copyrights[0].copyright, "(c) 2014 The Flutter Authors");
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("(c) 2014 The Flutter Authors")
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_strips_flutter_storyboard_text_wrapper() {
+    let text = r#"<label text="© 2018 The Flutter Authors. All rights reserved." />\n"#;
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("LaunchScreen.storyboard"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("LaunchScreen.storyboard".to_string())
+        .base_name("LaunchScreen".to_string())
+        .extension(".storyboard".to_string())
+        .path("LaunchScreen.storyboard".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "(c) 2018 The Flutter Authors. All rights reserved."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("(c) 2018 The Flutter Authors")
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_drops_flutter_generated_doc_false_positive() {
+    let text = r#"<i class="material-icons-sharp md-36">copyright</i> &#x2014; material icon named "copyright" (sharp).\n"#;
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("icons.dart"), text, 120.0, false);
+
+    let file = builder
+        .name("icons.dart".to_string())
+        .base_name("icons".to_string())
+        .extension(".dart".to_string())
+        .path("icons.dart".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(
+        file.copyrights.is_empty(),
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert!(file.holders.is_empty(), "holders: {:?}", file.holders);
+}
+
+#[test]
+fn test_extract_copyright_information_strips_trailing_or_notice_bleed() {
+    let text = "Copyright © 1993,2004 Sun Microsystems or\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("NOTICE"), text, 120.0, false);
+
+    let file = builder
+        .name("NOTICE".to_string())
+        .base_name("NOTICE".to_string())
+        .extension("".to_string())
+        .path("NOTICE".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright (c) 1993,2004 Sun Microsystems"
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_strips_locale_timestamp_from_raw_projection() {
+    let text = "// Copyright (C) EDF R&D, lun sep 30 14:23:19 CEST 2002\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("action_aat_product.hh"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("action_aat_product.hh".to_string())
+        .base_name("action_aat_product".to_string())
+        .extension(".hh".to_string())
+        .path("action_aat_product.hh".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.copyrights[0].copyright, "Copyright (C) EDF R&D 2002");
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(file.holders[0].holder, "EDF R&D");
+}
+
+#[test]
 fn test_binary_string_copyright_candidate_keeps_real_notice() {
     let notice = "Copyright nexB and others (c) 2012";
     assert!(is_binary_string_copyright_candidate(notice));

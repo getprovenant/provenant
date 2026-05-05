@@ -14,6 +14,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use super::candidates::strip_balanced_edge_parens;
+use super::prepare::prepare_text_line;
 mod authors_junk_patterns;
 mod copyrights_junk_patterns;
 mod holders_junk_patterns;
@@ -519,8 +520,10 @@ fn is_junk_copyright_code_fragment(s: &str) -> bool {
         || lower == "copyright void"
         || trimmed.contains("??")
         || contains_member_access_code_token(trimmed)
+        || contains_code_string_literal_fragment(trimmed)
         || contains_unicode_escape_token_run(trimmed)
         || contains_html_entity_decoder_artifact(trimmed)
+        || contains_markup_tag_fragment(trimmed)
         || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
         || has_windows_versioninfo_markers
@@ -580,10 +583,14 @@ fn is_junk_holder_code_fragment(s: &str) -> bool {
         || contains_embedded_file_reference_prose(trimmed)
         || lower.contains("icondata")
         || lower.contains("authors.append")
+        || lower == "void"
+        || looks_like_parenthesized_ui_descriptor(trimmed)
         || contains_member_access_code_token(trimmed)
         || contains_code_call_fragment(trimmed)
+        || contains_code_string_literal_fragment(trimmed)
         || contains_unicode_escape_token_run(trimmed)
         || contains_html_entity_decoder_artifact(trimmed)
+        || contains_markup_tag_fragment(trimmed)
         || contains_xml_markup_declaration_token(trimmed)
         || contains_regex_or_template_marker(trimmed)
         || has_windows_versioninfo_markers
@@ -667,6 +674,7 @@ fn contains_html_entity_decoder_artifact(s: &str) -> bool {
     let lower = s.to_ascii_lowercase();
     lower.contains("u00a0")
         || lower.contains("hellip")
+        || lower.contains("x2014")
         || lower.contains("x2f")
         || lower.contains("reg 174")
         || lower.contains("copy 169")
@@ -690,6 +698,29 @@ fn contains_generated_resource_token(s: &str) -> bool {
     }
 
     ASSET_RE.is_match(trimmed)
+}
+
+fn contains_markup_tag_fragment(s: &str) -> bool {
+    static MARKUP_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)</?[a-z][^>]*>|<[!?][^>]*>").expect("valid markup tag fragment regex")
+    });
+
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if trimmed.contains('@')
+        || lower.contains("www.")
+        || lower.contains(".com")
+        || lower.contains(".org")
+        || lower.contains(".net")
+        || lower.contains(".edu")
+        || lower.contains(".gov")
+        || lower.contains(".io")
+        || lower.contains(".dev")
+    {
+        return false;
+    }
+
+    MARKUP_TAG_RE.is_match(trimmed) || trimmed.contains("&#")
 }
 
 fn contains_member_access_code_token(s: &str) -> bool {
@@ -716,6 +747,25 @@ fn contains_member_access_code_token(s: &str) -> bool {
     MEMBER_ACCESS_RE.is_match(trimmed)
 }
 
+fn contains_code_string_literal_fragment(s: &str) -> bool {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+
+    lower.contains("r'")
+        || lower.contains("r\"")
+        || lower.contains("\"\\0\"")
+        || lower.contains("'\\0'")
+}
+
+fn looks_like_parenthesized_ui_descriptor(s: &str) -> bool {
+    static UI_DESCRIPTOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^\((?:sharp|round|rounded|outline|outlined|filled)\)$")
+            .expect("valid UI descriptor regex")
+    });
+
+    UI_DESCRIPTOR_RE.is_match(s.trim())
+}
+
 fn is_post_refine_copyright_code_fragment(s: &str) -> bool {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
@@ -723,7 +773,9 @@ fn is_post_refine_copyright_code_fragment(s: &str) -> bool {
     contains_windows_versioninfo_token(trimmed)
         || contains_member_access_code_token(trimmed)
         || contains_code_call_fragment(trimmed)
+        || contains_code_string_literal_fragment(trimmed)
         || contains_unicode_escape_token_run(trimmed)
+        || contains_markup_tag_fragment(trimmed)
         || lower.contains("public void")
         || lower.contains("get set")
         || lower.contains("assert.equal")
@@ -789,6 +841,7 @@ fn is_explicit_generic_field_label_token(s: &str) -> bool {
             "description",
             "direction",
             "options",
+            "organization",
             "owner_name",
             "params",
             "placeholder",
@@ -796,6 +849,7 @@ fn is_explicit_generic_field_label_token(s: &str) -> bool {
             "ref",
             "reviewers",
             "schema",
+            "sharp",
             "source",
             "text",
             "timeago",
@@ -803,6 +857,11 @@ fn is_explicit_generic_field_label_token(s: &str) -> bool {
             "tooltip",
             "unique",
             "username",
+            "round",
+            "rounded",
+            "outline",
+            "outlined",
+            "filled",
         ])
     });
 
@@ -1027,7 +1086,11 @@ fn is_obvious_prose_fragment(s: &str) -> bool {
     if lower.starts_with("not by ") {
         return false;
     }
-    if lower.contains("code sample for") {
+    if lower.contains("code sample for")
+        || lower.contains("tests using the examples provided by")
+        || lower.ends_with("row header")
+        || lower.ends_with("column header")
+    {
         return true;
     }
 
@@ -1092,6 +1155,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
         return None;
     }
     let mut c = original.clone();
+    c = strip_known_copyright_wrappers(&c);
     c = strip_trailing_quote_before_email(&c);
     c = normalize_b_dot_angle_emails(&c);
     c = strip_nickname_quotes(&c);
@@ -1136,12 +1200,14 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_heavily_based_clause(&c);
     c = strip_trailing_obfuscated_email_in_angle_brackets_after_copyright(&c);
     c = strip_trailing_linux_ag_location_in_copyright(&c);
+    c = strip_trailing_locale_timestamp_before_terminal_year_in_copyright(&c);
     c = strip_trailing_by_person_clause_after_company(&c);
     c = strip_trailing_division_of_company_suffix(&c);
     c = strip_trailing_paren_at_without_domain(&c);
     c = strip_trailing_inc_after_today_year_placeholder(&c);
     c = truncate_trailing_boilerplate(&c);
     c = strip_trailing_everyone_is_permitted_to_copy_clause(&c);
+    c = strip_trailing_all_rights_reserved_clause(&c);
     c = strip_trailing_author_label(&c);
     c = strip_trailing_credit_file_reference_clause(&c);
     c = strip_trailing_isc_after_inc(&c);
@@ -1217,7 +1283,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     let result_upper = result.to_ascii_uppercase();
     if result_upper.contains("COPYRIGHT")
         && result_upper.contains("YEAR")
-        && result_upper.contains("YOUR NAME")
+        && (result_upper.contains("YOUR NAME") || result_upper.contains("ORGANIZATION"))
     {
         return None;
     }
@@ -1246,6 +1312,107 @@ fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
             | "copyright doctrines of fair use, fair dealing, or other equivalents"
             | "copyright doctrines of fair use, fair dealing, or other equivalents."
     )
+}
+
+fn strip_known_copyright_wrappers(s: &str) -> String {
+    static VALUE_LEGALCOPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            ^VALUE\s+"LegalCopyright"\s*,\s*"(?P<value>[^"]+)"
+            (?:\s+"\\0")?\s*$
+            "#,
+        )
+        .expect("valid LegalCopyright wrapper regex")
+    });
+    static ASSIGNMENT_COPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            ^(?:PRODUCT_COPYRIGHT|INFOPLIST_KEY_NSHumanReadableCopyright)
+            \s*=\s*(?P<value>.+?)\s*;?\s*$
+            "#,
+        )
+        .expect("valid assignment copyright wrapper regex")
+    });
+    static APPLICATION_LEGALESE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?ix)^applicationLegalese\s*:\s*(?P<value>.+?)\s*,?\s*$"#)
+            .expect("valid applicationLegalese wrapper regex")
+    });
+    static MARKUP_TEXT_COPYRIGHT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            \btext\s*=\s*(?:"(?P<dq>[^"]+)"|'(?P<sq>[^']+)')
+            "#,
+        )
+        .expect("valid markup text copyright wrapper regex")
+    });
+
+    let trimmed = s.trim();
+    if let Some(captures) = VALUE_LEGALCOPYRIGHT_RE.captures(trimmed) {
+        let value = captures
+            .name("value")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        if !value.is_empty() {
+            return prepare_text_line(value).trim().to_string();
+        }
+    }
+
+    for regex in [&*ASSIGNMENT_COPYRIGHT_RE, &*APPLICATION_LEGALESE_RE] {
+        if let Some(captures) = regex.captures(trimmed) {
+            let value = captures
+                .name("value")
+                .map(|m| m.as_str())
+                .unwrap_or("")
+                .trim()
+                .trim_matches(&['\'', '"'][..]);
+            if value.starts_with("Copyright") || value.starts_with('©') {
+                return prepare_text_line(value).trim().to_string();
+            }
+        }
+    }
+
+    if let Some(captures) = MARKUP_TEXT_COPYRIGHT_RE.captures(trimmed) {
+        let value = captures
+            .name("dq")
+            .or_else(|| captures.name("sq"))
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        if value.starts_with("Copyright") || value.starts_with('©') {
+            return prepare_text_line(value).trim().to_string();
+        }
+    }
+
+    s.to_string()
+}
+
+fn strip_trailing_all_rights_reserved_clause(s: &str) -> String {
+    static ALL_RIGHTS_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)^(?P<prefix>.+?)\.?\s+all\s+rights\s+reserved\.?$")
+            .expect("valid all rights reserved regex")
+    });
+
+    let trimmed = s.trim();
+    let Some(captures) = ALL_RIGHTS_RESERVED_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    let prefix = captures
+        .name("prefix")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim();
+    let lower = prefix.to_ascii_lowercase();
+    if prefix.is_empty()
+        || !(lower.starts_with("copyright") || lower.starts_with("(c)") || lower.starts_with('©'))
+    {
+        return s.to_string();
+    }
+
+    prefix
+        .trim_end_matches(&[' ', '.', ',', ';', ':'][..])
+        .to_string()
 }
 
 fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
@@ -1524,6 +1691,40 @@ fn strip_trailing_linux_ag_location_in_copyright(s: &str) -> String {
         }
     }
     s.to_string()
+}
+
+fn strip_trailing_locale_timestamp_before_terminal_year_in_copyright(s: &str) -> String {
+    static LOCALE_TIMESTAMP_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?),\s*
+            [a-z]{3}\s+[a-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+[A-Z]{2,5}
+            (?:\s+(?P<year>\d{4}))?\s*$
+            ",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = LOCALE_TIMESTAMP_COPY_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+    let lower = prefix.to_ascii_lowercase();
+    if !(lower.starts_with("copyright") || lower.starts_with("(c)") || lower.starts_with('©')) {
+        return s.to_string();
+    }
+    if let Some(year) = cap
+        .name("year")
+        .map(|m| m.as_str())
+        .filter(|y| !y.is_empty())
+    {
+        return format!("{} {}", prefix.trim_end_matches(&[',', ' '][..]), year);
+    }
+    prefix.trim_end_matches(&[',', ' '][..]).to_string()
 }
 
 fn strip_trailing_quote_before_email(s: &str) -> String {
@@ -1912,6 +2113,30 @@ fn strip_trailing_component_descriptor_from_holder(s: &str) -> String {
         let desc = m.as_str().trim();
         if !prefix.is_empty() && is_trailing_component_descriptor(desc) {
             return prefix.to_string();
+        }
+    }
+
+    s.to_string()
+}
+
+fn strip_trailing_holder_prose_clause(s: &str) -> String {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    for marker in [
+        " and it is hereby released to the",
+        " it is hereby released to the",
+        ", are derived from ",
+        " are derived from ",
+        " and is licensed under ",
+        " and labeled as such",
+    ] {
+        if let Some(idx) = lower.find(marker) {
+            let prefix = trimmed[..idx]
+                .trim_end_matches(&[',', ';', ':', ' '][..])
+                .trim();
+            if !prefix.is_empty() && prefix_has_holder_words(prefix) {
+                return prefix.to_string();
+            }
         }
     }
 
@@ -2420,6 +2645,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = normalize_comma_spacing(&h);
     h = normalize_angle_bracket_comma_spacing(&h);
     h = strip_trailing_linux_ag_location(&h);
+    h = strip_trailing_locale_timestamp_in_holder(&h);
     h = strip_trailing_but_suffix(&h);
     if had_paren_email {
         h = remove_comma_between_person_and_company_suffix(&h);
@@ -2462,6 +2688,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
 
     h = remove_some_extra_words_and_punct(&h);
     h = strip_trailing_incomplete_as_represented_by(&h);
+    h = strip_trailing_holder_prose_clause(&h);
     h = h.trim_matches(&['/', ' ', '~'][..]).to_string();
     h = refine_names(&h, prefixes);
     h = strip_trailing_company_co_ltd(&h);
@@ -2604,6 +2831,29 @@ fn strip_trailing_linux_ag_location(s: &str) -> String {
         }
     }
     s.to_string()
+}
+
+fn strip_trailing_locale_timestamp_in_holder(s: &str) -> String {
+    static LOCALE_TIMESTAMP_HOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?),\s*
+            [a-z]{3}\s+[a-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+[A-Z]{2,5}
+            (?:\s+\d{4})?\s*$
+            ",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = LOCALE_TIMESTAMP_HOLDER_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || !prefix_has_holder_words(prefix) {
+        return s.to_string();
+    }
+    prefix.trim_end_matches(&[',', ' '][..]).to_string()
 }
 
 fn remove_comma_between_person_and_company_suffix(s: &str) -> String {

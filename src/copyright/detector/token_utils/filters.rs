@@ -367,6 +367,45 @@ pub fn drop_path_fragment_holders_from_bare_c_code_lines(
     });
 }
 
+pub fn drop_test_label_false_positive_copyrights_and_holders(
+    raw_lines: &[&str],
+    copyrights: &mut Vec<CopyrightDetection>,
+    holders: &mut Vec<HolderDetection>,
+) {
+    if raw_lines.is_empty() || (copyrights.is_empty() && holders.is_empty()) {
+        return;
+    }
+
+    static ROW_HEADER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            \([A-Z]\)\s+(?:row|column)\s+header
+            | \|\s*\([A-Z]\)\s*\|\s*\d+\s*\|\s*\d+\s*\|\s*\([A-Z]\)\s+row\s+header
+            ",
+        )
+        .unwrap()
+    });
+    static TEST_EXAMPLES_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)tests\s+using\s+the\s+examples\s+provided\s+by\s+\(c\)").unwrap()
+    });
+
+    let bad_lines: HashSet<usize> = raw_lines
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, line)| {
+            (ROW_HEADER_RE.is_match(line) || TEST_EXAMPLES_COPY_RE.is_match(line))
+                .then_some(idx + 1)
+        })
+        .collect();
+
+    if bad_lines.is_empty() {
+        return;
+    }
+
+    copyrights.retain(|c| !(c.start_line == c.end_line && bad_lines.contains(&c.start_line.get())));
+    holders.retain(|h| !(h.start_line == h.end_line && bad_lines.contains(&h.start_line.get())));
+}
+
 /// Tags whose filtering should cause adjacent commas to be considered orphaned.
 /// Only year-related tags: commas between years (e.g. "2006, 2007") become
 /// orphaned when the years are removed. Email/URL commas are intentionally
