@@ -1010,6 +1010,39 @@ fn strip_trailing_everyone_is_permitted_to_copy_clause(s: &str) -> String {
         .unwrap_or_else(|| s.to_string())
 }
 
+fn strip_trailing_reserved_font_name_clause(s: &str) -> String {
+    static RESERVED_FONT_NAME_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?)
+            (?:
+                \s*,\s*
+              | \s+\(\s*
+              | \s+\(\s*,\s*
+              | \s+
+            )
+            with\s+(?:no\s+)?reserved\s+font\s+name\b.*$
+            ",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = RESERVED_FONT_NAME_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    cap.name("prefix")
+        .map(|m| {
+            m.as_str()
+                .trim_end_matches(&[',', ';', ':', ' ', '('][..])
+                .trim()
+                .to_string()
+        })
+        .filter(|prefix| !prefix.is_empty())
+        .unwrap_or_else(|| s.to_string())
+}
+
 fn looks_like_lowercase_enum_blob(s: &str) -> bool {
     static LOWERCASE_ENUM_BLOB_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"^[a-z][a-z0-9_-]*(?:\s+\d+)?(?:,\s*[a-z][a-z0-9_-]*(?:\s+\d+)?){1,6}$")
@@ -1208,6 +1241,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = truncate_trailing_boilerplate(&c);
     c = strip_trailing_everyone_is_permitted_to_copy_clause(&c);
     c = strip_trailing_all_rights_reserved_clause(&c);
+    c = strip_trailing_reserved_font_name_clause(&c);
     c = strip_trailing_author_label(&c);
     c = strip_trailing_credit_file_reference_clause(&c);
     c = strip_trailing_isc_after_inc(&c);
@@ -1413,6 +1447,28 @@ fn strip_trailing_all_rights_reserved_clause(s: &str) -> String {
     prefix
         .trim_end_matches(&[' ', '.', ',', ';', ':'][..])
         .to_string()
+}
+
+fn strip_trailing_no_rights_reserved_clause(s: &str) -> String {
+    static NO_RIGHTS_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)^(?P<prefix>.+?)\.?\s+no\s+rights\s+reserved\.?$").unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(captures) = NO_RIGHTS_RESERVED_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    captures
+        .name("prefix")
+        .map(|m| {
+            m.as_str()
+                .trim()
+                .trim_end_matches(&[',', ';', ':', '.'][..])
+                .to_string()
+        })
+        .filter(|prefix| !prefix.is_empty())
+        .unwrap_or_else(|| s.to_string())
 }
 
 fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
@@ -2655,6 +2711,9 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_division_of_company_suffix(&h);
     h = strip_leading_product_operating_system_title(&h);
     h = strip_trailing_everyone_is_permitted_to_copy_clause(&h);
+    h = strip_trailing_reserved_font_name_clause(&h);
+    h = strip_trailing_no_rights_reserved_clause(&h);
+    h = strip_trailing_parenthesized_url_or_domain(&h);
     h = strip_trailing_et_al(&h);
     h = strip_trailing_authors_clause(&h);
     h = strip_trailing_document_authors_clause(&h);

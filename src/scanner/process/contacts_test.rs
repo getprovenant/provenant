@@ -202,6 +202,38 @@ fn test_extract_email_url_information_keeps_gettext_mo_contacts() {
 }
 
 #[test]
+fn test_extract_email_url_information_applies_binary_filters_to_font_paths() {
+    let mut builder = FileInfoBuilder::default();
+    let options = TextDetectionOptions {
+        detect_emails: true,
+        detect_urls: true,
+        ..TextDetectionOptions::default()
+    };
+
+    extract_email_url_information(
+        &mut builder,
+        Path::new("font.eot"),
+        "p@pv0.sqdz\nhttp://scripts.sil.org/OFL",
+        &options,
+        false,
+    );
+
+    let file = builder
+        .name("font.eot".to_string())
+        .base_name("font".to_string())
+        .extension(".eot".to_string())
+        .path("font.eot".to_string())
+        .file_type(FileType::File)
+        .size(1)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(file.emails.is_empty(), "emails: {:?}", file.emails);
+    assert_eq!(file.urls.len(), 1, "urls: {:?}", file.urls);
+    assert_eq!(file.urls[0].url, "http://scripts.sil.org/OFL");
+}
+
+#[test]
 fn test_extract_email_url_information_prefers_unique_text_emails_before_cap() {
     let mut builder = FileInfoBuilder::default();
     let options = TextDetectionOptions {

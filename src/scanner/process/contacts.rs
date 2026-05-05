@@ -5,6 +5,7 @@ use super::binary_text::{is_binary_string_email_candidate, normalize_binary_stri
 use crate::finder::{self, DetectionConfig};
 use crate::models::{FileInfoBuilder, OutputEmail, OutputURL};
 use crate::scanner::TextDetectionOptions;
+use crate::utils::font::is_supported_font_path;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -19,7 +20,8 @@ pub(super) fn extract_email_url_information(
         return;
     }
 
-    let apply_binary_contact_filters = from_binary_strings && !is_gettext_mo_path(path);
+    let apply_binary_contact_filters =
+        (from_binary_strings || is_font_metadata_contact_path(path)) && !is_gettext_mo_path(path);
 
     if text_options.detect_emails {
         let config = DetectionConfig {
@@ -79,6 +81,10 @@ fn is_gettext_mo_path(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| ext.eq_ignore_ascii_case("mo"))
+}
+
+fn is_font_metadata_contact_path(path: &Path) -> bool {
+    is_supported_font_path(path)
 }
 
 #[cfg(test)]

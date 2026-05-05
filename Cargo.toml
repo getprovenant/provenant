@@ -97,6 +97,7 @@ golden-tests = []
 rpm-sqlite = ["dep:rusqlite"]
 
 [dependencies]
+allsorts = { version = "0.16.1", default-features = false, features = ["flate2_rust"] }
 anyhow = { workspace = true }
 ar = "0.9"           # Unix ar archive format (for .deb)
 base64 = "0.22.1"
