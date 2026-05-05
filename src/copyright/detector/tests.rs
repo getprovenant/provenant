@@ -1262,6 +1262,27 @@ fn test_detect_flutter_product_copyright_assignment_strips_wrapper() {
 }
 
 #[test]
+fn test_detect_python_author_assignment_before_copyright_assignment_stays_clean() {
+    let input = concat!(
+        "author = \"Pyodide contributors\"\n",
+        "copyright = \"2019-2026, Pyodide contributors and Mozilla\"\n",
+    );
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright 2019-2026, Pyodide contributors and Mozilla"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter()
+            .any(|ho| ho.holder == "Pyodide contributors and Mozilla"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_detect_flutter_windows_legalcopyright_template_dropped() {
     let input = r#"VALUE "LegalCopyright", "Copyright (C) {{year}} {{organization}}. All rights reserved." "\0""#;
     let (c, h, _a) = detect_copyrights_from_text(input);

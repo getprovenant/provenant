@@ -184,6 +184,37 @@ mod tests {
     }
 
     #[test]
+    fn test_python_standalone_wheel_scan_assembles_distribution_metadata() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        std::fs::copy(
+            "testdata/python/golden/pip_cache/wheels/construct/construct-2.10.68-py3-none-any.whl",
+            temp_dir.path().join("construct-2.10.68-py3-none-any.whl"),
+        )
+        .expect("copy wheel fixture");
+
+        let (files, result) = scan_and_assemble(temp_dir.path());
+
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("construct"))
+            .expect("standalone wheel should assemble a construct package");
+
+        assert_eq!(package.package_type, Some(PackageType::Pypi));
+        assert_eq!(package.version.as_deref(), Some("2.10.68"));
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:pypi/construct@2.10.68?extension=py3-none-any")
+        );
+        assert_file_links_to_package(
+            &files,
+            "/construct-2.10.68-py3-none-any.whl",
+            &package.package_uid,
+            DatasourceId::PypiWheel,
+        );
+    }
+
+    #[test]
     fn test_python_pip_inspect_scan_assembles_with_pyproject() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         fs::write(

@@ -7,6 +7,16 @@ use url::Url;
 
 use super::junk_data::{classify_host, classify_ip};
 
+fn is_well_formed_host_label(label: &str) -> bool {
+    !label.is_empty()
+        && !label.starts_with('-')
+        && !label.ends_with('-')
+        && label.chars().any(|ch| ch.is_ascii_alphanumeric())
+        && label
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
+}
+
 fn is_private_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => {
@@ -44,6 +54,10 @@ pub(crate) fn is_good_host(host: &str) -> bool {
     }
 
     let labels: Vec<&str> = host.split('.').collect();
+    if labels.iter().any(|label| !is_well_formed_host_label(label)) {
+        return false;
+    }
+
     if labels.len() >= 3
         && labels[..labels.len() - 1]
             .iter()

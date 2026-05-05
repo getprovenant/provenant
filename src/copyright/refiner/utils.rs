@@ -320,6 +320,17 @@ pub(super) fn remove_dupe_holder(h: &str) -> String {
     );
 
     let mut words: Vec<&str> = s.split_whitespace().collect();
+    for repeat_len in (2..=(words.len() / 2)).rev() {
+        if words[..repeat_len] == words[repeat_len..(repeat_len * 2)]
+            && words[..repeat_len]
+                .iter()
+                .any(|word| word.chars().any(|ch| ch.is_alphabetic()))
+        {
+            words.drain(repeat_len..(repeat_len * 2));
+            break;
+        }
+    }
+
     let is_all_caps_word = |w: &str| {
         let mut has_alpha = false;
         for c in w.chars() {
