@@ -320,17 +320,6 @@ pub(super) fn remove_dupe_holder(h: &str) -> String {
     );
 
     let mut words: Vec<&str> = s.split_whitespace().collect();
-    for repeat_len in (2..=(words.len() / 2)).rev() {
-        if words[..repeat_len] == words[repeat_len..(repeat_len * 2)]
-            && words[..repeat_len]
-                .iter()
-                .any(|word| word.chars().any(|ch| ch.is_alphabetic()))
-        {
-            words.drain(repeat_len..(repeat_len * 2));
-            break;
-        }
-    }
-
     let is_all_caps_word = |w: &str| {
         let mut has_alpha = false;
         for c in w.chars() {
@@ -365,6 +354,29 @@ pub(super) fn remove_dupe_holder(h: &str) -> String {
 
     s = words.join(" ");
     s
+}
+
+pub(super) fn strip_repeated_leading_holder_prefix(h: &str) -> String {
+    let words: Vec<&str> = h.split_whitespace().collect();
+    if words.len() < 5 {
+        return h.to_string();
+    }
+
+    for repeat_len in (2..=(words.len() / 2)).rev() {
+        let repeated_end = repeat_len * 2;
+        if repeated_end >= words.len() {
+            continue;
+        }
+        if words[..repeat_len] == words[repeat_len..repeated_end]
+            && words[..repeat_len]
+                .iter()
+                .any(|word| word.chars().any(|ch| ch.is_alphabetic()))
+        {
+            return words[repeat_len..].join(" ");
+        }
+    }
+
+    h.to_string()
 }
 
 /// Drop trailing words longer than 80 characters (garbled/binary data).

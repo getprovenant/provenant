@@ -2875,6 +2875,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_holder_prose_clause(&h);
     h = h.trim_matches(&['/', ' ', '~'][..]).to_string();
     h = refine_names(&h, prefixes);
+    h = strip_repeated_leading_holder_prefix(&h);
     h = strip_trailing_company_co_ltd(&h);
     h = strip_suffixes(&h, &HOLDERS_SUFFIXES);
     h = strip_trailing_ampas_acronym(&h);
@@ -3337,8 +3338,8 @@ use self::author::{normalize_angle_bracket_comma_spacing, strip_trailing_company
 
 use self::utils::{
     normalize_comma_spacing, normalize_whitespace, refine_names, remove_dupe_holder,
-    strip_trailing_incomplete_as_represented_by, strip_trailing_url, strip_trailing_url_slash,
-    truncate_long_words,
+    strip_repeated_leading_holder_prefix, strip_trailing_incomplete_as_represented_by,
+    strip_trailing_url, strip_trailing_url_slash, truncate_long_words,
 };
 
 #[cfg(test)]

@@ -3,6 +3,7 @@
 
 use super::binary_text::{is_binary_string_email_candidate, normalize_binary_string_url};
 use crate::finder::{self, DetectionConfig};
+use crate::models::LineNumber;
 use crate::models::{FileInfoBuilder, OutputEmail, OutputURL};
 use crate::scanner::TextDetectionOptions;
 use crate::utils::font::is_supported_font_path;
@@ -67,6 +68,7 @@ pub(super) fn extract_email_url_information(
             })
             .collect::<Vec<_>>();
         if apply_binary_contact_filters {
+            urls.extend(collect_binary_url_salvage_detections(text_content));
             let mut seen = HashSet::new();
             urls.retain(|url| seen.insert(url.url.clone()));
             if text_options.max_urls > 0 && urls.len() > text_options.max_urls {
@@ -85,6 +87,33 @@ fn is_gettext_mo_path(path: &Path) -> bool {
 
 fn is_font_metadata_contact_path(path: &Path) -> bool {
     is_supported_font_path(path)
+}
+
+fn collect_binary_url_salvage_detections(text_content: &str) -> Vec<OutputURL> {
+    text_content
+        .lines()
+        .enumerate()
+        .flat_map(|(line_index, line)| {
+            let line_number = LineNumber::from_0_indexed(line_index);
+            line.split_whitespace().filter_map(move |token| {
+                let candidate = token.trim_matches(|c: char| {
+                    matches!(
+                        c,
+                        '<' | '>' | '(' | ')' | '[' | ']' | '"' | '\'' | '`' | ',' | ';'
+                    )
+                });
+                if !candidate.contains("://") {
+                    return None;
+                }
+                let url = normalize_binary_string_url(candidate)?;
+                Some(OutputURL {
+                    url,
+                    start_line: line_number,
+                    end_line: line_number,
+                })
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
