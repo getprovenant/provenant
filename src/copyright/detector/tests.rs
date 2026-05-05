@@ -1228,6 +1228,134 @@ fn test_detect_storyboard_text_attribute_copyright_holder() {
 }
 
 #[test]
+fn test_detect_flutter_application_legalese_assignment_strips_wrapper() {
+    let input = "applicationLegalese: '© 2014 The Flutter Authors',";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "(c) 2014 The Flutter Authors"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|ho| ho.holder == "The Flutter Authors"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_flutter_product_copyright_assignment_strips_wrapper() {
+    let input = "PRODUCT_COPYRIGHT = Copyright © 2014 The Flutter Authors. All rights reserved.";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright (c) 2014 The Flutter Authors"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|ho| ho.holder == "The Flutter Authors"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_flutter_windows_legalcopyright_template_dropped() {
+    let input = r#"VALUE "LegalCopyright", "Copyright (C) {{year}} {{organization}}. All rights reserved." "\0""#;
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(c.is_empty(), "copyrights: {c:?}");
+    assert!(h.is_empty(), "holders: {h:?}");
+}
+
+#[test]
+fn test_detect_flutter_material_icon_doc_false_positive_dropped() {
+    let input = r#"<i class="material-icons-sharp md-36">copyright</i> &#x2014; material icon named "copyright" (sharp)."#;
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(c.is_empty(), "copyrights: {c:?}");
+    assert!(h.is_empty(), "holders: {h:?}");
+}
+
+#[test]
+fn test_detect_flutter_verify_entry_false_positive_dropped() {
+    let input = "verifyEntry(mapping, 'KeyC', <String>[r'c', r'C', r'©', r'¢'], 'c');";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(c.is_empty(), "copyrights: {c:?}");
+    assert!(h.is_empty(), "holders: {h:?}");
+}
+
+#[test]
+fn test_detect_python_bytestring_copyright_without_year() {
+    let input = "not line.startswith(b'Copyright (C) Microsoft Corporation') and line):";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright (c) Microsoft Corporation"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|ho| ho.holder == "Microsoft Corporation"),
+        "holders: {:?}",
+        h.iter().map(|ho| &ho.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_detect_table_header_labels_with_c_sign_are_dropped() {
+    let input = concat!(
+        "    ----------------------        (A) Column Header\n",
+        "    |  (C)  |  1  |  2   |        (D) Row Header\n",
+    );
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(c.is_empty(), "copyrights: {c:?}");
+    assert!(h.is_empty(), "holders: {h:?}");
+}
+
+#[test]
+fn test_detect_minpack_example_prose_false_positive_dropped() {
+    let input = "// Tests using the examples provided by (c)minpack\n";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(c.is_empty(), "copyrights: {c:?}");
+    assert!(h.is_empty(), "holders: {h:?}");
+}
+
+#[test]
+fn test_detect_flutter_about_dialog_snippet_keeps_clean_values() {
+    let input = concat!(
+        "// Copyright 2014 The Flutter Authors. All rights reserved.\n",
+        "showAboutDialog(\n",
+        "  context: context,\n",
+        "  applicationLegalese: '© 2014 The Flutter Authors',\n",
+        ");\n",
+    );
+    let (c, h, _a) = detect_copyrights_from_text(input);
+
+    let copyrights: Vec<&str> = c.iter().map(|cr| cr.copyright.as_str()).collect();
+    let holders: Vec<&str> = h.iter().map(|ho| ho.holder.as_str()).collect();
+
+    assert!(
+        copyrights.contains(&"Copyright 2014 The Flutter Authors"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyrights.contains(&"(c) 2014 The Flutter Authors"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|cr| !cr.contains("applicationLegalese") && !cr.contains("All rights reserved")),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().all(|ho| *ho == "The Flutter Authors"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
 fn test_detect_iso_date_holder_regression() {
     let input = "Copyright (c) 2006-07-24 John Boolage";
     let (_c, h, _a) = detect_copyrights_from_text(input);

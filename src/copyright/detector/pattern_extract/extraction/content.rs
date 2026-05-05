@@ -77,6 +77,78 @@ pub fn extract_spdx_filecopyrighttext_c_without_year(
     (copyrights, holders)
 }
 
+pub fn extract_bytestring_copyright_c_without_year(
+    content: &str,
+    existing_holders: &[HolderDetection],
+) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
+    static YEAR_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"\b(?:19\d{2}|20\d{2})\b").unwrap());
+
+    let mut copyrights = Vec::new();
+    let mut holders = Vec::new();
+
+    let mut seen_h: HashSet<(String, usize)> = existing_holders
+        .iter()
+        .map(|h| (h.holder.clone(), h.start_line.get()))
+        .collect();
+
+    for (idx, line) in content.lines().enumerate() {
+        let ln = idx + 1;
+        let Some(raw) = extract_bytestring_copyright_literal(line) else {
+            continue;
+        };
+        if raw.is_empty() || YEAR_RE.is_match(&raw) {
+            continue;
+        }
+
+        let prepared = crate::copyright::prepare_text_line(&raw);
+        if let Some(refined) = refine_copyright(&prepared) {
+            copyrights.push(CopyrightDetection {
+                copyright: refined,
+                start_line: LineNumber::new(ln).unwrap(),
+                end_line: LineNumber::new(ln).unwrap(),
+            });
+        }
+
+        let tail = prepared
+            .strip_prefix("Copyright")
+            .unwrap_or(prepared.as_str())
+            .trim()
+            .strip_prefix("(c)")
+            .unwrap_or(prepared.as_str())
+            .trim();
+        if let Some(holder) = refine_holder(tail)
+            && seen_h.insert((holder.clone(), ln))
+        {
+            holders.push(HolderDetection {
+                holder,
+                start_line: LineNumber::new(ln).unwrap(),
+                end_line: LineNumber::new(ln).unwrap(),
+            });
+        }
+    }
+
+    (copyrights, holders)
+}
+
+fn extract_bytestring_copyright_literal(line: &str) -> Option<String> {
+    for prefix in ["br'", "rb'", "b'", "br\"", "rb\"", "b\""] {
+        let Some(start) = line.find(prefix) else {
+            continue;
+        };
+        let quote = prefix.chars().last()?;
+        let rest = line.get(start + prefix.len()..)?;
+        let Some(end) = rest.find(quote) else {
+            continue;
+        };
+        let candidate = rest[..end].trim();
+        if candidate.to_ascii_lowercase().starts_with("copyright (c)") {
+            return Some(candidate.to_string());
+        }
+    }
+
+    None
+}
 pub fn extract_html_meta_name_copyright_content(
     content: &str,
     existing_holders: &[HolderDetection],

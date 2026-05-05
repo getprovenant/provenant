@@ -422,6 +422,15 @@ fn run_content_and_markup_extractions(
     holders.extend(new_h);
 
     let (mut new_c, new_h) =
+        super::super::pattern_extract::extract_bytestring_copyright_c_without_year(
+            content, holders,
+        );
+    seen.dedup_new_copyrights(&mut new_c, 0);
+    seen.register_holders(&new_h);
+    copyrights.extend(new_c);
+    holders.extend(new_h);
+
+    let (mut new_c, new_h) =
         super::super::pattern_extract::extract_html_meta_name_copyright_content(content, holders);
     seen.dedup_new_copyrights(&mut new_c, 0);
     seen.register_holders(&new_h);

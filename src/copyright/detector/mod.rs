@@ -357,6 +357,11 @@ pub fn detect_copyrights_from_text_with_deadline(
     postprocess_transforms::drop_shadowed_bare_c_from_year_fragments(&mut copyrights, &mut holders);
     drop_path_fragment_holders_from_bare_c_code_lines(&raw_lines, &copyrights, &mut holders);
     drop_scan_only_holders_from_copyright_scan_lines(&raw_lines, &copyrights, &mut holders);
+    drop_test_label_false_positive_copyrights_and_holders(
+        &raw_lines,
+        &mut copyrights,
+        &mut holders,
+    );
 
     for group in &groups {
         extend_dash_obfuscated_email_suffixes(&raw_lines, group, &mut copyrights[..], &holders[..]);
@@ -407,6 +412,7 @@ pub(super) use token_utils::collect_all_leaves;
 use token_utils::{
     apply_written_by_for_markers, drop_path_fragment_holders_from_bare_c_code_lines,
     drop_scan_only_holders_from_copyright_scan_lines,
+    drop_test_label_false_positive_copyrights_and_holders,
     extract_original_author_additional_contributors,
 };
 use tree_walk::{
