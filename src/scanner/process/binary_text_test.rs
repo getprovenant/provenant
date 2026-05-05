@@ -107,6 +107,16 @@ fn test_normalize_binary_string_url_does_not_trim_legitimate_path_suffix() {
 }
 
 #[test]
+fn test_normalize_binary_string_url_prefers_last_repeated_embedded_url() {
+    assert_eq!(
+        normalize_binary_string_url(
+            "https://github.com/behdad/fonttoolshttps://github.com/behdad/fonttools/blob/master/LICENSE.txt"
+        ),
+        Some("https://github.com/behdad/fonttools/blob/master/LICENSE.txt".to_string())
+    );
+}
+
+#[test]
 fn test_binary_string_author_candidate_keeps_named_author_with_email() {
     assert!(is_binary_string_author_candidate(
         "Andreas Schneider <asn@redhat.com>"

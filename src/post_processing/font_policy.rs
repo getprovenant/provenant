@@ -3,16 +3,8 @@
 
 use std::path::Path;
 
-const FONT_ASSET_EXTENSIONS: &[&str] = &["ttf", "otf", "woff", "woff2", "eot"];
-
 pub(super) fn is_font_asset_path(path: &Path) -> bool {
-    path.extension()
-        .and_then(|ext| ext.to_str())
-        .is_some_and(|ext| {
-            FONT_ASSET_EXTENSIONS
-                .iter()
-                .any(|supported| ext.eq_ignore_ascii_case(supported))
-        })
+    crate::utils::font::is_supported_font_path(path)
 }
 
 pub(super) fn is_font_license_file_name(file_name: &str, base_name: &str) -> bool {
@@ -34,6 +26,7 @@ mod tests {
     #[test]
     fn matches_font_asset_extensions_used_for_sidecar_inheritance() {
         assert!(is_font_asset_path(Path::new("demo.ttf")));
+        assert!(is_font_asset_path(Path::new("demo.ttc")));
         assert!(is_font_asset_path(Path::new("demo.woff2")));
         assert!(is_font_asset_path(Path::new("demo.EOT")));
         assert!(!is_font_asset_path(Path::new("demo.txt")));

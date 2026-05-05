@@ -1028,6 +1028,12 @@ fn test_refine_holder_strips_trailing_dash_after_url_removal() {
 }
 
 #[test]
+fn test_refine_holder_strips_reserved_font_name_clause() {
+    let result = refine_holder("Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’");
+    assert_eq!(result, Some("Adobe".to_string()));
+}
+
+#[test]
 fn test_refine_holder_empty() {
     assert_eq!(refine_holder(""), None);
 }
@@ -1805,6 +1811,14 @@ fn test_refine_holder_keeps_lowercase_company_with_inc_suffix() {
 }
 
 #[test]
+fn test_refine_holder_in_copyright_context_strips_no_rights_reserved_clause() {
+    assert_eq!(
+        refine_holder_in_copyright_context("FontTools. No rights reserved."),
+        Some("FontTools".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_strips_trailing_placeholder_dollar() {
     assert_eq!(
         refine_holder("Markus Franz Xaver Johannes Oberhumer $"),
@@ -1981,6 +1995,16 @@ fn test_refine_copyright_keeps_w3c_registered_paren_group() {
     assert_eq!(
         result,
         Some("Copyright (c) YEAR W3C(r) (MIT, ERCIM, Keio, Beihang)".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_strips_reserved_font_name_clause() {
+    let result =
+        refine_copyright("© 2023 Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’");
+    assert_eq!(
+        result,
+        Some("© 2023 Adobe (http://www.adobe.com/)".to_string())
     );
 }
 

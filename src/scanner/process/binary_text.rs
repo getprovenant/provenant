@@ -29,7 +29,8 @@ pub(super) fn is_binary_string_url_candidate(url: &str) -> bool {
 }
 
 pub(super) fn normalize_binary_string_url(url: &str) -> Option<String> {
-    let mut parsed = url::Url::parse(url).ok()?;
+    let url = trim_repeated_embedded_url(url);
+    let mut parsed = url::Url::parse(&url).ok()?;
 
     if let Some(host) = parsed.host_str() {
         let normalized_host = normalize_binary_url_host(host);
@@ -45,6 +46,30 @@ pub(super) fn normalize_binary_string_url(url: &str) -> Option<String> {
 
     let normalized = parsed.to_string();
     is_binary_string_url_candidate(&normalized).then_some(normalized)
+}
+
+fn trim_repeated_embedded_url(url: &str) -> String {
+    let lower = url.to_ascii_lowercase();
+    let scheme = if lower.starts_with("https://") {
+        "https://"
+    } else if lower.starts_with("http://") {
+        "http://"
+    } else {
+        return url.to_string();
+    };
+
+    let remainder = &lower[scheme.len()..];
+    let next_http = remainder.find("http://").map(|idx| idx + scheme.len());
+    let next_https = remainder.find("https://").map(|idx| idx + scheme.len());
+    let next = match (next_http, next_https) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+
+    next.map(|idx| url[idx..].to_string())
+        .unwrap_or_else(|| url.to_string())
 }
 
 pub(super) fn is_binary_string_author_candidate(author: &str) -> bool {

@@ -4,77 +4,379 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use ttf_parser::{Face, Permissions, name_id};
+use allsorts::binary::read::ReadScope;
+use allsorts::font_data::FontData;
+use allsorts::tables::{FontTableProvider, NameTable, OpenTypeData};
+use ttf_parser::{Face, Permissions, fonts_in_collection, name_id};
 
-const SUPPORTED_FONT_EXTENSIONS: &[&str] = &["ttf", "otf"];
+pub(crate) const SUPPORTED_FONT_EXTENSIONS: &[&str] =
+    &["ttf", "otf", "woff", "woff2", "eot", "ttc", "otc"];
+pub(crate) const SUPPORTED_FONT_FILE_GLOBS: &[&str] = &[
+    "**/*.ttf",
+    "**/*.otf",
+    "**/*.woff",
+    "**/*.woff2",
+    "**/*.eot",
+    "**/*.ttc",
+    "**/*.otc",
+];
+const OFL_URL_CANONICALIZATIONS: &[(&str, &str)] = &[
+    ("https://scripts.sil.org/OFL/", "http://scripts.sil.org/OFL"),
+    ("https://scripts.sil.org/OFL", "http://scripts.sil.org/OFL"),
+    ("https://openfontlicense.org/", "http://scripts.sil.org/OFL"),
+    ("https://openfontlicense.org", "http://scripts.sil.org/OFL"),
+];
+const ALLSORTS_NAME_TABLE_TAG: u32 = u32::from_be_bytes(*b"name");
+
+crate::register_detection_surface!(
+    "Embedded font legal metadata (native fonts, webfonts, and collections)",
+    SUPPORTED_FONT_FILE_GLOBS,
+    "",
+    "",
+    Some("https://learn.microsoft.com/en-us/typography/opentype/spec/name"),
+);
+
+pub(crate) fn is_supported_font_extension(extension: &str) -> bool {
+    SUPPORTED_FONT_EXTENSIONS
+        .iter()
+        .any(|supported| supported.eq_ignore_ascii_case(extension))
+}
+
+pub(crate) fn is_supported_font_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(is_supported_font_extension)
+}
 
 pub(crate) fn extract_font_metadata_text(path: &Path, bytes: &[u8]) -> Option<String> {
     let extension = path.extension().and_then(|ext| ext.to_str())?;
-    if !SUPPORTED_FONT_EXTENSIONS
-        .iter()
-        .any(|supported| extension.eq_ignore_ascii_case(supported))
-    {
+    let extension = extension.to_ascii_lowercase();
+    if !is_supported_font_extension(&extension) {
         return None;
     }
 
-    let face = Face::parse(bytes, 0).ok()?;
+    match extension.as_str() {
+        "ttf" | "otf" | "woff" | "woff2" | "ttc" | "otc" => extract_sfnt_font_metadata_text(
+            bytes,
+            matches!(extension.as_str(), "ttf" | "otf" | "ttc" | "otc"),
+        ),
+        "eot" => extract_eot_metadata_text(bytes),
+        _ => None,
+    }
+}
+
+fn extract_sfnt_font_metadata_text(bytes: &[u8], include_permissions: bool) -> Option<String> {
     let mut lines = Vec::new();
     let mut seen = BTreeSet::new();
 
-    for record in face.names() {
-        let Some(label) = font_name_label(record.name_id) else {
-            continue;
-        };
-        if !record.is_unicode() {
-            continue;
-        }
-        let Some(value) = record.to_string().map(normalize_font_value) else {
-            continue;
-        };
-        if value.is_empty() {
-            continue;
-        }
-
-        let line = format!("{label}: {value}");
+    for line in extract_allsorts_name_table_lines(bytes) {
         if seen.insert(line.clone()) {
             lines.push(line);
         }
     }
 
-    if let Some(permissions) = face.permissions() {
-        let line = format!(
-            "Embedding permissions: {}",
-            font_permission_label(permissions)
-        );
-        if seen.insert(line.clone()) {
-            lines.push(line);
+    if include_permissions {
+        let face_count = fonts_in_collection(bytes).unwrap_or(1);
+        for face_index in 0..face_count {
+            let Some(permissions) = Face::parse(bytes, face_index).ok()?.permissions() else {
+                continue;
+            };
+            let line = format!(
+                "Embedding permissions: {}",
+                font_permission_label(permissions)
+            );
+            if seen.insert(line.clone()) {
+                lines.push(line);
+            }
         }
     }
 
     (!lines.is_empty()).then(|| lines.join("\n"))
 }
 
+fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
+    let Some(font_data) = ReadScope::new(bytes).read::<FontData<'_>>().ok() else {
+        return Vec::new();
+    };
+
+    let mut lines = Vec::new();
+    let mut seen = BTreeSet::new();
+    for face_index in 0..allsorts_face_count(&font_data) {
+        let Ok(provider) = font_data.table_provider(face_index) else {
+            continue;
+        };
+        let Ok(name_table_data) = provider.read_table_data(ALLSORTS_NAME_TABLE_TAG) else {
+            continue;
+        };
+        let Ok(name_table) = ReadScope::new(name_table_data.as_ref()).read::<NameTable<'_>>()
+        else {
+            continue;
+        };
+
+        for (source_name_id, target_name_id) in [
+            (NameTable::COPYRIGHT_NOTICE, name_id::COPYRIGHT_NOTICE),
+            (NameTable::LICENSE_DESCRIPTION, name_id::LICENSE),
+            (NameTable::LICENSE_INFO_URL, name_id::LICENSE_URL),
+        ] {
+            let Some(value) = name_table.string_for_id(source_name_id) else {
+                continue;
+            };
+            let Some(line) = build_font_metadata_line(target_name_id, value) else {
+                continue;
+            };
+            if seen.insert(line.clone()) {
+                lines.push(line);
+            }
+        }
+    }
+
+    lines
+}
+
+fn allsorts_face_count(font_data: &FontData<'_>) -> usize {
+    match font_data {
+        FontData::OpenType(font) => match &font.data {
+            OpenTypeData::Single(_) => 1,
+            OpenTypeData::Collection(ttc) => ttc.offset_tables.len(),
+        },
+        FontData::Woff(_) => 1,
+        FontData::Woff2(font) => font
+            .collection_directory
+            .as_ref()
+            .map(|directory| directory.fonts().count())
+            .unwrap_or(1),
+    }
+}
+
+fn extract_eot_metadata_text(bytes: &[u8]) -> Option<String> {
+    let text = extract_eot_utf16le_marker_text(bytes).join("\n");
+    if text.is_empty() {
+        return None;
+    }
+
+    let mut lines = Vec::new();
+    let mut seen = BTreeSet::new();
+    for segment in split_eot_legal_metadata_segments(&text) {
+        let normalized = normalize_eot_metadata_segment(&segment);
+        if normalized.is_empty() {
+            continue;
+        }
+        if seen.insert(normalized.clone()) {
+            lines.push(normalized);
+        }
+    }
+
+    (!lines.is_empty()).then(|| lines.join("\n"))
+}
+
+fn extract_eot_utf16le_marker_text(bytes: &[u8]) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut seen = BTreeSet::new();
+    for marker in [
+        "Copyright",
+        "This Font Software is licensed under",
+        "http://",
+        "https://",
+    ] {
+        let encoded = marker.encode_utf16().collect::<Vec<_>>();
+        let marker_bytes = encoded
+            .iter()
+            .flat_map(|unit| unit.to_le_bytes())
+            .collect::<Vec<_>>();
+        let mut search_start = 0;
+        while let Some(relative_start) = bytes[search_start..]
+            .windows(marker_bytes.len())
+            .position(|window| window == marker_bytes.as_slice())
+        {
+            let start = search_start + relative_start;
+            let decoded = decode_utf16le_ascii_from_offset(bytes, start);
+            if !decoded.is_empty() && seen.insert(decoded.clone()) {
+                lines.push(decoded);
+            }
+            search_start = start + marker_bytes.len();
+        }
+    }
+    lines
+}
+
+fn decode_utf16le_ascii_from_offset(bytes: &[u8], start: usize) -> String {
+    let mut decoded = Vec::new();
+    let mut index = start;
+    while index + 1 < bytes.len() {
+        let lo = bytes[index];
+        let hi = bytes[index + 1];
+        if hi == 0 && (0x20..=0x7E).contains(&lo) {
+            decoded.push(lo);
+            index += 2;
+            continue;
+        }
+        break;
+    }
+    String::from_utf8_lossy(&decoded).into_owned()
+}
+
+fn split_eot_legal_metadata_segments(text: &str) -> Vec<String> {
+    let mut segments = Vec::new();
+
+    if let Some(segment) = extract_text_between_markers(
+        text,
+        "Copyright",
+        &["All Rights Reserved.", "All rights reserved."],
+    ) {
+        segments.push(segment);
+    }
+    if let Some(segment) = extract_text_between_markers(
+        text,
+        "This Font Software is licensed under",
+        &[
+            "governing your use of this Font Software.",
+            "This Font Software.",
+        ],
+    ) {
+        segments.push(segment);
+    }
+    segments.extend(extract_http_segments(text));
+
+    segments
+}
+
+fn extract_text_between_markers(
+    text: &str,
+    start_marker: &str,
+    end_markers: &[&str],
+) -> Option<String> {
+    let start = text.find(start_marker)?;
+    let tail = &text[start..];
+    let end = end_markers
+        .iter()
+        .filter_map(|marker| tail.find(marker).map(|idx| idx + marker.len()))
+        .min()
+        .unwrap_or(tail.len());
+    Some(tail[..end].to_string())
+}
+
+fn extract_http_segments(text: &str) -> Vec<String> {
+    let mut segments = Vec::new();
+    for marker in ["http://", "https://"] {
+        let mut search_start = 0;
+        while let Some(relative_start) = text[search_start..].find(marker) {
+            let start = search_start + relative_start;
+            let tail = &text[start + marker.len()..];
+            let mut end = text.len();
+            for boundary in [
+                "http://",
+                "https://",
+                "This Font Software",
+                "Copyright",
+                "Version ",
+            ] {
+                if let Some(relative_end) = tail.find(boundary) {
+                    end = end.min(start + marker.len() + relative_end);
+                }
+            }
+            if let Some(relative_end) = tail.find(char::is_whitespace) {
+                end = end.min(start + marker.len() + relative_end);
+            }
+
+            let segment = text[start..end]
+                .trim_end_matches(&['.', ',', ';', ':'][..])
+                .to_string();
+            if !segment.is_empty() {
+                segments.push(segment);
+            }
+            search_start = end.max(start + marker.len());
+        }
+    }
+    segments
+}
+
+fn normalize_eot_metadata_segment(segment: &str) -> String {
+    let normalized = segment
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .to_string();
+
+    if normalized.is_empty() {
+        return normalized;
+    }
+
+    let lowered = normalized.to_ascii_lowercase();
+    if lowered.starts_with("http://") || lowered.starts_with("https://") {
+        return canonicalize_ofl_license_reference_urls(normalized);
+    }
+
+    if lowered.contains("font software") || lowered.contains("open font license") {
+        return canonicalize_ofl_license_reference_urls(normalized);
+    }
+
+    normalized
+}
+
+fn build_font_metadata_line(name_id_value: u16, value: String) -> Option<String> {
+    let value = normalize_font_value(name_id_value, value);
+    if value.is_empty() {
+        return None;
+    }
+
+    if name_id_value == name_id::COPYRIGHT_NOTICE {
+        return Some(value);
+    }
+
+    let label = font_name_label(name_id_value)?;
+    Some(format!("{label}: {value}"))
+}
+
 fn font_name_label(name_id_value: u16) -> Option<&'static str> {
     match name_id_value {
-        name_id::COPYRIGHT_NOTICE => Some("Copyright Notice"),
-        name_id::TRADEMARK => Some("Trademark"),
-        name_id::MANUFACTURER => Some("Manufacturer"),
-        name_id::DESCRIPTION => Some("Description"),
-        name_id::VENDOR_URL => Some("Vendor URL"),
-        name_id::DESIGNER_URL => Some("Designer URL"),
         name_id::LICENSE => Some("License Description"),
         name_id::LICENSE_URL => Some("License Info URL"),
         _ => None,
     }
 }
 
-fn normalize_font_value(value: String) -> String {
-    value
+fn normalize_font_value(name_id_value: u16, value: String) -> String {
+    let normalized = value
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
         .trim()
-        .to_string()
+        .to_string();
+
+    match name_id_value {
+        name_id::COPYRIGHT_NOTICE => strip_reserved_font_name_clause(normalized),
+        name_id::LICENSE | name_id::LICENSE_URL => {
+            canonicalize_ofl_license_reference_urls(normalized)
+        }
+        _ => normalized,
+    }
+}
+
+fn strip_reserved_font_name_clause(value: String) -> String {
+    let lower = value.to_ascii_lowercase();
+    for marker in [
+        ", with reserved font name",
+        ", with no reserved font name",
+        " with reserved font name",
+        " with no reserved font name",
+    ] {
+        if let Some(index) = lower.find(marker) {
+            return value[..index]
+                .trim_end_matches(&[',', ';', ':', ' ', '('][..])
+                .trim()
+                .to_string();
+        }
+    }
+
+    value
+}
+
+fn canonicalize_ofl_license_reference_urls(mut value: String) -> String {
+    for (from, to) in OFL_URL_CANONICALIZATIONS {
+        value = value.replace(from, to);
+    }
+    value
 }
 
 fn font_permission_label(permission: Permissions) -> &'static str {
@@ -91,7 +393,14 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
-    use super::extract_font_metadata_text;
+    use crate::copyright::detect_copyrights;
+    use crate::license_detection::LicenseDetectionEngine;
+    use ttf_parser::name_id;
+
+    use super::{
+        build_font_metadata_line, canonicalize_ofl_license_reference_urls,
+        extract_font_metadata_text,
+    };
 
     #[test]
     fn extracts_ofl_metadata_from_lato_font_fixture() {
@@ -117,12 +426,187 @@ mod tests {
             .expect("font metadata text");
 
         assert!(
-            text.contains("License Description:") || text.contains("Copyright Notice:"),
+            text.contains("License Description:") || text.contains("Copyright"),
             "{text}"
         );
         assert!(
             text.contains("Apache") || text.contains("http://www.apache.org/licenses"),
             "{text}"
         );
+    }
+
+    #[test]
+    fn canonicalizes_ofl_url_variants_in_font_license_metadata() {
+        let canonical = canonicalize_ofl_license_reference_urls(
+            "This license is available with a FAQ at: https://openfontlicense.org/".to_string(),
+        );
+
+        assert_eq!(
+            canonical,
+            "This license is available with a FAQ at: http://scripts.sil.org/OFL"
+        );
+    }
+
+    #[test]
+    fn font_metadata_lines_detect_noto_ofl_text_without_trademark_noise() {
+        let metadata_text = [
+            build_font_metadata_line(
+                name_id::COPYRIGHT_NOTICE,
+                "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)".to_string(),
+            ),
+            build_font_metadata_line(
+                name_id::TRADEMARK,
+                "Noto is a trademark of Google LLC.".to_string(),
+            ),
+            build_font_metadata_line(
+                name_id::LICENSE,
+                "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL".to_string(),
+            ),
+            build_font_metadata_line(
+                name_id::LICENSE_URL,
+                "https://scripts.sil.org/OFL".to_string(),
+            ),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join("\n");
+
+        assert!(!metadata_text.contains("Trademark:"), "{metadata_text}");
+        assert!(
+            metadata_text.contains("Copyright 2022 The Noto Project Authors"),
+            "{metadata_text}"
+        );
+        assert!(
+            metadata_text.contains("http://scripts.sil.org/OFL"),
+            "{metadata_text}"
+        );
+
+        let engine = LicenseDetectionEngine::from_embedded().expect("initialize license engine");
+        let detections = engine
+            .detect_with_kind_and_source_with_score(&metadata_text, false, false, "font.ttf", 0.0)
+            .expect("detect licenses from font metadata text");
+
+        assert!(
+            detections.iter().any(|detection| {
+                detection
+                    .license_expression_spdx
+                    .as_deref()
+                    .is_some_and(|expression| expression.contains("OFL-1.1"))
+            }),
+            "detections: {detections:#?}"
+        );
+
+        let (copyrights, holders, _authors) = detect_copyrights(&metadata_text, None);
+        assert!(
+            copyrights.iter().any(|detection| {
+                detection.copyright
+                    == "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)"
+            }),
+            "copyrights: {copyrights:#?}"
+        );
+        assert!(
+            holders
+                .iter()
+                .any(|detection| detection.holder == "The Noto Project Authors"),
+            "holders: {holders:#?}"
+        );
+    }
+
+    #[test]
+    fn extracts_metadata_from_sourcecodepro_woff_fixture() {
+        let bytes = fs::read("testdata/font-fixtures/SourceCodePro-Regular.otf.woff")
+            .expect("read woff font fixture");
+
+        let text = extract_font_metadata_text(Path::new("SourceCodePro-Regular.otf.woff"), &bytes)
+            .expect("woff font metadata text");
+
+        assert!(text.contains("Adobe"), "{text}");
+        assert!(
+            text.contains("Open Font License") || text.contains("OFL"),
+            "{text}"
+        );
+        assert!(text.contains("http://scripts.sil.org/OFL"), "{text}");
+    }
+
+    #[test]
+    fn extracts_metadata_from_sourcecodepro_woff2_fixture() {
+        let bytes = fs::read("testdata/font-fixtures/SourceCodePro-Regular.otf.woff2")
+            .expect("read woff2 font fixture");
+
+        let text = extract_font_metadata_text(Path::new("SourceCodePro-Regular.otf.woff2"), &bytes)
+            .expect("woff2 font metadata text");
+
+        assert!(text.contains("Adobe"), "{text}");
+        assert!(
+            text.contains("Open Font License") || text.contains("OFL"),
+            "{text}"
+        );
+        assert!(text.contains("http://scripts.sil.org/OFL"), "{text}");
+    }
+
+    #[test]
+    fn extracts_legal_strings_from_notosans_eot_fixture() {
+        let bytes =
+            fs::read("testdata/font-fixtures/NotoSans-Regular.eot").expect("read eot font fixture");
+
+        let text = extract_font_metadata_text(Path::new("NotoSans-Regular.eot"), &bytes)
+            .expect("eot font metadata text");
+
+        assert!(text.contains("Copyright 2015 Google Inc."), "{text}");
+        assert!(
+            text.contains("This Font Software is licensed under the SIL Open Font License"),
+            "{text}"
+        );
+        assert!(text.contains("http://scripts.sil.org/OFL"), "{text}");
+    }
+
+    #[test]
+    fn wrapped_font_metadata_detects_sourcecodepro_ofl_without_reserved_font_tail() {
+        let bytes = fs::read("testdata/font-fixtures/SourceCodePro-Regular.otf.woff")
+            .expect("read woff font fixture");
+        let metadata_text =
+            extract_font_metadata_text(Path::new("SourceCodePro-Regular.otf.woff"), &bytes)
+                .expect("wrapped font metadata text");
+
+        let engine = LicenseDetectionEngine::from_embedded().expect("initialize license engine");
+        let detections = engine
+            .detect_with_kind_and_source_with_score(&metadata_text, false, false, "font.woff", 0.0)
+            .expect("detect licenses from wrapped font metadata text");
+        assert!(
+            detections.iter().any(|detection| {
+                detection
+                    .license_expression_spdx
+                    .as_deref()
+                    .is_some_and(|expression| expression.contains("OFL-1.1"))
+            }),
+            "detections: {detections:#?}"
+        );
+
+        let (copyrights, holders, _authors) = detect_copyrights(&metadata_text, None);
+        assert!(
+            copyrights.iter().any(|detection| {
+                detection.copyright == "(c) 2023 Adobe (http://www.adobe.com/)"
+            }),
+            "copyrights: {copyrights:#?}"
+        );
+        assert!(
+            holders.iter().any(|detection| detection.holder == "Adobe"),
+            "holders: {holders:#?}"
+        );
+    }
+
+    #[test]
+    fn extracts_metadata_from_ttc_fixture() {
+        let bytes = fs::read("testdata/font-fixtures/TTC.ttc").expect("read ttc font fixture");
+
+        let text = extract_font_metadata_text(Path::new("TTC.ttc"), &bytes)
+            .expect("ttc font metadata text");
+
+        assert!(
+            text.contains("Copyright") || text.contains("License"),
+            "{text}"
+        );
+        assert!(text.contains("No rights reserved"), "{text}");
     }
 }
