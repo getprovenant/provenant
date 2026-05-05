@@ -377,7 +377,7 @@ fn test_extract_copyright_information_strips_locale_timestamp_from_raw_projectio
         "copyrights: {:?}",
         file.copyrights
     );
-    assert_eq!(file.copyrights[0].copyright, "Copyright (C) EDF R&D 2002");
+    assert_eq!(file.copyrights[0].copyright, "Copyright (c) EDF R&D 2002");
     assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
     assert_eq!(file.holders[0].holder, "EDF R&D");
 }
