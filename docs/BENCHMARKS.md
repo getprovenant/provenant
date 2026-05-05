@@ -1,6 +1,6 @@
-# Package Detection Benchmarks
+# Scan Benchmarks
 
-This document records explicit [`compare-outputs`](../xtask/README.md#compare-outputs) runs with high-level timing metrics and notable end-state Provenant-vs-ScanCode outcomes on recorded targets.
+This document records explicit [`compare-outputs`](../xtask/README.md#compare-outputs) benchmark runs with high-level timing metrics and notable end-state Provenant-vs-ScanCode outcomes on recorded targets.
 
 These rows are not ad hoc performance snapshots. They are the public record of an iterative compare-review-fix-rerun loop on one concrete target at a time.
 
@@ -1453,7 +1453,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
   1. repository-backed targets (`--repo-url`)
   2. artifact/rootfs-backed targets (`--target-path`)
 - Within each target kind, use the example headings below as the canonical placement buckets—dominant ecosystem or repository shape for repository-backed targets, artifact shape for artifact/rootfs-backed targets—and sort rows **alphabetically by target label** within each bucket.
-- If a benchmark plausibly fits several ecosystems, place it where a reader is most likely to look first based on the dominant package-detection story in the final notes bullet.
+- If a benchmark plausibly fits several ecosystems, place it where a reader is most likely to look first based on the dominant end-state story in the final notes bullet.
 - This keeps the document browsable for readers while still giving maintainers a stable, predictable placement rule for new rows.
 
 ### Writing rules for the notes bullet

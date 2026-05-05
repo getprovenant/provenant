@@ -5,9 +5,9 @@
 [![CI](https://github.com/mstykow/provenant/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/mstykow/provenant/actions/workflows/check.yml)
 [![License](https://img.shields.io/crates/l/provenant-cli.svg)](LICENSE)
 
-Provenant is a Rust-based code scanner for licenses, package metadata, file metadata, and related provenance data. It is an independent Rust implementation for ScanCode-aligned workflows, focused on correctness, safe static parsing, and native execution.
+Provenant is a Rust-based code scanner for licenses, copyrights, package metadata, file metadata, and related provenance data. It is an independent Rust implementation for ScanCode-aligned workflows, focused on correctness, safe static parsing, and native execution.
 
-On recorded package-detection targets, Provenant is frequently about an order of magnitude faster than ScanCode while also surfacing broader package and dependency metadata, cleaner, lower-noise results on many documented targets, and workflows such as incremental rescans and `--paths-file` selected-file scanning.
+Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than ScanCode while also surfacing broader package and dependency metadata, reducing result noise through documented parser and detection fixes, and supporting practical workflows such as incremental rescans, selected-file scans, and long-lived HTTP service use.
 
 Provenant reimplements the scanning engine in Rust while continuing to use the upstream [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit) license and rule data. That expert-maintained dataset is foundational to Provenant's work; the goal is to preserve and build on it, not replace it.
 
@@ -22,12 +22,12 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 
 ## Why Provenant?
 
-- [Benchmark-backed](docs/BENCHMARKS.md) package-detection speedups that are frequently about an order of magnitude faster than ScanCode on recorded same-host runs
+- [Benchmark-backed](docs/BENCHMARKS.md) scan speedups that are frequently about an order of magnitude faster than ScanCode on recorded same-host runs
 - Broader package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), including beyond-parity parsers and improvements in overlapping parser families
 - [Documented parser and detection fixes](docs/improvements/README.md) that reduce noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
-- Native workflows such as `--incremental` cache reuse and `--paths-file` rooted file lists for CI or changed-file scans
-- Option to [self-host an HTTP service](docs/SERVE_API_GUIDE.md) with warm process reuse, remote-friendly inputs, and async job handling for automation
-- Single self-contained binary for simpler installation and CI use
+- Package assembly for sibling, nested, and workspace-style inputs
+- Native workflows such as `--incremental` cache reuse, `--paths-file` rooted file lists for CI or changed-file scans, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
+- Single self-contained binary with parallel native execution for simpler installation and CI use
 - ScanCode-compatible workflows and output formats, including ScanCode-style JSON, SPDX, CycloneDX, YAML, JSON Lines, HTML, and custom templates
 - [Security-first](docs/adr/0004-security-first-parsing.md) static parsing with explicit safeguards and compatibility-focused tradeoffs where needed
 - Built on upstream ScanCode license and rule data maintained by experts
@@ -41,35 +41,20 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 
 - Provenant is an independent Rust implementation inspired by ScanCode Toolkit.
 - It aims for strong compatibility with ScanCode workflows and output semantics where practical.
-- It continues to use the upstream ScanCode license and rule data.
-- ScanCode Toolkit remains the reference ecosystem Provenant studies for behavior, parity validation, and output semantics.
-- Provenant does not replace the value of upstream rule curation; it provides a Rust scanning engine around that expert-maintained knowledge base.
+- It continues to use the upstream ScanCode license and rule data, and studies ScanCode Toolkit as the reference ecosystem for compatibility and parity work.
 - If you are moving an existing ScanCode power-user workflow, see [Migrating from ScanCode Toolkit](docs/MIGRATING_FROM_SCANCODE.md).
-
-## Features
-
-- Single, self-contained binary
-- Parallel scanning with native concurrency
-- Broad package-manifest and lockfile coverage across many ecosystems
-- Cleaner normalization and lower-noise detection results from documented parser and detection fixes
-- Package assembly for sibling, nested, and workspace-style inputs
-- Include and exclude filtering, path normalization, and scan-result filtering
-- Incremental reuse for repeated scans of the same tree
-- Explicit rooted selected-file scans via `--paths-file`
-- Long-lived HTTP scanning via `provenant serve`, including sync/async requests, remote-friendly inputs, and job polling
-- Security-first parsing with explicit safeguards and compatibility-focused tradeoffs where needed
 
 ## Installation
 
 ### From Crates.io
 
-Install the Provenant package from crates.io under the crate name `provenant-cli`:
+Install the crates.io package `provenant-cli`:
 
 ```sh
 cargo install provenant-cli
 ```
 
-This installs the `provenant` binary.
+This installs the `provenant` command-line binary.
 
 ### Download Precompiled Binary
 
@@ -100,13 +85,9 @@ Cargo places the compiled binary under `target/release/`.
 
 > **Note**: The binary includes a built-in compact license index. The `reference/scancode-toolkit/` submodule is only needed for developers updating the embedded license data, using maintainer commands that depend on it, or maintaining Provenant's built-in license dataset.
 
-### Use as a Library
-
-The published crate name is `provenant-cli`, while the library target is imported as `provenant`.
-
-For the supported high-level Rust embedding path, dependency setup, and embedding-specific feature choices such as `rpm-sqlite`, see the [Library Guide](docs/LIBRARY_GUIDE.md).
-
 ## Usage
+
+### CLI Scanning
 
 ```sh
 provenant scan --json-pp <FILE> [OPTIONS] <INPUT>...
@@ -126,48 +107,40 @@ For the complete scan-flag surface, run:
 provenant scan --help
 ```
 
-For the current service shell surface, run:
-
-```sh
-provenant serve --help
-```
-
-For the HTTP request/response contract and examples, see the [Serve API Guide](docs/SERVE_API_GUIDE.md).
-
-For guided workflows and important flag combinations, see the [CLI Guide](docs/CLI_GUIDE.md).
-
 ### Example
 
 ```sh
 provenant scan --json-pp scan-results.json --license --package ~/projects/my-codebase --ignore "*.git*" --ignore "target/*" --ignore "node_modules/*"
 ```
 
-### Highlighted Workflows
-
-For PR-scoped or CI-selected scans, use `--paths-file` with one explicit scan root instead of expanding the file list into positional args:
-
-```sh
-provenant scan --json-pp scan-results.json --license /path/to/repo --paths-file changed-files.txt
-```
-
-For repeated scans of the same checkout, use `--incremental` so Provenant can reuse unchanged file results from the shared cache:
-
-```sh
-provenant scan --json-pp scan-results.json --license --package --incremental /path/to/repo
-```
-
 Use `-` as `FILE` to write an output stream to stdout, for example `--json-pp -`.
 Multiple output flags can be used in a single run, matching ScanCode CLI behavior.
 When using `--from-json`, you can pass multiple JSON inputs. Native directory scans also support multiple input paths, matching ScanCode's common-prefix behavior.
-For more workflow details, including cache controls and stdin-driven file lists, see the [CLI Guide](docs/CLI_GUIDE.md).
+For guided workflows, flag combinations, cache controls, and stdin-driven file lists, see the [CLI Guide](docs/CLI_GUIDE.md).
 
-For the generated package-format support matrix, see [Supported Formats](docs/SUPPORTED_FORMATS.md).
+### HTTP Service
+
+For the current service shell surface, run:
+
+```sh
+provenant serve --help
+```
+
+`provenant serve` runs Provenant as a long-lived HTTP service with warm process reuse, synchronous and asynchronous scan endpoints, and job polling for automation-friendly integrations.
+
+For the HTTP request/response contract and examples, see the [Serve API Guide](docs/SERVE_API_GUIDE.md).
+
+### Rust Library
+
+If you want to embed Provenant in a Rust application instead of invoking the CLI, use the crates.io package `provenant-cli` and import the library target as `provenant`.
+
+For the supported high-level Rust embedding path and dependency setup, see the [Library Guide](docs/LIBRARY_GUIDE.md).
 
 ## Performance
 
-`Provenant` has maintained package-detection benchmarks against ScanCode on specific recorded targets. Across those same-host recorded runs, Provenant is frequently about an order of magnitude faster while also delivering broader package and dependency extraction, cleaner normalization, or other documented end-state improvements on many listed targets. See [Package Detection Benchmarks](docs/BENCHMARKS.md) for the exact targets, timings, machine context, and benchmark scope.
+`Provenant` has maintained scan benchmarks against ScanCode on specific recorded targets. Across those same-host recorded runs, Provenant is frequently about an order of magnitude faster while also delivering broader package and dependency extraction, cleaner normalization, or other documented end-state improvements on many listed targets. See [Scan Benchmarks](docs/BENCHMARKS.md) for the exact targets, timings, machine context, and benchmark scope.
 
-These results apply only to those recorded package-detection runs; they are not a blanket claim about every scan mode, target, or environment. For implementation details, see [Architecture: Performance Characteristics](docs/ARCHITECTURE.md#performance-characteristics).
+These results apply only to those recorded benchmark runs; they are not a blanket claim about every scan mode, target, or environment. For implementation details, see [Architecture: Performance Characteristics](docs/ARCHITECTURE.md#performance-characteristics).
 
 ## Output Formats
 
@@ -182,6 +155,8 @@ Implemented output formats include:
 - HTML report
 - Custom template rendering
 
+For the generated support matrix for package ecosystems and package-adjacent detection surfaces, see [Supported Formats](docs/SUPPORTED_FORMATS.md).
+
 Output architecture and compatibility approach are documented in:
 
 - [Architecture](docs/ARCHITECTURE.md)
@@ -195,7 +170,7 @@ Output architecture and compatibility approach are documented in:
 - **[CLI Guide](docs/CLI_GUIDE.md)** - Common workflows and important flag combinations
 - **[Migrating from ScanCode Toolkit](docs/MIGRATING_FROM_SCANCODE.md)** - Practical migration notes for ScanCode users, especially power-user workflows
 - **[Architecture](docs/ARCHITECTURE.md)** - System design, processing pipeline, and design decisions
-- **[Supported Formats](docs/SUPPORTED_FORMATS.md)** - Generated support matrix for package ecosystems and file formats
+- **[Supported Formats](docs/SUPPORTED_FORMATS.md)** - Generated support matrix for package ecosystems and package-adjacent detection surfaces
 - **[How to Add a Parser](docs/HOW_TO_ADD_A_PARSER.md)** - Step-by-step guide for adding new parsers
 - **[Testing Strategy](docs/TESTING_STRATEGY.md)** - Testing approach and guidelines
 - **[ADRs](docs/adr/)** - Architectural decision records
@@ -205,10 +180,7 @@ Output architecture and compatibility approach are documented in:
 
 Contributions are welcome. Please feel free to submit a pull request.
 
-For contributor workflow, start with [CONTRIBUTING.md](CONTRIBUTING.md).
-Inbound contributions use the Developer Certificate of Origin (DCO) 1.1, so
-commits should be signed off with `git commit -s`. See [`DCO`](DCO) and
-[`CONTRIBUTING.md`](CONTRIBUTING.md) for the policy details.
+For contributor workflow and contribution policy, start with [CONTRIBUTING.md](CONTRIBUTING.md). Inbound contributions use the Developer Certificate of Origin (DCO) 1.1, so commits should be signed off with `git commit -s`; see [`DCO`](DCO) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for the policy details.
 
 For deeper contributor documentation, see the [Documentation Index](docs/DOCUMENTATION_INDEX.md), [How to Add a Parser](docs/HOW_TO_ADD_A_PARSER.md), and [Testing Strategy](docs/TESTING_STRATEGY.md).
 
@@ -220,7 +192,7 @@ A substantial portion of Provenant's development has been contributed by people 
 
 ## Upstream Data and Attribution
 
-`Provenant` is an independent Rust implementation inspired by [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit). It uses the upstream ScanCode Toolkit project by nexB Inc. and the AboutCode community as a reference for compatibility, behavior, and parity validation, and it continues to rely on the upstream ScanCode license and rule data maintained by that ecosystem. Provenant code is licensed under Apache-2.0; included ScanCode-derived rule and license data remains subject to upstream attribution and CC-BY-4.0 terms where applicable. We are grateful to nexB Inc. and the AboutCode community for the reference implementation and the extensive license and copyright research behind it. See [`NOTICE`](NOTICE) for preserved upstream attribution notices applicable to materials included in this repository and to distributions that include ScanCode-derived data.
+`Provenant` is an independent Rust implementation inspired by [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit). It relies on the upstream ScanCode Toolkit project by nexB Inc. and the AboutCode community for reference behavior, compatibility validation, and the license and rule data maintained by that ecosystem. Provenant code is licensed under Apache-2.0; included ScanCode-derived rule and license data remains subject to upstream attribution and CC-BY-4.0 terms where applicable. We are grateful to nexB Inc. and the AboutCode community for the reference implementation and the extensive license and copyright research behind it. See [`NOTICE`](NOTICE) for preserved upstream attribution notices applicable to materials included in this repository and to distributions that include ScanCode-derived data.
 
 ## License
 
