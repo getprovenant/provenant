@@ -499,7 +499,6 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             DatasourceId::PypiPoetryPyprojectToml,
             DatasourceId::PypiSetupPy,
             DatasourceId::PypiSetupCfg,
-            DatasourceId::PypiWheel,
             DatasourceId::PypiWheelMetadata,
             DatasourceId::PypiEgg,
             DatasourceId::PypiEggPkginfo,

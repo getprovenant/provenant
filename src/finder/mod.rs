@@ -283,4 +283,22 @@ mod tests {
         let values: Vec<_> = urls.into_iter().map(|url| url.url).collect();
         assert_eq!(values, vec!["https://rust-lang.org/real".to_string()]);
     }
+
+    #[test]
+    fn test_find_urls_ignores_ellipsis_placeholder_hosts() {
+        let text = "Fetch https://.../script.py after download.";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert!(urls.is_empty(), "urls: {urls:#?}");
+    }
+
+    #[test]
+    fn test_find_urls_ignores_braced_placeholder_hosts() {
+        let text = "Download from http://{httpserver.host/ when tests boot.";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert!(urls.is_empty(), "urls: {urls:#?}");
+    }
 }

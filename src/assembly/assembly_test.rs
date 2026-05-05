@@ -3286,6 +3286,34 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_python_standalone_wheel_creates_top_level_package() {
+        let mut files = vec![create_test_file_info(
+            "dist/construct-2.10.68-py3-none-any.whl",
+            DatasourceId::PypiWheel,
+            Some("pkg:pypi/construct@2.10.68?extension=py3-none-any"),
+            Some("construct"),
+            Some("2.10.68"),
+            vec![],
+        )];
+
+        let result = assemble(&mut files);
+
+        assert_eq!(result.packages.len(), 1, "packages: {:#?}", result.packages);
+        let package = &result.packages[0];
+        assert_eq!(package.name.as_deref(), Some("construct"));
+        assert_eq!(package.version.as_deref(), Some("2.10.68"));
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:pypi/construct@2.10.68?extension=py3-none-any")
+        );
+        assert_eq!(
+            package.datafile_paths,
+            vec!["dist/construct-2.10.68-py3-none-any.whl"]
+        );
+        assert_eq!(files[0].for_packages, vec![package.package_uid.clone()]);
+    }
+
+    #[test]
     fn test_assemble_python_pip_cache_skips_mismatched_second_wheel() {
         let mut files = vec![
             create_test_file_info(

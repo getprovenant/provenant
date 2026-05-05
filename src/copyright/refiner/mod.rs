@@ -1193,6 +1193,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = normalize_b_dot_angle_emails(&c);
     c = strip_nickname_quotes(&c);
     c = strip_leading_author_label_in_copyright(&c);
+    c = strip_leading_duplicate_phrase_before_embedded_copyright(&c);
     c = strip_leading_licensed_material_of(&c);
     c = strip_leading_version_number_before_c(&c);
     c = strip_trailing_parenthesized_descriptor_after_by_holder(&c);
@@ -1367,6 +1368,10 @@ fn strip_known_copyright_wrappers(s: &str) -> String {
         )
         .expect("valid assignment copyright wrapper regex")
     });
+    static PLAIN_COPYRIGHT_ASSIGNMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?ix)^copyright\s*=\s*(?P<value>.+?)\s*;?\s*$"#)
+            .expect("valid plain copyright assignment regex")
+    });
     static APPLICATION_LEGALESE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r#"(?ix)^applicationLegalese\s*:\s*(?P<value>.+?)\s*,?\s*$"#)
             .expect("valid applicationLegalese wrapper regex")
@@ -1403,6 +1408,18 @@ fn strip_known_copyright_wrappers(s: &str) -> String {
             if value.starts_with("Copyright") || value.starts_with('©') {
                 return prepare_text_line(value).trim().to_string();
             }
+        }
+    }
+
+    if let Some(captures) = PLAIN_COPYRIGHT_ASSIGNMENT_RE.captures(trimmed) {
+        let value = captures
+            .name("value")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim()
+            .trim_matches(&['\'', '"'][..]);
+        if !value.is_empty() {
+            return synthesize_copyright_from_assignment_value(value);
         }
     }
 
@@ -1958,7 +1975,108 @@ fn strip_trailing_author_label(s: &str) -> String {
     prefix.to_string()
 }
 
+fn extract_copyright_assignment_value_after_author_assignment(s: &str) -> Option<String> {
+    static AUTHOR_ASSIGNMENT_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            ^(?:@?authors?)\s*=\s*(?:"[^"]*"|'[^']*'|.+?)\s+
+            copyright\s*=\s*(?P<rest>.+?)\s*$
+            "#,
+        )
+        .expect("valid author assignment before copyright regex")
+    });
+
+    let trimmed = s.trim();
+    let captures = AUTHOR_ASSIGNMENT_COPY_RE.captures(trimmed)?;
+    let rest = captures
+        .name("rest")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim()
+        .trim_matches(&['\'', '"'][..]);
+    if rest.is_empty() {
+        None
+    } else {
+        Some(normalize_whitespace(rest))
+    }
+}
+
+fn synthesize_copyright_from_assignment_value(value: &str) -> String {
+    let prepared = prepare_text_line(value).trim().to_string();
+    if prepared.is_empty() {
+        String::new()
+    } else if prepared.starts_with("Copyright") || prepared.starts_with('©') {
+        prepared
+    } else {
+        format!("Copyright {prepared}")
+    }
+}
+
+fn strip_leading_duplicate_phrase_before_embedded_copyright(s: &str) -> String {
+    static EMBEDDED_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?P<prefix>.+?)\s+copyright\s+(?P<rest>.+)$")
+            .expect("valid embedded copyright regex")
+    });
+    static LEADING_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)^(?P<years>(?:19\d{2}|20\d{2}|CURRENT_YEAR|\?\?\?\?)(?:\s*[-–/]\s*(?:19\d{2}|20\d{2}|\d{2}|CURRENT_YEAR|\?\?\?\?))?(?:\s*,\s*(?:19\d{2}|20\d{2}|CURRENT_YEAR|\?\?\?\?))*(?:\s*,)?)\s+(?P<tail>.+)$",
+        )
+        .expect("valid leading year regex")
+    });
+
+    let trimmed = s.trim();
+    let Some(captures) = EMBEDDED_COPY_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = normalize_whitespace(
+        captures
+            .name("prefix")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim(),
+    );
+    if prefix.split_whitespace().count() < 2 {
+        return s.to_string();
+    }
+
+    let rest = normalize_whitespace(
+        captures
+            .name("rest")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim(),
+    );
+    let Some(year_captures) = LEADING_YEAR_RE.captures(&rest) else {
+        return s.to_string();
+    };
+    let years = year_captures
+        .name("years")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim();
+    let tail = year_captures
+        .name("tail")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim();
+    if years.is_empty() || tail.is_empty() {
+        return s.to_string();
+    }
+
+    let prefix_lower = prefix.to_ascii_lowercase();
+    let tail_lower = tail.to_ascii_lowercase();
+    if tail_lower != prefix_lower && !tail_lower.starts_with(&format!("{prefix_lower} ")) {
+        return s.to_string();
+    }
+
+    normalize_whitespace(&format!("Copyright {years} {tail}"))
+}
+
 fn strip_leading_author_label_in_copyright(s: &str) -> String {
+    if let Some(rest) = extract_copyright_assignment_value_after_author_assignment(s) {
+        return synthesize_copyright_from_assignment_value(&rest);
+    }
+
     static LEADING_AUTHOR_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)^(?:@?author)\s+(?P<rest>.+\(c\)\s*(?:19|20)\d{2}.*)$")
             .expect("valid leading author copyright regex")
@@ -1975,6 +2093,10 @@ fn strip_leading_author_label_in_copyright(s: &str) -> String {
 }
 
 fn strip_leading_author_label_in_holder(s: &str) -> String {
+    if let Some(rest) = extract_copyright_assignment_value_after_author_assignment(s) {
+        return rest;
+    }
+
     static LEADING_AUTHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)^(?:@?author)\b[:\s]+(?P<rest>.+)$").expect("valid leading author regex")
     });
@@ -2687,6 +2809,9 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_lowercase_handle_angle_email(&h);
     h = strip_trailing_quote_before_email(&h);
     h = strip_nickname_quotes(&h);
+    if let Some(rest) = extract_copyright_assignment_value_after_author_assignment(&h) {
+        h = rest;
+    }
     h = strip_leading_author_label_in_holder(&h);
     h = strip_angle_bracketed_www_domains(&h);
     if in_copyright_context {

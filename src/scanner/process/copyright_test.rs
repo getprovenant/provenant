@@ -383,6 +383,44 @@ fn test_extract_copyright_information_strips_locale_timestamp_from_raw_projectio
 }
 
 #[test]
+fn test_extract_copyright_information_projects_clean_python_assignment_metadata() {
+    let text = concat!(
+        "author = \"Pyodide contributors\"\n",
+        "copyright = \"2019-2026, Pyodide contributors and Mozilla\"\n",
+    );
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("docs/conf.py"), text, 120.0, false);
+
+    let file = builder
+        .name("conf.py".to_string())
+        .base_name("conf".to_string())
+        .extension(".py".to_string())
+        .path("docs/conf.py".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright 2019-2026, Pyodide contributors and Mozilla"
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("Copyright 2019-2026, Pyodide contributors and Mozilla")
+    );
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(file.holders[0].holder, "Pyodide contributors and Mozilla");
+}
+
+#[test]
 fn test_binary_string_copyright_candidate_keeps_real_notice() {
     let notice = "Copyright nexB and others (c) 2012";
     assert!(is_binary_string_copyright_candidate(notice));
