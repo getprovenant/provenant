@@ -63,7 +63,83 @@ pub(super) fn group_matches_by_region_with_threshold(
         groups.push(DetectionGroup::new(current_group));
     }
 
-    groups
+    merge_sandwiched_same_line_clue_groups(groups)
+}
+
+fn merge_sandwiched_same_line_clue_groups(groups: Vec<DetectionGroup>) -> Vec<DetectionGroup> {
+    let mut merged = Vec::new();
+    let mut index = 0;
+
+    while index < groups.len() {
+        if index + 2 < groups.len()
+            && should_merge_sandwiched_same_line_clue(
+                &groups[index],
+                &groups[index + 1],
+                &groups[index + 2],
+            )
+        {
+            let mut combined_matches = groups[index].matches.clone();
+            combined_matches.extend(groups[index + 1].matches.clone());
+            combined_matches.extend(groups[index + 2].matches.clone());
+            merged.push(DetectionGroup::new(combined_matches));
+            index += 3;
+            continue;
+        }
+
+        merged.push(DetectionGroup::new(groups[index].matches.clone()));
+        index += 1;
+    }
+
+    merged
+}
+
+fn should_merge_sandwiched_same_line_clue(
+    left: &DetectionGroup,
+    middle: &DetectionGroup,
+    right: &DetectionGroup,
+) -> bool {
+    let Some(clue_match) = middle.matches.first() else {
+        return false;
+    };
+
+    middle.matches.len() == 1
+        && clue_match.is_license_clue()
+        && left
+            .matches
+            .iter()
+            .all(|match_item| !match_item.is_license_clue())
+        && right
+            .matches
+            .iter()
+            .all(|match_item| !match_item.is_license_clue())
+        && all_matches_are_single_line_exact(&left.matches)
+        && all_matches_are_single_line_exact(&middle.matches)
+        && all_matches_are_single_line_exact(&right.matches)
+        && group_line_range(left) == group_line_range(middle)
+        && group_line_range(middle) == group_line_range(right)
+}
+
+fn all_matches_are_single_line_exact(matches: &[LicenseMatch]) -> bool {
+    !matches.is_empty()
+        && matches.iter().all(|match_item| {
+            match_item.start_line == match_item.end_line
+                && match_item.coverage() == 100.0
+                && matches!(
+                    match_item.matcher,
+                    crate::license_detection::models::MatcherKind::Hash
+                        | crate::license_detection::models::MatcherKind::SpdxId
+                        | crate::license_detection::models::MatcherKind::Aho
+                )
+        })
+}
+
+fn group_line_range(
+    group: &DetectionGroup,
+) -> Option<(crate::models::LineNumber, crate::models::LineNumber)> {
+    Some((
+        group.matches.first()?.start_line,
+        group.matches.last()?.end_line,
+    ))
 }
 
 /// Check if two matches should be in the same group based on line proximity.
@@ -306,6 +382,48 @@ mod tests {
         assert_eq!(groups.len(), 2);
         assert_eq!(groups[0].matches, vec![reference]);
         assert_eq!(groups[1].matches, vec![clue]);
+    }
+
+    #[test]
+    fn test_group_matches_merges_sandwiched_same_line_clue_between_exact_matches() {
+        let mut left = create_test_match(10, 10, "2-aho", "linux-note.RULE");
+        left.rule_kind = crate::license_detection::models::RuleKind::Reference;
+        left.license_expression = "linux-syscall-exception-gpl".to_string();
+        left.match_coverage = 100.0;
+
+        let mut clue = create_test_match(10, 10, "2-aho", "gpl_bare_word_only.RULE");
+        clue.rule_kind = crate::license_detection::models::RuleKind::Clue;
+        clue.license_expression = "gpl-1.0-plus".to_string();
+        clue.match_coverage = 100.0;
+
+        let mut right = create_test_match(10, 10, "2-aho", "llgpl_3.RULE");
+        right.rule_kind = crate::license_detection::models::RuleKind::Reference;
+        right.license_expression = "llgpl".to_string();
+        right.match_coverage = 100.0;
+
+        let groups = group_matches_by_region(&[left.clone(), clue.clone(), right.clone()]);
+
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].matches, vec![left, clue, right]);
+    }
+
+    #[test]
+    fn test_group_matches_does_not_merge_sandwiched_clue_across_different_lines() {
+        let mut left = create_test_match(10, 10, "2-aho", "linux-note.RULE");
+        left.rule_kind = crate::license_detection::models::RuleKind::Reference;
+        left.match_coverage = 100.0;
+
+        let mut clue = create_test_match(11, 11, "2-aho", "gpl_bare_word_only.RULE");
+        clue.rule_kind = crate::license_detection::models::RuleKind::Clue;
+        clue.match_coverage = 100.0;
+
+        let mut right = create_test_match(11, 11, "2-aho", "llgpl_3.RULE");
+        right.rule_kind = crate::license_detection::models::RuleKind::Reference;
+        right.match_coverage = 100.0;
+
+        let groups = group_matches_by_region(&[left, clue, right]);
+
+        assert_eq!(groups.len(), 3);
     }
 
     #[test]

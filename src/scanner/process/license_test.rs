@@ -4,7 +4,8 @@
 use super::{
     LicenseExtractionInput, MAX_OUTPUT_MATCHED_TEXT_BYTES, MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH,
     compute_percentage_of_license_text, convert_detection_to_model, extract_license_information,
-    promote_legal_notice_low_quality_detections, prune_redundant_readme_conjunctive_detections,
+    normalize_optional_spdx_expression, promote_legal_notice_low_quality_detections,
+    prune_redundant_readme_conjunctive_detections,
 };
 use crate::license_detection::LicenseDetection as InternalLicenseDetection;
 use crate::license_detection::LicenseDetectionEngine;
@@ -255,6 +256,29 @@ fn test_convert_detection_to_model_routes_expressionless_detection_to_license_cl
     );
     assert_eq!(clues[0].matched_text.as_deref(), Some("MIT"));
     assert_eq!(clues[0].matched_text_diagnostics, None);
+}
+
+#[test]
+fn test_convert_detection_to_model_drops_invalid_spdx_expression() {
+    let mut detection = make_detection("");
+    detection.license_expression_spdx = Some("MIT\" or malformed".to_string());
+    detection.matches[0].license_expression_spdx = Some("MIT\" or malformed".to_string());
+
+    let (converted, clues) =
+        convert_detection_to_model(&detection, LicenseScanOptions::default(), "", None, None);
+    let converted = converted.expect("detection should convert");
+
+    assert_eq!(converted.license_expression_spdx, "");
+    assert_eq!(converted.matches[0].license_expression_spdx, "");
+    assert!(clues.is_empty());
+}
+
+#[test]
+fn test_normalize_optional_spdx_expression_rejects_invalid_input() {
+    assert_eq!(
+        normalize_optional_spdx_expression(Some("MIT\" or malformed")),
+        ""
+    );
 }
 
 #[test]

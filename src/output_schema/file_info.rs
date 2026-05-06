@@ -119,40 +119,51 @@ impl OutputFileInfo {
 
     pub(crate) fn detected_license_expression_spdx(&self) -> Option<String> {
         {
-            let expressions: Vec<String> = self
+            let expressions: Option<Vec<String>> = self
                 .license_detections
                 .iter()
-                .filter(|detection| !detection.license_expression_spdx.is_empty())
-                .map(|detection| detection.license_expression_spdx.clone())
+                .map(|detection| {
+                    (!detection.license_expression_spdx.is_empty())
+                        .then(|| detection.license_expression_spdx.clone())
+                })
                 .collect();
-            crate::utils::spdx::select_primary_license_expression(expressions.clone()).or_else(
-                || {
-                    crate::utils::spdx::combine_license_expressions_preserving_structure(
-                        expressions,
-                    )
-                },
-            )
+            expressions.and_then(|expressions| {
+                crate::utils::spdx::select_primary_license_expression_strict(expressions.clone())
+                    .or_else(|| {
+                        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
+                            expressions,
+                        )
+                    })
+            })
         }
         .or_else(|| {
-            let expressions: Vec<String> = self
+            let expressions: Option<Vec<String>> = self
                 .package_data
                 .iter()
                 .flat_map(|package_data| package_data.license_detections.iter())
-                .filter(|detection| !detection.license_expression_spdx.is_empty())
-                .map(|detection| detection.license_expression_spdx.clone())
+                .map(|detection| {
+                    (!detection.license_expression_spdx.is_empty())
+                        .then(|| detection.license_expression_spdx.clone())
+                })
                 .collect();
-            crate::utils::spdx::select_primary_license_expression(expressions.clone()).or_else(
-                || {
-                    crate::utils::spdx::combine_license_expressions_preserving_structure(
-                        expressions,
-                    )
-                },
-            )
+            expressions.and_then(|expressions| {
+                crate::utils::spdx::select_primary_license_expression_strict(expressions.clone())
+                    .or_else(|| {
+                        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
+                            expressions,
+                        )
+                    })
+            })
         })
         .or_else(|| {
             self.license_expression
                 .clone()
                 .filter(|expression| !expression.is_empty())
+                .and_then(|expression| {
+                    crate::utils::spdx::combine_license_expressions_preserving_structure_strict([
+                        expression,
+                    ])
+                })
         })
     }
 }
@@ -458,5 +469,98 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
                 .map(crate::models::Tallies::try_from)
                 .transpose()?,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OutputFileInfo;
+    use crate::models::FileType;
+    use crate::output_schema::license_detection::OutputLicenseDetection;
+
+    fn base_output_file_info() -> OutputFileInfo {
+        OutputFileInfo {
+            name: "mod.rs".to_string(),
+            base_name: "mod".to_string(),
+            extension: ".rs".to_string(),
+            path: "mod.rs".to_string(),
+            file_type: FileType::File,
+            mime_type: None,
+            file_type_label: None,
+            size: 0,
+            date: None,
+            sha1: None,
+            md5: None,
+            sha256: None,
+            sha1_git: None,
+            programming_language: None,
+            package_data: Vec::new(),
+            license_expression: None,
+            license_detections: Vec::new(),
+            license_clues: Vec::new(),
+            percentage_of_license_text: None,
+            copyrights: Vec::new(),
+            holders: Vec::new(),
+            authors: Vec::new(),
+            emails: Vec::new(),
+            urls: Vec::new(),
+            for_packages: Vec::new(),
+            scan_errors: Vec::new(),
+            license_policy: None,
+            is_generated: None,
+            is_binary: None,
+            is_text: None,
+            is_archive: None,
+            is_media: None,
+            is_source: None,
+            is_script: None,
+            files_count: None,
+            dirs_count: None,
+            size_count: None,
+            source_count: None,
+            is_legal: false,
+            is_manifest: false,
+            is_readme: false,
+            is_top_level: false,
+            is_key_file: false,
+            is_community: false,
+            facets: Vec::new(),
+            tallies: None,
+        }
+    }
+
+    #[test]
+    fn detected_license_expression_spdx_does_not_recombine_partial_detection_spdx() {
+        let mut file_info = base_output_file_info();
+        file_info.license_expression = Some("Apache-2.0 AND MIT".to_string());
+        file_info.license_detections = vec![
+            OutputLicenseDetection {
+                license_expression: "apache-2.0".to_string(),
+                license_expression_spdx: "Apache-2.0".to_string(),
+                matches: Vec::new(),
+                detection_log: Vec::new(),
+                identifier: None,
+            },
+            OutputLicenseDetection {
+                license_expression: "mit".to_string(),
+                license_expression_spdx: String::new(),
+                matches: Vec::new(),
+                detection_log: Vec::new(),
+                identifier: None,
+            },
+        ];
+
+        assert_eq!(
+            file_info.detected_license_expression_spdx().as_deref(),
+            Some("Apache-2.0 AND MIT")
+        );
+    }
+
+    #[test]
+    fn detected_license_expression_spdx_rejects_invalid_fallback_expression() {
+        let mut file_info = base_output_file_info();
+        file_info.license_expression = Some("MIT\" or malformed".to_string());
+
+        assert_eq!(file_info.detected_license_expression_spdx(), None);
     }
 }

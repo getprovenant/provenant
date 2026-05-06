@@ -145,18 +145,20 @@ pub(super) fn extract_license_information(
                 collapse_repeated_sourcemap_license_detections(path, model_detections);
 
             if !model_detections.is_empty() {
-                let expressions: Vec<String> = model_detections
+                let expressions: Option<Vec<String>> = model_detections
                     .iter()
-                    .filter(|d| !d.license_expression_spdx.is_empty())
-                    .map(|d| d.license_expression_spdx.clone())
+                    .map(|detection| {
+                        (!detection.license_expression_spdx.is_empty())
+                            .then(|| detection.license_expression_spdx.clone())
+                    })
                     .collect();
 
-                if !expressions.is_empty() {
-                    let combined = crate::utils::spdx::select_primary_license_expression(
+                if let Some(expressions) = expressions {
+                    let combined = crate::utils::spdx::select_primary_license_expression_strict(
                         expressions.clone(),
                     )
                     .or_else(|| {
-                        crate::utils::spdx::combine_license_expressions_preserving_structure(
+                        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
                             expressions,
                         )
                     });
@@ -566,12 +568,11 @@ fn promote_reference_url_clue_detection(
             .iter()
             .map(|license_match| license_match.license_expression.clone()),
     )?;
-    let license_expression_spdx =
-        crate::utils::spdx::combine_license_expressions_preserving_structure(
-            promoted_matches
-                .iter()
-                .filter_map(|license_match| license_match.license_expression_spdx.clone()),
-        )
+    let license_expression_spdx = promoted_matches
+        .iter()
+        .map(|license_match| license_match.license_expression_spdx.clone())
+        .collect::<Option<Vec<_>>>()
+        .and_then(crate::utils::spdx::combine_license_expressions_preserving_structure_strict)
         .unwrap_or_default();
     let matches = promoted_matches
         .into_iter()
@@ -638,14 +639,12 @@ fn promote_legal_notice_low_quality_detections(
         else {
             continue;
         };
-        let license_expression_spdx =
-            crate::utils::spdx::combine_license_expressions_preserving_structure(
-                detection
-                    .matches
-                    .iter()
-                    .filter_map(|license_match| license_match.license_expression_spdx.clone())
-                    .collect::<Vec<_>>(),
-            );
+        let license_expression_spdx = detection
+            .matches
+            .iter()
+            .map(|license_match| license_match.license_expression_spdx.clone())
+            .collect::<Option<Vec<_>>>()
+            .and_then(crate::utils::spdx::combine_license_expressions_preserving_structure_strict);
 
         detection.license_expression = Some(license_expression);
         detection.license_expression_spdx = license_expression_spdx;
@@ -1119,10 +1118,10 @@ fn normalize_optional_spdx_expression(expression: Option<&str>) -> String {
         return String::new();
     };
 
-    crate::utils::spdx::combine_license_expressions_preserving_structure(std::iter::once(
+    crate::utils::spdx::combine_license_expressions_preserving_structure_strict(std::iter::once(
         expression.to_string(),
     ))
-    .unwrap_or_else(|| expression.to_string())
+    .unwrap_or_default()
 }
 
 fn compute_percentage_of_license_text(

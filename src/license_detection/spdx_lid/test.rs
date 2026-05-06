@@ -452,6 +452,31 @@ mod tests {
     }
 
     #[test]
+    fn test_spdx_lid_match_canonicalizes_recovered_unknown_spdx_expression() {
+        let engine = crate::license_detection::LicenseDetectionEngine::from_embedded()
+            .expect("required test dependency available");
+
+        let index = engine.index();
+        let text = concat!(
+            "// SPDX-License-Identifier: Apache-2.0\n",
+            "//! such as \"SPDX-License-Identifier: MIT\" or variations with different comment styles and casing."
+        );
+        let query = Query::from_extracted_text(text, index, false).unwrap();
+        let matches = spdx_lid_match(index, &query);
+
+        assert_eq!(matches.len(), 2);
+        assert_eq!(
+            matches[0].license_expression_spdx.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert_eq!(matches[1].license_expression, "unknown-spdx");
+        assert_eq!(
+            matches[1].license_expression_spdx.as_deref(),
+            Some("LicenseRef-scancode-unknown-spdx")
+        );
+    }
+
+    #[test]
     fn test_split_license_expression_with_with() {
         let expr = "GPL-2.0 WITH Classpath-exception-2.0";
         let keys = split_license_expression(expr);

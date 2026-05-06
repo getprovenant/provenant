@@ -32,6 +32,16 @@ pub fn combine_license_expressions_preserving_structure(
     combine_license_expressions_with_relation_and_mode(expressions, ExpressionRelation::And, true)
 }
 
+pub(crate) fn combine_license_expressions_preserving_structure_strict(
+    expressions: impl IntoIterator<Item = String>,
+) -> Option<String> {
+    combine_license_expressions_with_relation_and_mode_strict(
+        expressions,
+        ExpressionRelation::And,
+        true,
+    )
+}
+
 pub fn select_primary_license_expression(
     expressions: impl IntoIterator<Item = String>,
 ) -> Option<String> {
@@ -74,11 +84,20 @@ pub fn select_primary_license_expression(
         .then(|| candidate.clone())
 }
 
-pub(crate) fn combine_license_expressions_with_relation_preserving_structure(
+pub(crate) fn select_primary_license_expression_strict(
+    expressions: impl IntoIterator<Item = String>,
+) -> Option<String> {
+    let expressions: Vec<String> = expressions.into_iter().collect();
+    select_primary_license_expression(expressions).and_then(|expression| {
+        combine_license_expressions_preserving_structure_strict([expression])
+    })
+}
+
+pub(crate) fn combine_license_expressions_with_relation_preserving_structure_strict(
     expressions: impl IntoIterator<Item = String>,
     relation: ExpressionRelation,
 ) -> Option<String> {
-    combine_license_expressions_with_relation_and_mode(expressions, relation, true)
+    combine_license_expressions_with_relation_and_mode_strict(expressions, relation, true)
 }
 
 pub(crate) fn combine_license_expressions_with_relation(
@@ -105,6 +124,24 @@ fn combine_license_expressions_with_relation_and_mode(
 
     combine_parsed_expressions(&expressions, relation, preserve_structure)
         .or_else(|| combine_license_expressions_fallback(&expressions, relation))
+}
+
+fn combine_license_expressions_with_relation_and_mode_strict(
+    expressions: impl IntoIterator<Item = String>,
+    relation: ExpressionRelation,
+    preserve_structure: bool,
+) -> Option<String> {
+    let expressions: Vec<String> = expressions
+        .into_iter()
+        .map(|expression| expression.trim().to_string())
+        .filter(|expression| !expression.is_empty())
+        .collect();
+
+    if expressions.is_empty() {
+        return None;
+    }
+
+    combine_parsed_expressions(&expressions, relation, preserve_structure)
 }
 
 fn combine_parsed_expressions(
@@ -458,6 +495,24 @@ mod tests {
             "Apache-2.0 OR MIT".to_string(),
             "GPL-2.0-only".to_string(),
         ]);
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn combine_license_expressions_preserving_structure_strict_rejects_invalid_expression() {
+        let result = combine_license_expressions_preserving_structure_strict(vec![
+            "Apache-2.0".to_string(),
+            "MIT\" or malformed".to_string(),
+        ]);
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn select_primary_license_expression_strict_rejects_invalid_primary_expression() {
+        let result =
+            select_primary_license_expression_strict(vec!["MIT\" or malformed".to_string()]);
 
         assert_eq!(result, None);
     }

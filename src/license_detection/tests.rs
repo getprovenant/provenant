@@ -492,6 +492,70 @@ fn test_engine_surfaces_bare_gpl1_as_clue_not_detection() {
 }
 
 #[test]
+fn test_engine_groups_same_line_bare_gpl_clue_with_exact_neighbors() {
+    let engine = get_engine();
+
+    let text = concat!(
+        "matches!(\n",
+        "    lowered.as_str(),\n",
+        "    \"linux-syscall-note\" | \"gpl-cc-1.0\" | \"llgpr\" | \"llgpl\" | \"shl-2.0\" | \"shl-2.1\"\n",
+        ")"
+    );
+
+    let detections = engine
+        .detect_with_kind(text, false, false)
+        .expect("Detection should succeed");
+
+    let grouped_detection = detections.iter().find(|detection| {
+        detection
+            .license_expression
+            .as_ref()
+            .is_some_and(|expression| {
+                expression.contains("linux-syscall-exception-gpl")
+                    && expression.contains("gpl-1.0-plus")
+                    && expression.contains("llgpl")
+            })
+    });
+
+    let grouped_detection =
+        grouped_detection.expect("sandwiched GPL clue should join exact neighbors");
+    assert!(
+        grouped_detection
+            .matches
+            .iter()
+            .any(|match_item| match_item.rule_identifier == "gpl_bare_word_only.RULE")
+    );
+    assert!(
+        !grouped_detection
+            .detection_log
+            .iter()
+            .any(|log| log == "license-clues")
+    );
+    assert!(
+        !detections.iter().any(|detection| {
+            detection.license_expression.is_none()
+                && detection
+                    .matches
+                    .iter()
+                    .any(|match_item| match_item.rule_identifier == "gpl_bare_word_only.RULE")
+        }),
+        "sandwiched GPL clue should not remain as standalone clue-only evidence: {:?}",
+        detections
+            .iter()
+            .map(|detection| (
+                detection.license_expression.as_deref().unwrap_or("none"),
+                detection.detection_log.clone(),
+                detection
+                    .matches
+                    .iter()
+                    .map(|match_item| match_item.rule_identifier.as_str())
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_engine_does_not_detect_graphics_pipeline_library_as_gpl() {
     let engine = get_engine();
 

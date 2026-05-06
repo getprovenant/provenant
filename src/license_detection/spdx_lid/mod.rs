@@ -29,6 +29,14 @@ use crate::models::MatchScore;
 
 pub const MATCH_SPDX_ID: MatcherKind = MatcherKind::SpdxId;
 
+const UNKNOWN_SPDX_LICENSE_REF: &str = "LicenseRef-scancode-unknown-spdx";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ResolvedExpression {
+    scancode_expression: String,
+    spdx_expression: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum RecoveryToken {
     LicenseKey(String),
@@ -323,8 +331,8 @@ pub fn spdx_lid_match(index: &LicenseIndex, query: &Query) -> Vec<LicenseMatch> 
             lowered.clone()
         };
 
-        if let Some(license_expression) =
-            find_matching_rule_for_expression(index, &resolved_expression)
+        if let Some(resolved_match) =
+            resolve_matching_rule_for_expression(index, &resolved_expression)
         {
             let matched_length = end_token.saturating_sub(*start_token);
             let match_coverage = 100.0;
@@ -347,7 +355,8 @@ pub fn spdx_lid_match(index: &LicenseIndex, query: &Query) -> Vec<LicenseMatch> 
                 .unwrap_or(0);
 
             let rule_relevance = 100;
-            let rule_identifier = synthetic_spdx_rule_identifier(&license_expression, spdx_text);
+            let rule_identifier =
+                synthetic_spdx_rule_identifier(&resolved_match.scancode_expression, spdx_text);
             let rule_url = String::new();
             let rule_length = matched_length;
             let referenced_filenames = None;
@@ -356,8 +365,12 @@ pub fn spdx_lid_match(index: &LicenseIndex, query: &Query) -> Vec<LicenseMatch> 
             let qspan = PositionSpan::range(*start_token, *end_token);
 
             let license_match = LicenseMatch {
-                license_expression,
-                license_expression_spdx: Some(spdx_expression.clone()),
+                license_expression: resolved_match.scancode_expression,
+                license_expression_spdx: Some(
+                    resolved_match
+                        .spdx_expression
+                        .unwrap_or_else(|| spdx_expression.clone()),
+                ),
                 from_file: None,
                 start_line,
                 end_line,
@@ -708,19 +721,106 @@ fn render_boolean_operand(expr: &LicenseExpression, parent_operator: BooleanOper
     }
 }
 
-pub(crate) fn find_matching_rule_for_expression(
+fn unknown_spdx_license_ref() -> String {
+    UNKNOWN_SPDX_LICENSE_REF.to_string()
+}
+
+fn rule_spdx_expression(index: &LicenseIndex, rid: usize) -> Option<String> {
+    let rule = index.rules_by_rid.get(rid)?;
+
+    index
+        .rule_metadata_by_identifier
+        .get(&rule.identifier)
+        .and_then(|metadata| metadata.license_expression_spdx.clone())
+        .or_else(|| {
+            if rule.license_expression == "unknown-spdx" {
+                Some(unknown_spdx_license_ref())
+            } else {
+                None
+            }
+        })
+}
+
+fn scancode_key_to_spdx_expression(key: &str, index: &LicenseIndex) -> Option<LicenseExpression> {
+    if key == "unknown-spdx" {
+        return Some(LicenseExpression::LicenseRef(unknown_spdx_license_ref()));
+    }
+
+    let license = index.licenses_by_key.get(key)?;
+    match &license.spdx_license_key {
+        Some(spdx_key) if spdx_key.starts_with("LicenseRef-") => {
+            Some(LicenseExpression::LicenseRef(spdx_key.clone()))
+        }
+        Some(spdx_key) => Some(LicenseExpression::License(spdx_key.clone())),
+        None => Some(LicenseExpression::LicenseRef(format!(
+            "LicenseRef-scancode-{key}"
+        ))),
+    }
+}
+
+fn convert_scancode_expression_to_spdx(
+    expr: &LicenseExpression,
+    index: &LicenseIndex,
+) -> Option<LicenseExpression> {
+    match expr {
+        LicenseExpression::License(key) => scancode_key_to_spdx_expression(key, index),
+        LicenseExpression::LicenseRef(key) => Some(LicenseExpression::LicenseRef(key.clone())),
+        LicenseExpression::And { left, right } => Some(LicenseExpression::And {
+            left: Box::new(convert_scancode_expression_to_spdx(left, index)?),
+            right: Box::new(convert_scancode_expression_to_spdx(right, index)?),
+        }),
+        LicenseExpression::Or { left, right } => Some(LicenseExpression::Or {
+            left: Box::new(convert_scancode_expression_to_spdx(left, index)?),
+            right: Box::new(convert_scancode_expression_to_spdx(right, index)?),
+        }),
+        LicenseExpression::With { left, right } => Some(LicenseExpression::With {
+            left: Box::new(convert_scancode_expression_to_spdx(left, index)?),
+            right: Box::new(convert_scancode_expression_to_spdx(right, index)?),
+        }),
+    }
+}
+
+fn render_valid_spdx_expression(expr: &LicenseExpression, index: &LicenseIndex) -> Option<String> {
+    let spdx_expr = convert_scancode_expression_to_spdx(expr, index)?;
+    Some(render_valid_scancode_expression(&spdx_expr))
+}
+
+fn render_recovered_spdx_expression(
+    expr: &LicenseExpression,
+    index: &LicenseIndex,
+    render_mode: RecoveryRenderMode,
+) -> Option<String> {
+    let spdx_expr = convert_scancode_expression_to_spdx(expr, index)?;
+    Some(render_recovered_scancode_expression(
+        &spdx_expr,
+        render_mode,
+    ))
+}
+
+fn resolve_matching_rule_for_expression(
     index: &LicenseIndex,
     expression: &str,
-) -> Option<String> {
+) -> Option<ResolvedExpression> {
     if let Some(&rid) = index.rid_by_spdx_key.get(expression) {
         let rule = &index.rules_by_rid[rid];
-        return Some(rule.license_expression.clone());
+        return Some(ResolvedExpression {
+            scancode_expression: rule.license_expression.clone(),
+            spdx_expression: rule_spdx_expression(index, rid),
+        });
     }
 
     for rule in &index.rules_by_rid {
         let normalized = normalize_spdx_key(&rule.license_expression);
         if normalized == expression {
-            return Some(rule.license_expression.clone());
+            let spdx_expression = index
+                .rule_metadata_by_identifier
+                .get(&rule.identifier)
+                .and_then(|metadata| metadata.license_expression_spdx.clone());
+
+            return Some(ResolvedExpression {
+                scancode_expression: rule.license_expression.clone(),
+                spdx_expression,
+            });
         }
     }
 
@@ -729,7 +829,10 @@ pub(crate) fn find_matching_rule_for_expression(
     {
         let result = render_valid_scancode_expression(&converted);
         if !result.is_empty() {
-            return Some(result);
+            return Some(ResolvedExpression {
+                scancode_expression: result,
+                spdx_expression: render_valid_spdx_expression(&converted, index),
+            });
         }
     }
 
@@ -742,7 +845,10 @@ pub(crate) fn find_matching_rule_for_expression(
             {
                 let result = render_valid_scancode_expression(&converted);
                 if !result.is_empty() {
-                    return Some(result);
+                    return Some(ResolvedExpression {
+                        scancode_expression: result,
+                        spdx_expression: render_valid_spdx_expression(&converted, index),
+                    });
                 }
             }
         }
@@ -752,13 +858,27 @@ pub(crate) fn find_matching_rule_for_expression(
         let converted = convert_recovered_expression_to_scancode(&recovered, index);
         let result = render_recovered_scancode_expression(&converted, render_mode);
         if !result.is_empty() {
-            return Some(result);
+            return Some(ResolvedExpression {
+                scancode_expression: result,
+                spdx_expression: render_recovered_spdx_expression(&converted, index, render_mode),
+            });
         }
     }
 
-    index
-        .unknown_spdx_rid
-        .map(|rid| index.rules_by_rid[rid].license_expression.clone())
+    index.unknown_spdx_rid.map(|rid| ResolvedExpression {
+        scancode_expression: index.rules_by_rid[rid].license_expression.clone(),
+        spdx_expression: rule_spdx_expression(index, rid)
+            .or_else(|| Some(unknown_spdx_license_ref())),
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn find_matching_rule_for_expression(
+    index: &LicenseIndex,
+    expression: &str,
+) -> Option<String> {
+    resolve_matching_rule_for_expression(index, expression)
+        .map(|resolved| resolved.scancode_expression)
 }
 
 fn convert_spdx_expression_to_scancode(

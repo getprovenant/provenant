@@ -10,8 +10,8 @@ use crate::license_detection::expression::{
 };
 use crate::license_detection::models::{LicenseMatch, MatcherKind};
 use crate::utils::spdx::{
-    ExpressionRelation, combine_license_expressions_preserving_structure,
-    combine_license_expressions_with_relation_preserving_structure,
+    ExpressionRelation, combine_license_expressions_preserving_structure_strict,
+    combine_license_expressions_with_relation_preserving_structure_strict,
 };
 
 /// Coverage value below which detections are not perfect.
@@ -463,8 +463,10 @@ pub fn determine_spdx_expression(
     let expressions = expressions
         .ok_or_else(|| "Missing SPDX expressions for one or more matches".to_string())?;
 
-    combine_license_expressions_preserving_structure(expressions.into_iter().map(str::to_string))
-        .ok_or_else(|| "Failed to combine SPDX expressions".to_string())
+    combine_license_expressions_preserving_structure_strict(
+        expressions.into_iter().map(str::to_string),
+    )
+    .ok_or_else(|| "Failed to combine SPDX expressions".to_string())
 }
 
 fn determine_alternative_notice_expression(
@@ -528,11 +530,12 @@ fn determine_alternative_notice_spdx_expression(
     let alternative_expressions = alternative_expressions.ok_or_else(|| {
         "Missing SPDX expressions for one or more alternative-license matches".to_string()
     })?;
-    let alternative_expression = combine_license_expressions_with_relation_preserving_structure(
-        alternative_expressions,
-        ExpressionRelation::Or,
-    )
-    .ok_or_else(|| "Failed to combine alternative SPDX expressions".to_string())?;
+    let alternative_expression =
+        combine_license_expressions_with_relation_preserving_structure_strict(
+            alternative_expressions,
+            ExpressionRelation::Or,
+        )
+        .ok_or_else(|| "Failed to combine alternative SPDX expressions".to_string())?;
 
     let mut parts = vec![alternative_expression];
     let supplemental_expressions: Option<Vec<String>> = supplemental
@@ -543,9 +546,12 @@ fn determine_alternative_notice_spdx_expression(
         "Missing SPDX expressions for one or more supplemental matches".to_string()
     })?);
 
-    combine_license_expressions_with_relation_preserving_structure(parts, ExpressionRelation::And)
-        .ok_or_else(|| "Failed to combine alternative SPDX expression parts".to_string())
-        .map(Some)
+    combine_license_expressions_with_relation_preserving_structure_strict(
+        parts,
+        ExpressionRelation::And,
+    )
+    .ok_or_else(|| "Failed to combine alternative SPDX expression parts".to_string())
+    .map(Some)
 }
 
 fn has_alternative_license_notice(matches: &[LicenseMatch], source_text: Option<&str>) -> bool {
