@@ -938,3 +938,92 @@ fn normalize_top_level_output_paths_only_applies_strip_root() {
     assert_eq!(packages[0].datafile_paths, vec!["package.json"]);
     assert_eq!(dependencies[0].datafile_path, "package.json");
 }
+
+#[test]
+fn normalize_paths_strip_root_removes_root_directory_entry() {
+    let mut files = vec![
+        dir("project"),
+        dir("project/src"),
+        file("project/src/main.rs"),
+        file("project/README.md"),
+    ];
+    normalize_paths(&mut files, "project", true, false);
+
+    let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+    assert!(
+        !paths.contains(&"project"),
+        "root directory entry should be removed with --strip-root, got: {paths:?}"
+    );
+    assert!(paths.contains(&"src"), "child directory should remain");
+    assert!(paths.contains(&"src/main.rs"), "child file should remain");
+    assert!(
+        paths.contains(&"README.md"),
+        "root-level file should remain"
+    );
+}
+
+#[test]
+fn normalize_paths_strip_root_keeps_root_entry_for_single_file_scan() {
+    let mut files = vec![file("project/README.md")];
+    normalize_paths(&mut files, "project/README.md", true, false);
+
+    let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+    assert!(
+        paths.contains(&"README.md"),
+        "single file entry should remain with --strip-root, got: {paths:?}"
+    );
+}
+
+#[test]
+fn normalize_paths_strip_root_keeps_root_entry_for_single_directory_scan() {
+    let mut files = vec![dir("project")];
+    normalize_paths(&mut files, "project", true, false);
+
+    let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+    assert_eq!(
+        paths,
+        vec!["project"],
+        "single directory root should remain with --strip-root, got: {paths:?}"
+    );
+}
+
+#[test]
+fn normalize_paths_strip_root_removes_root_but_keeps_same_named_child() {
+    let mut files = vec![
+        dir("project"),
+        dir("project/project"),
+        file("project/project/inner.txt"),
+    ];
+    normalize_paths(&mut files, "project", true, false);
+
+    let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+    assert_eq!(
+        paths.len(),
+        2,
+        "should have exactly 2 entries (child dir + file), got: {paths:?}"
+    );
+    assert!(
+        paths.contains(&"project"),
+        "child directory named 'project' should remain after root is removed"
+    );
+    assert!(
+        paths.contains(&"project/inner.txt"),
+        "file under same-named child should remain"
+    );
+}
+
+#[test]
+fn normalize_paths_without_strip_root_keeps_root_directory_entry() {
+    let mut files = vec![
+        dir("project"),
+        dir("project/src"),
+        file("project/src/main.rs"),
+    ];
+    normalize_paths(&mut files, "project", false, false);
+
+    let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+    assert!(
+        paths.contains(&"project"),
+        "root directory entry should be kept without --strip-root"
+    );
+}

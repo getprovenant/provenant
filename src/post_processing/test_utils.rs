@@ -424,7 +424,7 @@ pub(crate) fn strip_root_prefix_for_test(path: &Path, root: &Path) -> Option<Pat
 }
 
 #[cfg(feature = "golden-tests")]
-pub fn normalize_paths_for_test(files: &mut [FileInfo], scan_root: &str) {
+pub fn normalize_paths_for_test(files: &mut Vec<FileInfo>, scan_root: &str) {
     normalize_paths(files, scan_root, true, false);
 }
 
@@ -488,15 +488,6 @@ pub(crate) fn compute_fixture_output(
             .to_str()
             .expect("fixture path should be UTF-8"),
     );
-    if let Some(root_name) = resolved_scan_root
-        .scan_root
-        .file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.is_empty())
-        && !files.iter().any(|file| file.path == root_name)
-    {
-        files.push(dir(root_name));
-    }
     let mut assembly_result = assembly::assemble(&mut files);
     for package in &mut assembly_result.packages {
         package.backfill_license_provenance();

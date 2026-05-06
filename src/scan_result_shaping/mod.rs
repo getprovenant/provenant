@@ -540,11 +540,21 @@ fn normalize_ignorable_value(value: &str, trim_slashes: bool) -> String {
 }
 
 pub(crate) fn normalize_paths(
-    files: &mut [FileInfo],
+    files: &mut Vec<FileInfo>,
     scan_root: &str,
     strip_root: bool,
     full_root: bool,
 ) {
+    if strip_root {
+        let root_is_directory = files.iter().any(|entry| {
+            entry.path == scan_root && entry.file_type == crate::models::FileType::Directory
+        });
+        let has_single_resource = files.len() <= 1;
+        if root_is_directory && !has_single_resource {
+            files.retain(|entry| entry.path != scan_root);
+        }
+    }
+
     for entry in files.iter_mut() {
         if let Some(normalized_path) =
             normalize_path_value(&entry.path, scan_root, strip_root, full_root)
