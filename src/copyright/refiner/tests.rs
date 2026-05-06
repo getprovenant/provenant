@@ -1831,6 +1831,22 @@ fn test_refine_holder_in_copyright_context_strips_onwards_prefix() {
 }
 
 #[test]
+fn test_refine_copyright_strips_trailing_ansi_escape_suffix() {
+    assert_eq!(
+        refine_copyright("(c) 1996 Id Software, inc. x1b 21;1H"),
+        Some("(c) 1996 Id Software, inc.".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_in_copyright_context_strips_trailing_ansi_escape_suffix() {
+    assert_eq!(
+        refine_holder_in_copyright_context("Id Software, inc. x1b 21;1H"),
+        Some("Id Software, inc.".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_strips_trailing_placeholder_dollar() {
     assert_eq!(
         refine_holder("Markus Franz Xaver Johannes Oberhumer $"),

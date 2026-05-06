@@ -1262,6 +1262,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_original_authors(&c);
     c = strip_trailing_mountain_view_ca(&c);
     c = strip_trailing_comma_after_respective_authors(&c);
+    c = strip_trailing_ansi_escape_suffix(&c);
     c = c.trim_end_matches(char::is_whitespace).to_string();
     c = c.trim_matches('\'').to_string();
     c = wrap_trailing_and_urls_in_parens(&c);
@@ -1798,6 +1799,15 @@ fn strip_trailing_locale_timestamp_before_terminal_year_in_copyright(s: &str) ->
         return format!("{} {}", prefix.trim_end_matches(&[',', ' '][..]), year);
     }
     prefix.trim_end_matches(&[',', ' '][..]).to_string()
+}
+
+fn strip_trailing_ansi_escape_suffix(s: &str) -> String {
+    static ANSI_ESCAPE_SUFFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)\s+x1b(?:\s+\d+(?:;\d+)*[a-z])+\s*$")
+            .expect("valid ansi escape suffix regex")
+    });
+
+    ANSI_ESCAPE_SUFFIX_RE.replace(s, "").trim().to_string()
 }
 
 fn strip_trailing_quote_before_email(s: &str) -> String {
@@ -2907,6 +2917,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     }
     h = strip_trailing_at_sign(&h);
     h = strip_trailing_mountain_view_ca(&h);
+    h = strip_trailing_ansi_escape_suffix(&h);
     h = h.trim_matches(&[',', ' '][..]).to_string();
     h = strip_trailing_period(&h);
     h = h.trim_matches(&[',', ' '][..]).to_string();

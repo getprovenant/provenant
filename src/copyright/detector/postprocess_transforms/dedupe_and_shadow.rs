@@ -8,7 +8,6 @@ pub fn strip_trailing_license_tail(s: &str) -> Option<String> {
     if !(lower.contains("/license")
         || lower.contains("/licenses")
         || lower.contains(" licensed")
-        || lower.contains(" license")
         || lower.contains(" released under"))
     {
         return None;
@@ -20,7 +19,7 @@ pub fn strip_trailing_license_tail(s: &str) -> Option<String> {
         if lower.contains("/license") || lower.contains("/licenses") {
             return Some(idx);
         }
-        if lower == "license" || lower == "licenses" || lower == "licensed" {
+        if lower == "licensed" {
             return Some(idx);
         }
         if lower == "released"

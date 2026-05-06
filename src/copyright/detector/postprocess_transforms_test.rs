@@ -137,6 +137,18 @@ fn test_derive_holder_from_simple_copyright_string_strips_and_onwards_prefix() {
 }
 
 #[test]
+fn test_strip_trailing_license_tail_keeps_see_license_prose() {
+    assert_eq!(
+        strip_trailing_license_tail("Tyler Kellen. See LICENSE for further details"),
+        None
+    );
+    assert_eq!(
+        strip_trailing_license_tail("Tyler Kellen; Licensed MIT"),
+        Some("Tyler Kellen".to_string())
+    );
+}
+
+#[test]
 fn test_refine_final_authors_keeps_structured_metadata_collectives() {
     let mut authors = vec![
         AuthorDetection {
