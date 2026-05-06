@@ -1982,16 +1982,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2"
 
 [[package]]
-name = "iri-string"
-version = "0.7.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25e659a4bb38e810ebc252e53b5814ff908a8c58c2a9ce2fae1bbec24cbf4e20"
-dependencies = [
- "memchr",
- "serde",
-]
-
-[[package]]
 name = "is-macro"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2912,9 +2902,9 @@ dependencies = [
 
 [[package]]
 name = "pdf_oxide"
-version = "0.3.43"
+version = "0.3.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a66d8830a6e0c06e934ae57b0e2befab65027805791ea1e07e26efa53712fb8c"
+checksum = "325e9fd442fc140039db83b3f8a346f17e88b1dabf821081a573b940f369fe72"
 dependencies = [
  "aes",
  "base64",
@@ -2928,6 +2918,7 @@ dependencies = [
  "env_logger",
  "fax",
  "flate2",
+ "getrandom 0.4.2",
  "image",
  "jpeg-decoder",
  "libc",
@@ -3345,7 +3336,7 @@ dependencies = [
 
 [[package]]
 name = "provenant-cli"
-version = "0.0.38"
+version = "0.0.39"
 dependencies = [
  "allsorts",
  "anyhow",
@@ -3888,9 +3879,9 @@ dependencies = [
 
 [[package]]
 name = "rpm"
-version = "0.23.2"
+version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf5c92939a06adb261d757e43f49bcdb121d62c6fe8e859b1006ce37f81e6d7f"
+checksum = "ec12fafd4b6cf7a3ffaf0c15d30df8000b1c94137a4e52218601fae52b8c43dc"
 dependencies = [
  "base64",
  "bitflags 2.11.1",
@@ -4860,20 +4851,20 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.6.8"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4e6559d53cc268e5031cd8429d05415bc4cb4aefc4aa5d6cc35fbf5b924a1f8"
+checksum = "a28f0d049ccfaa566e14e9663d304d8577427b368cb4710a20528690287a738b"
 dependencies = [
  "bitflags 2.11.1",
  "bytes",
  "futures-util",
  "http",
  "http-body",
- "iri-string",
  "pin-project-lite",
  "tower",
  "tower-layer",
  "tower-service",
+ "url",
 ]
 
 [[package]]
