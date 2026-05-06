@@ -783,12 +783,13 @@ pub fn extract_versioned_project_c_holder_banner_lines(
                 continue;
             };
 
-            let first_token = holder_raw.split_whitespace().next().unwrap_or("");
-            let starts_upper = holder_raw
+            let holder_for_gate = strip_leading_year_prefix_for_versioned_banner_gate(&holder_raw);
+            let first_token = holder_for_gate.split_whitespace().next().unwrap_or("");
+            let starts_upper = holder_for_gate
                 .chars()
                 .next()
                 .is_some_and(|c| c.is_ascii_uppercase());
-            let starts_mixed_case_brand = holder_raw
+            let starts_mixed_case_brand = holder_for_gate
                 .chars()
                 .next()
                 .is_some_and(|c| c.is_ascii_lowercase())
@@ -822,6 +823,24 @@ pub fn extract_versioned_project_c_holder_banner_lines(
     }
 
     (copyrights, holders)
+}
+
+fn strip_leading_year_prefix_for_versioned_banner_gate(holder_raw: &str) -> String {
+    static LEADING_YEAR_PREFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^
+            (?:19\d{2}|20\d{2})
+            (?:\s*[-–]\s*(?:19\d{2}|20\d{2}|present|current_year))?
+            [\s,;:]+",
+        )
+        .expect("valid versioned banner leading year regex")
+    });
+
+    LEADING_YEAR_PREFIX_RE
+        .replace(holder_raw, "")
+        .trim()
+        .to_string()
 }
 
 pub fn extract_c_years_then_holder_lines(
@@ -942,6 +961,9 @@ pub fn extract_copyright_c_years_holder_lines(
             };
             let years = cap.name("years").map(|m| m.as_str()).unwrap_or("").trim();
             let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
+            let holder_raw = postprocess_transforms::strip_trailing_license_tail(holder_raw)
+                .unwrap_or_else(|| holder_raw.to_string());
+            let holder_raw = holder_raw.trim();
             if years.is_empty() || holder_raw.is_empty() {
                 continue;
             }

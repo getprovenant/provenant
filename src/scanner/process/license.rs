@@ -141,6 +141,8 @@ pub(super) fn extract_license_information(
                 &mut model_detections,
             );
             prune_redundant_readme_conjunctive_detections(path, &mut model_detections);
+            model_detections =
+                collapse_repeated_sourcemap_license_detections(path, model_detections);
 
             if !model_detections.is_empty() {
                 let expressions: Vec<String> = model_detections
@@ -248,6 +250,114 @@ fn supplement_nix_manifest_license_detections(
     }
 
     synthesized
+}
+
+fn collapse_repeated_sourcemap_license_detections(
+    path: &Path,
+    detections: Vec<PublicLicenseDetection>,
+) -> Vec<PublicLicenseDetection> {
+    if !crate::utils::sourcemap::is_sourcemap(path) || detections.len() <= 1 {
+        return detections;
+    }
+
+    let mut deduplicated: Vec<PublicLicenseDetection> = Vec::new();
+
+    for detection in detections {
+        if let Some(existing) = deduplicated.iter_mut().find(|existing| {
+            existing.license_expression == detection.license_expression
+                && existing.license_expression_spdx == detection.license_expression_spdx
+        }) {
+            merge_public_detection(existing, detection);
+        } else {
+            deduplicated.push(detection);
+        }
+    }
+
+    let concrete_detections = deduplicated
+        .iter()
+        .filter(|detection| is_concrete_sourcemap_detection(detection))
+        .cloned()
+        .collect::<Vec<_>>();
+    if concrete_detections.len() <= 1 {
+        return deduplicated;
+    }
+
+    let combined = combine_sourcemap_detections(concrete_detections);
+    let mut combined = Some(combined);
+    let mut collapsed = Vec::with_capacity(deduplicated.len());
+
+    for detection in deduplicated {
+        if is_concrete_sourcemap_detection(&detection) {
+            if let Some(combined) = combined.take() {
+                collapsed.push(combined);
+            }
+            continue;
+        }
+
+        collapsed.push(detection);
+    }
+
+    collapsed
+}
+
+fn is_concrete_sourcemap_detection(detection: &PublicLicenseDetection) -> bool {
+    !detection_is_unknown_reference(detection)
+        && (!detection.license_expression.is_empty()
+            || !detection.license_expression_spdx.is_empty())
+}
+
+fn combine_sourcemap_detections(detections: Vec<PublicLicenseDetection>) -> PublicLicenseDetection {
+    let mut detections = detections.into_iter();
+    let mut combined = detections
+        .next()
+        .expect("sourcemap combination requires at least one detection");
+    let mut combined_license_expressions = vec![combined.license_expression.clone()];
+    let mut combined_spdx_expressions = if combined.license_expression_spdx.is_empty() {
+        Vec::new()
+    } else {
+        vec![combined.license_expression_spdx.clone()]
+    };
+
+    for detection in detections {
+        combined_license_expressions.push(detection.license_expression.clone());
+        if !detection.license_expression_spdx.is_empty() {
+            combined_spdx_expressions.push(detection.license_expression_spdx.clone());
+        }
+        merge_public_detection(&mut combined, detection);
+    }
+
+    combined.license_expression =
+        crate::utils::spdx::combine_license_expressions_preserving_structure(
+            combined_license_expressions,
+        )
+        .unwrap_or_else(|| combined.license_expression.clone());
+    combined.license_expression_spdx =
+        crate::utils::spdx::combine_license_expressions_preserving_structure(
+            combined_spdx_expressions,
+        )
+        .unwrap_or_else(|| combined.license_expression_spdx.clone());
+    combined
+}
+
+fn merge_public_detection(
+    existing: &mut PublicLicenseDetection,
+    detection: PublicLicenseDetection,
+) {
+    for detection_log in detection.detection_log {
+        if !existing.detection_log.contains(&detection_log) {
+            existing.detection_log.push(detection_log);
+        }
+    }
+
+    for matched_region in detection.matches {
+        if !existing.matches.contains(&matched_region) {
+            existing.matches.push(matched_region);
+        }
+    }
+
+    if existing.identifier.is_none() {
+        existing.identifier = detection.identifier;
+    }
 }
 
 fn collect_detected_license_keys(detections: &[PublicLicenseDetection]) -> HashSet<String> {

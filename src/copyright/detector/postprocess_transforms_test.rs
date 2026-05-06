@@ -127,6 +127,16 @@ fn test_derive_holder_from_simple_copyright_string_keeps_leading_digits() {
 }
 
 #[test]
+fn test_derive_holder_from_simple_copyright_string_strips_and_onwards_prefix() {
+    assert_eq!(
+        derive_holder_from_simple_copyright_string(
+            "Copyright 2006 and onwards The Apache Software Foundation."
+        ),
+        Some("The Apache Software Foundation".to_string())
+    );
+}
+
+#[test]
 fn test_refine_final_authors_keeps_structured_metadata_collectives() {
     let mut authors = vec![
         AuthorDetection {

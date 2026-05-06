@@ -3,7 +3,7 @@
 
 use super::*;
 
-fn strip_trailing_license_tail(s: &str) -> Option<String> {
+pub fn strip_trailing_license_tail(s: &str) -> Option<String> {
     let lower = s.to_ascii_lowercase();
     if !(lower.contains("/license")
         || lower.contains("/licenses")

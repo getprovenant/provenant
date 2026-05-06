@@ -388,6 +388,215 @@ pub fn detect_copyrights_from_text_with_deadline(
     (copyrights, holders, authors)
 }
 
+#[cfg(test)]
+#[derive(Debug)]
+pub(super) struct PhaseBoundaryDetections {
+    pub(super) after_group_loop_copyrights: Vec<CopyrightDetection>,
+    pub(super) after_group_loop_holders: Vec<HolderDetection>,
+    pub(super) after_primary_copyrights: Vec<CopyrightDetection>,
+    pub(super) after_primary_holders: Vec<HolderDetection>,
+    pub(super) after_postprocess_copyrights: Vec<CopyrightDetection>,
+    pub(super) after_postprocess_holders: Vec<HolderDetection>,
+}
+
+#[cfg(test)]
+pub(super) fn detect_copyright_phase_boundaries(content: &str) -> PhaseBoundaryDetections {
+    let mut copyrights = Vec::new();
+    let mut holders = Vec::new();
+    let mut authors = Vec::new();
+
+    if content.is_empty() {
+        return PhaseBoundaryDetections {
+            after_group_loop_copyrights: Vec::new(),
+            after_group_loop_holders: Vec::new(),
+            after_primary_copyrights: Vec::new(),
+            after_primary_holders: Vec::new(),
+            after_postprocess_copyrights: Vec::new(),
+            after_postprocess_holders: Vec::new(),
+        };
+    }
+
+    let normalized = normalize_split_angle_bracket_urls(content);
+    let expanded = maybe_expand_copyrighted_by_href_urls(normalized.as_ref());
+    let did_expand_href = matches!(expanded, Cow::Owned(_));
+    let content = expanded.as_ref();
+    let line_number_index = LineNumberIndex::new(content);
+
+    let allow_not_copyrighted_prefix = NOT_COPYRIGHTED_RE.find_iter(content).count() == 1;
+    let raw_lines: Vec<&str> = content.lines().collect();
+    let prepared_cache = PreparedLineCache::new(&raw_lines);
+
+    let groups =
+        collect_candidate_lines(raw_lines.iter().enumerate().map(|(i, line)| (i + 1, *line)));
+    let mut seen = seen_text::SeenTextSets::from_existing(&copyrights, &holders, &authors);
+
+    for group in &groups {
+        if group.is_empty() {
+            continue;
+        }
+
+        let tokens = get_tokens(group);
+        if tokens.is_empty() {
+            continue;
+        }
+
+        let tree = parse(tokens);
+        let has_top_level_nodes = tree.iter().any(|n| {
+            matches!(
+                n.label(),
+                Some(TreeLabel::Copyright) | Some(TreeLabel::Copyright2) | Some(TreeLabel::Author)
+            )
+        });
+        let analysis = analyze_tree(&tree);
+
+        if has_top_level_nodes {
+            let (new_c, new_h, new_a) =
+                extract_from_tree_nodes(&tree, allow_not_copyrighted_prefix);
+            seen.register_copyrights(&new_c);
+            seen.register_holders(&new_h);
+            seen.register_authors(&new_a);
+            let copyrights_before = copyrights.len();
+            copyrights.extend(new_c);
+            holders.extend(new_h);
+            authors.extend(new_a);
+
+            if let Some(det) = extract_original_author_additional_contributors(&tree)
+                && seen.authors.insert(det.author.clone())
+            {
+                authors.push(det);
+            }
+
+            if copyrights.len() == copyrights_before
+                && analysis.has_copy_like_token
+                && analysis.has_authorish_boundary_token
+                && analysis.is_single_line_group
+            {
+                let (new_c, new_h) = extract_bare_copyrights(&tree);
+                seen.register_copyrights(&new_c);
+                seen.register_holders(&new_h);
+                copyrights.extend(new_c);
+                holders.extend(new_h);
+                let (new_c, new_h) =
+                    extract_copyrights_from_spans(&tree, allow_not_copyrighted_prefix);
+                seen.register_copyrights(&new_c);
+                seen.register_holders(&new_h);
+                copyrights.extend(new_c);
+                holders.extend(new_h);
+            }
+
+            if copyrights.len() == copyrights_before
+                && analysis.has_copy_like_token
+                && analysis.has_year_token
+            {
+                let (new_c, new_h) =
+                    extract_copyrights_from_spans(&tree, allow_not_copyrighted_prefix);
+                seen.register_copyrights(&new_c);
+                seen.register_holders(&new_h);
+                copyrights.extend(new_c);
+                holders.extend(new_h);
+            }
+        } else {
+            let (new_c, new_h) = extract_bare_copyrights(&tree);
+            seen.register_copyrights(&new_c);
+            seen.register_holders(&new_h);
+            copyrights.extend(new_c);
+            holders.extend(new_h);
+            let (new_c, new_h, new_a) = extract_from_spans(&tree, allow_not_copyrighted_prefix);
+            seen.register_copyrights(&new_c);
+            seen.register_holders(&new_h);
+            seen.register_authors(&new_a);
+            copyrights.extend(new_c);
+            holders.extend(new_h);
+            authors.extend(new_a);
+            let mut new_a = extract_orphaned_by_authors(&tree);
+            seen.dedup_new_authors(&mut new_a, 0);
+            authors.extend(new_a);
+
+            if let Some(det) = extract_original_author_additional_contributors(&tree)
+                && seen.authors.insert(det.author.clone())
+            {
+                authors.push(det);
+            }
+        }
+
+        fix_truncated_contributors_authors(&tree, &mut authors);
+        seen.rebuild_authors_from(&authors);
+        let (mut new_c, mut new_h) = extract_holder_is_name(&tree);
+        seen.dedup_new_copyrights(&mut new_c, 0);
+        seen.dedup_new_holders(&mut new_h, 0);
+        copyrights.extend(new_c);
+        holders.extend(new_h);
+        apply_written_by_for_markers(group, &mut copyrights, &mut holders);
+        extend_multiline_copyright_c_year_holder_continuations(
+            group,
+            &mut copyrights,
+            &mut holders,
+        );
+        extend_multiline_copyright_c_no_year_names(group, &mut copyrights[..], &mut holders[..]);
+        extend_authors_see_url_copyrights(group, &mut copyrights[..], &mut holders[..]);
+        extend_leading_dash_suffixes(group, &mut copyrights[..], &mut holders[..]);
+        extend_dash_obfuscated_email_suffixes(&raw_lines, group, &mut copyrights[..], &holders[..]);
+        extend_trailing_copy_year_suffixes(&raw_lines, group, &mut copyrights[..]);
+        extend_trailing_lowercase_holder_suffixes(
+            &raw_lines,
+            group,
+            &mut copyrights[..],
+            &mut holders,
+        );
+        extend_w3c_registered_org_list_suffixes(group, &mut copyrights[..], &mut holders[..]);
+        extend_software_in_the_public_interest_holder(group, &mut copyrights, &mut holders);
+    }
+
+    let mut fallback = fallback_year_only_copyrights(&groups);
+    seen.dedup_new_copyrights(&mut fallback, 0);
+    fallback.retain(|det| {
+        !copyrights.iter().any(|c| {
+            c.copyright
+                .to_ascii_lowercase()
+                .contains(&det.copyright.to_ascii_lowercase())
+        })
+    });
+    copyrights.extend(fallback);
+
+    let after_group_loop_copyrights = copyrights.clone();
+    let after_group_loop_holders = holders.clone();
+
+    let prepared_lines = prepared_cache.materialize();
+
+    phases::run_phase_primary_extractions(
+        content,
+        &groups,
+        &line_number_index,
+        &prepared_lines,
+        &mut copyrights,
+        &mut holders,
+        &mut seen,
+    );
+
+    let after_primary_copyrights = copyrights.clone();
+    let after_primary_holders = holders.clone();
+
+    phases::run_phase_postprocess(
+        content,
+        &raw_lines,
+        &prepared_lines,
+        did_expand_href,
+        &mut copyrights,
+        &mut holders,
+        &mut authors,
+        &mut seen,
+    );
+
+    PhaseBoundaryDetections {
+        after_group_loop_copyrights,
+        after_group_loop_holders,
+        after_primary_copyrights,
+        after_primary_holders,
+        after_postprocess_copyrights: copyrights,
+        after_postprocess_holders: holders,
+    }
+}
+
 mod author_heuristics;
 mod pattern_extract;
 mod phases;

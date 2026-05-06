@@ -1819,6 +1819,18 @@ fn test_refine_holder_in_copyright_context_strips_no_rights_reserved_clause() {
 }
 
 #[test]
+fn test_refine_holder_in_copyright_context_strips_onwards_prefix() {
+    assert_eq!(
+        refine_holder_in_copyright_context("and onwards The Apache Software Foundation"),
+        Some("The Apache Software Foundation".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("onwards The Apache Software Foundation"),
+        Some("The Apache Software Foundation".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_strips_trailing_placeholder_dollar() {
     assert_eq!(
         refine_holder("Markus Franz Xaver Johannes Oberhumer $"),

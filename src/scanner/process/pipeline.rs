@@ -370,13 +370,7 @@ fn prepare_license_detection_text(
     text_content: String,
 ) -> String {
     let text_content = if crate::utils::sourcemap::is_sourcemap(path) {
-        if let Some(sourcemap_content) =
-            crate::utils::sourcemap::extract_sourcemap_content(&text_content)
-        {
-            sourcemap_content
-        } else {
-            text_content
-        }
+        crate::utils::sourcemap::detection_text(path, &text_content).into_owned()
     } else if should_remove_verbatim_escape_sequences(path, classification.is_source) {
         remove_verbatim_escape_sequences(&text_content)
     } else {

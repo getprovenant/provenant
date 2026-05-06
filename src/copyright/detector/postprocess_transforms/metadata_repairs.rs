@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::copyright::candidates::is_raw_versioned_project_banner_line;
+use crate::copyright::candidates::{
+    is_raw_versioned_project_banner_line, versioned_banner_holder_from_prepared,
+};
 use crate::copyright::detector::token_utils;
+use crate::copyright::prepare::prepare_text_line;
 
 pub fn drop_json_description_metadata_copyrights_and_holders(
     raw_lines: &[&str],
@@ -15,11 +18,11 @@ pub fn drop_json_description_metadata_copyrights_and_holders(
 
     let mut retained_spans: HashSet<(usize, usize)> = HashSet::new();
     copyrights.retain(|copyright| {
-        if copyright.start_line == copyright.end_line
-            && raw_lines
-                .get(copyright.start_line.get().saturating_sub(1))
-                .is_some_and(|line| is_raw_versioned_project_banner_line(line))
-        {
+        if span_is_versioned_project_banner(
+            raw_lines,
+            copyright.start_line.get(),
+            copyright.end_line.get(),
+        ) {
             retained_spans.insert((copyright.start_line.get(), copyright.end_line.get()));
             return true;
         }
@@ -53,11 +56,11 @@ pub fn drop_json_description_metadata_copyrights_and_holders(
         if retained_spans.contains(&(holder.start_line.get(), holder.end_line.get())) {
             return true;
         }
-        if holder.start_line == holder.end_line
-            && raw_lines
-                .get(holder.start_line.get().saturating_sub(1))
-                .is_some_and(|line| is_raw_versioned_project_banner_line(line))
-        {
+        if span_is_versioned_project_banner(
+            raw_lines,
+            holder.start_line.get(),
+            holder.end_line.get(),
+        ) {
             return true;
         }
         let Some(window) =
@@ -73,6 +76,36 @@ pub fn drop_json_description_metadata_copyrights_and_holders(
             || lower.contains("\"url\"");
         !description_like || JSON_COPYRIGHT_KEY_RE.is_match(&window)
     });
+}
+
+fn span_is_versioned_project_banner(
+    raw_lines: &[&str],
+    start_line: usize,
+    end_line: usize,
+) -> bool {
+    if start_line == 0
+        || end_line == 0
+        || start_line > raw_lines.len()
+        || end_line > raw_lines.len()
+    {
+        return false;
+    }
+
+    if start_line == end_line
+        && raw_lines
+            .get(start_line.saturating_sub(1))
+            .is_some_and(|line| is_raw_versioned_project_banner_line(line))
+    {
+        return true;
+    }
+
+    let window_start = start_line.saturating_sub(3).max(1);
+    let prepared = raw_lines[window_start - 1..end_line]
+        .iter()
+        .map(|line| prepare_text_line(line))
+        .collect::<Vec<_>>()
+        .join(" ");
+    versioned_banner_holder_from_prepared(&prepared).is_some()
 }
 
 pub fn drop_markup_declaration_and_versioninfo_copyrights_and_holders(

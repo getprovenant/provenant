@@ -2789,6 +2789,14 @@ fn strip_parenthesized_emails(s: &str) -> String {
     normalize_whitespace(&PAREN_EMAIL_RE.replace_all(s, " "))
 }
 
+fn strip_leading_and_onwards_holder_prefix(s: &str) -> String {
+    static AND_ONWARDS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?:and\s+)?onwards\b[\s,;:.-]*")
+            .expect("valid leading onwards holder regex")
+    });
+    normalize_whitespace(&AND_ONWARDS_RE.replace(s, " "))
+}
+
 fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     if s.is_empty() {
         return None;
@@ -2858,6 +2866,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
 
     if in_copyright_context {
         h = strip_trailing_short_surname_paren_list_in_holder(&h);
+        h = strip_leading_and_onwards_holder_prefix(&h);
     }
 
     // Strip leading date-like prefix (digits, dashes, slashes).

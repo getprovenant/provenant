@@ -505,6 +505,242 @@ fn test_detect_versioned_project_banner_with_mixed_case_brand_holder() {
 }
 
 #[test]
+fn test_detect_versioned_project_banner_with_leading_year_before_holder() {
+    let content = "/*! X-editable - v1.5.0 Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n";
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Vitaliy Potapov"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
+fn test_detect_multiline_versioned_project_banner_with_trailing_license_tail() {
+    let content = "/*! X-editable - v1.5.0\n\
+                   * In-place editing with Twitter Bootstrap\n\
+                   * http://vitalets.github.io/x-editable\n\
+                   * Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n";
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Vitaliy Potapov"),
+        "holders: {holders:?}"
+    );
+    assert!(
+        !copyrights
+            .iter()
+            .any(|c| c.copyright.contains("Licensed MIT")),
+        "copyrights: {copyrights:?}"
+    );
+}
+
+#[test]
+fn test_detect_multiline_x_editable_header_still_works_with_huge_minified_auth_lines() {
+    let header = "/*! X-editable - v1.5.0\n\
+                  * In-place editing with Twitter Bootstrap\n\
+                  * http://vitalets.github.io/x-editable\n\
+                  * Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n";
+    let content = format!(
+        "{header}{}\n{}\n{}\n",
+        make_minified_auth_line(32_001),
+        make_minified_auth_line(32_203),
+        make_minified_auth_line(9_776),
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(&content);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Vitaliy Potapov"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
+fn test_detect_multiline_x_editable_actual_line5_shape_survives_postprocess_boundary() {
+    let content = format!(
+        "/*! X-editable - v1.5.0\n* In-place editing with Twitter Bootstrap, jQuery UI or pure jQuery\n* http://github.com/vitalets/x-editable\n* Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n{}\n",
+        make_bootstrap_editable_actual_line5_shape(),
+    );
+
+    let boundaries = super::detect_copyright_phase_boundaries(&content);
+
+    assert!(
+        boundaries
+            .after_group_loop_copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "after_group_loop_copyrights: {:?}",
+        boundaries.after_group_loop_copyrights
+    );
+    assert!(
+        boundaries
+            .after_group_loop_holders
+            .iter()
+            .any(|h| h.holder == "Vitaliy Potapov"),
+        "after_group_loop_holders: {:?}",
+        boundaries.after_group_loop_holders
+    );
+    assert!(
+        boundaries
+            .after_primary_copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "after_primary_copyrights: {:?}",
+        boundaries.after_primary_copyrights
+    );
+    assert!(
+        boundaries
+            .after_primary_holders
+            .iter()
+            .any(|h| h.holder == "Vitaliy Potapov"),
+        "after_primary_holders: {:?}",
+        boundaries.after_primary_holders
+    );
+    assert!(
+        boundaries
+            .after_postprocess_copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "after_postprocess_copyrights: {:?}",
+        boundaries.after_postprocess_copyrights
+    );
+    assert!(
+        boundaries
+            .after_postprocess_holders
+            .iter()
+            .any(|h| h.holder == "Vitaliy Potapov"),
+        "after_postprocess_holders: {:?}",
+        boundaries.after_postprocess_holders
+    );
+}
+
+#[test]
+fn test_detect_multiline_x_editable_actual_line5_shape_end_to_end() {
+    let content = format!(
+        "/*! X-editable - v1.5.0\n* In-place editing with Twitter Bootstrap, jQuery UI or pure jQuery\n* http://github.com/vitalets/x-editable\n* Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n{}\n",
+        make_bootstrap_editable_actual_line5_shape(),
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(&content);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) 2013 Vitaliy Potapov"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Vitaliy Potapov"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
+fn test_detect_bloomfilter_exact_file_shape_phase_boundary_keeps_onelab() {
+    let content = "/**
+ *
+ * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or 
+ * without modification, are permitted provided that the following 
+ * conditions are met:
+ *  - Redistributions of source code must retain the above copyright 
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright 
+ *    notice, this list of conditions and the following disclaimer in 
+ *    the documentation and/or other materials provided with the distribution.
+ */
+
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * \"License\"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+package org.apache.hadoop.util.bloom;
+
+/**
+ * Originally created by
+ * <a href=\"http://www.one-lab.org\">European Commission One-Lab Project 034819</a>.
+ */
+public class BloomFilter {}
+";
+    let boundaries = super::detect_copyright_phase_boundaries(content);
+
+    assert!(
+        boundaries
+            .after_group_loop_copyrights
+            .iter()
+            .any(|c| { c.copyright == "Copyright (c) 2005, European Commission project OneLab" }),
+        "after_group_loop_copyrights: {:?}",
+        boundaries.after_group_loop_copyrights,
+    );
+    assert!(
+        boundaries
+            .after_group_loop_holders
+            .iter()
+            .any(|h| h.holder == "European Commission project OneLab"),
+        "after_group_loop_holders: {:?}",
+        boundaries.after_group_loop_holders,
+    );
+    assert!(
+        boundaries
+            .after_primary_copyrights
+            .iter()
+            .any(|c| { c.copyright == "Copyright (c) 2005, European Commission project OneLab" }),
+        "after_primary_copyrights: {:?}",
+        boundaries.after_primary_copyrights,
+    );
+    assert!(
+        boundaries
+            .after_primary_holders
+            .iter()
+            .any(|h| h.holder == "European Commission project OneLab"),
+        "after_primary_holders: {:?}",
+        boundaries.after_primary_holders,
+    );
+    assert!(
+        boundaries.after_postprocess_copyrights.iter().any(|c| {
+            c.copyright
+                .starts_with("Copyright (c) 2005, European Commission project OneLab")
+        }),
+        "after_postprocess_copyrights: {:?}",
+        boundaries.after_postprocess_copyrights,
+    );
+    assert!(
+        boundaries
+            .after_postprocess_holders
+            .iter()
+            .any(|h| h.holder == "European Commission project OneLab"),
+        "after_postprocess_holders: {:?}",
+        boundaries.after_postprocess_holders,
+    );
+}
+
+#[test]
 fn test_detect_postscript_percent_copyright_prefix() {
     let content = "%%Copyright: -----------------------------------------------------------\n\
 %%Copyright: Copyright 1990-2009 Adobe Systems Incorporated.\n\
@@ -522,6 +758,47 @@ fn test_detect_postscript_percent_copyright_prefix() {
         hs.iter().any(|s| s == "Adobe Systems Incorporated"),
         "{hs:#?}"
     );
+}
+
+fn make_minified_auth_line(target_len: usize) -> String {
+    let chunk = concat!(
+        "!function(){var authenticationToken=this.authenticationToken;",
+        "return this.removeEventListener('x',handler),",
+        "document.createElement('div').appendChild(node),",
+        "node.className='editable',this.addEventListener('x',handler),",
+        "this.setAttribute('data-auth','1'),this.innerHTML=node.className;}"
+    );
+    let mut line = chunk.repeat(target_len / chunk.len() + 1);
+    line.truncate(target_len);
+    line
+}
+
+fn make_bootstrap_editable_actual_line5_shape() -> String {
+    let prefix = concat!(
+        "!function(a){\"use strict\";var b=function(b,c){this.options=a.extend({},a.fn.editableform.defaults,c),",
+        "this.$div=a(b),this.options.scope||(this.options.scope=this)};b.prototype={constructor:b,initInput:function(){",
+        "this.input=this.options.input,this.value=this.input.str2value(this.options.value),this.input.prerender()},",
+        "initTemplate:function(){this.$form=a(a.fn.editableform.template)},initButtons:function(){var b=this.$form.find(\".editable-buttons\");",
+        "b.append(a.fn.editableform.buttons),\"bottom\"===this.options.showbuttons&&b.addClass(\"editable-buttons-bottom\")},",
+        "render:function(){this.$loading=a(a.fn.editableform.loading),this.$div.empty().append(this.$loading),this.initTemplate(),",
+        "this.options.showbuttons?this.initButtons():this.$form.find(\".editable-buttons\").remove(),this.showLoading(),",
+        "this.isSaving=!1,this.$div.triggerHandler(\"rendering\"),this.initInput(),this.$form.find(\"div.editable-input\")"
+    );
+    let visible = concat!(
+        ",\"value\"===a&&this.setValue(b)},setValue:function(a,b){this.value=b?this.input.str2value(a):a,",
+        "this.$form&&this.$form.is(\":visible\")&&this.input.value2input(this.value)}},a.fn.editableform=function(c){",
+        "var d=arguments;return this.each(function(){var e=a(this),f="
+    );
+    let url = concat!(
+        "n.editableutils.inherit(b,a.fn.editabletypes.text),b.defaults=a.extend({},a.fn.editabletypes.text.defaults,",
+        "{tpl:'<input type=\"url\">'}),a.fn.editabletypes.url=b}(window.jQuery),function(a){\"use strict\";",
+        "var b=function(a){this.init(\"tel\",a,b.defaults)};a.fn.edita"
+    );
+
+    let mut line = prefix.repeat(3);
+    line.push_str(visible);
+    line.push_str(url);
+    line
 }
 
 #[test]

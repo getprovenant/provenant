@@ -19,6 +19,7 @@ use crate::models::{
     ScanDiagnostic,
 };
 use crate::scanner::LicenseScanOptions;
+use std::path::Path;
 use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
@@ -695,4 +696,48 @@ fn test_extract_license_information_maps_timeout_to_stage_error() {
 
     assert!(scan_diagnostics.is_empty());
     assert_eq!(error.to_string(), "Timeout during license scan (> 1.00s)");
+}
+
+#[test]
+fn test_collapse_repeated_sourcemap_license_detections_combines_concrete_detections() {
+    let mut first = make_public_detection("mit", "MIT", 1, 3);
+    first.identifier = Some("mit-first".to_string());
+    first.detection_log = vec!["first-log".to_string()];
+
+    let mut second = make_public_detection("mit", "MIT", 10, 12);
+    second.identifier = Some("mit-second".to_string());
+    second.detection_log = vec!["second-log".to_string()];
+
+    let mut third = make_public_detection("cc-by-3.0", "CC-BY-3.0", 20, 24);
+    third.identifier = Some("cc-by".to_string());
+
+    let sourcemap_result = super::collapse_repeated_sourcemap_license_detections(
+        Path::new("bundle.js.map"),
+        vec![first.clone(), second.clone(), third.clone()],
+    );
+
+    assert_eq!(
+        sourcemap_result.len(),
+        1,
+        "detections: {:?}",
+        sourcemap_result
+    );
+    assert_eq!(sourcemap_result[0].license_expression, "mit AND cc-by-3.0");
+    assert_eq!(
+        sourcemap_result[0].license_expression_spdx,
+        "MIT AND CC-BY-3.0"
+    );
+    assert_eq!(sourcemap_result[0].identifier.as_deref(), Some("mit-first"));
+    assert_eq!(sourcemap_result[0].matches.len(), 3);
+    assert_eq!(
+        sourcemap_result[0].detection_log,
+        vec!["first-log".to_string(), "second-log".to_string()]
+    );
+
+    let plain_result = super::collapse_repeated_sourcemap_license_detections(
+        Path::new("bundle.js"),
+        vec![first, second, third],
+    );
+
+    assert_eq!(plain_result.len(), 3);
 }
