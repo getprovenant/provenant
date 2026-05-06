@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 192 of 192 recorded runs, with a **12.1× median speedup** and **11.2× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 193 of 193 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -438,6 +438,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-26 · camel-80585 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `469.31s`; ScanCode `5338.67s`
 - Broader Maven dependency extraction (`14818` vs `7645`) from the large multi-module reactor, archetype template POMs, and mixed package-adjacent Helm, Docker, and Cargo surfaces, plus restored UTF-16 template license detection and broader notice-author recovery across Apache/Spring/OpenShift acknowledgements, with zero scan-file errors where ScanCode times out on the committed `camel-sbom.json` and `camel-sbom.xml`
+
+##### [apache/hadoop @ dbcc7cd](https://github.com/apache/hadoop/tree/dbcc7cd797100e6b32cd84f85b53a5193a5f9af0) — **16.42× faster**
+
+- Files: 16,370
+- Run context: 2026-05-06 · 20260506T074747Z-hadoop-28100 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `278.63s`; ScanCode `4575.96s`
+- Broader dependency extraction (`5849` vs `3794`) and slightly broader package visibility (`123` vs `122`) from the large multi-module Maven reactor, classifier/type-aware WAR identities, committed vcpkg metadata, and property-preserving Maven coordinates, with cleaner sourcemap/minified-banner party handling and reviewed remaining legal-text/author differences
 
 ##### [apache/kafka @ 0d9fe51](https://github.com/apache/kafka/tree/0d9fe518b616725fecd96162297fee89a7b7a6a5) — **14.02× faster**
 

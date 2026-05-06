@@ -815,6 +815,9 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
         Regex::new(r"(?i)^copyright\s*\(c\)\s*(?:19|20)\d{2}-\d{2}-\d{2}\s+(?P<holder>.+)$")
             .expect("valid iso-date copyright holder regex")
     });
+    static LEADING_AND_ONWARDS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^and\s+onwards\b[\s,;:.-]*").expect("valid leading and onwards regex")
+    });
     static LEADING_YEARISH_TOKEN_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
             r"(?ix)^
@@ -900,6 +903,8 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
     if let Some(rest) = holder_raw.strip_prefix("by ") {
         holder_raw = rest.trim();
     }
+    let holder_raw_cleaned = LEADING_AND_ONWARDS_RE.replace(holder_raw, "");
+    holder_raw = holder_raw_cleaned.trim();
 
     if let Some(cap) = EMBEDDED_C_MARKER_RE.captures(holder_raw)
         && let Some(head) = cap.name("head").map(|m| m.as_str().trim())

@@ -389,3 +389,56 @@ fn test_oprofile_authors_copyright() {
         "Should detect 'OProfile authors' holder. prepared={prepared_line:?} tokens={token_debug:?} got: {h:?}",
     );
 }
+
+#[test]
+fn test_collect_trailing_orphan_tokens_absorbs_name_before_legal_tail() {
+    let text = "Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)";
+    let prepared = super::super::super::prepare::prepare_text_line(text);
+    let tokens = get_tokens(&[(1, prepared)]);
+    let tree = parse(tokens);
+    let (copyright_idx, copyright_node) = tree
+        .iter()
+        .enumerate()
+        .find(|(_i, n)| {
+            matches!(
+                n.label(),
+                Some(TreeLabel::Copyright) | Some(TreeLabel::Copyright2)
+            )
+        })
+        .expect("Should parse a COPYRIGHT node");
+    let start = copyright_idx + 1;
+
+    assert!(
+        should_start_absorbing(copyright_node, &tree, start),
+        "Should absorb trailing holder continuation before legal tail; tree={tree:#?}"
+    );
+
+    let (trailing, _skip) = collect_trailing_orphan_tokens(copyright_node, &tree, start);
+    let trailing_values: Vec<&str> = trailing.iter().map(|t| t.value.as_str()).collect();
+
+    assert!(
+        trailing.iter().any(|t| t.value == "OneLab"),
+        "Trailing tokens should include OneLab, got: {trailing_values:?}"
+    );
+    assert!(
+        !trailing
+            .iter()
+            .any(|t| t.value.eq_ignore_ascii_case("under")),
+        "Trailing tokens should stop before legal tail, got: {trailing_values:?}"
+    );
+
+    let (copyrights, holders, _authors) = super::super::detect_copyrights_from_text(text);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| { c.copyright == "Copyright (c) 2005, European Commission project OneLab" }),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders
+            .iter()
+            .any(|h| h.holder == "European Commission project OneLab"),
+        "holders: {holders:?}"
+    );
+}

@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Source map file processing for license detection.
+//! Source map file processing for scanner text detection.
 //!
 //! Source map files (.js.map, .css.map) are JSON files containing embedded
 //! source code in a `sourcesContent` array. This module extracts that content
-//! for license detection.
+//! so the scanner can detect licenses and parties from the embedded sources
+//! instead of from the raw source map JSON wrapper.
 
+use std::borrow::Cow;
 use std::path::Path;
 
 /// Check if a file is a source map file based on extension.
@@ -43,6 +45,17 @@ pub fn extract_sourcemap_content(json_text: &str) -> Option<String> {
     } else {
         Some(combined)
     }
+}
+
+/// Return the text scanners should inspect for this file.
+pub fn detection_text<'a>(path: &Path, text: &'a str) -> Cow<'a, str> {
+    if !is_sourcemap(path) {
+        return Cow::Borrowed(text);
+    }
+
+    extract_sourcemap_content(text)
+        .map(Cow::Owned)
+        .unwrap_or_else(|| Cow::Borrowed(text))
 }
 
 /// Replace verbatim escaped CR/LF characters with actual newlines.
@@ -141,6 +154,16 @@ mod tests {
         assert!(result.is_some());
         let content = result.unwrap();
         assert!(content.contains("actual"));
+    }
+
+    #[test]
+    fn test_detection_text_prefers_embedded_sources_for_sourcemaps() {
+        let path = PathBuf::from("bundle.js.map");
+        let raw = r#"{"version":3,"comment":"Copyright 1999 Wrong Corp.","sourcesContent":["/* Copyright 2024 Example Corp. */\n"]}"#;
+
+        let result = detection_text(&path, raw);
+
+        assert_eq!(result.as_ref(), "/* Copyright 2024 Example Corp. */\n");
     }
 
     #[test]

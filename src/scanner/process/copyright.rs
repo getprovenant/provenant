@@ -23,6 +23,9 @@ pub(super) fn extract_copyright_information(
     timeout_seconds: f64,
     from_binary_strings: bool,
 ) {
+    let text_content = crate::utils::sourcemap::detection_text(path, text_content);
+    let text_content = text_content.as_ref();
+
     if copyright::is_credits_file(path) {
         let author_detections = copyright::detect_credits_authors(text_content);
         if !author_detections.is_empty() {
@@ -663,6 +666,8 @@ fn looks_like_comment_author_source_line(line: &str) -> bool {
 
 fn normalize_comment_author_line(line: &str) -> String {
     line.trim()
+        .trim_start_matches("<!--")
+        .trim_start()
         .trim_end_matches("*/")
         .trim_end_matches("-->")
         .trim()

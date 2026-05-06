@@ -1645,6 +1645,28 @@ pub fn should_start_absorbing(
         _ => false,
     };
     if is_name_like_first {
+        let same_line = last_line.is_some_and(|line| {
+            detector::token_utils::collect_all_leaves(first)
+                .first()
+                .is_some_and(|token| token.start_line == line)
+        });
+        let node_has_holder = detector::token_utils::build_holder_from_node(
+            copyright_node,
+            detector::NON_HOLDER_LABELS,
+            detector::NON_HOLDER_POS_TAGS,
+        )
+        .is_some();
+        if same_line
+            && node_has_holder
+            && is_same_line_legal_tail_boundary(
+                tree,
+                start + 1,
+                last_line.expect("same_line checked"),
+            )
+        {
+            return true;
+        }
+
         return has_company_signal_nearby(tree, start);
     }
 
@@ -1742,6 +1764,18 @@ fn has_company_signal_nearby(tree: &[ParseNode], start: usize) -> bool {
         }
     }
     false
+}
+
+fn is_same_line_legal_tail_boundary(tree: &[ParseNode], start: usize, line: LineNumber) -> bool {
+    let end = std::cmp::min(start + 3, tree.len());
+    tree[start..end].iter().any(|node| match node {
+        ParseNode::Leaf(token) => {
+            token.start_line == line
+                && token.tag == PosTag::Junk
+                && !token.value.eq_ignore_ascii_case("file")
+        }
+        _ => false,
+    })
 }
 
 fn last_leaf_ends_with_comma(node: &ParseNode) -> bool {

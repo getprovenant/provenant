@@ -90,6 +90,27 @@ fn has_copyright_indicators(line: &str) -> bool {
         || has_c_sign_before_year(bytes)
 }
 
+/// Check whether a long or obvious-code line should still be treated as copyright-relevant.
+///
+/// This is narrower than `has_copyright_indicators()`: it keeps explicit author markers such as
+/// `@author`, `author:`, `authors:`, and `written by`, but does not let incidental substrings like
+/// `authentication` keep huge minified code lines inside copyright candidate groups.
+fn has_long_line_copyright_indicators(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    contains_ascii_ci(bytes, b"opyr")
+        || contains_ascii_ci(bytes, b"opyl")
+        || has_explicit_author_marker(bytes)
+        || has_c_sign_before_year(bytes)
+}
+
+fn has_explicit_author_marker(bytes: &[u8]) -> bool {
+    contains_ascii_ci(bytes, b"@author")
+        || contains_ascii_ci(bytes, b"author:")
+        || contains_ascii_ci(bytes, b"authors:")
+        || contains_ascii_ci(bytes, b"author(s):")
+        || contains_ascii_ci(bytes, b"written by")
+}
+
 /// Case-insensitive ASCII substring search without allocation.
 fn contains_ascii_ci(haystack: &[u8], needle: &[u8]) -> bool {
     if needle.len() > haystack.len() {
@@ -131,7 +152,7 @@ fn is_encoded_data_line(line: &str) -> bool {
     }
 
     // Quick check: if the line contains strong copyright indicators, never skip.
-    if has_copyright_indicators(line) {
+    if has_long_line_copyright_indicators(line) {
         return false;
     }
 
@@ -212,10 +233,8 @@ fn is_code_line_with_false_c(line: &str) -> bool {
         return false;
     }
 
-    let lower = line.to_lowercase();
-
     // Check if the ONLY copyright hint is `(c)` — if there's a real "copyright" word, keep it.
-    if lower.contains("opyr") || lower.contains("opyl") || lower.contains("auth") {
+    if has_long_line_copyright_indicators(line) {
         return false;
     }
 
@@ -437,7 +456,7 @@ where
         }
 
         // Skip long lines without copyright indicators (minified JS, binary data).
-        if line.len() > MAX_LINE_LENGTH && !has_copyright_indicators(line) {
+        if line.len() > MAX_LINE_LENGTH && !has_long_line_copyright_indicators(line) {
             if in_copyright > 0 {
                 in_copyright -= 1;
                 if in_copyright == 0 && !candidates.is_empty() {
@@ -694,7 +713,7 @@ where
                 prev_was_single_line_markup_comment = false;
                 continue;
             }
-            if is_obvious_code_line(line) && !has_copyright_indicators(line) {
+            if is_obvious_code_line(line) && !has_long_line_copyright_indicators(line) {
                 if !candidates.is_empty() {
                     groups.push(std::mem::take(&mut candidates));
                 }
@@ -1237,6 +1256,22 @@ mod tests {
     }
 
     #[test]
+    fn test_long_line_indicators_keep_explicit_author_markers() {
+        assert!(has_long_line_copyright_indicators("@author John Doe"));
+        assert!(has_long_line_copyright_indicators("author: John Doe"));
+        assert!(has_long_line_copyright_indicators(
+            "authors: Jane Doe, John Doe"
+        ));
+        assert!(has_long_line_copyright_indicators("written by Jane Doe"));
+    }
+
+    #[test]
+    fn test_long_line_indicators_ignore_incidental_auth_substrings() {
+        let line = "!function(){var authenticationToken=this.authenticationToken;return this.removeEventListener('x',handler),document.createElement('div').appendChild(node),node.className='editable'}";
+        assert!(!has_long_line_copyright_indicators(line));
+    }
+
+    #[test]
     fn test_indicators_c_sign_with_year() {
         assert!(has_copyright_indicators("(c)2024 Acme Inc."));
         assert!(has_copyright_indicators("(C) 1996 Id Software"));
@@ -1541,6 +1576,39 @@ mod tests {
     }
 
     #[test]
+    fn test_collect_skips_huge_minified_auth_lines_after_x_editable_header() {
+        let lines = vec![
+            (1, "/*! X-editable - v1.5.0".to_string()),
+            (2, "* In-place editing with Twitter Bootstrap".to_string()),
+            (3, "* http://vitalets.github.io/x-editable".to_string()),
+            (
+                4,
+                "* Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */".to_string(),
+            ),
+            (5, make_minified_auth_line(32_001)),
+            (6, make_minified_auth_line(32_203)),
+            (7, make_minified_auth_line(9_776)),
+        ];
+
+        let groups = collect_candidate_lines(lines);
+
+        assert!(
+            groups
+                .iter()
+                .flat_map(|group| group.iter())
+                .any(|(ln, _)| *ln == 4),
+            "groups: {groups:?}"
+        );
+        assert!(
+            !groups
+                .iter()
+                .flat_map(|group| group.iter())
+                .any(|(ln, _)| *ln >= 5),
+            "groups: {groups:?}"
+        );
+    }
+
+    #[test]
     fn test_versioned_banner_holder_from_prepared_extracts_holder() {
         let prepared =
             "! jQuery v3.7.1 (c) OpenJS Foundation and other contributors jquery.org/license";
@@ -1548,5 +1616,18 @@ mod tests {
             versioned_banner_holder_from_prepared(prepared),
             Some("OpenJS Foundation and other contributors".to_string())
         );
+    }
+
+    fn make_minified_auth_line(target_len: usize) -> String {
+        let chunk = concat!(
+            "!function(){var authenticationToken=this.authenticationToken;",
+            "return this.removeEventListener('x',handler),",
+            "document.createElement('div').appendChild(node),",
+            "node.className='editable',this.addEventListener('x',handler),",
+            "this.setAttribute('data-auth','1'),this.innerHTML=node.className;}"
+        );
+        let mut line = chunk.repeat(target_len / chunk.len() + 1);
+        line.truncate(target_len);
+        line
     }
 }

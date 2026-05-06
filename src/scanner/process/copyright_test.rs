@@ -91,6 +91,44 @@ fn test_extract_copyright_information_preserves_raw_text_and_normalized_shadow()
 }
 
 #[test]
+fn test_extract_copyright_information_uses_embedded_sourcemap_sources_for_parties() {
+    let text = r#"{"version":3,"comment":"Copyright 1999 Wrong Corp.","sourcesContent":["/* Copyright 2024 Example Corp. */\n"]}"#;
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("bundle.js.map"), text, 120.0, false);
+
+    let file = builder
+        .name("bundle.js.map".to_string())
+        .base_name("bundle.js".to_string())
+        .extension(".map".to_string())
+        .path("bundle.js.map".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.copyrights[0].copyright, "Copyright 2024 Example Corp.");
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(file.holders[0].holder, "Example Corp.");
+    assert!(
+        file.copyrights
+            .iter()
+            .all(|copyright| !copyright.copyright.contains("Wrong Corp"))
+    );
+    assert!(
+        file.holders
+            .iter()
+            .all(|holder| !holder.holder.contains("Wrong Corp"))
+    );
+}
+
+#[test]
 fn test_extract_copyright_information_multiline_native_projection_avoids_comment_wrappers() {
     let text = "/*\n * Copyright 2024 Example Corp.\n * All rights reserved.\n */\n";
     let mut builder = FileInfoBuilder::default();
@@ -183,6 +221,79 @@ fn test_extract_copyright_information_xml_comment_projection_preserves_native_sy
     assert_eq!(
         file.copyrights[0].normalized_copyright.as_deref(),
         Some("Copyright (c) 2024 Example Corp.")
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_bloomfilter_exact_file_shape_keeps_onelab() {
+    let text = "/**
+ *
+ * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or 
+ * without modification, are permitted provided that the following 
+ * conditions are met:
+ *  - Redistributions of source code must retain the above copyright 
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright 
+ *    notice, this list of conditions and the following disclaimer in 
+ *    the documentation and/or other materials provided with the distribution.
+ */
+
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * \"License\"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+package org.apache.hadoop.util.bloom;
+
+/**
+ * Originally created by
+ * <a href=\"http://www.one-lab.org\">European Commission One-Lab Project 034819</a>.
+ */
+public class BloomFilter {}
+";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("BloomFilter.java"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("BloomFilter.java".to_string())
+        .base_name("BloomFilter".to_string())
+        .extension(".java".to_string())
+        .path("BloomFilter.java".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(
+        file.copyrights.iter().any(|c| {
+            c.normalized_copyright.as_deref()
+                == Some("Copyright (c) 2005, European Commission project OneLab")
+        }),
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert!(
+        file.holders
+            .iter()
+            .any(|h| h.holder == "European Commission project OneLab"),
+        "holders: {:?}",
+        file.holders
     );
 }
 
@@ -517,6 +628,16 @@ fn test_extract_comment_author_supplements_handles_c_style_translator_headers() 
             "S A Sureshkumar (saskumar@live.com)",
         ]
     );
+}
+
+#[test]
+fn test_extract_comment_author_supplements_handles_html_comment_by_line() {
+    let text = "<!-- Checkstyle XML Style Sheet by Stephane Bailliez <sbailliez@apache.org> -->\n";
+
+    let authors = extract_comment_author_supplements(text);
+    let values: Vec<_> = authors.into_iter().map(|author| author.author).collect();
+
+    assert_eq!(values, vec!["Stephane Bailliez <sbailliez@apache.org>"]);
 }
 
 #[test]
