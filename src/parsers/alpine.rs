@@ -875,7 +875,7 @@ fn build_alpine_license_data(
     if extracted == "custom:multiple" {
         return build_declared_license_data_from_pair(
             "unknown-license-reference",
-            "LicenseRef-provenant-unknown-license-reference",
+            "LicenseRef-scancode-unknown-license-reference",
             DeclaredLicenseMatchMetadata::single_line(extracted),
         );
     }
@@ -1763,7 +1763,7 @@ p:so:libtest.so.1
         );
         assert_eq!(
             pkg.declared_license_expression_spdx.as_deref(),
-            Some("LicenseRef-provenant-unknown-license-reference")
+            Some("LicenseRef-scancode-unknown-license-reference")
         );
         let matched = pkg.license_detections[0].matches[0].matched_text.as_deref();
         assert_eq!(matched, Some("custom:multiple"));

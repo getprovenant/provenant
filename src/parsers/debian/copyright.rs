@@ -362,7 +362,7 @@ fn normalize_debian_license_name(license_name: &str) -> NormalizedDeclaredLicens
         "LGPL-3+" => NormalizedDeclaredLicense::new("lgpl-3.0-plus", "LGPL-3.0-or-later"),
         "BSD-4-clause" => NormalizedDeclaredLicense::new("bsd-original-uc", "BSD-4-Clause-UC"),
         "public-domain" => {
-            NormalizedDeclaredLicense::new("public-domain", "LicenseRef-provenant-public-domain")
+            NormalizedDeclaredLicense::new("public-domain", "LicenseRef-scancode-public-domain")
         }
         other => normalize_declared_license_key(other)
             .unwrap_or_else(|| NormalizedDeclaredLicense::new(other.to_ascii_lowercase(), other)),
@@ -771,5 +771,16 @@ Copyright (C) 2015-2018 Example Corp";
         );
         assert_eq!(target.license_detections.len(), 1);
         assert_eq!(target.other_license_detections.len(), 1);
+    }
+
+    #[test]
+    fn test_normalize_debian_public_domain_uses_scancode_license_ref() {
+        let normalized = normalize_debian_license_name("public-domain");
+
+        assert_eq!(normalized.declared_license_expression, "public-domain");
+        assert_eq!(
+            normalized.declared_license_expression_spdx,
+            "LicenseRef-scancode-public-domain"
+        );
     }
 }

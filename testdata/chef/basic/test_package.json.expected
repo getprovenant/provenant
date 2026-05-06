@@ -23,15 +23,15 @@
   "copyright": null,
   "holder": null,
   "declared_license_expression": "public-domain",
-  "declared_license_expression_spdx": "LicenseRef-provenant-public-domain",
+  "declared_license_expression_spdx": "LicenseRef-scancode-public-domain",
   "license_detections": [
     {
       "license_expression": "public-domain",
-  "license_expression_spdx": "LicenseRef-provenant-public-domain",
+  "license_expression_spdx": "LicenseRef-scancode-public-domain",
       "matches": [
         {
           "license_expression": "public-domain",
-  "license_expression_spdx": "LicenseRef-provenant-public-domain",
+  "license_expression_spdx": "LicenseRef-scancode-public-domain",
           "from_file": null,
           "start_line": 1,
           "end_line": 1,

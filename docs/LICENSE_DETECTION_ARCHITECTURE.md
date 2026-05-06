@@ -63,6 +63,16 @@ license-reference generation is explicitly requested.
 
 This document is the evergreen maintainer reference for the current public license-detection surface. It documents the live contract and module layout; it is not a claim that every downstream parity gap is closed.
 
+### `LicenseRef-*` namespace convention
+
+Provenant uses the shared `LicenseRef-scancode-*` namespace for SPDX-side `LicenseRef` identifiers.
+
+If a license key is backed by the loaded ScanCode-compatible license dataset or by the public
+output contract built on that dataset, reuse the dataset-owned `LicenseRef-scancode-*` identifier
+instead of minting a tool-specific variant. This applies across detection output, SPDX-LID
+fallbacks such as `unknown-spdx`, and parser-side declared-license normalization for keys such as
+`public-domain`, `proprietary-license`, and `unknown-license-reference`.
+
 ### Initialization Flow
 
 ```text

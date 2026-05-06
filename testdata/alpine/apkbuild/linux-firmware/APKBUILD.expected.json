@@ -7,15 +7,15 @@
     "parties": [],
     "homepage_url": "https://git.kernel.org/?p=linux/kernel/git/firmware/linux-firmware.git;a=summary",
     "declared_license_expression": "unknown-license-reference",
-    "declared_license_expression_spdx": "LicenseRef-provenant-unknown-license-reference",
+    "declared_license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
     "license_detections": [
       {
         "license_expression": "unknown-license-reference",
-        "license_expression_spdx": "LicenseRef-provenant-unknown-license-reference",
+        "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
         "matches": [
           {
             "license_expression": "unknown-license-reference",
-            "license_expression_spdx": "LicenseRef-provenant-unknown-license-reference",
+            "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
             "start_line": 1,
             "end_line": 1,
             "matcher": "1-spdx-id",

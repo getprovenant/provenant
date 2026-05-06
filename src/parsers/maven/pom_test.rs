@@ -940,6 +940,10 @@ mod tests {
             package_data.declared_license_expression.as_deref(),
             Some("public-domain")
         );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("LicenseRef-scancode-public-domain")
+        );
     }
 
     #[test]

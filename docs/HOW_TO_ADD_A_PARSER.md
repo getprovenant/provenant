@@ -141,6 +141,15 @@ field, populate:
 Use the shared helper in `src/parsers/license_normalization.rs` instead of writing parser-specific
 normalization logic.
 
+When a parser emits an SPDX-side `LicenseRef-*` identifier, use the shared
+`LicenseRef-scancode-*` namespace.
+
+This applies to parser-side declared-license normalization too. If the normalized key is already
+backed by the shared ScanCode-compatible license dataset or public output contract, reuse that
+dataset-owned SPDX identifier instead of inventing a parser-local variant. In practice this means
+parser outputs such as `public-domain`, `proprietary-license`, and
+`unknown-license-reference` should use their existing `LicenseRef-scancode-*` identifiers.
+
 If the license surface is weak or ambiguous, keep the parser raw-only:
 
 - preserve `extracted_license_statement`

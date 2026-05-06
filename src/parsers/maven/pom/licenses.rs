@@ -110,7 +110,7 @@ fn normalize_maven_license_name(name: &str) -> Option<NormalizedDeclaredLicense>
     match name.trim() {
         "Public Domain" | "public domain" => Some(NormalizedDeclaredLicense::new(
             "public-domain",
-            "LicenseRef-provenant-public-domain",
+            "LicenseRef-scancode-public-domain",
         )),
         other => normalize_declared_license_key(other),
     }

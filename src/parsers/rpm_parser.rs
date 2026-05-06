@@ -819,8 +819,8 @@ fn canonicalize_rpm_license_statement(statement: &str) -> String {
         ("MPLv2.0", "MPL-2.0"),
         ("MPLv1.1", "MPL-1.1"),
         ("BSD with advertising", "BSD-4-Clause-UC"),
-        ("Public Domain", "LicenseRef-provenant-public-domain"),
-        ("public domain", "LicenseRef-provenant-public-domain"),
+        ("Public Domain", "LicenseRef-scancode-public-domain"),
+        ("public domain", "LicenseRef-scancode-public-domain"),
         ("OpenLDAP", "OLDAP-2.8"),
         ("OpenSSL", "OpenSSL"),
         ("Sleepycat", "Sleepycat"),
@@ -1414,11 +1414,11 @@ mod tests {
         );
         assert_eq!(
             pkg.declared_license_expression.as_deref(),
-            Some("licenseref-provenant-public-domain")
+            Some("licenseref-scancode-public-domain")
         );
         assert_eq!(
             pkg.declared_license_expression_spdx.as_deref(),
-            Some("LicenseRef-provenant-public-domain")
+            Some("LicenseRef-scancode-public-domain")
         );
         assert_eq!(pkg.license_detections.len(), 1);
     }
