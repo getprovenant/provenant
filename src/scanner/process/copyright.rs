@@ -263,6 +263,23 @@ fn project_suspicious_native_copyright_value(rendered: &str) -> Option<String> {
 }
 
 fn normalize_native_suffix(suffix: &str) -> Option<String> {
+    static CONFIDENTIALITY_SUFFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^[.,;:]?\s*
+            confidential
+            (?:
+                [\s,;:.\-]+information
+              | [\s,;:.\-]+proprietary
+              | [\s,;:.\-]+and[\s,;:.\-]+proprietary
+            )
+            \.?
+            $
+            ",
+        )
+        .expect("valid confidentiality suffix regex")
+    });
+
     if suffix.is_empty() {
         return Some(String::new());
     }
@@ -294,6 +311,10 @@ fn normalize_native_suffix(suffix: &str) -> Option<String> {
         ": all rights reserved.",
     ];
     if all_rights_variants.contains(&lower.as_str()) {
+        return Some(trimmed.to_string());
+    }
+
+    if CONFIDENTIALITY_SUFFIX_RE.is_match(trimmed) {
         return Some(trimmed.to_string());
     }
 

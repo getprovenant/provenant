@@ -1146,7 +1146,8 @@ fn normalize_compare_copyright_value(value: &str) -> String {
         return normalized;
     }
 
-    let mut out = strip_compare_all_rights_reserved(&normalized)
+    let out = strip_compare_all_rights_reserved(&normalized);
+    let mut out = strip_compare_confidentiality_suffix(&out)
         .trim()
         .to_string();
     while out.ends_with(['.', ',', ';', ':']) {
@@ -1166,6 +1167,33 @@ fn strip_compare_all_rights_reserved(value: &str) -> String {
                 .trim_end_matches([' ', '.', ',', ';', ':'])
                 .trim_end()
                 .to_string();
+        }
+    }
+    value.to_string()
+}
+
+fn strip_compare_confidentiality_suffix(value: &str) -> String {
+    let lower = value.to_ascii_lowercase();
+    for marker in [
+        "confidential and proprietary",
+        "confidential proprietary",
+        "confidential information",
+    ] {
+        if let Some(idx) = lower.rfind(marker) {
+            let tail = lower[idx + marker.len()..].trim();
+            let boundary_ok = idx == 0
+                || lower[..idx]
+                    .chars()
+                    .next_back()
+                    .is_some_and(|ch| ch.is_whitespace() || matches!(ch, '.' | ',' | ';' | ':'));
+            if boundary_ok
+                && (tail.is_empty() || tail.chars().all(|ch| matches!(ch, '.' | ',' | ';' | ':')))
+            {
+                return value[..idx]
+                    .trim_end_matches([' ', '.', ',', ';', ':'])
+                    .trim_end()
+                    .to_string();
+            }
         }
     }
     value.to_string()
@@ -2152,6 +2180,22 @@ mod tests {
         assert_eq!(
             metric_values(&entry, "copyrights"),
             vec!["Copyright 2024 Example Corp".to_string()]
+        );
+    }
+
+    #[test]
+    fn metric_values_normalize_confidentiality_tail_copyright_differences() {
+        let entry = json!({
+            "copyrights": [
+                {
+                    "copyright": "(c) foo platforms, inc. and affiliates. confidential and proprietary."
+                }
+            ]
+        });
+
+        assert_eq!(
+            metric_values(&entry, "copyrights"),
+            vec!["(c) foo platforms, inc. and affiliates".to_string()]
         );
     }
 }
