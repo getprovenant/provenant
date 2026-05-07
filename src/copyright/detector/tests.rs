@@ -552,6 +552,41 @@ fn test_detect_versioned_project_banner_with_mixed_case_brand_holder() {
 }
 
 #[test]
+fn test_detect_multiline_header_copyright_without_year_and_with_url() {
+    let content = concat!(
+        "/**\n",
+        " * @license\n",
+        " * Lodash <https://lodash.com/>\n",
+        " * Copyright OpenJS Foundation and other contributors <https://openjsf.org/>\n",
+        " * Released under MIT license <https://lodash.com/license>\n",
+        " * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>\n",
+        " * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors\n",
+        " */\n",
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
+
+    assert!(
+        copyrights.iter().any(|c| {
+            c.copyright == "Copyright OpenJS Foundation and other contributors https://openjsf.org"
+        }),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders
+            .iter()
+            .any(|h| h.holder == "OpenJS Foundation and other contributors"),
+        "holders: {holders:?}"
+    );
+    assert!(
+        copyrights.iter().any(|c| {
+            c.copyright
+                == "Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors"
+        }),
+        "copyrights: {copyrights:?}"
+    );
+}
+
+#[test]
 fn test_detect_versioned_project_banner_with_leading_year_before_holder() {
     let content = "/*! X-editable - v1.5.0 Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(content);

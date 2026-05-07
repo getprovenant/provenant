@@ -756,6 +756,83 @@ pub fn extract_c_holder_without_year_lines(
     (copyrights, holders)
 }
 
+pub fn extract_copyright_holder_url_without_year_lines(
+    groups: &[Vec<(usize, String)>],
+) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
+    static YEAR_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"\b(?:19\d{2}|20\d{2})\b").unwrap());
+    static COPYRIGHT_HOLDER_URL_NO_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^copyright\s+
+            (?P<holder>[A-Z][^<]{3,}?)
+            \s*
+            (?P<url><https?://[^>]+>|https?://\S+)
+            \s*$
+        ",
+        )
+        .unwrap()
+    });
+
+    let mut copyrights = Vec::new();
+    let mut holders = Vec::new();
+
+    for group in groups {
+        for (ln, line) in group {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            let normalized = trimmed
+                .trim_start_matches(['*', '/', '#', ';', '%', '!'])
+                .trim_start();
+            if YEAR_RE.is_match(normalized) {
+                continue;
+            }
+
+            let Some(cap) = COPYRIGHT_HOLDER_URL_NO_YEAR_RE.captures(normalized) else {
+                continue;
+            };
+
+            let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
+            let holder_lower = holder_raw.to_ascii_lowercase();
+            if holder_raw.split_whitespace().count() < 2
+                || holder_lower.starts_with("notice")
+                || holder_lower.contains("license")
+                || holder_lower.starts_with("released under")
+                || holder_lower.starts_with("based on")
+            {
+                continue;
+            }
+
+            let url_raw = cap.name("url").map(|m| m.as_str()).unwrap_or("").trim();
+            if url_raw.is_empty() {
+                continue;
+            }
+
+            let raw = format!("Copyright {holder_raw} {url_raw}");
+            if let Some(cr) = refine_copyright(&raw) {
+                copyrights.push(CopyrightDetection {
+                    copyright: cr,
+                    start_line: LineNumber::new(*ln).expect("invalid line number"),
+                    end_line: LineNumber::new(*ln).expect("invalid line number"),
+                });
+            }
+
+            if let Some(holder) = refine_holder_in_copyright_context(holder_raw) {
+                holders.push(HolderDetection {
+                    holder,
+                    start_line: LineNumber::new(*ln).expect("invalid line number"),
+                    end_line: LineNumber::new(*ln).expect("invalid line number"),
+                });
+            }
+        }
+    }
+
+    (copyrights, holders)
+}
+
 pub fn extract_versioned_project_c_holder_banner_lines(
     groups: &[Vec<(usize, String)>],
     existing_copyrights: &[CopyrightDetection],

@@ -246,6 +246,39 @@ mod tests {
     }
 
     #[test]
+    fn test_find_urls_keeps_query_asterisk_in_url() {
+        let text = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%20url%3D%22";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert_eq!(urls.len(), 1, "urls: {urls:#?}");
+        assert_eq!(
+            urls[0].url,
+            "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%20url%3D%22"
+        );
+    }
+
+    #[test]
+    fn test_find_urls_keeps_npm_package_url_ending_with_fill() {
+        let text = "[npm](https://www.npmjs.com/package/lodash.fill \"See the npm package\")";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert_eq!(urls.len(), 1, "urls: {urls:#?}");
+        assert_eq!(urls[0].url, "https://www.npmjs.com/package/lodash.fill");
+    }
+
+    #[test]
+    fn test_find_urls_drops_nested_scheme_artifact_in_path() {
+        let text =
+            "https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert!(urls.is_empty(), "urls: {urls:#?}");
+    }
+
+    #[test]
     fn test_find_urls_filters_code_variable_host_artifacts() {
         let text = "loginUrl = \"http://os.environ['DD_BASE_URL']/login\"";
         let config = DetectionConfig::default();
