@@ -1343,10 +1343,14 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         let scancode_file = scancode_files.get(path).unwrap();
         let provenant_file = provenant_files.get(path).unwrap();
         for metric in metrics {
-            let sc_count = metric_count(scancode_file, metric);
-            let pr_count = metric_count(provenant_file, metric);
             let sc_values = metric_values(scancode_file, metric);
             let pr_values = metric_values(provenant_file, metric);
+            let sc_counter = value_counter(&sc_values);
+            let pr_counter = value_counter(&pr_values);
+            let sc_signal_counter = metric_signal_counter(metric, &sc_values);
+            let pr_signal_counter = metric_signal_counter(metric, &pr_values);
+            let sc_count = counter_total(&sc_signal_counter);
+            let pr_count = counter_total(&pr_signal_counter);
             if pr_count < sc_count {
                 lower_counts.get_mut(metric).unwrap().push(CountDeltaEntry {
                     path: path.clone(),
@@ -1369,11 +1373,17 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
                         provenant_sample_values: sample_values(&pr_values),
                     });
             }
-            let sc_counter = value_counter(&sc_values);
-            let pr_counter = value_counter(&pr_values);
-            let missing = subtract_counters(&sc_counter, &pr_counter);
-            let extra = subtract_counters(&pr_counter, &sc_counter);
-            if !missing.is_empty() || !extra.is_empty() {
+            let signal_missing = subtract_counters(&sc_signal_counter, &pr_signal_counter);
+            let signal_extra = subtract_counters(&pr_signal_counter, &sc_signal_counter);
+            if !signal_missing.is_empty() || !signal_extra.is_empty() {
+                let missing = filter_counter_to_signal_keys(
+                    &subtract_counters(&sc_counter, &pr_counter),
+                    &signal_missing,
+                );
+                let extra = filter_counter_to_signal_keys(
+                    &subtract_counters(&pr_counter, &sc_counter),
+                    &signal_extra,
+                );
                 value_differences
                     .get_mut(metric)
                     .unwrap()
@@ -4072,6 +4082,224 @@ mod tests {
         assert!(summary_tsv.contains("scancode_only_output_file_paths"));
         assert!(summary_tsv.contains("ScanCode final output"));
         assert!(summary_tsv.contains("filtered these paths away after finding nothing"));
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn direct_json_comparison_ignores_duplicate_party_occurrence_noise() {
+        let temp_root = unique_temp_dir("direct-json-party-noise");
+        fs::create_dir_all(&temp_root).unwrap();
+        let mut context = test_context();
+        context.compare_mode = CompareMode::DirectJson;
+        context.scan_args = Vec::new();
+        context.run_dir = temp_root.join("run");
+        context.raw_dir = context.run_dir.join("raw");
+        context.comparison_dir = context.run_dir.join("comparison");
+        context.samples_dir = context.comparison_dir.join("samples");
+        context.run_manifest = context.run_dir.join("run-manifest.json");
+        context.summary_json = context.comparison_dir.join("summary.json");
+        context.summary_tsv = context.comparison_dir.join("summary.tsv");
+        context.scancode_json = context.raw_dir.join("scancode.json");
+        context.provenant_json = context.raw_dir.join("provenant.json");
+        fs::create_dir_all(&context.raw_dir).unwrap();
+        fs::create_dir_all(&context.samples_dir).unwrap();
+
+        fs::write(
+            &context.scancode_json,
+            serde_json::to_string_pretty(&json!({
+                "files": [{
+                    "path": "src/lib.rs",
+                    "type": "file",
+                    "copyrights": [
+                        {"copyright": "Copyright 2024 Example Corp."},
+                        {"copyright": "Copyright 2024 Example Corp."}
+                    ],
+                    "holders": [
+                        {"holder": "Example Corp."},
+                        {"holder": "Example Corp."}
+                    ],
+                    "authors": [
+                        {"author": "Jane Doe"},
+                        {"author": "Jane Doe"}
+                    ]
+                }],
+                "packages": [],
+                "dependencies": [],
+                "license_detections": [],
+                "license_references": [],
+                "license_rule_references": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            &context.provenant_json,
+            serde_json::to_string_pretty(&json!({
+                "files": [{
+                    "path": "src/lib.rs",
+                    "type": "file",
+                    "copyrights": [
+                        {"copyright": "Copyright 2024 Example Corp."}
+                    ],
+                    "holders": [
+                        {"holder": "Example Corp."}
+                    ],
+                    "authors": [
+                        {"author": "Jane Doe"}
+                    ]
+                }],
+                "packages": [],
+                "dependencies": [],
+                "license_detections": [],
+                "license_references": [],
+                "license_rule_references": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        generate_comparison_artifacts(&context).unwrap();
+
+        let summary: Value =
+            serde_json::from_str(&fs::read_to_string(&context.summary_json).unwrap()).unwrap();
+        let samples: Value = serde_json::from_str(
+            &fs::read_to_string(
+                context
+                    .samples_dir
+                    .join("file_metric_value_differences.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            summary["comparison_status"],
+            Value::String("no_detected_differences".into())
+        );
+
+        for metric in ["copyrights", "holders", "authors"] {
+            assert_eq!(
+                summary["file_metric_summary"][metric]["lower_counts"],
+                Value::from(0)
+            );
+            assert_eq!(
+                summary["file_metric_summary"][metric]["higher_counts"],
+                Value::from(0)
+            );
+            assert_eq!(
+                summary["file_metric_summary"][metric]["missing_in_provenant"],
+                Value::from(0)
+            );
+            assert_eq!(
+                summary["file_metric_summary"][metric]["extra_in_provenant"],
+                Value::from(0)
+            );
+            assert_eq!(samples[metric], serde_json::json!([]), "metric: {metric}");
+        }
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn direct_json_comparison_reports_only_real_party_value_difference() {
+        let temp_root = unique_temp_dir("direct-json-party-mixed");
+        fs::create_dir_all(&temp_root).unwrap();
+        let mut context = test_context();
+        context.compare_mode = CompareMode::DirectJson;
+        context.scan_args = Vec::new();
+        context.run_dir = temp_root.join("run");
+        context.raw_dir = context.run_dir.join("raw");
+        context.comparison_dir = context.run_dir.join("comparison");
+        context.samples_dir = context.comparison_dir.join("samples");
+        context.run_manifest = context.run_dir.join("run-manifest.json");
+        context.summary_json = context.comparison_dir.join("summary.json");
+        context.summary_tsv = context.comparison_dir.join("summary.tsv");
+        context.scancode_json = context.raw_dir.join("scancode.json");
+        context.provenant_json = context.raw_dir.join("provenant.json");
+        fs::create_dir_all(&context.raw_dir).unwrap();
+        fs::create_dir_all(&context.samples_dir).unwrap();
+
+        fs::write(
+            &context.scancode_json,
+            serde_json::to_string_pretty(&json!({
+                "files": [{
+                    "path": "src/lib.rs",
+                    "type": "file",
+                    "authors": [
+                        {"author": "Jane Doe"},
+                        {"author": "Jane Doe"}
+                    ]
+                }],
+                "packages": [],
+                "dependencies": [],
+                "license_detections": [],
+                "license_references": [],
+                "license_rule_references": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            &context.provenant_json,
+            serde_json::to_string_pretty(&json!({
+                "files": [{
+                    "path": "src/lib.rs",
+                    "type": "file",
+                    "authors": [
+                        {"author": "Jane Doe"},
+                        {"author": "John Doe"}
+                    ]
+                }],
+                "packages": [],
+                "dependencies": [],
+                "license_detections": [],
+                "license_references": [],
+                "license_rule_references": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        generate_comparison_artifacts(&context).unwrap();
+
+        let summary: Value =
+            serde_json::from_str(&fs::read_to_string(&context.summary_json).unwrap()).unwrap();
+        let samples: Value = serde_json::from_str(
+            &fs::read_to_string(
+                context
+                    .samples_dir
+                    .join("file_metric_value_differences.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            summary["file_metric_summary"]["authors"]["lower_counts"],
+            Value::from(0)
+        );
+        assert_eq!(
+            summary["file_metric_summary"]["authors"]["higher_counts"],
+            Value::from(1)
+        );
+        assert_eq!(
+            summary["file_metric_summary"]["authors"]["missing_in_provenant"],
+            Value::from(0)
+        );
+        assert_eq!(
+            summary["file_metric_summary"]["authors"]["extra_in_provenant"],
+            Value::from(1)
+        );
+        assert_eq!(samples["authors"].as_array().map(Vec::len), Some(1));
+        assert_eq!(
+            samples["authors"][0]["missing_in_provenant"],
+            serde_json::json!([])
+        );
+        assert_eq!(
+            samples["authors"][0]["extra_in_provenant"],
+            serde_json::json!([{"value": "John Doe", "count": 1}])
+        );
 
         let _ = fs::remove_dir_all(&temp_root);
     }

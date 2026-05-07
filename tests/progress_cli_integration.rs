@@ -593,6 +593,123 @@ fn create_compare_json_fixtures_with_only_findings_path_difference() -> (TempDir
     )
 }
 
+fn create_compare_json_fixtures_with_repeated_party_noise() -> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let scancode_file = temp.path().join("scancode-party-noise.json");
+    let provenant_file = temp.path().join("provenant-party-noise.json");
+
+    let repeated_copyright = serde_json::json!({
+        "copyright": "Copyright 2024 Example Corp."
+    });
+    let repeated_holder = serde_json::json!({
+        "holder": "Example Corp."
+    });
+    let repeated_author = serde_json::json!({
+        "author": "Jane Doe"
+    });
+
+    fs::write(
+        &scancode_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "copyrights": [repeated_copyright.clone(), repeated_copyright.clone()],
+                "holders": [repeated_holder.clone(), repeated_holder.clone()],
+                "authors": [repeated_author.clone(), repeated_author.clone()]
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write scancode party-noise fixture");
+
+    fs::write(
+        &provenant_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "copyrights": [repeated_copyright],
+                "holders": [repeated_holder],
+                "authors": [repeated_author]
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write provenant party-noise fixture");
+
+    (
+        temp,
+        scancode_file.to_string_lossy().to_string(),
+        provenant_file.to_string_lossy().to_string(),
+    )
+}
+
+fn create_compare_json_fixtures_with_mixed_party_noise_and_real_difference()
+-> (TempDir, String, String) {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let scancode_file = temp.path().join("scancode-party-mixed.json");
+    let provenant_file = temp.path().join("provenant-party-mixed.json");
+
+    fs::write(
+        &scancode_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "authors": [
+                    {"author": "Jane Doe"},
+                    {"author": "Jane Doe"}
+                ]
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write scancode mixed party fixture");
+
+    fs::write(
+        &provenant_file,
+        serde_json::json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "authors": [
+                    {"author": "Jane Doe"},
+                    {"author": "John Doe"}
+                ]
+            }],
+            "packages": [],
+            "dependencies": [],
+            "license_detections": [],
+            "license_references": [],
+            "license_rule_references": []
+        })
+        .to_string(),
+    )
+    .expect("failed to write provenant mixed party fixture");
+
+    (
+        temp,
+        scancode_file.to_string_lossy().to_string(),
+        provenant_file.to_string_lossy().to_string(),
+    )
+}
+
 fn normalize_multi_parser_header(output: &mut Value) {
     let header = output["headers"]
         .as_array_mut()
@@ -1858,6 +1975,133 @@ fn compare_subcommand_marks_only_findings_path_buckets_as_filtered_output() {
     assert!(summary_tsv.contains("scancode_only_output_file_paths"));
     assert!(summary_tsv.contains("ScanCode final output"));
     assert!(summary_tsv.contains("filtered these paths away after finding nothing"));
+}
+
+#[test]
+fn compare_subcommand_ignores_duplicate_party_occurrence_noise() {
+    let (_temp, scancode_json, provenant_json) =
+        create_compare_json_fixtures_with_repeated_party_noise();
+    let artifact_temp = TempDir::new().expect("artifact temp dir");
+    let artifact_dir = artifact_temp.path().join("compare-artifacts");
+
+    let output = provenant_command()
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+            "--artifact-dir",
+            artifact_dir.to_str().expect("utf8 artifact path"),
+        ])
+        .output()
+        .expect("failed to run compare subcommand");
+
+    assert!(output.status.success(), "compare should succeed");
+
+    let summary_path = artifact_dir.join("comparison").join("summary.json");
+    let samples_path = artifact_dir
+        .join("comparison")
+        .join("samples")
+        .join("file_metric_value_differences.json");
+    let summary: Value =
+        serde_json::from_str(&fs::read_to_string(&summary_path).expect("summary json")).unwrap();
+    let samples: Value =
+        serde_json::from_str(&fs::read_to_string(&samples_path).expect("samples json")).unwrap();
+
+    assert_eq!(
+        summary["comparison_status"].as_str(),
+        Some("no_detected_differences")
+    );
+
+    for metric in ["copyrights", "holders", "authors"] {
+        assert_eq!(
+            summary["file_metric_summary"][metric]["lower_counts"].as_u64(),
+            Some(0),
+            "metric: {metric}"
+        );
+        assert_eq!(
+            summary["file_metric_summary"][metric]["higher_counts"].as_u64(),
+            Some(0),
+            "metric: {metric}"
+        );
+        assert_eq!(
+            summary["file_metric_summary"][metric]["missing_in_provenant"].as_u64(),
+            Some(0),
+            "metric: {metric}"
+        );
+        assert_eq!(
+            summary["file_metric_summary"][metric]["extra_in_provenant"].as_u64(),
+            Some(0),
+            "metric: {metric}"
+        );
+        assert_eq!(samples[metric], serde_json::json!([]), "metric: {metric}");
+    }
+}
+
+#[test]
+fn compare_subcommand_reports_only_real_party_value_difference() {
+    let (_temp, scancode_json, provenant_json) =
+        create_compare_json_fixtures_with_mixed_party_noise_and_real_difference();
+    let artifact_temp = TempDir::new().expect("artifact temp dir");
+    let artifact_dir = artifact_temp.path().join("compare-artifacts");
+
+    let output = provenant_command()
+        .args([
+            "compare",
+            "--scancode-json",
+            &scancode_json,
+            "--provenant-json",
+            &provenant_json,
+            "--artifact-dir",
+            artifact_dir.to_str().expect("utf8 artifact path"),
+        ])
+        .output()
+        .expect("failed to run compare subcommand");
+
+    assert!(output.status.success(), "compare should succeed");
+
+    let summary: Value = serde_json::from_str(
+        &fs::read_to_string(artifact_dir.join("comparison").join("summary.json"))
+            .expect("summary json"),
+    )
+    .unwrap();
+    let samples: Value = serde_json::from_str(
+        &fs::read_to_string(
+            artifact_dir
+                .join("comparison")
+                .join("samples")
+                .join("file_metric_value_differences.json"),
+        )
+        .expect("samples json"),
+    )
+    .unwrap();
+
+    assert_eq!(
+        summary["file_metric_summary"]["authors"]["lower_counts"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["file_metric_summary"]["authors"]["higher_counts"].as_u64(),
+        Some(1)
+    );
+    assert_eq!(
+        summary["file_metric_summary"]["authors"]["missing_in_provenant"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        summary["file_metric_summary"]["authors"]["extra_in_provenant"].as_u64(),
+        Some(1)
+    );
+    assert_eq!(samples["authors"].as_array().map(Vec::len), Some(1));
+    assert_eq!(
+        samples["authors"][0]["missing_in_provenant"],
+        serde_json::json!([])
+    );
+    assert_eq!(
+        samples["authors"][0]["extra_in_provenant"],
+        serde_json::json!([{"value": "John Doe", "count": 1}])
+    );
 }
 
 #[test]

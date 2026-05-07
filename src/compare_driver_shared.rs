@@ -168,6 +168,28 @@ pub fn value_counter(values: &[String]) -> BTreeMap<String, usize> {
     counts
 }
 
+pub fn metric_uses_distinct_signal_values(metric: &str) -> bool {
+    matches!(metric, "copyrights" | "holders" | "authors")
+}
+
+pub fn metric_signal_counter(metric: &str, values: &[String]) -> BTreeMap<String, usize> {
+    if !metric_uses_distinct_signal_values(metric) {
+        return value_counter(values);
+    }
+
+    values
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(|value| (value, 1))
+        .collect()
+}
+
+pub fn counter_total(counter: &BTreeMap<String, usize>) -> usize {
+    counter.values().copied().sum()
+}
+
 pub fn subtract_counters(
     left: &BTreeMap<String, usize>,
     right: &BTreeMap<String, usize>,
@@ -180,6 +202,17 @@ pub fn subtract_counters(
         }
     }
     result
+}
+
+pub fn filter_counter_to_signal_keys(
+    counter: &BTreeMap<String, usize>,
+    signal_counter: &BTreeMap<String, usize>,
+) -> BTreeMap<String, usize> {
+    counter
+        .iter()
+        .filter(|(key, _)| signal_counter.contains_key(*key))
+        .map(|(key, value)| (key.clone(), *value))
+        .collect()
 }
 
 pub fn counter_entries(counter: &BTreeMap<String, usize>) -> Vec<ValueCountEntry> {
