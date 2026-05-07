@@ -32,7 +32,7 @@ The license detection system is a multi-phase, multi-strategy detection engine t
 
 **Dataset export**: Use `provenant export-license-dataset /path/to/output-dir` to dump the effective embedded dataset into that dataset-root layout so you can inspect or edit it before reusing it with `provenant scan --license-dataset-path`.
 
-**Index build policy**: Provenant also applies a checked-in build policy from `resources/license_detection/index_build_policy.toml` before fingerprinting and index construction. This manifest carries the small curation decisions (ignored rule/license ids), while downstream add/replace overlays live as real ScanCode-format files under `resources/license_detection/overlay/`. This keeps local curation in the same `.RULE` / `.LICENSE` syntax as upstream without severing the broader dataset dependency. Stale ignore ids and overlays that become identical to upstream now fail the build so maintainers get an explicit prompt to remove redundant downstream curation. When a license-detection fix is really rule or license data curation—such as reclassifying one upstream rule, tightening one rule's minimum coverage, or adding a required phrase—prefer an overlay first and only reach for matcher or refinement code when the problem spans multiple rule families or exposes a true engine-level bug.
+**Index build policy**: Provenant also applies a checked-in build policy from `resources/license_detection/index_build_policy.toml` before fingerprinting and index construction. This manifest carries the small curation decisions (ignored rule/license ids plus required rationale entries for every bundled overlay file), while downstream add/replace overlays live as real ScanCode-format files under `resources/license_detection/overlay/`. This keeps local curation in the same `.RULE` / `.LICENSE` syntax as upstream without severing the broader dataset dependency, while still making every downstream overlay carry an audit trail in one central manifest. Stale ignore ids, stale overlay-reason entries, undocumented overlays, and overlays that become identical to upstream now fail the build so maintainers get an explicit prompt to remove redundant downstream curation. When a license-detection fix is really rule or license data curation—such as reclassifying one upstream rule, tightening one rule's minimum coverage, or adding a required phrase—prefer an overlay first and only reach for matcher or refinement code when the problem spans multiple rule families or exposes a true engine-level bug.
 
 ### License Index Cache
 
@@ -127,7 +127,7 @@ The loading process is split into two distinct stages:
 - Normalize rule and license data for embedding
 - Apply the checked-in license-index build policy
 - Apply any checked-in downstream overlay files from `resources/license_detection/overlay/`
-- Fail fast if an ignore id no longer exists upstream or an overlay file becomes identical to upstream data
+- Fail fast if an ignore id no longer exists upstream, an overlay-reason entry is stale or missing, or an overlay file becomes identical to upstream data
 - Sort embedded rules and licenses deterministically
 - Serialize the embedded loader snapshot with MessagePack
 - Compress the serialized bytes with zstd
