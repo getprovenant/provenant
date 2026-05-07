@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::LazyLock;
 
 use anyhow::{Result, anyhow};
@@ -48,9 +48,24 @@ pub struct IndexBuildPolicy {
     pub ignored_rules: Vec<String>,
     #[serde(default)]
     pub ignored_licenses: Vec<String>,
+    #[serde(default)]
+    pub overlay_reasons: OverlayReasons,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+pub struct OverlayReasons {
+    #[serde(default)]
+    pub rules: BTreeMap<String, String>,
+    #[serde(default)]
+    pub licenses: BTreeMap<String, String>,
 }
 
 impl IndexBuildPolicy {
+    /// Returns true when no behavior-changing ignore policy is present.
+    ///
+    /// `overlay_reasons` is intentionally excluded because it is enforced only for
+    /// the bundled default policy path and does not affect non-default overlay
+    /// application semantics.
     pub fn is_empty(&self) -> bool {
         self.ignored_rules.is_empty() && self.ignored_licenses.is_empty()
     }
@@ -137,6 +152,11 @@ pub fn apply_default_index_build_policy(
     loaded_rules: Vec<LoadedRule>,
     loaded_licenses: Vec<LoadedLicense>,
 ) -> Result<(Vec<LoadedRule>, Vec<LoadedLicense>, AppliedIndexBuildPolicy)> {
+    validate_bundled_overlay_reasons(
+        default_index_build_policy(),
+        BUNDLED_RULE_OVERLAY_FILES,
+        BUNDLED_LICENSE_OVERLAY_FILES,
+    )?;
     let overlay_rules = load_default_overlay_rules()?;
     let overlay_licenses = load_default_overlay_licenses()?;
     let (loaded_rules, loaded_licenses, report) = apply_index_build_policy(
@@ -219,6 +239,74 @@ pub fn apply_index_build_policy(
     report.sort_and_dedup();
 
     Ok((filtered_rules, filtered_licenses, report))
+}
+
+fn validate_bundled_overlay_reasons(
+    policy: &IndexBuildPolicy,
+    rule_overlays: &[BundledOverlayFile],
+    license_overlays: &[BundledOverlayFile],
+) -> Result<()> {
+    validate_overlay_reason_entries("rule", &policy.overlay_reasons.rules, rule_overlays)?;
+    validate_overlay_reason_entries(
+        "license",
+        &policy.overlay_reasons.licenses,
+        license_overlays,
+    )?;
+    Ok(())
+}
+
+fn validate_overlay_reason_entries(
+    overlay_kind: &str,
+    reasons: &BTreeMap<String, String>,
+    overlays: &[BundledOverlayFile],
+) -> Result<()> {
+    let overlay_identifiers = overlays
+        .iter()
+        .map(|overlay| overlay.identifier)
+        .collect::<HashSet<_>>();
+
+    let blank_reason_entries = overlays
+        .iter()
+        .filter_map(|overlay| match reasons.get(overlay.identifier) {
+            Some(reason) if reason.trim().is_empty() => Some(overlay.identifier.to_string()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if !blank_reason_entries.is_empty() {
+        return Err(anyhow!(
+            "blank overlay reasons for bundled {} overlays: {}",
+            overlay_kind,
+            blank_reason_entries.join(", ")
+        ));
+    }
+
+    let missing_reason_entries = overlays
+        .iter()
+        .filter(|overlay| !reasons.contains_key(overlay.identifier))
+        .map(|overlay| overlay.identifier.to_string())
+        .collect::<Vec<_>>();
+    if !missing_reason_entries.is_empty() {
+        return Err(anyhow!(
+            "missing overlay reasons for bundled {} overlays: {}",
+            overlay_kind,
+            missing_reason_entries.join(", ")
+        ));
+    }
+
+    let stale_reason_entries = reasons
+        .keys()
+        .filter(|identifier| !overlay_identifiers.contains(identifier.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    if !stale_reason_entries.is_empty() {
+        return Err(anyhow!(
+            "overlay reasons reference missing bundled {} overlays: {}",
+            overlay_kind,
+            stale_reason_entries.join(", ")
+        ));
+    }
+
+    Ok(())
 }
 
 fn load_default_overlay_rules() -> Result<Vec<LoadedRule>> {
@@ -565,6 +653,7 @@ mod tests {
         let policy = IndexBuildPolicy {
             ignored_rules: vec!["direct.RULE".to_string()],
             ignored_licenses: vec!["apache-2.0".to_string()],
+            overlay_reasons: OverlayReasons::default(),
         };
 
         let rules = vec![
@@ -608,6 +697,7 @@ mod tests {
         let policy = IndexBuildPolicy {
             ignored_rules: vec!["missing.RULE".to_string()],
             ignored_licenses: vec![],
+            overlay_reasons: OverlayReasons::default(),
         };
 
         let error = apply_index_build_policy(
@@ -715,5 +805,152 @@ mod tests {
                 .to_string()
                 .contains("overlay license 'mit' is now identical to upstream")
         );
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_accepts_complete_reason_registry() {
+        let policy = IndexBuildPolicy {
+            ignored_rules: vec![],
+            ignored_licenses: vec![],
+            overlay_reasons: OverlayReasons {
+                rules: BTreeMap::from([(
+                    "custom.RULE".to_string(),
+                    "Matches a documented custom rule variant.".to_string(),
+                )]),
+                licenses: BTreeMap::from([(
+                    "custom.LICENSE".to_string(),
+                    "Carries a documented local license correction.".to_string(),
+                )]),
+            },
+        };
+
+        let rule_overlays = [BundledOverlayFile {
+            identifier: "custom.RULE",
+            contents: "---\nlicense_expression: mit\nis_license_text: yes\n---\ntext",
+        }];
+        let license_overlays = [BundledOverlayFile {
+            identifier: "custom.LICENSE",
+            contents: "---\nkey: custom\nname: Custom\n---\ntext",
+        }];
+
+        validate_bundled_overlay_reasons(&policy, &rule_overlays, &license_overlays)
+            .expect("reason validation should pass");
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_accepts_checked_in_default_registry() {
+        validate_bundled_overlay_reasons(
+            default_index_build_policy(),
+            BUNDLED_RULE_OVERLAY_FILES,
+            BUNDLED_LICENSE_OVERLAY_FILES,
+        )
+        .expect("checked-in overlay reason registry should stay in sync");
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_rejects_missing_rule_reason() {
+        let policy = IndexBuildPolicy::default();
+        let rule_overlays = [BundledOverlayFile {
+            identifier: "custom.RULE",
+            contents: "",
+        }];
+
+        let error = validate_bundled_overlay_reasons(&policy, &rule_overlays, &[])
+            .expect_err("missing rule reason should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("missing overlay reasons for bundled rule overlays: custom.RULE")
+        );
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_rejects_blank_license_reason() {
+        let policy = IndexBuildPolicy {
+            ignored_rules: vec![],
+            ignored_licenses: vec![],
+            overlay_reasons: OverlayReasons {
+                rules: BTreeMap::new(),
+                licenses: BTreeMap::from([("custom.LICENSE".to_string(), "   ".to_string())]),
+            },
+        };
+        let license_overlays = [BundledOverlayFile {
+            identifier: "custom.LICENSE",
+            contents: "",
+        }];
+
+        let error = validate_bundled_overlay_reasons(&policy, &[], &license_overlays)
+            .expect_err("blank license reason should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("blank overlay reasons for bundled license overlays: custom.LICENSE")
+        );
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_rejects_missing_license_reason() {
+        let policy = IndexBuildPolicy::default();
+        let license_overlays = [BundledOverlayFile {
+            identifier: "custom.LICENSE",
+            contents: "",
+        }];
+
+        let error = validate_bundled_overlay_reasons(&policy, &[], &license_overlays)
+            .expect_err("missing license reason should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("missing overlay reasons for bundled license overlays: custom.LICENSE")
+        );
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_rejects_stale_rule_reason() {
+        let policy = IndexBuildPolicy {
+            ignored_rules: vec![],
+            ignored_licenses: vec![],
+            overlay_reasons: OverlayReasons {
+                rules: BTreeMap::from([(
+                    "removed.RULE".to_string(),
+                    "Old rationale that should have been deleted.".to_string(),
+                )]),
+                licenses: BTreeMap::new(),
+            },
+        };
+
+        let error = validate_bundled_overlay_reasons(&policy, &[], &[])
+            .expect_err("stale rule reason should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("overlay reasons reference missing bundled rule overlays: removed.RULE")
+        );
+    }
+
+    #[test]
+    fn test_validate_bundled_overlay_reasons_rejects_stale_license_reason() {
+        let policy = IndexBuildPolicy {
+            ignored_rules: vec![],
+            ignored_licenses: vec![],
+            overlay_reasons: OverlayReasons {
+                rules: BTreeMap::new(),
+                licenses: BTreeMap::from([(
+                    "removed.LICENSE".to_string(),
+                    "Old rationale that should have been deleted.".to_string(),
+                )]),
+            },
+        };
+
+        let error = validate_bundled_overlay_reasons(&policy, &[], &[])
+            .expect_err("stale license reason should fail");
+
+        assert!(error.to_string().contains(
+            "overlay reasons reference missing bundled license overlays: removed.LICENSE"
+        ));
     }
 }

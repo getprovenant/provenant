@@ -672,9 +672,9 @@ The license detection system uses a two-stage loading process:
 
 - Parse the ScanCode rules and licenses dataset
 - Normalize rule/license data before embedding
-- Apply the checked-in index build policy before sorting/serialization
+- Apply the checked-in index build policy, including required rationale entries for bundled overlays, before sorting/serialization
 - Apply the single downstream overlay directory (ignore via policy manifest, add/replace via `.RULE` / `.LICENSE` files)
-- Fail fast on stale ignore ids or redundant overlays that upstream has absorbed verbatim
+- Fail fast on stale ignore ids, stale or missing overlay-reason entries, or redundant overlays that upstream has absorbed verbatim
 - Serialize sorted `LoadedRule` / `LoadedLicense` snapshot bytes
 - Compress the serialized bytes for embedding
 

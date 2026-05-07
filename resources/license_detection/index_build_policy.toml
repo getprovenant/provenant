@@ -5,6 +5,8 @@
 #
 # This manifest keeps the small, reviewable curation decisions:
 # - `ignored_rules` / `ignored_licenses` remove upstream entries.
+# - `overlay_reasons.rules` / `overlay_reasons.licenses` must document why each
+#   bundled overlay file exists, keyed by the overlay filename.
 # - file-based add/replace overlays live under `resources/license_detection/overlay/`
 #   using the exact upstream `.RULE` / `.LICENSE` syntax.
 # - overlay semantics are collision-based: matching identifiers/keys replace
@@ -23,3 +25,19 @@ ignored_rules = [
 ]
 
 ignored_licenses = []
+
+[overlay_reasons.rules]
+"apache-2.0_and_lgpl-2.1_1.RULE" = "Keep the mixed Apache-2.0/LGPL-2.1 notice detectable only when both COPYING.LGPL and COPYING.ASL2 references are actually present."
+"apache-2.0_and_lgpl-2.1_2.RULE" = "Preserve a real typoed Apache-2.0/LGPL-2.1 notice seen in the wild without broadening generic dual-license detection."
+"apache-2.0_and_lgpl-2.1_4.RULE" = "Cover the GNU/Linux wording variant of the typoed mixed Apache-2.0/LGPL-2.1 notice while keeping it tight enough to avoid loose partial matches."
+"bsd-new_1319.RULE" = "Prevent two-clause BSD headers from being mislabeled as BSD-3-Clause when this upstream rule matches text that lacks the endorsement clause; keep the fix in rule curation instead of matcher logic."
+"bsd-new_99.RULE" = "Require a full continuous match for this BSD-3 endorsement-clause rule so BSD-2-style headers such as the Opus and GLC fixtures do not partially overmatch it."
+"gpl-1.0-plus_351.RULE" = "Keep the weak phrase 'the GPL' as clue-only GPL evidence without turning acronym collisions such as Graphics Pipeline Library into hard detections."
+"gpl-3.0_with_gcc-exception-3.1_16.RULE" = "Keep a known GPL-3.0-plus-GCC-exception reference from being split into weaker fragment matches that lose the intended combined meaning."
+"gpl1_bare_word_only.RULE" = "Treat bare GPL1 mentions as clue-only evidence because they are too weak to assert a concrete GPL license by themselves."
+"gpl_bare_word_only.RULE" = "Treat bare GPL mentions as clue-only evidence so short shorthand stays inspectable without becoming a false-positive hard detection."
+"mit_attribution_no_endorsement.RULE" = "Preserve correct MIT-family classification for this vendor-specific variant without letting the embedded Sinusoidal Systems AB names drive the match."
+"stable-diffusion-2022-08-22_required_phrase_1.RULE" = "Keep the dated Stable Diffusion August 22, 2022 CreativeML variant from collapsing into a different license variant during detection."
+"unknown_10.RULE" = "Narrow the upstream unknown-license-reference rule to the reviewed 'See LICENSE file for details' shape with a required LICENSE filename instead of letting broader mentions overmatch."
+
+[overlay_reasons.licenses]
