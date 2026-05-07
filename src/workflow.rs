@@ -144,19 +144,16 @@ impl Default for ScanOptions {
 /// ```
 /// use provenant::workflow::{scan_path, ScanOptions};
 /// use std::fs;
-/// use std::time::{SystemTime, UNIX_EPOCH};
+/// use tempfile::tempdir;
 ///
-/// let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
-/// let root = std::env::temp_dir().join(format!("provenant-workflow-docs-{unique}"));
-/// fs::create_dir_all(&root)?;
+/// let root = tempdir()?;
+/// let root = root.path();
 /// fs::write(root.join("README.txt"), "hello from doctest\n")?;
 ///
 /// let output = scan_path(&root, &ScanOptions::default())?;
 /// assert!(output.files.iter().any(|file| file.path.ends_with("README.txt")));
 /// assert_eq!(output.headers.len(), 1);
 /// assert!(!output.headers[0].options.contains_key("input"));
-///
-/// fs::remove_dir_all(&root)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn scan_path(path: impl AsRef<Path>, options: &ScanOptions) -> Result<Output> {
@@ -171,10 +168,10 @@ pub fn scan_path(path: impl AsRef<Path>, options: &ScanOptions) -> Result<Output
 /// ```
 /// use provenant::workflow::{scan_paths, ScanOptions};
 /// use std::fs;
-/// use std::time::{SystemTime, UNIX_EPOCH};
+/// use tempfile::tempdir;
 ///
-/// let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
-/// let root = std::env::temp_dir().join(format!("provenant-workflow-docs-{unique}"));
+/// let root = tempdir()?;
+/// let root = root.path();
 /// let left = root.join("left");
 /// let right = root.join("right");
 /// fs::create_dir_all(&left)?;
@@ -186,8 +183,6 @@ pub fn scan_path(path: impl AsRef<Path>, options: &ScanOptions) -> Result<Output
 /// let paths: Vec<_> = output.files.iter().map(|file| file.path.as_str()).collect();
 /// assert!(paths.iter().any(|path| path.ends_with("one.txt")));
 /// assert!(paths.iter().any(|path| path.ends_with("two.txt")));
-///
-/// fs::remove_dir_all(&root)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn scan_paths<'a>(
