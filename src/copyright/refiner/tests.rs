@@ -2265,6 +2265,22 @@ fn test_refine_holder_and_copyright_strip_single_letter_obfuscated_email_tail() 
 }
 
 #[test]
+fn test_refine_holder_in_copyright_context_strips_trailing_parenthesized_obfuscated_email() {
+    assert_eq!(
+        refine_holder_in_copyright_context("Christopher M. Kohlhoff (chris at kohlhoff dot com)"),
+        Some("Christopher M. Kohlhoff".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("Oliver Kowalke (oliver dot kowalke at gmail dot com)"),
+        Some("Oliver Kowalke".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("Peter Dimov (pdimov at gmail dot com), Vinnie Falco"),
+        Some("Peter Dimov (pdimov at gmail dot com), Vinnie Falco".to_string())
+    );
+}
+
+#[test]
 fn test_refine_copyright_drops_exclude_and_mpl_fair_use_noise() {
     assert_eq!(refine_copyright("copyright EXCLUDE"), None);
     assert_eq!(

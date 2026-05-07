@@ -2822,6 +2822,39 @@ fn strip_parenthesized_emails(s: &str) -> String {
     normalize_whitespace(&PAREN_EMAIL_RE.replace_all(s, " "))
 }
 
+fn strip_trailing_parenthesized_obfuscated_email_in_holder(s: &str) -> String {
+    static TRAILING_PAREN_OBFUSCATED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?P<prefix>.+?)
+            \s*
+            \(
+                \s*
+                (?P<local>[a-z0-9][a-z0-9._-]{0,63}(?:\s+dot\s+[a-z0-9][a-z0-9._-]{0,63})*)
+                \s+at\s+
+                (?P<domain>[a-z0-9][a-z0-9._-]{0,63})
+                \s+dot\s+
+                (?P<tld>[a-z]{2,12})
+                \s*
+            \)
+            \s*$",
+        )
+        .unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = TRAILING_PAREN_OBFUSCATED_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.split_whitespace().count() < 2 {
+        return s.to_string();
+    }
+
+    prefix.to_string()
+}
+
 fn strip_leading_and_onwards_holder_prefix(s: &str) -> String {
     static AND_ONWARDS_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)^(?:and\s+)?onwards\b[\s,;:.-]*")
@@ -2859,6 +2892,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
         h = strip_angle_bracketed_emails(&h);
         h = strip_trailing_email_token(&h);
         h = strip_trailing_obfuscated_email_phrase_in_holder(&h);
+        h = strip_trailing_parenthesized_obfuscated_email_in_holder(&h);
     }
     h = strip_trailing_single_letter_obfuscated_email_phrase(&h);
     h = strip_parenthesized_emails(&h);

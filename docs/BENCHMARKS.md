@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 196 of 196 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 197 of 197 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -580,6 +580,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `14.57s`; ScanCode `219.94s`
 - Broader Conan, Meson, and Bazel package visibility (`2` vs `1` packages, `3` vs `0` dependencies) from the root `conanfile.py`, `MODULE.bazel`, and committed `meson.build` manifests, with the local `LICENSE` notice in `.conan/test_package/conanfile.py` collapsed to plain `BSL-1.0` instead of ScanCode's extra unknown-reference placeholder
+
+##### [chriskohlhoff/asio @ bd500f0](https://github.com/chriskohlhoff/asio/tree/bd500f0a018db9a845ebaaed5c0318343ae9f497) — **17.58× faster**
+
+- Files: 1,468
+- Run context: 2026-05-07 · asio-38900 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `18.97s`; ScanCode `333.52s`
+- More correct root Autotools package identity on `configure.ac` instead of ScanCode's generic input placeholder, plus cleaner holder normalization on `include/asio.hpp` and the Oliver Kowalke C++ notice set; the remaining ScanCode edge is limited to two multiline continuation headers and a small Perl author/copyright-email-tail set
 
 ##### [chromium/chromium @ 2befda7](https://github.com/chromium/chromium/tree/2befda78fcc7fa5649540420eedcdd87a2583fe0) — **23.90× faster**
 

@@ -380,6 +380,9 @@ ScanCode: 110.49s</title></rect>
     <rect x="584.90" y="363.00" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/dejacode @ 4938cd4
 Files: 1278
 ScanCode: 272.67s</title></rect>
+    <rect x="594.45" y="353.48" width="8" height="8" fill="#d97706" rx="1.5"><title>chriskohlhoff/asio @ bd500f0
+Files: 1468
+ScanCode: 333.52s</title></rect>
     <rect x="596.63" y="368.99" width="8" height="8" fill="#d97706" rx="1.5"><title>aosp-mirror/platform_build @ 045a3d6
 Files: 1515
 ScanCode: 240.24s</title></rect>
@@ -970,6 +973,9 @@ Provenant: 12.05s</title></circle>
     <circle cx="588.90" cy="480.90" r="4.5" fill="#2563eb"><title>aboutcode-org/dejacode @ 4938cd4
 Files: 1278
 Provenant: 24.48s</title></circle>
+    <circle cx="598.45" cy="492.95" r="4.5" fill="#2563eb"><title>chriskohlhoff/asio @ bd500f0
+Files: 1468
+Provenant: 18.97s</title></circle>
     <circle cx="600.63" cy="479.47" r="4.5" fill="#2563eb"><title>aosp-mirror/platform_build @ 045a3d6
 Files: 1515
 Provenant: 25.23s</title></circle>

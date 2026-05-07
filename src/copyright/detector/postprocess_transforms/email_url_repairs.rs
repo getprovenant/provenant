@@ -424,9 +424,9 @@ pub fn strip_lone_obfuscated_angle_email_user_tokens(
         return;
     }
 
-    static ANGLE_OBF_RE: LazyLock<Regex> = LazyLock::new(|| {
+    static BRACKETED_OBF_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"(?ix)<\s*(?P<user>[a-z0-9][a-z0-9._-]{0,63})\s*(?:\[\s*at\s*\]|at)\s*(?P<host>[a-z0-9][a-z0-9._-]{0,63})\s*(?:\[\s*dot\s*\]|dot)\s*(?P<tld>[a-z]{2,12})\s*>",
+            r"(?ix)(?:<|\()\s*(?P<user>[a-z0-9][a-z0-9._-]{0,63})\s*(?:\[\s*at\s*\]|at)\s*(?P<host>[a-z0-9][a-z0-9._-]{0,63})\s*(?:\[\s*dot\s*\]|dot)\s*(?P<tld>[a-z]{2,12})\s*(?:>|\))",
         )
         .unwrap()
     });
@@ -448,15 +448,38 @@ pub fn strip_lone_obfuscated_angle_email_user_tokens(
         if out.is_empty() { None } else { Some(out) }
     }
 
+    fn strip_trailing_obfuscated_fragment(s: &str, fragment: &str) -> Option<String> {
+        if fragment.is_empty() {
+            return None;
+        }
+        let trimmed = s.trim_end();
+        let lower = trimmed.to_ascii_lowercase();
+        let fragment_lower = fragment.to_ascii_lowercase();
+        if !lower.ends_with(&fragment_lower) {
+            return None;
+        }
+        let prefix = trimmed[..trimmed.len() - fragment.len()].trim_end();
+        if prefix.split_whitespace().count() < 2 {
+            return None;
+        }
+        Some(prefix.to_string())
+    }
+
     for (idx, raw_line) in raw_lines.iter().enumerate() {
         let ln = idx + 1;
-        let Some(cap) = ANGLE_OBF_RE.captures(raw_line) else {
+        let Some(cap) = BRACKETED_OBF_RE.captures(raw_line) else {
             continue;
         };
         let user = cap.name("user").map(|m| m.as_str()).unwrap_or("").trim();
+        let host = cap.name("host").map(|m| m.as_str()).unwrap_or("").trim();
         if user.is_empty() {
             continue;
         }
+        let trailing_fragment = if host.is_empty() {
+            user.to_string()
+        } else {
+            format!("{user} at {host}")
+        };
 
         for c in copyrights
             .iter_mut()
@@ -482,6 +505,16 @@ pub fn strip_lone_obfuscated_angle_email_user_tokens(
         {
             let lower = h.holder.to_ascii_lowercase();
             if lower.contains(" at ") || lower.contains(" dot ") {
+                if let Some(stripped) = strip_trailing_obfuscated_fragment(
+                    h.holder.as_str(),
+                    trailing_fragment.as_str(),
+                ) {
+                    if let Some(refined) = refine_holder(&stripped) {
+                        h.holder = refined;
+                    } else {
+                        h.holder = stripped;
+                    }
+                }
                 continue;
             }
             let Some(stripped) = strip_trailing_word(h.holder.as_str(), user) else {

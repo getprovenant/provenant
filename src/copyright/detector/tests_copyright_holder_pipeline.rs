@@ -179,6 +179,24 @@ fn test_copyright_dash_email_tail_absorbed() {
 }
 
 #[test]
+fn test_parenthesized_obfuscated_email_holder_normalized_once() {
+    let input = "// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)";
+    let (_c, h, _a) = detect_copyrights_from_text(input);
+    let holders: Vec<&str> = h.iter().map(|hh| hh.holder.as_str()).collect();
+
+    assert_eq!(holders, vec!["Christopher M. Kohlhoff"]);
+}
+
+#[test]
+fn test_dotted_local_part_parenthesized_obfuscated_holder_is_normalized() {
+    let input = "// Copyright (c) 2014 Oliver Kowalke (oliver dot kowalke at gmail dot com)";
+    let (_c, h, _a) = detect_copyrights_from_text(input);
+    let holders: Vec<&str> = h.iter().map(|hh| hh.holder.as_str()).collect();
+
+    assert_eq!(holders, vec!["Oliver Kowalke"]);
+}
+
+#[test]
 fn test_w3c_paren_group_debug() {
     let input = "(c) 1998-2008 (W3C) MIT, ERCIM, Keio University";
     let (c, _h, _a) = detect_copyrights_from_text(input);
