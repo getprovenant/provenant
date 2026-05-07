@@ -128,21 +128,21 @@ pub fn split_multiline_holder_lists_from_copyright_email_sequences(
 
         let c_trimmed = c.copyright.trim();
         let c_lower = c_trimmed.to_ascii_lowercase();
+        let has_url_marker = c_lower.contains("http://") || c_lower.contains("https://");
         if !(c_lower.starts_with("(c)") || c_lower.starts_with("copyright (c)")) {
             continue;
         }
 
-        if !c.copyright.contains('@')
-            && !c_lower.contains("http://")
-            && !c_lower.contains("https://")
-        {
+        if !c.copyright.contains('@') && !has_url_marker {
             continue;
         }
-        if !(c_lower.contains("http://")
-            || c_lower.contains("https://")
+        if !(has_url_marker
             || c.copyright.contains('<') && c.copyright.contains('>')
             || c.copyright.contains('(') && c.copyright.contains(')'))
         {
+            continue;
+        }
+        if c_trimmed.contains(',') && !has_url_marker {
             continue;
         }
 
@@ -158,7 +158,7 @@ pub fn split_multiline_holder_lists_from_copyright_email_sequences(
             .filter_map(|name| refine_holder(&name))
             .collect();
 
-        if split_names.len() < 2 {
+        if split_names.len() < 2 && has_url_marker {
             let stripped = LEADING_COPY_YEAR_RE
                 .replace(&c.copyright, "")
                 .trim()
@@ -183,9 +183,12 @@ pub fn split_multiline_holder_lists_from_copyright_email_sequences(
         let joined = normalize_whitespace(&split_names.join(" "));
 
         let matching_joined_holder = holders.iter().find(|h| {
-            h.start_line.get() >= c.start_line.get()
-                && h.end_line.get() <= c.end_line.get()
-                && normalize_whitespace(&h.holder) == joined
+            let same_cluster = if has_url_marker {
+                h.start_line.get() >= c.start_line.get() && h.end_line.get() <= c.end_line.get()
+            } else {
+                h.start_line.get() == c.start_line.get() && h.end_line.get() == c.end_line.get()
+            };
+            same_cluster && normalize_whitespace(&h.holder) == joined
         });
 
         let Some(joined_holder) = matching_joined_holder else {

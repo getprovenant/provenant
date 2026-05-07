@@ -390,9 +390,27 @@ fn test_refine_copyright_flattens_html_anchor_footer_notice() {
 }
 
 #[test]
+fn test_refine_copyright_truncates_bug_reports_tail_after_year_only_notice() {
+    let result = refine_copyright(
+        "by Gordon Chaffee Copyright (C) 1995. Send bug reports for the VFAT filesystem to <chaffee@cs.berkeley.edu>.",
+    )
+    .expect("bug-report notice should refine");
+
+    assert_eq!(result, "Copyright (c) 1995");
+}
+
+#[test]
 fn test_remove_extra_words_as_represented_by() {
     let result = remove_some_extra_words_and_punct("Acme Corp as represented by");
     assert_eq!(result, "Acme Corp as represented by");
+}
+
+#[test]
+fn test_refine_holder_drops_trailing_preposition_fragment() {
+    assert_eq!(
+        refine_holder_in_copyright_context("VFAT filesystem to"),
+        None
+    );
 }
 
 // ── is_junk_copyright ────────────────────────────────────────────
