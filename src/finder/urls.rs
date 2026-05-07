@@ -58,7 +58,7 @@ fn end_of_url_cleaner(url: &str) -> String {
             .replace("&amp;", "&")
     };
 
-    for marker in ['\\', '<', '>', '(', ')', '[', ']', '"', '\'', '`', '*'] {
+    for marker in ['\\', '<', '>', '(', ')', '[', ']', '"', '\'', '`'] {
         if let Some((before, _)) = cleaned.split_once(marker) {
             cleaned = before.to_string();
         }
@@ -78,6 +78,7 @@ fn end_of_url_cleaner(url: &str) -> String {
     }
 
     cleaned = trim_trailing_template_openers(&cleaned);
+    cleaned = cleaned.trim_end_matches('*').to_string();
 
     cleaned
         .trim_end_matches(|c: char| [',', '.', ':', ';', '!', '?'].contains(&c))

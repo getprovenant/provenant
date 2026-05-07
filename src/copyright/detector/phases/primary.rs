@@ -232,6 +232,13 @@ fn run_group_based_extractions(
     copyrights.extend(new_c);
     holders.extend(new_h);
 
+    let (mut new_c, mut new_h) =
+        super::super::pattern_extract::extract_copyright_holder_url_without_year_lines(groups);
+    seen.dedup_new_copyrights(&mut new_c, 0);
+    seen.dedup_new_holders(&mut new_h, 0);
+    copyrights.extend(new_c);
+    holders.extend(new_h);
+
     let (new_c, new_h) = super::super::pattern_extract::extract_three_digit_copyright_year_lines(
         prepared_cache,
         copyrights,

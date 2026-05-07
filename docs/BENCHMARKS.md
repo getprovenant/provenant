@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 194 of 194 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 195 of 195 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -345,6 +345,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `15.56s`; ScanCode `303.29s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and cleaner Unicode-preserving author normalization across locale files and vendored docs
+
+##### [lodash/lodash @ cb0b9b9](https://github.com/lodash/lodash/tree/cb0b9b9212521c08e3eafe7c8cb0af1b42b6649e) — **15.67× faster**
+
+- Files: 159
+- Run context: 2026-05-07 · lodash-29622 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `10.90s`; ScanCode `170.82s`
+- Matched npm package and dependency coverage on the repo-root `package.json` and `package-lock.json`, with source-faithful copyright recovery across `lodash.js`, `dist/lodash*.js`, and `LICENSE`, plus encoded-query URL preservation and extra Firebug asset URL visibility where ScanCode flattens or misses the underlying source text
 
 ##### [metabase/metabase @ 10997b1](https://github.com/metabase/metabase/tree/10997b10908414ab05773b085a56a37fcdebcd1a) — **25.67× faster**
 

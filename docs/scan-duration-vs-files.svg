@@ -194,6 +194,9 @@ ScanCode: 157.63s</title></rect>
     <rect x="439.98" y="396.02" width="8" height="8" fill="#d97706" rx="1.5"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
 ScanCode: 135.56s</title></rect>
+    <rect x="441.29" y="385.10" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
+Files: 159
+ScanCode: 170.82s</title></rect>
     <rect x="450.98" y="397.47" width="8" height="8" fill="#d97706" rx="1.5"><title>Carthage/Carthage @ e33e133
 Files: 183
 ScanCode: 131.47s</title></rect>
@@ -778,6 +781,9 @@ Provenant: 11.99s</title></circle>
     <circle cx="443.98" cy="507.20" r="4.5" fill="#2563eb"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
 Provenant: 14.03s</title></circle>
+    <circle cx="445.29" cy="519.13" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
+Files: 159
+Provenant: 10.90s</title></circle>
     <circle cx="454.98" cy="519.74" r="4.5" fill="#2563eb"><title>Carthage/Carthage @ e33e133
 Files: 183
 Provenant: 10.76s</title></circle>

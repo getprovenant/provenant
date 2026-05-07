@@ -40,9 +40,6 @@ const JUNK_EXACT_DOMAIN_NAMES: &[&str] = &[
     "other.com",
 ];
 
-const JUNK_DOMAIN_SUFFIXES: &[&str] =
-    &[".png", ".jpg", ".gif", ".jpeg", ".local", ".blank", ".fill"];
-
 const JUNK_EMAIL_AND_HOST_SUFFIXES: &[&str] = &[
     ".png",
     ".jpg",
@@ -249,6 +246,9 @@ pub(crate) fn classify_url(url: &str) -> bool {
     }
 
     let normalized = url.to_lowercase().trim_end_matches('/').to_string();
+    if has_embedded_nested_scheme_in_path(&normalized) {
+        return false;
+    }
     if JUNK_URLS.contains(&normalized.as_str()) {
         return false;
     }
@@ -258,12 +258,15 @@ pub(crate) fn classify_url(url: &str) -> bool {
     {
         return false;
     }
-    if JUNK_DOMAIN_SUFFIXES
-        .iter()
-        .any(|suffix| normalized.ends_with(suffix))
-    {
-        return false;
-    }
-
     true
+}
+
+fn has_embedded_nested_scheme_in_path(url: &str) -> bool {
+    let Some(first_scheme_idx) = url.find("://") else {
+        return false;
+    };
+
+    let rest = &url[first_scheme_idx + 3..];
+    let pathish_prefix_end = rest.find(['?', '#']).unwrap_or(rest.len());
+    rest[..pathish_prefix_end].contains("://")
 }
