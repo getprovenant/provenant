@@ -36,6 +36,8 @@ pub mod assembly;
 pub mod cache;
 pub mod cli;
 pub(crate) mod compare;
+#[doc(hidden)]
+pub mod compare_normalization;
 pub mod copyright;
 pub mod finder;
 pub mod golden_maintenance;
