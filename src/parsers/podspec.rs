@@ -268,7 +268,7 @@ fn normalize_podspec_declared_license(
     Option<String>,
     Vec<crate::models::LicenseDetection>,
 ) {
-    let Some(raw_license) = extract_field(content, &LICENSE_PATTERN) else {
+    let Some(raw_license) = extract_raw_field(content, &LICENSE_PATTERN) else {
         return super::license_normalization::empty_declared_license_data();
     };
     if looks_like_nonliteral_podspec_expression(&raw_license) {
@@ -355,6 +355,10 @@ fn looks_like_podspec_dynamic_metadata_value(value: &str) -> bool {
 fn looks_like_nonliteral_podspec_expression(value: &str) -> bool {
     let trimmed = value.trim();
     if trimmed.is_empty() {
+        return false;
+    }
+
+    if trimmed.contains("=>") || trimmed.starts_with('{') {
         return false;
     }
 
