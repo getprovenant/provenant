@@ -587,6 +587,22 @@ fn test_detect_multiline_header_copyright_without_year_and_with_url() {
 }
 
 #[test]
+fn test_ignore_generic_lowercase_copyright_prose_with_url_suffixes() {
+    for input in [
+        "copyright content SSENSE / rel apple-touch-icon http://www.ssense.com/nl/icons/apple-touch-icon.png",
+        "copyright header of example files e592c53 (https://github.com/http-party/node-http-proxy/commit/e592c53d1a23b7920d603a9e9ac294fc0e841f6d)",
+        "copyright year 69cbf7a (https://github.com/PrismJS/prism/commit/69cbf7a)",
+    ] {
+        let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+        assert!(
+            copyrights.is_empty(),
+            "input={input:?} copyrights={copyrights:?}"
+        );
+        assert!(holders.is_empty(), "input={input:?} holders={holders:?}");
+    }
+}
+
+#[test]
 fn test_detect_versioned_project_banner_with_leading_year_before_holder() {
     let content = "/*! X-editable - v1.5.0 Copyright (c) 2013 Vitaliy Potapov; Licensed MIT */\n";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(content);

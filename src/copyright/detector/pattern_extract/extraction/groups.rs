@@ -797,7 +797,9 @@ pub fn extract_copyright_holder_url_without_year_lines(
 
             let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
             let holder_lower = holder_raw.to_ascii_lowercase();
+            let first_word = holder_lower.split_whitespace().next().unwrap_or("");
             if holder_raw.split_whitespace().count() < 2
+                || matches!(first_word, "content" | "header" | "notice" | "year")
                 || holder_lower.starts_with("notice")
                 || holder_lower.contains("license")
                 || holder_lower.starts_with("released under")
