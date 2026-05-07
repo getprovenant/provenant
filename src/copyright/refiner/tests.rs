@@ -1849,6 +1849,14 @@ fn test_refine_holder_in_copyright_context_strips_no_rights_reserved_clause() {
 }
 
 #[test]
+fn test_refine_holder_in_copyright_context_keeps_ato_gear_notice_holder() {
+    assert_eq!(
+        refine_holder_in_copyright_context("ATO Gear."),
+        Some("ATO Gear".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_in_copyright_context_strips_onwards_prefix() {
     assert_eq!(
         refine_holder_in_copyright_context("and onwards The Apache Software Foundation"),

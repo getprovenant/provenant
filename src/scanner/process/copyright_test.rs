@@ -91,6 +91,43 @@ fn test_extract_copyright_information_preserves_raw_text_and_normalized_shadow()
 }
 
 #[test]
+fn test_extract_copyright_information_keeps_raw_notice_and_holder_for_no_year_c_symbol() {
+    let text = "// Copyright (c) ATO Gear. All rights reserved.\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("RNBackgroundTimer.h"),
+        text,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("RNBackgroundTimer.h".to_string())
+        .base_name("RNBackgroundTimer".to_string())
+        .extension(".h".to_string())
+        .path("RNBackgroundTimer.h".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright (c) ATO Gear. All rights reserved."
+    );
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(file.holders[0].holder, "ATO Gear");
+}
+
+#[test]
 fn test_extract_copyright_information_uses_embedded_sourcemap_sources_for_parties() {
     let text = r#"{"version":3,"comment":"Copyright 1999 Wrong Corp.","sourcesContent":["/* Copyright 2024 Example Corp. */\n"]}"#;
     let mut builder = FileInfoBuilder::default();

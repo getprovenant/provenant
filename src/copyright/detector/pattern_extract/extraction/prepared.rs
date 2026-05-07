@@ -548,6 +548,69 @@ pub fn extract_all_rights_reserved_by_holder_lines(
     (copyrights, holders)
 }
 
+pub fn extract_copyright_c_all_rights_reserved_no_year_holder_lines(
+    prepared_cache: &PreparedLines<'_>,
+    existing_copyrights: &[CopyrightDetection],
+    existing_holders: &[HolderDetection],
+) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {
+    if prepared_cache.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+
+    static COPYRIGHT_C_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^copyright\s*\(c\)\s*(?P<holder>.+?)\s+all\s+rights\s+reserved\.?$")
+            .unwrap()
+    });
+    static YEAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?:19\d{2}|20\d{2})").unwrap());
+
+    let mut seen_cr: HashSet<(usize, String)> = existing_copyrights
+        .iter()
+        .map(|c| (c.start_line.get(), c.copyright.clone()))
+        .collect();
+    let mut seen_h: HashSet<(usize, String)> = existing_holders
+        .iter()
+        .map(|h| (h.start_line.get(), h.holder.clone()))
+        .collect();
+
+    let mut copyrights = Vec::new();
+    let mut holders = Vec::new();
+
+    for line in prepared_cache.iter_non_empty() {
+        let Some(cap) = COPYRIGHT_C_RESERVED_RE.captures(line.prepared) else {
+            continue;
+        };
+
+        let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
+        if holder_raw.is_empty() || YEAR_RE.is_match(holder_raw) {
+            continue;
+        }
+
+        let raw = format!("Copyright (c) {holder_raw}");
+        let Some(refined) = refine_copyright(&raw) else {
+            continue;
+        };
+        if seen_cr.insert((line.line_number.get(), refined.clone())) {
+            copyrights.push(CopyrightDetection {
+                copyright: refined,
+                start_line: line.line_number,
+                end_line: line.line_number,
+            });
+        }
+
+        if let Some(h) = refine_holder_in_copyright_context(holder_raw)
+            && seen_h.insert((line.line_number.get(), h.clone()))
+        {
+            holders.push(HolderDetection {
+                holder: h,
+                start_line: line.line_number,
+                end_line: line.line_number,
+            });
+        }
+    }
+
+    (copyrights, holders)
+}
+
 pub fn extract_holder_is_name_paren_email_lines(
     prepared_cache: &PreparedLines<'_>,
     existing_copyrights: &[CopyrightDetection],

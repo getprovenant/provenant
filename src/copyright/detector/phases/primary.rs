@@ -299,6 +299,17 @@ fn run_group_based_extractions(
     copyrights.extend(new_c);
     holders.extend(new_h);
 
+    let (new_c, new_h) =
+        super::super::pattern_extract::extract_copyright_c_all_rights_reserved_no_year_holder_lines(
+            prepared_cache,
+            copyrights,
+            holders,
+        );
+    seen.register_copyrights(&new_c);
+    seen.register_holders(&new_h);
+    copyrights.extend(new_c);
+    holders.extend(new_h);
+
     let mut new_c =
         super::super::pattern_extract::extract_trailing_bare_c_year_range_suffixes(groups);
     seen.dedup_new_copyrights(&mut new_c, 0);
