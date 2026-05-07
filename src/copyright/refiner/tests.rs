@@ -167,6 +167,14 @@ fn test_refine_author_truncates_trailing_prose_after_contact() {
 }
 
 #[test]
+fn test_refine_author_preserves_full_written_by_author_list() {
+    assert_eq!(
+        refine_author("Jean-Marc Valin, Gregory Maxwell, and Timothy B. Terriberry"),
+        Some("Jean-Marc Valin, Gregory Maxwell, and Timothy B. Terriberry".to_string())
+    );
+}
+
+#[test]
 fn test_refine_holder_discards_symbol_table_run_junk() {
     assert_eq!(
         refine_holder("(r), & 175, & 176, & 177, & 178, & 179, & 180, & 181, & 182, & 183"),
@@ -1555,6 +1563,20 @@ fn test_refine_copyright_drops_versioninfo_and_dtd_junk() {
 }
 
 #[test]
+fn test_refine_copyright_drops_prose_fragments_from_license_boilerplate() {
+    assert_eq!(
+        refine_copyright("copyright licenses specified in the"),
+        None
+    );
+    assert_eq!(refine_copyright("copyright in its"), None);
+}
+
+#[test]
+fn test_refine_holder_drops_license_boilerplate_fragment() {
+    assert_eq!(refine_holder("licenses specified in the"), None);
+}
+
+#[test]
 fn test_refine_copyright_strips_flutter_wrapper_context() {
     assert_eq!(
         refine_copyright("applicationLegalese: '© 2014 The Flutter Authors',"),
@@ -1612,6 +1634,14 @@ fn test_refine_holder_drops_versioninfo_and_dtd_junk() {
     assert_eq!(refine_holder("PCDATA"), None);
     assert_eq!(refine_holder("clone.Copyright.Text"), None);
     assert_eq!(refine_holder("HeaderType.Content u00AD u00AE"), None);
+}
+
+#[test]
+fn test_refine_holder_drops_prose_fragments_from_license_boilerplate() {
+    assert_eq!(
+        refine_holder("notice, list of conditions, and disclaimer when submitting"),
+        None
+    );
 }
 
 #[test]
@@ -1964,6 +1994,11 @@ fn test_refine_author_strips_trailing_javadoc_tags() {
         result,
         Some("stephane@hillion.org Stephane Hillion".to_string())
     );
+}
+
+#[test]
+fn test_refine_author_drops_bare_version_token() {
+    assert_eq!(refine_author("version"), None);
 }
 
 #[test]

@@ -15,6 +15,7 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^holders?,\s*authors\b",
         r"(?i)^notice,\s+and\b",
         r"(?i)^notice,\s+in\b",
+        r"(?i)^notice,\s+list of conditions,\s+and disclaimer when submitting\b",
         r"(?i)^but\s+its\s+distribution\b",
         r"(?i)\bprovided\s+to\s+the\s+public\s+domain\b",
         r"(?i)^patent\s+or\s+trademark\b",
@@ -118,6 +119,7 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^version of nameif\b",
         r"(?i)\bunless explicitly identified\b",
         r"(?i)^version 3 of the$",
+        r"(?i)^licenses? specified in the$",
         // Holder false positives from license boilerplate
         r"(?i)\b(if any) with\b",
         r"(?i)^(d),\b",

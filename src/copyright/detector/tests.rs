@@ -215,6 +215,53 @@ fn test_author_prefix_dedup_keeps_short_email_list() {
 }
 
 #[test]
+fn test_detect_copyright_header_with_standalone_written_by_author() {
+    let input = concat!(
+        "/* Copyright (c) 2003-2008 Jean-Marc Valin\n",
+        "   Copyright (c) 2007-2008 CSIRO\n",
+        "   Copyright (c) 2007-2009 Xiph.Org Foundation\n",
+        "   Written by Jean-Marc Valin */\n",
+    );
+
+    let (copyrights, holders, authors) = detect_copyrights_from_text(input);
+
+    let copyright_values: Vec<&str> = copyrights.iter().map(|c| c.copyright.as_str()).collect();
+    let holder_values: Vec<&str> = holders.iter().map(|h| h.holder.as_str()).collect();
+    let author_values: Vec<&str> = authors.iter().map(|a| a.author.as_str()).collect();
+
+    assert_eq!(copyright_values.len(), 3, "copyrights: {copyrights:?}");
+    assert!(
+        copyright_values.contains(&"Copyright (c) 2003-2008 Jean-Marc Valin"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyright_values.contains(&"Copyright (c) 2007-2008 CSIRO"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyright_values.contains(&"Copyright (c) 2007-2009 Xiph.Org Foundation"),
+        "copyrights: {copyrights:?}"
+    );
+
+    assert_eq!(holder_values.len(), 3, "holders: {holders:?}");
+    assert!(
+        holder_values.contains(&"Jean-Marc Valin"),
+        "holders: {holders:?}"
+    );
+    assert!(holder_values.contains(&"CSIRO"), "holders: {holders:?}");
+    assert!(
+        holder_values.contains(&"Xiph.Org Foundation"),
+        "holders: {holders:?}"
+    );
+
+    assert_eq!(
+        author_values,
+        vec!["Jean-Marc Valin"],
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_w3c_registered_holder_is_extracted() {
     let input = "This software includes material\n\
 copied from [title]. Copyright ©\n\

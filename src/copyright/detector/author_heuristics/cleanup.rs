@@ -735,6 +735,8 @@ pub(in super::super) fn drop_written_by_authors_preceded_by_copyright(
         LazyLock::new(|| Regex::new(r"(?i)^\s*written\s+by\s+(?P<who>.+)$").unwrap());
     static COPYRIGHT_HINT_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?i)\bcopyright\b|\(c\)").unwrap());
+    static WEAK_WRITTEN_BY_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\b(?:and\s+others|et\s+al\.?|contributors?)\b").unwrap());
 
     if prepared_cache.len() < 2 {
         return;
@@ -757,6 +759,9 @@ pub(in super::super) fn drop_written_by_authors_preceded_by_copyright(
             continue;
         }
         if !COPYRIGHT_HINT_RE.is_match(prev.prepared) {
+            continue;
+        }
+        if !WEAK_WRITTEN_BY_RE.is_match(who) {
             continue;
         }
         if let Some(author) = refine_author(who) {

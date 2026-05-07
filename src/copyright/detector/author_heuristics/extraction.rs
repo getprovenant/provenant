@@ -325,6 +325,44 @@ fn extract_written_by_subject(line: &str) -> Option<String> {
         .and_then(|cap| cap.name("who").map(|m| m.as_str().trim().to_string()))
 }
 
+fn has_adjacent_copyright_hint(
+    prepared_cache: &PreparedLines<'_>,
+    line_number: LineNumber,
+) -> bool {
+    static COPYRIGHT_HINT_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\bcopyright\b|\(c\)").unwrap());
+
+    let mut previous_line = line_number.prev();
+    while let Some(adjacent_line) = previous_line {
+        let Some(line) = prepared_cache.line(adjacent_line) else {
+            break;
+        };
+        if line.prepared.is_empty() {
+            break;
+        }
+        if COPYRIGHT_HINT_RE.is_match(line.prepared) {
+            return true;
+        }
+        previous_line = adjacent_line.prev();
+    }
+
+    let mut next_line = Some(line_number.next());
+    while let Some(adjacent_line) = next_line {
+        let Some(line) = prepared_cache.line(adjacent_line) else {
+            break;
+        };
+        if line.prepared.is_empty() {
+            break;
+        }
+        if COPYRIGHT_HINT_RE.is_match(line.prepared) {
+            return true;
+        }
+        next_line = Some(adjacent_line.next());
+    }
+
+    false
+}
+
 fn extract_dash_bullet_attribution_author(line: &str) -> Option<String> {
     static DASH_BULLET_BY_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
@@ -389,6 +427,15 @@ fn looks_like_plaintext_roster_author_candidate(who: &str) -> bool {
         && !words
             .iter()
             .any(|word| is_contributed_non_person_token(word))
+}
+
+fn looks_like_written_by_and_continuation(line: &str) -> bool {
+    let Some(who) = line.trim().strip_prefix("and ") else {
+        return false;
+    };
+
+    let who = trim_attribution_tail(who);
+    looks_like_plaintext_roster_author_candidate(&who)
 }
 
 pub(in super::super) fn extract_plaintext_roster_by_authors(
@@ -669,6 +716,12 @@ pub(in super::super) fn extract_multiline_written_by_author_blocks(
 
     static WRITTEN_BY_SINGLE_LINE_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?i)^\s*written\s+by\s+(?P<who>.+?)(?:\s+for\b|$)").unwrap());
+    static STANDALONE_WRITTEN_BY_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?i)^\s*(?:original(?:ly)?\s+)?(?:original\s+driver\s+)?(?:written|authored|created|developed)\s+by\s+(?P<who>.+?)(?:\s+for\b|$)",
+        )
+        .unwrap()
+    });
     static AUTHOR_EMAIL_HEAD_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?i)^(?P<head>.+?<[^>]+>)(?:\s+(?:for|to)\b.*)?$").unwrap());
     static MAINTAINED_BY_PREFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -684,42 +737,48 @@ pub(in super::super) fn extract_multiline_written_by_author_blocks(
         if raw_line.is_empty() {
             continue;
         }
-        let line = strip_leading_dash_bullet(raw_line.trim());
+        let line = strip_leading_dash_bullet(prepared_line.prepared.trim());
         if line.is_empty() {
             continue;
         }
-        if !line.to_ascii_lowercase().starts_with("written by ") {
+
+        let Some(cap) = STANDALONE_WRITTEN_BY_LINE_RE.captures(line) else {
+            continue;
+        };
+
+        let who = cap.name("who").map(|m| m.as_str()).unwrap_or("").trim();
+        if who.is_empty() {
+            continue;
+        }
+        let who_words: Vec<&str> = who.split_whitespace().collect();
+        if who_words.len() < 2 {
             continue;
         }
 
-        if let Some(cap) = WRITTEN_BY_SINGLE_LINE_RE.captures(line) {
-            let who = cap.name("who").map(|m| m.as_str()).unwrap_or("").trim();
-            if who.is_empty() {
-                continue;
-            }
-            let who_words: Vec<&str> = who.split_whitespace().collect();
-            if who_words.len() < 2 {
-                continue;
-            }
+        let has_email = who.contains('@') || who.contains('<');
+        let is_copyright_adjacent_header = has_adjacent_copyright_hint(prepared_cache, ln);
+        if !has_email && !is_copyright_adjacent_header {
+            continue;
+        }
 
-            let has_email = who.contains('@') || who.contains('<');
-            if !has_email {
-                continue;
-            }
-
-            let who = if let Some(cap) = AUTHOR_EMAIL_HEAD_RE.captures(who) {
+        let who = if has_email {
+            if let Some(cap) = AUTHOR_EMAIL_HEAD_RE.captures(who) {
                 cap.name("head").map(|m| m.as_str()).unwrap_or(who).trim()
             } else {
                 who
-            };
-
-            if let Some(author) = refine_author(who) {
-                authors.push(AuthorDetection {
-                    author,
-                    start_line: ln,
-                    end_line: ln,
-                });
             }
+        } else if let Some(cap) = WRITTEN_BY_SINGLE_LINE_RE.captures(line) {
+            cap.name("who").map(|m| m.as_str()).unwrap_or(who).trim()
+        } else {
+            who
+        };
+
+        if let Some(author) = refine_author(who) {
+            authors.push(AuthorDetection {
+                author,
+                start_line: ln,
+                end_line: ln,
+            });
         }
     }
 
@@ -758,6 +817,7 @@ pub(in super::super) fn extract_multiline_written_by_author_blocks(
             if !(next_lower.contains(" by ")
                 || next_lower.starts_with("for ")
                 || next_lower.starts_with("overhauled by ")
+                || looks_like_written_by_and_continuation(next_line)
                 || next_lower.starts_with("ported ")
                 || next_lower.starts_with("updated ")
                 || next_lower.starts_with("kernel ")
@@ -789,7 +849,8 @@ pub(in super::super) fn extract_multiline_written_by_author_blocks(
 
         let prefer_combined_block = block_lines.iter().skip(1).any(|(_, raw_line)| {
             let lower = raw_line.trim().to_ascii_lowercase();
-            lower.starts_with("overhauled by ")
+            lower.starts_with("and ")
+                || lower.starts_with("overhauled by ")
                 || lower.starts_with("ported ")
                 || lower.starts_with("updated ")
                 || lower.starts_with("kernel ")

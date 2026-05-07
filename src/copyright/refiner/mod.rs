@@ -1347,6 +1347,8 @@ fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
         "copyright exclude"
             | "copyright doctrines of fair use, fair dealing, or other equivalents"
             | "copyright doctrines of fair use, fair dealing, or other equivalents."
+            | "copyright licenses specified in the"
+            | "copyright in its"
     )
 }
 

@@ -397,6 +397,60 @@ fn test_written_by_author_with_contact_after_copyright_is_kept() {
 }
 
 #[test]
+fn test_standalone_written_by_header_after_copyright_is_extracted() {
+    let input = "/* Copyright (C) 2003 Epic Games\n   Written by Jean-Marc Valin */\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors.iter().any(|a| a.author == "Jean-Marc Valin"),
+        "authors: {:?}",
+        authors.iter().map(|a| &a.author).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_weak_standalone_written_by_header_after_copyright_is_dropped() {
+    let input = "/* Copyright (C) 2003 Epic Games\n   Written by Jean-Marc Valin and others */\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_multiline_written_by_and_continuation_is_included() {
+    let input =
+        "/* Copyright (C) 2003 Epic Games\n   Written by Jean-Marc Valin,\n   and Yunho Huh */\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    let author = authors
+        .iter()
+        .find(|a| a.author == "Jean-Marc Valin, and Yunho Huh")
+        .expect("expected multiline written-by author continuation");
+
+    assert_eq!(author.start_line, LineNumber::new(2).expect("valid"));
+    assert_eq!(author.end_line, LineNumber::new(3).expect("valid"));
+}
+
+#[test]
+fn test_single_line_written_by_author_list_preserves_final_author() {
+    let input = concat!(
+        "/* Copyright (c) 2008-2011 Xiph.Org Foundation, Mozilla Corporation,\n",
+        "                           Gregory Maxwell\n",
+        "   Written by Jean-Marc Valin, Gregory Maxwell, and Timothy B. Terriberry */\n",
+    );
+
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .any(|a| { a.author == "Jean-Marc Valin, Gregory Maxwell, and Timothy B. Terriberry" }),
+        "authors: {:?}",
+        authors.iter().map(|a| &a.author).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_originally_written_by_for_project_block_without_contact_is_extracted() {
     let input = concat!(
         "Originally written by Christophe Renou and Peter Sylvester,\n",
