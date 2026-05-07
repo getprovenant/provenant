@@ -351,7 +351,9 @@ fn assemble_one_per_package_data(
     results
 }
 
-fn should_skip_placeholder_only_cocoapods_podspec(pkg_data: &crate::models::PackageData) -> bool {
+pub(super) fn should_skip_placeholder_only_cocoapods_podspec(
+    pkg_data: &crate::models::PackageData,
+) -> bool {
     pkg_data.datasource_id == Some(DatasourceId::CocoapodsPodspec)
         && pkg_data
             .extra_data
