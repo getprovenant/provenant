@@ -90,6 +90,8 @@ Treat [`docs/HOW_TO_ADD_A_PARSER.md`](docs/HOW_TO_ADD_A_PARSER.md) as the canoni
 - Parser changes that affect supported-surface metadata must keep parser metadata registration and generated docs in sync.
 - One `PackageType` can map to multiple datasource IDs; use datasource IDs for file-format-level assembly behavior.
 
+For license-detection dataset curation, prefer checked-in overlays under `resources/license_detection/overlay/` over matcher-code changes when the issue is a rule/license semantic problem rather than an engine problem. Typical overlay-worthy fixes are rule reclassification, minimum-coverage tuning, required-phrase tightening, or other upstream-compatible `.RULE` / `.LICENSE` adjustments. After changing overlays or `resources/license_detection/index_build_policy.toml`, regenerate the embedded artifact with `cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact` and rerun the narrow owning license tests.
+
 For parity-sensitive parser work, use the compare and benchmark workflows in [`xtask/README.md`](xtask/README.md) instead of relying on ad hoc raw diffs.
 
 ## Architecture Reminder
