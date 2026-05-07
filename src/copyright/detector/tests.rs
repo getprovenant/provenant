@@ -1831,6 +1831,24 @@ fn test_detect_copyright_c_symbol_with_all_rights_reserved() {
 }
 
 #[test]
+fn test_detect_copyright_c_symbol_without_year_all_rights_reserved_yields_holder() {
+    let (c, h, _a) = detect_copyrights_from_text("Copyright (c) ATO Gear. All rights reserved.");
+
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright.contains("ATO Gear")
+                && !cr.copyright.contains("All rights reserved")),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|hd| hd.holder == "ATO Gear"),
+        "holders: {:?}",
+        h.iter().map(|hd| &hd.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_detect_copyright_unicode_symbol() {
     let (c, _, _) = detect_copyrights_from_text(
         "/* Copyright \u{00A9} 2000 ACME, Inc., All Rights Reserved */",

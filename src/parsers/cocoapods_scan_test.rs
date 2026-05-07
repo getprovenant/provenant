@@ -3,6 +3,7 @@
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::path::Path;
 
     use super::super::scan_test_utils::scan_and_assemble;
@@ -140,6 +141,77 @@ mod tests {
             !differentiator_podspec
                 .for_packages
                 .contains(&rx_data_sources.package_uid)
+        );
+    }
+
+    #[test]
+    fn test_cocoapods_scan_skips_top_level_assembly_for_placeholder_only_dynamic_podspec() {
+        let temp_dir = tempfile::tempdir().expect("tempdir should be created");
+        let podspec_path = temp_dir
+            .path()
+            .join("react-native-background-timer.podspec");
+        fs::write(
+            &podspec_path,
+            r#"require 'json'
+
+package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
+
+Pod::Spec.new do |s|
+  s.name     = package['name']
+  s.version  = package['version']
+  s.summary  = package['description']
+  s.homepage = package['repository']['url']
+  s.license  = package['license']
+  s.author   = package['author']
+  s.source   = { :git => s.homepage, :tag => 'v#{s.version}' }
+  s.dependency 'React-Core'
+end
+"#,
+        )
+        .expect("fixture podspec should be written");
+
+        let (files, result) = scan_and_assemble(temp_dir.path());
+
+        assert!(
+            result.packages.is_empty(),
+            "packages: {:?}",
+            result.packages
+        );
+        assert!(
+            result.dependencies.is_empty(),
+            "dependencies: {:?}",
+            result.dependencies
+        );
+
+        let podspec = files
+            .iter()
+            .find(|file| {
+                file.path
+                    .ends_with("/react-native-background-timer.podspec")
+            })
+            .expect("podspec should be scanned");
+        assert_eq!(
+            podspec.package_data.len(),
+            1,
+            "package_data: {:?}",
+            podspec.package_data
+        );
+        assert_eq!(
+            podspec.package_data[0].purl.as_deref(),
+            Some("pkg:cocoapods/packagename@packageversion")
+        );
+        assert_eq!(
+            podspec.package_data[0]
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("dynamic_identity_placeholders"))
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert!(
+            podspec.for_packages.is_empty(),
+            "for_packages: {:?}",
+            podspec.for_packages
         );
     }
 }

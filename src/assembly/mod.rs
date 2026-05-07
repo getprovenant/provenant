@@ -318,7 +318,10 @@ fn assemble_one_per_package_data(
                 .datasource_id
                 .is_some_and(|dsid| config.datasource_ids.contains(&dsid));
 
-            if !dsid_matches || pkg_data.purl.is_none() {
+            if !dsid_matches
+                || pkg_data.purl.is_none()
+                || should_skip_placeholder_only_cocoapods_podspec(pkg_data)
+            {
                 continue;
             }
 
@@ -346,6 +349,16 @@ fn assemble_one_per_package_data(
     }
 
     results
+}
+
+fn should_skip_placeholder_only_cocoapods_podspec(pkg_data: &crate::models::PackageData) -> bool {
+    pkg_data.datasource_id == Some(DatasourceId::CocoapodsPodspec)
+        && pkg_data
+            .extra_data
+            .as_ref()
+            .and_then(|data| data.get("dynamic_identity_placeholders"))
+            .and_then(|value| value.as_bool())
+            == Some(true)
 }
 
 /// Group file indices by their parent directory path.

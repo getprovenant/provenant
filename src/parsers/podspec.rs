@@ -34,7 +34,10 @@ use regex::Regex;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 use crate::parsers::PackageParser;
-use crate::parsers::license_normalization::normalize_spdx_declared_license;
+use crate::parsers::license_normalization::{
+    DeclaredLicenseMatchMetadata, build_declared_license_data_from_pair,
+    normalize_spdx_declared_license,
+};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 /// Parses CocoaPods specification files (.podspec).
@@ -72,13 +75,13 @@ impl PackageParser for PodspecParser {
             }
         };
 
-        let name = extract_field(&content, &NAME_PATTERN).map(truncate_field);
-        let version = extract_field(&content, &VERSION_PATTERN).map(truncate_field);
-        let summary = extract_field(&content, &SUMMARY_PATTERN).map(truncate_field);
+        let name = extract_metadata_field(&content, &NAME_PATTERN).map(truncate_field);
+        let version = extract_metadata_field(&content, &VERSION_PATTERN).map(truncate_field);
+        let summary = extract_metadata_field(&content, &SUMMARY_PATTERN).map(truncate_field);
         let description =
             merge_summary_and_description(summary.as_deref(), extract_description(&content))
                 .map(truncate_field);
-        let homepage_url = extract_field(&content, &HOMEPAGE_PATTERN).map(truncate_field);
+        let homepage_url = extract_metadata_field(&content, &HOMEPAGE_PATTERN).map(truncate_field);
         let license = extract_license_statement(&content).map(truncate_field);
         let (declared_license_expression, declared_license_expression_spdx, license_detections) =
             normalize_podspec_declared_license(&content, license.as_deref());
@@ -101,6 +104,18 @@ impl PackageParser for PodspecParser {
 
         let dependencies = extract_dependencies(&content);
         let mut extra_data = serde_json::Map::new();
+        let has_dynamic_identity_placeholders = name
+            .as_deref()
+            .is_some_and(is_podspec_dynamic_placeholder_token)
+            && version
+                .as_deref()
+                .is_some_and(is_podspec_dynamic_placeholder_token);
+        if has_dynamic_identity_placeholders {
+            extra_data.insert(
+                "dynamic_identity_placeholders".to_string(),
+                serde_json::Value::Bool(true),
+            );
+        }
         if let Some(raw_license) = extract_field(&content, &LICENSE_PATTERN)
             && let Some(license_file) = extract_ruby_hash_file(&raw_license)
         {
@@ -226,6 +241,8 @@ static AUTHOR_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\.authors?\s*=\s*(.+)").expect("valid regex"));
 static SOURCE_GIT_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#":git\s*=>\s*['\"]([^'\"]+)['\"]"#).expect("valid regex"));
+static SOURCE_GIT_DYNAMIC_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#":git\s*(?:=>|=)\s*([^,}]+)"#).expect("valid regex"));
 static SOURCE_HTTP_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#":http\s*=>\s*['\"]([^'\"]+)['\"]"#).expect("valid regex"));
 
@@ -236,7 +253,9 @@ static DEPENDENCY_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 fn extract_license_statement(content: &str) -> Option<String> {
-    extract_field(content, &LICENSE_PATTERN).map(|value| normalize_ruby_hash_literal(&value))
+    extract_field(content, &LICENSE_PATTERN)
+        .map(|value| normalize_ruby_hash_literal(&value))
+        .and_then(|value| normalize_podspec_dynamic_metadata_value(&value))
 }
 
 fn normalize_podspec_declared_license(
@@ -250,6 +269,15 @@ fn normalize_podspec_declared_license(
     let Some(raw_license) = extract_field(content, &LICENSE_PATTERN) else {
         return super::license_normalization::empty_declared_license_data();
     };
+    if looks_like_podspec_dynamic_metadata_value(&raw_license) {
+        return build_declared_license_data_from_pair(
+            "unknown".to_string(),
+            "LicenseRef-scancode-unknown".to_string(),
+            DeclaredLicenseMatchMetadata::single_line(
+                extracted_license_statement.unwrap_or(raw_license.as_str()),
+            ),
+        );
+    }
     let normalized_candidate = if raw_license.contains("=>") || raw_license.contains('=') {
         extract_ruby_hash_type(&raw_license)
             .map(|license_type| canonicalize_cocoapods_license_type(&license_type))
@@ -300,6 +328,42 @@ fn normalize_ruby_hash_literal(value: &str) -> String {
         .join(" ")
 }
 
+fn normalize_podspec_dynamic_metadata_value(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if looks_like_podspec_dynamic_metadata_value(trimmed) {
+        let normalized = trimmed
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+        return (!normalized.is_empty()).then_some(normalized);
+    }
+
+    Some(trimmed.to_string())
+}
+
+fn looks_like_podspec_dynamic_metadata_value(value: &str) -> bool {
+    value.contains("['") || value.contains("[\"")
+}
+
+fn is_podspec_dynamic_placeholder_token(value: &str) -> bool {
+    let trimmed = value.trim();
+    trimmed.starts_with("package")
+        && trimmed.len() > "package".len()
+        && trimmed
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+}
+
+fn extract_metadata_field(content: &str, pattern: &Regex) -> Option<String> {
+    extract_field(content, pattern)
+        .and_then(|value| normalize_podspec_dynamic_metadata_value(&value))
+}
+
 /// Extract a single field using a regex pattern
 fn extract_field(content: &str, pattern: &Regex) -> Option<String> {
     for line in content.lines().take(MAX_ITERATION_COUNT) {
@@ -326,7 +390,7 @@ fn extract_description(content: &str) -> Option<String> {
             if value_str.contains("<<-") {
                 return extract_multiline_description(&lines, i);
             } else {
-                return Some(clean_string(value_str));
+                return normalize_podspec_dynamic_metadata_value(&clean_string(value_str));
             }
         }
     }
@@ -404,6 +468,9 @@ fn extract_authors(content: &str) -> Vec<(String, Option<String>)> {
                 }
             } else {
                 let cleaned = clean_string(value_str);
+                let Some(cleaned) = normalize_podspec_dynamic_metadata_value(&cleaned) else {
+                    continue;
+                };
                 let (name, email) = parse_author_string(&cleaned);
                 authors.push((name, email));
             }
@@ -428,6 +495,15 @@ fn extract_source_url(content: &str) -> Option<String> {
             && let Some(url) = caps.get(1)
         {
             return Some(clean_string(url.as_str()));
+        }
+
+        if let Some(caps) = SOURCE_GIT_DYNAMIC_PATTERN.captures(value)
+            && let Some(url) = caps.get(1)
+        {
+            let cleaned = clean_string(url.as_str());
+            if !cleaned.is_empty() {
+                return Some(cleaned);
+            }
         }
 
         if let Some(caps) = SOURCE_HTTP_PATTERN.captures(value)
@@ -626,12 +702,41 @@ Pod::Spec.new do |s|
 end
 "#;
         assert_eq!(
-            extract_field(content, &NAME_PATTERN),
+            extract_metadata_field(content, &NAME_PATTERN),
             Some("AFNetworking".to_string())
         );
         assert_eq!(
-            extract_field(content, &VERSION_PATTERN),
+            extract_metadata_field(content, &VERSION_PATTERN),
             Some("4.0.1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_dynamic_metadata_field_uses_stable_placeholder() {
+        let content = r#"
+Pod::Spec.new do |s|
+  s.name = package['name']
+  s.version = package['version']
+  s.summary = package['description']
+  s.homepage = package['repository']['url']
+end
+"#;
+
+        assert_eq!(
+            extract_metadata_field(content, &NAME_PATTERN),
+            Some("packagename".to_string())
+        );
+        assert_eq!(
+            extract_metadata_field(content, &VERSION_PATTERN),
+            Some("packageversion".to_string())
+        );
+        assert_eq!(
+            extract_metadata_field(content, &SUMMARY_PATTERN),
+            Some("packagedescription".to_string())
+        );
+        assert_eq!(
+            extract_metadata_field(content, &HOMEPAGE_PATTERN),
+            Some("packagerepositoryurl".to_string())
         );
     }
 
@@ -765,6 +870,107 @@ end
                 .referenced_filenames
                 .as_ref(),
             Some(&vec!["LICENSE.txt".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_extract_packages_normalizes_dynamic_benchmark_style_fields() {
+        let content = r#"
+require 'json'
+
+package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
+
+Pod::Spec.new do |s|
+
+  s.name           = package['name']
+  s.version        = package['version']
+  s.summary        = package['description']
+  s.homepage       = package['repository']['url']
+  s.license        = package['license']
+  s.author         = package['author']
+  s.source         = { :git => s.homepage, :tag => 'v#{s.version}' }
+
+  s.requires_arc   = true
+  s.ios.deployment_target = '8.0'
+  s.tvos.deployment_target = '9.0'
+
+  s.preserve_paths = 'README.md', 'package.json', 'index.js'
+  s.source_files   = 'ios/*.{h,m}'
+
+  s.dependency 'React-Core'
+
+end
+"#;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir
+            .path()
+            .join("react-native-background-timer.podspec");
+        std::fs::write(&file_path, content).unwrap();
+
+        let package_data = PodspecParser::extract_first_package(&file_path);
+
+        assert_eq!(package_data.name.as_deref(), Some("packagename"));
+        assert_eq!(package_data.version.as_deref(), Some("packageversion"));
+        assert_eq!(
+            package_data.description.as_deref(),
+            Some("packagedescription")
+        );
+        assert_eq!(
+            package_data.homepage_url.as_deref(),
+            Some("packagerepositoryurl")
+        );
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("packagelicense")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("unknown")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("LicenseRef-scancode-unknown")
+        );
+        assert_eq!(package_data.license_detections.len(), 1);
+        assert_eq!(package_data.vcs_url.as_deref(), Some("s.homepage"));
+        assert_eq!(
+            package_data.repository_homepage_url.as_deref(),
+            Some("https://cocoapods.org/pods/packagename")
+        );
+        assert_eq!(
+            package_data.repository_download_url.as_deref(),
+            Some("s.homepage/archive/refs/tags/packageversion.zip")
+        );
+        assert_eq!(
+            package_data.code_view_url.as_deref(),
+            Some("s.homepage/tree/packageversion")
+        );
+        assert_eq!(
+            package_data.bug_tracking_url.as_deref(),
+            Some("s.homepage/issues/")
+        );
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:cocoapods/packagename@packageversion")
+        );
+        assert_eq!(package_data.parties.len(), 1);
+        assert_eq!(
+            package_data.parties[0].name.as_deref(),
+            Some("packageauthor")
+        );
+        assert_eq!(
+            package_data
+                .extra_data
+                .as_ref()
+                .and_then(|data| data.get("dynamic_identity_placeholders"))
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:cocoapods/React-Core")
         );
     }
 }

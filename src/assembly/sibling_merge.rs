@@ -434,12 +434,23 @@ fn is_handled_by(pkg_data: &PackageData, config: &AssemblerConfig) -> bool {
 
 fn should_skip_assembly_package_data(package: Option<&Package>, pkg_data: &PackageData) -> bool {
     should_skip_composer_lock_virtual_package(pkg_data)
+        || should_skip_placeholder_only_cocoapods_podspec(pkg_data)
         || package.is_some_and(|existing_package| {
             should_skip_npm_lock_merge(existing_package, pkg_data)
                 || should_skip_bun_lock_merge(existing_package, pkg_data)
                 || should_skip_python_uv_lock_merge(existing_package, pkg_data)
                 || should_skip_python_pip_cache_merge(existing_package, pkg_data)
         })
+}
+
+fn should_skip_placeholder_only_cocoapods_podspec(pkg_data: &PackageData) -> bool {
+    pkg_data.datasource_id == Some(DatasourceId::CocoapodsPodspec)
+        && pkg_data
+            .extra_data
+            .as_ref()
+            .and_then(|data| data.get("dynamic_identity_placeholders"))
+            .and_then(|value| value.as_bool())
+            == Some(true)
 }
 
 fn should_skip_composer_lock_virtual_package(pkg_data: &PackageData) -> bool {

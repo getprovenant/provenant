@@ -418,7 +418,7 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^iouoi\b",
         r"(?i)^aiuaey\b",
         r"(?i)^aoth\b",
-        r"(?i)^ato\b",
+        r"(?i)^ato$",
         r"(?i)^aaeamooa\b",
         r"(?i)^eeiaeiaaoa\b",
         r"(?i)^exauauuao\b",

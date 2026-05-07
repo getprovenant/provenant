@@ -2484,7 +2484,8 @@ pub fn extract_from_spans(
                 }
 
                 if !skip_holder_from_span {
-                    let holder_tokens: Vec<&Token> = span
+                    let holder_span = filtered.as_slice();
+                    let holder_tokens: Vec<&Token> = holder_span
                         .iter()
                         .copied()
                         .filter(|t| !detector::NON_HOLDER_POS_TAGS.contains(&t.tag))
@@ -2495,7 +2496,7 @@ pub fn extract_from_spans(
                     ) {
                         holders.push(det);
                     } else {
-                        let holder_tokens_mini: Vec<&Token> = span
+                        let holder_tokens_mini: Vec<&Token> = holder_span
                             .iter()
                             .copied()
                             .filter(|t| !detector::NON_HOLDER_POS_TAGS_MINI.contains(&t.tag))
@@ -2728,7 +2729,8 @@ pub fn extract_copyrights_from_spans(
                 }
 
                 if !skip_holder_from_span {
-                    let holder_tokens: Vec<&Token> = span
+                    let holder_span = filtered.as_slice();
+                    let holder_tokens: Vec<&Token> = holder_span
                         .iter()
                         .copied()
                         .filter(|t| !detector::NON_HOLDER_POS_TAGS.contains(&t.tag))
@@ -2739,7 +2741,7 @@ pub fn extract_copyrights_from_spans(
                     ) {
                         holders.push(det);
                     } else {
-                        let holder_tokens_mini: Vec<&Token> = span
+                        let holder_tokens_mini: Vec<&Token> = holder_span
                             .iter()
                             .copied()
                             .filter(|t| !detector::NON_HOLDER_POS_TAGS_MINI.contains(&t.tag))

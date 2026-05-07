@@ -947,6 +947,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `11.11s`; ScanCode `122.53s`
 - Matched top-level package coverage (`1` vs `1`) with broader package-adjacent dependency extraction (`11` vs `0`) from `.gitmodules`, `Cartfile.private`, and `Cartfile.resolved`, plus Unicode-preserving author recovery for `Robert Böhnke` and cleaner normalization of repeated workflow contact addresses and GitHub query URLs
 
+##### [ocetnik/react-native-background-timer @ 244ea3e](https://github.com/ocetnik/react-native-background-timer/tree/244ea3e554a6c480f22c818831ea0dd7c0587708) — **10.34× faster**
+
+- Files: 19
+- Run context: 2026-05-07 · react-native-background-timer-68507 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `9.41s`; ScanCode `97.28s`
+- Broader React Native mobile dependency extraction (`1493` vs `1492`) from the Android `build.gradle` React Native coordinate, plus direct AndroidManifest package visibility and source-faithful party recovery that keeps `ATO Gear` on the iOS native headers and preserves `Dávid Ocetník` instead of ScanCode's ASCII fallback
+
 ##### [pointfreeco/swift-composable-architecture @ 7517cc3](https://github.com/pointfreeco/swift-composable-architecture/tree/7517cc3) — **12.26× faster**
 
 - Files: 1,098

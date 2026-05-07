@@ -1491,6 +1491,31 @@ fn strip_trailing_no_rights_reserved_clause(s: &str) -> String {
         .unwrap_or_else(|| s.to_string())
 }
 
+fn strip_trailing_all_rights_reserved_holder_clause(s: &str) -> String {
+    static ALL_RIGHTS_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)^(?P<prefix>.+?)\.?\s+all\s+rights\s+reserved\.?$").unwrap()
+    });
+
+    let trimmed = s.trim();
+    let Some(captures) = ALL_RIGHTS_RESERVED_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+
+    let prefix = captures
+        .name("prefix")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim();
+    if prefix.is_empty() || !prefix_has_holder_words(prefix) {
+        return s.to_string();
+    }
+
+    prefix
+        .trim_end_matches(&[',', ';', ':', '.', ' '][..])
+        .trim()
+        .to_string()
+}
+
 fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
     static TRAILING_DASH_OBF_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
@@ -2857,6 +2882,7 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_leading_product_operating_system_title(&h);
     h = strip_trailing_everyone_is_permitted_to_copy_clause(&h);
     h = strip_trailing_reserved_font_name_clause(&h);
+    h = strip_trailing_all_rights_reserved_holder_clause(&h);
     h = strip_trailing_no_rights_reserved_clause(&h);
     h = strip_trailing_parenthesized_url_or_domain(&h);
     h = strip_trailing_et_al(&h);
