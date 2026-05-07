@@ -579,7 +579,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 542
 - Run context: 2026-05-07 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `13.15s`; ScanCode `132.33s`
-- Richer and cleaner serialization notice recovery across headers, tests, and legacy HTML docs, with repaired year-plus-contact holder extraction on `include/boost/serialization/variant.hpp`, multi-person codecvt footer attribution that preserves both Ronald Garcia and Andrew Lumsdaine, `Peter Dimov` author attribution on `test/test_mi.cpp`, fuller `Joaquin M Lopez Munoz` identity capture, and Unicode-preserving `René Ferdinand Rivera Morell` normalization
+- Richer and cleaner serialization notice recovery across headers, tests, and legacy HTML docs, with year-plus-contact holder recovery on `include/boost/serialization/variant.hpp`, multi-person codecvt footer attribution that preserves both Ronald Garcia and Andrew Lumsdaine, `Peter Dimov` author attribution on `test/test_mi.cpp`, fuller `Joaquin M Lopez Munoz` identity capture, and Unicode-preserving `René Ferdinand Rivera Morell` normalization
 
 ##### [catchorg/Catch2 @ 10f6248](https://github.com/catchorg/Catch2/tree/10f62484bff73e3a58a411e2e10b4e1c13cfba9f) — **15.10× faster**
 
