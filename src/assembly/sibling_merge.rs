@@ -8,7 +8,9 @@ use glob::Pattern;
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, TopLevelDependency};
 
-use super::{AssemblerConfig, DirectoryMergeOutput};
+use super::{
+    AssemblerConfig, DirectoryMergeOutput, should_skip_placeholder_only_cocoapods_podspec,
+};
 
 #[derive(Clone, Copy)]
 struct CocoapodsPodspecCandidate {
@@ -441,16 +443,6 @@ fn should_skip_assembly_package_data(package: Option<&Package>, pkg_data: &Packa
                 || should_skip_python_uv_lock_merge(existing_package, pkg_data)
                 || should_skip_python_pip_cache_merge(existing_package, pkg_data)
         })
-}
-
-fn should_skip_placeholder_only_cocoapods_podspec(pkg_data: &PackageData) -> bool {
-    pkg_data.datasource_id == Some(DatasourceId::CocoapodsPodspec)
-        && pkg_data
-            .extra_data
-            .as_ref()
-            .and_then(|data| data.get("dynamic_identity_placeholders"))
-            .and_then(|value| value.as_bool())
-            == Some(true)
 }
 
 fn should_skip_composer_lock_virtual_package(pkg_data: &PackageData) -> bool {
