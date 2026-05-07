@@ -562,6 +562,9 @@ pub fn extract_copyright_c_all_rights_reserved_no_year_holder_lines(
             .unwrap()
     });
     static YEAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?:19\d{2}|20\d{2})").unwrap());
+    static PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\{[^}]*\}|\bdate\s+here\b|\btoday\.year\b|\bcurrent_year\b").unwrap()
+    });
 
     let mut seen_cr: HashSet<(usize, String)> = existing_copyrights
         .iter()
@@ -581,7 +584,10 @@ pub fn extract_copyright_c_all_rights_reserved_no_year_holder_lines(
         };
 
         let holder_raw = cap.name("holder").map(|m| m.as_str()).unwrap_or("").trim();
-        if holder_raw.is_empty() || YEAR_RE.is_match(holder_raw) {
+        if holder_raw.is_empty()
+            || YEAR_RE.is_match(holder_raw)
+            || PLACEHOLDER_RE.is_match(holder_raw)
+        {
             continue;
         }
 

@@ -145,25 +145,19 @@ mod tests {
     }
 
     #[test]
-    fn test_cocoapods_scan_skips_top_level_assembly_for_placeholder_only_dynamic_podspec() {
+    fn test_cocoapods_scan_skips_top_level_assembly_for_generic_nonliteral_identity_podspec() {
         let temp_dir = tempfile::tempdir().expect("tempdir should be created");
-        let podspec_path = temp_dir
-            .path()
-            .join("react-native-background-timer.podspec");
+        let podspec_path = temp_dir.path().join("dynamic-identity.podspec");
         fs::write(
             &podspec_path,
-            r#"require 'json'
-
-package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
-
-Pod::Spec.new do |s|
-  s.name     = package['name']
-  s.version  = package['version']
+            r#"Pod::Spec.new do |s|
+  s.name     = pod_name
+  s.version  = pod_version
   s.summary  = package['description']
-  s.homepage = package['repository']['url']
-  s.license  = package['license']
-  s.author   = package['author']
-  s.source   = { :git => s.homepage, :tag => 'v#{s.version}' }
+  s.homepage = homepage_url
+  s.license  = license_name
+  s.author   = author_name
+  s.source   = { :git => homepage_url, :tag => 'v#{pod_version}' }
   s.dependency 'React-Core'
 end
 "#,
@@ -185,10 +179,7 @@ end
 
         let podspec = files
             .iter()
-            .find(|file| {
-                file.path
-                    .ends_with("/react-native-background-timer.podspec")
-            })
+            .find(|file| file.path.ends_with("/dynamic-identity.podspec"))
             .expect("podspec should be scanned");
         assert_eq!(
             podspec.package_data.len(),
@@ -198,7 +189,7 @@ end
         );
         assert_eq!(
             podspec.package_data[0].purl.as_deref(),
-            Some("pkg:cocoapods/packagename@packageversion")
+            Some("pkg:cocoapods/pod_name@pod_version")
         );
         assert_eq!(
             podspec.package_data[0]

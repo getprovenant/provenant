@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 195 of 195 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 196 of 196 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -952,7 +952,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 19
 - Run context: 2026-05-07 · react-native-background-timer-68507 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `9.41s`; ScanCode `97.28s`
-- Broader React Native mobile dependency extraction (`1493` vs `1492`) from the Android `build.gradle` React Native coordinate, plus direct AndroidManifest package visibility and source-faithful party recovery that keeps `ATO Gear` on the iOS native headers and preserves `Dávid Ocetník` instead of ScanCode's ASCII fallback
+- Broader React Native mobile dependency extraction (`1493` vs `1492`) from the Android `build.gradle` React Native coordinate, plus direct AndroidManifest package visibility and Unicode-preserving `Dávid Ocetník` copyright and holder recovery instead of ScanCode's ASCII fallback
 
 ##### [pointfreeco/swift-composable-architecture @ 7517cc3](https://github.com/pointfreeco/swift-composable-architecture/tree/7517cc3) — **12.26× faster**
 

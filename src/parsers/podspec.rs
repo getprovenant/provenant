@@ -75,6 +75,8 @@ impl PackageParser for PodspecParser {
             }
         };
 
+        let raw_name = extract_raw_field(&content, &NAME_PATTERN);
+        let raw_version = extract_raw_field(&content, &VERSION_PATTERN);
         let name = extract_metadata_field(&content, &NAME_PATTERN).map(truncate_field);
         let version = extract_metadata_field(&content, &VERSION_PATTERN).map(truncate_field);
         let summary = extract_metadata_field(&content, &SUMMARY_PATTERN).map(truncate_field);
@@ -104,12 +106,12 @@ impl PackageParser for PodspecParser {
 
         let dependencies = extract_dependencies(&content);
         let mut extra_data = serde_json::Map::new();
-        let has_dynamic_identity_placeholders = name
+        let has_dynamic_identity_placeholders = raw_name
             .as_deref()
-            .is_some_and(is_podspec_dynamic_placeholder_token)
-            && version
+            .is_some_and(looks_like_nonliteral_podspec_expression)
+            && raw_version
                 .as_deref()
-                .is_some_and(is_podspec_dynamic_placeholder_token);
+                .is_some_and(looks_like_nonliteral_podspec_expression);
         if has_dynamic_identity_placeholders {
             extra_data.insert(
                 "dynamic_identity_placeholders".to_string(),
@@ -269,7 +271,7 @@ fn normalize_podspec_declared_license(
     let Some(raw_license) = extract_field(content, &LICENSE_PATTERN) else {
         return super::license_normalization::empty_declared_license_data();
     };
-    if looks_like_podspec_dynamic_metadata_value(&raw_license) {
+    if looks_like_nonliteral_podspec_expression(&raw_license) {
         return build_declared_license_data_from_pair(
             "unknown".to_string(),
             "LicenseRef-scancode-unknown".to_string(),
@@ -350,18 +352,42 @@ fn looks_like_podspec_dynamic_metadata_value(value: &str) -> bool {
     value.contains("['") || value.contains("[\"")
 }
 
-fn is_podspec_dynamic_placeholder_token(value: &str) -> bool {
+fn looks_like_nonliteral_podspec_expression(value: &str) -> bool {
     let trimmed = value.trim();
-    trimmed.starts_with("package")
-        && trimmed.len() > "package".len()
-        && trimmed
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if matches!(trimmed.chars().next(), Some('\'' | '"'))
+        || trimmed.starts_with("%q{")
+        || trimmed.starts_with("%Q{")
+    {
+        return false;
+    }
+
+    if trimmed
+        .chars()
+        .all(|c| c.is_ascii_digit() || matches!(c, '.' | '-' | '_' | '+'))
+    {
+        return false;
+    }
+
+    true
 }
 
 fn extract_metadata_field(content: &str, pattern: &Regex) -> Option<String> {
     extract_field(content, pattern)
         .and_then(|value| normalize_podspec_dynamic_metadata_value(&value))
+}
+
+fn extract_raw_field(content: &str, pattern: &Regex) -> Option<String> {
+    for line in content.lines().take(MAX_ITERATION_COUNT) {
+        let cleaned_line = pre_process(line);
+        if let Some(value) = pattern.captures(&cleaned_line).and_then(|caps| caps.get(1)) {
+            return Some(value.as_str().trim().to_string());
+        }
+    }
+    None
 }
 
 /// Extract a single field using a regex pattern
@@ -741,6 +767,18 @@ end
     }
 
     #[test]
+    fn test_detects_nonliteral_podspec_expressions_generically() {
+        assert!(looks_like_nonliteral_podspec_expression("package['name']"));
+        assert!(looks_like_nonliteral_podspec_expression("pod_name"));
+        assert!(looks_like_nonliteral_podspec_expression(
+            "SpecMetadata.version"
+        ));
+        assert!(!looks_like_nonliteral_podspec_expression("'Demo'"));
+        assert!(!looks_like_nonliteral_podspec_expression("\"1.0.0\""));
+        assert!(!looks_like_nonliteral_podspec_expression("1.0.0"));
+    }
+
+    #[test]
     fn test_extract_multiline_description() {
         let content = r#"
 Pod::Spec.new do |s|
@@ -874,21 +912,17 @@ end
     }
 
     #[test]
-    fn test_extract_packages_normalizes_dynamic_benchmark_style_fields() {
+    fn test_extract_packages_marks_dynamic_identity_placeholders_for_nonliteral_fields() {
         let content = r#"
-require 'json'
-
-package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
-
 Pod::Spec.new do |s|
 
-  s.name           = package['name']
-  s.version        = package['version']
+  s.name           = pod_name
+  s.version        = pod_version
   s.summary        = package['description']
-  s.homepage       = package['repository']['url']
-  s.license        = package['license']
-  s.author         = package['author']
-  s.source         = { :git => s.homepage, :tag => 'v#{s.version}' }
+  s.homepage       = homepage_url
+  s.license        = license_name
+  s.author         = author_name
+  s.source         = { :git => homepage_url, :tag => 'v#{pod_version}' }
 
   s.requires_arc   = true
   s.ios.deployment_target = '8.0'
@@ -903,26 +937,21 @@ end
 "#;
 
         let temp_dir = tempfile::tempdir().unwrap();
-        let file_path = temp_dir
-            .path()
-            .join("react-native-background-timer.podspec");
+        let file_path = temp_dir.path().join("dynamic-identity.podspec");
         std::fs::write(&file_path, content).unwrap();
 
         let package_data = PodspecParser::extract_first_package(&file_path);
 
-        assert_eq!(package_data.name.as_deref(), Some("packagename"));
-        assert_eq!(package_data.version.as_deref(), Some("packageversion"));
+        assert_eq!(package_data.name.as_deref(), Some("pod_name"));
+        assert_eq!(package_data.version.as_deref(), Some("pod_version"));
         assert_eq!(
             package_data.description.as_deref(),
             Some("packagedescription")
         );
-        assert_eq!(
-            package_data.homepage_url.as_deref(),
-            Some("packagerepositoryurl")
-        );
+        assert_eq!(package_data.homepage_url.as_deref(), Some("homepage_url"));
         assert_eq!(
             package_data.extracted_license_statement.as_deref(),
-            Some("packagelicense")
+            Some("license_name")
         );
         assert_eq!(
             package_data.declared_license_expression.as_deref(),
@@ -933,32 +962,29 @@ end
             Some("LicenseRef-scancode-unknown")
         );
         assert_eq!(package_data.license_detections.len(), 1);
-        assert_eq!(package_data.vcs_url.as_deref(), Some("s.homepage"));
+        assert_eq!(package_data.vcs_url.as_deref(), Some("homepage_url"));
         assert_eq!(
             package_data.repository_homepage_url.as_deref(),
-            Some("https://cocoapods.org/pods/packagename")
+            Some("https://cocoapods.org/pods/pod_name")
         );
         assert_eq!(
             package_data.repository_download_url.as_deref(),
-            Some("s.homepage/archive/refs/tags/packageversion.zip")
+            Some("homepage_url/archive/refs/tags/pod_version.zip")
         );
         assert_eq!(
             package_data.code_view_url.as_deref(),
-            Some("s.homepage/tree/packageversion")
+            Some("homepage_url/tree/pod_version")
         );
         assert_eq!(
             package_data.bug_tracking_url.as_deref(),
-            Some("s.homepage/issues/")
+            Some("homepage_url/issues/")
         );
         assert_eq!(
             package_data.purl.as_deref(),
-            Some("pkg:cocoapods/packagename@packageversion")
+            Some("pkg:cocoapods/pod_name@pod_version")
         );
         assert_eq!(package_data.parties.len(), 1);
-        assert_eq!(
-            package_data.parties[0].name.as_deref(),
-            Some("packageauthor")
-        );
+        assert_eq!(package_data.parties[0].name.as_deref(), Some("author_name"));
         assert_eq!(
             package_data
                 .extra_data

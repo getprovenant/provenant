@@ -784,7 +784,7 @@ fn is_post_refine_copyright_code_fragment(s: &str) -> bool {
 
 fn contains_unicode_escape_token_run(s: &str) -> bool {
     static UNICODE_ESCAPE_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"(?i)\bu[0-9a-f]{4}\b").unwrap());
+        LazyLock::new(|| Regex::new(r"(?i)\bu[0-9a-f]{4}[a-z0-9_]*\b").unwrap());
 
     UNICODE_ESCAPE_RE.is_match(s.trim())
 }
@@ -1442,21 +1442,9 @@ fn strip_known_copyright_wrappers(s: &str) -> String {
 }
 
 fn strip_trailing_all_rights_reserved_clause(s: &str) -> String {
-    static ALL_RIGHTS_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?ix)^(?P<prefix>.+?)\.?\s+all\s+rights\s+reserved\.?$")
-            .expect("valid all rights reserved regex")
-    });
-
-    let trimmed = s.trim();
-    let Some(captures) = ALL_RIGHTS_RESERVED_RE.captures(trimmed) else {
+    let Some(prefix) = all_rights_reserved_prefix(s) else {
         return s.to_string();
     };
-
-    let prefix = captures
-        .name("prefix")
-        .map(|m| m.as_str())
-        .unwrap_or("")
-        .trim();
     let lower = prefix.to_ascii_lowercase();
     if prefix.is_empty()
         || !(lower.starts_with("copyright") || lower.starts_with("(c)") || lower.starts_with('©'))
@@ -1492,21 +1480,10 @@ fn strip_trailing_no_rights_reserved_clause(s: &str) -> String {
 }
 
 fn strip_trailing_all_rights_reserved_holder_clause(s: &str) -> String {
-    static ALL_RIGHTS_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?ix)^(?P<prefix>.+?)\.?\s+all\s+rights\s+reserved\.?$").unwrap()
-    });
-
-    let trimmed = s.trim();
-    let Some(captures) = ALL_RIGHTS_RESERVED_RE.captures(trimmed) else {
+    let Some(prefix) = all_rights_reserved_prefix(s) else {
         return s.to_string();
     };
-
-    let prefix = captures
-        .name("prefix")
-        .map(|m| m.as_str())
-        .unwrap_or("")
-        .trim();
-    if prefix.is_empty() || !prefix_has_holder_words(prefix) {
+    if prefix.is_empty() || !prefix_has_holder_words(prefix.as_str()) {
         return s.to_string();
     }
 
@@ -1514,6 +1491,25 @@ fn strip_trailing_all_rights_reserved_holder_clause(s: &str) -> String {
         .trim_end_matches(&[',', ';', ':', '.', ' '][..])
         .trim()
         .to_string()
+}
+
+fn all_rights_reserved_prefix(s: &str) -> Option<String> {
+    static ALL_RIGHTS_RESERVED_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)^(?P<prefix>.+?)\.?\s+all\s+rights\s+reserved\.?$")
+            .expect("valid all rights reserved regex")
+    });
+
+    let trimmed = s.trim();
+    let captures = ALL_RIGHTS_RESERVED_RE.captures(trimmed)?;
+
+    Some(
+        captures
+            .name("prefix")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string(),
+    )
 }
 
 fn strip_trailing_obfuscated_email_after_dash(s: &str) -> String {
