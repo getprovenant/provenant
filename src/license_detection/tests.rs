@@ -223,6 +223,49 @@ fn test_engine_detects_terser_license_as_bsd_simplified_only() {
 }
 
 #[test]
+fn test_engine_detects_opus_freq_full_file_as_bsd_simplified_only() {
+    let engine = get_engine();
+    let fixture = std::path::PathBuf::from(
+        "testdata/license-golden/datadriven/external/opus-dnn-freq-full.txt",
+    );
+    let text = std::fs::read_to_string(&fixture).expect("opus freq fixture should be readable");
+
+    let raw_matches = engine
+        .detect_matches_with_kind(&text, false, false)
+        .expect("opus freq header should detect");
+    let expressions: Vec<String> = raw_matches
+        .iter()
+        .map(|detection| detection.license_expression.clone())
+        .collect();
+
+    assert_eq!(expressions, vec!["bsd-simplified"]);
+    assert!(
+        raw_matches
+            .iter()
+            .any(|m| { m.rule_identifier == "bsd-simplified_70.RULE" && m.match_coverage > 98.0 }),
+        "raw matches: {:?}",
+        raw_matches
+            .iter()
+            .map(|m| (
+                m.license_expression.as_str(),
+                m.rule_identifier.as_str(),
+                m.match_coverage,
+                m.matched_length,
+            ))
+            .collect::<Vec<_>>()
+    );
+
+    let detections = engine
+        .detect_with_kind(&text, false, false)
+        .expect("opus freq fixture should detect");
+    assert_eq!(detections.len(), 1);
+    assert_eq!(
+        detections[0].license_expression.as_deref(),
+        Some("bsd-simplified")
+    );
+}
+
+#[test]
 fn test_engine_detects_boost_short_notice_with_url() {
     let engine = get_engine();
 
