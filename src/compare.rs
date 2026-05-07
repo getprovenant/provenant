@@ -276,10 +276,14 @@ pub(crate) fn write_comparison_artifacts(
         let scancode_file = scancode_files.get(path).expect("common path exists");
         let provenant_file = provenant_files.get(path).expect("common path exists");
         for metric in metrics {
-            let sc_count = metric_count(scancode_file, metric);
-            let pr_count = metric_count(provenant_file, metric);
             let sc_values = metric_values(scancode_file, metric);
             let pr_values = metric_values(provenant_file, metric);
+            let sc_counter = value_counter(&sc_values);
+            let pr_counter = value_counter(&pr_values);
+            let sc_signal_counter = metric_signal_counter(metric, &sc_values);
+            let pr_signal_counter = metric_signal_counter(metric, &pr_values);
+            let sc_count = counter_total(&sc_signal_counter);
+            let pr_count = counter_total(&pr_signal_counter);
             if pr_count < sc_count {
                 lower_counts
                     .get_mut(metric)
@@ -305,11 +309,17 @@ pub(crate) fn write_comparison_artifacts(
                         provenant_sample_values: sample_values(&pr_values),
                     });
             }
-            let sc_counter = value_counter(&sc_values);
-            let pr_counter = value_counter(&pr_values);
-            let missing = subtract_counters(&sc_counter, &pr_counter);
-            let extra = subtract_counters(&pr_counter, &sc_counter);
-            if !missing.is_empty() || !extra.is_empty() {
+            let signal_missing = subtract_counters(&sc_signal_counter, &pr_signal_counter);
+            let signal_extra = subtract_counters(&pr_signal_counter, &sc_signal_counter);
+            if !signal_missing.is_empty() || !signal_extra.is_empty() {
+                let missing = filter_counter_to_signal_keys(
+                    &subtract_counters(&sc_counter, &pr_counter),
+                    &signal_missing,
+                );
+                let extra = filter_counter_to_signal_keys(
+                    &subtract_counters(&pr_counter, &sc_counter),
+                    &signal_extra,
+                );
                 value_differences
                     .get_mut(metric)
                     .expect("metric bucket exists")
