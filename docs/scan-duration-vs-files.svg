@@ -314,6 +314,9 @@ ScanCode: 146.24s</title></rect>
     <rect x="543.91" y="374.16" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/json @ 70efd4b
 Files: 705
 ScanCode: 215.32s</title></rect>
+    <rect x="548.54" y="380.50" width="8" height="8" fill="#d97706" rx="1.5"><title>xiph/opus @ 22244de
+Files: 754
+ScanCode: 188.27s</title></rect>
     <rect x="549.45" y="345.68" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/scancode.io @ 904373a
 Files: 764
 ScanCode: 393.40s</title></rect>
@@ -895,6 +898,9 @@ Provenant: 12.57s</title></circle>
     <circle cx="547.91" cy="462.99" r="4.5" fill="#2563eb"><title>boostorg/json @ 70efd4b
 Files: 705
 Provenant: 35.76s</title></circle>
+    <circle cx="552.54" cy="499.85" r="4.5" fill="#2563eb"><title>xiph/opus @ 22244de
+Files: 754
+Provenant: 16.39s</title></circle>
     <circle cx="553.45" cy="454.32" r="4.5" fill="#2563eb"><title>aboutcode-org/scancode.io @ 904373a
 Files: 764
 Provenant: 42.96s</title></circle>

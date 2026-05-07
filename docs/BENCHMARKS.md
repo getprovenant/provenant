@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 193 of 193 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 194 of 194 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -853,6 +853,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `18.81s`; ScanCode `62.23s`
 - Matched Cargo workspace package and dependency coverage (`12` vs `12` packages, `83` vs `83` dependencies) while preserving collective manifest-author names like `Tokio Contributors <team@tokio.rs>`, plus cleaner rejection of ScanCode's weak `(c)`-plus-URL copyright and holder noise and normalized docs.rs URL variants
+
+##### [xiph/opus @ 22244de](https://github.com/xiph/opus/tree/22244de5a79bd1d6d623c32e72bf1954b56235be) — **11.49× faster**
+
+- Files: 754
+- Run context: 2026-05-07 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `16.39s`; ScanCode `188.27s`
+- Broader native-build package visibility (`3` vs `2` packages, `52` vs `38` dependencies) from the repo-root `configure.ac`, nested `meson.build`, and tracked `.gitmodules`, with the real `pkg:autotools/opus` identity instead of ScanCode's generic input placeholder, plus stronger `Written by ...` header author recovery and more correct BSD-2 classification on hybrid DNN headers such as `dnn/freq.h` and `dnn/vec_avx.h`
 
 ##### [torvalds/linux @ b42ed3b](https://github.com/torvalds/linux/tree/b42ed3bb884e6b399b46d19df3f5cf015a79c804) — **27.47× faster**
 
