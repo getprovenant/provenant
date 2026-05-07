@@ -1277,6 +1277,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_caps_after_company_suffix(&c);
     c = strip_trailing_javadoc_tags(&c);
     c = strip_trailing_batch_comment_marker(&c);
+    c = strip_trailing_bug_reports_after_year_only_copyright(&c);
     c = strip_prefixes(&c, &HashSet::from(["by", "c"]));
     c = c.trim().to_string();
     c = c.trim_matches('+').to_string();
@@ -2439,6 +2440,23 @@ fn strip_trailing_original_authors(s: &str) -> String {
     }
 }
 
+fn strip_trailing_bug_reports_after_year_only_copyright(s: &str) -> String {
+    static BUG_REPORTS_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)^.*?Copyright\s*\((?:c|C)\)\s*(?P<year>19\d{2}|20\d{2})\.?\s+Send\s+bug\s+reports\b.*$",
+        )
+        .unwrap()
+    });
+
+    BUG_REPORTS_COPY_RE
+        .captures(s.trim())
+        .and_then(|cap| {
+            cap.name("year")
+                .map(|m| format!("Copyright (c) {}", m.as_str().trim()))
+        })
+        .unwrap_or_else(|| s.to_string())
+}
+
 fn strip_trailing_paren_email_after_c_by(s: &str) -> String {
     static C_BY_PAREN_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
@@ -3008,6 +3026,12 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
     h = strip_trailing_period(&h);
     h = h.trim_matches(&[',', ' '][..]).to_string();
     h = normalize_whitespace(&h);
+    if h.split_whitespace()
+        .last()
+        .is_some_and(|word| matches!(word.to_ascii_lowercase().as_str(), "to"))
+    {
+        return None;
+    }
     h = truncate_long_words(&h);
     h = strip_trailing_single_digit_token(&h);
     h = strip_trailing_period(&h);

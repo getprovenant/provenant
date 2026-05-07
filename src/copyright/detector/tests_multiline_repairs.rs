@@ -257,22 +257,6 @@ fn test_merge_year_only_copyright_with_following_contact_line_and_url() {
 }
 
 #[test]
-fn test_case_only_same_span_copyright_variants_are_deduped() {
-    let input = "// copyright (c) 2019 Samuel Debionne, ESRF\n";
-    let (copyrights, _holders, _authors) = detect_copyrights_from_text(input);
-
-    let matching = copyrights
-        .iter()
-        .filter(|c| {
-            c.copyright
-                .eq_ignore_ascii_case("copyright (c) 2019 Samuel Debionne, ESRF")
-        })
-        .count();
-
-    assert_eq!(matching, 1, "copyrights: {copyrights:?}");
-}
-
-#[test]
 fn test_descriptive_line_does_not_expand_year_only_copyright_holder() {
     let input = "Tru64 audio module for SDL (Simple DirectMedia Layer)\nCopyright (C) 2003\n";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(input);

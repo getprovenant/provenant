@@ -724,7 +724,13 @@ pub fn merge_year_only_copyrights_with_following_contact_lines(
                 .find(|ch| ch.is_alphabetic())
                 .is_some_and(|ch| ch.is_lowercase())
         });
+        let trailing_stopword = words
+            .last()
+            .is_some_and(|word| matches!(word.to_ascii_lowercase().as_str(), "to"));
         if words.len() == 2 && all_lowercase_words {
+            return false;
+        }
+        if trailing_stopword {
             return false;
         }
 
