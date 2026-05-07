@@ -56,6 +56,40 @@ fn test_detect_html_multiline_copyright_keeps_copyright_word() {
 }
 
 #[test]
+fn test_html_copyright_table_row_splits_multiple_holders_cleanly() {
+    let input = concat!(
+        "<table summary=\"Copyright information\">\n",
+        "<tr valign=\"top\">\n",
+        "<td nowrap>Copyright &copy; 2001</td>\n",
+        "<td><a href=\"http://www.osl.iu.edu/~garcia\">Ronald Garcia</a>,\n",
+        "Indiana University\n",
+        "(<a href=\"mailto:garcia@cs.indiana.edu\">garcia@osl.iu.edu</a>)<br>\n",
+        "<a href=\"http://www.osl.iu.edu/~lums\">Andrew Lumsdaine</a>,\n",
+        "Indiana University\n",
+        "(<a href=\"mailto:lums@osl.iu.edu\">lums@osl.iu.edu</a>)</td>\n",
+        "</tr>\n",
+        "</table>\n",
+    );
+
+    let (_copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    let values: Vec<&str> = holders.iter().map(|h| h.holder.as_str()).collect();
+
+    assert!(
+        values.contains(&"Ronald Garcia, Indiana University"),
+        "holders: {values:?}"
+    );
+    assert!(
+        values.contains(&"Andrew Lumsdaine, Indiana University"),
+        "holders: {values:?}"
+    );
+    assert!(
+        !values.iter().any(|holder| holder
+            .contains("Ronald Garcia, Indiana University Andrew Lumsdaine, Indiana University")),
+        "holders: {values:?}"
+    );
+}
+
+#[test]
 fn test_extract_html_meta_name_copyright_content() {
     let content = concat!(
         r#"<meta name="copyright" content="copyright 2005-2006 Cedrik LIME"/>"#,

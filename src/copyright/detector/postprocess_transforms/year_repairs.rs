@@ -634,6 +634,185 @@ pub fn merge_year_only_copyrights_with_following_author_colon_lines(
     }
 }
 
+pub fn merge_year_only_copyrights_with_following_contact_lines(
+    prepared_cache: &PreparedLines<'_>,
+    copyrights: &mut Vec<CopyrightDetection>,
+    holders: &mut Vec<HolderDetection>,
+) {
+    if copyrights.is_empty() {
+        return;
+    }
+    if prepared_cache.raw_line_count() < 2 {
+        return;
+    }
+
+    static YEAR_ONLY_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)^copyright\s*\(c\)\s*(?P<years>[0-9\s,\-–/]+)$").unwrap()
+    });
+    static URL_ONLY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)^(?:https?://|www\.)\S+$").expect("valid url-only regex")
+    });
+    static ANGLE_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\s*<\s*[^>\s]+@[^>\s]+\s*>\s*").expect("valid angle-email regex")
+    });
+    static PAREN_CONTACT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?ix)\s*\((?:[^()]*@[^()]*|(?:https?://|www\.)[^()]+)\)\s*$")
+            .expect("valid parenthesized contact regex")
+    });
+    static OBFUSCATED_EMAIL_SUFFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            \s+
+            [a-z0-9._%+\-]{1,64}
+            \s+at\s+
+            [a-z0-9._\-]{1,64}
+            (?:\s+dot\s+[a-z]{2,12}|\.[a-z]{2,12})
+            \s*$",
+        )
+        .expect("valid obfuscated email suffix regex")
+    });
+
+    fn clean_holder_candidate(line: &str) -> String {
+        let no_angle_email = ANGLE_EMAIL_RE.replace_all(line.trim(), " ").into_owned();
+        let no_paren_contact = PAREN_CONTACT_RE.replace(&no_angle_email, " ").into_owned();
+        let no_obfuscated = OBFUSCATED_EMAIL_SUFFIX_RE
+            .replace(&no_paren_contact, " ")
+            .into_owned();
+        normalize_whitespace(&no_obfuscated)
+    }
+
+    fn is_supported_contact_line(line: &str, has_following_url: bool) -> bool {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            return false;
+        }
+
+        let lower = trimmed.to_ascii_lowercase();
+        if lower.starts_with("copyright")
+            || lower.starts_with("author:")
+            || lower.starts_with("authors:")
+            || lower.starts_with("contact ")
+            || lower.starts_with("email ")
+            || lower.starts_with("mailto:")
+            || lower.starts_with("thanks to")
+            || lower.starts_with("written by")
+            || lower.starts_with("developed by")
+            || lower.starts_with("created by")
+            || lower.starts_with("distributed under")
+            || lower.starts_with("licensed under")
+            || lower.starts_with("http://")
+            || lower.starts_with("https://")
+            || lower.starts_with("www.")
+        {
+            return false;
+        }
+
+        let has_inline_contact = trimmed.contains('@')
+            || (trimmed.contains('<') && trimmed.contains('>'))
+            || lower.contains(" at ");
+        if !has_inline_contact && !has_following_url {
+            return false;
+        }
+
+        let holder_candidate = clean_holder_candidate(trimmed);
+        let words: Vec<&str> = holder_candidate.split_whitespace().collect();
+        if words.len() < 2 || holder_candidate.len() > 100 {
+            return false;
+        }
+        let all_lowercase_words = words.iter().all(|word| {
+            word.chars()
+                .find(|ch| ch.is_alphabetic())
+                .is_some_and(|ch| ch.is_lowercase())
+        });
+        if words.len() == 2 && all_lowercase_words {
+            return false;
+        }
+
+        refine_holder_in_copyright_context(&holder_candidate).is_some()
+    }
+
+    let mut seen_c: HashSet<(usize, usize, String)> = copyrights
+        .iter()
+        .map(|c| (c.start_line.get(), c.end_line.get(), c.copyright.clone()))
+        .collect();
+    let mut seen_h: HashSet<(usize, usize, String)> = holders
+        .iter()
+        .map(|h| (h.start_line.get(), h.end_line.get(), h.holder.clone()))
+        .collect();
+
+    for i in 1..prepared_cache.raw_line_count() {
+        let ln1 = i;
+        let ln2 = i + 1;
+
+        let Some(prev) = copyrights
+            .iter()
+            .find(|c| c.start_line.get() == ln1 && c.end_line.get() == ln1)
+        else {
+            continue;
+        };
+        let Some(cap) = YEAR_ONLY_COPY_RE.captures(prev.copyright.as_str()) else {
+            continue;
+        };
+        let years = cap.name("years").map(|m| m.as_str()).unwrap_or("").trim();
+        if years.is_empty()
+            || years.chars().any(|ch| ch.is_alphabetic())
+            || !years.chars().any(|ch| ch.is_ascii_digit())
+        {
+            continue;
+        }
+
+        let Some(next_prepared) = prepared_cache.get(ln2) else {
+            continue;
+        };
+        let next_line = next_prepared.trim();
+        let url_line = prepared_cache
+            .get(ln2 + 1)
+            .map(str::trim)
+            .filter(|line| URL_ONLY_RE.is_match(line));
+        if !is_supported_contact_line(next_line, url_line.is_some()) {
+            continue;
+        }
+
+        let base = prev.copyright.trim();
+        let raw = if let Some(url) = url_line {
+            format!("{base} {next_line} {url}")
+        } else {
+            format!("{base} {next_line}")
+        };
+        let Some(cr) = refine_copyright(&raw) else {
+            continue;
+        };
+
+        let end_line = if url_line.is_some() { ln2 + 1 } else { ln2 };
+        let ckey = (ln1, end_line, cr.clone());
+        if seen_c.insert(ckey) {
+            copyrights.push(CopyrightDetection {
+                copyright: cr,
+                start_line: LineNumber::new(ln1).expect("valid"),
+                end_line: LineNumber::new(end_line).expect("valid"),
+            });
+        }
+
+        let holder_candidate = clean_holder_candidate(next_line);
+        if let Some(h) = refine_holder_in_copyright_context(&holder_candidate) {
+            let hkey = (ln2, ln2, h.clone());
+            if seen_h.insert(hkey) {
+                holders.push(HolderDetection {
+                    holder: h,
+                    start_line: LineNumber::new(ln2).expect("valid"),
+                    end_line: LineNumber::new(ln2).expect("valid"),
+                });
+            }
+        }
+
+        copyrights.retain(|c| {
+            !(c.start_line.get() == ln1
+                && c.end_line.get() == ln1
+                && YEAR_ONLY_COPY_RE.is_match(c.copyright.as_str()))
+        });
+    }
+}
+
 pub fn extract_question_mark_year_copyrights(
     prepared_cache: &PreparedLines<'_>,
 ) -> (Vec<CopyrightDetection>, Vec<HolderDetection>) {

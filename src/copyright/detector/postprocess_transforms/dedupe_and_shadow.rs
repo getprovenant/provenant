@@ -740,7 +740,10 @@ pub fn dedupe_exact_span_copyrights(copyrights: &mut Vec<CopyrightDetection>) {
         return;
     }
     let mut seen: HashSet<(usize, usize, String)> = HashSet::new();
-    copyrights.retain(|c| seen.insert((c.start_line.get(), c.end_line.get(), c.copyright.clone())));
+    copyrights.retain(|c| {
+        let normalized = normalize_whitespace(&c.copyright).to_ascii_lowercase();
+        seen.insert((c.start_line.get(), c.end_line.get(), normalized))
+    });
 }
 
 pub fn dedupe_exact_span_holders(holders: &mut Vec<HolderDetection>) {

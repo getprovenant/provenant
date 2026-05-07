@@ -231,6 +231,48 @@ fn test_add_missing_holder_from_preceding_name_line_for_year_only_copyright() {
 }
 
 #[test]
+fn test_merge_year_only_copyright_with_following_contact_line_and_url() {
+    let input = "// copyright (c) 2005\n// troy d. straszheim <troy@resophonic.com>\n// http://www.resophonic.com\n";
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights.iter().any(|c| {
+            c.start_line == LineNumber::ONE
+                && c.end_line == LineNumber::new(3).unwrap()
+                && c.copyright
+                    == "copyright (c) 2005 troy d. straszheim <troy@resophonic.com> http://www.resophonic.com"
+        }),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        !copyrights.iter().any(|c| c.start_line == LineNumber::ONE
+            && c.end_line == LineNumber::ONE
+            && c.copyright == "copyright (c) 2005"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "troy d. straszheim"),
+        "holders: {holders:?}"
+    );
+}
+
+#[test]
+fn test_case_only_same_span_copyright_variants_are_deduped() {
+    let input = "// copyright (c) 2019 Samuel Debionne, ESRF\n";
+    let (copyrights, _holders, _authors) = detect_copyrights_from_text(input);
+
+    let matching = copyrights
+        .iter()
+        .filter(|c| {
+            c.copyright
+                .eq_ignore_ascii_case("copyright (c) 2019 Samuel Debionne, ESRF")
+        })
+        .count();
+
+    assert_eq!(matching, 1, "copyrights: {copyrights:?}");
+}
+
+#[test]
 fn test_descriptive_line_does_not_expand_year_only_copyright_holder() {
     let input = "Tru64 audio module for SDL (Simple DirectMedia Layer)\nCopyright (C) 2003\n";
     let (copyrights, holders, _authors) = detect_copyrights_from_text(input);

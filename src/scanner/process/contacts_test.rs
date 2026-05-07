@@ -202,6 +202,37 @@ fn test_extract_email_url_information_keeps_gettext_mo_contacts() {
 }
 
 #[test]
+fn test_extract_email_url_information_deduplicates_exact_text_email_spans() {
+    let mut builder = FileInfoBuilder::default();
+    let options = TextDetectionOptions {
+        detect_emails: true,
+        detect_urls: false,
+        ..TextDetectionOptions::default()
+    };
+
+    extract_email_url_information(
+        &mut builder,
+        Path::new("doc.html"),
+        r#"(<a href=\"mailto:lums@osl.iu.edu\">lums@osl.iu.edu</a>)"#,
+        &options,
+        false,
+    );
+
+    let file = builder
+        .name("doc.html".to_string())
+        .base_name("doc".to_string())
+        .extension(".html".to_string())
+        .path("doc.html".to_string())
+        .file_type(FileType::File)
+        .size(1)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(file.emails.len(), 1, "emails: {:?}", file.emails);
+    assert_eq!(file.emails[0].email, "lums@osl.iu.edu");
+}
+
+#[test]
 fn test_extract_email_url_information_applies_binary_filters_to_font_paths() {
     let mut builder = FileInfoBuilder::default();
     let options = TextDetectionOptions {

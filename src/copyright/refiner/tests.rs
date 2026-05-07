@@ -377,6 +377,19 @@ fn test_remove_extra_words_mailto() {
 }
 
 #[test]
+fn test_refine_copyright_flattens_html_anchor_footer_notice() {
+    let result = refine_copyright(
+        r#"<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004."#,
+    )
+    .expect("html footer notice should refine");
+
+    assert_eq!(
+        result,
+        "(c) Copyright http://www.rrsd.com Robert Ramey 2002-2004"
+    );
+}
+
+#[test]
 fn test_remove_extra_words_as_represented_by() {
     let result = remove_some_extra_words_and_punct("Acme Corp as represented by");
     assert_eq!(result, "Acme Corp as represented by");

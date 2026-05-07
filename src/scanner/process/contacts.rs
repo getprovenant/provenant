@@ -30,9 +30,11 @@ pub(super) fn extract_email_url_information(
             max_urls: text_options.max_urls,
             unique: from_binary_strings,
         };
+        let mut seen_email_spans = HashSet::new();
         let emails = finder::find_emails(text_content, &config)
             .into_iter()
             .filter(|d| !apply_binary_contact_filters || is_binary_string_email_candidate(&d.email))
+            .filter(|d| seen_email_spans.insert((d.email.clone(), d.start_line, d.end_line)))
             .map(|d| OutputEmail {
                 email: d.email,
                 start_line: d.start_line,

@@ -574,6 +574,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `35.76s`; ScanCode `215.32s`
 - Cleaner benchmark-corpus author extraction in `bench/data/gsoc-2018.json` and `bench/data/github_events.json`, replacing ScanCode junk such as `type' Person name' AadityaNair` and prose fragments with actual participant names while preserving Unicode identities like `Nils Jørgen Mittet`, plus Unicode-preserving holder normalization for `René Ferdinand Rivera Morell` on build metadata
 
+##### [boostorg/serialization @ 097a6c6](https://github.com/boostorg/serialization/tree/097a6c63a137be836d663cdb27f2e6c803a4100b) — **10.06× faster**
+
+- Files: 542
+- Run context: 2026-05-07 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `13.15s`; ScanCode `132.33s`
+- Richer and cleaner serialization notice recovery across headers, tests, and legacy HTML docs, with repaired year-plus-contact holder extraction on `include/boost/serialization/variant.hpp`, multi-person codecvt footer attribution that preserves both Ronald Garcia and Andrew Lumsdaine, `Peter Dimov` author attribution on `test/test_mi.cpp`, fuller `Joaquin M Lopez Munoz` identity capture, and Unicode-preserving `René Ferdinand Rivera Morell` normalization
+
 ##### [catchorg/Catch2 @ 10f6248](https://github.com/catchorg/Catch2/tree/10f62484bff73e3a58a411e2e10b4e1c13cfba9f) — **15.10× faster**
 
 - Files: 576

@@ -60,6 +60,16 @@ fn run_pre_pattern_repairs(
 
     let c_before = copyrights.len();
     let h_before = holders.len();
+    super::super::postprocess_transforms::merge_year_only_copyrights_with_following_contact_lines(
+        prepared_cache,
+        copyrights,
+        holders,
+    );
+    seen.dedup_new_copyrights(copyrights, c_before);
+    seen.dedup_new_holders(holders, h_before);
+
+    let c_before = copyrights.len();
+    let h_before = holders.len();
     super::super::postprocess_transforms::extract_licensed_material_of_company_bare_c_year_lines(
         prepared_cache,
         copyrights,

@@ -104,12 +104,19 @@ pub fn split_multiline_holder_lists_from_copyright_email_sequences(
     static NAME_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?P<name>[^<>\n]+?)\s*<[^>\s]+@[^>\s]+>").expect("valid name-email regex")
     });
+    static NAME_PAREN_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?P<name>[^()\n]+?)\s*\([^()]*@[^()]*\)").expect("valid paren-email regex")
+    });
     static LEADING_COPY_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
             r"(?i)^\s*(?:copyright\s*)?\(c\)\s*(?:\d{2,4}(?:\s*-\s*\d{2,4})?(?:\s*,\s*\d{2,4})*)\s+",
         )
         .expect("valid leading copyright-year regex")
     });
+    static LEADING_URL_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^\s*https?://\S+\s+").expect("valid leading url regex"));
+    static INLINE_URL_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\s+https?://\S+\s+").expect("valid inline url regex"));
 
     let mut to_add: Vec<HolderDetection> = Vec::new();
     let mut to_remove: HashSet<(usize, usize, String)> = HashSet::new();
@@ -124,23 +131,46 @@ pub fn split_multiline_holder_lists_from_copyright_email_sequences(
         if !(c_lower.starts_with("(c)") || c_lower.starts_with("copyright (c)")) {
             continue;
         }
-        if c_trimmed.contains(',') {
+
+        if !c.copyright.contains('@')
+            && !c_lower.contains("http://")
+            && !c_lower.contains("https://")
+        {
             continue;
         }
-
-        if !c.copyright.contains('@') || !c.copyright.contains('<') || !c.copyright.contains('>') {
+        if !(c_lower.contains("http://")
+            || c_lower.contains("https://")
+            || c.copyright.contains('<') && c.copyright.contains('>')
+            || c.copyright.contains('(') && c.copyright.contains(')'))
+        {
             continue;
         }
 
         let mut split_names: Vec<String> = NAME_EMAIL_RE
             .captures_iter(&c.copyright)
+            .chain(NAME_PAREN_EMAIL_RE.captures_iter(&c.copyright))
             .filter_map(|cap| {
                 cap.name("name")
                     .map(|m| normalize_whitespace(m.as_str().trim()))
             })
             .map(|name| LEADING_COPY_YEAR_RE.replace(&name, "").trim().to_string())
+            .map(|name| LEADING_URL_RE.replace(&name, "").trim().to_string())
             .filter_map(|name| refine_holder(&name))
             .collect();
+
+        if split_names.len() < 2 {
+            let stripped = LEADING_COPY_YEAR_RE
+                .replace(&c.copyright, "")
+                .trim()
+                .to_string();
+            split_names = INLINE_URL_RE
+                .split(&stripped)
+                .map(|name| normalize_whitespace(name.trim()))
+                .map(|name| LEADING_URL_RE.replace(&name, "").trim().to_string())
+                .filter(|name| name.split_whitespace().count() >= 2)
+                .filter_map(|name| refine_holder(&name))
+                .collect();
+        }
 
         if split_names.len() < 2 {
             continue;
@@ -152,31 +182,36 @@ pub fn split_multiline_holder_lists_from_copyright_email_sequences(
         }
         let joined = normalize_whitespace(&split_names.join(" "));
 
-        let mut has_joined_holder = false;
-        for h in holders.iter() {
-            if h.start_line.get() == c.start_line.get()
-                && h.end_line.get() == c.end_line.get()
+        let matching_joined_holder = holders.iter().find(|h| {
+            h.start_line.get() >= c.start_line.get()
+                && h.end_line.get() <= c.end_line.get()
                 && normalize_whitespace(&h.holder) == joined
-            {
-                has_joined_holder = true;
-                to_remove.insert((h.start_line.get(), h.end_line.get(), h.holder.clone()));
-            }
-        }
+        });
 
-        if !has_joined_holder {
+        let Some(joined_holder) = matching_joined_holder else {
             continue;
-        }
+        };
+
+        to_remove.insert((
+            joined_holder.start_line.get(),
+            joined_holder.end_line.get(),
+            joined_holder.holder.clone(),
+        ));
 
         for name in split_names {
-            let key = (c.start_line.get(), c.end_line.get(), name.clone());
+            let key = (
+                joined_holder.start_line.get(),
+                joined_holder.end_line.get(),
+                name.clone(),
+            );
             if !holders
                 .iter()
                 .any(|h| (h.start_line.get(), h.end_line.get(), h.holder.clone()) == key)
             {
                 to_add.push(HolderDetection {
                     holder: name,
-                    start_line: c.start_line,
-                    end_line: c.end_line,
+                    start_line: joined_holder.start_line,
+                    end_line: joined_holder.end_line,
                 });
             }
         }

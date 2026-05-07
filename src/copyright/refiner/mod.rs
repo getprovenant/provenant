@@ -686,6 +686,34 @@ fn contains_html_entity_decoder_artifact(s: &str) -> bool {
         || lower.contains("&#174")
 }
 
+fn normalize_markup_rich_text_fragment(s: &str) -> String {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return s.to_string();
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    let looks_like_markup_rich_text = lower.contains("href=")
+        || lower.contains("<a")
+        || lower.contains("</a")
+        || lower.contains("<br")
+        || lower.contains("<p")
+        || lower.contains("<td")
+        || lower.contains("<i>")
+        || lower.contains("&copy")
+        || lower.contains("mailto:");
+    if !looks_like_markup_rich_text {
+        return s.to_string();
+    }
+
+    let prepared = prepare_text_line(trimmed);
+    if prepared.is_empty() {
+        return s.to_string();
+    }
+
+    normalize_whitespace(&prepared)
+}
+
 fn contains_generated_resource_token(s: &str) -> bool {
     static ASSET_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?i)(?:@(?:1x|2x|3x|4x))?\.(?:png|jpg|jpeg|gif|webp|bmp|ico|icns|svg|ttf|otf|woff2?|img|tmpl|json|xml|yaml|yml|g\.dart)\b")
@@ -1181,7 +1209,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     if s.is_empty() {
         return None;
     }
-    let original = normalize_whitespace(s);
+    let original = normalize_whitespace(&normalize_markup_rich_text_fragment(s));
     if contains_windows_versioninfo_token(&original)
         || (contains_xml_markup_declaration_token(&original) && !has_copyright_year(&original))
     {

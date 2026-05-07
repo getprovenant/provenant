@@ -281,6 +281,9 @@ ScanCode: 211.97s</title></rect>
     <rect x="525.54" y="396.10" width="8" height="8" fill="#d97706" rx="1.5"><title>pyodide/pyodide @ 86e27b0
 Files: 540
 ScanCode: 135.33s</title></rect>
+    <rect x="525.79" y="397.16" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/serialization @ 097a6c6
+Files: 542
+ScanCode: 132.33s</title></rect>
     <rect x="526.30" y="381.25" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
 ScanCode: 185.33s</title></rect>
@@ -874,6 +877,9 @@ Provenant: 11.92s</title></circle>
     <circle cx="529.54" cy="519.69" r="4.5" fill="#2563eb"><title>pyodide/pyodide @ 86e27b0
 Files: 540
 Provenant: 10.77s</title></circle>
+    <circle cx="529.79" cy="510.26" r="4.5" fill="#2563eb"><title>boostorg/serialization @ 097a6c6
+Files: 542
+Provenant: 13.15s</title></circle>
     <circle cx="530.30" cy="507.88" r="4.5" fill="#2563eb"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
 Provenant: 13.83s</title></circle>
