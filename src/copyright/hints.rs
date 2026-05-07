@@ -69,6 +69,37 @@ pub fn has_copyright_hint(line: &str) -> bool {
 }
 
 fn has_c_marker_hint(line: &str) -> bool {
+    fn lowercase_word_len(bytes: &[u8]) -> usize {
+        let mut len = 0;
+        for &b in bytes {
+            if b.is_ascii_lowercase() || b == b'\'' || b == b'-' {
+                len += 1;
+            } else {
+                break;
+            }
+        }
+        len
+    }
+
+    fn has_lowercase_holder_shape(bytes: &[u8]) -> bool {
+        let first_word_len = lowercase_word_len(bytes);
+        if first_word_len < 2 {
+            return false;
+        }
+
+        let mut j = first_word_len;
+        while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+            j += 1;
+        }
+        if j >= bytes.len() {
+            return false;
+        }
+
+        let next = bytes[j];
+        matches!(next, b',' | b'.' | b';' | b':' | b'&')
+            || (next.is_ascii_lowercase() && lowercase_word_len(&bytes[j..]) >= 2)
+    }
+
     let lower = line.to_ascii_lowercase();
     for (idx, _) in lower.match_indices("(c)") {
         if idx > 0 {
@@ -85,7 +116,9 @@ fn has_c_marker_hint(line: &str) -> bool {
                 j += 1;
                 continue;
             }
-            return b.is_ascii_digit() || b.is_ascii_uppercase();
+            return b.is_ascii_digit()
+                || b.is_ascii_uppercase()
+                || (b.is_ascii_lowercase() && has_lowercase_holder_shape(&line.as_bytes()[j..]));
         }
     }
     false
@@ -129,6 +162,18 @@ mod tests {
     #[test]
     fn test_hint_c_in_parens() {
         assert!(has_copyright_hint("Copyright (C) 2024"));
+    }
+
+    #[test]
+    fn test_hint_c_in_parens_with_lowercase_holder() {
+        assert!(has_copyright_hint(
+            " * (c) foo platforms, inc. and affiliates. confidential and proprietary."
+        ));
+    }
+
+    #[test]
+    fn test_hint_c_in_parens_rejects_single_letter_code_expression() {
+        assert!(!has_copyright_hint("(c) c ? foo : bar"));
     }
 
     #[test]

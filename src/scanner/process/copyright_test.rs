@@ -192,6 +192,41 @@ fn test_extract_copyright_information_xml_comment_projection_avoids_comment_wrap
 }
 
 #[test]
+fn test_extract_copyright_information_js_block_comment_lowercase_c_header() {
+    let text = "/**\n * (c) foo platforms, inc. and affiliates. confidential and proprietary.\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("fixture.js"), text, 120.0, false);
+
+    let file = builder
+        .name("fixture.js".to_string())
+        .base_name("fixture".to_string())
+        .extension(".js".to_string())
+        .path("fixture.js".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "(c) foo platforms, inc. and affiliates. confidential and proprietary."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("(c) foo platforms, inc. and affiliates")
+    );
+    assert_eq!(file.holders[0].holder, "foo platforms, inc. and affiliates");
+}
+
+#[test]
 fn test_extract_copyright_information_xml_comment_projection_preserves_native_symbol() {
     let text = "<!-- Copyright © 2024 Example Corp. All rights reserved. -->\n";
     let mut builder = FileInfoBuilder::default();

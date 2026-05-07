@@ -1576,6 +1576,24 @@ mod tests {
     }
 
     #[test]
+    fn test_collect_keeps_lowercase_c_holder_comment_line() {
+        let lines = vec![(
+            1,
+            " * (c) foo platforms, inc. and affiliates. confidential and proprietary.".to_string(),
+        )];
+
+        let groups = collect_candidate_lines(lines);
+
+        assert_eq!(groups.len(), 1, "groups: {groups:?}");
+        assert_eq!(groups[0].len(), 1, "groups: {groups:?}");
+        assert!(
+            groups[0][0]
+                .1
+                .contains("(c) foo platforms, inc. and affiliates")
+        );
+    }
+
+    #[test]
     fn test_collect_skips_huge_minified_auth_lines_after_x_editable_header() {
         let lines = vec![
             (1, "/*! X-editable - v1.5.0".to_string()),
