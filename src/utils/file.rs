@@ -14,6 +14,7 @@ use flate2::read::ZlibDecoder;
 use glob::Pattern;
 use image::{ImageDecoder, ImageFormat, ImageReader};
 use mime_guess::from_path;
+use object::FileKind;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader as XmlReader;
 
@@ -49,6 +50,10 @@ const MAX_IMAGE_METADATA_VALUES: usize = 64;
 const MAX_IMAGE_METADATA_TEXT_BYTES: usize = 32 * 1024;
 const BINARY_CONTROL_CHAR_THRESHOLD_DIVISOR: usize = 10;
 const LARGE_OPAQUE_BINARY_SKIP_BYTES: usize = 512 * 1024;
+const LARGE_MACHO_LEGAL_WINDOW_BYTES: usize = 64 * 1024;
+const LARGE_MACHO_LEGAL_MAX_WINDOWS: usize = 24;
+const LARGE_MACHO_LEGAL_MAX_WINDOWS_PER_MARKER: usize = 4;
+const LARGE_MACHO_LEGAL_MAX_EXTRACT_BYTES: usize = 2 * 1024 * 1024;
 const JSON_VALIDATION_MAX_BYTES: usize = 4 * 1024 * 1024;
 const MAX_XMP_PACKET_BYTES: usize = 256 * 1024;
 const MAX_PDF_TEXT_EXTRACTION_BYTES: usize = 32 * 1024 * 1024;
@@ -61,6 +66,26 @@ const BINARY_EXTENSIONS: &[&str] = &[
 const ARCHIVE_EXTENSIONS: &[&str] = &[
     "zip", "jar", "war", "ear", "tar", "gz", "tgz", "bz2", "xz", "7z", "rar", "apk", "deb", "rpm",
     "whl", "crate", "egg", "gem", "nupkg", "sqs", "squashfs",
+];
+const LARGE_MACHO_LEGAL_MARKERS: &[&[u8]] = &[
+    b"Unicode, Inc.",
+    b"http://www.unicode.org/copyright.html",
+    b"https://www.unicode.org/copyright.html",
+    b"SPDX-License-Identifier:",
+    b"Licensed under",
+    b"licensed under",
+    b"Apache License",
+    b"http://www.apache.org/licenses/",
+    b"https://www.apache.org/licenses/",
+    b"Permission is hereby granted",
+    b"permission is hereby granted",
+    b"Redistribution and use in source and binary forms",
+    b"redistribution and use in source and binary forms",
+    b"Permission to use, copy, modify, and/or distribute this software",
+    b"The MIT License",
+    b"GNU GENERAL PUBLIC LICENSE",
+    b"GNU LESSER GENERAL PUBLIC LICENSE",
+    b"Mozilla Public License",
 ];
 
 /// Get the last modified date of a file as a `YYYY-MM-DD` string.
@@ -290,8 +315,25 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
     let windows_executable_metadata_text = extract_windows_executable_metadata_text(bytes);
     let large_opaque_binary = windows_executable_metadata_text.is_none()
         && is_large_opaque_binary_candidate(bytes, detected_format);
+    let bounded_macho_legal_text = if large_opaque_binary {
+        extract_bounded_macho_legal_strings(bytes)
+    } else {
+        String::new()
+    };
+    let skip_large_opaque_binary_text =
+        should_skip_large_opaque_binary_text_extraction(path, bytes, detected_format);
 
-    if should_skip_large_opaque_binary_text_extraction(path, bytes, detected_format) {
+    if skip_large_opaque_binary_text {
+        if !bounded_macho_legal_text.is_empty() {
+            return (
+                combine_extracted_text_fragments(
+                    windows_executable_metadata_text,
+                    bounded_macho_legal_text,
+                ),
+                ExtractedTextKind::BinaryStrings,
+                None,
+            );
+        }
         return windows_metadata_or_empty_result(windows_executable_metadata_text);
     }
 
@@ -322,7 +364,12 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
     }
 
     let text = if large_opaque_binary {
-        extract_sampled_printable_strings(bytes)
+        let sampled_text = extract_sampled_printable_strings(bytes);
+        if bounded_macho_legal_text.is_empty() {
+            sampled_text
+        } else {
+            combine_extracted_text_fragments(Some(sampled_text), bounded_macho_legal_text)
+        }
     } else {
         extract_printable_strings(bytes)
     };
@@ -1578,6 +1625,103 @@ fn sampled_printable_window_ranges(len: usize) -> Vec<(usize, usize)> {
     ranges
 }
 
+fn extract_bounded_macho_legal_strings(bytes: &[u8]) -> String {
+    if !matches!(
+        FileKind::parse(bytes),
+        Ok(FileKind::MachO32 | FileKind::MachO64 | FileKind::MachOFat32 | FileKind::MachOFat64)
+    ) {
+        return String::new();
+    }
+
+    let mut ranges = Vec::new();
+    for marker in LARGE_MACHO_LEGAL_MARKERS {
+        collect_marker_window_ranges(bytes, marker, &mut ranges);
+        if ranges.len() >= LARGE_MACHO_LEGAL_MAX_WINDOWS {
+            break;
+        }
+    }
+
+    if ranges.is_empty() {
+        return String::new();
+    }
+
+    let mut merged_ranges = merge_overlapping_ranges(ranges);
+    let mut combined_lines = BTreeSet::new();
+    let mut extracted_bytes = 0usize;
+
+    for (start, end) in merged_ranges.drain(..) {
+        if extracted_bytes >= LARGE_MACHO_LEGAL_MAX_EXTRACT_BYTES {
+            break;
+        }
+        let remaining = LARGE_MACHO_LEGAL_MAX_EXTRACT_BYTES - extracted_bytes;
+        let end = start.saturating_add((end - start).min(remaining));
+        let window_text = extract_printable_strings(&bytes[start..end]);
+        for line in window_text
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+        {
+            combined_lines.insert(line.to_string());
+        }
+        extracted_bytes += end - start;
+    }
+
+    combined_lines.into_iter().collect::<Vec<_>>().join("\n")
+}
+
+fn collect_marker_window_ranges(bytes: &[u8], marker: &[u8], ranges: &mut Vec<(usize, usize)>) {
+    if marker.is_empty() || ranges.len() >= LARGE_MACHO_LEGAL_MAX_WINDOWS {
+        return;
+    }
+
+    let mut search_start = 0usize;
+    let mut hits_for_marker = 0usize;
+
+    while search_start + marker.len() <= bytes.len()
+        && ranges.len() < LARGE_MACHO_LEGAL_MAX_WINDOWS
+        && hits_for_marker < LARGE_MACHO_LEGAL_MAX_WINDOWS_PER_MARKER
+    {
+        let Some(relative_match) = bytes[search_start..].iter().position(|&b| b == marker[0])
+        else {
+            break;
+        };
+        let match_start = search_start + relative_match;
+        let match_end = match_start + marker.len();
+        if match_end <= bytes.len() && &bytes[match_start..match_end] == marker {
+            let half_window = LARGE_MACHO_LEGAL_WINDOW_BYTES / 2;
+            let window_start = match_start.saturating_sub(half_window);
+            let window_end = (match_end + half_window).min(bytes.len());
+            ranges.push((window_start, window_end));
+            hits_for_marker += 1;
+            search_start = match_end;
+        } else {
+            search_start = match_start + 1;
+        }
+    }
+}
+
+fn merge_overlapping_ranges(mut ranges: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    if ranges.is_empty() {
+        return ranges;
+    }
+
+    ranges.sort_unstable_by_key(|&(start, end)| (start, end));
+
+    let mut merged = Vec::with_capacity(ranges.len());
+    let mut current = ranges[0];
+    for (start, end) in ranges.into_iter().skip(1) {
+        if start <= current.1 {
+            current.1 = current.1.max(end);
+        } else {
+            merged.push(current);
+            current = (start, end);
+        }
+    }
+    merged.push(current);
+
+    merged
+}
+
 fn sample_has_promising_printable_strings(bytes: &[u8]) -> bool {
     let mut structured_signal_seen = false;
     let promising_license_windows = sampled_printable_window_ranges(bytes.len())
@@ -2575,6 +2719,52 @@ mod tests {
         assert_ne!(kind, ExtractedTextKind::None);
         assert!(text.contains("asn@redhat.com"));
         assert!(text.contains("https://publicsuffix.org/"));
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_keeps_large_macho_with_off_window_legal_markers() {
+        let mut bytes = vec![0_u8; LARGE_OPAQUE_BINARY_SKIP_BYTES * 2];
+        bytes[..4].copy_from_slice(&[0xCF, 0xFA, 0xED, 0xFE]);
+        let apache_notice = b"// Licensed under the Apache License, Version 2.0 (the \"License\");\n// http://www.apache.org/licenses/LICENSE-2.0\n// SPDX-License-Identifier: Apache-2.0\n";
+        let insert_offset = 200 * 1024;
+        bytes[insert_offset..insert_offset + apache_notice.len()].copy_from_slice(apache_notice);
+
+        let (text, kind) = extract_text_for_detection(Path::new("node"), &bytes);
+
+        assert_eq!(kind, ExtractedTextKind::BinaryStrings);
+        assert!(text.contains("Apache License, Version 2.0"), "{text}");
+        assert!(
+            text.contains("SPDX-License-Identifier: Apache-2.0"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_keeps_large_macho_with_unicode_notice_markers() {
+        let mut bytes = vec![0_u8; LARGE_OPAQUE_BINARY_SKIP_BYTES * 2];
+        bytes[..4].copy_from_slice(&[0xCF, 0xFA, 0xED, 0xFE]);
+        let unicode_notice = b"Copyright (c) 1991-2024 Unicode, Inc.\nFor terms of use, see http://www.unicode.org/copyright.html\n";
+        let insert_offset = 700 * 1024;
+        bytes[insert_offset..insert_offset + unicode_notice.len()].copy_from_slice(unicode_notice);
+
+        let (text, kind) = extract_text_for_detection(Path::new("node"), &bytes);
+
+        assert_eq!(kind, ExtractedTextKind::BinaryStrings);
+        assert!(text.contains("Unicode, Inc."), "{text}");
+        assert!(text.contains("unicode.org/copyright.html"), "{text}");
+    }
+
+    #[test]
+    fn test_extract_text_for_detection_does_not_reopen_single_window_legal_noise_for_non_macho() {
+        let mut bytes = vec![0_u8; LARGE_OPAQUE_BINARY_SKIP_BYTES * 2];
+        let apache_notice = b"// Licensed under the Apache License, Version 2.0 (the \"License\");\n// http://www.apache.org/licenses/LICENSE-2.0\n// SPDX-License-Identifier: Apache-2.0\n";
+        let insert_offset = 200 * 1024;
+        bytes[insert_offset..insert_offset + apache_notice.len()].copy_from_slice(apache_notice);
+
+        let (text, kind) = extract_text_for_detection(Path::new("model.bin"), &bytes);
+
+        assert!(text.is_empty());
+        assert_eq!(kind, ExtractedTextKind::None);
     }
 
     #[test]
