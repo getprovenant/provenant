@@ -246,7 +246,9 @@ pub(crate) fn classify_url(url: &str) -> bool {
     }
 
     let normalized = url.to_lowercase().trim_end_matches('/').to_string();
-    if has_embedded_nested_scheme_in_path(&normalized) {
+    if has_embedded_nested_scheme_in_path(&normalized)
+        && !is_archive_capture_url_with_embedded_target(&normalized)
+    {
         return false;
     }
     if JUNK_URLS.contains(&normalized.as_str()) {
@@ -269,4 +271,9 @@ fn has_embedded_nested_scheme_in_path(url: &str) -> bool {
     let rest = &url[first_scheme_idx + 3..];
     let pathish_prefix_end = rest.find(['?', '#']).unwrap_or(rest.len());
     rest[..pathish_prefix_end].contains("://")
+}
+
+fn is_archive_capture_url_with_embedded_target(url: &str) -> bool {
+    url.starts_with("http://web.archive.org/web/")
+        || url.starts_with("https://web.archive.org/web/")
 }

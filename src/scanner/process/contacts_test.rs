@@ -265,6 +265,42 @@ fn test_extract_email_url_information_applies_binary_filters_to_font_paths() {
 }
 
 #[test]
+fn test_extract_email_url_information_keeps_short_uppercase_font_metadata_email() {
+    let mut builder = FileInfoBuilder::default();
+    let options = TextDetectionOptions {
+        detect_emails: true,
+        detect_urls: true,
+        ..TextDetectionOptions::default()
+    };
+
+    extract_email_url_information(
+        &mut builder,
+        Path::new("font.ttf"),
+        "xx/A@0.CC\nhttp://www.apache.org/licenses/LICENSE-2.0",
+        &options,
+        false,
+    );
+
+    let file = builder
+        .name("font.ttf".to_string())
+        .base_name("font".to_string())
+        .extension(".ttf".to_string())
+        .path("font.ttf".to_string())
+        .file_type(FileType::File)
+        .size(1)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(file.emails.len(), 1, "emails: {:?}", file.emails);
+    assert_eq!(file.emails[0].email, "a@0.cc");
+    assert_eq!(file.urls.len(), 1, "urls: {:?}", file.urls);
+    assert_eq!(
+        file.urls[0].url,
+        "http://www.apache.org/licenses/LICENSE-2.0"
+    );
+}
+
+#[test]
 fn test_extract_email_url_information_prefers_unique_text_emails_before_cap() {
     let mut builder = FileInfoBuilder::default();
     let options = TextDetectionOptions {

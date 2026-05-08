@@ -21,8 +21,12 @@ pub(super) fn extract_email_url_information(
         return;
     }
 
+    let applies_gettext_exception = is_gettext_mo_path(path);
+    let is_font_metadata_path = !from_binary_strings && is_font_metadata_contact_path(path);
     let apply_binary_contact_filters =
-        (from_binary_strings || is_font_metadata_contact_path(path)) && !is_gettext_mo_path(path);
+        (from_binary_strings || is_font_metadata_path) && !applies_gettext_exception;
+    let font_metadata_lines =
+        is_font_metadata_path.then(|| text_content.lines().collect::<Vec<_>>());
 
     if text_options.detect_emails {
         let config = DetectionConfig {
@@ -33,7 +37,15 @@ pub(super) fn extract_email_url_information(
         let mut seen_email_spans = HashSet::new();
         let emails = finder::find_emails(text_content, &config)
             .into_iter()
-            .filter(|d| !apply_binary_contact_filters || is_binary_string_email_candidate(&d.email))
+            .filter(|d| {
+                !apply_binary_contact_filters
+                    || is_binary_string_email_candidate(&d.email)
+                    || is_short_font_metadata_email_alias(
+                        font_metadata_lines.as_deref(),
+                        &d.email,
+                        d.start_line,
+                    )
+            })
             .filter(|d| seen_email_spans.insert((d.email.clone(), d.start_line, d.end_line)))
             .map(|d| OutputEmail {
                 email: d.email,
@@ -89,6 +101,61 @@ fn is_gettext_mo_path(path: &Path) -> bool {
 
 fn is_font_metadata_contact_path(path: &Path) -> bool {
     is_supported_font_path(path)
+}
+
+fn is_short_font_metadata_email_alias(
+    font_metadata_lines: Option<&[&str]>,
+    email: &str,
+    line_number: LineNumber,
+) -> bool {
+    let raw_line = font_metadata_lines
+        .and_then(|lines| lines.get(line_number.get() - 1).copied())
+        .map(|line| {
+            line.trim().trim_matches(|c: char| {
+                matches!(
+                    c,
+                    '<' | '>' | '(' | ')' | '[' | ']' | '"' | '\'' | '`' | ',' | ';'
+                )
+            })
+        })
+        .unwrap_or("");
+    let normalized_email = email.to_ascii_lowercase();
+    let raw_line_lower = raw_line.to_ascii_lowercase();
+    let Some(email_start) = raw_line_lower.find(&normalized_email) else {
+        return false;
+    };
+    let email_end = email_start + normalized_email.len();
+    let prefix = &raw_line[email_start.saturating_sub(email_start)..email_start];
+    let suffix = &raw_line[email_end..];
+    let extra = [prefix, suffix].concat();
+    if !extra.is_empty()
+        && (extra.contains(char::is_whitespace)
+            || extra.contains('@')
+            || extra.chars().count() > 12
+            || extra.chars().filter(|c| c.is_ascii_alphanumeric()).count() > 2)
+    {
+        return false;
+    }
+
+    let Some((local, domain)) = email.rsplit_once('@') else {
+        return false;
+    };
+    let Some((host, tld)) = domain.rsplit_once('.') else {
+        return false;
+    };
+
+    !local.is_empty()
+        && local.len() <= 2
+        && local.chars().any(|c| c.is_ascii_alphabetic())
+        && local
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '%' | '+' | '-'))
+        && !host.is_empty()
+        && host.len() <= 2
+        && host.chars().all(|c| c.is_ascii_alphanumeric())
+        && (2..=3).contains(&tld.len())
+        && tld.chars().all(|c| c.is_ascii_alphabetic())
+        && raw_line.chars().any(|c| c.is_ascii_uppercase())
 }
 
 fn collect_binary_url_salvage_detections(text_content: &str) -> Vec<OutputURL> {
