@@ -279,6 +279,32 @@ mod tests {
     }
 
     #[test]
+    fn test_find_urls_keeps_wayback_archive_capture_with_embedded_http_target() {
+        let text = "http://web.archive.org/web/20160201063255/http://download.microsoft.com/download/foo.exe";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert_eq!(urls.len(), 1, "urls: {urls:#?}");
+        assert_eq!(
+            urls[0].url,
+            "http://web.archive.org/web/20160201063255/http://download.microsoft.com/download/foo.exe"
+        );
+    }
+
+    #[test]
+    fn test_find_urls_keeps_wayback_archive_capture_with_embedded_https_target() {
+        let text = "https://web.archive.org/web/20231103044404/https://raphlinus.github.io/graphics/2020/04/21/blurred-rounded-rects.html";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        assert_eq!(urls.len(), 1, "urls: {urls:#?}");
+        assert_eq!(
+            urls[0].url,
+            "https://web.archive.org/web/20231103044404/https://raphlinus.github.io/graphics/2020/04/21/blurred-rounded-rects.html"
+        );
+    }
+
+    #[test]
     fn test_find_urls_filters_code_variable_host_artifacts() {
         let text = "loginUrl = \"http://os.environ['DD_BASE_URL']/login\"";
         let config = DetectionConfig::default();
