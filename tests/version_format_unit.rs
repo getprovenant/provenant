@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[path = "../build_support/version_format.rs"]
+#[path = "../src/version_format.rs"]
 mod version_format;
 
 use version_format::{derive_build_version, sanitize_build_version};
