@@ -7,7 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-#[path = "build_support/version_format.rs"]
+#[path = "src/version_format.rs"]
 mod version_format;
 
 fn main() {
