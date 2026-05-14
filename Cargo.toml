@@ -132,7 +132,7 @@ pdf_oxide = "0.3.43"
 pep508_rs = "0.9.2"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
-quick-xml = "0.39.2"
+quick-xml = "0.40.0"
 rancor = "0.1.1"
 rayon = { workspace = true }
 regex = { workspace = true }
@@ -160,7 +160,7 @@ ttf-parser = "0.25.1"
 url = { workspace = true }
 uuid = { version = "1.23.1", features = ["v4"] }
 yaml_serde = { workspace = true }
-zip = "8.6.0"
+zip = "8.5.1"
 zstd = { workspace = true }
 
 [build-dependencies]
