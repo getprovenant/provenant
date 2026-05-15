@@ -8,6 +8,7 @@ use std::path::Path;
 
 use prost::Message;
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use quick_xml::events::Event;
 use rusty_axml::{find_nodes_by_type, get_requested_permissions, parse_from_reader};
 use zip::ZipArchive;
@@ -517,7 +518,7 @@ fn xml_attributes_to_map(
     for attribute in event.attributes().flatten().take(MAX_ITERATION_COUNT) {
         let key = String::from_utf8_lossy(attribute.key.as_ref()).into_owned();
         let value = attribute
-            .decode_and_unescape_value(reader.decoder())
+            .decoded_and_normalized_value(XmlVersion::Implicit1_0, reader.decoder())
             .map_err(|error| format!("Failed to decode XML attribute {}: {}", key, error))?
             .into_owned();
         attributes.insert(key, truncate_field(value));
