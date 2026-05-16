@@ -88,6 +88,16 @@ impl PackageParser for CpanMakefilePlParser {
 
         vec![parse_makefile_pl_with_base(&content, path.parent())]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "CPAN Perl Makefile.PL",
+            file_patterns: &["*/Makefile.PL"],
+            package_type: "cpan",
+            primary_language: "Perl",
+            documentation_url: Some("https://metacpan.org/pod/ExtUtils::MakeMaker"),
+        }]
+    }
 }
 
 #[cfg(test)]
@@ -569,11 +579,3 @@ fn extract_deps_from_hash(hash_content: &str, scope: &str, is_runtime: bool) -> 
 
     deps
 }
-
-crate::register_parser!(
-    "CPAN Perl Makefile.PL",
-    &["*/Makefile.PL"],
-    "cpan",
-    "Perl",
-    Some("https://metacpan.org/pod/ExtUtils::MakeMaker"),
-);

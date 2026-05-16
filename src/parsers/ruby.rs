@@ -43,6 +43,7 @@ use tar::Archive;
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Gem;
 
@@ -78,6 +79,16 @@ pub struct GemfileParser;
 
 impl PackageParser for GemfileParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Ruby Gemfile manifest",
+            file_patterns: &["**/Gemfile", "**/data.gz-extract/Gemfile"],
+            package_type: "gem",
+            primary_language: "Ruby",
+            documentation_url: Some("https://bundler.io/man/gemfile.5.html"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let datasource_id = gemfile_datasource_id(path);
@@ -403,6 +414,16 @@ pub struct GemfileLockParser;
 
 impl PackageParser for GemfileLockParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Ruby Gemfile.lock lockfile",
+            file_patterns: &["**/Gemfile.lock", "**/data.gz-extract/Gemfile.lock"],
+            package_type: "gem",
+            primary_language: "Ruby",
+            documentation_url: Some("https://bundler.io/man/gemfile.5.html"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let datasource_id = gemfile_lock_datasource_id(path);
@@ -987,6 +1008,20 @@ pub struct GemspecParser;
 
 impl PackageParser for GemspecParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Ruby .gemspec manifest",
+            file_patterns: &[
+                "**/*.gemspec",
+                "**/data.gz-extract/*.gemspec",
+                "**/specifications/*.gemspec",
+            ],
+            package_type: "gem",
+            primary_language: "Ruby",
+            documentation_url: Some("https://guides.rubygems.org/specification-reference/"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let datasource_id = gemspec_datasource_id(path);
@@ -1730,6 +1765,16 @@ pub struct GemArchiveParser;
 impl PackageParser for GemArchiveParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Ruby .gem archive",
+            file_patterns: &["**/*.gem"],
+            package_type: "gem",
+            primary_language: "Ruby",
+            documentation_url: Some("https://guides.rubygems.org/specification-reference/"),
+        }]
+    }
+
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         vec![match extract_gem_archive(path) {
             Ok(data) => data,
@@ -2141,6 +2186,16 @@ pub struct GemMetadataExtractedParser;
 impl PackageParser for GemMetadataExtractedParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Ruby gem metadata (extracted)",
+            file_patterns: &["**/metadata.gz-extract"],
+            package_type: "gem",
+            primary_language: "Ruby",
+            documentation_url: Some("https://guides.rubygems.org/specification-reference/"),
+        }]
+    }
+
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         vec![match extract_gem_metadata_extracted(path) {
             Ok(data) => data,
@@ -2163,51 +2218,6 @@ fn extract_gem_metadata_extracted(path: &Path) -> Result<PackageData, String> {
 
     parse_gem_metadata_yaml(&content, DatasourceId::GemArchiveExtracted)
 }
-
-// Register parser with metadata
-crate::register_parser!(
-    "Ruby Gemfile manifest",
-    &["**/Gemfile", "**/data.gz-extract/Gemfile"],
-    "gem",
-    "Ruby",
-    Some("https://bundler.io/man/gemfile.5.html"),
-);
-
-crate::register_parser!(
-    "Ruby Gemfile.lock lockfile",
-    &["**/Gemfile.lock", "**/data.gz-extract/Gemfile.lock"],
-    "gem",
-    "Ruby",
-    Some("https://bundler.io/man/gemfile.5.html"),
-);
-
-crate::register_parser!(
-    "Ruby .gemspec manifest",
-    &[
-        "**/*.gemspec",
-        "**/data.gz-extract/*.gemspec",
-        "**/specifications/*.gemspec"
-    ],
-    "gem",
-    "Ruby",
-    Some("https://guides.rubygems.org/specification-reference/"),
-);
-
-crate::register_parser!(
-    "Ruby .gem archive",
-    &["**/*.gem"],
-    "gem",
-    "Ruby",
-    Some("https://guides.rubygems.org/specification-reference/"),
-);
-
-crate::register_parser!(
-    "Ruby gem metadata (extracted)",
-    &["**/metadata.gz-extract"],
-    "gem",
-    "Ruby",
-    Some("https://guides.rubygems.org/specification-reference/"),
-);
 
 #[cfg(test)]
 mod tests {

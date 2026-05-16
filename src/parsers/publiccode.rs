@@ -8,12 +8,23 @@ use crate::parser_warn as warn;
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 pub struct PubliccodeParser;
 
 impl PackageParser for PubliccodeParser {
     const PACKAGE_TYPE: PackageType = PackageType::Publiccode;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "publiccode metadata",
+            file_patterns: &["**/publiccode.yml", "**/publiccode.yaml"],
+            package_type: "publiccode",
+            primary_language: "YAML",
+            documentation_url: Some("https://yml.publiccode.tools/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         matches!(
@@ -171,11 +182,3 @@ fn extract_contact_parties(maintenance: Option<&yaml_serde::Value>) -> Vec<Party
 fn yaml_value_as_string(value: &yaml_serde::Value) -> Option<&str> {
     value.as_str()
 }
-
-crate::register_parser!(
-    "publiccode metadata",
-    &["**/publiccode.yml", "**/publiccode.yaml"],
-    "publiccode",
-    "YAML",
-    Some("https://yml.publiccode.tools/"),
-);

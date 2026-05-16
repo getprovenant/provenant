@@ -33,6 +33,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Golang;
 
@@ -44,6 +45,16 @@ pub struct GoModParser;
 
 impl PackageParser for GoModParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Go go.mod module manifest",
+            file_patterns: &["**/go.mod"],
+            package_type: "golang",
+            primary_language: "Go",
+            documentation_url: Some("https://go.dev/ref/mod#go-mod-file"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let content = match read_file_to_string(path, None) {
@@ -524,14 +535,6 @@ fn default_godeps_package_data() -> PackageData {
     }
 }
 
-crate::register_parser!(
-    "Go go.mod module manifest",
-    &["**/go.mod"],
-    "golang",
-    "Go",
-    Some("https://go.dev/ref/mod#go-mod-file"),
-);
-
 // ============================================================================
 // GoSumParser
 // ============================================================================
@@ -540,6 +543,16 @@ pub struct GoSumParser;
 
 impl PackageParser for GoSumParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Go go.sum checksum database",
+            file_patterns: &["**/go.sum"],
+            package_type: "golang",
+            primary_language: "Go",
+            documentation_url: Some("https://go.dev/ref/mod#go-sum-files"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let content = match read_file_to_string(path, None) {
@@ -645,18 +658,20 @@ pub fn parse_go_sum(content: &str) -> PackageData {
     }
 }
 
-crate::register_parser!(
-    "Go go.sum checksum database",
-    &["**/go.sum"],
-    "golang",
-    "Go",
-    Some("https://go.dev/ref/mod#go-sum-files"),
-);
-
 pub struct GoWorkParser;
 
 impl PackageParser for GoWorkParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Go go.work workspace file",
+            file_patterns: &["**/go.work"],
+            package_type: "golang",
+            primary_language: "Go",
+            documentation_url: Some("https://go.dev/ref/mod#go-work-files"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let content = match read_file_to_string(path, None) {
@@ -1022,14 +1037,6 @@ fn parse_go_tokens(value: &str) -> Vec<String> {
     tokens
 }
 
-crate::register_parser!(
-    "Go go.work workspace file",
-    &["**/go.work"],
-    "golang",
-    "Go",
-    Some("https://go.dev/ref/mod#go-work-files"),
-);
-
 // ============================================================================
 // GodepsParser
 // ============================================================================
@@ -1038,6 +1045,16 @@ pub struct GodepsParser;
 
 impl PackageParser for GodepsParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Go Godeps.json legacy dependency file",
+            file_patterns: &["**/Godeps.json"],
+            package_type: "golang",
+            primary_language: "Go",
+            documentation_url: None,
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let content = match read_file_to_string(path, None) {
@@ -1171,11 +1188,3 @@ pub fn parse_godeps_json(content: &str) -> PackageData {
         purl,
     }
 }
-
-crate::register_parser!(
-    "Go Godeps.json legacy dependency file",
-    &["**/Godeps.json"],
-    "golang",
-    "Go",
-    None,
-);

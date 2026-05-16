@@ -76,6 +76,18 @@ impl PackageParser for RpmSpecfileParser {
 
         vec![parse_specfile(&content)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM specfile",
+            file_patterns: &["**/*.spec"],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some(
+                "https://rpm-software-management.github.io/rpm/manual/spec.html",
+            ),
+        }]
+    }
 }
 
 fn parse_specfile(content: &str) -> PackageData {
@@ -431,11 +443,3 @@ fn build_rpm_purl(name: &str, version: Option<&str>) -> Option<String> {
 
     Some(purl.to_string())
 }
-
-crate::register_parser!(
-    "RPM specfile",
-    &["**/*.spec"],
-    "rpm",
-    "",
-    Some("https://rpm-software-management.github.io/rpm/manual/spec.html"),
-);

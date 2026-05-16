@@ -10,6 +10,7 @@ use crate::parsers::rfc822::{self, Rfc822Metadata};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
 use crate::utils::spdx::combine_license_expressions;
 
+use super::super::metadata::ParserMetadata;
 use super::utils::{build_debian_purl, make_party};
 use super::{PACKAGE_TYPE, default_package_data, read_or_default};
 use crate::parsers::PackageParser;
@@ -23,6 +24,24 @@ pub struct DebianCopyrightParser;
 
 impl PackageParser for DebianCopyrightParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian machine-readable copyright file",
+            file_patterns: &[
+                "**/debian/copyright",
+                "**/ports/*/copyright",
+                "**/packages/deb/copyright",
+                "**/usr/share/doc/*/copyright",
+                "**/*_copyright",
+            ],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
@@ -52,20 +71,6 @@ impl PackageParser for DebianCopyrightParser {
         vec![package_data]
     }
 }
-
-crate::register_parser!(
-    "Debian machine-readable copyright file",
-    &[
-        "**/debian/copyright",
-        "**/ports/*/copyright",
-        "**/packages/deb/copyright",
-        "**/usr/share/doc/*/copyright",
-        "**/*_copyright"
-    ],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"),
-);
 
 fn detect_debian_copyright_datasource(path: &Path) -> DatasourceId {
     let path_str = path.to_string_lossy();

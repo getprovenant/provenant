@@ -9,6 +9,7 @@ use crate::parser_warn as warn;
 use crate::parsers::rfc822::{self, Rfc822Metadata};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
 
+use super::super::metadata::ParserMetadata;
 use super::utils::{
     build_debian_purl, detect_namespace, make_party, parse_all_dependencies, parse_source_field,
 };
@@ -23,6 +24,18 @@ pub struct DebianControlParser;
 
 impl PackageParser for DebianControlParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian source package control file (debian/control)",
+            file_patterns: &["**/debian/control"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/debian-policy/ch-controlfields.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         if let Some(name) = path.file_name()
@@ -56,6 +69,18 @@ pub struct DebianInstalledParser;
 impl PackageParser for DebianInstalledParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian installed package database (dpkg status)",
+            file_patterns: &["**/var/lib/dpkg/status"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/debian-policy/ch-controlfields.html",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         let path_str = path.to_string_lossy();
         path_str.ends_with("var/lib/dpkg/status")
@@ -77,6 +102,18 @@ pub struct DebianDistrolessInstalledParser;
 
 impl PackageParser for DebianDistrolessInstalledParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian distroless package database (status.d)",
+            file_patterns: &["**/var/lib/dpkg/status.d/*"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/debian-policy/ch-controlfields.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         let path_str = path.to_string_lossy();
@@ -396,32 +433,8 @@ fn build_package_from_source_paragraph(paragraph: &Rfc822Metadata) -> Option<Pac
 }
 
 // ---------------------------------------------------------------------------
-// Parser registration macros
+// Parser registration
 // ---------------------------------------------------------------------------
-
-crate::register_parser!(
-    "Debian source package control file (debian/control)",
-    &["**/debian/control"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-controlfields.html"),
-);
-
-crate::register_parser!(
-    "Debian installed package database (dpkg status)",
-    &["**/var/lib/dpkg/status"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-controlfields.html"),
-);
-
-crate::register_parser!(
-    "Debian distroless package database (status.d)",
-    &["**/var/lib/dpkg/status.d/*"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-controlfields.html"),
-);
 
 #[cfg(test)]
 mod tests {

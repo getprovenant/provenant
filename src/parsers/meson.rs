@@ -12,6 +12,7 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field};
 
 pub struct MesonParser;
@@ -21,6 +22,16 @@ impl PackageParser for MesonParser {
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "meson.build")
+    }
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Meson meson.build manifest",
+            file_patterns: &["**/meson.build"],
+            package_type: "meson",
+            primary_language: "",
+            documentation_url: Some("https://mesonbuild.com/Syntax.html"),
+        }]
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
@@ -736,11 +747,3 @@ fn extract_string_values(expr: &Expr) -> Vec<String> {
         _ => Vec::new(),
     }
 }
-
-crate::register_parser!(
-    "Meson meson.build manifest",
-    &["**/meson.build"],
-    "meson",
-    "",
-    Some("https://mesonbuild.com/Syntax.html"),
-);

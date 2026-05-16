@@ -124,6 +124,16 @@ impl PackageParser for RpmYumdbParser {
             ..Default::default()
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM yumdb metadata",
+            file_patterns: &["**/var/lib/yum/yumdb/*/*/from_repo"],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some("http://yum.baseurl.org/wiki/YumDB.html"),
+        }]
+    }
 }
 
 #[cfg(test)]
@@ -180,11 +190,3 @@ mod tests {
         assert_eq!(extra["releasever"], "8");
     }
 }
-
-crate::register_parser!(
-    "RPM yumdb metadata",
-    &["**/var/lib/yum/yumdb/*/*/from_repo"],
-    "rpm",
-    "",
-    Some("http://yum.baseurl.org/wiki/YumDB.html"),
-);

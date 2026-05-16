@@ -38,6 +38,7 @@ use crate::models::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_NAME: &str = "name";
 const FIELD_VERSION: &str = "version";
@@ -73,6 +74,16 @@ pub struct PubspecYamlParser;
 
 impl PackageParser for PubspecYamlParser {
     const PACKAGE_TYPE: PackageType = PackageType::Dart;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Dart pubspec.yaml manifest",
+            file_patterns: &["**/pubspec.yaml", "**/pubspec.lock"],
+            package_type: "pub",
+            primary_language: "Dart",
+            documentation_url: Some("https://dart.dev/tools/pub/pubspec"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let yaml_content = match read_yaml_file(path) {
@@ -866,14 +877,6 @@ fn classify_lock_dependency(
         _ => (true, false, true),
     }
 }
-
-crate::register_parser!(
-    "Dart pubspec.yaml manifest",
-    &["**/pubspec.yaml", "**/pubspec.lock"],
-    "pub",
-    "Dart",
-    Some("https://dart.dev/tools/pub/pubspec"),
-);
 
 #[cfg(test)]
 mod is_match_tests {

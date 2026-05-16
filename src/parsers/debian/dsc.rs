@@ -9,6 +9,7 @@ use crate::parser_warn as warn;
 use crate::parsers::rfc822;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
 
+use super::super::metadata::ParserMetadata;
 use super::utils::{build_debian_purl, make_party, parse_dependency_field};
 use super::{PACKAGE_TYPE, default_package_data, read_or_default};
 use crate::parsers::PackageParser;
@@ -18,6 +19,18 @@ pub struct DebianDscParser;
 
 impl PackageParser for DebianDscParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian source control file (.dsc)",
+            file_patterns: &["**/*.dsc"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/debian-policy/ch-controlfields.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|e| e.to_str()) == Some("dsc")
@@ -29,14 +42,6 @@ impl PackageParser for DebianDscParser {
         vec![parse_dsc_content(&content)]
     }
 }
-
-crate::register_parser!(
-    "Debian source control file (.dsc)",
-    &["**/*.dsc"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-controlfields.html"),
-);
 
 enum PgpParseState {
     Normal,

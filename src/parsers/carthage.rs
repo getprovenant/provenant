@@ -3,6 +3,7 @@
 
 use std::path::Path;
 
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -14,6 +15,18 @@ pub struct CarthageCartfileParser;
 
 impl PackageParser for CarthageCartfileParser {
     const PACKAGE_TYPE: PackageType = PackageType::Carthage;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Carthage Cartfile dependency manifest",
+            file_patterns: &["**/Cartfile", "**/Cartfile.private"],
+            package_type: "carthage",
+            primary_language: "Objective-C",
+            documentation_url: Some(
+                "https://github.com/Carthage/Carthage/blob/master/Documentation/Artifacts.md",
+            ),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let is_private = is_private_cartfile_path(path);
@@ -47,6 +60,18 @@ pub struct CarthageCartfileResolvedParser;
 
 impl PackageParser for CarthageCartfileResolvedParser {
     const PACKAGE_TYPE: PackageType = PackageType::Carthage;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Carthage Cartfile.resolved pinned dependencies",
+            file_patterns: &["**/Cartfile.resolved"],
+            package_type: "carthage",
+            primary_language: "Objective-C",
+            documentation_url: Some(
+                "https://github.com/Carthage/Carthage/blob/master/Documentation/Artifacts.md",
+            ),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let content = match read_file_to_string(path, None) {
@@ -278,19 +303,3 @@ fn default_cartfile_resolved_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Carthage Cartfile dependency manifest",
-    &["**/Cartfile", "**/Cartfile.private"],
-    "carthage",
-    "Objective-C",
-    Some("https://github.com/Carthage/Carthage/blob/master/Documentation/Artifacts.md"),
-);
-
-crate::register_parser!(
-    "Carthage Cartfile.resolved pinned dependencies",
-    &["**/Cartfile.resolved"],
-    "carthage",
-    "Objective-C",
-    Some("https://github.com/Carthage/Carthage/blob/master/Documentation/Artifacts.md"),
-);

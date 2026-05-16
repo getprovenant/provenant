@@ -31,6 +31,7 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_f
 use std::path::Path;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 /// README attribution file parser.
 ///
@@ -40,6 +41,24 @@ pub struct ReadmeParser;
 
 impl PackageParser for ReadmeParser {
     const PACKAGE_TYPE: PackageType = PackageType::Readme;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Third-party attribution README files",
+            file_patterns: &[
+                "**/README.android",
+                "**/README.chromium",
+                "**/README.facebook",
+                "**/README.google",
+                "**/README.thirdparty",
+            ],
+            package_type: "readme",
+            primary_language: "",
+            documentation_url: Some(
+                "https://github.com/chromium/chromium/blob/main/docs/contributing.md#third_party-components",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| {
@@ -284,19 +303,3 @@ mod tests {
         assert_eq!(pkg.datasource_id, Some(DatasourceId::Readme));
     }
 }
-
-crate::register_parser!(
-    "Third-party attribution README files",
-    &[
-        "**/README.android",
-        "**/README.chromium",
-        "**/README.facebook",
-        "**/README.google",
-        "**/README.thirdparty"
-    ],
-    "readme",
-    "",
-    Some(
-        "https://github.com/chromium/chromium/blob/main/docs/contributing.md#third_party-components"
-    ),
-);

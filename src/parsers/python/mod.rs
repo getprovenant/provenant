@@ -48,6 +48,7 @@ mod scan_test;
 mod test;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, PackageData, PackageType};
 use std::path::Path;
 
@@ -117,6 +118,33 @@ pub struct PythonParser;
 impl PackageParser for PythonParser {
     const PACKAGE_TYPE: PackageType = PackageType::Pypi;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Python package manifests (pyproject.toml, setup.py, suffixed setup.py variants, setup.cfg, pypi.json, PKG-INFO, .dist-info/METADATA, pip cache origin.json, sdist archives, .whl, .egg)",
+            file_patterns: &[
+                "**/pyproject.toml",
+                "**/setup.py",
+                "**/*_setup.py",
+                "**/*-setup.py",
+                "**/setup.cfg",
+                "**/pypi.json",
+                "**/PKG-INFO",
+                "**/*.dist-info/METADATA",
+                "**/origin.json",
+                "**/*.tar.gz",
+                "**/*.tgz",
+                "**/*.tar.bz2",
+                "**/*.tar.xz",
+                "**/*.zip",
+                "**/*.whl",
+                "**/*.egg",
+            ],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some("https://packaging.python.org/"),
+        }]
+    }
+
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         match classify_python_file(path) {
             Some(PythonFileKind::PyprojectToml) => pyproject::extract(path),
@@ -182,28 +210,3 @@ pub(super) fn is_installed_wheel_metadata_path(path: &Path) -> bool {
             .and_then(|name| name.to_str())
             .is_some_and(|name| name.ends_with(".dist-info"))
 }
-
-crate::register_parser!(
-    "Python package manifests (pyproject.toml, setup.py, suffixed setup.py variants, setup.cfg, pypi.json, PKG-INFO, .dist-info/METADATA, pip cache origin.json, sdist archives, .whl, .egg)",
-    &[
-        "**/pyproject.toml",
-        "**/setup.py",
-        "**/*_setup.py",
-        "**/*-setup.py",
-        "**/setup.cfg",
-        "**/pypi.json",
-        "**/PKG-INFO",
-        "**/*.dist-info/METADATA",
-        "**/origin.json",
-        "**/*.tar.gz",
-        "**/*.tgz",
-        "**/*.tar.bz2",
-        "**/*.tar.xz",
-        "**/*.zip",
-        "**/*.whl",
-        "**/*.egg"
-    ],
-    "pypi",
-    "Python",
-    Some("https://packaging.python.org/"),
-);

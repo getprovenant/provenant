@@ -62,6 +62,16 @@ impl PackageParser for RpmMarinerManifestParser {
 
         parse_rpm_mariner_manifest(&content)
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM Mariner distroless package manifest",
+            file_patterns: &["*var/lib/rpmmanifest/container-manifest-2"],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some("https://github.com/microsoft/marinara/"),
+        }]
+    }
 }
 
 pub(crate) fn parse_rpm_mariner_manifest(content: &str) -> Vec<PackageData> {
@@ -135,11 +145,3 @@ pub(crate) fn parse_rpm_mariner_manifest(content: &str) -> Vec<PackageData> {
 
     packages
 }
-
-crate::register_parser!(
-    "RPM Mariner distroless package manifest",
-    &["*var/lib/rpmmanifest/container-manifest-2"],
-    "rpm",
-    "",
-    Some("https://github.com/microsoft/marinara/"),
-);

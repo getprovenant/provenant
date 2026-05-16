@@ -52,7 +52,6 @@ path = "src/bin/generate_legalese_artifact/main.rs"
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
-inventory = { workspace = true }
 postcard = { workspace = true }
 provenant = { path = "..", package = "provenant-cli", features = ["golden-tests"] }
 rayon = { workspace = true }

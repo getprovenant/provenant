@@ -27,6 +27,7 @@ use std::path::Path;
 use yaml_serde::Value;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 /// npm workspace parser for pnpm-workspace.yaml files.
 ///
@@ -35,6 +36,16 @@ pub struct NpmWorkspaceParser;
 
 impl PackageParser for NpmWorkspaceParser {
     const PACKAGE_TYPE: PackageType = PackageType::Npm;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "pnpm workspace yaml file",
+            file_patterns: &["**/pnpm-workspace.yaml"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://pnpm.io/pnpm-workspace_yaml"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -279,11 +290,3 @@ packages: []
         assert!(result.extra_data.is_none());
     }
 }
-
-crate::register_parser!(
-    "pnpm workspace yaml file",
-    &["**/pnpm-workspace.yaml"],
-    "npm",
-    "JavaScript",
-    Some("https://pnpm.io/pnpm-workspace_yaml"),
-);

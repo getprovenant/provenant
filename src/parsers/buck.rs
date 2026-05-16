@@ -31,6 +31,7 @@ use starlark_syntax::syntax::{AstModule, Dialect};
 use crate::models::{DatasourceId, PackageData, PackageType, Party, Sha1Digest};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 type StarlarkCallArgs = ast::CallArgsP<ast::AstNoPayload>;
 
@@ -44,6 +45,16 @@ pub struct BuckBuildParser;
 
 impl PackageParser for BuckBuildParser {
     const PACKAGE_TYPE: PackageType = PackageType::Buck;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Buck build file and METADATA.bzl",
+            file_patterns: &["**/BUCK", "**/METADATA.bzl"],
+            package_type: "buck",
+            primary_language: "",
+            documentation_url: Some("https://buck.build/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -687,11 +698,3 @@ rust_library(
         assert_eq!(packages[0].name.as_deref(), Some("library"));
     }
 }
-
-crate::register_parser!(
-    "Buck build file and METADATA.bzl",
-    &["**/BUCK", "**/METADATA.bzl"],
-    "buck",
-    "",
-    Some("https://buck.build/"),
-);

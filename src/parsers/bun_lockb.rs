@@ -110,6 +110,16 @@ impl PackageParser for BunLockbParser {
             }
         }
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Legacy Bun binary lockfile",
+            file_patterns: &["**/bun.lockb"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://bun.sh/docs/pm/lockfile"),
+        }]
+    }
 }
 
 fn default_package_data() -> PackageData {
@@ -832,11 +842,3 @@ impl<'a> LockbCursor<'a> {
         Ok(u64::from_le_bytes(bytes))
     }
 }
-
-crate::register_parser!(
-    "Legacy Bun binary lockfile",
-    &["**/bun.lockb"],
-    "npm",
-    "JavaScript",
-    Some("https://bun.sh/docs/pm/lockfile"),
-);

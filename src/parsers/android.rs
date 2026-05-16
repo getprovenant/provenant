@@ -19,6 +19,7 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_fie
 use crate::utils::magic;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Android;
 const MAX_ARCHIVE_SIZE: u64 = 100 * 1024 * 1024;
@@ -93,6 +94,18 @@ fn looks_like_android_soong_metadata_content(content: &str) -> bool {
 impl PackageParser for AndroidSoongMetadataParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Android Soong METADATA textproto",
+            file_patterns: &["**/METADATA"],
+            package_type: "android",
+            primary_language: "",
+            documentation_url: Some(
+                "https://android.googlesource.com/platform/build/soong/+/refs/heads/main/compliance/project_metadata_proto/project_metadata.proto",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         if path.file_name().and_then(|name| name.to_str()) != Some("METADATA") {
             return false;
@@ -126,6 +139,18 @@ impl PackageParser for AndroidSoongMetadataParser {
 impl PackageParser for AndroidManifestParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "AndroidManifest.xml metadata (text XML or binary AXML)",
+            file_patterns: &["**/AndroidManifest.xml"],
+            package_type: "android",
+            primary_language: "XML",
+            documentation_url: Some(
+                "https://developer.android.com/guide/topics/manifest/manifest-intro",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.file_name().and_then(|name| name.to_str()) == Some("AndroidManifest.xml")
     }
@@ -151,6 +176,16 @@ impl PackageParser for AndroidManifestParser {
 
 impl PackageParser for AndroidApkParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Android APK archive manifest metadata",
+            file_patterns: &["**/*.apk"],
+            package_type: "android",
+            primary_language: "",
+            documentation_url: Some("https://developer.android.com/build/build-for-release"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|ext| ext.to_str()) == Some("apk") && magic::is_zip(path)
@@ -185,6 +220,16 @@ impl PackageParser for AndroidApkParser {
 
 impl PackageParser for AndroidAabParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Android App Bundle (.aab) proto manifest metadata",
+            file_patterns: &["**/*.aab"],
+            package_type: "android",
+            primary_language: "",
+            documentation_url: Some("https://developer.android.com/guide/app-bundle"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|ext| ext.to_str()) == Some("aab") && magic::is_zip(path)
@@ -1315,37 +1360,3 @@ pub mod proto_primitive {
         Fraction(u32),
     }
 }
-
-crate::register_parser!(
-    "Android Soong METADATA textproto",
-    &["**/METADATA"],
-    "android",
-    "",
-    Some(
-        "https://android.googlesource.com/platform/build/soong/+/refs/heads/main/compliance/project_metadata_proto/project_metadata.proto"
-    ),
-);
-
-crate::register_parser!(
-    "AndroidManifest.xml metadata (text XML or binary AXML)",
-    &["**/AndroidManifest.xml"],
-    "android",
-    "XML",
-    Some("https://developer.android.com/guide/topics/manifest/manifest-intro"),
-);
-
-crate::register_parser!(
-    "Android APK archive manifest metadata",
-    &["**/*.apk"],
-    "android",
-    "",
-    Some("https://developer.android.com/build/build-for-release"),
-);
-
-crate::register_parser!(
-    "Android App Bundle (.aab) proto manifest metadata",
-    &["**/*.aab"],
-    "android",
-    "",
-    Some("https://developer.android.com/guide/app-bundle"),
-);

@@ -208,6 +208,16 @@ impl PackageParser for CargoParser {
             .and_then(|name| name.to_str())
             .is_some_and(|name| name.eq_ignore_ascii_case("cargo.toml"))
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Rust Cargo.toml manifest",
+            file_patterns: &["**/Cargo.toml", "**/cargo.toml"],
+            package_type: "cargo",
+            primary_language: "Rust",
+            documentation_url: Some("https://doc.rust-lang.org/cargo/reference/manifest.html"),
+        }]
+    }
 }
 
 /// Reads and parses a TOML file
@@ -686,11 +696,3 @@ fn extract_extra_data(
         Some(extra_data)
     }
 }
-
-crate::register_parser!(
-    "Rust Cargo.toml manifest",
-    &["**/Cargo.toml", "**/cargo.toml"],
-    "cargo",
-    "Rust",
-    Some("https://doc.rust-lang.org/cargo/reference/manifest.html"),
-);

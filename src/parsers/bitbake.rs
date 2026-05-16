@@ -14,12 +14,36 @@ use serde_json::Value;
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 use super::utils::{read_file_to_string, truncate_field};
 
 pub struct BitbakeRecipeParser;
 
 impl PackageParser for BitbakeRecipeParser {
     const PACKAGE_TYPE: PackageType = PackageType::Bitbake;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![
+            ParserMetadata {
+                description: "Yocto BitBake recipe",
+                file_patterns: &["**/*.bb"],
+                package_type: "bitbake",
+                primary_language: "Shell",
+                documentation_url: Some(
+                    "https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-metadata.html",
+                ),
+            },
+            ParserMetadata {
+                description: "Yocto BitBake append file",
+                file_patterns: &["**/*.bbappend"],
+                package_type: "bitbake",
+                primary_language: "Shell",
+                documentation_url: Some(
+                    "https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-metadata.html",
+                ),
+            },
+        ]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension()
@@ -843,23 +867,3 @@ fn build_dependency_purl(name: &str) -> Option<String> {
         .ok()
         .map(|purl| truncate_field(purl.to_string()))
 }
-
-crate::register_parser!(
-    "Yocto BitBake recipe",
-    &["**/*.bb"],
-    "bitbake",
-    "Shell",
-    Some(
-        "https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-metadata.html"
-    ),
-);
-
-crate::register_parser!(
-    "Yocto BitBake append file",
-    &["**/*.bbappend"],
-    "bitbake",
-    "Shell",
-    Some(
-        "https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-metadata.html"
-    ),
-);

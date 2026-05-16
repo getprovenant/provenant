@@ -14,11 +14,24 @@ use crate::parsers::utils::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 pub struct NixFlakeLockParser;
 
 impl PackageParser for NixFlakeLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Nix;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Nix flake lockfile",
+            file_patterns: &["**/flake.lock"],
+            package_type: "nix",
+            primary_language: "JSON",
+            documentation_url: Some(
+                "https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-flake.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "flake.lock")
@@ -56,6 +69,18 @@ pub struct NixFlakeParser;
 impl PackageParser for NixFlakeParser {
     const PACKAGE_TYPE: PackageType = PackageType::Nix;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Nix flake manifest",
+            file_patterns: &["**/flake.nix"],
+            package_type: "nix",
+            primary_language: "Nix",
+            documentation_url: Some(
+                "https://nix.dev/manual/nix/stable/command-ref/new-cli/nix3-flake.html",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "flake.nix")
     }
@@ -80,6 +105,16 @@ pub struct NixDefaultParser;
 
 impl PackageParser for NixDefaultParser {
     const PACKAGE_TYPE: PackageType = PackageType::Nix;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Nix derivation manifest",
+            file_patterns: &["**/default.nix"],
+            package_type: "nix",
+            primary_language: "Nix",
+            documentation_url: Some("https://nix.dev/manual/nix/stable/language/derivations.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "default.nix")
@@ -2037,27 +2072,3 @@ fn default_default_nix_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Nix flake manifest",
-    &["**/flake.nix"],
-    "nix",
-    "Nix",
-    Some("https://nix.dev/manual/nix/stable/command-ref/new-cli/nix3-flake.html"),
-);
-
-crate::register_parser!(
-    "Nix flake lockfile",
-    &["**/flake.lock"],
-    "nix",
-    "JSON",
-    Some("https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-flake.html"),
-);
-
-crate::register_parser!(
-    "Nix derivation manifest",
-    &["**/default.nix"],
-    "nix",
-    "Nix",
-    Some("https://nix.dev/manual/nix/stable/language/derivations.html"),
-);

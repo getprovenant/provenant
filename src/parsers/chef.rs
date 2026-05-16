@@ -37,6 +37,7 @@ use serde_json::Value;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, read_file_to_string, truncate_field};
 
 const FIELD_NAME: &str = "name";
@@ -80,6 +81,16 @@ pub struct ChefMetadataJsonParser;
 
 impl PackageParser for ChefMetadataJsonParser {
     const PACKAGE_TYPE: PackageType = PackageType::Chef;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Chef cookbook metadata",
+            file_patterns: &["**/metadata.json", "**/metadata.rb"],
+            package_type: "chef",
+            primary_language: "Ruby",
+            documentation_url: Some("https://docs.chef.io/config_rb_metadata/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         if path.file_name().is_some_and(|name| name == "metadata.json") {
@@ -498,11 +509,3 @@ fn build_package(fields: ChefPackageFields) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Chef cookbook metadata",
-    &["**/metadata.json", "**/metadata.rb"],
-    "chef",
-    "Ruby",
-    Some("https://docs.chef.io/config_rb_metadata/"),
-);

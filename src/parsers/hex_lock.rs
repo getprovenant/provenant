@@ -16,6 +16,7 @@ use crate::models::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 pub struct HexLockParser;
 
@@ -40,6 +41,16 @@ struct Parser<'a> {
 
 impl PackageParser for HexLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Hex;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Hex mix.lock lockfile",
+            file_patterns: &["**/mix.lock"],
+            package_type: "hex",
+            primary_language: "Elixir",
+            documentation_url: Some("https://hexdocs.pm/mix/Mix.Tasks.Deps.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().and_then(|name| name.to_str()) == Some("mix.lock")
@@ -210,14 +221,6 @@ fn build_nested_dependency(tuple: DependencyTuple) -> Result<Dependency, String>
         extra_data: None,
     })
 }
-
-crate::register_parser!(
-    "Hex mix.lock lockfile",
-    &["**/mix.lock"],
-    "hex",
-    "Elixir",
-    Some("https://hexdocs.pm/mix/Mix.Tasks.Deps.html"),
-);
 
 #[derive(Debug)]
 struct DependencyTuple {

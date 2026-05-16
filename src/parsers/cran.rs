@@ -168,6 +168,18 @@ impl PackageParser for CranParser {
             purl,
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "CRAN R package DESCRIPTION file",
+            file_patterns: &["**/DESCRIPTION"],
+            package_type: "cran",
+            primary_language: "R",
+            documentation_url: Some(
+                "https://cran.r-project.org/doc/manuals/r-release/R-exts.html#The-DESCRIPTION-file",
+            ),
+        }]
+    }
 }
 
 fn parse_dcf(content: &str) -> HashMap<String, String> {
@@ -465,11 +477,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "CRAN R package DESCRIPTION file",
-    &["**/DESCRIPTION"],
-    "cran",
-    "R",
-    Some("https://cran.r-project.org/doc/manuals/r-release/R-exts.html#The-DESCRIPTION-file"),
-);

@@ -31,6 +31,7 @@ use super::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data_from_pair,
     empty_declared_license_data,
 };
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 /// Haxe package manifest (haxelib.json) parser.
@@ -41,6 +42,18 @@ pub struct HaxeParser;
 
 impl PackageParser for HaxeParser {
     const PACKAGE_TYPE: PackageType = PackageType::Haxe;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Haxe haxelib.json package manifest",
+            file_patterns: &["**/haxelib.json"],
+            package_type: "haxe",
+            primary_language: "Haxe",
+            documentation_url: Some(
+                "https://lib.haxe.org/documentation/creating-a-haxelib-package/",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "haxelib.json")
@@ -406,11 +419,3 @@ mod tests {
         assert!(package_data.name.is_none());
     }
 }
-
-crate::register_parser!(
-    "Haxe haxelib.json package manifest",
-    &["**/haxelib.json"],
-    "haxe",
-    "Haxe",
-    Some("https://lib.haxe.org/documentation/creating-a-haxelib-package/"),
-);

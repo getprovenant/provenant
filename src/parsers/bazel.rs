@@ -31,6 +31,7 @@ use starlark_syntax::syntax::module::AstModuleFields;
 use starlark_syntax::syntax::{AstModule, Dialect};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 type StarlarkCallArgs = ast::CallArgsP<ast::AstNoPayload>;
 const SCANCODE_SIMPLE_TOP_LEVEL_KEY: &str = "scancode_simple_top_level";
@@ -44,6 +45,16 @@ pub struct BazelBuildParser;
 
 impl PackageParser for BazelBuildParser {
     const PACKAGE_TYPE: PackageType = PackageType::Bazel;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Bazel BUILD file",
+            file_patterns: &["**/BUILD"],
+            package_type: "bazel",
+            primary_language: "",
+            documentation_url: Some("https://bazel.build/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -156,86 +167,20 @@ fn is_scancode_simple_top_level_statement(statement: &ast::AstStmt) -> bool {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::models::PackageType;
-    use std::path::PathBuf;
-
-    #[test]
-    fn test_is_match() {
-        assert!(BazelBuildParser::is_match(&PathBuf::from("BUILD")));
-        assert!(BazelBuildParser::is_match(&PathBuf::from("path/to/BUILD")));
-        assert!(!BazelBuildParser::is_match(&PathBuf::from("BUILD.bazel")));
-        assert!(!BazelBuildParser::is_match(&PathBuf::from("build")));
-        assert!(!BazelBuildParser::is_match(&PathBuf::from("BUCK")));
-    }
-
-    #[test]
-    fn test_check_rule_name_ending() {
-        assert!(check_rule_name_ending("cc_binary"));
-        assert!(check_rule_name_ending("cc_library"));
-        assert!(check_rule_name_ending("java_binary"));
-        assert!(check_rule_name_ending("py_library"));
-        assert!(!check_rule_name_ending("filegroup"));
-        assert!(!check_rule_name_ending("load"));
-        assert!(!check_rule_name_ending("cc_test"));
-    }
-
-    #[test]
-    fn test_fallback_package_data() {
-        let path = PathBuf::from("/path/to/myproject/BUILD");
-        let pkg = fallback_package_data(&path);
-        assert_eq!(pkg.package_type, Some(PackageType::Bazel));
-        assert_eq!(pkg.name, Some("myproject".to_string()));
-        assert_eq!(pkg.purl.as_deref(), Some("pkg:bazel/myproject"));
-    }
-
-    #[test]
-    fn test_scancode_simple_top_level_allows_direct_calls() {
-        let module = parse_starlark_module(
-            "<BUILD>",
-            "cc_library(name = \"demo\")\npy_binary(name = \"tool\")\n".to_string(),
-        )
-        .expect("parse BUILD");
-
-        assert!(is_scancode_simple_top_level_module(&module));
-    }
-
-    #[test]
-    fn test_scancode_simple_top_level_rejects_attribute_calls() {
-        let module = parse_starlark_module(
-            "<BUILD>",
-            "selects.config_setting_group(name = \"demo\")\ncc_library(name = \"demo\")\n"
-                .to_string(),
-        )
-        .expect("parse BUILD");
-
-        assert!(!is_scancode_simple_top_level_module(&module));
-    }
-
-    #[test]
-    fn test_scancode_simple_top_level_rejects_non_call_expressions() {
-        let module =
-            parse_starlark_module("<BUILD>", "[(cc_binary(name = \"demo\"),)]\n".to_string())
-                .expect("parse BUILD");
-
-        assert!(!is_scancode_simple_top_level_module(&module));
-    }
-}
-
-crate::register_parser!(
-    "Bazel BUILD file",
-    &["**/BUILD"],
-    "bazel",
-    "",
-    Some("https://bazel.build/"),
-);
-
 pub struct BazelModuleParser;
 
 impl PackageParser for BazelModuleParser {
     const PACKAGE_TYPE: PackageType = PackageType::Bazel;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Bazel MODULE.bazel file",
+            file_patterns: &["**/MODULE.bazel"],
+            package_type: "bazel",
+            primary_language: "",
+            documentation_url: Some("https://bazel.build/external/module"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -539,10 +484,70 @@ fn default_bazel_module_package_data() -> PackageData {
     }
 }
 
-crate::register_parser!(
-    "Bazel MODULE.bazel file",
-    &["**/MODULE.bazel"],
-    "bazel",
-    "",
-    Some("https://bazel.build/external/module"),
-);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::PackageType;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_is_match() {
+        assert!(BazelBuildParser::is_match(&PathBuf::from("BUILD")));
+        assert!(BazelBuildParser::is_match(&PathBuf::from("path/to/BUILD")));
+        assert!(!BazelBuildParser::is_match(&PathBuf::from("BUILD.bazel")));
+        assert!(!BazelBuildParser::is_match(&PathBuf::from("build")));
+        assert!(!BazelBuildParser::is_match(&PathBuf::from("BUCK")));
+    }
+
+    #[test]
+    fn test_check_rule_name_ending() {
+        assert!(check_rule_name_ending("cc_binary"));
+        assert!(check_rule_name_ending("cc_library"));
+        assert!(check_rule_name_ending("java_binary"));
+        assert!(check_rule_name_ending("py_library"));
+        assert!(!check_rule_name_ending("filegroup"));
+        assert!(!check_rule_name_ending("load"));
+        assert!(!check_rule_name_ending("cc_test"));
+    }
+
+    #[test]
+    fn test_fallback_package_data() {
+        let path = PathBuf::from("/path/to/myproject/BUILD");
+        let pkg = fallback_package_data(&path);
+        assert_eq!(pkg.package_type, Some(PackageType::Bazel));
+        assert_eq!(pkg.name, Some("myproject".to_string()));
+        assert_eq!(pkg.purl.as_deref(), Some("pkg:bazel/myproject"));
+    }
+
+    #[test]
+    fn test_scancode_simple_top_level_allows_direct_calls() {
+        let module = parse_starlark_module(
+            "<BUILD>",
+            "cc_library(name = \"demo\")\npy_binary(name = \"tool\")\n".to_string(),
+        )
+        .expect("parse BUILD");
+
+        assert!(is_scancode_simple_top_level_module(&module));
+    }
+
+    #[test]
+    fn test_scancode_simple_top_level_rejects_attribute_calls() {
+        let module = parse_starlark_module(
+            "<BUILD>",
+            "selects.config_setting_group(name = \"demo\")\ncc_library(name = \"demo\")\n"
+                .to_string(),
+        )
+        .expect("parse BUILD");
+
+        assert!(!is_scancode_simple_top_level_module(&module));
+    }
+
+    #[test]
+    fn test_scancode_simple_top_level_rejects_non_call_expressions() {
+        let module =
+            parse_starlark_module("<BUILD>", "[(cc_binary(name = \"demo\"),)]\n".to_string())
+                .expect("parse BUILD");
+
+        assert!(!is_scancode_simple_top_level_module(&module));
+    }
+}

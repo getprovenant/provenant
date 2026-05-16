@@ -10,6 +10,7 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_f
 
 use super::PackageParser;
 use super::go::{create_golang_purl, split_module_path};
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Golang;
 
@@ -26,6 +27,16 @@ pub struct GoModGraphParser;
 
 impl PackageParser for GoModGraphParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Go module graph file",
+            file_patterns: &["*go.mod.graph", "*go.modgraph"],
+            package_type: "golang",
+            primary_language: "Go",
+            documentation_url: Some("https://go.dev/ref/mod#go-mod-graph"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -220,11 +231,3 @@ mod tests {
         assert_eq!(package_data.dependencies.len(), 1);
     }
 }
-
-crate::register_parser!(
-    "Go module graph file",
-    &["*go.mod.graph", "*go.modgraph"],
-    "golang",
-    "Go",
-    Some("https://go.dev/ref/mod#go-mod-graph"),
-);

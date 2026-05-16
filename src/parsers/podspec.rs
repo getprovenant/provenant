@@ -32,6 +32,7 @@ use md5::{Digest, Md5};
 use packageurl::PackageUrl;
 use regex::Regex;
 
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 use crate::parsers::PackageParser;
 use crate::parsers::license_normalization::{
@@ -56,6 +57,16 @@ pub struct PodspecParser;
 
 impl PackageParser for PodspecParser {
     const PACKAGE_TYPE: PackageType = PackageType::Cocoapods;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "CocoaPods podspec file",
+            file_patterns: &["**/*.podspec"],
+            package_type: "cocoapods",
+            primary_language: "Objective-C",
+            documentation_url: Some("https://guides.cocoapods.org/syntax/podspec.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().is_some_and(|ext| {
@@ -691,14 +702,6 @@ fn get_hashed_path(name: &str) -> Option<String> {
         &hash_str[2..3]
     ))
 }
-
-crate::register_parser!(
-    "CocoaPods podspec file",
-    &["**/*.podspec"],
-    "cocoapods",
-    "Objective-C",
-    Some("https://guides.cocoapods.org/syntax/podspec.html"),
-);
 
 #[cfg(test)]
 mod tests {

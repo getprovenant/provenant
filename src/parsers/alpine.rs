@@ -27,6 +27,7 @@ use std::path::Path;
 use crate::parser_warn as warn;
 use crate::utils::magic;
 
+use super::metadata::ParserMetadata;
 use crate::models::{
     DatasourceId, Dependency, FileReference, LicenseDetection, PackageData, PackageType, Party,
     Sha1Digest,
@@ -85,6 +86,18 @@ impl PackageParser for AlpineInstalledParser {
 
 impl PackageParser for AlpineApkbuildParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Alpine Linux APKBUILD recipe",
+            file_patterns: &["**/APKBUILD"],
+            package_type: "alpine",
+            primary_language: "Shell",
+            documentation_url: Some(
+                "https://github.com/alpinelinux/abuild/blob/master/APKBUILD.5.scd",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -1103,6 +1116,18 @@ pub struct AlpineApkParser;
 impl PackageParser for AlpineApkParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Alpine Linux package (installed db and .apk archive)",
+            file_patterns: &["**/lib/apk/db/installed", "**/*.apk"],
+            package_type: "alpine",
+            primary_language: "",
+            documentation_url: Some(
+                "https://github.com/alpinelinux/apk-tools/blob/master/doc/apk-v2.5.scd",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|e| e.to_str()) == Some("apk")
             && magic::is_gzip(path)
@@ -2078,19 +2103,3 @@ D:json-c geos gdal proj protobuf-c libstdc++
         assert_eq!(pkg.license_detections.len(), 1);
     }
 }
-
-crate::register_parser!(
-    "Alpine Linux package (installed db and .apk archive)",
-    &["**/lib/apk/db/installed", "**/*.apk"],
-    "alpine",
-    "",
-    Some("https://github.com/alpinelinux/apk-tools/blob/master/doc/apk-v2.5.scd"),
-);
-
-crate::register_parser!(
-    "Alpine Linux APKBUILD recipe",
-    &["**/APKBUILD"],
-    "alpine",
-    "Shell",
-    Some("https://github.com/alpinelinux/abuild/blob/master/APKBUILD.5.scd"),
-);

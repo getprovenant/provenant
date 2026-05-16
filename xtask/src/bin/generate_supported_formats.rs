@@ -55,7 +55,7 @@ fn main() -> Result<()> {
 }
 
 fn generate_markdown() -> String {
-    let mut parsers: Vec<&ParserMetadata> = inventory::iter::<ParserMetadata>().collect();
+    let mut parsers: Vec<ParserMetadata> = provenant::parsers::all_metadata();
 
     parsers.sort_by(|a, b| {
         a.package_type

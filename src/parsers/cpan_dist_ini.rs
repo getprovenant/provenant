@@ -56,6 +56,16 @@ impl PackageParser for CpanDistIniParser {
 
         vec![parse_dist_ini(&content)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "CPAN Perl dist.ini",
+            file_patterns: &["*/dist.ini"],
+            package_type: "cpan",
+            primary_language: "Perl",
+            documentation_url: Some("https://metacpan.org/pod/Dist::Zilla::Tutorial"),
+        }]
+    }
 }
 
 pub(crate) fn parse_dist_ini(content: &str) -> PackageData {
@@ -265,11 +275,3 @@ fn classify_prereq_scope(section_name: &str) -> Option<String> {
         Some("runtime".to_string())
     }
 }
-
-crate::register_parser!(
-    "CPAN Perl dist.ini",
-    &["*/dist.ini"],
-    "cpan",
-    "Perl",
-    Some("https://metacpan.org/pod/Dist::Zilla::Tutorial"),
-);

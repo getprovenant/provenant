@@ -31,6 +31,7 @@ use crate::parser_warn as warn;
 use crate::models::PackageData;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 const PACKAGE_TYPE: PackageType = PackageType::LinuxDistro;
@@ -40,6 +41,18 @@ pub struct OsReleaseParser;
 
 impl PackageParser for OsReleaseParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Linux OS release metadata file",
+            file_patterns: &["*etc/os-release", "*usr/lib/os-release"],
+            package_type: "linux-distro",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.freedesktop.org/software/systemd/man/os-release.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.to_str()
@@ -150,11 +163,3 @@ fn unquote(s: &str) -> String {
         s.to_string()
     }
 }
-
-crate::register_parser!(
-    "Linux OS release metadata file",
-    &["*etc/os-release", "*usr/lib/os-release"],
-    "linux-distro",
-    "",
-    Some("https://www.freedesktop.org/software/systemd/man/os-release.html"),
-);

@@ -8,6 +8,7 @@ use crate::parser_warn as warn;
 use crate::parsers::rfc822;
 use crate::parsers::utils::truncate_field;
 
+use super::super::metadata::ParserMetadata;
 use super::control::build_package_from_paragraph;
 use super::copyright::parse_copyright_file;
 use super::file_list::parse_file_entries;
@@ -23,6 +24,16 @@ pub struct DebianDebParser;
 
 impl PackageParser for DebianDebParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian binary package archive (.deb)",
+            file_patterns: &["**/*.deb"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some("https://www.debian.org/doc/debian-policy/ch-binary.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|e| e.to_str()) == Some("deb")
@@ -45,14 +56,6 @@ impl PackageParser for DebianDebParser {
         vec![parse_deb_filename(filename)]
     }
 }
-
-crate::register_parser!(
-    "Debian binary package archive (.deb)",
-    &["**/*.deb"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-binary.html"),
-);
 
 fn is_path_traversal(path: &std::path::Path) -> bool {
     path.components()
@@ -429,6 +432,21 @@ pub struct DebianControlInExtractedDebParser;
 impl PackageParser for DebianControlInExtractedDebParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian control file in extracted .deb control tarball",
+            file_patterns: &[
+                "**/control.tar.gz-extract/control",
+                "**/control.tar.xz-extract/control",
+            ],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/debian-policy/ch-controlfields.html",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.file_name()
             .and_then(|n| n.to_str())
@@ -477,6 +495,21 @@ pub struct DebianMd5sumInPackageParser;
 
 impl PackageParser for DebianMd5sumInPackageParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian MD5 checksums in extracted .deb control tarball",
+            file_patterns: &[
+                "**/control.tar.gz-extract/md5sums",
+                "**/control.tar.xz-extract/md5sums",
+            ],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some(
+                "https://www.debian.org/doc/debian-policy/ch-controlfields.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -538,28 +571,6 @@ fn parse_md5sums_in_package(content: &str, package_name: Option<&str>) -> Packag
 
     package
 }
-
-crate::register_parser!(
-    "Debian control file in extracted .deb control tarball",
-    &[
-        "**/control.tar.gz-extract/control",
-        "**/control.tar.xz-extract/control"
-    ],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-controlfields.html"),
-);
-
-crate::register_parser!(
-    "Debian MD5 checksums in extracted .deb control tarball",
-    &[
-        "**/control.tar.gz-extract/md5sums",
-        "**/control.tar.xz-extract/md5sums"
-    ],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-controlfields.html"),
-);
 
 #[cfg(test)]
 mod tests {

@@ -73,6 +73,16 @@ impl PackageParser for ConanFilePyParser {
             }
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Conan C/C++ package manifest",
+            file_patterns: &["**/conanfile.py", "**/conanfile.txt", "**/conan.lock"],
+            package_type: "conan",
+            primary_language: "C++",
+            documentation_url: Some("https://docs.conan.io/"),
+        }]
+    }
 }
 
 /// Parse conanfile.py AST to extract ConanFile class attributes
@@ -547,11 +557,3 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Conan C/C++ package manifest",
-    &["**/conanfile.py", "**/conanfile.txt", "**/conan.lock"],
-    "conan",
-    "C++",
-    Some("https://docs.conan.io/"),
-);

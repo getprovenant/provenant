@@ -13,7 +13,7 @@ use packageurl::PackageUrl;
 
 use crate::models::{DatasourceId, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
-use crate::register_parser;
+use crate::parsers::metadata::ParserMetadata;
 use crate::utils::file::extract_printable_strings;
 
 use super::ParsePackagesResult;
@@ -22,13 +22,15 @@ use super::license_normalization::{
 };
 use super::utils::{MAX_ITERATION_COUNT, truncate_field};
 
-register_parser!(
-    "Windows PE executable with VERSIONINFO package metadata",
-    &["<windows executable and DLL files with VERSIONINFO resources>"],
-    "winexe",
-    "",
-    Some("https://learn.microsoft.com/en-us/windows/win32/menurc/versioninfo-resource"),
-);
+pub(crate) static WINDOWS_EXE_METADATA: &[ParserMetadata] = &[ParserMetadata {
+    description: "Windows PE executable with VERSIONINFO package metadata",
+    file_patterns: &["<windows executable and DLL files with VERSIONINFO resources>"],
+    package_type: "winexe",
+    primary_language: "",
+    documentation_url: Some(
+        "https://learn.microsoft.com/en-us/windows/win32/menurc/versioninfo-resource",
+    ),
+}];
 
 const VS_FIXEDFILEINFO_SIGNATURE: u32 = 0xFEEF04BD;
 const MAX_SIBLING_LICENSE_BYTES: u64 = 256 * 1024;

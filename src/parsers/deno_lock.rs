@@ -14,6 +14,7 @@ use crate::models::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, parse_sri, read_file_to_string, truncate_field};
 
 const FIELD_VERSION: &str = "version";
@@ -29,6 +30,16 @@ pub struct DenoLockParser;
 
 impl PackageParser for DenoLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Deno;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Deno lockfile",
+            file_patterns: &["**/deno.lock"],
+            package_type: "deno",
+            primary_language: "TypeScript",
+            documentation_url: Some("https://docs.deno.com/runtime/fundamentals/modules/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().and_then(|name| name.to_str()) == Some("deno.lock")
@@ -516,11 +527,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Deno lockfile",
-    &["**/deno.lock"],
-    "deno",
-    "TypeScript",
-    Some("https://docs.deno.com/runtime/fundamentals/modules/"),
-);

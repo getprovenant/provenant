@@ -13,11 +13,22 @@ use yaml_serde::{Mapping, Value};
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 pub struct HelmChartYamlParser;
 
 impl PackageParser for HelmChartYamlParser {
     const PACKAGE_TYPE: PackageType = PackageType::Helm;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Helm chart metadata",
+            file_patterns: &["**/Chart.yaml", "**/Chart.lock"],
+            package_type: "helm",
+            primary_language: "YAML",
+            documentation_url: Some("https://helm.sh/docs/topics/charts/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "Chart.yaml")
@@ -355,11 +366,3 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Helm chart metadata",
-    &["**/Chart.yaml", "**/Chart.lock"],
-    "helm",
-    "YAML",
-    Some("https://helm.sh/docs/topics/charts/"),
-);

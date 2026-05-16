@@ -10,29 +10,30 @@ use object::{Object, ObjectSection};
 use packageurl::PackageUrl;
 use serde::Deserialize;
 
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
-use crate::register_parser;
 
 use super::ParsePackagesResult;
 use super::go::create_golang_purl;
 
-register_parser!(
-    "Go compiled binary with embedded build info",
-    &["<compiled Go binaries with Go build info>"],
-    "golang",
-    "Go",
-    Some("https://pkg.go.dev/runtime/debug#BuildInfo"),
-);
-
-register_parser!(
-    "Rust compiled binary with cargo-auditable dependency section",
-    &["<compiled Rust binaries with .dep-v0 sections>"],
-    "cargo",
-    "Rust",
-    Some("https://github.com/rust-secure-code/cargo-auditable"),
-);
+pub(crate) static COMPILED_BINARY_METADATA: &[ParserMetadata] = &[
+    ParserMetadata {
+        description: "Go compiled binary with embedded build info",
+        file_patterns: &["<compiled Go binaries with Go build info>"],
+        package_type: "golang",
+        primary_language: "Go",
+        documentation_url: Some("https://pkg.go.dev/runtime/debug#BuildInfo"),
+    },
+    ParserMetadata {
+        description: "Rust compiled binary with cargo-auditable dependency section",
+        file_patterns: &["<compiled Rust binaries with .dep-v0 sections>"],
+        package_type: "cargo",
+        primary_language: "Rust",
+        documentation_url: Some("https://github.com/rust-secure-code/cargo-auditable"),
+    },
+];
 
 #[derive(Debug, Deserialize)]
 struct RustBinaryAuditData {

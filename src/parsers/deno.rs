@@ -13,6 +13,7 @@ use url::Url;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_NAME: &str = "name";
 const FIELD_VERSION: &str = "version";
@@ -29,6 +30,16 @@ pub struct DenoParser;
 
 impl PackageParser for DenoParser {
     const PACKAGE_TYPE: PackageType = PackageType::Deno;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Deno configuration",
+            file_patterns: &["**/deno.json", "**/deno.jsonc"],
+            package_type: "deno",
+            primary_language: "TypeScript",
+            documentation_url: Some("https://docs.deno.com/runtime/fundamentals/configuration/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -301,11 +312,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Deno configuration",
-    &["**/deno.json", "**/deno.jsonc"],
-    "deno",
-    "TypeScript",
-    Some("https://docs.deno.com/runtime/fundamentals/configuration/"),
-);

@@ -37,6 +37,7 @@ use crate::parsers::python::{build_pypi_urls, read_toml_file};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_PACKAGE: &str = "package";
 const FIELD_METADATA: &str = "metadata";
@@ -54,6 +55,18 @@ pub struct PoetryLockParser;
 
 impl PackageParser for PoetryLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Pypi;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Poetry lockfile",
+            file_patterns: &["**/poetry.lock"],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some(
+                "https://python-poetry.org/docs/basic-usage/#installing-with-poetrylock",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -430,11 +443,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Poetry lockfile",
-    &["**/poetry.lock"],
-    "pypi",
-    "Python",
-    Some("https://python-poetry.org/docs/basic-usage/#installing-with-poetrylock"),
-);

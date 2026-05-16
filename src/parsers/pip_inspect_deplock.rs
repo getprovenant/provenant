@@ -34,6 +34,7 @@ use serde_json::Value;
 use super::PackageParser;
 #[cfg(test)]
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 use super::python::PythonParser;
 #[cfg(test)]
 use super::python::extract_requires_dist_dependencies;
@@ -84,6 +85,16 @@ struct PackageMetadata {
 
 impl PackageParser for PipInspectDeplockParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "pip inspect deplock file",
+            file_patterns: &["*pip-inspect.deplock"],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some("https://pip.pypa.io/en/stable/cli/pip_inspect/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.to_str()
@@ -185,11 +196,3 @@ pub(crate) fn parse_pip_inspect_deplock(content: &str) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "pip inspect deplock file",
-    &["*pip-inspect.deplock"],
-    "pypi",
-    "Python",
-    Some("https://pip.pypa.io/en/stable/cli/pip_inspect/"),
-);

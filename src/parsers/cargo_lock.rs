@@ -160,6 +160,18 @@ impl PackageParser for CargoLockParser {
             purl,
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Rust Cargo.lock lockfile",
+            file_patterns: &["**/Cargo.lock", "**/cargo.lock"],
+            package_type: "cargo",
+            primary_language: "Rust",
+            documentation_url: Some(
+                "https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html",
+            ),
+        }]
+    }
 }
 
 fn read_cargo_lock(path: &Path) -> Result<Value, String> {
@@ -542,11 +554,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Rust Cargo.lock lockfile",
-    &["**/Cargo.lock", "**/cargo.lock"],
-    "cargo",
-    "Rust",
-    Some("https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html"),
-);

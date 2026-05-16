@@ -66,6 +66,16 @@ impl PackageParser for ProjectJsonParser {
 
         vec![parse_project_json_manifest(&parsed)]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: "Legacy .NET project.json manifest",
+            file_patterns: &["**/project.json"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some("https://learn.microsoft.com/en-us/nuget/archive/project-json"),
+        }]
+    }
 }
 
 pub struct ProjectLockJsonParser;
@@ -101,6 +111,16 @@ impl PackageParser for ProjectLockJsonParser {
         };
 
         vec![parse_project_lock_manifest(&parsed)]
+    }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET project.lock.json lockfile",
+            file_patterns: &["**/project.lock.json"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some("https://learn.microsoft.com/en-us/nuget/archive/project-json"),
+        }]
     }
 }
 
@@ -339,19 +359,3 @@ fn parse_project_lock_dependency(entry: &str, scope: Option<String>) -> Option<D
         extra_data: None,
     })
 }
-
-crate::register_parser!(
-    "Legacy .NET project.json manifest",
-    &["**/project.json"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/nuget/archive/project-json"),
-);
-
-crate::register_parser!(
-    ".NET project.lock.json lockfile",
-    &["**/project.lock.json"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/nuget/archive/project-json"),
-);

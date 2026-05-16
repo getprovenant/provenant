@@ -318,6 +318,18 @@ impl PackageParser for AboutFileParser {
             .and_then(|ext| ext.to_str())
             .is_some_and(|ext| ext == "ABOUT")
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "AboutCode .ABOUT metadata file",
+            file_patterns: &["**/*.ABOUT"],
+            package_type: "about",
+            primary_language: "",
+            documentation_url: Some(
+                "https://aboutcode-toolkit.readthedocs.io/en/latest/specification.html",
+            ),
+        }]
+    }
 }
 
 /// Reads and parses a YAML file.
@@ -552,11 +564,3 @@ fn build_extra_data(
     }
     (!extra_data.is_empty()).then_some(extra_data)
 }
-
-crate::register_parser!(
-    "AboutCode .ABOUT metadata file",
-    &["**/*.ABOUT"],
-    "about",
-    "",
-    Some("https://aboutcode-toolkit.readthedocs.io/en/latest/specification.html"),
-);

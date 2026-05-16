@@ -51,6 +51,18 @@ impl PackageParser for SwiftManifestJsonParser {
             .and_then(|name| name.to_str())
             .is_some_and(|name| name.ends_with(".swift.json") || name.ends_with(".swift.deplock"))
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Swift Package Manager manifest JSON (Package.swift.json, Package.swift.deplock)",
+            file_patterns: &["**/Package.swift.json", "**/Package.swift.deplock"],
+            package_type: "swift",
+            primary_language: "Swift",
+            documentation_url: Some(
+                "https://docs.swift.org/package-manager/PackageDescription/PackageDescription.html",
+            ),
+        }]
+    }
 }
 
 fn read_swift_manifest_json(path: &Path) -> Result<Value, String> {
@@ -428,11 +440,3 @@ fn default_package_data(path: &Path) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Swift Package Manager manifest JSON (Package.swift.json, Package.swift.deplock)",
-    &["**/Package.swift.json", "**/Package.swift.deplock"],
-    "swift",
-    "Swift",
-    Some("https://docs.swift.org/package-manager/PackageDescription/PackageDescription.html"),
-);

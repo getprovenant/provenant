@@ -41,6 +41,18 @@ impl PackageParser for DirectoryBuildPropsParser {
             }
         }]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET Directory.Build.props property source",
+            file_patterns: &["**/Directory.Build.props"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022",
+            ),
+        }]
+    }
 }
 
 impl PackageParser for CentralPackageManagementPropsParser {
@@ -64,6 +76,18 @@ impl PackageParser for CentralPackageManagementPropsParser {
                 );
                 default_package_data(Some(DatasourceId::NugetDirectoryPackagesProps))
             }
+        }]
+    }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET Directory.Packages.props central package management manifest",
+            file_patterns: &["**/Directory.Packages.props"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management",
+            ),
         }]
     }
 }
@@ -906,21 +930,3 @@ fn detect_props_resolution_root(path: &Path) -> PathBuf {
         .map(Path::to_path_buf)
         .unwrap_or_else(|| path.to_path_buf())
 }
-
-crate::register_parser!(
-    ".NET Directory.Build.props property source",
-    &["**/Directory.Build.props"],
-    "nuget",
-    "C#",
-    Some(
-        "https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022"
-    ),
-);
-
-crate::register_parser!(
-    ".NET Directory.Packages.props central package management manifest",
-    &["**/Directory.Packages.props"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management"),
-);

@@ -35,6 +35,7 @@ const MAX_RECURSION_DEPTH: usize = 50;
 use packageurl::PackageUrl;
 use serde_json::json;
 
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::PackageParser;
 
@@ -70,6 +71,16 @@ pub struct GradleParser;
 
 impl PackageParser for GradleParser {
     const PACKAGE_TYPE: PackageType = PackageType::Maven;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Gradle build script",
+            file_patterns: &["**/build.gradle", "**/build.gradle.kts"],
+            package_type: "maven",
+            primary_language: "Java",
+            documentation_url: Some("https://gradle.org/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| {
@@ -1996,14 +2007,6 @@ fn derive_gradle_license_expression(name: &str, url: Option<&str>) -> Option<Str
 
     None
 }
-
-crate::register_parser!(
-    "Gradle build script",
-    &["**/build.gradle", "**/build.gradle.kts"],
-    "maven",
-    "Java",
-    Some("https://gradle.org/"),
-);
 
 #[cfg(test)]
 mod tests {

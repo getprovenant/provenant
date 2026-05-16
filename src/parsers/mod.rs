@@ -528,6 +528,16 @@ pub trait PackageParser {
             .next()
             .unwrap_or_default()
     }
+
+    /// Returns documentation metadata for the file-format surfaces this parser handles.
+    ///
+    /// Used to auto-generate `docs/SUPPORTED_FORMATS.md`. Parsers that share a
+    /// documentation entry with another parser (e.g., AlpineApkParser and
+    /// AlpineInstalledParser) should return the entry from only one of them
+    /// and use the default empty implementation in the other.
+    fn metadata() -> Vec<metadata::ParserMetadata> {
+        Vec::new()
+    }
 }
 
 pub fn try_parse_rpm_archive_with_license_engine(
@@ -567,8 +577,21 @@ pub fn try_parse_windows_executable_bytes(
     self::windows_executable::try_parse_windows_executable_bytes(path, bytes)
 }
 
-pub(crate) fn path_looks_like_rpm_archive(path: &Path) -> bool {
+pub fn path_looks_like_rpm_archive(path: &Path) -> bool {
     self::rpm_parser::path_looks_like_rpm_archive(path)
+}
+
+/// Collects all registered parser and detection-surface metadata.
+///
+/// Used by the `generate-supported-formats` xtask to auto-generate
+/// `docs/SUPPORTED_FORMATS.md`.
+pub fn all_metadata() -> Vec<metadata::ParserMetadata> {
+    let mut entries = collect_parser_metadata();
+    entries.extend_from_slice(self::compiled_binary::COMPILED_BINARY_METADATA);
+    entries.extend_from_slice(self::windows_executable::WINDOWS_EXE_METADATA);
+    entries.extend_from_slice(self::misc::RECOGNIZER_METADATA);
+    entries.extend_from_slice(crate::utils::font::FONT_METADATA);
+    entries
 }
 
 pub use self::about::AboutFileParser;
@@ -756,6 +779,19 @@ macro_rules! register_package_handlers {
                     stringify!($recognizer),
                 )*
             ]
+        }
+
+        /// Collects documentation metadata from all registered parsers and recognizers.
+        pub fn collect_parser_metadata() -> Vec<metadata::ParserMetadata> {
+            let mut entries = Vec::new();
+            $(
+                $(#[$parser_meta])*
+                entries.extend(<$parser>::metadata());
+            )*
+            $(
+                entries.extend(<$recognizer>::metadata());
+            )*
+            entries
         }
     };
 }

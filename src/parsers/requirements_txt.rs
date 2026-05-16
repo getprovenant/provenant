@@ -62,6 +62,40 @@ impl PackageParser for RequirementsTxtParser {
         is_requirements_txt_filename(name)
             || (is_requirements_like_extension(name) && has_requirements_like_ancestor(path))
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "pip requirements file",
+            file_patterns: &[
+                "**/requirements*.txt",
+                "**/*requirements.txt",
+                "**/reqs.txt",
+                "**/minreqs.txt",
+                "**/*-reqs.txt",
+                "**/*_reqs.txt",
+                "**/*.reqs.txt",
+                "**/*-minreqs.txt",
+                "**/*_minreqs.txt",
+                "**/*.minreqs.txt",
+                "**/requirements*.in",
+                "**/*requirements.in",
+                "**/requires.txt",
+                "**/requirements/*.txt",
+                "**/requirements/*.in",
+                "**/requirements/**/*.txt",
+                "**/requirements/**/*.in",
+                "**/requirements*/*.txt",
+                "**/requirements*/*.in",
+                "**/requirements*/**/*.txt",
+                "**/requirements*/**/*.in",
+            ],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some(
+                "https://pip.pypa.io/en/latest/reference/requirements-file-format/",
+            ),
+        }]
+    }
 }
 
 fn is_requirements_txt_filename(name: &str) -> bool {
@@ -771,33 +805,3 @@ fn normalize_pypi_name(name: &str) -> String {
     }
     normalized
 }
-
-crate::register_parser!(
-    "pip requirements file",
-    &[
-        "**/requirements*.txt",
-        "**/*requirements.txt",
-        "**/reqs.txt",
-        "**/minreqs.txt",
-        "**/*-reqs.txt",
-        "**/*_reqs.txt",
-        "**/*.reqs.txt",
-        "**/*-minreqs.txt",
-        "**/*_minreqs.txt",
-        "**/*.minreqs.txt",
-        "**/requirements*.in",
-        "**/*requirements.in",
-        "**/requires.txt",
-        "**/requirements/*.txt",
-        "**/requirements/*.in",
-        "**/requirements/**/*.txt",
-        "**/requirements/**/*.in",
-        "**/requirements*/*.txt",
-        "**/requirements*/*.in",
-        "**/requirements*/**/*.txt",
-        "**/requirements*/**/*.in"
-    ],
-    "pypi",
-    "Python",
-    Some("https://pip.pypa.io/en/latest/reference/requirements-file-format/"),
-);

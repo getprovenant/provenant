@@ -12,6 +12,7 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_f
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Docker;
 const OCI_LABEL_PREFIX: &str = "org.opencontainers.image.";
@@ -29,6 +30,25 @@ pub struct DockerfileParser;
 
 impl PackageParser for DockerfileParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Dockerfile or Containerfile OCI image metadata",
+            file_patterns: &[
+                "**/Dockerfile",
+                "**/dockerfile",
+                "**/Containerfile",
+                "**/containerfile",
+                "**/Containerfile.core",
+                "**/containerfile.core",
+            ],
+            package_type: "docker",
+            primary_language: "Dockerfile",
+            documentation_url: Some(
+                "https://github.com/opencontainers/image-spec/blob/main/annotations.md",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -251,18 +271,3 @@ fn tokenize_label_arguments(input: &str) -> Vec<String> {
 
     tokens
 }
-
-crate::register_parser!(
-    "Dockerfile or Containerfile OCI image metadata",
-    &[
-        "**/Dockerfile",
-        "**/dockerfile",
-        "**/Containerfile",
-        "**/containerfile",
-        "**/Containerfile.core",
-        "**/containerfile.core",
-    ],
-    "docker",
-    "Dockerfile",
-    Some("https://github.com/opencontainers/image-spec/blob/main/annotations.md"),
-);

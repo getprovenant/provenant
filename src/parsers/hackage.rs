@@ -15,6 +15,7 @@ use crate::parsers::utils::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Hackage;
 const PRIMARY_LANGUAGE: &str = "Haskell";
@@ -27,6 +28,18 @@ pub struct HackageStackYamlParser;
 
 impl PackageParser for HackageCabalParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Hackage Cabal package manifest",
+            file_patterns: &["**/*.cabal"],
+            package_type: "hackage",
+            primary_language: "Haskell",
+            documentation_url: Some(
+                "https://cabal.readthedocs.io/en/stable/cabal-package-description-file.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().is_some_and(|ext| ext == "cabal")
@@ -48,6 +61,18 @@ impl PackageParser for HackageCabalParser {
 impl PackageParser for HackageCabalProjectParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Hackage cabal.project workspace file",
+            file_patterns: &["**/cabal.project"],
+            package_type: "hackage",
+            primary_language: "Haskell",
+            documentation_url: Some(
+                "https://cabal.readthedocs.io/en/stable/cabal-project-description-file.html",
+            ),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "cabal.project")
     }
@@ -67,6 +92,16 @@ impl PackageParser for HackageCabalProjectParser {
 
 impl PackageParser for HackageStackYamlParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Hackage Stack project manifest",
+            file_patterns: &["**/stack.yaml"],
+            package_type: "hackage",
+            primary_language: "Haskell",
+            documentation_url: Some("https://docs.haskellstack.org/en/stable/configure/yaml/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "stack.yaml")
@@ -1055,27 +1090,3 @@ fn mapping_string(mapping: &Mapping, key: &str) -> Option<String> {
         .and_then(YamlValue::as_str)
         .map(str::to_string)
 }
-
-crate::register_parser!(
-    "Hackage Cabal package manifest",
-    &["**/*.cabal"],
-    "hackage",
-    "Haskell",
-    Some("https://cabal.readthedocs.io/en/stable/cabal-package-description-file.html"),
-);
-
-crate::register_parser!(
-    "Hackage cabal.project workspace file",
-    &["**/cabal.project"],
-    "hackage",
-    "Haskell",
-    Some("https://cabal.readthedocs.io/en/stable/cabal-project-description-file.html"),
-);
-
-crate::register_parser!(
-    "Hackage Stack project manifest",
-    &["**/stack.yaml"],
-    "hackage",
-    "Haskell",
-    Some("https://docs.haskellstack.org/en/stable/configure/yaml/"),
-);

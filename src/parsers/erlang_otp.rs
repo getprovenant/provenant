@@ -16,6 +16,7 @@ use crate::parsers::utils::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 // ── Parser structs ──
 
@@ -531,6 +532,16 @@ fn build_hex_purl(name: &str, version: Option<&str>) -> Option<String> {
 impl PackageParser for ErlangAppSrcParser {
     const PACKAGE_TYPE: PackageType = PackageType::Hex;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Erlang OTP application resource file",
+            file_patterns: &["**/*.app.src"],
+            package_type: "hex",
+            primary_language: "Erlang",
+            documentation_url: Some("https://www.erlang.org/doc/apps/kernel/application"),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.extension()
             .and_then(|e| e.to_str())
@@ -768,6 +779,16 @@ fn is_otp_stdlib(name: &str) -> bool {
 
 impl PackageParser for RebarConfigParser {
     const PACKAGE_TYPE: PackageType = PackageType::Hex;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Rebar3 configuration",
+            file_patterns: &["**/rebar.config"],
+            package_type: "hex",
+            primary_language: "Erlang",
+            documentation_url: Some("https://rebar3.org/docs/configuration/configuration/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().and_then(|n| n.to_str()) == Some("rebar.config")
@@ -1047,6 +1068,16 @@ fn parse_profile_deps(term: &ErlTerm, dependencies: &mut Vec<Dependency>) {
 impl PackageParser for RebarLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Hex;
 
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Rebar3 lockfile",
+            file_patterns: &["**/rebar.lock"],
+            package_type: "hex",
+            primary_language: "Erlang",
+            documentation_url: Some("https://rebar3.org/docs/configuration/configuration/"),
+        }]
+    }
+
     fn is_match(path: &Path) -> bool {
         path.file_name().and_then(|n| n.to_str()) == Some("rebar.lock")
     }
@@ -1233,29 +1264,3 @@ fn extract_pkg_hashes(term: &ErlTerm) -> HashMap<String, String> {
     }
     hashes
 }
-
-// ── Parser metadata registration ──
-
-crate::register_parser!(
-    "Erlang OTP application resource file",
-    &["**/*.app.src"],
-    "hex",
-    "Erlang",
-    Some("https://www.erlang.org/doc/apps/kernel/application"),
-);
-
-crate::register_parser!(
-    "Rebar3 configuration",
-    &["**/rebar.config"],
-    "hex",
-    "Erlang",
-    Some("https://rebar3.org/docs/configuration/configuration/"),
-);
-
-crate::register_parser!(
-    "Rebar3 lockfile",
-    &["**/rebar.lock"],
-    "hex",
-    "Erlang",
-    Some("https://rebar3.org/docs/configuration/configuration/"),
-);
