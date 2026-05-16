@@ -8,6 +8,7 @@ use crate::license_detection::TokenSet;
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::TokenId;
 use crate::license_detection::models::Rule;
+use crate::license_detection::models::RuleId;
 use crate::license_detection::query::QueryRun;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
@@ -30,7 +31,7 @@ pub struct ScoresVector {
     /// Ordering key for matched length.
     matched_length: OrderingKey,
     /// Rule ID for tie-breaking
-    pub rid: usize,
+    pub rid: RuleId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -126,7 +127,7 @@ impl CandidateMetrics {
         quantize_ratio_tenths(self.matched_length as u64, 20)
     }
 
-    fn rounded_score_vector(&self, rid: usize) -> ScoresVector {
+    fn rounded_score_vector(&self, rid: RuleId) -> ScoresVector {
         ScoresVector {
             is_highly_resemblant: self.rounded_is_highly_resemblant(),
             containment: OrderingKey::integer(self.rounded_containment_tenths()),
@@ -136,7 +137,7 @@ impl CandidateMetrics {
         }
     }
 
-    fn full_score_vector(&self, rid: usize) -> ScoresVector {
+    fn full_score_vector(&self, rid: RuleId) -> ScoresVector {
         ScoresVector {
             is_highly_resemblant: self.full_is_highly_resemblant(),
             containment: OrderingKey::ratio(self.matched_length as u64, self.rule_len as u64),
@@ -193,7 +194,7 @@ pub(crate) struct Candidate<'a> {
     /// Full score vector for sorting
     score_vec_full: ScoresVector,
     /// Rule ID
-    pub(super) rid: usize,
+    pub(super) rid: RuleId,
     /// Reference to the rule (borrowed from LicenseIndex)
     pub(super) rule: &'a Rule,
     /// Set of high-value (legalese) tokens in the intersection
@@ -280,10 +281,10 @@ impl Ord for Candidate<'_> {
 fn compare_candidate_rank(
     rounded: &ScoresVector,
     full: &ScoresVector,
-    rid: usize,
+    rid: RuleId,
     other_rounded: &ScoresVector,
     other_full: &ScoresVector,
-    other_rid: usize,
+    other_rid: RuleId,
 ) -> std::cmp::Ordering {
     rounded
         .cmp(other_rounded)
@@ -333,7 +334,7 @@ fn passes_minimum_containment(rule: &Rule, metrics: CandidateMetrics) -> bool {
 }
 
 fn build_ranked_candidate<'a>(
-    rid: usize,
+    rid: RuleId,
     rule: &'a Rule,
     high_set_intersection: TokenSet,
     metrics: CandidateMetrics,
@@ -372,7 +373,7 @@ fn find_set_candidates<'a>(
     high_resemblance: bool,
     deadline: Option<Instant>,
 ) -> Vec<Candidate<'a>> {
-    let candidate_rids: HashSet<usize> = query_data
+    let candidate_rids: HashSet<RuleId> = query_data
         .query_high_set
         .iter()
         .filter_map(|tid| index.rids_by_high_tid.get(&TokenId::new(tid)))
@@ -386,7 +387,7 @@ fn find_set_candidates<'a>(
             return candidates;
         }
 
-        let Some(rule) = index.rules_by_rid.get(rid) else {
+        let Some(rule) = index.rules_by_rid.get(rid.raw()) else {
             continue;
         };
         let Some(rule_set) = index.sets_by_rid.get(&rid) else {
@@ -620,7 +621,7 @@ mod tests {
     use super::*;
     use crate::license_detection::index::dictionary::tid;
 
-    fn candidate<'a>(rid: usize, rule: &'a Rule, metrics: CandidateMetrics) -> Candidate<'a> {
+    fn candidate<'a>(rid: RuleId, rule: &'a Rule, metrics: CandidateMetrics) -> Candidate<'a> {
         Candidate {
             metrics,
             score_vec_rounded: metrics.rounded_score_vector(rid),
@@ -633,8 +634,8 @@ mod tests {
 
     #[test]
     fn test_scores_vector_comparison() {
-        let sv1 = CandidateMetrics::new(9, 10, 10).rounded_score_vector(0);
-        let sv2 = CandidateMetrics::new(5, 10, 10).rounded_score_vector(1);
+        let sv1 = CandidateMetrics::new(9, 10, 10).rounded_score_vector(RuleId::new(0));
+        let sv2 = CandidateMetrics::new(5, 10, 10).rounded_score_vector(RuleId::new(1));
 
         assert!(sv1 > sv2);
     }
@@ -729,8 +730,8 @@ mod tests {
             stopwords_by_pos: std::collections::HashMap::new(),
         };
 
-        let candidate1 = candidate(0, &rule1, CandidateMetrics::new(9, 10, 10));
-        let candidate2 = candidate(1, &rule2, CandidateMetrics::new(5, 10, 10));
+        let candidate1 = candidate(RuleId::new(0), &rule1, CandidateMetrics::new(9, 10, 10));
+        let candidate2 = candidate(RuleId::new(1), &rule2, CandidateMetrics::new(5, 10, 10));
 
         assert!(
             candidate1 > candidate2,
@@ -787,8 +788,8 @@ mod tests {
             ..rule1.clone()
         };
 
-        let candidate1 = candidate(1, &rule1, CandidateMetrics::new(138, 200, 276));
-        let candidate2 = candidate(2, &rule2, CandidateMetrics::new(133, 200, 266));
+        let candidate1 = candidate(RuleId::new(1), &rule1, CandidateMetrics::new(138, 200, 276));
+        let candidate2 = candidate(RuleId::new(2), &rule2, CandidateMetrics::new(133, 200, 266));
 
         let candidates = vec![candidate1, candidate2];
         let filtered = filter_dupes(candidates);
@@ -849,8 +850,8 @@ mod tests {
             ..rule1.clone()
         };
 
-        let candidate1 = candidate(1, &rule1, CandidateMetrics::new(100, 200, 200));
-        let candidate2 = candidate(2, &rule2, CandidateMetrics::new(100, 200, 200));
+        let candidate1 = candidate(RuleId::new(1), &rule1, CandidateMetrics::new(100, 200, 200));
+        let candidate2 = candidate(RuleId::new(2), &rule2, CandidateMetrics::new(100, 200, 200));
 
         let candidates = vec![candidate1, candidate2];
         let filtered = filter_dupes(candidates);
@@ -942,8 +943,16 @@ mod tests {
             stopwords_by_pos: std::collections::HashMap::new(),
         };
 
-        let candidate_sa = candidate(1, &rule_sa, CandidateMetrics::new(100, 110, 111));
-        let candidate_nc_sa = candidate(2, &rule_nc_sa, CandidateMetrics::new(100, 110, 111));
+        let candidate_sa = candidate(
+            RuleId::new(1),
+            &rule_sa,
+            CandidateMetrics::new(100, 110, 111),
+        );
+        let candidate_nc_sa = candidate(
+            RuleId::new(2),
+            &rule_nc_sa,
+            CandidateMetrics::new(100, 110, 111),
+        );
 
         let candidates = vec![candidate_nc_sa, candidate_sa];
         let filtered = filter_dupes(candidates);
@@ -1035,19 +1044,20 @@ mod tests {
             ..rule_a.clone()
         };
 
-        let candidate_low_rid = candidate(1, &rule_z, CandidateMetrics::new(9, 10, 10));
+        let candidate_low_rid =
+            candidate(RuleId::new(1), &rule_z, CandidateMetrics::new(9, 10, 10));
 
         let candidate_high_rid = Candidate {
             score_vec_rounded: ScoresVector {
-                rid: 2,
+                rid: RuleId::new(2),
                 ..candidate_low_rid.score_vec_rounded
             },
             score_vec_full: ScoresVector {
-                rid: 2,
+                rid: RuleId::new(2),
                 ..candidate_low_rid.score_vec_full
             },
             metrics: candidate_low_rid.metrics,
-            rid: 2,
+            rid: RuleId::new(2),
             rule: &rule_a,
             high_set_intersection: TokenSet::new(),
         };
@@ -1055,7 +1065,8 @@ mod tests {
         let mut sorted = [candidate_low_rid, candidate_high_rid];
         sorted.sort_by(|a, b| b.cmp(a));
         assert_eq!(
-            sorted[0].rid, 2,
+            sorted[0].rid,
+            RuleId::new(2),
             "Python final candidate tuple ordering falls back to higher rid after equal scores"
         );
     }

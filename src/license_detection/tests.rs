@@ -366,7 +366,7 @@ fn test_engine_index_populated() {
 
     let mut rules_with_tokens = 0;
     for &rid in index.rid_by_hash.values().take(10) {
-        let rule = &index.rules_by_rid[rid];
+        let rule = &index.rules_by_rid[rid.raw()];
         if !rule.tokens.is_empty() {
             rules_with_tokens += 1;
             assert!(

@@ -330,12 +330,12 @@ pub fn filter_overlapping_matches(
                 {
                     let current_ends = index
                         .rules_by_rid
-                        .get(matches[i].rid)
+                        .get(matches[i].rid.raw())
                         .map(|r| r.ends_with_license)
                         .unwrap_or(false);
                     let next_starts = index
                         .rules_by_rid
-                        .get(matches[j].rid)
+                        .get(matches[j].rid.raw())
                         .map(|r| r.starts_with_license)
                         .unwrap_or(false);
 
@@ -455,6 +455,7 @@ pub fn restore_non_overlapping(
 mod tests {
     use super::*;
     use crate::license_detection::models::MatchCoordinates;
+    use crate::license_detection::models::RuleId;
     use crate::license_detection::models::position_span::PositionSpan;
     use crate::models::LineNumber;
     use crate::models::MatchScore;
@@ -478,7 +479,7 @@ mod tests {
     ) -> LicenseMatch {
         let matched_len = end_line - start_line + 1;
         let rule_len = matched_len;
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         let start_line_ln = LineNumber::new(start_line).expect("valid start_line");
         let end_line_ln = LineNumber::new(end_line).expect("valid end_line");
         LicenseMatch {
@@ -518,7 +519,7 @@ mod tests {
         end_token: usize,
         matched_length: usize,
     ) -> LicenseMatch {
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         LicenseMatch {
             rid,
             license_expression: "mit".to_string(),
@@ -965,8 +966,8 @@ mod tests {
     #[test]
     fn test_filter_overlapping_matches_false_positive_skip() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(1);
-        let _ = index.false_positive_rids.insert(2);
+        let _ = index.false_positive_rids.insert(RuleId::new(1));
+        let _ = index.false_positive_rids.insert(RuleId::new(2));
 
         let mut m1 = create_test_match("#1", 1, 20, MatchScore::from_percentage(0.9), 90.0, 100);
         m1.matched_length = 100;

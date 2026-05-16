@@ -7,7 +7,7 @@ mod tests {
     use crate::license_detection::index::dictionary::tid;
     use crate::license_detection::models::position_span::PositionSpan;
     use crate::license_detection::models::{
-        License, LicenseMatch, MatchCoordinates, MatcherKind, Rule, RuleKind,
+        License, LicenseMatch, MatchCoordinates, MatcherKind, Rule, RuleId, RuleKind,
     };
     use crate::license_detection::position_set::PositionSet;
     use crate::models::LineNumber;
@@ -96,7 +96,7 @@ mod tests {
 
     fn create_license_match() -> LicenseMatch {
         LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: Some("README.md".to_string()),
@@ -515,7 +515,7 @@ mod tests {
     #[test]
     fn test_license_match_creation_with_minimal_fields() {
         let match_result = LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: None,
@@ -665,7 +665,7 @@ mod tests {
     #[test]
     fn test_license_match_with_referenced_filenames() {
         let match_result = LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: Some("README.md".to_string()),

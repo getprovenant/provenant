@@ -13,6 +13,7 @@ pub use builder::{
 
 use crate::license_detection::automaton::{AsBytes, Automaton};
 use crate::license_detection::index::dictionary::{TokenDictionary, TokenId};
+use crate::license_detection::models::RuleId;
 use crate::license_detection::{TokenMultiset, TokenSet};
 use rkyv::Archive;
 use std::collections::{HashMap, HashSet};
@@ -64,10 +65,10 @@ pub struct LicenseIndex {
     /// Each hash maps to exactly one rule ID.
     ///
     /// Note: The hash is a 20-byte SHA1 digest, stored as a key in HashMap.
-    /// In practice, we use a HashMap<[u8; 20], usize>.
+    /// In practice, we use a HashMap<[u8; 20], RuleId>.
     ///
     /// Corresponds to Python: `self.rid_by_hash = {}` (line 216)
-    pub rid_by_hash: HashMap<[u8; 20], usize>,
+    pub rid_by_hash: HashMap<[u8; 20], RuleId>,
 
     /// Rules indexed by rule ID.
     ///
@@ -107,7 +108,7 @@ pub struct LicenseIndex {
     /// Used for efficient candidate selection based on token overlap.
     ///
     /// Corresponds to Python: `self.sets_by_rid = []` (line 212)
-    pub sets_by_rid: HashMap<usize, TokenSet>,
+    pub sets_by_rid: HashMap<RuleId, TokenSet>,
 
     pub rule_metadata_by_identifier: HashMap<String, IndexedRuleMetadata>,
 
@@ -117,7 +118,7 @@ pub struct LicenseIndex {
     /// Used for ranking candidates by token frequency overlap.
     ///
     /// Corresponds to Python: `self.msets_by_rid = []` (line 213)
-    pub msets_by_rid: HashMap<usize, TokenMultiset>,
+    pub msets_by_rid: HashMap<RuleId, TokenMultiset>,
 
     /// High-value token sets per rule for early candidate rejection.
     ///
@@ -126,7 +127,7 @@ pub struct LicenseIndex {
     /// and early rejection of candidates that won't pass the high-token threshold.
     ///
     /// Precomputed during index building to avoid redundant filtering at runtime.
-    pub high_sets_by_rid: HashMap<usize, TokenSet>,
+    pub high_sets_by_rid: HashMap<RuleId, TokenSet>,
 
     /// Inverted index of high-value token positions per rule.
     ///
@@ -138,7 +139,7 @@ pub struct LicenseIndex {
     ///
     /// Corresponds to Python: `self.high_postings_by_rid = []` (line 209)
     /// In Python: `postings = {tid: array('h', [positions, ...])}`
-    pub high_postings_by_rid: HashMap<usize, HashMap<TokenId, Vec<usize>>>,
+    pub high_postings_by_rid: HashMap<RuleId, HashMap<TokenId, Vec<usize>>>,
 
     /// Set of rule IDs for false positive rules.
     ///
@@ -146,7 +147,7 @@ pub struct LicenseIndex {
     /// filtering to subtract spurious matches.
     ///
     /// Corresponds to Python: `self.false_positive_rids = set()` (line 230)
-    pub false_positive_rids: HashSet<usize>,
+    pub false_positive_rids: HashSet<RuleId>,
 
     /// Set of rule IDs that can be matched approximately.
     ///
@@ -159,7 +160,7 @@ pub struct LicenseIndex {
     ///
     /// Corresponds to Python: `self.approx_matchable_rids = set()` (line 234)
     #[allow(dead_code)]
-    pub approx_matchable_rids: HashSet<usize>,
+    pub approx_matchable_rids: HashSet<RuleId>,
 
     /// Mapping from ScanCode license key to License object.
     ///
@@ -177,14 +178,14 @@ pub struct LicenseIndex {
     /// Keys are stored lowercase for case-insensitive lookup.
     ///
     /// Corresponds to Python: `self.licenses_by_spdx_key` in cache.py
-    pub rid_by_spdx_key: HashMap<String, usize>,
+    pub rid_by_spdx_key: HashMap<String, RuleId>,
 
     /// Rule ID for the unknown-spdx license.
     ///
     /// Used as a fallback when an SPDX identifier is not recognized.
     ///
     /// Corresponds to Python: `get_unknown_spdx_symbol()` in cache.py
-    pub unknown_spdx_rid: Option<usize>,
+    pub unknown_spdx_rid: Option<RuleId>,
 
     /// Inverted index mapping high-value token IDs to rule IDs.
     ///
@@ -195,7 +196,7 @@ pub struct LicenseIndex {
     ///
     /// Only contains entries for tokens with ID < len_legalese (high-value tokens).
     /// Rules not in approx_matchable_rids are excluded from this index.
-    pub rids_by_high_tid: HashMap<TokenId, HashSet<usize>>,
+    pub rids_by_high_tid: HashMap<TokenId, HashSet<RuleId>>,
 
     /// SPDX license list version used to build this index.
     pub spdx_license_list_version: Option<String>,

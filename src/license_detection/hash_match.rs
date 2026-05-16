@@ -58,9 +58,9 @@ pub fn hash_match(index: &LicenseIndex, query_run: &QueryRun) -> Vec<LicenseMatc
     let mut matches = Vec::new();
     let query_hash = compute_hash(query_run.tokens());
 
-    if let Some(&rid) = index.rid_by_hash.get(&query_hash) {
-        let rule = &index.rules_by_rid[rid];
-        let itokens = &index.tids_by_rid[rid];
+    if let Some(rid) = index.rid_by_hash.get(&query_hash) {
+        let rule = &index.rules_by_rid[rid.raw()];
+        let itokens = &index.tids_by_rid[rid.raw()];
 
         let rule_length = rule.tokens.len();
 
@@ -105,7 +105,7 @@ pub fn hash_match(index: &LicenseIndex, query_run: &QueryRun) -> Vec<LicenseMatc
             rule_length,
             match_coverage,
             rule_relevance: rule.relevance,
-            rid,
+            rid: *rid,
             rule_identifier: rule.identifier.clone(),
             rule_url: rule.rule_url().unwrap_or_default(),
             matched_text: None,

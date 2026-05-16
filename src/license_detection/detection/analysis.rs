@@ -650,7 +650,7 @@ mod tests {
 
     fn create_test_match(coverage: f32, rule_identifier: &str) -> LicenseMatch {
         LicenseMatch {
-            rid: 0,
+            rid: crate::license_detection::models::RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: Some("test.txt".to_string()),
@@ -693,7 +693,7 @@ mod tests {
         let start_line = LineNumber::new(start_line).expect("valid start_line");
         let end_line = LineNumber::new(end_line).expect("valid end_line");
         LicenseMatch {
-            rid: 0,
+            rid: crate::license_detection::models::RuleId::NONE,
             license_expression: license_expression.to_string(),
             license_expression_spdx: Some(license_expression.to_string()),
             from_file: Some("test.txt".to_string()),

@@ -5,6 +5,7 @@ use super::*;
 use crate::license_detection::index::IndexedRuleMetadata;
 use crate::license_detection::index::dictionary::TokenId;
 use crate::license_detection::models::Rule;
+use crate::license_detection::models::RuleId;
 use crate::license_detection::test_utils::{create_mock_query_with_tokens, create_test_index};
 use crate::models::MatchScore;
 
@@ -145,7 +146,9 @@ fn test_hash_match_no_match() {
     let rules_by_rid = create_test_rules_by_rid();
     let tids_by_rid = vec![tids(&[0, 1]), tids(&[2, 3, 4])];
 
-    index.rid_by_hash.insert(compute_hash(&tids(&[5, 6, 7])), 0);
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[5, 6, 7])), RuleId::new(0));
     index.rules_by_rid = rules_by_rid;
     index.tids_by_rid = tids_by_rid;
 
@@ -166,7 +169,9 @@ fn test_hash_match_with_match() {
     let rules_by_rid = create_test_rules_by_rid();
     let tids_by_rid = vec![tids(&[0, 1]), tids(&[2, 3, 4])];
 
-    index.rid_by_hash.insert(compute_hash(&tids(&[0, 1])), 0);
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[0, 1])), RuleId::new(0));
     index.rules_by_rid = rules_by_rid;
     index.tids_by_rid = tids_by_rid;
 
@@ -184,7 +189,9 @@ fn test_hash_match_with_match() {
 fn test_hash_match_uses_precomputed_spdx_expression() {
     let mut index = create_test_index(&[("mit", 0), ("license", 1)], 2);
 
-    index.rid_by_hash.insert(compute_hash(&tids(&[0, 1])), 0);
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[0, 1])), RuleId::new(0));
     index.rules_by_rid = vec![create_test_rules_by_rid()[0].clone()];
     index.tids_by_rid = vec![tids(&[0, 1])];
     index.rule_metadata_by_identifier.insert(
@@ -210,7 +217,9 @@ fn test_hash_match_hispan_filters_legalese() {
     let rules_by_rid = create_test_rules_by_rid();
     let tids_by_rid = vec![tids(&[0, 1]), tids(&[2, 3, 4])];
 
-    index.rid_by_hash.insert(compute_hash(&tids(&[0, 1])), 0);
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[0, 1])), RuleId::new(0));
     index.rules_by_rid = rules_by_rid;
     index.tids_by_rid = tids_by_rid;
 
@@ -274,8 +283,12 @@ fn test_hash_match_multiple_rules_same_hash() {
     let rules_by_rid = create_test_rules_by_rid();
     let tids_by_rid = vec![tids(&[0, 1]), tids(&[2, 3, 4])];
 
-    index.rid_by_hash.insert(compute_hash(&tids(&[0, 1])), 0);
-    index.rid_by_hash.insert(compute_hash(&tids(&[0, 1])), 1);
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[0, 1])), RuleId::new(0));
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[0, 1])), RuleId::new(1));
     index.rules_by_rid = rules_by_rid;
     index.tids_by_rid = tids_by_rid;
 
@@ -297,7 +310,9 @@ fn test_hash_match_returns_correct_license_expression() {
     let rules_by_rid = create_test_rules_by_rid();
     let tids_by_rid = vec![tids(&[0, 1])];
 
-    index.rid_by_hash.insert(compute_hash(&tids(&[0, 1])), 0);
+    index
+        .rid_by_hash
+        .insert(compute_hash(&tids(&[0, 1])), RuleId::new(0));
     index.rules_by_rid = rules_by_rid;
     index.tids_by_rid = tids_by_rid;
 

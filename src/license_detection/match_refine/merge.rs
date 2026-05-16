@@ -373,6 +373,7 @@ mod tests {
     use super::*;
     use crate::license_detection::index::LicenseIndex;
     use crate::license_detection::models::PositionSpan;
+    use crate::license_detection::models::RuleId;
     use crate::models::LineNumber;
 
     fn parse_rule_id(rule_identifier: &str) -> Option<usize> {
@@ -394,7 +395,7 @@ mod tests {
     ) -> LicenseMatch {
         let matched_len = end_line - start_line + 1;
         let rule_len = matched_len;
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         let qspan = PositionSpan::range(start_line, end_line + 1);
         let ispan = PositionSpan::range(0, matched_len);
         let hispan = PositionSpan::range(0, matched_len / 2);
@@ -432,7 +433,7 @@ mod tests {
         end_token: usize,
         matched_length: usize,
     ) -> LicenseMatch {
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         let qspan = PositionSpan::range(start_token, end_token);
         LicenseMatch {
             rid,
@@ -472,7 +473,7 @@ mod tests {
         end_token: usize,
         matched_length: usize,
     ) -> LicenseMatch {
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         LicenseMatch {
             rid,
             license_expression: "mit".to_string(),

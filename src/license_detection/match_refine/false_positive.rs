@@ -172,7 +172,7 @@ pub fn filter_false_positive_license_lists_matches(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::license_detection::models::{MatchCoordinates, PositionSpan};
+    use crate::license_detection::models::{MatchCoordinates, PositionSpan, RuleId};
     use crate::models::LineNumber;
     use crate::models::MatchScore;
 
@@ -193,7 +193,7 @@ mod tests {
     ) -> LicenseMatch {
         let rid = rule_identifier.trim_start_matches('#').parse().unwrap_or(0);
         LicenseMatch {
-            rid,
+            rid: RuleId::new(rid),
             license_expression: license_expression.to_string(),
             license_expression_spdx: Some(license_expression.to_string()),
             from_file: None,

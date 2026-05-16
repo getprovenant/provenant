@@ -7,6 +7,7 @@ use serde::Serialize;
 use std::fmt;
 use std::str::FromStr;
 
+use super::rule_id::RuleId;
 use crate::license_detection::models::RuleKind;
 use crate::license_detection::models::position_span::PositionSpan;
 use crate::license_detection::position_set::PositionSet;
@@ -151,7 +152,7 @@ impl FromStr for MatcherKind {
 pub struct LicenseMatch {
     /// Internal rule ID for fast lookups (index into rules_by_rid).
     /// Not serialized to JSON output.
-    pub rid: usize,
+    pub rid: RuleId,
 
     /// License expression string using ScanCode license keys
     pub license_expression: String,
@@ -313,7 +314,7 @@ impl Serialize for LicenseMatch {
 impl Default for LicenseMatch {
     fn default() -> Self {
         LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: String::new(),
             license_expression_spdx: None,
             from_file: None,

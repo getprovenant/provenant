@@ -3,6 +3,7 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::license_detection::models::RuleId;
     use crate::license_detection::query::Query;
     use crate::license_detection::spdx_lid::*;
     use crate::license_detection::test_utils::{create_mock_rule_simple, create_test_index};
@@ -30,14 +31,14 @@ mod tests {
         let mut index = create_test_index(&[], 0);
 
         for (spdx_key, license_expression) in entries {
-            let rid = index.rules_by_rid.len();
+            let rid = RuleId::new(index.rules_by_rid.len());
             index
                 .rules_by_rid
                 .push(create_mock_rule_simple(license_expression, 100));
             index.rid_by_spdx_key.insert(spdx_key.to_string(), rid);
         }
 
-        let unknown_rid = index.rules_by_rid.len();
+        let unknown_rid = RuleId::new(index.rules_by_rid.len());
         index
             .rules_by_rid
             .push(create_mock_rule_simple("unknown-spdx", 100));
@@ -431,7 +432,7 @@ mod tests {
     #[test]
     fn test_spdx_lid_match_uses_full_line_span_when_expression_tokens_are_unknown() {
         let mut index = create_test_index(&[("spdx", 0), ("license", 1), ("identifier", 2)], 3);
-        let apache_rid = index.rules_by_rid.len();
+        let apache_rid = RuleId::new(index.rules_by_rid.len());
         index
             .rules_by_rid
             .push(create_mock_rule_simple("apache-2.0", 100));
@@ -655,8 +656,8 @@ mod tests {
             "Should have gpl-2.0+ in SPDX key mappings"
         );
 
-        if let Some(&rid) = index.rid_by_spdx_key.get("gpl-2.0+") {
-            let rule = &index.rules_by_rid[rid];
+        if let Some(rid) = index.rid_by_spdx_key.get("gpl-2.0+").copied() {
+            let rule = &index.rules_by_rid[rid.raw()];
             assert_eq!(
                 rule.license_expression, "gpl-2.0-plus",
                 "GPL-2.0+ should map to gpl-2.0-plus rule"
@@ -699,7 +700,9 @@ mod tests {
             1,
         );
         index.rules_by_rid.push(create_mock_rule_simple("mit", 100));
-        index.rid_by_spdx_key.insert("mit".to_string(), 0);
+        index
+            .rid_by_spdx_key
+            .insert("mit".to_string(), RuleId::new(0));
 
         let text = "NOTICE SPDX-License-Identifier: MIT";
         let query = Query::from_extracted_text(text, &index, false).unwrap();
@@ -718,7 +721,9 @@ mod tests {
             1,
         );
         index.rules_by_rid.push(create_mock_rule_simple("mit", 100));
-        index.rid_by_spdx_key.insert("mit".to_string(), 0);
+        index
+            .rid_by_spdx_key
+            .insert("mit".to_string(), RuleId::new(0));
 
         let plain =
             Query::from_extracted_text("// SPDX-License-Identifier: MIT", &index, false).unwrap();
@@ -795,8 +800,8 @@ mod tests {
         ];
 
         for (spdx_key, expected_expr) in test_cases {
-            if let Some(&rid) = index.rid_by_spdx_key.get(spdx_key) {
-                let rule = &index.rules_by_rid[rid];
+            if let Some(rid) = index.rid_by_spdx_key.get(spdx_key).copied() {
+                let rule = &index.rules_by_rid[rid.raw()];
                 assert_eq!(
                     rule.license_expression, expected_expr,
                     "SPDX key '{}' should map to expression '{}'",

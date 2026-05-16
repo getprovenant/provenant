@@ -13,7 +13,9 @@ use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::TokenDictionary;
 use crate::license_detection::models::License;
 use crate::license_detection::models::position_span::PositionSpan;
-use crate::license_detection::models::{LicenseMatch, MatchCoordinates, MatcherKind, RuleKind};
+use crate::license_detection::models::{
+    LicenseMatch, MatchCoordinates, MatcherKind, RuleId, RuleKind,
+};
 use crate::license_detection::query::Query;
 use crate::models::{
     FileInfoBuilder, LicenseDetection as PublicLicenseDetection, LineNumber, Match, MatchScore,
@@ -38,7 +40,7 @@ static TEST_ENGINE: LazyLock<Arc<LicenseDetectionEngine>> = LazyLock::new(|| {
 
 fn make_internal_match(rule_url: &str) -> LicenseMatch {
     LicenseMatch {
-        rid: 0,
+        rid: RuleId::NONE,
         license_expression: "mit".to_string(),
         license_expression_spdx: Some("MIT".to_string()),
         from_file: None,
@@ -90,7 +92,7 @@ fn make_internal_notice_match(
     end_line: usize,
 ) -> LicenseMatch {
     LicenseMatch {
-        rid: 0,
+        rid: RuleId::NONE,
         license_expression: expr.to_string(),
         license_expression_spdx: Some(expr_spdx.to_string()),
         from_file: Some("NOTICE".to_string()),

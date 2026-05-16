@@ -11,7 +11,7 @@ use std::sync::LazyLock;
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::{TokenId, TokenKind};
 use crate::license_detection::models::position_span::PositionSpan;
-use crate::license_detection::models::{LicenseMatch, MatchCoordinates, MatcherKind};
+use crate::license_detection::models::{LicenseMatch, MatchCoordinates, MatcherKind, RuleId};
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::Query;
 use crate::license_detection::tokenize::STOPWORDS;
@@ -268,7 +268,7 @@ fn create_unknown_match_from_qspan(query: &Query, qspan: &PositionSet) -> Option
     let qspan_span = qspan.to_position_span();
 
     LicenseMatch {
-        rid: 0,
+        rid: RuleId::NONE,
         license_expression: "unknown".to_string(),
         license_expression_spdx: None,
         from_file: None,
@@ -811,7 +811,7 @@ mod tests {
             .expect("Failed to create query");
 
         let known_matches = vec![LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "test".to_string(),
             license_expression_spdx: Some("TEST".to_string()),
             from_file: None,
@@ -860,7 +860,7 @@ mod tests {
             .expect("Failed to create query");
 
         let known_matches = vec![LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "test".to_string(),
             license_expression_spdx: Some("TEST".to_string()),
             from_file: None,
@@ -908,7 +908,7 @@ mod tests {
             .expect("Failed to create query");
 
         let known_matches = vec![LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "test".to_string(),
             license_expression_spdx: Some("TEST".to_string()),
             from_file: None,
@@ -991,7 +991,7 @@ mod tests {
             Query::from_extracted_text(text, &index, false).expect("Failed to create query");
 
         let known_matches = vec![LicenseMatch {
-            rid: 0,
+            rid: RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: None,

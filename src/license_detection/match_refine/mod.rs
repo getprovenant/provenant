@@ -340,6 +340,7 @@ fn filter_binary_low_coverage_same_expression_seq_bridges(
 mod tests {
     use super::*;
     use crate::license_detection::models::MatchCoordinates;
+    use crate::license_detection::models::RuleId;
     use crate::license_detection::models::position_span::PositionSpan;
     use crate::models::LineNumber;
     use crate::models::MatchScore;
@@ -363,7 +364,7 @@ mod tests {
     ) -> LicenseMatch {
         let matched_len = end_line - start_line + 1;
         let rule_len = matched_len;
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         LicenseMatch {
             rid,
             license_expression: "mit".to_string(),
@@ -398,7 +399,7 @@ mod tests {
     #[test]
     fn test_refine_matches_full_pipeline() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(99);
+        let _ = index.false_positive_rids.insert(RuleId::new(99));
 
         let mut m1 = create_test_match("#1", 1, 10, MatchScore::from_percentage(0.5), 100.0, 100);
         m1.rule_length = 100;
@@ -604,7 +605,7 @@ mod tests {
     #[test]
     fn test_refine_matches_complex_scenario() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(999);
+        let _ = index.false_positive_rids.insert(RuleId::new(999));
 
         let mut m1 = create_test_match("#1", 1, 10, MatchScore::from_percentage(0.7), 100.0, 100);
         m1.matched_length = 100;
@@ -693,7 +694,7 @@ mod tests {
     #[test]
     fn test_split_weak_matches_keeps_false_positive_unknown_out_of_weak_bucket() {
         let m = LicenseMatch {
-            rid: 42,
+            rid: RuleId::new(42),
             license_expression: "unknown".to_string(),
             matcher: crate::license_detection::models::MatcherKind::Aho,
             matched_length: 3,
@@ -703,7 +704,7 @@ mod tests {
         };
 
         let mut index = LicenseIndex::with_legalese_count(10);
-        index.false_positive_rids.insert(42);
+        index.false_positive_rids.insert(RuleId::new(42));
 
         let (good, weak) = split_weak_matches(&index, std::slice::from_ref(&m));
         assert!(good.contains(&m));

@@ -10,6 +10,7 @@ use crate::license_detection::detection::{
     select_matches_for_expression,
 };
 use crate::license_detection::expression::parse_expression;
+use crate::license_detection::models::RuleId;
 use crate::models::{
     FileInfo, FileType, LicenseDetection, Match, Package, PackageUid, TopLevelLicenseDetection,
 };
@@ -1375,7 +1376,7 @@ fn public_match_to_internal(
     detection_match: &Match,
 ) -> crate::license_detection::models::LicenseMatch {
     crate::license_detection::models::LicenseMatch {
-        rid: 0,
+        rid: RuleId::NONE,
         license_expression: detection_match.license_expression.clone(),
         license_expression_spdx: (!detection_match.license_expression_spdx.is_empty())
             .then(|| detection_match.license_expression_spdx.clone()),

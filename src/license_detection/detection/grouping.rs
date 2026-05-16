@@ -223,7 +223,7 @@ mod tests {
         let start_line_ln = LineNumber::new(start_line).expect("valid start_line");
         let end_line_ln = LineNumber::new(end_line).expect("valid end_line");
         LicenseMatch {
-            rid: 0,
+            rid: crate::license_detection::models::RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: Some("test.txt".to_string()),
@@ -262,7 +262,7 @@ mod tests {
         let start_line_ln = LineNumber::new(start_line).expect("valid start_line");
         let end_line_ln = LineNumber::new(end_line).expect("valid end_line");
         LicenseMatch {
-            rid: 0,
+            rid: crate::license_detection::models::RuleId::NONE,
             license_expression: "mit".to_string(),
             license_expression_spdx: Some("MIT".to_string()),
             from_file: Some("test.txt".to_string()),

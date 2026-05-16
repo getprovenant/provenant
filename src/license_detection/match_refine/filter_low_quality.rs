@@ -80,7 +80,7 @@ pub(crate) fn filter_below_rule_minimum_coverage(
             }
 
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid)
+            if let Some(rule) = index.rules_by_rid.get(rid.raw())
                 && let Some(min_cov) = rule.minimum_coverage
             {
                 return m.coverage() >= f32::from(min_cov);
@@ -114,7 +114,7 @@ pub(crate) fn filter_short_matches_scattered_on_too_many_lines(
         .iter()
         .filter(|m| {
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid)
+            if let Some(rule) = index.rules_by_rid.get(rid.raw())
                 && rule.is_small
             {
                 let matched_len = m.len();
@@ -162,7 +162,7 @@ pub(crate) fn filter_matches_missing_required_phrases(
     for m in matches {
         let rid = m.rid;
 
-        let rule = match index.rules_by_rid.get(rid) {
+        let rule = match index.rules_by_rid.get(rid.raw()) {
             Some(r) => r,
             None => {
                 kept.push(m.clone());
@@ -540,7 +540,7 @@ pub(crate) fn filter_invalid_matches_to_single_word_gibberish(
         .iter()
         .filter(|m| {
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid)
+            if let Some(rule) = index.rules_by_rid.get(rid.raw())
                 && rule.length_unique == 1
                 && (rule.is_license_reference() || rule.is_license_clue())
             {
@@ -569,7 +569,7 @@ pub(crate) fn filter_filename_like_single_word_reference_matches(
         .iter()
         .filter(|m| {
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid)
+            if let Some(rule) = index.rules_by_rid.get(rid.raw())
                 && rule.length_unique == 1
                 && rule.is_license_reference()
                 && rule.relevance < 100
@@ -598,7 +598,7 @@ pub(crate) fn filter_too_short_matches(
             }
 
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid) {
+            if let Some(rule) = index.rules_by_rid.get(rid.raw()) {
                 return !m.is_small(
                     rule.min_matched_length,
                     rule.min_high_matched_length,
@@ -617,6 +617,7 @@ mod tests {
     use super::*;
     use crate::license_detection::models::MatchCoordinates;
     use crate::license_detection::models::Rule;
+    use crate::license_detection::models::RuleId;
     use crate::license_detection::models::position_span::PositionSpan;
     use crate::license_detection::unknown_match::MATCH_UNKNOWN;
     use crate::models::LineNumber;
@@ -641,7 +642,7 @@ mod tests {
     ) -> LicenseMatch {
         let matched_len = end_line - start_line + 1;
         let rule_len = matched_len;
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         let start_line_ln = LineNumber::new(start_line).expect("valid start_line");
         let end_line_ln = LineNumber::new(end_line).expect("valid end_line");
         LicenseMatch {
@@ -681,7 +682,7 @@ mod tests {
         end_token: usize,
         matched_length: usize,
     ) -> LicenseMatch {
-        let rid = parse_rule_id(rule_identifier).unwrap_or(0);
+        let rid = parse_rule_id(rule_identifier).map_or(RuleId::NONE, RuleId::new);
         LicenseMatch {
             rid,
             license_expression: "mit".to_string(),
@@ -720,7 +721,7 @@ mod tests {
     #[test]
     fn test_filter_false_positive_matches_with_false_positive() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(42);
+        let _ = index.false_positive_rids.insert(RuleId::new(42));
 
         let matches = vec![
             create_test_match("#42", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),
@@ -750,8 +751,8 @@ mod tests {
     #[test]
     fn test_filter_false_positive_matches_all_false_positive() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(42);
-        let _ = index.false_positive_rids.insert(43);
+        let _ = index.false_positive_rids.insert(RuleId::new(42));
+        let _ = index.false_positive_rids.insert(RuleId::new(43));
 
         let matches = vec![
             create_test_match("#42", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),
@@ -876,7 +877,7 @@ mod tests {
     #[test]
     fn test_filter_false_positive_matches_mixed_identifiers() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(42);
+        let _ = index.false_positive_rids.insert(RuleId::new(42));
 
         let matches = vec![
             create_test_match("#42", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),

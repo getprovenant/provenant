@@ -390,7 +390,7 @@ fn merge_and_prepare_aho_matches(
 
         if index
             .rules_by_rid
-            .get(m.rid)
+            .get(m.rid.raw())
             .is_some_and(|rule| rule.is_license_text())
             && m.rule_length > 120
             && m.coverage() > 98.0

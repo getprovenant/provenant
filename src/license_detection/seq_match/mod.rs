@@ -47,6 +47,7 @@ mod tests {
     use crate::license_detection::index::LicenseIndex;
     use crate::license_detection::index::dictionary::{TokenId, TokenKind};
     use crate::license_detection::models::Rule;
+    use crate::license_detection::models::RuleId;
     use crate::license_detection::query::Query;
     use crate::license_detection::test_utils::create_test_index;
     use crate::license_detection::{TokenMultiset, TokenSet};
@@ -66,8 +67,8 @@ mod tests {
         )
     }
 
-    pub(super) fn add_test_rule(index: &mut LicenseIndex, text: &str, expression: &str) -> usize {
-        let rid = index.rules_by_rid.len();
+    pub(super) fn add_test_rule(index: &mut LicenseIndex, text: &str, expression: &str) -> RuleId {
+        let rid = RuleId::new(index.rules_by_rid.len());
         let tokens: Vec<TokenId> = text
             .split_whitespace()
             .filter_map(|word| index.dictionary.get(word))
