@@ -6,12 +6,9 @@
 pub mod builder;
 pub mod dictionary;
 
-// build_index is used by library tests (see spdx_lid/test.rs, index/builder/tests.rs)
-// even though the binary doesn't use it directly.
 #[allow(unused_imports)]
 pub use builder::{
-    build_index, build_index_from_loaded, build_index_from_loaded_with_automatons,
-    loaded_license_to_license, loaded_rule_to_rule,
+    build_index, build_index_from_loaded, loaded_license_to_license, loaded_rule_to_rule,
 };
 
 use crate::license_detection::automaton::{AsBytes, Automaton};
