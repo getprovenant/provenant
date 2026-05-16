@@ -387,7 +387,7 @@ fn find_set_candidates<'a>(
             return candidates;
         }
 
-        let Some(rule) = index.rules_by_rid.get(rid.raw()) else {
+        let Some(rule) = index.rule(rid) else {
             continue;
         };
         let Some(rule_set) = index.sets_by_rid.get(&rid) else {

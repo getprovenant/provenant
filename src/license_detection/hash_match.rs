@@ -59,8 +59,12 @@ pub fn hash_match(index: &LicenseIndex, query_run: &QueryRun) -> Vec<LicenseMatc
     let query_hash = compute_hash(query_run.tokens());
 
     if let Some(rid) = index.rid_by_hash.get(&query_hash) {
-        let rule = &index.rules_by_rid[rid.raw()];
-        let itokens = &index.tids_by_rid[rid.raw()];
+        let Some(rule) = index.rule(*rid) else {
+            return matches;
+        };
+        let Some(itokens) = index.rule_tokens(*rid) else {
+            return matches;
+        };
 
         let rule_length = rule.tokens.len();
 

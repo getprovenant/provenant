@@ -568,7 +568,11 @@ fn normalize_license_key(key: &str, index: &LicenseIndex) -> Option<NormalizedDe
         .rid_by_spdx_key
         .get(&normalized_key.to_ascii_lowercase())
     {
-        let rule_license_expression = index.rules_by_rid[rid.raw()].license_expression.clone();
+        let rule_license_expression = index
+            .rule(*rid)
+            .expect("rid from spdx key lookup must be valid")
+            .license_expression
+            .clone();
         if rule_license_expression.contains("unknown-spdx") {
             return None;
         }

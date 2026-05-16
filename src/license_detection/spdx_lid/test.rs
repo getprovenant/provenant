@@ -657,7 +657,7 @@ mod tests {
         );
 
         if let Some(rid) = index.rid_by_spdx_key.get("gpl-2.0+").copied() {
-            let rule = &index.rules_by_rid[rid.raw()];
+            let rule = index.rule(rid).expect("test rid must be valid");
             assert_eq!(
                 rule.license_expression, "gpl-2.0-plus",
                 "GPL-2.0+ should map to gpl-2.0-plus rule"
@@ -801,7 +801,7 @@ mod tests {
 
         for (spdx_key, expected_expr) in test_cases {
             if let Some(rid) = index.rid_by_spdx_key.get(spdx_key).copied() {
-                let rule = &index.rules_by_rid[rid.raw()];
+                let rule = index.rule(rid).expect("test rid must be valid");
                 assert_eq!(
                     rule.license_expression, expected_expr,
                     "SPDX key '{}' should map to expression '{}'",

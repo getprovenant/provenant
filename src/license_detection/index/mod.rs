@@ -202,7 +202,25 @@ pub struct LicenseIndex {
     pub spdx_license_list_version: Option<String>,
 }
 
-impl LicenseIndex {}
+impl LicenseIndex {
+    /// Returns the rule for the given ID, or `None` if the ID is invalid
+    /// or out of range.
+    pub fn rule(&self, id: RuleId) -> Option<&crate::license_detection::models::Rule> {
+        if id.is_none() {
+            return None;
+        }
+        self.rules_by_rid.get(id.raw())
+    }
+
+    /// Returns the token ID sequence for the given rule, or `None` if the ID
+    /// is invalid or out of range.
+    pub fn rule_tokens(&self, id: RuleId) -> Option<&[TokenId]> {
+        if id.is_none() {
+            return None;
+        }
+        self.tids_by_rid.get(id.raw()).map(|v| v.as_slice())
+    }
+}
 
 impl LicenseIndex {
     /// Create a new empty license index.

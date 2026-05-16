@@ -240,7 +240,7 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
         }
 
         let rid = candidate.rid;
-        let rule_tokens = index.tids_by_rid.get(rid.raw());
+        let rule_tokens = index.rule_tokens(rid);
         let high_postings: HashMap<TokenId, Vec<usize>> = index
             .high_postings_by_rid
             .get(&rid)

@@ -577,16 +577,26 @@ fn convert_recovered_expression_to_scancode(
     match expr {
         LicenseExpression::License(key) => {
             let lookup_key = key.to_lowercase();
-            if let Some(rid) = index.rid_by_spdx_key.get(&lookup_key).copied() {
-                LicenseExpression::License(index.rules_by_rid[rid.raw()].license_expression.clone())
+            if let Some(rule) = index
+                .rid_by_spdx_key
+                .get(&lookup_key)
+                .copied()
+                .and_then(|rid| index.rule(rid))
+            {
+                LicenseExpression::License(rule.license_expression.clone())
             } else {
                 LicenseExpression::License("unknown-spdx".to_string())
             }
         }
         LicenseExpression::LicenseRef(key) => {
             let lookup_key = key.to_lowercase();
-            if let Some(rid) = index.rid_by_spdx_key.get(&lookup_key).copied() {
-                LicenseExpression::License(index.rules_by_rid[rid.raw()].license_expression.clone())
+            if let Some(rule) = index
+                .rid_by_spdx_key
+                .get(&lookup_key)
+                .copied()
+                .and_then(|rid| index.rule(rid))
+            {
+                LicenseExpression::License(rule.license_expression.clone())
             } else {
                 LicenseExpression::License("unknown-spdx".to_string())
             }
@@ -726,7 +736,7 @@ fn unknown_spdx_license_ref() -> String {
 }
 
 fn rule_spdx_expression(index: &LicenseIndex, rid: RuleId) -> Option<String> {
-    let rule = index.rules_by_rid.get(rid.raw())?;
+    let rule = index.rule(rid)?;
 
     index
         .rule_metadata_by_identifier
@@ -802,7 +812,7 @@ fn resolve_matching_rule_for_expression(
     expression: &str,
 ) -> Option<ResolvedExpression> {
     if let Some(rid) = index.rid_by_spdx_key.get(expression).copied() {
-        let rule = &index.rules_by_rid[rid.raw()];
+        let rule = index.rule(rid).expect("rid from index must be valid");
         return Some(ResolvedExpression {
             scancode_expression: rule.license_expression.clone(),
             spdx_expression: rule_spdx_expression(index, rid),
@@ -865,10 +875,13 @@ fn resolve_matching_rule_for_expression(
         }
     }
 
-    index.unknown_spdx_rid.map(|rid| ResolvedExpression {
-        scancode_expression: index.rules_by_rid[rid.raw()].license_expression.clone(),
-        spdx_expression: rule_spdx_expression(index, rid)
-            .or_else(|| Some(unknown_spdx_license_ref())),
+    index.unknown_spdx_rid.map(|rid| {
+        let rule = index.rule(rid).expect("unknown_spdx_rid must be valid");
+        ResolvedExpression {
+            scancode_expression: rule.license_expression.clone(),
+            spdx_expression: rule_spdx_expression(index, rid)
+                .or_else(|| Some(unknown_spdx_license_ref())),
+        }
     })
 }
 
@@ -888,15 +901,27 @@ fn convert_spdx_expression_to_scancode(
     match expr {
         LicenseExpression::License(key) => {
             let lookup_key = key.to_lowercase();
-            index.rid_by_spdx_key.get(&lookup_key).copied().map(|rid| {
-                LicenseExpression::License(index.rules_by_rid[rid.raw()].license_expression.clone())
-            })
+            index
+                .rid_by_spdx_key
+                .get(&lookup_key)
+                .copied()
+                .and_then(|rid| {
+                    index
+                        .rule(rid)
+                        .map(|r| LicenseExpression::License(r.license_expression.clone()))
+                })
         }
         LicenseExpression::LicenseRef(key) => {
             let lookup_key = key.to_lowercase();
-            index.rid_by_spdx_key.get(&lookup_key).copied().map(|rid| {
-                LicenseExpression::License(index.rules_by_rid[rid.raw()].license_expression.clone())
-            })
+            index
+                .rid_by_spdx_key
+                .get(&lookup_key)
+                .copied()
+                .and_then(|rid| {
+                    index
+                        .rule(rid)
+                        .map(|r| LicenseExpression::License(r.license_expression.clone()))
+                })
         }
         LicenseExpression::And { left, right } => {
             let left_converted = convert_spdx_expression_to_scancode(left, index);

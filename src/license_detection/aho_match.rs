@@ -123,12 +123,7 @@ pub fn aho_match_with_extra_matchables(
             continue;
         }
 
-        let rid_raw = ac_match.pattern;
-        if rid_raw >= index.rules_by_rid.len() {
-            continue;
-        }
-
-        let rid = RuleId::new(rid_raw);
+        let rid = RuleId::new(ac_match.pattern);
 
         let matched_length = qend - qstart;
 
@@ -136,8 +131,12 @@ pub fn aho_match_with_extra_matchables(
             continue;
         }
 
-        let rule = &index.rules_by_rid[rid.raw()];
-        let rule_tids = &index.tids_by_rid[rid.raw()];
+        let Some(rule) = index.rule(rid) else {
+            continue;
+        };
+        let Some(rule_tids) = index.rule_tokens(rid) else {
+            continue;
+        };
         let rule_length = rule.tokens.len();
 
         let match_coverage = if rule_length > 0 {

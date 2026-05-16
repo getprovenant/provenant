@@ -189,15 +189,18 @@ mod test_cases {
 
         let index = build_index(vec![stored_rule, computed_rule], vec![]);
 
-        let stored = &index.rules_by_rid[find_rid_by_identifier(&index, "stored.RULE")
-            .expect("stored rule should exist")
-            .raw()];
+        let stored = index
+            .rule(find_rid_by_identifier(&index, "stored.RULE").expect("stored rule should exist"))
+            .expect("test rid must be valid");
         assert_eq!(stored.minimum_coverage, Some(99));
         assert!(stored.has_stored_minimum_coverage);
 
-        let computed = &index.rules_by_rid[find_rid_by_identifier(&index, "computed.RULE")
-            .expect("computed rule should exist")
-            .raw()];
+        let computed = index
+            .rule(
+                find_rid_by_identifier(&index, "computed.RULE")
+                    .expect("computed rule should exist"),
+            )
+            .expect("test rid must be valid");
         assert_eq!(computed.minimum_coverage, Some(50));
         assert!(!computed.has_stored_minimum_coverage);
     }
@@ -414,7 +417,7 @@ mod test_cases {
 
         let mut rules_with_empty_tokens = 0;
         for &rid in index.rid_by_hash.values() {
-            let rule = &index.rules_by_rid[rid.raw()];
+            let rule = index.rule(rid).expect("test rid must be valid");
             if rule.tokens.is_empty() {
                 rules_with_empty_tokens += 1;
             }
@@ -438,7 +441,7 @@ mod test_cases {
 
         if !index.approx_matchable_rids.is_empty() {
             for &rid in &index.approx_matchable_rids {
-                let rule = &index.rules_by_rid[rid.raw()];
+                let rule = index.rule(rid).expect("test rid must be valid");
                 assert!(!rule.is_false_positive);
             }
         }
@@ -462,7 +465,7 @@ mod test_cases {
         assert_eq!(index.rid_by_hash.len(), 3);
 
         let rid = find_rid_by_identifier(&index, "auto1.RULE").expect("rule should exist");
-        let rule_tokens = &index.tids_by_rid[rid.raw()];
+        let rule_tokens = index.rule_tokens(rid).expect("test rid must be valid");
         let pattern: Vec<u8> = rule_tokens.iter().flat_map(|t| t.to_le_bytes()).collect();
 
         let matches: Vec<_> = index
@@ -481,7 +484,7 @@ mod test_cases {
         let index = build_index(rules, vec![]);
 
         let rid = find_rid_by_identifier(&index, "thresholds.RULE").expect("rule should exist");
-        let rule = &index.rules_by_rid[rid.raw()];
+        let rule = index.rule(rid).expect("test rid must be valid");
 
         assert!(rule.length_unique > 0, "length_unique should be computed");
         assert!(
@@ -583,7 +586,7 @@ mod test_cases {
 
         let index = build_index(vec![tiny_rule], vec![]);
         let rid = find_rid_by_identifier(&index, "tiny-legalese.RULE").expect("tiny rule");
-        let stored_rule = &index.rules_by_rid[rid.raw()];
+        let stored_rule = index.rule(rid).expect("test rid must be valid");
 
         assert!(stored_rule.is_tiny);
         assert!(index.approx_matchable_rids.contains(&rid));
@@ -602,7 +605,7 @@ mod test_cases {
 
         let index = build_index(vec![reference_rule], vec![]);
         let rid = find_rid_by_identifier(&index, "small-reference.RULE").expect("reference rule");
-        let stored_rule = &index.rules_by_rid[rid.raw()];
+        let stored_rule = index.rule(rid).expect("test rid must be valid");
 
         assert!(stored_rule.is_small);
         assert!(index.approx_matchable_rids.contains(&rid));
@@ -883,7 +886,7 @@ SOFTWARE."#;
             .map(RuleId::new);
 
         if let Some(rid) = target_rid {
-            let rule = &index.rules_by_rid[rid.raw()];
+            let rule = index.rule(rid).expect("test rid must be valid");
             eprintln!("Found rule: {}", rule.identifier);
             eprintln!("License expression: {}", rule.license_expression);
             eprintln!("Ignorable URLs: {:?}", rule.ignorable_urls);
@@ -942,8 +945,8 @@ SOFTWARE."#;
             .position(|r| r.identifier == "mit_or_boost-1.0_1.RULE")
             .map(RuleId::new);
         if let Some(rid) = target_rid {
-            let rule = &index.rules_by_rid[rid.raw()];
-            let rule_tokens = &index.tids_by_rid[rid.raw()];
+            let rule = index.rule(rid).expect("test rid must be valid");
+            let rule_tokens = index.rule_tokens(rid).expect("test rid must be valid");
             eprintln!("\nRule token count: {}", rule_tokens.len());
 
             // Use the indexed set from the index

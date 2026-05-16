@@ -80,7 +80,7 @@ pub(crate) fn filter_below_rule_minimum_coverage(
             }
 
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid.raw())
+            if let Some(rule) = index.rule(rid)
                 && let Some(min_cov) = rule.minimum_coverage
             {
                 return m.coverage() >= f32::from(min_cov);
@@ -114,7 +114,7 @@ pub(crate) fn filter_short_matches_scattered_on_too_many_lines(
         .iter()
         .filter(|m| {
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid.raw())
+            if let Some(rule) = index.rule(rid)
                 && rule.is_small
             {
                 let matched_len = m.len();
@@ -162,7 +162,7 @@ pub(crate) fn filter_matches_missing_required_phrases(
     for m in matches {
         let rid = m.rid;
 
-        let rule = match index.rules_by_rid.get(rid.raw()) {
+        let rule = match index.rule(rid) {
             Some(r) => r,
             None => {
                 kept.push(m.clone());
@@ -540,7 +540,7 @@ pub(crate) fn filter_invalid_matches_to_single_word_gibberish(
         .iter()
         .filter(|m| {
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid.raw())
+            if let Some(rule) = index.rule(rid)
                 && rule.length_unique == 1
                 && (rule.is_license_reference() || rule.is_license_clue())
             {
@@ -569,7 +569,7 @@ pub(crate) fn filter_filename_like_single_word_reference_matches(
         .iter()
         .filter(|m| {
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid.raw())
+            if let Some(rule) = index.rule(rid)
                 && rule.length_unique == 1
                 && rule.is_license_reference()
                 && rule.relevance < 100
@@ -598,7 +598,7 @@ pub(crate) fn filter_too_short_matches(
             }
 
             let rid = m.rid;
-            if let Some(rule) = index.rules_by_rid.get(rid.raw()) {
+            if let Some(rule) = index.rule(rid) {
                 return !m.is_small(
                     rule.min_matched_length,
                     rule.min_high_matched_length,
