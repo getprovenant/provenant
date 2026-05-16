@@ -172,21 +172,6 @@ pub struct LicenseIndex {
     /// Corresponds to Python: `get_licenses_db()` in models.py
     pub licenses_by_key: HashMap<String, crate::license_detection::models::License>,
 
-    /// Maps AhoCorasick pattern_id to rule ids (rids).
-    ///
-    /// This is needed because the AhoCorasick pattern_id is just the index
-    /// in the patterns iterator used to build the automaton, not the actual
-    /// rule id. In Python, the automaton stores (rid, start, end) tuples as
-    /// values, so the rid is retrieved from the stored value. In Rust, we
-    /// maintain this mapping instead.
-    ///
-    /// Multiple rules can share the same token pattern (e.g., rules that differ
-    /// only in license_expression). Each pattern_id maps to a list of all rule IDs
-    /// that share that pattern.
-    ///
-    /// Corresponds to Python: automaton values contain (rid, istart, iend)
-    pub pattern_id_to_rid: Vec<Vec<usize>>,
-
     /// Mapping from SPDX license key to rule ID.
     ///
     /// Enables direct lookup of rules by their SPDX license key,
@@ -250,7 +235,6 @@ impl LicenseIndex {
             false_positive_rids: HashSet::new(),
             approx_matchable_rids: HashSet::new(),
             licenses_by_key: HashMap::new(),
-            pattern_id_to_rid: Vec::new(),
             rid_by_spdx_key: HashMap::new(),
             unknown_spdx_rid: None,
             rids_by_high_tid: HashMap::new(),

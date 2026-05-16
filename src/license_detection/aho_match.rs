@@ -107,7 +107,6 @@ pub fn aho_match_with_extra_matchables(
             crate::license_detection::ensure_within_deadline(deadline)?;
         }
 
-        let pattern_id = ac_match.pattern;
         let byte_start = ac_match.start;
         let byte_end = ac_match.end;
 
@@ -124,91 +123,86 @@ pub fn aho_match_with_extra_matchables(
             continue;
         }
 
-        let Some(rids) = index.pattern_id_to_rid.get(pattern_id) else {
+        let rid = ac_match.pattern;
+        if rid >= index.rules_by_rid.len() {
             continue;
+        }
+
+        let matched_length = qend - qstart;
+
+        // Skip zero-length matches (empty patterns)
+        if matched_length == 0 {
+            continue;
+        }
+
+        let rule = &index.rules_by_rid[rid];
+        let rule_tids = &index.tids_by_rid[rid];
+        let rule_length = rule.tokens.len();
+
+        let match_coverage = if rule_length > 0 {
+            LicenseMatch::round_metric((matched_length as f32 / rule_length as f32) * 100.0)
+        } else {
+            100.0
         };
 
-        for &rid in rids {
-            if rid >= index.rules_by_rid.len() {
-                continue;
-            }
+        let start_line = query_run
+            .line_for_pos(qstart)
+            .and_then(LineNumber::new)
+            .unwrap_or(LineNumber::ONE);
 
-            let matched_length = qend - qstart;
-
-            // Skip zero-length matches (empty patterns)
-            if matched_length == 0 {
-                continue;
-            }
-
-            let rule = &index.rules_by_rid[rid];
-            let rule_tids = &index.tids_by_rid[rid];
-            let rule_length = rule.tokens.len();
-
-            let match_coverage = if rule_length > 0 {
-                LicenseMatch::round_metric((matched_length as f32 / rule_length as f32) * 100.0)
-            } else {
-                100.0
-            };
-
-            let start_line = query_run
-                .line_for_pos(qstart)
+        let end_line = if qend > qstart {
+            query_run
+                .line_for_pos(qend.saturating_sub(1))
                 .and_then(LineNumber::new)
-                .unwrap_or(LineNumber::ONE);
+                .unwrap_or(start_line)
+        } else {
+            start_line
+        };
 
-            let end_line = if qend > qstart {
-                query_run
-                    .line_for_pos(qend.saturating_sub(1))
-                    .and_then(LineNumber::new)
-                    .unwrap_or(start_line)
-            } else {
-                start_line
-            };
+        let score = if rule_length > 0 {
+            MatchScore::from_percentage((matched_length as f64 / rule_length as f64) * 100.0)
+        } else {
+            MatchScore::MAX
+        };
 
-            let score = if rule_length > 0 {
-                MatchScore::from_percentage((matched_length as f64 / rule_length as f64) * 100.0)
-            } else {
-                MatchScore::MAX
-            };
+        let qspan = PositionSpan::range(qstart, qend);
+        let ispan = PositionSpan::range(0, matched_length);
+        let hispan = PositionSpan::from_positions(
+            (0..matched_length)
+                .filter(|&p| index.dictionary.token_kind(rule_tids[p]) == TokenKind::Legalese),
+        );
 
-            let qspan = PositionSpan::range(qstart, qend);
-            let ispan = PositionSpan::range(0, matched_length);
-            let hispan = PositionSpan::from_positions(
-                (0..matched_length)
-                    .filter(|&p| index.dictionary.token_kind(rule_tids[p]) == TokenKind::Legalese),
-            );
+        let license_match = LicenseMatch {
+            license_expression: rule.license_expression.clone(),
+            license_expression_spdx: index
+                .rule_metadata_by_identifier
+                .get(&rule.identifier)
+                .and_then(|metadata| metadata.license_expression_spdx.clone()),
+            from_file: None,
+            start_line,
+            end_line,
+            start_token: qstart,
+            end_token: qend,
+            matcher: MATCH_AHO,
+            score,
+            matched_length,
+            rule_length,
+            match_coverage,
+            rule_relevance: rule.relevance,
+            rid,
+            rule_identifier: rule.identifier.clone(),
+            rule_url: rule.rule_url().unwrap_or_default(),
+            matched_text: None,
+            referenced_filenames: rule.referenced_filenames.clone(),
+            rule_kind: rule.kind(),
+            is_from_license: rule.is_from_license,
+            rule_start_token: 0,
+            coordinates: MatchCoordinates::rule_aligned(qspan, ispan, hispan),
+            candidate_resemblance: 0.0,
+            candidate_containment: 0.0,
+        };
 
-            let license_match = LicenseMatch {
-                license_expression: rule.license_expression.clone(),
-                license_expression_spdx: index
-                    .rule_metadata_by_identifier
-                    .get(&rule.identifier)
-                    .and_then(|metadata| metadata.license_expression_spdx.clone()),
-                from_file: None,
-                start_line,
-                end_line,
-                start_token: qstart,
-                end_token: qend,
-                matcher: MATCH_AHO,
-                score,
-                matched_length,
-                rule_length,
-                match_coverage,
-                rule_relevance: rule.relevance,
-                rid,
-                rule_identifier: rule.identifier.clone(),
-                rule_url: rule.rule_url().unwrap_or_default(),
-                matched_text: None,
-                referenced_filenames: rule.referenced_filenames.clone(),
-                rule_kind: rule.kind(),
-                is_from_license: rule.is_from_license,
-                rule_start_token: 0,
-                coordinates: MatchCoordinates::rule_aligned(qspan, ispan, hispan),
-                candidate_resemblance: 0.0,
-                candidate_containment: 0.0,
-            };
-
-            matches.push(license_match);
-        }
+        matches.push(license_match);
     }
 
     if let Some(extra_matchables) = extra_matchable_positions {
@@ -334,7 +328,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("mit", vec![0, 1], false, false));
         index.tids_by_rid.push(tids(&[0, 1]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -377,7 +370,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("apache-2.0", vec![0, 1, 2], false, false));
         index.tids_by_rid.push(tids(&[0, 1, 2]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -423,8 +415,6 @@ mod tests {
             .push(create_mock_rule("apache-2.0", vec![2, 3], true, false));
         index.tids_by_rid.push(tids(&[0, 1]));
         index.tids_by_rid.push(tids(&[2, 3]));
-        index.pattern_id_to_rid.push(vec![0]);
-        index.pattern_id_to_rid.push(vec![1]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -466,7 +456,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("mit", vec![0, 1, 2], false, false));
         index.tids_by_rid.push(tids(&[0, 1, 2]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -507,7 +496,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("mit", vec![0, 1, 2], false, false));
         index.tids_by_rid.push(tids(&[0, 1, 2]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -558,14 +546,12 @@ mod tests {
         short_rule.rule_kind = crate::license_detection::models::RuleKind::Reference;
         index.rules_by_rid.push(short_rule);
         index.tids_by_rid.push(tids(&[0, 1]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let mut long_rule = create_mock_rule("cecill-c", vec![0, 1, 2], false, false);
         long_rule.identifier = "cecill-c_3.RULE".to_string();
         long_rule.rule_kind = crate::license_detection::models::RuleKind::Reference;
         index.rules_by_rid.push(long_rule);
         index.tids_by_rid.push(tids(&[0, 1, 2]));
-        index.pattern_id_to_rid.push(vec![1]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -610,7 +596,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("mit", vec![0, 1], true, false));
         index.tids_by_rid.push(tids(&[0, 1]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -648,7 +633,7 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("mit", vec![0, 1], true, false));
         index.tids_by_rid.push(tids(&[0, 1]));
-        index.pattern_id_to_rid.push(vec![0]);
+
         index.rule_metadata_by_identifier.insert(
             "mit.LICENSE".to_string(),
             IndexedRuleMetadata {
@@ -692,8 +677,6 @@ mod tests {
             .push(create_mock_rule("mit-partial", vec![1, 2], true, false));
         index.tids_by_rid.push(tids(&[0, 1, 2]));
         index.tids_by_rid.push(tids(&[1, 2]));
-        index.pattern_id_to_rid.push(vec![0]);
-        index.pattern_id_to_rid.push(vec![1]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -731,7 +714,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("single-token", vec![0], false, false));
         index.tids_by_rid.push(tids(&[0]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -772,7 +754,6 @@ mod tests {
             .rules_by_rid
             .push(create_mock_rule("mit", vec![0, 1], true, false));
         index.tids_by_rid.push(tids(&[0, 1]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let tokens: Vec<TokenId> = (0u16..1000).map(|i| tid(i % 2)).collect();
         let line_by_pos: Vec<usize> = (0..1000).map(|i| i / 80 + 1).collect();
@@ -820,7 +801,6 @@ mod tests {
             false,
         ));
         index.tids_by_rid.push(tids(&[0, 1, 2, 3, 4]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
@@ -868,7 +848,6 @@ mod tests {
             false,
         ));
         index.tids_by_rid.push(tids(&[pattern_tid]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let exit_tid: u16 = 8045;
         let next_tid: u16 = 18993;
@@ -922,7 +901,6 @@ mod tests {
             false,
         ));
         index.tids_by_rid.push(tids(&[pattern_tid]));
-        index.pattern_id_to_rid.push(vec![0]);
 
         let query = crate::license_detection::query::Query {
             text: String::new(),
