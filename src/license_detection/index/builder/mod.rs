@@ -364,7 +364,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
     let mut approx_matchable_rids: HashSet<usize> = HashSet::new();
     let mut rids_by_high_tid: HashMap<TokenId, HashSet<usize>> = HashMap::new();
 
-    let mut pattern_to_rids: HashMap<Vec<u8>, Vec<usize>> = HashMap::with_capacity(rules.len());
+    let mut rules_builder = AutomatonBuilder::new();
     let mut unknown_automaton_patterns: Vec<Vec<u8>> = Vec::new();
 
     let mut licenses_by_key: HashMap<String, License> = HashMap::new();
@@ -419,7 +419,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         // Empty patterns (from non-ASCII text like Japanese) would match everywhere
         if !rule_token_ids.is_empty() {
             let pattern = tokens_to_bytes(&rule_token_ids);
-            pattern_to_rids.entry(pattern).or_default().push(rid);
+            rules_builder.add_pattern_with_value(&pattern, rid as u32);
         }
 
         if rule.is_false_positive {
@@ -524,21 +524,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
 
     add_deprecated_spdx_aliases(&mut rid_by_spdx_key);
 
-    // Build unique patterns list sorted for deterministic ordering
-    let mut unique_patterns: Vec<&[u8]> = pattern_to_rids.keys().map(|p| p.as_slice()).collect();
-    unique_patterns.sort();
-
-    let mut rules_builder = AutomatonBuilder::new();
-    for pattern in &unique_patterns {
-        rules_builder.add_pattern(pattern);
-    }
     let rules_automaton = rules_builder.build();
-
-    // Build pattern_id_to_rid mapping from unique patterns
-    let pattern_id_to_rid: Vec<Vec<usize>> = unique_patterns
-        .iter()
-        .map(|pattern| pattern_to_rids.get(*pattern).cloned().unwrap_or_default())
-        .collect();
 
     let unknown_automaton = if unknown_automaton_patterns.is_empty() {
         AutomatonBuilder::new().build()
@@ -568,7 +554,6 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         false_positive_rids,
         approx_matchable_rids,
         licenses_by_key,
-        pattern_id_to_rid,
         rid_by_spdx_key,
         unknown_spdx_rid,
         rids_by_high_tid,
@@ -708,7 +693,6 @@ pub fn build_index_from_loaded(
 /// * `loaded_rules` - Rules loaded from the loader stage
 /// * `loaded_licenses` - Licenses loaded from the loader stage
 /// * `with_deprecated` - If false, filter out deprecated entries before building
-/// * `pattern_id_to_rid` - Pre-built pattern ID to rule ID mapping
 ///
 /// # Returns
 /// A fully constructed `LicenseIndex`
@@ -719,7 +703,6 @@ pub fn build_index_from_loaded_with_automatons(
     with_deprecated: bool,
     rules_automaton: Automaton,
     unknown_automaton: Automaton,
-    pattern_id_to_rid: Vec<Vec<usize>>,
 ) -> LicenseIndex {
     let rule_metadata = loaded_rules.clone();
     let rules: Vec<Rule> = loaded_rules
@@ -734,13 +717,8 @@ pub fn build_index_from_loaded_with_automatons(
         .map(loaded_license_to_license)
         .collect();
 
-    let mut index = build_index_with_automatons(
-        rules,
-        licenses,
-        rules_automaton,
-        unknown_automaton,
-        pattern_id_to_rid,
-    );
+    let mut index =
+        build_index_with_automatons(rules, licenses, rules_automaton, unknown_automaton);
     apply_loaded_rule_metadata(&mut index, &rule_metadata, with_deprecated);
     index
 }
@@ -752,15 +730,14 @@ pub fn build_index_from_loaded_with_automatons(
 ///
 /// IMPORTANT: The rid assignment must match the xtask's build_automatons function.
 /// The xtask assigns rids in order: rules first (sorted by identifier), then
-/// licenses (sorted by key). This function must follow the same ordering for
-/// the pattern_id_to_rid mapping to be correct.
+/// licenses (sorted by key). This function must follow the same ordering
+/// for the automaton pattern values to be correct.
 #[allow(dead_code)]
 fn build_index_with_automatons(
     rules: Vec<Rule>,
     licenses: Vec<License>,
     rules_automaton: Automaton,
     unknown_automaton: Automaton,
-    pattern_id_to_rid: Vec<Vec<usize>>,
 ) -> LicenseIndex {
     let legalese = legalese::archived_legalese();
     let mut dictionary = TokenDictionary::new_with_legalese(legalese);
@@ -1062,7 +1039,6 @@ fn build_index_with_automatons(
         false_positive_rids,
         approx_matchable_rids,
         licenses_by_key,
-        pattern_id_to_rid,
         rid_by_spdx_key,
         unknown_spdx_rid,
         rids_by_high_tid,

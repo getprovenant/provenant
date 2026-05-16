@@ -96,25 +96,6 @@ impl Automaton {
         }
     }
 
-    /// Build an automaton from patterns.
-    ///
-    /// Each pattern is a byte slice. Patterns are assigned IDs in order.
-    #[allow(dead_code)]
-    pub fn build(patterns: &[&[u8]]) -> Self {
-        if patterns.is_empty() {
-            return Self::empty();
-        }
-        // Filter out empty patterns - daachorse doesn't support them
-        let non_empty: Vec<&[u8]> = patterns.iter().copied().filter(|p| !p.is_empty()).collect();
-        if non_empty.is_empty() {
-            return Self::empty();
-        }
-        match DoubleArrayAhoCorasick::new(non_empty) {
-            Ok(ac) => Self { inner: ac },
-            Err(_) => Self::empty(),
-        }
-    }
-
     /// Find all overlapping matches in the haystack.
     ///
     /// Returns an iterator that yields all matches found in the haystack,
@@ -138,13 +119,11 @@ impl Automaton {
     }
 
     /// Get the number of states in the automaton.
-    #[allow(dead_code)]
     pub fn num_states(&self) -> usize {
         self.inner.num_states()
     }
 
     /// Get the memory usage in bytes.
-    #[allow(dead_code)]
     pub fn heap_bytes(&self) -> usize {
         self.inner.heap_bytes()
     }
@@ -207,6 +186,7 @@ impl Iterator for FindOverlappingIter {
 /// This mirrors the `FrozenNfaBuilder` interface for compatibility.
 pub struct AutomatonBuilder {
     patterns: Vec<Vec<u8>>,
+    values: Vec<u32>,
 }
 
 impl AutomatonBuilder {
@@ -214,43 +194,46 @@ impl AutomatonBuilder {
     pub fn new() -> Self {
         Self {
             patterns: Vec::new(),
+            values: Vec::new(),
+        }
+    }
+
+    /// Add a pattern to the automaton with an associated value.
+    ///
+    /// Empty patterns are skipped. Daachorse 3.0+ supports duplicate patterns;
+    /// each occurrence gets its own value.
+    pub fn add_pattern_with_value(&mut self, pattern: &[u8], value: u32) {
+        if !pattern.is_empty() {
+            self.patterns.push(pattern.to_vec());
+            self.values.push(value);
         }
     }
 
     /// Add a pattern to the automaton.
     ///
-    /// Empty patterns are skipped.
+    /// Empty patterns are skipped. Assigns sequential IDs (0, 1, 2, ...).
     pub fn add_pattern(&mut self, pattern: &[u8]) {
-        if !pattern.is_empty() {
-            self.patterns.push(pattern.to_vec());
-        }
+        let value = self.patterns.len() as u32;
+        self.add_pattern_with_value(pattern, value);
     }
 
     /// Build the automaton.
     ///
-    /// Deduplicates patterns and assigns sequential IDs (0, 1, 2, ...).
-    /// The caller must maintain their own mapping from pattern_id to rule IDs.
+    /// Uses `with_values()` so each pattern's value is directly accessible
+    /// via `Match::value()`, eliminating the need for an external pattern_id-to-rid mapping.
     pub fn build(self) -> Automaton {
-        use std::collections::HashSet;
-
         if self.patterns.is_empty() {
             return Automaton::empty();
         }
 
-        // Deduplicate patterns - daachorse rejects duplicates
-        let mut seen: HashSet<Vec<u8>> = HashSet::new();
-        let mut unique_patterns: Vec<&[u8]> = Vec::new();
-        for pattern in &self.patterns {
-            if seen.insert(pattern.clone()) {
-                unique_patterns.push(pattern.as_slice());
-            }
-        }
+        let patvals: Vec<(&[u8], u32)> = self
+            .patterns
+            .iter()
+            .zip(self.values.iter())
+            .map(|(p, &v)| (p.as_slice(), v))
+            .collect();
 
-        if unique_patterns.is_empty() {
-            return Automaton::empty();
-        }
-
-        match DoubleArrayAhoCorasick::new(unique_patterns) {
+        match DoubleArrayAhoCorasick::with_values(patvals) {
             Ok(ac) => Automaton { inner: ac },
             Err(_) => Automaton::empty(),
         }
@@ -275,20 +258,12 @@ mod tests {
     }
 
     #[test]
-    fn test_build_with_patterns() {
-        let patterns: Vec<&[u8]> = vec![b"hello", b"world"];
-        let ac = Automaton::build(&patterns);
-        let matches: Vec<_> = ac.find_overlapping_iter(b"hello world").collect();
-        assert_eq!(matches.len(), 2);
-    }
-
-    #[test]
     fn test_token_boundary_filtering() {
-        // Pattern: [31, 49] (token 12575 in little-endian)
         let pattern: &[u8] = &[31, 49];
-        let ac = Automaton::build(&[pattern]);
+        let mut builder = AutomatonBuilder::new();
+        builder.add_pattern(pattern);
+        let ac = builder.build();
 
-        // Haystack: [109, 31, 49, 74] = tokens [8045, 18993]
         // The pattern [31, 49] appears at bytes 1-2 (odd position)
         // which would span token boundaries - should NOT match
         let haystack: &[u8] = &[109, 31, 49, 74];
@@ -302,9 +277,10 @@ mod tests {
     #[test]
     fn test_valid_token_match() {
         let pattern: &[u8] = &[31, 49];
-        let ac = Automaton::build(&[pattern]);
+        let mut builder = AutomatonBuilder::new();
+        builder.add_pattern(pattern);
+        let ac = builder.build();
 
-        // Haystack with pattern at even position (valid token boundary)
         let haystack: &[u8] = &[0, 0, 31, 49, 0, 0];
         let matches: Vec<_> = ac.find_overlapping_iter(haystack).collect();
         assert_eq!(matches.len(), 1);
@@ -345,8 +321,11 @@ mod tests {
 
     #[test]
     fn test_serialize_deserialize() {
-        let patterns: Vec<&[u8]> = vec![b"hello", b"world", b"test"];
-        let ac1 = Automaton::build(&patterns);
+        let mut builder = AutomatonBuilder::new();
+        builder.add_pattern(b"hello");
+        builder.add_pattern(b"world");
+        builder.add_pattern(b"test");
+        let ac1 = builder.build();
 
         let serialized = ac1.inner.serialize();
         let ac2 = Automaton::deserialize_unchecked(&serialized);
@@ -365,11 +344,40 @@ mod tests {
 
     #[test]
     fn test_overlapping_matches() {
-        let patterns: Vec<&[u8]> = vec![b"ab", b"bc", b"abc"];
-        let ac = Automaton::build(&patterns);
+        let mut builder = AutomatonBuilder::new();
+        builder.add_pattern(b"ab");
+        builder.add_pattern(b"bc");
+        builder.add_pattern(b"abc");
+        let ac = builder.build();
 
         let matches: Vec<_> = ac.find_overlapping_iter(b"abc").collect();
-        // Should find "ab", "abc", and "bc" (all overlapping)
         assert!(matches.len() >= 2);
+    }
+
+    #[test]
+    fn test_builder_with_values() {
+        let mut builder = AutomatonBuilder::new();
+        builder.add_pattern_with_value(b"hello", 42);
+        builder.add_pattern_with_value(b"world", 99);
+        let ac = builder.build();
+
+        let matches: Vec<_> = ac.find_overlapping_iter(b"hello world").collect();
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].pattern, 42);
+        assert_eq!(matches[1].pattern, 99);
+    }
+
+    #[test]
+    fn test_builder_duplicate_patterns() {
+        let mut builder = AutomatonBuilder::new();
+        builder.add_pattern_with_value(b"hello", 10);
+        builder.add_pattern_with_value(b"hello", 20);
+        let ac = builder.build();
+
+        let matches: Vec<_> = ac.find_overlapping_iter(b"hello").collect();
+        assert_eq!(matches.len(), 2);
+        let mut values: Vec<usize> = matches.iter().map(|m| m.pattern).collect();
+        values.sort();
+        assert_eq!(values, vec![10, 20]);
     }
 }

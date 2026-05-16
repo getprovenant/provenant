@@ -202,7 +202,6 @@ Pre-computed data structures for efficient matching:
 | `false_positive_rids`   | Set of false-positive rule IDs               |
 | `approx_matchable_rids` | Set of approx-matchable rule IDs             |
 | `licenses_by_key`       | ScanCode key → License mapping               |
-| `pattern_id_to_rid`     | AhoCorasick pattern ID → rule ID             |
 | `rid_by_spdx_key`       | SPDX license key → rule ID                   |
 | `unknown_spdx_rid`      | Rule ID for unknown-spdx fallback            |
 

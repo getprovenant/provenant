@@ -243,7 +243,6 @@ mod tests {
             false_positive_rids: Default::default(),
             approx_matchable_rids: Default::default(),
             licenses_by_key: Default::default(),
-            pattern_id_to_rid: Default::default(),
             rid_by_spdx_key: Default::default(),
             unknown_spdx_rid: None,
             rids_by_high_tid: Default::default(),
