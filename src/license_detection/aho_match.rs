@@ -13,7 +13,7 @@
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::{TokenId, TokenKind};
 use crate::license_detection::models::position_span::PositionSpan;
-use crate::license_detection::models::{LicenseMatch, MatchCoordinates, MatcherKind, RuleId};
+use crate::license_detection::models::{LicenseMatch, MatchCoordinates, MatcherKind};
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::QueryRun;
 use crate::models::LineNumber;
@@ -123,7 +123,7 @@ pub fn aho_match_with_extra_matchables(
             continue;
         }
 
-        let rid = RuleId::new(ac_match.pattern);
+        let rid = ac_match.rule_id;
 
         let matched_length = qend - qstart;
 

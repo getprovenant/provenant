@@ -8,6 +8,7 @@
 //! The daachorse library provides ~85% smaller binary size and built-in
 //! serialization support.
 
+use crate::license_detection::models::RuleId;
 use daachorse::DoubleArrayAhoCorasick;
 use rancor::Fallible;
 use rkyv::with::{ArchiveWith, DeserializeWith, SerializeWith};
@@ -49,8 +50,8 @@ where
 /// A match found by the automaton.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Match {
-    /// Pattern ID (index into the original pattern list).
-    pub pattern: usize,
+    /// The rule ID associated with the matched pattern.
+    pub rule_id: RuleId,
     /// Start position in haystack (bytes, inclusive).
     pub start: usize,
     /// End position in haystack (bytes, exclusive).
@@ -171,7 +172,7 @@ impl Iterator for FindOverlappingIter {
             // start at even byte positions. Odd positions would span tokens.
             if m.start() % 2 == 0 {
                 return Some(Match {
-                    pattern: m.value() as usize,
+                    rule_id: RuleId::new(m.value() as usize),
                     start: m.start(),
                     end: m.end(),
                 });
@@ -302,8 +303,8 @@ mod tests {
 
         let matches: Vec<_> = ac.find_overlapping_iter(b"hello world").collect();
         assert_eq!(matches.len(), 2);
-        assert_eq!(matches[0].pattern, 42);
-        assert_eq!(matches[1].pattern, 99);
+        assert_eq!(matches[0].rule_id, RuleId::new(42));
+        assert_eq!(matches[1].rule_id, RuleId::new(99));
     }
 
     #[test]
@@ -315,8 +316,8 @@ mod tests {
 
         let matches: Vec<_> = ac.find_overlapping_iter(b"hello").collect();
         assert_eq!(matches.len(), 2);
-        let mut values: Vec<usize> = matches.iter().map(|m| m.pattern).collect();
+        let mut values: Vec<RuleId> = matches.iter().map(|m| m.rule_id).collect();
         values.sort();
-        assert_eq!(values, vec![10, 20]);
+        assert_eq!(values, vec![RuleId::new(10), RuleId::new(20)]);
     }
 }
