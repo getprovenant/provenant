@@ -29,11 +29,10 @@ pub(super) fn is_candidate_false_positive(m: &LicenseMatch) -> bool {
 }
 
 fn count_unique_licenses(matches: &[LicenseMatch]) -> usize {
-    let mut seen = std::collections::HashSet::new();
-    for m in matches {
-        seen.insert(&m.license_expression);
-    }
-    seen.len()
+    std::collections::HashSet::<&str>::from_iter(
+        matches.iter().map(|m| m.license_expression.as_str()),
+    )
+    .len()
 }
 
 pub(super) fn is_list_of_false_positives(
@@ -49,27 +48,20 @@ pub(super) fn is_list_of_false_positives(
 
     let len_matches = matches.len();
 
-    let is_long_enough_sequence = len_matches >= min_matches;
-
     let len_unique_licenses = count_unique_licenses(matches);
     let unique_proportion = len_unique_licenses as f64 / len_matches as f64;
-    let mut has_enough_licenses = unique_proportion > min_unique_licenses_proportion;
+    let has_enough_licenses = unique_proportion > min_unique_licenses_proportion
+        || len_unique_licenses >= min_unique_licenses;
 
-    if !has_enough_licenses {
-        has_enough_licenses = len_unique_licenses >= min_unique_licenses;
-    }
-
-    let has_enough_candidates = if min_candidate_proportion > 0.0 {
+    let has_enough_candidates = min_candidate_proportion <= 0.0 || {
         let candidates_count = matches
             .iter()
             .filter(|m| is_candidate_false_positive(m))
             .count();
         (candidates_count as f64 / len_matches as f64) > min_candidate_proportion
-    } else {
-        true
     };
 
-    is_long_enough_sequence && has_enough_licenses && has_enough_candidates
+    len_matches >= min_matches && has_enough_licenses && has_enough_candidates
 }
 
 /// Filter matches that are likely false positive license lists.
@@ -82,17 +74,15 @@ pub(super) fn is_list_of_false_positives(
 /// * `matches` - Vector of LicenseMatch to filter
 ///
 /// # Returns
-/// Tuple of (kept matches, discarded matches)
+/// Matches that are not part of a false positive license list
 pub fn filter_false_positive_license_lists_matches(
     matches: Vec<LicenseMatch>,
-) -> (Vec<LicenseMatch>, Vec<LicenseMatch>) {
-    let len_matches = matches.len();
-
-    if len_matches < MIN_SHORT_FP_LIST_LENGTH {
-        return (matches, vec![]);
+) -> Vec<LicenseMatch> {
+    if matches.len() < MIN_SHORT_FP_LIST_LENGTH {
+        return matches;
     }
 
-    if len_matches > MIN_LONG_FP_LIST_LENGTH
+    if matches.len() > MIN_LONG_FP_LIST_LENGTH
         && is_list_of_false_positives(
             &matches,
             MIN_LONG_FP_LIST_LENGTH,
@@ -101,72 +91,62 @@ pub fn filter_false_positive_license_lists_matches(
             0.95,
         )
     {
-        return (vec![], matches);
+        return vec![];
     }
 
     let mut kept = Vec::new();
-    let mut discarded = Vec::new();
-    let mut candidates: Vec<&LicenseMatch> = Vec::new();
+    let mut candidate_start: Option<usize> = None;
+    let mut candidate_last: usize = 0;
 
-    for match_item in &matches {
+    for (i, match_item) in matches.iter().enumerate() {
         let is_candidate = is_candidate_false_positive(match_item);
 
         if is_candidate {
-            let is_close_enough = candidates
-                .last()
-                .map(|last| last.qdistance_to(match_item) <= MAX_DISTANCE_BETWEEN_CANDIDATES)
-                .unwrap_or(true);
+            let is_close_enough = candidate_start.is_none_or(|_| {
+                matches[candidate_last].qdistance_to(match_item) <= MAX_DISTANCE_BETWEEN_CANDIDATES
+            });
 
-            if is_close_enough {
-                candidates.push(match_item);
+            if candidate_start.is_none() || is_close_enough {
+                candidate_start.get_or_insert(i);
+                candidate_last = i;
             } else {
-                let owned: Vec<LicenseMatch> = candidates.iter().map(|m| (*m).clone()).collect();
-                if is_list_of_false_positives(
-                    &owned,
-                    MIN_SHORT_FP_LIST_LENGTH,
-                    MIN_UNIQUE_LICENSES,
-                    MIN_UNIQUE_LICENSES_PROPORTION,
-                    0.0,
-                ) {
-                    discarded.extend(owned);
-                } else {
-                    kept.extend(owned);
-                }
-                candidates.clear();
-                candidates.push(match_item);
+                flush_candidates(&matches, candidate_start.unwrap(), i, &mut kept);
+                candidate_start = Some(i);
+                candidate_last = i;
             }
         } else {
-            let owned: Vec<LicenseMatch> = candidates.iter().map(|m| (*m).clone()).collect();
-            if is_list_of_false_positives(
-                &owned,
-                MIN_SHORT_FP_LIST_LENGTH,
-                MIN_UNIQUE_LICENSES,
-                MIN_UNIQUE_LICENSES_PROPORTION,
-                0.0,
-            ) {
-                discarded.extend(owned);
-            } else {
-                kept.extend(owned);
+            if let Some(start) = candidate_start.take() {
+                flush_candidates(&matches, start, i, &mut kept);
             }
-            candidates.clear();
             kept.push(match_item.clone());
         }
     }
 
-    let owned: Vec<LicenseMatch> = candidates.iter().map(|m| (*m).clone()).collect();
+    if let Some(start) = candidate_start {
+        flush_candidates(&matches, start, matches.len(), &mut kept);
+    }
+
+    kept
+}
+
+fn flush_candidates(
+    matches: &[LicenseMatch],
+    start: usize,
+    end: usize,
+    kept: &mut Vec<LicenseMatch>,
+) {
+    let candidates = &matches[start..end];
     if is_list_of_false_positives(
-        &owned,
+        candidates,
         MIN_SHORT_FP_LIST_LENGTH,
         MIN_UNIQUE_LICENSES,
         MIN_UNIQUE_LICENSES_PROPORTION,
         0.0,
     ) {
-        discarded.extend(owned);
+        // discard all candidates
     } else {
-        kept.extend(owned);
+        kept.extend(candidates.iter().cloned());
     }
-
-    (kept, discarded)
 }
 
 #[cfg(test)]
@@ -311,9 +291,8 @@ mod tests {
             })
             .collect();
 
-        let (kept, discarded) = filter_false_positive_license_lists_matches(matches);
+        let kept = filter_false_positive_license_lists_matches(matches);
         assert_eq!(kept.len(), 10);
-        assert_eq!(discarded.len(), 0);
     }
 
     #[test]
@@ -337,9 +316,8 @@ mod tests {
             })
             .collect();
 
-        let (kept, discarded) = filter_false_positive_license_lists_matches(matches);
+        let kept = filter_false_positive_license_lists_matches(matches);
         assert_eq!(kept.len(), 0);
-        assert_eq!(discarded.len(), 160);
     }
 
     #[test]
@@ -380,10 +358,9 @@ mod tests {
             ));
         }
 
-        let (kept, discarded) = filter_false_positive_license_lists_matches(matches);
+        let kept = filter_false_positive_license_lists_matches(matches);
 
         assert_eq!(kept.len(), 5);
-        assert_eq!(discarded.len(), 15);
     }
 
     #[test]
@@ -428,10 +405,9 @@ mod tests {
             ));
         }
 
-        let (kept, discarded) = filter_false_positive_license_lists_matches(matches);
+        let kept = filter_false_positive_license_lists_matches(matches);
 
         assert_eq!(kept.len(), 1);
-        assert_eq!(discarded.len(), 30);
     }
 
     #[test]
