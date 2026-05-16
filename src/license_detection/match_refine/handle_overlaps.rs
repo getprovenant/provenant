@@ -329,13 +329,11 @@ pub fn filter_overlapping_matches(
                     && current_hilen >= next_hilen
                 {
                     let current_ends = index
-                        .rules_by_rid
-                        .get(matches[i].rid.raw())
+                        .rule(matches[i].rid)
                         .map(|r| r.ends_with_license)
                         .unwrap_or(false);
                     let next_starts = index
-                        .rules_by_rid
-                        .get(matches[j].rid.raw())
+                        .rule(matches[j].rid)
                         .map(|r| r.starts_with_license)
                         .unwrap_or(false);
 
