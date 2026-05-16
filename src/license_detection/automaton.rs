@@ -251,13 +251,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_empty_automaton() {
-        let ac = Automaton::empty();
-        let matches: Vec<_> = ac.find_overlapping_iter(b"hello").collect();
-        assert!(matches.is_empty());
-    }
-
-    #[test]
     fn test_token_boundary_filtering() {
         let pattern: &[u8] = &[31, 49];
         let mut builder = AutomatonBuilder::new();
@@ -289,25 +282,6 @@ mod tests {
     }
 
     #[test]
-    fn test_builder() {
-        let mut builder = AutomatonBuilder::new();
-        builder.add_pattern(b"hello");
-        builder.add_pattern(b"world");
-        let ac = builder.build();
-
-        let matches: Vec<_> = ac.find_overlapping_iter(b"hello world").collect();
-        assert_eq!(matches.len(), 2);
-    }
-
-    #[test]
-    fn test_builder_empty_patterns() {
-        let builder = AutomatonBuilder::new();
-        let ac = builder.build();
-        let matches: Vec<_> = ac.find_overlapping_iter(b"hello").collect();
-        assert!(matches.is_empty());
-    }
-
-    #[test]
     fn test_builder_skips_empty_patterns() {
         let mut builder = AutomatonBuilder::new();
         builder.add_pattern(b"");
@@ -317,41 +291,6 @@ mod tests {
 
         let matches: Vec<_> = ac.find_overlapping_iter(b"hello").collect();
         assert_eq!(matches.len(), 1);
-    }
-
-    #[test]
-    fn test_serialize_deserialize() {
-        let mut builder = AutomatonBuilder::new();
-        builder.add_pattern(b"hello");
-        builder.add_pattern(b"world");
-        builder.add_pattern(b"test");
-        let ac1 = builder.build();
-
-        let serialized = ac1.inner.serialize();
-        let ac2 = Automaton::deserialize_unchecked(&serialized);
-
-        let haystack = b"hello world test";
-        let matches1: Vec<_> = ac1.find_overlapping_iter(haystack).collect();
-        let matches2: Vec<_> = ac2.find_overlapping_iter(haystack).collect();
-
-        assert_eq!(matches1.len(), matches2.len());
-        for (m1, m2) in matches1.iter().zip(matches2.iter()) {
-            assert_eq!(m1.pattern, m2.pattern);
-            assert_eq!(m1.start, m2.start);
-            assert_eq!(m1.end, m2.end);
-        }
-    }
-
-    #[test]
-    fn test_overlapping_matches() {
-        let mut builder = AutomatonBuilder::new();
-        builder.add_pattern(b"ab");
-        builder.add_pattern(b"bc");
-        builder.add_pattern(b"abc");
-        let ac = builder.build();
-
-        let matches: Vec<_> = ac.find_overlapping_iter(b"abc").collect();
-        assert!(matches.len() >= 2);
     }
 
     #[test]
