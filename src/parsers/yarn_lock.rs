@@ -75,6 +75,16 @@ impl PackageParser for YarnLockParser {
             parse_yarn_v1(&content, &manifest_dependencies)
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "yarn.lock lockfile (v1 and v2+)",
+            file_patterns: &["**/yarn.lock"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://classic.yarnpkg.com/lang/en/docs/yarn-lock/"),
+        }]
+    }
 }
 
 /// Detect if yarn.lock is v2 (has __metadata) or v1 (has "yarn lockfile v1")
@@ -932,11 +942,3 @@ left-pad@^1.3.0:
         assert_eq!(version, "1.2.6");
     }
 }
-
-crate::register_parser!(
-    "yarn.lock lockfile (v1 and v2+)",
-    &["**/yarn.lock"],
-    "npm",
-    "JavaScript",
-    Some("https://classic.yarnpkg.com/lang/en/docs/yarn-lock/"),
-);

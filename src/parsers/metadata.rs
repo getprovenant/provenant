@@ -3,11 +3,11 @@
 
 /// Registered detection-surface metadata for auto-generating documentation.
 ///
-/// This module provides infrastructure for registering parser and scanner-gated
-/// detection surfaces
-/// that is used to automatically generate `docs/SUPPORTED_FORMATS.md`.
+/// This module provides the `ParserMetadata` type used by parser `metadata()`
+/// trait methods and by `bin/generate_supported_formats.rs` to automatically
+/// generate `docs/SUPPORTED_FORMATS.md`.
 ///
-/// Fields are used by `bin/generate_supported_formats.rs` but not in library code,
+/// Fields are used by the xtask but not in library code,
 /// so we allow dead_code warnings for library builds.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -22,52 +22,4 @@ pub struct ParserMetadata {
     pub primary_language: &'static str,
     /// Optional documentation URL
     pub documentation_url: Option<&'static str>,
-}
-
-inventory::collect!(ParserMetadata);
-
-/// Registers parser metadata for documentation generation.
-///
-/// # Example
-///
-/// ```no_run
-/// use provenant::register_parser;
-///
-/// register_parser!(
-///     "npm package.json manifest",
-///     &["**/package.json"],
-///     "npm",
-///     "JavaScript",
-///     Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
-/// );
-/// ```
-#[macro_export]
-macro_rules! register_parser {
-    ($description:expr, $patterns:expr, $package_type:expr, $language:expr, $docs_url:expr $(,)?) => {
-        inventory::submit! {
-            $crate::parsers::metadata::ParserMetadata {
-                description: $description,
-                file_patterns: $patterns,
-                package_type: $package_type,
-                primary_language: $language,
-                documentation_url: $docs_url,
-            }
-        }
-    };
-}
-
-/// Registers scanner-gated or detector-driven metadata for documentation generation.
-#[macro_export]
-macro_rules! register_detection_surface {
-    ($description:expr, $patterns:expr, $package_type:expr, $language:expr, $docs_url:expr $(,)?) => {
-        inventory::submit! {
-            $crate::parsers::metadata::ParserMetadata {
-                description: $description,
-                file_patterns: $patterns,
-                package_type: $package_type,
-                primary_language: $language,
-                documentation_url: $docs_url,
-            }
-        }
-    };
 }

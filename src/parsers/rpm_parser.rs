@@ -532,6 +532,16 @@ impl PackageParser for RpmParser {
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         extract_rpm_packages(path)
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM package archive",
+            file_patterns: &["**/*.rpm", "**/*.srpm"],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some("https://rpm.org/"),
+        }]
+    }
 }
 
 pub(crate) fn infer_rpm_namespace_from_filename(path: &Path) -> Option<String> {
@@ -1434,11 +1444,3 @@ mod tests {
         );
     }
 }
-
-crate::register_parser!(
-    "RPM package archive",
-    &["**/*.rpm", "**/*.srpm"],
-    "rpm",
-    "",
-    Some("https://rpm.org/"),
-);

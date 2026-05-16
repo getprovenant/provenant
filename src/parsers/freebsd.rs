@@ -37,6 +37,7 @@ use super::license_normalization::{
     DeclaredLicenseMatchMetadata, NormalizedDeclaredLicense, build_declared_license_data,
     combine_normalized_licenses, empty_declared_license_data, normalize_declared_license_key,
 };
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Freebsd;
 
@@ -53,6 +54,16 @@ pub struct FreebsdCompactManifestParser;
 
 impl PackageParser for FreebsdCompactManifestParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "FreeBSD +COMPACT_MANIFEST package manifest",
+            file_patterns: &["**/*COMPACT_MANIFEST"],
+            package_type: "freebsd",
+            primary_language: "",
+            documentation_url: Some("https://man.freebsd.org/cgi/man.cgi?query=pkg-create"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -435,11 +446,3 @@ mod tests {
         );
     }
 }
-
-crate::register_parser!(
-    "FreeBSD +COMPACT_MANIFEST package manifest",
-    &["**/*COMPACT_MANIFEST"],
-    "freebsd",
-    "",
-    Some("https://man.freebsd.org/cgi/man.cgi?query=pkg-create"),
-);

@@ -28,6 +28,7 @@ use std::path::Path;
 use crate::parser_warn as warn;
 use regex::Regex;
 
+use super::metadata::ParserMetadata;
 use crate::models::{
     DatasourceId, Dependency, Md5Digest, PackageData, PackageType, Party, Sha1Digest, Sha256Digest,
     Sha512Digest,
@@ -48,6 +49,16 @@ pub struct OpamParser;
 
 impl PackageParser for OpamParser {
     const PACKAGE_TYPE: PackageType = PackageType::Opam;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "OCaml OPAM package manifest",
+            file_patterns: &["**/*.opam", "**/opam"],
+            package_type: "opam",
+            primary_language: "OCaml",
+            documentation_url: Some("https://opam.ocaml.org/doc/Manual.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| {
@@ -865,11 +876,3 @@ dev-repo: "git+https://github.com/ocaml/dune.git"
         );
     }
 }
-
-crate::register_parser!(
-    "OCaml OPAM package manifest",
-    &["**/*.opam", "**/opam"],
-    "opam",
-    "OCaml",
-    Some("https://opam.ocaml.org/doc/Manual.html"),
-);

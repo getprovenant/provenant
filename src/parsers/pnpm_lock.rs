@@ -34,6 +34,7 @@ use std::path::Path;
 use yaml_serde::Value;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use super::yarn_lock::extract_namespace_and_name;
 
 /// pnpm lockfile parser supporting v5, v6, and v9 formats.
@@ -43,6 +44,16 @@ pub struct PnpmLockParser;
 
 impl PackageParser for PnpmLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::PnpmLock;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "pnpm lockfile",
+            file_patterns: &["**/pnpm-lock.yaml", "**/shrinkwrap.yaml"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://pnpm.io/next/git#lockfile-compatibility"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -810,11 +821,3 @@ mod tests {
         assert!(md5.is_none());
     }
 }
-
-crate::register_parser!(
-    "pnpm lockfile",
-    &["**/pnpm-lock.yaml", "**/shrinkwrap.yaml"],
-    "npm",
-    "JavaScript",
-    Some("https://pnpm.io/next/git#lockfile-compatibility"),
-);

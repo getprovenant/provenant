@@ -14,6 +14,7 @@ use crate::parsers::utils::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Alpm;
 const PACKAGE_NAMESPACE: &str = "arch";
@@ -23,6 +24,16 @@ pub struct ArchPkginfoParser;
 
 impl PackageParser for ArchSrcinfoParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Arch Linux package metadata (.SRCINFO, .AURINFO, .PKGINFO)",
+            file_patterns: &["**/.SRCINFO", "**/.AURINFO", "**/.PKGINFO"],
+            package_type: "alpm",
+            primary_language: "",
+            documentation_url: Some("https://wiki.archlinux.org/title/.SRCINFO"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -507,11 +518,3 @@ fn should_force_array_extra_value(key: &str) -> bool {
             | "cksums"
     ) || is_arch_variant_key(key)
 }
-
-crate::register_parser!(
-    "Arch Linux package metadata (.SRCINFO, .AURINFO, .PKGINFO)",
-    &["**/.SRCINFO", "**/.AURINFO", "**/.PKGINFO"],
-    "alpm",
-    "",
-    Some("https://wiki.archlinux.org/title/.SRCINFO"),
-);

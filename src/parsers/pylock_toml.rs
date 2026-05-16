@@ -19,6 +19,7 @@ use crate::parsers::python::read_toml_file;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_LOCK_VERSION: &str = "lock-version";
 const FIELD_CREATED_BY: &str = "created-by";
@@ -64,6 +65,18 @@ struct DependencyAnalysisContext<'a> {
 
 impl PackageParser for PylockTomlParser {
     const PACKAGE_TYPE: PackageType = PackageType::Pypi;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "pylock.toml lockfile",
+            file_patterns: &["**/pylock.toml", "**/pylock.*.toml"],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some(
+                "https://packaging.python.org/en/latest/specifications/pylock-toml/",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
@@ -760,11 +773,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "pylock.toml lockfile",
-    &["**/pylock.toml", "**/pylock.*.toml"],
-    "pypi",
-    "Python",
-    Some("https://packaging.python.org/en/latest/specifications/pylock-toml/"),
-);

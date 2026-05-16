@@ -60,6 +60,16 @@ impl PackageParser for BunLockParser {
 
         vec![parse_bun_lockfile(&root)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Bun lockfile",
+            file_patterns: &["**/bun.lock"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://bun.sh/docs/pm/lockfile"),
+        }]
+    }
 }
 
 fn default_package_data() -> PackageData {
@@ -526,11 +536,3 @@ fn qualify_name(namespace: &Option<String>, name: &str) -> String {
         Some(namespace) => format!("{}/{}", namespace, name),
     }
 }
-
-crate::register_parser!(
-    "Bun lockfile",
-    &["**/bun.lock"],
-    "npm",
-    "JavaScript",
-    Some("https://bun.sh/docs/pm/lockfile"),
-);

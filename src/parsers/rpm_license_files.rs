@@ -93,15 +93,17 @@ impl PackageParser for RpmLicenseFilesParser {
 
         vec![pkg]
     }
-}
 
-crate::register_parser!(
-    "RPM mariner distroless package license files",
-    &[
-        "*usr/share/licenses/*/COPYING*",
-        "*usr/share/licenses/*/LICENSE*"
-    ],
-    "rpm",
-    "",
-    Some("https://github.com/microsoft/marinara/"),
-);
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM mariner distroless package license files",
+            file_patterns: &[
+                "*usr/share/licenses/*/COPYING*",
+                "*usr/share/licenses/*/LICENSE*",
+            ],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some("https://github.com/microsoft/marinara/"),
+        }]
+    }
+}

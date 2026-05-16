@@ -30,6 +30,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use regex::Regex;
 
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -49,6 +50,16 @@ pub struct PodfileParser;
 
 impl PackageParser for PodfileParser {
     const PACKAGE_TYPE: PackageType = PackageType::Cocoapods;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "CocoaPods Podfile",
+            file_patterns: &["**/Podfile"],
+            package_type: "cocoapods",
+            primary_language: "Objective-C",
+            documentation_url: Some("https://guides.cocoapods.org/using/the-podfile.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "Podfile")
@@ -336,14 +347,6 @@ fn extract_podfile_hash_assignments(
 
     hashes
 }
-
-crate::register_parser!(
-    "CocoaPods Podfile",
-    &["**/Podfile"],
-    "cocoapods",
-    "Objective-C",
-    Some("https://guides.cocoapods.org/using/the-podfile.html"),
-);
 
 #[cfg(test)]
 mod tests {

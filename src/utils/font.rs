@@ -9,6 +9,8 @@ use allsorts::font_data::FontData;
 use allsorts::tables::{FontTableProvider, NameTable, OpenTypeData};
 use ttf_parser::{Face, Permissions, fonts_in_collection, name_id};
 
+use crate::parsers::metadata::ParserMetadata;
+
 pub(crate) const SUPPORTED_FONT_EXTENSIONS: &[&str] =
     &["ttf", "otf", "woff", "woff2", "eot", "ttc", "otc"];
 pub(crate) const SUPPORTED_FONT_FILE_GLOBS: &[&str] = &[
@@ -28,13 +30,13 @@ const OFL_URL_CANONICALIZATIONS: &[(&str, &str)] = &[
 ];
 const ALLSORTS_NAME_TABLE_TAG: u32 = u32::from_be_bytes(*b"name");
 
-crate::register_detection_surface!(
-    "Embedded font legal metadata (native fonts, webfonts, and collections)",
-    SUPPORTED_FONT_FILE_GLOBS,
-    "",
-    "",
-    Some("https://learn.microsoft.com/en-us/typography/opentype/spec/name"),
-);
+pub(crate) static FONT_METADATA: &[ParserMetadata] = &[ParserMetadata {
+    description: "Embedded font legal metadata (native fonts, webfonts, and collections)",
+    file_patterns: SUPPORTED_FONT_FILE_GLOBS,
+    package_type: "",
+    primary_language: "",
+    documentation_url: Some("https://learn.microsoft.com/en-us/typography/opentype/spec/name"),
+}];
 
 pub(crate) fn is_supported_font_extension(extension: &str) -> bool {
     SUPPORTED_FONT_EXTENSIONS

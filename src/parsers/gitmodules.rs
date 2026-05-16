@@ -29,6 +29,7 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::Github;
 
@@ -44,6 +45,16 @@ pub struct GitmodulesParser;
 
 impl PackageParser for GitmodulesParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Git submodules manifest",
+            file_patterns: &["**/.gitmodules"],
+            package_type: "gitmodules",
+            primary_language: "",
+            documentation_url: Some("https://git-scm.com/docs/gitmodules"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == ".gitmodules")
@@ -338,11 +349,3 @@ mod tests {
         assert_eq!(pkgs[0].dependencies.len(), 1);
     }
 }
-
-crate::register_parser!(
-    "Git submodules manifest",
-    &["**/.gitmodules"],
-    "gitmodules",
-    "",
-    Some("https://git-scm.com/docs/gitmodules"),
-);

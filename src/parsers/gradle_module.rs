@@ -15,6 +15,7 @@ use crate::models::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_FORMAT_VERSION: &str = "formatVersion";
 const FIELD_COMPONENT: &str = "component";
@@ -57,6 +58,18 @@ struct ExtractedDependency {
 
 impl PackageParser for GradleModuleParser {
     const PACKAGE_TYPE: PackageType = PackageType::Maven;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Gradle module metadata",
+            file_patterns: &["**/*.module"],
+            package_type: "maven",
+            primary_language: "Java",
+            documentation_url: Some(
+                "https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         if path.extension().and_then(|ext| ext.to_str()) != Some("module") {
@@ -692,11 +705,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Gradle module metadata",
-    &["**/*.module"],
-    "maven",
-    "Java",
-    Some("https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html"),
-);

@@ -71,21 +71,28 @@ impl PackageParser for MyParser {
 }
 ```
 
-Add `register_parser!` near the end of the file:
+Override `fn metadata()` on the `PackageParser` impl to register detection-surface metadata:
 
 ```rust
-crate::register_parser!(
-    "npm package.json manifest",
-    &["**/package.json"],
-    "npm",
-    "JavaScript",
-    Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
-);
+use super::metadata::ParserMetadata;
+
+impl PackageParser for MyParser {
+    // ... existing trait items ...
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "npm package.json manifest".to_string(),
+            file_patterns: &["**/package.json"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
+        }]
+    }
+}
 ```
 
-This macro registers detection-surface metadata consumed by `src/parsers/metadata.rs` and the
-`generate-supported-formats` xtask. `docs/SUPPORTED_FORMATS.md` is generated from registered
-metadata, not from parser code alone.
+This metadata is consumed by `src/parsers/metadata.rs` and the `generate-supported-formats` xtask.
+`docs/SUPPORTED_FORMATS.md` is generated from registered metadata, not from parser code alone.
 
 **Assembly and topology hints**:
 
@@ -119,7 +126,7 @@ metadata, not from parser code alone.
 - Preserve the ecosystem's native scope terminology unless an existing parser pattern says otherwise.
 - Treat parser tests and parser goldens as interface-contract checks for dependency fields, not just smoke tests.
 
-**Multi-format ecosystems**: When an ecosystem has both a manifest and a lockfile, put all `PackageParser` impls in a single `src/parsers/<ecosystem>.rs` file with separate `register_parser!` invocations for each. Example: `src/parsers/julia.rs` contains both `JuliaProjectTomlParser` and `JuliaManifestTomlParser`.
+**Multi-format ecosystems**: When an ecosystem has both a manifest and a lockfile, put all `PackageParser` impls in a single `src/parsers/<ecosystem>.rs` file with separate `fn metadata()` overrides for each. Example: `src/parsers/julia.rs` contains both `JuliaProjectTomlParser` and `JuliaManifestTomlParser`.
 
 **Large single-dispatcher ecosystems**: When a single `PackageParser` impl dispatches to many large extraction helpers and the file exceeds ~1,500 lines, convert to a nested directory `src/parsers/<ecosystem>/mod.rs` with surface files. See [ADR 0009](../../docs/adr/0009-parser-submodule-structure.md) for the full structure, visibility rules, and conversion guide.
 
@@ -284,7 +291,7 @@ Before considering a parser complete, verify ALL of the following:
 - [ ] `PackageType` variant exists in `src/models/package_type.rs`
 - [ ] `datasource_id` is correct on every production path
 - [ ] Parser is exported and registered in `src/parsers/mod.rs`
-- [ ] `register_parser!` metadata is present
+- [ ] `fn metadata()` override is present
 - [ ] Parser unit tests exist
 - [ ] Parser goldens exist unless an explicitly scoped follow-up is already planned
 - [ ] Golden `.expected` files are committed alongside test fixtures
@@ -303,7 +310,7 @@ Before considering a parser complete, verify ALL of the following:
 - Parser guesses declared-license expressions from weak metadata instead of preserving raw input.
 - Parser-only tests pass but real scanner output is wrong because `*_scan_test.rs` was skipped.
 - Parser emits `file_references` but no resolver ownership was added in assembly.
-- `register_parser!` was skipped, so supported-formats docs never pick up the parser.
+- `fn metadata()` was skipped, so supported-formats docs never pick up the parser.
 - `docs/SUPPORTED_FORMATS.md` was not regenerated, so the pre-commit hook or CI docs checks fail.
 - Golden `.expected` files were not generated or committed.
 

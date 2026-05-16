@@ -34,6 +34,7 @@ mod scan_test;
 
 use self::{manifest::parse_manifest_mf, pom::parse_pom_xml, properties::parse_pom_properties};
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, PackageData, PackageType};
 use std::path::Path;
 
@@ -42,6 +43,21 @@ pub struct MavenParser;
 
 impl PackageParser for MavenParser {
     const PACKAGE_TYPE: PackageType = PackageType::Maven;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Apache Maven POM",
+            file_patterns: &[
+                "**/*.pom",
+                "**/pom.xml",
+                "**/pom.properties",
+                "**/META-INF/MANIFEST.MF",
+            ],
+            package_type: "maven",
+            primary_language: "Java",
+            documentation_url: Some("https://maven.apache.org/pom.html"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         if let Some(filename) = path.file_name().and_then(|name| name.to_str()) {
@@ -78,16 +94,3 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Apache Maven POM",
-    &[
-        "**/*.pom",
-        "**/pom.xml",
-        "**/pom.properties",
-        "**/META-INF/MANIFEST.MF"
-    ],
-    "maven",
-    "Java",
-    Some("https://maven.apache.org/pom.html"),
-);

@@ -35,6 +35,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 // Field name constants
 const FIELD_LOCKFILE_VERSION: &str = "lockfileVersion";
@@ -57,6 +58,22 @@ pub struct NpmLockParser;
 
 impl PackageParser for NpmLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Npm;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "npm package-lock.json lockfile",
+            file_patterns: &[
+                "**/package-lock.json",
+                "**/.package-lock.json",
+                "**/npm-shrinkwrap.json",
+            ],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some(
+                "https://docs.npmjs.com/cli/v8/configuring-npm/package-lock-json",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -876,15 +893,3 @@ fn build_link_dependency(
         extra_data: Some(extra_data),
     }
 }
-
-crate::register_parser!(
-    "npm package-lock.json lockfile",
-    &[
-        "**/package-lock.json",
-        "**/.package-lock.json",
-        "**/npm-shrinkwrap.json"
-    ],
-    "npm",
-    "JavaScript",
-    Some("https://docs.npmjs.com/cli/v8/configuring-npm/package-lock-json"),
-);

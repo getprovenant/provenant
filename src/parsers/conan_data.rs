@@ -147,6 +147,18 @@ impl PackageParser for ConanDataParser {
 
         parse_conandata_yml(&content)
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Conan external source metadata",
+            file_patterns: &["*/conandata.yml"],
+            package_type: "conan",
+            primary_language: "C++",
+            documentation_url: Some(
+                "https://docs.conan.io/2/tutorial/creating_packages/handle_sources_in_packages.html",
+            ),
+        }]
+    }
 }
 
 pub(crate) fn parse_conandata_yml(content: &str) -> Vec<PackageData> {
@@ -250,11 +262,3 @@ pub(crate) fn parse_conandata_yml(content: &str) -> Vec<PackageData> {
 
     packages
 }
-
-crate::register_parser!(
-    "Conan external source metadata",
-    &["*/conandata.yml"],
-    "conan",
-    "C++",
-    Some("https://docs.conan.io/2/tutorial/creating_packages/handle_sources_in_packages.html"),
-);

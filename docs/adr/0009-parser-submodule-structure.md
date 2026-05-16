@@ -23,7 +23,7 @@ Several ecosystems have grown far beyond that. As of this writing:
 
 Large monolithic files hurt navigation, review, and incremental compilation. They also discourage the kind of focused refactoring that keeps parser code healthy.
 
-The repo already has a **flat sibling** pattern for ecosystems with independently registered `PackageParser` impls: `npm.rs` + `npm_lock.rs` + `npm_workspace.rs`, `gradle.rs` + `gradle_lock.rs` + `gradle_module.rs`, `rpm_parser.rs` + `rpm_specfile.rs` + `rpm_db.rs`, etc. These are separate top-level modules, each with their own `PackageParser` impl and `register_parser!` call.
+The repo already has a **flat sibling** pattern for ecosystems with independently registered `PackageParser` impls: `npm.rs` + `npm_lock.rs` + `npm_workspace.rs`, `gradle.rs` + `gradle_lock.rs` + `gradle_module.rs`, `rpm_parser.rs` + `rpm_specfile.rs` + `rpm_db.rs`, etc. These are separate top-level modules, each with their own `PackageParser` impl and `fn metadata()` override.
 
 That pattern works when each surface type has its own impl, but it does not address the common case where **one** `PackageParser` impl dispatches to many large private extraction functions. For example, `PythonParser::extract_packages` routes to `extract_from_pyproject_toml`, `extract_from_setupCfg`, `extract_from_wheel_archive`, and a dozen more — all private helpers in the same 5,400-line file.
 
@@ -48,7 +48,7 @@ When an ecosystem converts to a directory, the structure is:
 
 ```text
 src/parsers/<ecosystem>/
-├── mod.rs              # PackageParser impl(s), dispatcher, is_match, register_parser!
+├── mod.rs              # PackageParser impl(s), dispatcher, is_match, fn metadata()
 ├── <surface>.rs        # One file per major extraction surface or concern
 ├── <surface>_test.rs   # Unit tests for that surface
 ├── scan_test.rs        # Full-pipeline scan tests (ecosystem-wide)
@@ -60,7 +60,7 @@ this writing the structure is:
 
 ```text
 src/parsers/python/
-├── mod.rs              # PythonParser impl, dispatcher, register_parser!
+├── mod.rs              # PythonParser impl, dispatcher, fn metadata()
 ├── archive.rs          # sdist/wheel/egg archive extraction, pip-origin-json parsing
 ├── rfc822_meta.rs      # PKG-INFO/METADATA RFC 822 parsing
 ├── pyproject.rs        # pyproject.toml + Poetry parsing
@@ -74,7 +74,7 @@ src/parsers/python/
 
 Specific rules:
 
-- **`mod.rs` owns the public contract**: `PackageParser` impl(s), `is_match`, the `extract_packages` dispatcher, `register_parser!`, and any types needed by sibling files (helper structs, enums, constants). It re-exports everything the rest of the crate needs.
+- **`mod.rs` owns the public contract**: `PackageParser` impl(s), `is_match`, the `extract_packages` dispatcher, `fn metadata()` override, and any types needed by sibling files (helper structs, enums, constants). It re-exports everything the rest of the crate needs.
 - **Surface files are private by default**: `mod <surface>;` without `pub`. They contain the `extract_from_*` functions and their supporting helpers for one format or concern (e.g., `wheel.rs`, `setup_py.rs`, `pyproject.rs`).
 - **Surface files may use `pub(super)` for shared helpers**: If two surfaces share a utility function (e.g., `normalize_python_package_name`), place it in the surface that owns it and mark it `pub(super)`. If sharing becomes widespread, extract a shared `utils.rs` (or `common.rs`) inside the directory.
 - **Test files are co-located inside the directory**: Each surface file has a matching `<surface>_test.rs` in the same directory. This gives tests natural visibility into `pub(super)` and `pub(self)` items without forcing `pub(crate)` leaks, and keeps the test code as navigable as the source it tests.
@@ -82,7 +82,7 @@ Specific rules:
 
 ### 3. Flat siblings remain for independently-registered parsers
 
-The existing flat-sibling pattern (e.g., `npm.rs` + `npm_lock.rs` + `npm_workspace.rs`) is **not** affected. Use flat siblings when each file has its own `PackageParser` impl and `register_parser!` call. Use nested submodules when one `PackageParser` impl dispatches to many large private helpers.
+The existing flat-sibling pattern (e.g., `npm.rs` + `npm_lock.rs` + `npm_workspace.rs`) is **not** affected. Use flat siblings when each file has its own `PackageParser` impl and `fn metadata()` override. Use nested submodules when one `PackageParser` impl dispatches to many large private helpers.
 
 These two patterns can coexist within the same ecosystem. For example, `python/` could contain the main `PythonParser` dispatcher and its extraction surfaces, while `pip_inspect_deplock.rs` stays flat with its own independent `PipInspectDeplockParser`.
 
@@ -91,7 +91,7 @@ These two patterns can coexist within the same ecosystem. For example, `python/`
 When splitting an existing `<ecosystem>.rs` into a directory:
 
 1. Create `src/parsers/<ecosystem>/` directory.
-2. Move the `PackageParser` impl, `register_parser!`, dispatcher logic, shared types, and constants into `mod.rs`.
+2. Move the `PackageParser` impl, `fn metadata()`, dispatcher logic, shared types, and constants into `mod.rs`.
 3. Extract each `extract_from_*` function group and its private helpers into a named surface file.
 4. Add `mod <surface>;` declarations in `mod.rs`.
 5. Move the corresponding test sections from the flat `<ecosystem>_test.rs` into co-located `<surface>_test.rs` files inside the directory, and add `#[cfg(test)] mod <surface>_test;` declarations in `mod.rs`. Move `<ecosystem>_scan_test.rs` into the directory as `scan_test.rs`.

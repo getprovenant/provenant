@@ -38,6 +38,16 @@ impl PackageParser for CitationCffParser {
 
         vec![parse_citation_cff(&yaml)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "citation cff metadata",
+            file_patterns: &["**/CITATION.cff"],
+            package_type: "generic",
+            primary_language: "Text",
+            documentation_url: Some("https://citation-file-format.github.io/"),
+        }]
+    }
 }
 
 fn default_package_data() -> PackageData {
@@ -144,11 +154,3 @@ fn extract_author_parties(value: Option<&yaml_serde::Value>) -> Vec<Party> {
         })
         .collect()
 }
-
-crate::register_parser!(
-    "citation cff metadata",
-    &["**/CITATION.cff"],
-    "generic",
-    "Text",
-    Some("https://citation-file-format.github.io/"),
-);

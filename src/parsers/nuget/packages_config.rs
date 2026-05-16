@@ -86,6 +86,18 @@ impl PackageParser for PackagesConfigParser {
             ..default_package_data(Some(DatasourceId::NugetPackagesConfig))
         }]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET packages.config manifest",
+            file_patterns: &["**/packages.config"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/nuget/reference/packages-config",
+            ),
+        }]
+    }
 }
 
 fn parse_packages_config_package(element: &quick_xml::events::BytesStart) -> Option<Dependency> {
@@ -117,11 +129,3 @@ fn parse_packages_config_package(element: &quick_xml::events::BytesStart) -> Opt
         extra_data: None,
     })
 }
-
-crate::register_parser!(
-    ".NET packages.config manifest",
-    &["**/packages.config"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/nuget/reference/packages-config"),
-);

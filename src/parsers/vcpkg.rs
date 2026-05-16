@@ -41,6 +41,16 @@ impl PackageParser for VcpkgManifestParser {
 
         vec![parse_vcpkg_manifest(path, &json)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "vcpkg manifest file",
+            file_patterns: &["**/vcpkg.json"],
+            package_type: "vcpkg",
+            primary_language: "",
+            documentation_url: Some("https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json"),
+        }]
+    }
 }
 
 fn default_package_data() -> PackageData {
@@ -306,11 +316,3 @@ fn build_vcpkg_purl(name: &str, version: Option<&str>) -> Option<String> {
     }
     Some(purl.to_string())
 }
-
-crate::register_parser!(
-    "vcpkg manifest file",
-    &["**/vcpkg.json"],
-    "vcpkg",
-    "",
-    Some("https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json"),
-);

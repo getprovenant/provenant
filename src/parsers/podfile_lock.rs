@@ -34,6 +34,7 @@ use crate::models::{
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PRIMARY_LANGUAGE: &str = "Objective-C";
 
@@ -55,6 +56,16 @@ pub struct PodfileLockParser;
 
 impl PackageParser for PodfileLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Cocoapods;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Cocoapods Podfile.lock",
+            file_patterns: &["**/Podfile.lock"],
+            package_type: "cocoapods",
+            primary_language: "Objective-C",
+            documentation_url: Some("https://guides.cocoapods.org/using/the-podfile.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -468,11 +479,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Cocoapods Podfile.lock",
-    &["**/Podfile.lock"],
-    "cocoapods",
-    "Objective-C",
-    Some("https://guides.cocoapods.org/using/the-podfile.html"),
-);

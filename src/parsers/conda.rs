@@ -310,6 +310,33 @@ impl PackageParser for CondaMetaYamlParser {
         }
         vec![pkg]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Conda package manifest and environment file",
+            file_patterns: &[
+                "**/meta.yaml",
+                "**/meta.yml",
+                "**/recipe/recipe.yaml",
+                "**/recipe/recipe.yml",
+                "**/environment.yml",
+                "**/environment.yaml",
+                "**/env.yaml",
+                "**/env.yml",
+                "**/conda.yaml",
+                "**/conda.yml",
+                "**/*conda*.yaml",
+                "**/*conda*.yml",
+                "**/*env*.yaml",
+                "**/*env*.yml",
+                "**/*environment*.yaml",
+                "**/*environment*.yml",
+            ],
+            package_type: "conda",
+            primary_language: "Python",
+            documentation_url: Some("https://docs.conda.io/"),
+        }]
+    }
 }
 
 fn looks_like_conda_recipe_yaml(yaml: &Value) -> bool {
@@ -1055,28 +1082,3 @@ fn create_pip_dependency(
         extra_data: None,
     })
 }
-
-crate::register_parser!(
-    "Conda package manifest and environment file",
-    &[
-        "**/meta.yaml",
-        "**/meta.yml",
-        "**/recipe/recipe.yaml",
-        "**/recipe/recipe.yml",
-        "**/environment.yml",
-        "**/environment.yaml",
-        "**/env.yaml",
-        "**/env.yml",
-        "**/conda.yaml",
-        "**/conda.yml",
-        "**/*conda*.yaml",
-        "**/*conda*.yml",
-        "**/*env*.yaml",
-        "**/*env*.yml",
-        "**/*environment*.yaml",
-        "**/*environment*.yml"
-    ],
-    "conda",
-    "Python",
-    Some("https://docs.conda.io/"),
-);

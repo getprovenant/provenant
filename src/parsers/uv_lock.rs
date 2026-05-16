@@ -80,6 +80,16 @@ impl PackageParser for UvLockParser {
 
         vec![parse_uv_lock(&toml_content)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "uv lockfile",
+            file_patterns: &["**/uv.lock"],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some("https://docs.astral.sh/uv/concepts/projects/layout/"),
+        }]
+    }
 }
 
 fn parse_uv_lock(toml_content: &TomlValue) -> PackageData {
@@ -971,11 +981,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "uv lockfile",
-    &["**/uv.lock"],
-    "pypi",
-    "Python",
-    Some("https://docs.astral.sh/uv/concepts/projects/layout/"),
-);

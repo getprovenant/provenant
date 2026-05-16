@@ -82,6 +82,18 @@ impl PackageParser for SwiftShowDependenciesParser {
 
         vec![parse_swift_show_dependencies(&content)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Swift show-dependencies deplock file",
+            file_patterns: &["*swift-show-dependencies.deplock"],
+            package_type: "swift",
+            primary_language: "Swift",
+            documentation_url: Some(
+                "https://forums.swift.org/t/swiftpm-show-dependencies-without-fetching-dependencies/51154",
+            ),
+        }]
+    }
 }
 
 pub(crate) fn parse_swift_show_dependencies(content: &str) -> PackageData {
@@ -294,13 +306,3 @@ fn parse_url_namespace_and_name(url: &str) -> Option<(String, String)> {
 
     Some((format!("{}/{}", host, owner), repo.to_string()))
 }
-
-crate::register_parser!(
-    "Swift show-dependencies deplock file",
-    &["*swift-show-dependencies.deplock"],
-    "swift",
-    "Swift",
-    Some(
-        "https://forums.swift.org/t/swiftpm-show-dependencies-without-fetching-dependencies/51154"
-    ),
-);

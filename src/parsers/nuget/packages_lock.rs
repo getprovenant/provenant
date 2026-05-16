@@ -125,14 +125,16 @@ impl PackageParser for PackagesLockParser {
             ..default_package_data(Some(DatasourceId::NugetPackagesLock))
         }]
     }
-}
 
-crate::register_parser!(
-    ".NET packages.lock.json lockfile",
-    &["**/packages.lock.json"],
-    "nuget",
-    "C#",
-    Some(
-        "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#locking-dependencies"
-    ),
-);
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET packages.lock.json lockfile",
+            file_patterns: &["**/packages.lock.json"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#locking-dependencies",
+            ),
+        }]
+    }
+}

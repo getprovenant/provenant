@@ -35,6 +35,7 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 
 const FIELD_NAME: &str = "name";
 const FIELD_VERSION: &str = "version";
@@ -55,6 +56,16 @@ pub struct PodspecJsonParser;
 
 impl PackageParser for PodspecJsonParser {
     const PACKAGE_TYPE: PackageType = PackageType::Cocoapods;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "CocoaPods .podspec.json manifest",
+            file_patterns: &["**/*.podspec.json"],
+            package_type: "cocoapods",
+            primary_language: "Objective-C",
+            documentation_url: Some("https://guides.cocoapods.org/syntax/podspec.html"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let json_content = match read_json_file(path) {
@@ -512,11 +523,3 @@ fn get_hashed_path(name: &str) -> Option<String> {
         Some(hash_str)
     }
 }
-
-crate::register_parser!(
-    "CocoaPods .podspec.json manifest",
-    &["**/*.podspec.json"],
-    "cocoapods",
-    "Objective-C",
-    Some("https://guides.cocoapods.org/syntax/podspec.html"),
-);

@@ -7,6 +7,7 @@ use crate::models::{DatasourceId, FileReference, Md5Digest, PackageData, Package
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
 
+use super::super::metadata::ParserMetadata;
 use super::utils::build_debian_purl;
 use super::{IGNORED_ROOT_DIRS, PACKAGE_TYPE, default_package_data, read_or_default};
 use crate::parsers::PackageParser;
@@ -16,6 +17,16 @@ pub struct DebianInstalledListParser;
 
 impl PackageParser for DebianInstalledListParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian installed files list",
+            file_patterns: &["**/var/lib/dpkg/info/*.list"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some("https://www.debian.org/doc/debian-policy/ch-files.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|e| e.to_str()) == Some("list")
@@ -43,19 +54,21 @@ impl PackageParser for DebianInstalledListParser {
     }
 }
 
-crate::register_parser!(
-    "Debian installed files list",
-    &["**/var/lib/dpkg/info/*.list"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-files.html"),
-);
-
 /// Parser for Debian installed MD5 checksum files (*.md5sums)
 pub struct DebianInstalledMd5sumsParser;
 
 impl PackageParser for DebianInstalledMd5sumsParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian installed package md5sums",
+            file_patterns: &["**/var/lib/dpkg/info/*.md5sums"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some("https://www.debian.org/doc/debian-policy/ch-files.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().and_then(|e| e.to_str()) == Some("md5sums")
@@ -82,14 +95,6 @@ impl PackageParser for DebianInstalledMd5sumsParser {
         )]
     }
 }
-
-crate::register_parser!(
-    "Debian installed package md5sums",
-    &["**/var/lib/dpkg/info/*.md5sums"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-files.html"),
-);
 
 pub(crate) fn parse_file_entries(content: &str, log_label: &str) -> Vec<FileReference> {
     let mut file_references = Vec::new();

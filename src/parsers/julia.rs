@@ -36,6 +36,7 @@ use super::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data, empty_declared_license_data,
     normalize_spdx_expression,
 };
+use super::metadata::ParserMetadata;
 
 const FIELD_NAME: &str = "name";
 const FIELD_UUID: &str = "uuid";
@@ -53,6 +54,16 @@ pub struct JuliaProjectTomlParser;
 
 impl PackageParser for JuliaProjectTomlParser {
     const PACKAGE_TYPE: PackageType = PackageType::Julia;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Julia Project.toml manifest",
+            file_patterns: &["**/Project.toml"],
+            package_type: "julia",
+            primary_language: "Julia",
+            documentation_url: Some("https://pkgdocs.julialang.org/v1/toml-files/"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let toml_content = match read_julia_toml(path) {
@@ -176,6 +187,16 @@ pub struct JuliaManifestTomlParser;
 
 impl PackageParser for JuliaManifestTomlParser {
     const PACKAGE_TYPE: PackageType = PackageType::Julia;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Julia Manifest.toml resolved dependencies",
+            file_patterns: &["**/Manifest.toml"],
+            package_type: "julia",
+            primary_language: "Julia",
+            documentation_url: Some("https://pkgdocs.julialang.org/v1/toml-files/"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let toml_content = match read_julia_toml(path) {
@@ -534,19 +555,3 @@ fn is_julia_version_pinned(version_str: &str) -> bool {
     }
     trimmed.matches('.').count() >= 2
 }
-
-crate::register_parser!(
-    "Julia Project.toml manifest",
-    &["**/Project.toml"],
-    "julia",
-    "Julia",
-    Some("https://pkgdocs.julialang.org/v1/toml-files/"),
-);
-
-crate::register_parser!(
-    "Julia Manifest.toml resolved dependencies",
-    &["**/Manifest.toml"],
-    "julia",
-    "Julia",
-    Some("https://pkgdocs.julialang.org/v1/toml-files/"),
-);

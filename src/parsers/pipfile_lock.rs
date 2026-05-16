@@ -36,6 +36,7 @@ use crate::parsers::python::read_toml_file;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_META: &str = "_meta";
 const FIELD_HASH: &str = "hash";
@@ -59,6 +60,16 @@ pub struct PipfileLockParser;
 
 impl PackageParser for PipfileLockParser {
     const PACKAGE_TYPE: PackageType = PackageType::Pypi;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Pipenv lockfile and manifest",
+            file_patterns: &["**/Pipfile.lock", "**/Pipfile"],
+            package_type: "pypi",
+            primary_language: "Python",
+            documentation_url: Some("https://github.com/pypa/pipfile"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -427,11 +438,3 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Pipenv lockfile and manifest",
-    &["**/Pipfile.lock", "**/Pipfile"],
-    "pypi",
-    "Python",
-    Some("https://github.com/pypa/pipfile"),
-);

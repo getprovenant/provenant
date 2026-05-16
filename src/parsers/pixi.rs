@@ -18,6 +18,7 @@ use crate::parsers::utils::{
 };
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const FIELD_WORKSPACE: &str = "workspace";
 const FIELD_PROJECT: &str = "project";
@@ -46,6 +47,16 @@ pub struct PixiTomlParser;
 
 impl PackageParser for PixiTomlParser {
     const PACKAGE_TYPE: PackageType = PackageType::Pixi;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Pixi workspace manifest and lockfile",
+            file_patterns: &["**/pixi.toml", "**/pixi.lock"],
+            package_type: "pixi",
+            primary_language: "TOML/YAML",
+            documentation_url: Some("https://pixi.sh/latest/reference/pixi_manifest/"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name().is_some_and(|name| name == "pixi.toml")
@@ -816,11 +827,3 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Pixi workspace manifest and lockfile",
-    &["**/pixi.toml", "**/pixi.lock"],
-    "pixi",
-    "TOML/YAML",
-    Some("https://pixi.sh/latest/reference/pixi_manifest/"),
-);

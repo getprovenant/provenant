@@ -156,6 +156,16 @@ impl PackageParser for BowerJsonParser {
         path.file_name()
             .is_some_and(|name| name == "bower.json" || name == ".bower.json")
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Bower package manifest",
+            file_patterns: &["**/bower.json", "**/.bower.json"],
+            package_type: "bower",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://bower.io"),
+        }]
+    }
 }
 
 /// Reads and parses a JSON file
@@ -410,11 +420,3 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Bower package manifest",
-    &["**/bower.json", "**/.bower.json"],
-    "bower",
-    "JavaScript",
-    Some("https://bower.io"),
-);

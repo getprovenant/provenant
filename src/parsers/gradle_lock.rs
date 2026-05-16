@@ -28,6 +28,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 /// Gradle gradle.lockfile parser.
@@ -37,6 +38,18 @@ pub struct GradleLockfileParser;
 
 impl PackageParser for GradleLockfileParser {
     const PACKAGE_TYPE: PackageType = PackageType::Maven;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Gradle lockfile",
+            file_patterns: &["**/gradle.lockfile"],
+            package_type: "maven",
+            primary_language: "Java",
+            documentation_url: Some(
+                "https://docs.gradle.org/current/userguide/dependency_locking.html",
+            ),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -434,11 +447,3 @@ mod tests {
         assert!(parse_dependency_line("empty=annotationProcessor").is_none());
     }
 }
-
-crate::register_parser!(
-    "Gradle lockfile",
-    &["**/gradle.lockfile"],
-    "maven",
-    "Java",
-    Some("https://docs.gradle.org/current/userguide/dependency_locking.html"),
-);

@@ -49,6 +49,16 @@ impl PackageParser for ClojureDepsEdnParser {
             }
         }
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Clojure deps.edn and project.clj manifests",
+            file_patterns: &["**/deps.edn", "**/project.clj"],
+            package_type: "maven",
+            primary_language: "Clojure",
+            documentation_url: Some("https://clojure.org/reference/deps_edn"),
+        }]
+    }
 }
 
 pub struct ClojureProjectCljParser;
@@ -808,11 +818,3 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Clojure deps.edn and project.clj manifests",
-    &["**/deps.edn", "**/project.clj"],
-    "maven",
-    "Clojure",
-    Some("https://clojure.org/reference/deps_edn"),
-);

@@ -58,6 +58,18 @@ impl PackageParser for SwiftPackageResolvedParser {
             }
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Swift Package.resolved lockfile",
+            file_patterns: &["**/Package.resolved", "**/.package.resolved"],
+            package_type: "swift",
+            primary_language: "Swift",
+            documentation_url: Some(
+                "https://docs.swift.org/package-manager/PackageDescription/PackageDescription.html#package-dependency",
+            ),
+        }]
+    }
 }
 
 #[derive(Deserialize)]
@@ -301,16 +313,6 @@ fn default_package_data() -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Swift Package.resolved lockfile",
-    &["**/Package.resolved", "**/.package.resolved"],
-    "swift",
-    "Swift",
-    Some(
-        "https://docs.swift.org/package-manager/PackageDescription/PackageDescription.html#package-dependency"
-    ),
-);
 
 #[cfg(test)]
 mod tests {

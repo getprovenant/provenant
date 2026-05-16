@@ -121,6 +121,16 @@ impl PackageParser for CpanMetaJsonParser {
             ..Default::default()
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "CPAN Perl META.json",
+            file_patterns: &["**/META.json"],
+            package_type: "cpan",
+            primary_language: "Perl",
+            documentation_url: Some("https://metacpan.org/pod/CPAN::Meta::Spec"),
+        }]
+    }
 }
 
 /// CPAN META.yml parser for CPAN::Meta::Spec v1.4 metadata.
@@ -188,6 +198,16 @@ impl PackageParser for CpanMetaYmlParser {
             ..Default::default()
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "CPAN Perl META.yml",
+            file_patterns: &["**/META.yml"],
+            package_type: "cpan",
+            primary_language: "Perl",
+            documentation_url: Some("https://metacpan.org/pod/CPAN::Meta::Spec"),
+        }]
+    }
 }
 
 /// CPAN MANIFEST parser for module file lists.
@@ -236,6 +256,16 @@ impl PackageParser for CpanManifestParser {
             primary_language: Some("Perl".to_string()),
             datasource_id: Some(DatasourceId::CpanManifest),
             ..Default::default()
+        }]
+    }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "CPAN Perl MANIFEST",
+            file_patterns: &["**/MANIFEST"],
+            package_type: "cpan",
+            primary_language: "Perl",
+            documentation_url: Some("https://metacpan.org/pod/Module::Manifest"),
         }]
     }
 }
@@ -740,27 +770,3 @@ fn extract_yaml_dependency_group(
         })
         .collect()
 }
-
-crate::register_parser!(
-    "CPAN Perl META.json",
-    &["**/META.json"],
-    "cpan",
-    "Perl",
-    Some("https://metacpan.org/pod/CPAN::Meta::Spec"),
-);
-
-crate::register_parser!(
-    "CPAN Perl META.yml",
-    &["**/META.yml"],
-    "cpan",
-    "Perl",
-    Some("https://metacpan.org/pod/CPAN::Meta::Spec"),
-);
-
-crate::register_parser!(
-    "CPAN Perl MANIFEST",
-    &["**/MANIFEST"],
-    "cpan",
-    "Perl",
-    Some("https://metacpan.org/pod/Module::Manifest"),
-);

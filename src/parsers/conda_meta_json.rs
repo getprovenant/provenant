@@ -89,6 +89,16 @@ impl PackageParser for CondaMetaJsonParser {
 
         vec![parse_conda_meta_json(&content)]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Conda installed package metadata JSON",
+            file_patterns: &["*conda-meta/*.json"],
+            package_type: "conda",
+            primary_language: "Python",
+            documentation_url: Some("https://docs.conda.io/"),
+        }]
+    }
 }
 
 pub(crate) fn parse_conda_meta_json(content: &str) -> PackageData {
@@ -243,11 +253,3 @@ fn condense_to_pkgs_relative(path: &str) -> Option<String> {
     let relative = normalized.split("/pkgs/").nth(1)?;
     Some(format!("pkgs/{}", relative.trim_start_matches('/')))
 }
-
-crate::register_parser!(
-    "Conda installed package metadata JSON",
-    &["*conda-meta/*.json"],
-    "conda",
-    "Python",
-    Some("https://docs.conda.io/"),
-);

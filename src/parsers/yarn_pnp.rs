@@ -36,6 +36,16 @@ impl PackageParser for YarnPnpParser {
             }
         }
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "yarn plug and play runtime state",
+            file_patterns: &["**/.pnp.cjs"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://yarnpkg.com/features/pnp"),
+        }]
+    }
 }
 
 fn default_package_data() -> PackageData {
@@ -200,11 +210,3 @@ fn extract_raw_runtime_state_json(content: &str) -> Option<&str> {
 
     None
 }
-
-crate::register_parser!(
-    "yarn plug and play runtime state",
-    &["**/.pnp.cjs"],
-    "npm",
-    "JavaScript",
-    Some("https://yarnpkg.com/features/pnp"),
-);

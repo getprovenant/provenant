@@ -381,6 +381,38 @@ impl PackageParser for PackageReferenceProjectParser {
             ..default_package_data(Some(datasource_id))
         }]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![
+            super::super::metadata::ParserMetadata {
+                description: ".NET PackageReference C# project file",
+                file_patterns: &["**/*.csproj"],
+                package_type: "nuget",
+                primary_language: "C#",
+                documentation_url: Some(
+                    "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files",
+                ),
+            },
+            super::super::metadata::ParserMetadata {
+                description: ".NET PackageReference Visual Basic project file",
+                file_patterns: &["**/*.vbproj"],
+                package_type: "nuget",
+                primary_language: "Visual Basic .NET",
+                documentation_url: Some(
+                    "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files",
+                ),
+            },
+            super::super::metadata::ParserMetadata {
+                description: ".NET PackageReference F# project file",
+                file_patterns: &["**/*.fsproj"],
+                package_type: "nuget",
+                primary_language: "F#",
+                documentation_url: Some(
+                    "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files",
+                ),
+            },
+        ]
+    }
 }
 
 fn build_project_file_dependency(
@@ -432,33 +464,3 @@ fn build_project_file_dependency(
         },
     })
 }
-
-crate::register_parser!(
-    ".NET PackageReference C# project file",
-    &["**/*.csproj"],
-    "nuget",
-    "C#",
-    Some(
-        "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files"
-    ),
-);
-
-crate::register_parser!(
-    ".NET PackageReference Visual Basic project file",
-    &["**/*.vbproj"],
-    "nuget",
-    "Visual Basic .NET",
-    Some(
-        "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files"
-    ),
-);
-
-crate::register_parser!(
-    ".NET PackageReference F# project file",
-    &["**/*.fsproj"],
-    "nuget",
-    "F#",
-    Some(
-        "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files"
-    ),
-);

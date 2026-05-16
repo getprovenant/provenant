@@ -23,6 +23,7 @@ use crate::models::PackageData;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
+use super::metadata::ParserMetadata;
 
 const PACKAGE_TYPE: PackageType = PackageType::WindowsUpdate;
 
@@ -30,6 +31,16 @@ pub struct MicrosoftUpdateManifestParser;
 
 impl PackageParser for MicrosoftUpdateManifestParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Microsoft Update Manifest .mum file",
+            file_patterns: &["*.mum"],
+            package_type: "windows-update",
+            primary_language: "",
+            documentation_url: None,
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.extension().is_some_and(|ext| ext == "mum")
@@ -198,11 +209,3 @@ pub(crate) fn parse_mum_xml(content: &str) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "Microsoft Update Manifest .mum file",
-    &["*.mum"],
-    "windows-update",
-    "",
-    None,
-);

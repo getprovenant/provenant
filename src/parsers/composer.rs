@@ -190,6 +190,16 @@ impl PackageParser for ComposerJsonParser {
             .and_then(|name| name.to_str())
             .is_some_and(is_composer_manifest_filename)
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "PHP composer manifest",
+            file_patterns: &["**/*composer.json", "**/composer.*.json"],
+            package_type: "composer",
+            primary_language: "PHP",
+            documentation_url: Some("https://getcomposer.org/doc/04-schema.md"),
+        }]
+    }
 }
 
 /// Composer lockfile parser for composer.lock files.
@@ -221,6 +231,18 @@ impl PackageParser for ComposerLockParser {
         path.file_name()
             .and_then(|name| name.to_str())
             .is_some_and(is_composer_lock_filename)
+    }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "PHP composer lockfile",
+            file_patterns: &["**/*composer.lock", "**/composer.*.lock"],
+            package_type: "composer",
+            primary_language: "PHP",
+            documentation_url: Some(
+                "https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+            ),
+        }]
     }
 }
 
@@ -1046,19 +1068,3 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
         ..Default::default()
     }
 }
-
-crate::register_parser!(
-    "PHP composer manifest",
-    &["**/*composer.json", "**/composer.*.json"],
-    "composer",
-    "PHP",
-    Some("https://getcomposer.org/doc/04-schema.md"),
-);
-
-crate::register_parser!(
-    "PHP composer lockfile",
-    &["**/*composer.lock", "**/composer.*.lock"],
-    "composer",
-    "PHP",
-    Some("https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"),
-);

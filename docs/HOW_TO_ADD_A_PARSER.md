@@ -18,7 +18,7 @@ Adding a parser usually means doing all of the following:
 1. research the manifest or lockfile behavior you need to preserve
 2. implement `src/parsers/<ecosystem>.rs` (or `src/parsers/<ecosystem>/mod.rs` for large ecosystems — see [ADR 0009](adr/0009-parser-submodule-structure.md))
 3. register the parser in `src/parsers/mod.rs`
-4. register parser metadata with `register_parser!`
+4. register parser metadata with `fn metadata()`
 5. add parser-local tests and, by default, parser goldens
 6. classify every new `DatasourceId` for assembly accounting
 7. add assembly or file-reference wiring when the ecosystem needs it
@@ -174,21 +174,29 @@ If the license surface is weak or ambiguous, keep the parser raw-only:
 
 ### Parser metadata registration
 
-Add `crate::register_parser!(...)` near the end of the parser file. This feeds
-`docs/SUPPORTED_FORMATS.md` generation through `src/parsers/metadata.rs`.
+Override `fn metadata()` on the `PackageParser` impl to return `Vec<ParserMetadata>`. This feeds
+`docs/SUPPORTED_FORMATS.md` generation through `src/parsers/metadata.rs` and `all_metadata()`.
 
 ```rust
-crate::register_parser!(
-    "npm package.json manifest",
-    &["**/package.json"],
-    "npm",
-    "JavaScript",
-    Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
-);
+use super::metadata::ParserMetadata;
+
+impl PackageParser for MyParser {
+    // ... existing trait items ...
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "npm package.json manifest".to_string(),
+            file_patterns: &["**/package.json"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
+        }]
+    }
+}
 ```
 
-If you skip this macro, the parser can still work at scan time, but it will be missing from the
-generated supported-formats docs.
+If you skip this override, the parser can still work at scan time (the default returns an empty
+vector), but it will be missing from the generated supported-formats docs.
 
 ### Use existing parsers as templates
 
@@ -202,7 +210,7 @@ points in this repo:
 
 When an ecosystem has both a manifest and a lockfile (or multiple related file formats), put all
 `PackageParser` impls in a single `src/parsers/<ecosystem>.rs` file with separate
-`register_parser!` invocations for each. This keeps related parsing logic co-located. For example,
+`metadata()` overrides for each. This keeps related parsing logic co-located. For example,
 `src/parsers/julia.rs` contains both `JuliaProjectTomlParser` and `JuliaManifestTomlParser`.
 
 When a single-file ecosystem exceeds ~1,500 lines or has clearly separable extraction surfaces
@@ -434,7 +442,7 @@ Use the `compare-outputs`, benchmark, and golden-maintenance workflows documente
 - Parser-only tests pass, but the real scanner output is wrong because the parser needed a
   `*_scan_test.rs`.
 - The parser emits `file_references`, but no resolver ownership was added in assembly.
-- `register_parser!` was skipped, so generated supported-formats docs never pick up the parser.
+- `fn metadata()` was skipped, so generated supported-formats docs never pick up the parser.
 - `docs/SUPPORTED_FORMATS.md` is stale after adding a parser. The `generate-supported-formats`
   pre-commit hook will reject the commit if regeneration produces changes. If the commit bypasses
   hooks, the file will not be updated. Verify with
@@ -449,7 +457,7 @@ Before considering a new parser complete, make sure all of these are true:
 - `PackageType` variant exists in `src/models/package_type.rs`
 - `datasource_id` is correct on every production path
 - parser is exported and registered in `src/parsers/mod.rs`
-- `register_parser!` metadata is present
+- `fn metadata()` override is present
 - parser unit tests exist
 - parser goldens exist unless an explicitly scoped follow-up is already planned
 - golden `.expected` files are committed alongside test fixtures

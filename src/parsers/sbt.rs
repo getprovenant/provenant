@@ -59,6 +59,16 @@ impl PackageParser for SbtParser {
             ..Default::default()
         }]
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Scala SBT build.sbt definition",
+            file_patterns: &["**/build.sbt"],
+            package_type: "maven",
+            primary_language: "Scala",
+            documentation_url: Some("https://www.scala-sbt.org/1.x/docs/Basic-Def.html"),
+        }]
+    }
 }
 
 fn default_package_data() -> PackageData {
@@ -1015,11 +1025,3 @@ fn format_license_entries(licenses: &[LicenseEntry]) -> Option<String> {
 
     Some(formatted)
 }
-
-crate::register_parser!(
-    "Scala SBT build.sbt definition",
-    &["**/build.sbt"],
-    "maven",
-    "Scala",
-    Some("https://www.scala-sbt.org/1.x/docs/Basic-Def.html"),
-);

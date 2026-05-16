@@ -37,6 +37,18 @@ impl PackageParser for NupkgParser {
             }
         }]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET .nupkg package archive",
+            file_patterns: &["**/*.nupkg"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package",
+            ),
+        }]
+    }
 }
 
 fn extract_nupkg_archive(path: &Path) -> Result<PackageData, String> {
@@ -175,11 +187,3 @@ fn read_nupkg_license_file(
 
     Ok(None)
 }
-
-crate::register_parser!(
-    ".NET .nupkg package archive",
-    &["**/*.nupkg"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package"),
-);

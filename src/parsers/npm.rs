@@ -33,6 +33,7 @@ use std::path::Path;
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
+use super::metadata::ParserMetadata;
 
 const FIELD_NAME: &str = "name";
 const FIELD_VERSION: &str = "version";
@@ -74,6 +75,16 @@ pub struct NpmParser;
 
 impl PackageParser for NpmParser {
     const PACKAGE_TYPE: PackageType = PackageType::Npm;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "npm package.json manifest",
+            file_patterns: &["**/package.json"],
+            package_type: "npm",
+            primary_language: "JavaScript",
+            documentation_url: Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
+        }]
+    }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let (json, _field_lines) = match read_and_parse_json_with_lines(path) {
@@ -1043,11 +1054,3 @@ fn combine_extra_data(
     }
     combined
 }
-
-crate::register_parser!(
-    "npm package.json manifest",
-    &["**/package.json"],
-    "npm",
-    "JavaScript",
-    Some("https://docs.npmjs.com/cli/v10/configuring-npm/package-json"),
-);

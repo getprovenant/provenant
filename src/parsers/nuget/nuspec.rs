@@ -241,6 +241,16 @@ impl PackageParser for NuspecParser {
             ..default_package_data(Some(DatasourceId::NugetNuspec))
         }]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET .nuspec package specification",
+            file_patterns: &["**/*.nuspec"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some("https://learn.microsoft.com/en-us/nuget/reference/nuspec"),
+        }]
+    }
 }
 
 pub(super) fn parse_nuspec_dependency(
@@ -477,11 +487,3 @@ pub(super) fn parse_nuspec_content(content: &str) -> Result<PackageData, String>
         ..default_package_data(Some(DatasourceId::NugetNupkg))
     })
 }
-
-crate::register_parser!(
-    ".NET .nuspec package specification",
-    &["**/*.nuspec"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/nuget/reference/nuspec"),
-);

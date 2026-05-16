@@ -40,6 +40,18 @@ impl PackageParser for DotNetDepsJsonParser {
 
         vec![parse_dotnet_deps_json(&parsed, path)]
     }
+
+    fn metadata() -> Vec<super::super::metadata::ParserMetadata> {
+        vec![super::super::metadata::ParserMetadata {
+            description: ".NET .deps.json runtime dependency graph",
+            file_patterns: &["**/*.deps.json"],
+            package_type: "nuget",
+            primary_language: "C#",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/default-probing",
+            ),
+        }]
+    }
 }
 
 fn parse_dotnet_deps_json(parsed: &serde_json::Value, path: &Path) -> PackageData {
@@ -304,11 +316,3 @@ fn select_root_library_key(
 fn split_library_key(key: &str) -> Option<(&str, &str)> {
     key.rsplit_once('/')
 }
-
-crate::register_parser!(
-    ".NET .deps.json runtime dependency graph",
-    &["**/*.deps.json"],
-    "nuget",
-    "C#",
-    Some("https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/default-probing"),
-);

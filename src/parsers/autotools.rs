@@ -92,12 +92,14 @@ impl PackageParser for AutotoolsConfigureParser {
             ..Default::default()
         }]
     }
-}
 
-crate::register_parser!(
-    "Autotools configure script",
-    &["**/configure", "**/configure.ac"],
-    "autotools",
-    "C",
-    Some("https://www.gnu.org/software/autoconf/"),
-);
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "Autotools configure script",
+            file_patterns: &["**/configure", "**/configure.ac"],
+            package_type: "autotools",
+            primary_language: "C",
+            documentation_url: Some("https://www.gnu.org/software/autoconf/"),
+        }]
+    }
+}

@@ -97,6 +97,41 @@ impl PackageParser for RpmBdbDatabaseParser {
             }
         }
     }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM installed package database",
+            file_patterns: &[
+                "**/var/lib/rpm/Packages",
+                "**/usr/lib/sysimage/rpm/Packages",
+                "**/var/lib/rpm/Packages.db",
+                "**/usr/lib/sysimage/rpm/Packages.db",
+                "**/var/lib/rpm/rpmdb.sqlite",
+                "**/usr/lib/sysimage/rpm/rpmdb.sqlite",
+            ],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some("https://rpm.org/"),
+        }]
+    }
+}
+
+#[cfg(not(feature = "rpm-sqlite"))]
+impl PackageParser for RpmBdbDatabaseParser {
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "RPM installed package database",
+            file_patterns: &[
+                "**/var/lib/rpm/Packages",
+                "**/usr/lib/sysimage/rpm/Packages",
+                "**/var/lib/rpm/Packages.db",
+                "**/usr/lib/sysimage/rpm/Packages.db",
+            ],
+            package_type: "rpm",
+            primary_language: "",
+            documentation_url: Some("https://rpm.org/"),
+        }]
+    }
 }
 
 pub struct RpmNdbDatabaseParser;
@@ -822,33 +857,3 @@ mod tests {
         );
     }
 }
-
-#[cfg(feature = "rpm-sqlite")]
-crate::register_parser!(
-    "RPM installed package database",
-    &[
-        "**/var/lib/rpm/Packages",
-        "**/usr/lib/sysimage/rpm/Packages",
-        "**/var/lib/rpm/Packages.db",
-        "**/usr/lib/sysimage/rpm/Packages.db",
-        "**/var/lib/rpm/rpmdb.sqlite",
-        "**/usr/lib/sysimage/rpm/rpmdb.sqlite"
-    ],
-    "rpm",
-    "",
-    Some("https://rpm.org/"),
-);
-
-#[cfg(not(feature = "rpm-sqlite"))]
-crate::register_parser!(
-    "RPM installed package database",
-    &[
-        "**/var/lib/rpm/Packages",
-        "**/usr/lib/sysimage/rpm/Packages",
-        "**/var/lib/rpm/Packages.db",
-        "**/usr/lib/sysimage/rpm/Packages.db"
-    ],
-    "rpm",
-    "",
-    Some("https://rpm.org/"),
-);

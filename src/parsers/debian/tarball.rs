@@ -6,6 +6,7 @@ use std::path::Path;
 use crate::models::{DatasourceId, PackageData, PackageType};
 use crate::parsers::utils::truncate_field;
 
+use super::super::metadata::ParserMetadata;
 use super::utils::build_debian_purl;
 use super::{PACKAGE_TYPE, default_package_data};
 use crate::parsers::PackageParser;
@@ -15,6 +16,16 @@ pub struct DebianOrigTarParser;
 
 impl PackageParser for DebianOrigTarParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian original source tarball",
+            file_patterns: &["**/*.orig.tar.*"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some("https://www.debian.org/doc/debian-policy/ch-source.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -40,19 +51,21 @@ impl PackageParser for DebianOrigTarParser {
     }
 }
 
-crate::register_parser!(
-    "Debian original source tarball",
-    &["**/*.orig.tar.*"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-source.html"),
-);
-
 /// Parser for Debian source package metadata tarballs (*.debian.tar.*)
 pub struct DebianDebianTarParser;
 
 impl PackageParser for DebianDebianTarParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn metadata() -> Vec<ParserMetadata> {
+        vec![ParserMetadata {
+            description: "Debian source metadata tarball",
+            file_patterns: &["**/*.debian.tar.*"],
+            package_type: "deb",
+            primary_language: "",
+            documentation_url: Some("https://www.debian.org/doc/debian-policy/ch-source.html"),
+        }]
+    }
 
     fn is_match(path: &Path) -> bool {
         path.file_name()
@@ -77,14 +90,6 @@ impl PackageParser for DebianDebianTarParser {
         )]
     }
 }
-
-crate::register_parser!(
-    "Debian source metadata tarball",
-    &["**/*.debian.tar.*"],
-    "deb",
-    "",
-    Some("https://www.debian.org/doc/debian-policy/ch-source.html"),
-);
 
 fn parse_source_tarball_filename(filename: &str, datasource_id: DatasourceId) -> PackageData {
     let without_tar_ext = filename
