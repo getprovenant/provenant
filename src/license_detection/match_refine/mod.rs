@@ -20,8 +20,7 @@ use crate::license_detection::query::Query;
 
 // Internal use only
 use filter_low_quality::{
-    filter_below_rule_minimum_coverage, filter_false_positive_matches,
-    filter_filename_like_single_word_reference_matches,
+    filter_below_rule_minimum_coverage, filter_filename_like_single_word_reference_matches,
     filter_invalid_matches_to_single_word_gibberish, filter_matches_missing_required_phrases,
     filter_matches_to_spurious_single_token, filter_short_matches_scattered_on_too_many_lines,
     filter_spurious_matches, filter_too_short_matches,
@@ -92,22 +91,11 @@ pub fn split_weak_matches(
     index: &LicenseIndex,
     matches: &[LicenseMatch],
 ) -> (Vec<LicenseMatch>, Vec<LicenseMatch>) {
-    let mut good = Vec::new();
-    let mut weak = Vec::new();
-
-    for m in matches {
-        let is_false_positive = index.false_positive_rids.contains(&m.rid);
-        let is_weak = (!is_false_positive && m.has_unknown())
-            || (m.matcher == MatcherKind::Seq && m.len() <= SMALL_RULE && m.coverage() <= 25.0);
-
-        if is_weak {
-            weak.push(m.clone());
-        } else {
-            good.push(m.clone());
-        }
-    }
-
-    (good, weak)
+    matches.iter().cloned().partition(|m| {
+        let is_fp = index.is_false_positive(m.rid);
+        !((!is_fp && m.has_unknown())
+            || (m.matcher == MatcherKind::Seq && m.len() <= SMALL_RULE && m.coverage() <= 25.0))
+    })
 }
 
 /// Main refinement function - applies all refinement operations to match results.
@@ -133,7 +121,7 @@ pub fn split_weak_matches(
 /// The operations are applied in sequence to produce final refined matches.
 ///
 /// # Arguments
-/// * `index` - LicenseIndex containing false_positive_rids and rules_by_rid
+/// * `index` - LicenseIndex containing rules_by_rid
 /// * `matches` - Vector of raw LicenseMatch from all strategies
 /// * `query` - Query object for spurious/gibberish filtering
 ///
@@ -292,9 +280,11 @@ fn refine_matches_internal(
     let (non_contained_final, _) = filter_contained_matches(&final_matches);
 
     let result = if filter_false_positive {
-        let non_fp = filter_false_positive_matches(index, &non_contained_final);
-        let (kept, _discarded) = filter_false_positive_license_lists_matches(non_fp);
-        kept
+        let non_fp: Vec<_> = non_contained_final
+            .into_iter()
+            .filter(|m| !index.is_false_positive(m.rid))
+            .collect();
+        filter_false_positive_license_lists_matches(non_fp)
     } else {
         non_contained_final
     };
@@ -340,8 +330,59 @@ fn filter_binary_low_coverage_same_expression_seq_bridges(
 mod tests {
     use super::*;
     use crate::license_detection::models::MatchCoordinates;
+    use crate::license_detection::models::Rule;
     use crate::license_detection::models::RuleId;
     use crate::license_detection::models::position_span::PositionSpan;
+    use std::collections::HashMap;
+
+    fn make_rule(is_false_positive: bool) -> Rule {
+        Rule {
+            identifier: String::new(),
+            license_expression: String::new(),
+            text: String::new(),
+            tokens: Vec::new(),
+            rule_kind: crate::license_detection::models::RuleKind::Text,
+            is_false_positive,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            required_phrase_spans: Vec::new(),
+            stopwords_by_pos: HashMap::new(),
+            referenced_filenames: None,
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 0,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 0,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: Vec::new(),
+        }
+    }
+
+    fn insert_fp_rule(index: &mut LicenseIndex, rid: usize) {
+        while index.rules_by_rid.len() <= rid {
+            index.rules_by_rid.push(make_rule(false));
+            index.tids_by_rid.push(Vec::new());
+        }
+        index.rules_by_rid[rid].is_false_positive = true;
+    }
     use crate::models::LineNumber;
     use crate::models::MatchScore;
 
@@ -399,7 +440,7 @@ mod tests {
     #[test]
     fn test_refine_matches_full_pipeline() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(RuleId::new(99));
+        insert_fp_rule(&mut index, 99);
 
         let mut m1 = create_test_match("#1", 1, 10, MatchScore::from_percentage(0.5), 100.0, 100);
         m1.rule_length = 100;
@@ -605,7 +646,7 @@ mod tests {
     #[test]
     fn test_refine_matches_complex_scenario() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(RuleId::new(999));
+        insert_fp_rule(&mut index, 999);
 
         let mut m1 = create_test_match("#1", 1, 10, MatchScore::from_percentage(0.7), 100.0, 100);
         m1.matched_length = 100;
@@ -704,7 +745,7 @@ mod tests {
         };
 
         let mut index = LicenseIndex::with_legalese_count(10);
-        index.false_positive_rids.insert(RuleId::new(42));
+        insert_fp_rule(&mut index, 42);
 
         let (good, weak) = split_weak_matches(&index, std::slice::from_ref(&m));
         assert!(good.contains(&m));

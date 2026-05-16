@@ -360,8 +360,6 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
     let mut msets_by_rid: HashMap<RuleId, TokenMultiset> = HashMap::new();
     let mut high_sets_by_rid: HashMap<RuleId, TokenSet> = HashMap::new();
     let mut high_postings_by_rid: HashMap<RuleId, HashMap<TokenId, Vec<usize>>> = HashMap::new();
-    let mut false_positive_rids: HashSet<RuleId> = HashSet::new();
-    let mut approx_matchable_rids: HashSet<RuleId> = HashSet::new();
     let mut rids_by_high_tid: HashMap<TokenId, HashSet<RuleId>> = HashMap::new();
 
     let mut rules_builder = AutomatonBuilder::new();
@@ -424,7 +422,6 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         }
 
         if rule.is_false_positive {
-            false_positive_rids.insert(rule_id);
             rules_by_rid.push(rule);
             tids_by_rid.push(rule_token_ids);
             continue;
@@ -449,8 +446,6 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         }
 
         if is_approx_matchable && !is_weak {
-            approx_matchable_rids.insert(rule_id);
-
             let mut postings: HashMap<TokenId, Vec<usize>> = HashMap::new();
             for (pos, token) in known_rule_tokens.iter().enumerate() {
                 if token.kind == TokenKind::Legalese {
@@ -476,7 +471,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         }
 
         // Build inverted index: map high-value tokens to rules containing them
-        if approx_matchable_rids.contains(&rule_id) {
+        if is_approx_matchable && !is_weak {
             for tid in tids_set_high.iter() {
                 rids_by_high_tid
                     .entry(TokenId::new(tid))
@@ -552,8 +547,6 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         msets_by_rid,
         high_sets_by_rid,
         high_postings_by_rid,
-        false_positive_rids,
-        approx_matchable_rids,
         licenses_by_key,
         rid_by_spdx_key,
         unknown_spdx_rid,

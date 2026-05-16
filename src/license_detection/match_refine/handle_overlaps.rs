@@ -114,10 +114,6 @@ pub fn filter_contained_matches(
     (matches, discarded)
 }
 
-fn is_false_positive(m: &LicenseMatch, index: &LicenseIndex) -> bool {
-    index.false_positive_rids.contains(&m.rid)
-}
-
 fn is_strong_exact_match(match_item: &LicenseMatch) -> bool {
     match_item.matcher == MatcherKind::Aho && match_item.coverage() == 100.0
 }
@@ -187,7 +183,7 @@ pub fn filter_overlapping_matches(
             }
 
             let both_fp =
-                is_false_positive(&matches[i], index) && is_false_positive(&matches[j], index);
+                index.is_false_positive(matches[i].rid) && index.is_false_positive(matches[j].rid);
             if both_fp {
                 j += 1;
                 continue;
@@ -453,10 +449,61 @@ pub fn restore_non_overlapping(
 mod tests {
     use super::*;
     use crate::license_detection::models::MatchCoordinates;
+    use crate::license_detection::models::Rule;
     use crate::license_detection::models::RuleId;
     use crate::license_detection::models::position_span::PositionSpan;
     use crate::models::LineNumber;
     use crate::models::MatchScore;
+    use std::collections::HashMap;
+
+    fn make_rule(is_false_positive: bool) -> Rule {
+        Rule {
+            identifier: String::new(),
+            license_expression: String::new(),
+            text: String::new(),
+            tokens: Vec::new(),
+            rule_kind: crate::license_detection::models::RuleKind::Text,
+            is_false_positive,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            required_phrase_spans: Vec::new(),
+            stopwords_by_pos: HashMap::new(),
+            referenced_filenames: None,
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 0,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 0,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: Vec::new(),
+        }
+    }
+
+    fn insert_fp_rule(index: &mut LicenseIndex, rid: usize) {
+        while index.rules_by_rid.len() <= rid {
+            index.rules_by_rid.push(make_rule(false));
+            index.tids_by_rid.push(Vec::new());
+        }
+        index.rules_by_rid[rid].is_false_positive = true;
+    }
 
     fn parse_rule_id(rule_identifier: &str) -> Option<usize> {
         let trimmed = rule_identifier.trim();
@@ -964,8 +1011,8 @@ mod tests {
     #[test]
     fn test_filter_overlapping_matches_false_positive_skip() {
         let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(RuleId::new(1));
-        let _ = index.false_positive_rids.insert(RuleId::new(2));
+        insert_fp_rule(&mut index, 1);
+        insert_fp_rule(&mut index, 2);
 
         let mut m1 = create_test_match("#1", 1, 20, MatchScore::from_percentage(0.9), 90.0, 100);
         m1.matched_length = 100;

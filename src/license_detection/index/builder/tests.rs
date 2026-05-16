@@ -134,8 +134,6 @@ mod test_cases {
         assert!(index.rules_by_rid.is_empty());
         assert!(index.tids_by_rid.is_empty());
         assert!(index.rid_by_hash.is_empty());
-        assert!(index.false_positive_rids.is_empty());
-        assert!(index.approx_matchable_rids.is_empty());
     }
 
     #[test]
@@ -157,7 +155,7 @@ mod test_cases {
                 .values()
                 .any(|&stored_rid| stored_rid == rid)
         );
-        assert!(!index.false_positive_rids.contains(&rid));
+        assert!(!index.rule(rid).is_some_and(|r| r.is_false_positive));
         assert!(index.licenses_by_key.contains_key("mit"));
     }
 
@@ -171,7 +169,7 @@ mod test_cases {
         assert_eq!(index.rules_by_rid.len(), 1);
 
         let rid = find_rid_by_identifier(&index, "fp.RULE").expect("rule should exist");
-        assert!(index.false_positive_rids.contains(&rid));
+        assert!(index.rule(rid).is_some_and(|r| r.is_false_positive));
         assert!(index.rid_by_hash.is_empty());
     }
 
@@ -228,8 +226,8 @@ mod test_cases {
 
         let rid = find_rid_by_identifier(&index, "hp.RULE").expect("rule should exist");
 
-        if !index.approx_matchable_rids.is_empty() {
-            assert!(index.high_postings_by_rid.contains_key(&rid));
+        if index.high_postings_by_rid.contains_key(&rid) {
+            assert!(!index.high_postings_by_rid[&rid].is_empty());
         }
     }
 
@@ -351,11 +349,10 @@ mod test_cases {
 
         assert_eq!(index.rules_by_rid.len(), 3);
         assert_eq!(index.tids_by_rid.len(), 3);
-        assert_eq!(index.false_positive_rids.len(), 1);
         assert_eq!(index.rid_by_hash.len(), 2);
 
         let gpl_rid = find_rid_by_identifier(&index, "gpl.RULE").expect("gpl rule should exist");
-        assert!(index.false_positive_rids.contains(&gpl_rid));
+        assert!(index.rule(gpl_rid).is_some_and(|r| r.is_false_positive));
     }
 
     #[test]
@@ -439,8 +436,8 @@ mod test_cases {
             );
         }
 
-        if !index.approx_matchable_rids.is_empty() {
-            for &rid in &index.approx_matchable_rids {
+        if !index.high_postings_by_rid.is_empty() {
+            for &rid in index.high_postings_by_rid.keys() {
                 let rule = index.rule(rid).expect("test rid must be valid");
                 assert!(!rule.is_false_positive);
             }
@@ -551,8 +548,8 @@ mod test_cases {
             "False positive should not participate in exact matching"
         );
         assert!(
-            index.false_positive_rids.contains(&fp_rid),
-            "False positive should be in false_positive_rids"
+            index.rule(fp_rid).is_some_and(|r| r.is_false_positive),
+            "False positive should be marked on rule"
         );
     }
 
@@ -568,7 +565,7 @@ mod test_cases {
 
         let rid = find_rid_by_identifier(&index, "high_postings.RULE").expect("rule should exist");
 
-        if index.approx_matchable_rids.contains(&rid) {
+        if index.high_postings_by_rid.contains_key(&rid) {
             assert!(
                 index.high_postings_by_rid.contains_key(&rid),
                 "Should have high postings for approx-matchable rule with legalese"
@@ -589,7 +586,6 @@ mod test_cases {
         let stored_rule = index.rule(rid).expect("test rid must be valid");
 
         assert!(stored_rule.is_tiny);
-        assert!(index.approx_matchable_rids.contains(&rid));
         assert!(index.high_postings_by_rid.contains_key(&rid));
         assert!(!compute_is_approx_matchable(stored_rule));
     }
@@ -608,7 +604,6 @@ mod test_cases {
         let stored_rule = index.rule(rid).expect("test rid must be valid");
 
         assert!(stored_rule.is_small);
-        assert!(index.approx_matchable_rids.contains(&rid));
         assert!(index.high_postings_by_rid.contains_key(&rid));
         assert!(!compute_is_approx_matchable(stored_rule));
     }
@@ -676,7 +671,7 @@ SOFTWARE."#;
                     .values()
                     .any(|&stored_rid| stored_rid == rid)
             );
-            assert!(!index.false_positive_rids.contains(&rid));
+            assert!(!index.is_false_positive(rid));
         }
 
         if let Some(rid) = mit_custom_rid {
@@ -686,7 +681,7 @@ SOFTWARE."#;
                     .values()
                     .any(|&stored_rid| stored_rid == rid)
             );
-            assert!(!index.false_positive_rids.contains(&rid));
+            assert!(!index.is_false_positive(rid));
         }
     }
 
@@ -788,10 +783,6 @@ SOFTWARE."#;
         let rid = find_rid_by_identifier(&index, "weak.RULE").expect("rule should exist");
 
         assert!(
-            !index.approx_matchable_rids.contains(&rid),
-            "Weak rule (no legalese tokens) should not be approx_matchable"
-        );
-        assert!(
             !index.high_postings_by_rid.contains_key(&rid),
             "Weak rule should not have high postings"
         );
@@ -809,8 +800,8 @@ SOFTWARE."#;
         let rid = find_rid_by_identifier(&index, "continuous.RULE").expect("rule should exist");
 
         assert!(
-            !index.approx_matchable_rids.contains(&rid),
-            "Continuous rule should not be approx_matchable"
+            !index.high_postings_by_rid.contains_key(&rid),
+            "Continuous rule should not have high postings"
         );
     }
 
@@ -828,8 +819,8 @@ SOFTWARE."#;
         let rid = find_rid_by_identifier(&index, "required.RULE").expect("rule should exist");
 
         assert!(
-            !index.approx_matchable_rids.contains(&rid),
-            "Required phrase should not be approx_matchable"
+            !index.high_postings_by_rid.contains_key(&rid),
+            "Required phrase should not have high postings"
         );
     }
 
@@ -994,11 +985,6 @@ SOFTWARE."#;
             );
 
             // Check if rule is approx_matchable
-            eprintln!(
-                "\nRule is approx_matchable: {}",
-                index.approx_matchable_rids.contains(&rid)
-            );
-
             // Check the threshold values
             eprintln!("\nRule thresholds:");
             eprintln!(

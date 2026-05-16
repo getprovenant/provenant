@@ -357,11 +357,11 @@ fn test_engine_index_populated() {
     );
 
     assert!(
-        !index.approx_matchable_rids.is_empty(),
-        "Should have approx-matchable rules"
+        !index.rid_by_hash.is_empty(),
+        "Should have rules with computed hashes"
     );
 
-    let has_false_positives = !index.false_positive_rids.is_empty();
+    let has_false_positives = index.rules_by_rid.iter().any(|r| r.is_false_positive);
     assert!(has_false_positives, "Should have false positive rules");
 
     let mut rules_with_tokens = 0;
@@ -684,12 +684,10 @@ fn test_engine_index_high_postings() {
     let engine = get_engine();
     let index = engine.index();
 
-    if !index.approx_matchable_rids.is_empty() {
-        let some_approx_rid = index.approx_matchable_rids.iter().next().unwrap();
-        if index.high_postings_by_rid.contains_key(some_approx_rid) {
-            let postings = &index.high_postings_by_rid[some_approx_rid];
-            assert!(!postings.is_empty(), "High postings should have entries");
-        }
+    if !index.high_postings_by_rid.is_empty() {
+        let some_rid = index.high_postings_by_rid.keys().next().unwrap();
+        let postings = &index.high_postings_by_rid[some_rid];
+        assert!(!postings.is_empty(), "High postings should have entries");
     }
 }
 

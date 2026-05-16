@@ -240,8 +240,6 @@ mod tests {
             msets_by_rid: Default::default(),
             high_sets_by_rid: Default::default(),
             high_postings_by_rid: Default::default(),
-            false_positive_rids: Default::default(),
-            approx_matchable_rids: Default::default(),
             licenses_by_key: Default::default(),
             rid_by_spdx_key: Default::default(),
             unknown_spdx_rid: None,

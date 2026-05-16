@@ -388,29 +388,6 @@ pub(crate) fn filter_matches_to_spurious_single_token(
         .collect()
 }
 
-/// Filter matches to false positive rules.
-///
-/// Removes matches whose rule ID is in the index's false_positive_rids set.
-///
-/// Based on Python: `filter_false_positive_matches()` (lines 1950-1970)
-pub(crate) fn filter_false_positive_matches(
-    index: &LicenseIndex,
-    matches: &[LicenseMatch],
-) -> Vec<LicenseMatch> {
-    let mut filtered = Vec::new();
-
-    for m in matches {
-        let rid = m.rid;
-        if index.false_positive_rids.contains(&rid) {
-            continue;
-        }
-
-        filtered.push(m.clone());
-    }
-
-    filtered
-}
-
 /// Check if a matched text is a valid short match.
 ///
 /// A short match is valid if:
@@ -719,60 +696,6 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_false_positive_matches_with_false_positive() {
-        let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(RuleId::new(42));
-
-        let matches = vec![
-            create_test_match("#42", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),
-            create_test_match("#1", 15, 25, MatchScore::from_percentage(0.85), 85.0, 100),
-        ];
-
-        let filtered = filter_false_positive_matches(&index, &matches);
-
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].rule_identifier, "#1");
-    }
-
-    #[test]
-    fn test_filter_false_positive_matches_no_false_positive() {
-        let index = LicenseIndex::with_legalese_count(10);
-
-        let matches = vec![
-            create_test_match("#1", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),
-            create_test_match("#2", 15, 25, MatchScore::from_percentage(0.85), 85.0, 100),
-        ];
-
-        let filtered = filter_false_positive_matches(&index, &matches);
-
-        assert_eq!(filtered.len(), 2);
-    }
-
-    #[test]
-    fn test_filter_false_positive_matches_all_false_positive() {
-        let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(RuleId::new(42));
-        let _ = index.false_positive_rids.insert(RuleId::new(43));
-
-        let matches = vec![
-            create_test_match("#42", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),
-            create_test_match("#43", 15, 25, MatchScore::from_percentage(0.85), 85.0, 100),
-        ];
-
-        let filtered = filter_false_positive_matches(&index, &matches);
-
-        assert_eq!(filtered.len(), 0);
-    }
-
-    #[test]
-    fn test_filter_false_positive_matches_empty() {
-        let index = LicenseIndex::with_legalese_count(10);
-        let matches: Vec<LicenseMatch> = vec![];
-        let filtered = filter_false_positive_matches(&index, &matches);
-        assert_eq!(filtered.len(), 0);
-    }
-
-    #[test]
     fn test_filter_spurious_matches_keeps_non_seq_matchers() {
         let index = LicenseIndex::with_legalese_count(10);
         let query = Query::from_extracted_text("test text", &index, false).unwrap();
@@ -872,31 +795,6 @@ mod tests {
         let matches: Vec<LicenseMatch> = vec![];
         let filtered = filter_spurious_matches(&matches, &query);
         assert_eq!(filtered.len(), 0);
-    }
-
-    #[test]
-    fn test_filter_false_positive_matches_mixed_identifiers() {
-        let mut index = LicenseIndex::with_legalese_count(10);
-        let _ = index.false_positive_rids.insert(RuleId::new(42));
-
-        let matches = vec![
-            create_test_match("#42", 1, 10, MatchScore::from_percentage(0.9), 90.0, 100),
-            create_test_match(
-                "mit.LICENSE",
-                15,
-                25,
-                MatchScore::from_percentage(0.85),
-                85.0,
-                100,
-            ),
-            create_test_match("#1", 30, 40, MatchScore::from_percentage(0.8), 80.0, 100),
-        ];
-
-        let filtered = filter_false_positive_matches(&index, &matches);
-
-        assert_eq!(filtered.len(), 2);
-        assert!(filtered.iter().any(|m| m.rule_identifier == "mit.LICENSE"));
-        assert!(filtered.iter().any(|m| m.rule_identifier == "#1"));
     }
 
     #[test]

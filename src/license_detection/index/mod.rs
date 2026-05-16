@@ -42,7 +42,6 @@ pub struct IndexedRuleMetadata {
 /// - **Automaton matching**: `rules_automaton` and `unknown_automaton` for pattern matching
 /// - **Candidate selection**: `sets_by_rid` and `msets_by_rid` for set-based ranking
 /// - **Sequence matching**: `high_postings_by_rid` for high-value token position tracking
-/// - **Rule classification**: `false_positive_rids`, `approx_matchable_rids`
 #[derive(Debug, Clone, Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct LicenseIndex {
     /// Token dictionary mapping token strings to integer IDs.
@@ -141,27 +140,6 @@ pub struct LicenseIndex {
     /// In Python: `postings = {tid: array('h', [positions, ...])}`
     pub high_postings_by_rid: HashMap<RuleId, HashMap<TokenId, Vec<usize>>>,
 
-    /// Set of rule IDs for false positive rules.
-    ///
-    /// False positive rules are used for exact matching and post-matching
-    /// filtering to subtract spurious matches.
-    ///
-    /// Corresponds to Python: `self.false_positive_rids = set()` (line 230)
-    pub false_positive_rids: HashSet<RuleId>,
-
-    /// Set of rule IDs that can be matched approximately.
-    ///
-    /// Only rules marked as approx-matchable participate in sequence matching.
-    /// Other rules can only be matched exactly using the automaton.
-    ///
-    /// Note: This field is kept for Python parity documentation and test usage.
-    /// The inverted index (`rids_by_high_tid`) now handles candidate filtering
-    /// more efficiently, making direct iteration over this set unnecessary.
-    ///
-    /// Corresponds to Python: `self.approx_matchable_rids = set()` (line 234)
-    #[allow(dead_code)]
-    pub approx_matchable_rids: HashSet<RuleId>,
-
     /// Mapping from ScanCode license key to License object.
     ///
     /// Provides access to license metadata for building SPDX mappings
@@ -195,7 +173,7 @@ pub struct LicenseIndex {
     /// rules for every file, making license detection extremely slow.
     ///
     /// Only contains entries for tokens with ID < len_legalese (high-value tokens).
-    /// Rules not in approx_matchable_rids are excluded from this index.
+    /// Only approx-matchable rules are included in this index.
     pub rids_by_high_tid: HashMap<TokenId, HashSet<RuleId>>,
 
     /// SPDX license list version used to build this index.
@@ -219,6 +197,10 @@ impl LicenseIndex {
             return None;
         }
         self.tids_by_rid.get(id.raw()).map(|v| v.as_slice())
+    }
+
+    pub fn is_false_positive(&self, id: RuleId) -> bool {
+        self.rule(id).is_some_and(|r| r.is_false_positive)
     }
 }
 
@@ -248,8 +230,6 @@ impl LicenseIndex {
             msets_by_rid: HashMap::new(),
             high_sets_by_rid: HashMap::new(),
             high_postings_by_rid: HashMap::new(),
-            false_positive_rids: HashSet::new(),
-            approx_matchable_rids: HashSet::new(),
             licenses_by_key: HashMap::new(),
             rid_by_spdx_key: HashMap::new(),
             unknown_spdx_rid: None,
@@ -328,8 +308,6 @@ mod tests {
         assert!(index.sets_by_rid.is_empty());
         assert!(index.msets_by_rid.is_empty());
         assert!(index.high_postings_by_rid.is_empty());
-        assert!(index.false_positive_rids.is_empty());
-        assert!(index.approx_matchable_rids.is_empty());
         assert!(index.licenses_by_key.is_empty());
     }
 
