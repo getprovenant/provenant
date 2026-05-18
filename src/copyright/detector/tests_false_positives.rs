@@ -509,3 +509,15 @@ fn test_bash_array_expansion_does_not_produce_copyright() {
     assert!(holders.is_empty(), "holders: {holders:?}");
     assert!(authors.is_empty(), "authors: {authors:?}");
 }
+
+#[test]
+fn test_author_of_work_does_not_produce_author() {
+    let text = "We've added the ability to use rclone to store backup data on all\nbackends that it supports. This was done in collaboration with\nNick, the author of rclone.\n";
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(
+        !authors.iter().any(|a| a.author == "rclone"),
+        "authors should not contain 'rclone': {authors:?}"
+    );
+}
