@@ -160,9 +160,9 @@ fn build_pattern_list() -> Vec<(String, PosTag)> {
     add(r"^\(c\),?$", PosTag::Copy);
 
     // Copr.
-    add(r"^COPR\.?$", PosTag::Copy);
-    add(r"^copr\.?$", PosTag::Copy);
-    add(r"^Copr\.?$", PosTag::Copy);
+    add(r"^COPR\.$", PosTag::Copy);
+    add(r"^copr\.$", PosTag::Copy);
+    add(r"^Copr\.$", PosTag::Copy);
 
     // copyright in markup, until we strip markup: apache'>Copyright
     add(r"[A-Za-z0-9]+['\x22>]+[Cc]opyright", PosTag::Copy);

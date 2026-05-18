@@ -333,7 +333,7 @@ fn assemble_one_per_package_data(
             let deps: Vec<TopLevelDependency> = pkg_data
                 .dependencies
                 .iter()
-                .filter(|dep| dep.purl.is_some())
+                .filter(|dep| dep.purl.is_some() || dep.extracted_requirement.is_some())
                 .map(|dep| {
                     TopLevelDependency::from_dependency(
                         dep,

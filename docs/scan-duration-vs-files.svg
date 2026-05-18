@@ -383,6 +383,9 @@ ScanCode: 110.49s</title></rect>
     <rect x="584.90" y="363.00" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/dejacode @ 4938cd4
 Files: 1278
 ScanCode: 272.67s</title></rect>
+    <rect x="585.23" y="404.76" width="8" height="8" fill="#d97706" rx="1.5"><title>restic/restic @ 29446b0
+Files: 1284
+ScanCode: 112.67s</title></rect>
     <rect x="594.45" y="353.48" width="8" height="8" fill="#d97706" rx="1.5"><title>chriskohlhoff/asio @ bd500f0
 Files: 1468
 ScanCode: 333.52s</title></rect>
@@ -979,6 +982,9 @@ Provenant: 12.05s</title></circle>
     <circle cx="588.90" cy="480.90" r="4.5" fill="#2563eb"><title>aboutcode-org/dejacode @ 4938cd4
 Files: 1278
 Provenant: 24.48s</title></circle>
+    <circle cx="589.23" cy="509.69" r="4.5" fill="#2563eb"><title>restic/restic @ 29446b0
+Files: 1284
+Provenant: 13.31s</title></circle>
     <circle cx="598.45" cy="492.95" r="4.5" fill="#2563eb"><title>chriskohlhoff/asio @ bd500f0
 Files: 1468
 Provenant: 18.97s</title></circle>

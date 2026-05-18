@@ -433,8 +433,14 @@ fn extract_dep_name(dep: &str) -> String {
     truncate_field(parts[0].to_string())
 }
 
-/// Builds a package URL for RPM packages
+/// Builds a package URL for RPM packages.
+/// Returns `None` for file-path dependencies (e.g. `/bin/bash`) since they
+/// are not valid purl names and would produce broken `%2F`-encoded results.
 fn build_rpm_purl(name: &str, version: Option<&str>) -> Option<String> {
+    if name.starts_with('/') {
+        return None;
+    }
+
     let mut purl = PackageUrl::new(PACKAGE_TYPE.as_str(), name).ok()?;
 
     if let Some(ver) = version {

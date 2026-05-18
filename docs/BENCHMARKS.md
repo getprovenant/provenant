@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 198 of 198 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 199 of 199 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -797,6 +797,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `78.51s`; ScanCode `2493.21s`
 - Broader Meson and package-adjacent dependency extraction (`22` vs `21` packages, `260` vs `176` dependencies) from the root `.gitmodules`, `python/tests/minreqs.txt`, and many committed `subprojects/**/meson.build` manifests, with the real `pkg:autotools/qemu` root identity instead of ScanCode's generic input placeholder
+
+##### [restic/restic @ 29446b0](https://github.com/restic/restic/tree/29446b0fd853b7765f652584ff90e817890ee389) — **8.47× faster**
+
+- Files: 1,284
+- Run context: 2026-05-18 · restic-116171 · Linux 6.17 · Intel i5-12400 · 46 GB · x86_64 · 4 proc
+- Timing: Provenant `13.31s`; ScanCode `112.67s`
+- Broader Go module and RPM spec dependency extraction (`2` vs `1` packages, `352` vs `348` dependencies) from `go.mod`/`go.sum` plus `contrib/restic.spec`, with correct `rpm_specfile` datasource spelling and valid RPM purl construction where ScanCode emits a typo (`rpm_spefile`) and null purl, cleaner `BSD-2-Clause` detection without ScanCode's low-relevance `unknown-license-reference` false positive on README.md, extra Docker package visibility on `docker/Dockerfile`, and correct rejection of `sftp.X` Go-identifier URLs, `dnf copr` copyright noise, and bash `${var[@]}` array-expansion copyright artifacts
 
 ##### [rpm-software-management/dnf @ e47634f](https://github.com/rpm-software-management/dnf/tree/e47634fbe3565d0580e89ec21adb7c1b308642ce) — **14.16× faster**
 

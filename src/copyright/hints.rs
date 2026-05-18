@@ -29,7 +29,7 @@ pub const HINT_MARKERS: &[&str] = &[
     "opyr",
     // have copyleft
     "opyl",
-    "copr",
+    "copr.",
     "reserv",
     "auth",
     "contrib",
@@ -204,6 +204,11 @@ mod tests {
     #[test]
     fn test_hint_copr() {
         assert!(has_copyright_hint("Copr. 2024 Foo"));
+    }
+
+    #[test]
+    fn test_hint_copr_without_period_is_not_hint() {
+        assert!(!has_copyright_hint("dnf copr remove user/project"));
     }
 
     #[test]

@@ -35,7 +35,8 @@ mod tests {
                 && dep.for_package_uid.as_deref() == Some(package.package_uid.as_str())
         }));
         assert!(result.dependencies.iter().any(|dep| {
-            dep.purl.as_deref() == Some("pkg:rpm/%2Fsbin%2Finstall-info")
+            dep.purl.is_none()
+                && dep.extracted_requirement.as_deref() == Some("/sbin/install-info")
                 && dep.scope.as_deref() == Some("post")
                 && dep.for_package_uid.as_deref() == Some(package.package_uid.as_str())
         }));
