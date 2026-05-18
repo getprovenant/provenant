@@ -2522,6 +2522,9 @@ pub fn extract_from_spans(
             let start = i;
             let start_line = token.start_line;
             i += 1;
+            if i < all_leaves.len() && all_leaves[i].tag == PosTag::Of {
+                continue;
+            }
             while i < all_leaves.len() && detector::token_utils::is_author_span_token(all_leaves[i])
             {
                 let t = all_leaves[i];
