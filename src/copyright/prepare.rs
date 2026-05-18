@@ -128,6 +128,9 @@ static ANGLE_BRACKET_SINGLE_YEAR_RE: LazyLock<Regex> =
 /// Regex to strip CSS measurement artifacts like "0pt" that leak through HTML demarkup.
 static CSS_MEASUREMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d+pt\b").unwrap());
 
+static BASH_ARRAY_EXPANSION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\$\{[a-zA-Z_][a-zA-Z0-9_]*\[[^\]]*\]\}").unwrap());
+
 static JOIN_REGISTERED_MARK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?P<head>[A-Za-z0-9])\s+\(r\)").unwrap());
 
@@ -279,6 +282,10 @@ pub fn prepare_text_line(line: &str) -> String {
 
     // Remove printf format codes like ` %s ` or ` #d `
     s = PRINTF_FORMAT_RE.replace_all(&s, " ").into_owned();
+
+    // Replace bash array expansions like ${commands[@]} with a space
+    // before punctuation stripping exposes (c) patterns or @ hints.
+    s = BASH_ARRAY_EXPANSION_RE.replace_all(&s, " ").into_owned();
 
     // Remove less common comment markers (rem, @rem, dnl)
     s = WEIRD_COMMENT_RE.replace_all(&s, " ").into_owned();
@@ -1343,6 +1350,19 @@ mod tests {
     fn test_strip_o_template_element_content() {
         let result = prepare_text_line("<o:Template>techdoc.dot</o:Template>");
         assert!(!result.to_ascii_lowercase().contains("techdoc.dot"));
+    }
+
+    #[test]
+    fn test_prepare_strips_bash_array_expansion() {
+        let result = prepare_text_line("elif __restic_contains_word '${commands[@]}'; then");
+        assert!(
+            !result.contains("${commands[@]}"),
+            "bash array expansion should be stripped: {result}"
+        );
+        assert!(
+            !result.contains("@"),
+            "no @ should remain from array expansion: {result}"
+        );
     }
 }
 

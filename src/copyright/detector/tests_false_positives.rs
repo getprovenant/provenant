@@ -481,3 +481,31 @@ fn test_meta_sdk_license_false_positive_detector_drops_legal_prose_fragments() {
         );
     }
 }
+
+#[test]
+fn test_dnf_copr_command_does_not_produce_copyright() {
+    let text = concat!(
+        "If you used restic from copr previously, remove the copr repo as follows:\n",
+        "   $ dnf copr remove copart/restic\n",
+        "For RHEL7/CentOS there is a copr repository available:\n",
+        "    $ yum copr enable copart/restic\n",
+    );
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_bash_array_expansion_does_not_produce_copyright() {
+    let text = concat!(
+        "if __restic_contains_word '${words[c]}' '${two_word_flags[@]}'; then\n",
+        "elif __restic_contains_word '${words[c]}' '${must_have_one_noun[@]}'; then\n",
+        "elif __restic_contains_word '${words[c]}' '${commands[@]}'; then\n",
+        "elif __restic_contains_word '${words[c]}' '${command_aliases[@]}'; then\n",
+    );
+    let (copyrights, holders, authors) = detect_copyrights_from_text(text);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}

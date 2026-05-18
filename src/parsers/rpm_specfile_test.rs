@@ -342,3 +342,47 @@ Macro package
         .unwrap();
     assert_eq!(provides[0].as_str(), Some("macro-pkg-libs = 2.4"));
 }
+
+#[test]
+fn test_file_path_dependency_has_no_purl() {
+    let temp_dir = TempDir::new().unwrap();
+    let spec_path = temp_dir.path().join("filepath-dep.spec");
+
+    let spec = r#"
+Name: filepath-dep-pkg
+Version: 1.0
+Release: 1
+Summary: Package with file-path requires
+License: MIT
+Requires: /bin/bash
+Requires(post): /sbin/ldconfig
+BuildRequires: /usr/bin/make
+
+%description
+Package with file-path requires
+"#;
+
+    fs::write(&spec_path, spec).unwrap();
+    let pkg = RpmSpecfileParser::extract_first_package(&spec_path);
+
+    let runtime_file_path = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.extracted_requirement.as_deref() == Some("/bin/bash"))
+        .unwrap();
+    assert!(runtime_file_path.purl.is_none());
+
+    let post_file_path = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.extracted_requirement.as_deref() == Some("/sbin/ldconfig"))
+        .unwrap();
+    assert!(post_file_path.purl.is_none());
+
+    let build_file_path = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.extracted_requirement.as_deref() == Some("/usr/bin/make"))
+        .unwrap();
+    assert!(build_file_path.purl.is_none());
+}

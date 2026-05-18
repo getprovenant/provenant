@@ -334,6 +334,30 @@ mod tests {
     }
 
     #[test]
+    fn test_find_urls_ignores_sftp_go_identifiers() {
+        let text = "Use sftp.Client to connect via sftp.Config with sftp.c.Stat()";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+        assert!(urls.is_empty(), "urls: {urls:#?}");
+    }
+
+    #[test]
+    fn test_find_urls_keeps_ftp_hostname_after_punctuation() {
+        let text = "Download: ftp.gnu.org/gnu/tar/ and also (ftp.mozilla.org/pub/)";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        let values: Vec<_> = urls.into_iter().map(|url| url.url).collect();
+        assert_eq!(
+            values,
+            vec![
+                "http://ftp.gnu.org/gnu/tar/".to_string(),
+                "http://ftp.mozilla.org/pub/".to_string(),
+            ]
+        );
+    }
+
+    #[test]
     fn test_find_urls_ignores_file_like_fake_hosts() {
         let text = "http://ftp.sftp/ http://www.classes.hint/ http://www.conf.default/ https://rust-lang.org/real";
         let config = DetectionConfig::default();

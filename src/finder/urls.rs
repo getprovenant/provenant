@@ -159,6 +159,13 @@ pub fn find_urls(text: &str, config: &DetectionConfig) -> Vec<UrlDetection> {
 
         for segment in normalized_line.split("\\n") {
             for matched in URLS_REGEX.find_iter(segment) {
+                if matched.start() > 0 {
+                    let prev_byte = segment.as_bytes()[matched.start() - 1];
+                    if prev_byte.is_ascii_alphanumeric() {
+                        continue;
+                    }
+                }
+
                 let mut candidate = matched.as_str().to_string();
 
                 candidate = verbatim_crlf_url_cleaner(&candidate);

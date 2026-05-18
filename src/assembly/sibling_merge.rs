@@ -346,7 +346,7 @@ fn collect_pending_dependencies(
     pkg_data
         .dependencies
         .iter()
-        .filter(|dep| dep.purl.is_some())
+        .filter(|dep| dep.purl.is_some() || dep.extracted_requirement.is_some())
         .cloned()
         .map(|dependency| PendingDependency {
             dependency,

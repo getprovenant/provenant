@@ -17,7 +17,8 @@ fn test_copyright_markers() {
     assert_eq!(p.match_token("(c)"), PosTag::Copy);
     assert_eq!(p.match_token("(C)"), PosTag::Copy);
     assert_eq!(p.match_token("COPR."), PosTag::Copy);
-    assert_eq!(p.match_token("Copr"), PosTag::Copy);
+    assert_eq!(p.match_token("Copr."), PosTag::Copy);
+    assert_eq!(p.match_token("Copr"), PosTag::Nnp);
     assert_eq!(p.match_token("COPYRIGHT"), PosTag::Copy);
     assert_eq!(p.match_token("Copyrights"), PosTag::Copy);
     assert_eq!(p.match_token("copyrighted"), PosTag::Copy);
@@ -56,7 +57,8 @@ fn test_copyright_special_forms() {
     assert_eq!(p.match_token("copyright'>"), PosTag::Copy);
     assert_eq!(p.match_token("@Copyright"), PosTag::Copy);
     assert_eq!(p.match_token("(C),"), PosTag::Copy);
-    assert_eq!(p.match_token("copr"), PosTag::Copy);
+    assert_eq!(p.match_token("copr."), PosTag::Copy);
+    assert_eq!(p.match_token("copr"), PosTag::Nn);
     assert_eq!(p.match_token("AssemblyCopyright"), PosTag::Copy);
 }
 
