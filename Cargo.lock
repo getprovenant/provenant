@@ -223,6 +223,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "atoi_simd"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3cdb3708a128e559a30fb830e8a77a5022ee6902806925c216658652b452a44"
+dependencies = [
+ "debug_unsafe",
+ "rustversion",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -882,6 +892,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "debug_unsafe"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7eed2c4702fa172d1ce21078faa7c5203e69f5394d48cc436d25928394a867a2"
+
+[[package]]
 name = "deflate64"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1229,6 +1245,12 @@ name = "fallible-streaming-iterator"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
+
+[[package]]
+name = "fast-float2"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8eb564c5c7423d25c886fb561d1e4ee69f72354d16918afa32c08811f6b6a55"
 
 [[package]]
 name = "fastrand"
@@ -2757,6 +2779,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "office_oxide"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "866a8fa5e1a756f8cc9f9f614031ad7e33adc7f6972eab74a35b0c799fe08da5"
+dependencies = [
+ "atoi_simd",
+ "encoding_rs",
+ "fast-float2",
+ "libc",
+ "log",
+ "quick-xml 0.40.0",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "zip 8.6.0",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2893,9 +2933,9 @@ dependencies = [
 
 [[package]]
 name = "pdf_oxide"
-version = "0.3.47"
+version = "0.3.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04717572366df7c9fa002f3c376e58c4d4071d47cf9339b95c0054adb8a0bbb7"
+checksum = "c512f3d7e8feac18e94ee08995d5c12d0fb86375ff4b03f931a11c808276eff4"
 dependencies = [
  "aes",
  "base64",
@@ -2917,6 +2957,7 @@ dependencies = [
  "md-5",
  "memchr",
  "nom",
+ "office_oxide",
  "phf 0.13.1",
  "qcms",
  "quick-xml 0.39.3",
@@ -3490,6 +3531,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b7315c86b26aaef0321fba33c9dcc160da659c6a9d278f0f6a5656d6561c03b"
 dependencies = [
  "memchr",
+ "serde",
 ]
 
 [[package]]
