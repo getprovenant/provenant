@@ -77,6 +77,17 @@ Example:
 ./scripts/check_release_version_sync.sh
 ```
 
+## `check_release_tag_sync.sh`
+
+Verify that a release tag matches the root crate version in `Cargo.toml`.
+
+Examples:
+
+```bash
+./scripts/check_release_tag_sync.sh v0.1.1
+GITHUB_REF_NAME=v0.1.1 ./scripts/check_release_tag_sync.sh
+```
+
 ## `check_scancode_output_format_sync.sh`
 
 Verify that Provenant's `OUTPUT_FORMAT_VERSION` stays aligned with the pinned
