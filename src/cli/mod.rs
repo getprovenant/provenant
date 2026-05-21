@@ -78,6 +78,8 @@ fn parse_processes(value: &str) -> Result<ProcessMode, String> {
 }
 
 const PDF_OXIDE_LOG_HELP: &str = "Troubleshooting PDF parser logs:\n  Provenant suppresses noisy pdf_oxide logs by default.\n  To inspect raw pdf_oxide logs for debugging, rerun with RUST_LOG=pdf_oxide=warn (or =error).";
+const CLI_ABOUT: &str = "Independent Rust scanner for ScanCode-compatible workflows. Not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc.";
+const CLI_LONG_ABOUT: &str = "Independent Rust scanner for ScanCode-compatible workflows.\n\nNot affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc.";
 
 fn parse_license_policy_arg(value: &str) -> Result<String, String> {
     let policy_path = Path::new(value);
@@ -130,8 +132,8 @@ fn parse_license_policy_arg(value: &str) -> Result<String, String> {
     version = crate::version::BUILD_VERSION,
     long_version = crate::version::build_long_version(),
     after_help = PDF_OXIDE_LOG_HELP,
-    about,
-    long_about = None,
+    about = CLI_ABOUT,
+    long_about = CLI_LONG_ABOUT,
     arg_required_else_help = true,
     subcommand_required = true
 )]
@@ -1390,6 +1392,14 @@ mod tests {
         assert!(help.contains("compare"));
         assert!(help.contains("show-attribution"));
         assert!(help.contains("export-license-dataset"));
+    }
+
+    #[test]
+    fn test_root_help_mentions_non_affiliation() {
+        let help = Cli::command().render_help().to_string();
+
+        assert!(help.contains("Not affiliated with, endorsed by, or sponsored by"));
+        assert!(help.contains("ScanCode Toolkit"));
     }
 
     #[test]
