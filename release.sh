@@ -111,6 +111,9 @@ run_release_step version "$RELEASE_TYPE"
 run_release_step replace
 run_release_step hook
 
+echo "🔎 Verifying release version sync..."
+./scripts/check_release_version_sync.sh
+
 if [ -n "$EXECUTE_FLAG" ]; then
     echo "📝 Creating DCO-signed release commit..."
     git add -u
@@ -123,9 +126,14 @@ if [ -n "$EXECUTE_FLAG" ]; then
     git commit -s -m "chore: release"
 fi
 
-echo "🚀 Running cargo-release publish, tag, and push steps..."
-run_release_step publish
+echo "🏷️  Running cargo-release tag and push steps..."
 run_release_step tag
 run_release_step push
 
-echo "✅ Release completed successfully!"
+if [ -n "$EXECUTE_FLAG" ]; then
+    echo "✅ Release prep completed successfully!"
+    echo "ℹ️  The pushed release tag now triggers GitHub Actions to publish provenant-cli to crates.io and create GitHub release assets."
+else
+    echo "✅ Dry-run release prep completed successfully!"
+    echo "ℹ️  In execute mode, the pushed release tag will trigger GitHub Actions to publish provenant-cli to crates.io and create GitHub release assets."
+fi

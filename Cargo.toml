@@ -53,8 +53,10 @@ pre-release-replacements = [
 pre-release-hook = ["cargo", "generate-lockfile"]
 # Tag message template
 tag-message = "Release v{{version}}"
-# Publish to crates.io automatically
-publish = true
+# Release tags must use the v-prefixed GitHub workflow contract.
+tag-name = "v{{version}}"
+# Crates.io publish is handled by the tag-triggered GitHub Actions workflow.
+publish = false
 
 [workspace]
 resolver = "3"

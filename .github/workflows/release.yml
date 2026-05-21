@@ -12,16 +12,21 @@ env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  license-index:
-    name: Verify Embedded License Index
+  verify-release:
+    name: Verify Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
         with:
+          fetch-depth: 0
           submodules: recursive
           lfs: false
 
@@ -34,7 +39,7 @@ jobs:
       - name: Set up Rust cache
         uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
         with:
-          key: embedded-license-index
+          key: release-verify
 
       - name: Verify embedded license index
         uses: ./.github/actions/verify-embedded-license-index
@@ -42,9 +47,26 @@ jobs:
       - name: Verify ScanCode output format version sync
         uses: ./.github/actions/verify-scancode-output-format-version
 
+      - name: Verify release version sync
+        run: ./scripts/check_release_version_sync.sh
+
+      - name: Verify release tag matches crate version
+        run: ./scripts/check_release_tag_sync.sh
+
+      - name: Verify tagged commit is reachable from origin/main
+        run: |
+          git fetch origin main --depth=1
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Check packaged crate size
+        run: ./scripts/check_crate_size.sh
+
+      - name: Verify crates.io package publish dry-run
+        run: cargo publish --locked --dry-run -p provenant-cli
+
   build:
     name: Build ${{ matrix.target }}
-    needs: license-index
+    needs: verify-release
     strategy:
       fail-fast: false
       matrix:
@@ -137,10 +159,51 @@ jobs:
             target/${{ matrix.target }}/release/${{ matrix.asset_name }}.${{ matrix.archive_format }}.sha256
           if-no-files-found: error
 
+  publish-crate:
+    name: Publish crate
+    needs: build
+    if: github.repository == 'mstykow/provenant'
+    runs-on: ubuntu-latest
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
+        with:
+          cache: false
+          rustflags: ""
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+        with:
+          key: publish-crate
+
+      - name: Authenticate to crates.io via trusted publishing
+        id: crates-io-auth
+        uses: rust-lang/crates-io-auth-action@1d2b8f3552d69b407d7790fa3ec7c39041305a61
+
+      - name: Publish provenant-cli to crates.io
+        run: cargo publish --locked -p provenant-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
+
   create-release:
     name: Create Release
-    needs: build
+    if: github.repository == 'mstykow/provenant'
+    needs:
+      - build
+      - publish-crate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8
