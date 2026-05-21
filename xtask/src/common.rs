@@ -658,7 +658,7 @@ mod tests {
         let script = temp.path().join("fake-provenant");
         fs::write(
             &script,
-            "#!/bin/sh\nif [ \"$1\" = \"-V\" ]; then\n  printf 'provenant 1.2.3\\n'\nelse\n  printf 'provenant 1.2.3\\nLicense detection uses data from ScanCode Toolkit.\\n'\nfi",
+            "#!/bin/sh\nif [ \"$1\" = \"-V\" ]; then\n  printf 'provenant 1.2.3\\n'\nelse\n  printf 'provenant 1.2.3\\nIndependent project; not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc. License detection uses data from ScanCode Toolkit (CC-BY-4.0). See NOTICE file or the show-attribution command.\\n'\nfi",
         )
         .unwrap();
         let mut perms = fs::metadata(&script).unwrap().permissions();
@@ -678,7 +678,7 @@ mod tests {
         let script = temp.path().join("fake-provenant");
         fs::write(
             &script,
-            "#!/bin/sh\nif [ \"$1\" = \"-V\" ]; then\n  printf 'provenant-cli 0.0.13\\n'\nelse\n  printf 'provenant-cli 0.0.13\\nLicense detection uses data from ScanCode Toolkit (CC-BY-4.0). See NOTICE or the show-attribution command.\\n'\nfi",
+            "#!/bin/sh\nif [ \"$1\" = \"-V\" ]; then\n  printf 'provenant-cli 0.0.13\\n'\nelse\n  printf 'provenant-cli 0.0.13\\nIndependent project; not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc. License detection uses data from ScanCode Toolkit (CC-BY-4.0). See NOTICE file or the show-attribution command.\\n'\nfi",
         )
         .unwrap();
         let mut perms = fs::metadata(&script).unwrap().permissions();
