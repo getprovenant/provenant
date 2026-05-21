@@ -5,15 +5,17 @@
 [![CI](https://github.com/mstykow/provenant/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/mstykow/provenant/actions/workflows/check.yml)
 [![License](https://img.shields.io/crates/l/provenant-cli.svg)](LICENSE)
 
-Provenant is a Rust-based code scanner for licenses, copyrights, package metadata, file metadata, and related provenance data. It is an independent Rust implementation for ScanCode-aligned workflows, focused on correctness, safe static parsing, and native execution.
+Provenant is a Rust-based code scanner for licenses, copyrights, package metadata, file metadata, and related provenance data. It is an independent Rust implementation for ScanCode-compatible workflows, focused on correctness, safe static parsing, and native execution.
+
+Provenant is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc.
 
 Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than ScanCode while also surfacing broader package and dependency metadata, reducing result noise through documented parser and detection fixes, and supporting practical workflows such as incremental rescans, selected-file scans, and long-lived HTTP service use.
 
 Provenant reimplements the scanning engine in Rust and builds on the upstream [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit) license and rule data.
 
 > [!IMPORTANT]
-> **Project status:** production-usable, at parity with ScanCode where intended, and steadily improving.
-> Provenant is at parity with ScanCode for ScanCode-compatible workflows and output formats, aside from intentional non-goals such as ScanCode's plugin system. Ongoing work focuses on improving Provenant's performance, quality, and coverage across supported workflows.
+> **Project status:** production-usable, compatibility-focused, and steadily improving.
+> Provenant targets parity for documented ScanCode-compatible workflows and output formats, aside from intentional non-goals such as ScanCode's plugin system. Ongoing work focuses on improving Provenant's performance, quality, and coverage across supported workflows.
 
 **Quick links:** [Quick Start](#quick-start) · [Choose a Workflow](#choose-a-workflow) · [Relationship to ScanCode](#relationship-to-scancode) · [Why Provenant?](#why-provenant) · [Installation](#installation) · [CLI Guide](docs/CLI_GUIDE.md) · [Benchmarks](docs/BENCHMARKS.md) · [Supported Formats](docs/SUPPORTED_FORMATS.md) · [Migrating from ScanCode Toolkit](docs/MIGRATING_FROM_SCANCODE.md) · [Architecture](docs/ARCHITECTURE.md)
 
@@ -38,12 +40,12 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 
 ## Relationship to ScanCode
 
-| Topic              | Provenant                                                                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Implementation     | Independent Rust implementation for ScanCode-aligned workflows                                                                                               |
-| Compatibility goal | Strong compatibility with ScanCode workflows and output semantics where practical                                                                            |
-| Upstream data      | Uses the upstream ScanCode license and rule data as a foundational dataset                                                                                   |
-| Migration path     | For many ScanCode users, Provenant is a practical drop-in replacement; see the [migration guide](docs/MIGRATING_FROM_SCANCODE.md) for documented differences |
+| Topic              | Provenant                                                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation     | Independent Rust implementation for ScanCode-compatible workflows                                                                                           |
+| Compatibility goal | Strong compatibility with ScanCode workflows and output semantics where practical                                                                           |
+| Upstream data      | Uses the upstream ScanCode license and rule data as a foundational dataset                                                                                  |
+| Migration path     | For many ScanCode users, Provenant offers a practical migration path; see the [migration guide](docs/MIGRATING_FROM_SCANCODE.md) for documented differences |
 
 ## Why Provenant?
 
@@ -175,7 +177,7 @@ Implemented output formats include:
 - **[How to Add a Parser](docs/HOW_TO_ADD_A_PARSER.md)** - Step-by-step guide for adding new parsers
 - **[Testing Strategy](docs/TESTING_STRATEGY.md)** - Testing approach and guidelines
 - **[ADRs](docs/adr/)** - Architectural decision records
-- **[Beyond-Parity Improvements](docs/improvements/)** - Features where Rust exceeds the Python original
+- **[Beyond-Parity Improvements](docs/improvements/)** - Features where Provenant intentionally goes beyond the Python reference
 
 ## Contributing
 
@@ -193,7 +195,7 @@ A substantial portion of Provenant's development has been contributed by people 
 
 ## Upstream Data and Attribution
 
-`Provenant` is an independent Rust implementation inspired by [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit). It relies on the upstream ScanCode Toolkit project by nexB Inc. and the AboutCode community for reference behavior, compatibility validation, and the license and rule data maintained by that ecosystem. Provenant code is licensed under Apache-2.0; included ScanCode-derived rule and license data remains subject to upstream attribution and CC-BY-4.0 terms where applicable. We are grateful to nexB Inc. and the AboutCode community for the reference implementation and the extensive license and copyright research behind it. See [`NOTICE`](NOTICE) for preserved upstream attribution notices applicable to materials included in this repository and to distributions that include ScanCode-derived data.
+`Provenant` is an independent Rust implementation for ScanCode-compatible workflows. It is not affiliated with, endorsed by, or sponsored by [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit), AboutCode, or nexB Inc. Provenant relies on the upstream ScanCode Toolkit project by nexB Inc. and the AboutCode community for reference behavior, compatibility validation, and the license and rule data maintained by that ecosystem. Provenant code is licensed under Apache-2.0; included ScanCode-derived rule and license data remains subject to upstream attribution and CC-BY-4.0 terms where applicable. We are grateful to nexB Inc. and the AboutCode community for the reference implementation and the extensive license and copyright research behind it. See [`NOTICE`](NOTICE) for preserved upstream attribution notices applicable to materials included in this repository and to distributions that include ScanCode-derived data.
 
 ## License
 
