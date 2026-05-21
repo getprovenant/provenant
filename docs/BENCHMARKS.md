@@ -4,7 +4,7 @@ This document records explicit [`compare-outputs`](../xtask/README.md#compare-ou
 
 These rows are not ad hoc performance snapshots. They are the public record of an iterative compare-review-fix-rerun loop on one concrete target at a time.
 
-Provenant and ScanCode are run on the same repository or artifact with the maintained shared profile, the resulting deltas are reviewed to find where ScanCode is actually better, Provenant is improved with generic fixes and focused regression coverage, and the comparison is rerun until Provenant reaches parity or a justified better result on that target. Each row is therefore a maintained verification checkpoint and a snapshot of one recorded `compare-outputs` run, not a blanket claim about every scan mode, target, or future revision.
+Provenant and ScanCode are run on the same repository or artifact with the maintained shared profile, the resulting deltas are reviewed to find where ScanCode currently performs better on that target, Provenant is improved with generic fixes and focused regression coverage, and the comparison is rerun until Provenant reaches parity or a justified better result on that target. Each row is therefore a maintained verification checkpoint and a snapshot of one recorded `compare-outputs` run, not a blanket claim about every scan mode, target, or future revision.
 
 ## Scan duration vs. file count
 
@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 199 of 199 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> On the recorded runs in this document, Provenant was faster on all 199 targets, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples

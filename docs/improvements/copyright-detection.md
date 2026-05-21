@@ -2,7 +2,7 @@
 
 ## Summary
 
-The copyright detection engine in Provenant is a **complete rewrite** of Python ScanCode's `cluecode/copyrights.py`, implementing the full four-stage pipeline (text preparation → candidate selection → lexing/parsing → refinement) with several intentional improvements:
+The copyright detection engine in Provenant is a **Rust reimplementation** of the engine in Python ScanCode's `cluecode/copyrights.py`, implementing the same four-stage pipeline (text preparation → candidate selection → lexing/parsing → refinement) with several intentional improvements:
 
 1. **🐛 Bug Fix**: Extended year range from 2039 to 2099
 2. **🐛 Bug Fix**: Fixed `_YEAR_SHORT` regex typo (`[0-][0-9]` → `[0-2][0-9]`)
