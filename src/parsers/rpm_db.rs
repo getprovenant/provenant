@@ -45,6 +45,7 @@ const RPM_NDB_PATH_SUFFIXES: &[&str] = &[
     "var/lib/rpm/Packages.db",
     "usr/lib/sysimage/rpm/Packages.db",
 ];
+#[cfg(feature = "rpm-sqlite")]
 const RPM_SQLITE_PATH_SUFFIXES: &[&str] = &[
     "var/lib/rpm/rpmdb.sqlite",
     "usr/lib/sysimage/rpm/rpmdb.sqlite",
@@ -80,6 +81,7 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
 
 pub struct RpmBdbDatabaseParser;
 
+#[cfg(feature = "rpm-sqlite")]
 impl PackageParser for RpmBdbDatabaseParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
 
@@ -118,6 +120,23 @@ impl PackageParser for RpmBdbDatabaseParser {
 
 #[cfg(not(feature = "rpm-sqlite"))]
 impl PackageParser for RpmBdbDatabaseParser {
+    const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
+
+    fn is_match(path: &Path) -> bool {
+        path_matches_any_suffix(path, RPM_BDB_PATH_SUFFIXES)
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        match parse_rpm_database(path, DatasourceId::RpmInstalledDatabaseBdb) {
+            Ok(pkgs) if !pkgs.is_empty() => pkgs,
+            Ok(_) => vec![default_package_data(DatasourceId::RpmInstalledDatabaseBdb)],
+            Err(e) => {
+                warn!("Failed to parse RPM BDB database {:?}: {}", path, e);
+                vec![default_package_data(DatasourceId::RpmInstalledDatabaseBdb)]
+            }
+        }
+    }
+
     fn metadata() -> Vec<super::metadata::ParserMetadata> {
         vec![super::metadata::ParserMetadata {
             description: "RPM installed package database",
