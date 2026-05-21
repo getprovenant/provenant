@@ -2,9 +2,9 @@
 
 This guide is for people who already know ScanCode Toolkit and want to understand what, if anything, changes when they move a workflow to Provenant.
 
-For many users, the answer is: **not much**.
+For many common scan-and-consume workflows, the answer is: **not much**.
 
-Provenant aims for strong CLI and output compatibility with ScanCode where practical. If you mostly run scans and consume the usual output formats, you can often start with the same broad habits and adjust only a few power-user workflows.
+Provenant targets strong CLI and output compatibility with ScanCode where practical. It is developed independently and is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc. If you mostly run scans and consume the usual output formats, you can often start with the same broad habits and adjust only a few power-user workflows.
 
 ## Who needs this guide?
 
@@ -15,11 +15,11 @@ You will probably care about this document if you:
 - rely on historical quirks or typos in emitted values
 - want to understand where Provenant intentionally differs from ScanCode
 
-If you mostly want a ScanCode-aligned scan from a single binary, start with the [CLI Guide](CLI_GUIDE.md) instead.
+If you mostly want a ScanCode-compatible scan from a single binary, start with the [CLI Guide](CLI_GUIDE.md) instead.
 
 ## What mostly stays the same
 
-- Provenant keeps the ScanCode-aligned scan model and output formats as its primary compatibility target.
+- Provenant keeps the ScanCode-compatible scan model and output formats as its primary compatibility target.
 - `spdx_license_list_version` stays in the existing ScanCode-style header location.
 - `--from-json` continues to target ScanCode-style JSON inputs rather than a Provenant-only format.
 - Scanning now has an explicit `provenant scan ...` command form, while bare `provenant ...` scan invocations continue to work as a compatibility alias.
@@ -117,7 +117,7 @@ If your downstream workflow needs the historic ScanCode-style rendered value in 
 provenant scan --json-pp scan.json --copyright --compat-mode scancode /path/to/project
 ```
 
-### 6. Parser behavior may be better than ScanCode in some ecosystems
+### 6. Parser behavior can be more capable than ScanCode on some documented surfaces
 
 Provenant includes many documented parser fixes and beyond-parity improvements, for example in:
 
@@ -127,7 +127,7 @@ Provenant includes many documented parser fixes and beyond-parity improvements, 
 - Maven
 - copyright detection
 
-These are not random incompatibilities; they are documented behavior improvements.
+These are documented improvements on specific surfaces, not random incompatibilities.
 
 See [Beyond-Parity Improvements](improvements/README.md) for the full index.
 

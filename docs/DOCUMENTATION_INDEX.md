@@ -95,7 +95,7 @@ docs/
 **...use Provenant as a Rust library**
 → [LIBRARY_GUIDE.md](LIBRARY_GUIDE.md)
 
-**...understand Provenant's relationship to ScanCode Toolkit**
+**...understand Provenant's compatibility relationship with ScanCode Toolkit**
 → [README.md](../README.md) for high-level positioning, then [MIGRATING_FROM_SCANCODE.md](MIGRATING_FROM_SCANCODE.md) for practical differences
 
 **...migrate an existing ScanCode workflow to Provenant**
@@ -113,7 +113,7 @@ docs/
 **...understand a design decision**
 → [adr/README.md](adr/README.md)
 
-**...see where Rust exceeds Python**
+**...see where Provenant intentionally goes beyond the Python reference**
 → [improvements/README.md](improvements/README.md)
 
 **...track implementation quality and behavior**
