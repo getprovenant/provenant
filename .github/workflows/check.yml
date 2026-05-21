@@ -149,6 +149,36 @@ jobs:
       - name: Run doctests
         run: cargo test -p provenant-cli --doc --profile ci-release --verbose
 
+  no-default-features-smoke:
+    name: No-default-features Smoke Test
+    runs-on: ubuntu-latest
+    if: |
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
+        with:
+          cache: false
+          rustflags: ""
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: no-default-features-smoke
+
+      - name: Check no-default-features build
+        run: cargo check --lib --no-default-features
+
+      - name: Run no-default-features parser smoke tests
+        run: |
+          cargo test --lib --no-default-features parsers::rpm_db::tests::test_bdb_parser_is_match -- --exact
+          cargo test --lib --no-default-features parsers::rpm_db_scan_test::tests::test_rpm_bdb_scan_assigns_referenced_files_from_fedora_rootfs -- --exact
+
   windows-build-smoke:
     name: Windows Build Smoke Test
     runs-on: windows-latest

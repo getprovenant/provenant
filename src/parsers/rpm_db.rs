@@ -81,6 +81,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
 
 pub struct RpmBdbDatabaseParser;
 
+// Keep these cfg-split impls mutually exclusive and complete. `PackageParser`
+// impls cannot be composed across feature branches, so the no-default-features
+// build must still define the full BDB parser surface here.
 #[cfg(feature = "rpm-sqlite")]
 impl PackageParser for RpmBdbDatabaseParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
