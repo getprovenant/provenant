@@ -6,7 +6,7 @@ This guide documents the maintainer release flow for `provenant`.
 
 Releases are split into two phases:
 
-1. local release preparation with `release.sh`, which refreshes the embedded license data, runs the release-time sync checks, writes the release commit, and pushes the release tag
+1. local release preparation with `release.sh`, which refreshes the embedded license data, runs the release-time sync checks, prepares the release commit, and pushes the release tag
 2. tag-triggered GitHub Actions publication, which publishes `provenant-cli` to crates.io via trusted publishing and creates the GitHub Release assets
 
 The published crate name is `provenant-cli`, while the installed binary and product name remain `provenant` / Provenant.
@@ -21,9 +21,7 @@ Before cutting a release, make sure you have:
 - GPG signing configured for git tags
 - A green `CI` workflow run on `main` before you start release prep
 
-For the normal release path, you do **not** need `cargo login` on your local machine. crates.io authentication is handled in GitHub Actions through trusted publishing.
-
-The tag-triggered publish job verifies that the tagged commit is reachable from `origin/main` before it can mint the short-lived crates.io token.
+For the normal release path, you do **not** need `cargo login` on your local machine. crates.io authentication is handled by the tag-triggered GitHub Actions trusted publishing flow, which verifies that the tagged commit is reachable from `origin/main` before it can mint the short-lived crates.io token.
 
 Install `cargo-release` if needed:
 
@@ -70,19 +68,6 @@ On every release attempt, the script:
 
 The exact `cargo release` behavior comes from `[package.metadata.release]` in `Cargo.toml`, including the `CITATION.cff` version replacement, `Cargo.lock` regeneration, signed tag creation, and push behavior. The release commit written by `release.sh` stays versionless (`chore: release`) and DCO-signed.
 
-## One-Time Trusted Publishing Setup
-
-Before relying on the automated publish step, configure a trusted publisher for the `provenant-cli` crate on crates.io:
-
-1. Open the `provenant-cli` crate settings on crates.io.
-2. Add a GitHub Actions trusted publisher for:
-   - owner: `mstykow`
-   - repository: `provenant`
-   - workflow file: `.github/workflows/release.yml`
-3. Protect release tags so only the small maintainer set can create or update `v*` tags.
-
-The crate already exists on crates.io, so this is a settings change, not a first-publish migration.
-
 ## GitHub Release Automation
 
 Pushing the `vX.Y.Z` tag triggers `.github/workflows/release.yml`.
@@ -116,6 +101,5 @@ If the GitHub Release asset step fails after crates.io publish has already succe
 - Missing submodule setup: run `./setup.sh`
 - Missing GPG configuration: `cargo release` cannot create the signed tag
 - Dirty working tree: clean up local changes before retrying
-- Missing crates.io trusted publisher configuration for `provenant-cli`
 - Release tag is not reachable from `main`
 - Release tag does not match the crate version in `Cargo.toml`
