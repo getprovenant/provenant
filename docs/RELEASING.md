@@ -4,7 +4,10 @@ This guide documents the maintainer release flow for `provenant`.
 
 ## Overview
 
-Releases are driven locally with `release.sh`, which wraps `cargo release`, refreshes the embedded license data, and checks for ScanCode output-format drift before publishing.
+Releases are split into two phases:
+
+1. local release preparation with `release.sh`, which refreshes the embedded license data, runs the release-time sync checks, writes the release commit, and pushes the release tag
+2. tag-triggered GitHub Actions publication, which publishes `provenant-cli` to crates.io via trusted publishing and creates the GitHub Release assets
 
 The published crate name is `provenant-cli`, while the installed binary and product name remain `provenant` / Provenant.
 
@@ -15,20 +18,17 @@ Before cutting a release, make sure you have:
 - A clean working tree
 - The `reference/scancode-toolkit/` submodule initialized via `./setup.sh`
 - `cargo-release` installed locally
-- A valid crates.io login in your Cargo credentials
 - GPG signing configured for git tags
-- A green `CI` workflow run for the exact commit you plan to release
+- A green `CI` workflow run on `main` before you start release prep
+
+For the normal release path, you do **not** need `cargo login` on your local machine. crates.io authentication is handled in GitHub Actions through trusted publishing.
+
+The tag-triggered publish job now has an explicit approval gate: the tagged commit must be reachable from `origin/main`, and GitHub must approve the `crates-io` environment before the workflow can mint the short-lived crates.io token.
 
 Install `cargo-release` if needed:
 
 ```sh
 cargo install cargo-release
-```
-
-Authenticate with crates.io if needed:
-
-```sh
-cargo login
 ```
 
 ## Preflight Checks
@@ -64,10 +64,26 @@ On every release attempt, the script:
 1. verifies a clean working tree and initialized ScanCode reference submodule
 2. updates the pinned ScanCode checkout from `origin/develop` and regenerates the embedded license index artifact
 3. checks ScanCode output-format version sync before continuing
-4. in `--execute` mode, commits any license-data refresh with `git commit -s`
-5. runs the `cargo release` flow for versioning, publishing, tagging, and pushing
+4. runs the release version sync check after `cargo release` updates versioned files
+5. in `--execute` mode, commits any license-data refresh with `git commit -s`
+6. runs the local `cargo release` flow for versioning, tagging, and pushing
 
-The exact `cargo release` behavior comes from `[package.metadata.release]` in `Cargo.toml`, including the `CITATION.cff` version replacement, `Cargo.lock` regeneration, signed tag creation, and publish/push behavior. The release commit written by `release.sh` stays versionless (`chore: release`) and DCO-signed.
+The exact `cargo release` behavior comes from `[package.metadata.release]` in `Cargo.toml`, including the `CITATION.cff` version replacement, `Cargo.lock` regeneration, signed tag creation, and push behavior. The release commit written by `release.sh` stays versionless (`chore: release`) and DCO-signed.
+
+## One-Time Trusted Publishing Setup
+
+Before relying on the automated publish step, configure a trusted publisher for the `provenant-cli` crate on crates.io:
+
+1. Open the `provenant-cli` crate settings on crates.io.
+2. Create a GitHub environment named `crates-io` and configure the required reviewers you want for release approval.
+3. Add a GitHub Actions trusted publisher for:
+   - owner: `mstykow`
+   - repository: `provenant`
+   - workflow file: `.github/workflows/release.yml`
+   - environment: `crates-io`
+4. Protect release tags so only the small maintainer set can create or update `v*` tags.
+
+The crate already exists on crates.io, so this is a settings change, not a first-publish migration.
 
 ## GitHub Release Automation
 
@@ -75,7 +91,9 @@ Pushing the `vX.Y.Z` tag triggers `.github/workflows/release.yml`.
 
 That workflow:
 
+- verifies release invariants on the tagged commit, including version/tag alignment and crates.io dry-run packaging
 - Builds release binaries for Linux, macOS (Intel and Apple Silicon), and Windows
+- waits for approval of the `crates-io` environment and then publishes `provenant-cli` to crates.io via trusted publishing
 - Re-runs embedded license index verification as a final release-time safeguard before building artifacts
 - Packages each build under the `provenant-<platform>-<arch>` naming scheme
 - Generates SHA256 checksum files
@@ -89,13 +107,18 @@ Monitor the [GitHub Actions release workflow](https://github.com/mstykow/provena
 
 Verify:
 
-- The crates.io publish step succeeded
+- The crates.io publish job in the GitHub Actions release workflow succeeded
 - The tag and release commit are present on the remote
 - The GitHub Release contains all expected Linux, macOS (Intel and Apple Silicon), and Windows archives and checksum files
+
+If the GitHub Release asset step fails after crates.io publish has already succeeded, rerun only the failed downstream jobs. Do not rerun the successful crates.io publish job for the same version.
 
 ## Common Failure Points
 
 - Missing submodule setup: run `./setup.sh`
-- Missing crates.io credentials: run `cargo login`
 - Missing GPG configuration: `cargo release` cannot create the signed tag
 - Dirty working tree: clean up local changes before retrying
+- Missing crates.io trusted publisher configuration for `provenant-cli`
+- Missing `crates-io` GitHub environment approval or reviewer configuration
+- Release tag is not reachable from `main`
+- Release tag does not match the crate version in `Cargo.toml`
