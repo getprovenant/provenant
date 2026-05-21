@@ -23,7 +23,7 @@ Before cutting a release, make sure you have:
 
 For the normal release path, you do **not** need `cargo login` on your local machine. crates.io authentication is handled in GitHub Actions through trusted publishing.
 
-The tag-triggered publish job now has an explicit approval gate: the tagged commit must be reachable from `origin/main`, and GitHub must approve the `crates-io` environment before the workflow can mint the short-lived crates.io token.
+The tag-triggered publish job verifies that the tagged commit is reachable from `origin/main` before it can mint the short-lived crates.io token.
 
 Install `cargo-release` if needed:
 
@@ -75,13 +75,11 @@ The exact `cargo release` behavior comes from `[package.metadata.release]` in `C
 Before relying on the automated publish step, configure a trusted publisher for the `provenant-cli` crate on crates.io:
 
 1. Open the `provenant-cli` crate settings on crates.io.
-2. Create a GitHub environment named `crates-io` and configure the required reviewers you want for release approval.
-3. Add a GitHub Actions trusted publisher for:
+2. Add a GitHub Actions trusted publisher for:
    - owner: `mstykow`
    - repository: `provenant`
    - workflow file: `.github/workflows/release.yml`
-   - environment: `crates-io`
-4. Protect release tags so only the small maintainer set can create or update `v*` tags.
+3. Protect release tags so only the small maintainer set can create or update `v*` tags.
 
 The crate already exists on crates.io, so this is a settings change, not a first-publish migration.
 
@@ -93,7 +91,7 @@ That workflow:
 
 - verifies release invariants on the tagged commit, including version/tag alignment and crates.io dry-run packaging
 - Builds release binaries for Linux, macOS (Intel and Apple Silicon), and Windows
-- waits for approval of the `crates-io` environment and then publishes `provenant-cli` to crates.io via trusted publishing
+- publishes `provenant-cli` to crates.io via trusted publishing
 - Re-runs embedded license index verification as a final release-time safeguard before building artifacts
 - Packages each build under the `provenant-<platform>-<arch>` naming scheme
 - Generates SHA256 checksum files
@@ -119,6 +117,5 @@ If the GitHub Release asset step fails after crates.io publish has already succe
 - Missing GPG configuration: `cargo release` cannot create the signed tag
 - Dirty working tree: clean up local changes before retrying
 - Missing crates.io trusted publisher configuration for `provenant-cli`
-- Missing `crates-io` GitHub environment approval or reviewer configuration
 - Release tag is not reachable from `main`
 - Release tag does not match the crate version in `Cargo.toml`
