@@ -5,7 +5,7 @@ It includes parser improvements and text-detection subsystem improvements.
 
 ## Philosophy
 
-This directory records cases where Provenant exceeds the Python reference implementation. We:
+This directory records cases where Provenant intentionally goes beyond the Python reference implementation. We:
 
 - Fix bugs present in the Python implementation
 - Implement features marked as TODO in Python

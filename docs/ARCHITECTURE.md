@@ -2,7 +2,7 @@
 
 ## Overview
 
-Provenant is a Rust reimplementation of [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit) focused on trustworthy feature parity, explicit behavioral documentation, and targeted improvements where Rust makes the result safer or easier to maintain.
+Provenant is an independent Rust implementation for [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit)-compatible workflows, focused on trustworthy compatibility, explicit behavioral documentation, and targeted improvements where Rust makes the result safer or easier to maintain. Provenant is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc.
 
 - **Strong compatibility goals**: preserve ScanCode behavior where users depend on it
 - **Better performance**: native code, parallel processing, and efficient parsing
@@ -17,7 +17,7 @@ See [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md) for the full list of supported 
 
 > "always prefer correctness and full feature parity over effort/pragmatism"
 
-- Every feature, edge case, and requirement from Python ScanCode must be preserved
+- Preserve the ScanCode features, edge cases, and requirements that users depend on, and document any intentional gaps clearly
 - Zero tolerance for bugs - identify and fix issues from the original
 - Comprehensive test coverage across unit, golden, scanner-contract, and integration layers
 
@@ -372,7 +372,7 @@ See [ADR 0005: Auto-Generated Documentation](adr/0005-auto-generated-docs.md) fo
 
 ## Beyond-Parity Improvements
 
-We don't just match Python ScanCode - we improve it:
+Provenant does not just target parity with Python ScanCode; in several areas it intentionally goes beyond it:
 
 | Parser                  | Improvement                                                                                                                  | Type                                      |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
