@@ -164,7 +164,6 @@ jobs:
     needs: build
     if: github.repository == 'mstykow/provenant'
     runs-on: ubuntu-latest
-    environment: crates-io
     permissions:
       contents: read
       id-token: write
