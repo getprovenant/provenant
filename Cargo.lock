@@ -2933,9 +2933,9 @@ dependencies = [
 
 [[package]]
 name = "pdf_oxide"
-version = "0.3.50"
+version = "0.3.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c512f3d7e8feac18e94ee08995d5c12d0fb86375ff4b03f931a11c808276eff4"
+checksum = "45d7b80fef01830c04bb6a13fe73de53434b9db2bb558df712e76369aaa12194"
 dependencies = [
  "aes",
  "base64",
@@ -2960,7 +2960,7 @@ dependencies = [
  "office_oxide",
  "phf 0.13.1",
  "qcms",
- "quick-xml 0.39.3",
+ "quick-xml 0.40.1",
  "regex",
  "serde",
  "serde_json",
@@ -2974,7 +2974,7 @@ dependencies = [
  "unicode-bidi",
  "unicode-linebreak",
  "uuid",
- "weezl",
+ "weezl 0.2.1",
 ]
 
 [[package]]
@@ -3511,15 +3511,6 @@ name = "quick-xml"
 version = "0.38.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b66c2058c55a409d601666cffe35f04333cf1013010882cec174a7467cd4e21c"
-dependencies = [
- "memchr",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.39.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "721da970c312655cde9b4ffe0547f20a8494866a4af5ff51f18b7c633d0c870b"
 dependencies = [
  "memchr",
 ]
@@ -4753,7 +4744,7 @@ dependencies = [
  "flate2",
  "half",
  "quick-error",
- "weezl",
+ "weezl 0.1.12",
  "zune-jpeg",
 ]
 
@@ -5318,6 +5309,12 @@ name = "weezl"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
+
+[[package]]
+name = "weezl"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4ca08e5ef825b65b056d9efbd95c8750683f0a6d0466d02e96dc2e4e360f3d2"
 
 [[package]]
 name = "winapi"
