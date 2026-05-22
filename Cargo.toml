@@ -50,7 +50,7 @@ pre-release-commit-message = "chore: release"
 pre-release-replacements = [
     { file = "CITATION.cff", search = '^version: ".*"$', replace = 'version: "{{version}}"' },
 ]
-pre-release-hook = ["cargo", "generate-lockfile"]
+pre-release-hook = ["./scripts/check_release_version_sync.sh", "--update-lockfile"]
 # Tag message template
 tag-message = "Release v{{version}}"
 # Release tags must use the v-prefixed GitHub workflow contract.
