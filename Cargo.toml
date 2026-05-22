@@ -160,7 +160,7 @@ ttf-parser = "0.25.1"
 url = { workspace = true }
 uuid = { version = "1.23.1", features = ["v4"] }
 yaml_serde = { workspace = true }
-zip = "8.5.1"
+zip = "8.6.0"
 zstd = { workspace = true }
 
 [build-dependencies]
