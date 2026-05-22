@@ -62,11 +62,11 @@ On every release attempt, the script:
 1. verifies a clean working tree and initialized ScanCode reference submodule
 2. updates the pinned ScanCode checkout from `origin/develop` and regenerates the embedded license index artifact
 3. checks ScanCode output-format version sync before continuing
-4. runs the release version sync check after `cargo release` updates versioned files
+4. syncs the root package version in `Cargo.lock` without re-resolving dependencies, then verifies release version sync after `cargo release` updates versioned files
 5. in `--execute` mode, commits any license-data refresh with `git commit -s`
 6. runs the local `cargo release` flow for versioning, tagging, and pushing
 
-The exact `cargo release` behavior comes from `[package.metadata.release]` in `Cargo.toml`, including the `CITATION.cff` version replacement, `Cargo.lock` regeneration, signed tag creation, and push behavior. The release commit written by `release.sh` stays versionless (`chore: release`) and DCO-signed.
+The exact `cargo release` behavior comes from `[package.metadata.release]` in `Cargo.toml`, including the `CITATION.cff` version replacement, `Cargo.lock` root-package version sync without dependency re-resolution, signed tag creation, and push behavior. The release commit written by `release.sh` stays versionless (`chore: release`) and DCO-signed.
 
 ## GitHub Release Automation
 

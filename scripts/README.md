@@ -71,10 +71,14 @@ Example:
 Verify that the crate version in `Cargo.toml`, the packaged `provenant-cli`
 entry in the lockfile, and `CITATION.cff` all stay aligned for releases.
 
+Use `--update-lockfile` to rewrite only the root package version in the lockfile
+without re-resolving dependencies.
+
 Example:
 
 ```bash
 ./scripts/check_release_version_sync.sh
+./scripts/check_release_version_sync.sh --update-lockfile
 ```
 
 ## `check_release_tag_sync.sh`
