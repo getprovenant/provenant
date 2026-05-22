@@ -132,7 +132,7 @@ pdf_oxide = "0.3.49"
 pep508_rs = "0.9.2"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
-quick-xml = "0.40.0"
+quick-xml = "0.40.1"
 rancor = "0.1.1"
 rayon = { workspace = true }
 regex = { workspace = true }
