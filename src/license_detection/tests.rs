@@ -201,7 +201,10 @@ fn test_engine_detect_with_deadline_times_out_when_already_expired() {
         )
         .expect_err("expired deadline should abort license detection");
 
-    assert_eq!(error.to_string(), LICENSE_DETECTION_TIMEOUT_MESSAGE);
+    assert_eq!(
+        error.to_string(),
+        LicenseDetectionError::Timeout.to_string()
+    );
 }
 
 #[test]

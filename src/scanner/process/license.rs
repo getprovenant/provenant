@@ -3,6 +3,7 @@
 
 use crate::license_detection::LicenseDetection as InternalLicenseDetection;
 use crate::license_detection::LicenseDetectionEngine;
+use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::PositionSet;
 use crate::license_detection::expression::parse_expression;
 use crate::license_detection::index::LicenseIndex;
@@ -495,7 +496,7 @@ fn nix_license_symbol_to_spdx(symbol: &str) -> Option<&'static str> {
 }
 
 fn is_license_detection_timeout_error(error: &Error) -> bool {
-    error.to_string() == crate::license_detection::LICENSE_DETECTION_TIMEOUT_MESSAGE
+    error.downcast_ref::<LicenseDetectionError>().is_some()
 }
 
 fn timeout_during_license_scan(timeout_seconds: f64) -> Error {

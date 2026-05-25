@@ -84,7 +84,11 @@ pub const SCANCODE_LICENSES_LICENSES_PATH: &str =
 pub const SCANCODE_LICENSES_DATA_PATH: &str = "reference/scancode-toolkit/src/licensedcode/data";
 
 pub const DEFAULT_LICENSEDB_URL_TEMPLATE: &str = "https://scancode-licensedb.aboutcode.org/{}";
-pub(crate) const LICENSE_DETECTION_TIMEOUT_MESSAGE: &str = "license detection timed out";
+#[derive(Debug, Clone, thiserror::Error)]
+pub(crate) enum LicenseDetectionError {
+    #[error("license detection timed out")]
+    Timeout,
+}
 
 pub(crate) use detection::{
     LicenseDetection, group_matches_by_region, post_process_detections, sort_matches_by_line,
@@ -132,7 +136,7 @@ pub(crate) fn deadline_exceeded(deadline: Option<Instant>) -> bool {
 
 pub(crate) fn ensure_within_deadline(deadline: Option<Instant>) -> Result<()> {
     if deadline_exceeded(deadline) {
-        Err(anyhow::anyhow!(LICENSE_DETECTION_TIMEOUT_MESSAGE))
+        Err(LicenseDetectionError::Timeout.into())
     } else {
         Ok(())
     }
