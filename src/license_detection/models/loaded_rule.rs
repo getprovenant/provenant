@@ -190,50 +190,24 @@ impl LoadedRule {
 }
 
 /// Error type for rule-kind validation failures.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RuleKindError {
+    #[error("rule has multiple is_license_* flags set")]
     MultipleFlagsSet,
+    #[error("non-false-positive rule has no is_license_* flags set")]
     NoFlagsSet,
+    #[error("false-positive rule cannot have is_license_* flags set")]
     FalsePositiveWithFlags,
 }
 
-impl std::fmt::Display for RuleKindError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MultipleFlagsSet => write!(f, "rule has multiple is_license_* flags set"),
-            Self::NoFlagsSet => write!(f, "non-false-positive rule has no is_license_* flags set"),
-            Self::FalsePositiveWithFlags => {
-                write!(f, "false-positive rule cannot have is_license_* flags set")
-            }
-        }
-    }
-}
-
-impl std::error::Error for RuleKindError {}
-
 /// Error type for license expression validation failures.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LicenseExpressionError {
+    #[error("license_expression is required for non-false-positive rules")]
     MissingExpression,
+    #[error("license_expression cannot be empty for non-false-positive rules")]
     EmptyExpression,
 }
-
-impl std::fmt::Display for LicenseExpressionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MissingExpression => write!(
-                f,
-                "license_expression is required for non-false-positive rules"
-            ),
-            Self::EmptyExpression => write!(
-                f,
-                "license_expression cannot be empty for non-false-positive rules"
-            ),
-        }
-    }
-}
-
-impl std::error::Error for LicenseExpressionError {}
 
 /// Check if a string has trivial outer parentheses.
 ///

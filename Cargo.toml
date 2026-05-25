@@ -153,6 +153,7 @@ strum = { version = "0.28.0", features = ["derive"] }
 tar = "0.4.45"
 tempfile = { workspace = true }
 tera = { version = "1.20.1", default-features = false }
+thiserror = "2.0.18"
  toml = { workspace = true }
 ttf-parser = "0.25.1"
 url = { workspace = true }

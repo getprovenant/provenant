@@ -178,53 +178,23 @@ impl LoadedLicense {
 }
 
 /// Error type for license key validation failures.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LicenseKeyError {
+    #[error("cannot extract key from license file path")]
     CannotExtractKey,
+    #[error("license key mismatch: filename '{filename}' vs frontmatter '{frontmatter}'")]
     KeyMismatch {
         filename: String,
         frontmatter: String,
     },
 }
 
-impl std::fmt::Display for LicenseKeyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::CannotExtractKey => write!(f, "cannot extract key from license file path"),
-            Self::KeyMismatch {
-                filename,
-                frontmatter,
-            } => {
-                write!(
-                    f,
-                    "license key mismatch: filename '{}' vs frontmatter '{}'",
-                    filename, frontmatter
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for LicenseKeyError {}
-
 /// Error type for license text validation failures.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LicenseTextError {
+    #[error("license file has empty text content and is not deprecated/unknown/generic")]
     EmptyText,
 }
-
-impl std::fmt::Display for LicenseTextError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::EmptyText => write!(
-                f,
-                "license file has empty text content and is not deprecated/unknown/generic"
-            ),
-        }
-    }
-}
-
-impl std::error::Error for LicenseTextError {}
 
 #[cfg(test)]
 mod tests {
