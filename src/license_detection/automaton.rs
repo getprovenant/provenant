@@ -91,10 +91,9 @@ impl Automaton {
         // Use a very unlikely byte sequence as a sentinel pattern
         // This will match but never in our token-encoded data
         let dummy_pattern: &[u8] = &[0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8];
-        match DoubleArrayAhoCorasick::new([dummy_pattern]) {
-            Ok(ac) => Self { inner: ac },
-            Err(_) => panic!("Failed to create empty automaton"),
-        }
+        let inner = DoubleArrayAhoCorasick::new([dummy_pattern])
+            .expect("Failed to create empty automaton with hardcoded dummy pattern");
+        Self { inner }
     }
 
     /// Find all overlapping matches in the haystack.

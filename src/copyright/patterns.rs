@@ -29,8 +29,7 @@ impl CompiledPatterns {
         let patterns = raw_patterns
             .iter()
             .map(|(regex_str, tag)| PatternEntry {
-                regex: Regex::new(regex_str)
-                    .unwrap_or_else(|e| panic!("Failed to compile regex '{}': {}", regex_str, e)),
+                regex: Regex::new(regex_str).expect("regex pattern is hardcoded and must compile"),
                 tag: *tag,
             })
             .collect();

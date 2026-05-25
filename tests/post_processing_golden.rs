@@ -13,8 +13,7 @@ mod tests {
     use tempfile::tempdir;
 
     use provenant::models::FileType;
-    use provenant::post_processing::materialize_generated_flags_for_golden_tests;
-    use provenant::post_processing::test_utils::{
+    use provenant::post_processing::golden_helpers::{
         FixtureOutputOptions, assert_classify_fixture_matches_expected,
         assert_facet_fixture_matches_expected, assert_file_info_fixture_matches_expected,
         assert_package_fixture_matches_expected, assert_reference_follow_fixture_matches_expected,
@@ -22,6 +21,7 @@ mod tests {
         compare_scan_json_values, fixture_exclude_patterns, normalize_paths_for_test,
         normalize_scan_json, test_license_engine,
     };
+    use provenant::post_processing::materialize_generated_flags_for_golden_tests;
     use provenant::progress::{ProgressMode, ScanProgress};
     use provenant::scanner::{
         LicenseScanOptions, TextDetectionOptions, collect_paths, process_collected,

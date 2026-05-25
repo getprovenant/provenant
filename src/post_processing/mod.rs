@@ -58,6 +58,8 @@ mod facet_test;
 mod font_policy;
 #[cfg(test)]
 mod generated_test;
+#[cfg(feature = "golden-tests")]
+pub mod golden_helpers;
 mod license_policy;
 mod license_references;
 mod output_indexes;
@@ -71,10 +73,8 @@ mod summary_helpers;
 mod tallies;
 #[cfg(test)]
 mod tallies_test;
-#[cfg(all(test, not(feature = "golden-tests")))]
+#[cfg(test)]
 mod test_utils;
-#[cfg(feature = "golden-tests")]
-pub mod test_utils;
 
 pub(crate) struct CreateOutputOptions<'a> {
     pub(crate) facet_rules: &'a [FacetRule],
