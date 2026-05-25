@@ -3,6 +3,9 @@
 
 use super::contacts::extract_email_url_information;
 use super::copyright::extract_copyright_information;
+use super::file_scan_error::{
+    FileScanError, FileScanTimeout, TimeoutPhase, is_timeout_diagnostic_message,
+};
 use super::license::{LicenseExtractionInput, extract_license_information};
 use super::special_cases::{is_go_non_production_source, should_skip_text_detection};
 use crate::license_detection::LicenseDetectionEngine;
@@ -31,7 +34,6 @@ use crate::utils::hash::{
 use crate::utils::text::{
     remove_verbatim_escape_sequences, should_remove_verbatim_escape_sequences,
 };
-use anyhow::Error;
 use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -136,7 +138,7 @@ fn extract_information_from_content(
     license_engine: Option<Arc<LicenseDetectionEngine>>,
     license_options: LicenseScanOptions,
     text_options: &TextDetectionOptions,
-) -> Result<(Option<bool>, Sha256Digest, bool), Error> {
+) -> Result<(Option<bool>, Sha256Digest, bool), FileScanError> {
     let started = Instant::now();
     let filesystem_path = absolute_filesystem_path(path);
     let license_enabled = license_engine.is_some();
@@ -177,10 +179,10 @@ fn extract_information_from_content(
     let buffer = fs::read(&filesystem_path)?;
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
-        return Err(Error::msg(format!(
-            "Timeout while reading file content (> {:.2}s)",
-            text_options.timeout_seconds
-        )));
+        return Err(FileScanError::Timeout(FileScanTimeout {
+            phase: TimeoutPhase::ReadingContent,
+            seconds: text_options.timeout_seconds,
+        }));
     }
 
     let sha256 = calculate_sha256(&buffer);
@@ -262,10 +264,10 @@ fn extract_information_from_content(
     }
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
-        return Err(Error::msg(format!(
-            "Timeout while extracting package/text metadata (> {:.2}s)",
-            text_options.timeout_seconds
-        )));
+        return Err(FileScanError::Timeout(FileScanTimeout {
+            phase: TimeoutPhase::ExtractingMetadata,
+            seconds: text_options.timeout_seconds,
+        }));
     }
 
     let (text_content, text_kind, text_scan_error) =
@@ -276,10 +278,10 @@ fn extract_information_from_content(
     let from_binary_strings = matches!(text_kind, ExtractedTextKind::BinaryStrings);
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
-        return Err(Error::msg(format!(
-            "Timeout while extracting text content (> {:.2}s)",
-            text_options.timeout_seconds
-        )));
+        return Err(FileScanError::Timeout(FileScanTimeout {
+            phase: TimeoutPhase::ExtractingText,
+            seconds: text_options.timeout_seconds,
+        }));
     }
 
     if text_content.is_empty() {
@@ -304,20 +306,20 @@ fn extract_information_from_content(
     );
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
-        return Err(Error::msg(format!(
-            "Timeout before license scan (> {:.2}s)",
-            text_options.timeout_seconds
-        )));
+        return Err(FileScanError::Timeout(FileScanTimeout {
+            phase: TimeoutPhase::BeforeLicenseScan,
+            seconds: text_options.timeout_seconds,
+        }));
     }
 
     let text_content_for_license_detection =
         prepare_license_detection_text(path, &classification, text_content);
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
-        return Err(Error::msg(format!(
-            "Timeout during license scan (> {:.2}s)",
-            text_options.timeout_seconds
-        )));
+        return Err(FileScanError::Timeout(FileScanTimeout {
+            phase: TimeoutPhase::DuringLicenseScan,
+            seconds: text_options.timeout_seconds,
+        }));
     }
 
     let license_deadline = deadline_from_start(started, text_options.timeout_seconds);
@@ -355,10 +357,10 @@ fn extract_information_from_content(
     }
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
-        return Err(Error::msg(format!(
-            "Timeout during license scan (> {:.2}s)",
-            text_options.timeout_seconds
-        )));
+        return Err(FileScanError::Timeout(FileScanTimeout {
+            phase: TimeoutPhase::DuringLicenseScan,
+            seconds: text_options.timeout_seconds,
+        }));
     }
 
     Ok((is_generated, sha256, classification.is_source))
@@ -410,7 +412,7 @@ fn can_skip_content_read_after_package_fast_path(
             && !license_enabled)
 }
 
-fn is_oversized_rpm_archive_candidate(path: &Path) -> Result<bool, Error> {
+fn is_oversized_rpm_archive_candidate(path: &Path) -> Result<bool, FileScanError> {
     if !path_looks_like_rpm_archive(path) {
         return Ok(false);
     }
@@ -422,7 +424,7 @@ fn populate_oversized_rpm_info(
     file_info_builder: &mut FileInfoBuilder,
     filesystem_path: &Path,
     text_options: &TextDetectionOptions,
-) -> Result<(), Error> {
+) -> Result<(), FileScanError> {
     if !text_options.collect_info {
         return Ok(());
     }
@@ -528,20 +530,13 @@ fn maybe_record_processing_timeout(
     if is_timeout_exceeded(started, timeout_seconds)
         && !scan_diagnostics
             .iter()
-            .any(|diagnostic| is_timeout_scan_error(&diagnostic.message))
+            .any(|diagnostic| is_timeout_diagnostic_message(&diagnostic.message))
     {
         scan_diagnostics.push(ScanDiagnostic::error(format!(
             "Processing interrupted due to timeout after {:.2} seconds",
             timeout_seconds
         )));
     }
-}
-
-fn is_timeout_scan_error(error: &str) -> bool {
-    error.contains("Timeout while ")
-        || error.contains("Timeout before ")
-        || error.contains("Timeout during ")
-        || error.contains("Processing interrupted due to timeout")
 }
 
 fn cap_non_source_json_license_text<'a>(

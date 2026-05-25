@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod collect;
-mod process;
+pub(crate) mod process;
 
 use crate::license_detection::LicenseDetectionEngine;
 use crate::models::FileInfo;

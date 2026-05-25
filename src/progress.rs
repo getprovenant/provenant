@@ -567,9 +567,7 @@ fn concise_scan_error_reason(err: &str) -> String {
 }
 
 fn is_timeout_scan_error(err: &str) -> bool {
-    err.contains("Timeout while ")
-        || err.contains("Timeout before ")
-        || err.contains("Processing interrupted due to timeout")
+    crate::scanner::process::is_timeout_diagnostic_message(err)
 }
 
 pub(crate) fn is_warning_scan_error(err: &str) -> bool {
