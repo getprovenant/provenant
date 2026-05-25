@@ -16,7 +16,7 @@ mod tests {
     }
 
     fn build_query<'a>(text: &str, index: &'a LicenseIndex) -> anyhow::Result<Query<'a>> {
-        Query::from_extracted_text(text, index, false)
+        Query::from_extracted_text(text, index, false).map_err(Into::into)
     }
 
     fn build_query_detecting_binary<'a>(
@@ -24,6 +24,7 @@ mod tests {
         index: &'a LicenseIndex,
     ) -> anyhow::Result<Query<'a>> {
         Query::with_source_options(text, index, Query::TEXT_LINE_THRESHOLD, None, None)
+            .map_err(Into::into)
     }
 
     fn build_query_with_threshold<'a>(
@@ -31,7 +32,7 @@ mod tests {
         index: &'a LicenseIndex,
         line_threshold: usize,
     ) -> anyhow::Result<Query<'a>> {
-        Query::with_source_options(text, index, line_threshold, None, None)
+        Query::with_source_options(text, index, line_threshold, None, None).map_err(Into::into)
     }
 
     fn query_unknown_count_after(query: &Query<'_>, pos: Option<usize>) -> usize {

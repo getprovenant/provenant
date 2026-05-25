@@ -3,6 +3,7 @@
 
 //! Candidate selection using set and multiset similarity.
 
+use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::TokenMultiset;
 use crate::license_detection::TokenSet;
 use crate::license_detection::index::LicenseIndex;
@@ -573,7 +574,7 @@ pub(crate) fn select_seq_candidates_with_deadline<'a>(
     high_resemblance: bool,
     top_n: usize,
     deadline: Option<Instant>,
-) -> anyhow::Result<Vec<Candidate<'a>>> {
+) -> Result<Vec<Candidate<'a>>, LicenseDetectionError> {
     crate::license_detection::ensure_within_deadline(deadline)?;
     let Some(query_data) = QueryData::new(index, query_run) else {
         return Ok(Vec::new());

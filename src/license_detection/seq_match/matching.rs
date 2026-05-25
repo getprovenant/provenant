@@ -3,6 +3,7 @@
 
 //! Sequence matching algorithms for finding matching blocks.
 
+use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::TokenId;
 use crate::license_detection::models::position_span::PositionSpan;
@@ -54,7 +55,7 @@ fn find_longest_match_impl(
     query_hi: usize,
     rule_lo: usize,
     rule_hi: usize,
-) -> anyhow::Result<(usize, usize, usize)> {
+) -> Result<(usize, usize, usize), LicenseDetectionError> {
     let mut best_i = query_lo;
     let mut best_j = rule_lo;
     let mut best_size = 0;
@@ -146,7 +147,7 @@ fn match_blocks_impl(
     context: &MatchSearchContext<'_>,
     query_start: usize,
     query_end: usize,
-) -> anyhow::Result<Vec<(usize, usize, usize)>> {
+) -> Result<Vec<(usize, usize, usize)>, LicenseDetectionError> {
     if context.query_tokens.is_empty() || context.rule_tokens.is_empty() {
         return Ok(Vec::new());
     }
@@ -231,7 +232,7 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
     query_run: &QueryRun,
     candidates: &[Candidate<'_>],
     deadline: Option<Instant>,
-) -> anyhow::Result<Vec<LicenseMatch>> {
+) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
     let mut matches = Vec::new();
 
     for (candidate_index, candidate) in candidates.iter().enumerate() {

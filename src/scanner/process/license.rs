@@ -55,8 +55,8 @@ pub(super) fn extract_license_information(
         return Ok(());
     };
 
-    let detection_result = if deadline.is_some() {
-        if license_options.min_score == 0 {
+    if deadline.is_some() {
+        let detection_result = if license_options.min_score == 0 {
             engine.detect_with_kind_and_source_with_deadline(
                 &text_content,
                 license_options.unknown_licenses,
@@ -73,118 +73,74 @@ pub(super) fn extract_license_information(
                 f32::from(license_options.min_score),
                 deadline,
             )
-        }
-    } else if license_options.min_score == 0 {
-        engine.detect_with_kind_and_source(
-            &text_content,
-            license_options.unknown_licenses,
-            from_binary_strings,
-            &path.to_string_lossy(),
-        )
-    } else {
-        engine.detect_with_kind_and_source_with_score(
-            &text_content,
-            license_options.unknown_licenses,
-            from_binary_strings,
-            &path.to_string_lossy(),
-            f32::from(license_options.min_score),
-        )
-    };
+        };
 
-    match detection_result {
-        Ok(detections) => {
-            let query = match if deadline.is_some() {
-                Query::from_extracted_text_with_deadline(
+        match detection_result {
+            Ok(detections) => {
+                let query = match Query::from_extracted_text_with_deadline(
                     &text_content,
                     engine.index(),
                     from_binary_strings,
                     deadline,
-                )
-            } else {
-                Query::from_extracted_text(&text_content, engine.index(), from_binary_strings)
-            } {
-                Ok(query) => Some(query),
-                Err(error) if is_license_detection_timeout_error(&error) => {
-                    return Err(license_detection_timeout(timeout_seconds));
-                }
-                Err(_) => None,
-            };
-            let mut detections = detections;
-            promote_legal_notice_low_quality_detections(&mut detections, path);
-
-            let mut model_detections = Vec::new();
-            let mut model_clues = Vec::new();
-
-            for detection in &detections {
-                let (public_detection, clue_matches) = convert_detection_to_model(
-                    detection,
-                    license_options,
-                    &text_content,
-                    query.as_ref(),
-                    Some(engine.index()),
-                );
-
-                if let Some(public_detection) = public_detection {
-                    model_detections.push(public_detection);
-                }
-
-                model_clues.extend(clue_matches);
-            }
-
-            model_detections.extend(supplement_nix_manifest_license_detections(
-                path,
-                &text_content,
-                &model_detections,
-            ));
-            expand_dual_licensed_under_readme_choice_detections(
-                path,
-                &text_content,
-                &mut model_detections,
-            );
-            prune_redundant_readme_conjunctive_detections(path, &mut model_detections);
-            model_detections =
-                collapse_repeated_sourcemap_license_detections(path, model_detections);
-
-            if !model_detections.is_empty() {
-                let expressions: Option<Vec<String>> = model_detections
-                    .iter()
-                    .map(|detection| {
-                        (!detection.license_expression_spdx.is_empty())
-                            .then(|| detection.license_expression_spdx.clone())
-                    })
-                    .collect();
-
-                if let Some(expressions) = expressions {
-                    let combined = crate::utils::spdx::select_primary_license_expression_strict(
-                        expressions.clone(),
-                    )
-                    .or_else(|| {
-                        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
-                            expressions,
-                        )
-                    });
-                    if let Some(expr) = combined {
-                        file_info_builder.license_expression(Some(expr));
+                ) {
+                    Ok(query) => Some(query),
+                    Err(LicenseDetectionError::Timeout) => {
+                        return Err(license_detection_timeout(timeout_seconds));
                     }
-                }
+                };
+                process_successful_detections(
+                    file_info_builder,
+                    &detections,
+                    query.as_ref(),
+                    &text_content,
+                    path,
+                    license_options,
+                    engine.index(),
+                );
             }
+            Err(LicenseDetectionError::Timeout) => {
+                return Err(license_detection_timeout(timeout_seconds));
+            }
+        }
+    } else {
+        let detection_result = if license_options.min_score == 0 {
+            engine.detect_with_kind_and_source(
+                &text_content,
+                license_options.unknown_licenses,
+                from_binary_strings,
+                &path.to_string_lossy(),
+            )
+        } else {
+            engine.detect_with_kind_and_source_with_score(
+                &text_content,
+                license_options.unknown_licenses,
+                from_binary_strings,
+                &path.to_string_lossy(),
+                f32::from(license_options.min_score),
+            )
+        };
 
-            file_info_builder.license_detections(model_detections);
-            file_info_builder.license_clues(model_clues);
-            file_info_builder.percentage_of_license_text(
-                query
-                    .as_ref()
-                    .map(|query| compute_percentage_of_license_text(query, &detections)),
-            );
-        }
-        Err(e) if is_license_detection_timeout_error(&e) => {
-            return Err(license_detection_timeout(timeout_seconds));
-        }
-        Err(e) => {
-            scan_diagnostics.push(ScanDiagnostic::error(format!(
-                "License detection failed: {}",
-                e
-            )));
+        match detection_result {
+            Ok(detections) => {
+                let query =
+                    Query::from_extracted_text(&text_content, engine.index(), from_binary_strings)
+                        .ok();
+                process_successful_detections(
+                    file_info_builder,
+                    &detections,
+                    query.as_ref(),
+                    &text_content,
+                    path,
+                    license_options,
+                    engine.index(),
+                );
+            }
+            Err(e) => {
+                scan_diagnostics.push(ScanDiagnostic::error(format!(
+                    "License detection failed: {}",
+                    e
+                )));
+            }
         }
     }
 
@@ -495,8 +451,74 @@ fn nix_license_symbol_to_spdx(symbol: &str) -> Option<&'static str> {
     }
 }
 
-fn is_license_detection_timeout_error(error: &anyhow::Error) -> bool {
-    error.downcast_ref::<LicenseDetectionError>().is_some()
+fn process_successful_detections(
+    file_info_builder: &mut FileInfoBuilder,
+    detections: &[InternalLicenseDetection],
+    query: Option<&Query<'_>>,
+    text_content: &str,
+    path: &Path,
+    license_options: LicenseScanOptions,
+    index: &LicenseIndex,
+) {
+    let mut detections = detections.to_vec();
+    promote_legal_notice_low_quality_detections(&mut detections, path);
+
+    let mut model_detections = Vec::new();
+    let mut model_clues = Vec::new();
+
+    for detection in &detections {
+        let (public_detection, clue_matches) = convert_detection_to_model(
+            detection,
+            license_options,
+            text_content,
+            query,
+            Some(index),
+        );
+
+        if let Some(public_detection) = public_detection {
+            model_detections.push(public_detection);
+        }
+
+        model_clues.extend(clue_matches);
+    }
+
+    model_detections.extend(supplement_nix_manifest_license_detections(
+        path,
+        text_content,
+        &model_detections,
+    ));
+    expand_dual_licensed_under_readme_choice_detections(path, text_content, &mut model_detections);
+    prune_redundant_readme_conjunctive_detections(path, &mut model_detections);
+    model_detections = collapse_repeated_sourcemap_license_detections(path, model_detections);
+
+    if !model_detections.is_empty() {
+        let expressions: Option<Vec<String>> = model_detections
+            .iter()
+            .map(|detection| {
+                (!detection.license_expression_spdx.is_empty())
+                    .then(|| detection.license_expression_spdx.clone())
+            })
+            .collect();
+
+        if let Some(expressions) = expressions {
+            let combined =
+                crate::utils::spdx::select_primary_license_expression_strict(expressions.clone())
+                    .or_else(|| {
+                        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
+                            expressions,
+                        )
+                    });
+            if let Some(expr) = combined {
+                file_info_builder.license_expression(Some(expr));
+            }
+        }
+    }
+
+    file_info_builder.license_detections(model_detections);
+    file_info_builder.license_clues(model_clues);
+    file_info_builder.percentage_of_license_text(
+        query.map(|query| compute_percentage_of_license_text(query, &detections)),
+    );
 }
 
 fn license_detection_timeout(timeout_seconds: f64) -> FileScanError {

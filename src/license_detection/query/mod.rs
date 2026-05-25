@@ -3,6 +3,7 @@
 
 //! Query processing - tokenized input for license matching.
 
+use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::{KnownToken, QueryToken, TokenId, TokenKind};
 use crate::license_detection::models::PositionSpan;
@@ -501,20 +502,20 @@ impl<'a> Query<'a> {
         None
     }
 
-    pub fn from_extracted_text(
+    pub(crate) fn from_extracted_text(
         text: &str,
         index: &'a LicenseIndex,
         binary_derived: bool,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Result<Self, LicenseDetectionError> {
         Self::from_extracted_text_with_deadline(text, index, binary_derived, None)
     }
 
-    pub fn from_extracted_text_with_deadline(
+    pub(crate) fn from_extracted_text_with_deadline(
         text: &str,
         index: &'a LicenseIndex,
         binary_derived: bool,
         deadline: Option<Instant>,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Result<Self, LicenseDetectionError> {
         let line_threshold = if binary_derived {
             Self::BINARY_LINE_THRESHOLD
         } else {
@@ -540,11 +541,11 @@ impl<'a> Query<'a> {
         line_threshold: usize,
         binary_derived: Option<bool>,
         deadline: Option<Instant>,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Result<Self, LicenseDetectionError> {
         crate::license_detection::ensure_within_deadline(deadline)?;
         let is_binary = match binary_derived {
             Some(is_binary) => is_binary,
-            None => Self::detect_binary(text)?,
+            None => Self::detect_binary(text),
         };
         let has_long_lines = Self::detect_long_lines(text);
 
@@ -672,11 +673,11 @@ impl<'a> Query<'a> {
     /// true if binary, false otherwise
     ///
     /// Corresponds to Python: `typecode.get_type().is_binary` usage (lines 123-135)
-    fn detect_binary(text: &str) -> Result<bool, anyhow::Error> {
+    fn detect_binary(text: &str) -> bool {
         let null_byte_count = text.bytes().filter(|&b| b == 0).count();
 
         if null_byte_count > 0 {
-            return Ok(true);
+            return true;
         }
 
         let non_printable_ratio = text
@@ -687,7 +688,7 @@ impl<'a> Query<'a> {
             .count() as f64
             / text.len().max(1) as f64;
 
-        Ok(non_printable_ratio > 0.3)
+        non_printable_ratio > 0.3
     }
 
     /// Detect if text has very long lines (for minified JS/CSS).

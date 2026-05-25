@@ -134,9 +134,11 @@ pub(crate) fn deadline_exceeded(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|deadline| Instant::now() >= deadline)
 }
 
-pub(crate) fn ensure_within_deadline(deadline: Option<Instant>) -> Result<()> {
+pub(crate) fn ensure_within_deadline(
+    deadline: Option<Instant>,
+) -> Result<(), LicenseDetectionError> {
     if deadline_exceeded(deadline) {
-        Err(LicenseDetectionError::Timeout.into())
+        Err(LicenseDetectionError::Timeout)
     } else {
         Ok(())
     }
@@ -410,7 +412,7 @@ fn collect_whole_query_exact_followup_matches(
     matched_qspans: &mut Vec<models::PositionSpan>,
     whole_run: &query::QueryRun<'_>,
     deadline: Option<Instant>,
-) -> Result<Vec<LicenseMatch>> {
+) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
     let mut seq_all_matches = Vec::new();
 
     if whole_run.is_matchable(false, matched_qspans) {
@@ -459,7 +461,7 @@ fn collect_regular_seq_matches(
     matched_qspans: &[models::PositionSpan],
     candidate_contained_matches: &[LicenseMatch],
     deadline: Option<Instant>,
-) -> Result<Vec<LicenseMatch>> {
+) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
     let mut seq_all_matches = Vec::new();
 
     for (query_run_index, query_run) in query.query_runs().into_iter().enumerate() {
@@ -741,6 +743,7 @@ impl LicenseDetectionEngine {
             0.0,
             None,
         )
+        .map_err(Into::into)
     }
 
     pub fn detect_with_kind_with_score(
@@ -757,6 +760,7 @@ impl LicenseDetectionEngine {
             min_score,
             None,
         )
+        .map_err(Into::into)
     }
 
     pub(crate) fn detect_with_kind_with_score_and_deadline(
@@ -766,7 +770,7 @@ impl LicenseDetectionEngine {
         binary_derived: bool,
         min_score: f32,
         deadline: Option<Instant>,
-    ) -> Result<Vec<LicenseDetection>> {
+    ) -> Result<Vec<LicenseDetection>, LicenseDetectionError> {
         ensure_within_deadline(deadline)?;
         let clean_text = strip_utf8_bom_str(text);
 
@@ -966,6 +970,7 @@ impl LicenseDetectionEngine {
             source_path,
             None,
         )
+        .map_err(Into::into)
     }
 
     pub(crate) fn detect_with_kind_and_source_with_deadline(
@@ -975,7 +980,7 @@ impl LicenseDetectionEngine {
         binary_derived: bool,
         source_path: &str,
         deadline: Option<Instant>,
-    ) -> Result<Vec<LicenseDetection>> {
+    ) -> Result<Vec<LicenseDetection>, LicenseDetectionError> {
         let mut detections = self.detect_with_kind_with_score_and_deadline(
             text,
             unknown_licenses,
@@ -1009,7 +1014,7 @@ impl LicenseDetectionEngine {
         source_path: &str,
         min_score: f32,
         deadline: Option<Instant>,
-    ) -> Result<Vec<LicenseDetection>> {
+    ) -> Result<Vec<LicenseDetection>, LicenseDetectionError> {
         let mut detections = self.detect_with_kind_with_score_and_deadline(
             text,
             unknown_licenses,

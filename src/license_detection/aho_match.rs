@@ -10,6 +10,7 @@
 //! Based on the Python ScanCode Toolkit implementation at:
 //! reference/scancode-toolkit/src/licensedcode/match_aho.py
 
+use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::dictionary::{TokenId, TokenKind};
 use crate::license_detection::models::position_span::PositionSpan;
@@ -73,7 +74,7 @@ pub(crate) fn aho_match_with_deadline(
     index: &LicenseIndex,
     query_run: &QueryRun,
     deadline: Option<Instant>,
-) -> anyhow::Result<Vec<LicenseMatch>> {
+) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
     aho_match_with_extra_matchables(index, query_run, None, deadline)
 }
 
@@ -82,12 +83,12 @@ pub(crate) fn aho_match_with_deadline(
 /// This is used to preserve pre-subtraction SPDX positions for Phase 1c exact AHO
 /// eligibility checks only, while keeping the live query matchables unchanged for
 /// all later phases.
-pub fn aho_match_with_extra_matchables(
+pub(crate) fn aho_match_with_extra_matchables(
     index: &LicenseIndex,
     query_run: &QueryRun,
     extra_matchable_positions: Option<&PositionSet>,
     deadline: Option<Instant>,
-) -> anyhow::Result<Vec<LicenseMatch>> {
+) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
     let mut matches = Vec::new();
 
     let query_tokens = query_run.tokens();
