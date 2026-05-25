@@ -134,8 +134,11 @@ fn build_balanced_boolean_expression(
     expressions: &[LicenseExpression],
     combine: fn(Box<LicenseExpression>, Box<LicenseExpression>) -> LicenseExpression,
 ) -> LicenseExpression {
+    debug_assert!(
+        !expressions.is_empty(),
+        "build_balanced_boolean_expression called with empty list"
+    );
     match expressions.len() {
-        0 => panic!("build_balanced_boolean_expression called with empty list"),
         1 => expressions[0].clone(),
         _ => {
             let midpoint = expressions.len() / 2;

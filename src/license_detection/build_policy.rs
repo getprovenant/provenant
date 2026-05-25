@@ -34,12 +34,8 @@ mod bundled_overlay_manifest {
 use bundled_overlay_manifest::{BUNDLED_LICENSE_OVERLAY_FILES, BUNDLED_RULE_OVERLAY_FILES};
 
 static DEFAULT_INDEX_BUILD_POLICY: LazyLock<IndexBuildPolicy> = LazyLock::new(|| {
-    toml::from_str(DEFAULT_INDEX_BUILD_POLICY_TEXT).unwrap_or_else(|error| {
-        panic!(
-            "Failed to parse bundled license index build policy at {}: {}",
-            DEFAULT_INDEX_BUILD_POLICY_PATH, error
-        )
-    })
+    toml::from_str(DEFAULT_INDEX_BUILD_POLICY_TEXT)
+        .expect("Failed to parse bundled license index build policy")
 });
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]

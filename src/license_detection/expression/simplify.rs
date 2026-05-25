@@ -245,8 +245,11 @@ fn collect_unique_or(
 }
 
 fn build_expression_from_list(unique: &[LicenseExpression], is_and: bool) -> LicenseExpression {
+    debug_assert!(
+        !unique.is_empty(),
+        "build_expression_from_list called with empty list"
+    );
     match unique.len() {
-        0 => panic!("build_expression_from_list called with empty list"),
         1 => unique[0].clone(),
         _ => {
             let midpoint = unique.len() / 2;
