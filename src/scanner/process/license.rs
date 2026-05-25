@@ -16,7 +16,7 @@ use crate::parsers::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data, normalize_spdx_expression,
 };
 use crate::scanner::LicenseScanOptions;
-use anyhow::Error;
+use crate::scanner::process::file_scan_error::FileScanError;
 use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
@@ -40,7 +40,7 @@ pub(super) fn extract_license_information(
     file_info_builder: &mut FileInfoBuilder,
     scan_diagnostics: &mut Vec<ScanDiagnostic>,
     input: LicenseExtractionInput<'_>,
-) -> Result<(), Error> {
+) -> Result<(), FileScanError> {
     let LicenseExtractionInput {
         path,
         text_content,
@@ -105,7 +105,7 @@ pub(super) fn extract_license_information(
             } {
                 Ok(query) => Some(query),
                 Err(error) if is_license_detection_timeout_error(&error) => {
-                    return Err(timeout_during_license_scan(timeout_seconds));
+                    return Err(license_detection_timeout(timeout_seconds));
                 }
                 Err(_) => None,
             };
@@ -178,7 +178,7 @@ pub(super) fn extract_license_information(
             );
         }
         Err(e) if is_license_detection_timeout_error(&e) => {
-            return Err(timeout_during_license_scan(timeout_seconds));
+            return Err(license_detection_timeout(timeout_seconds));
         }
         Err(e) => {
             scan_diagnostics.push(ScanDiagnostic::error(format!(
@@ -495,15 +495,12 @@ fn nix_license_symbol_to_spdx(symbol: &str) -> Option<&'static str> {
     }
 }
 
-fn is_license_detection_timeout_error(error: &Error) -> bool {
+fn is_license_detection_timeout_error(error: &anyhow::Error) -> bool {
     error.downcast_ref::<LicenseDetectionError>().is_some()
 }
 
-fn timeout_during_license_scan(timeout_seconds: f64) -> Error {
-    Error::msg(format!(
-        "Timeout during license scan (> {:.2}s)",
-        timeout_seconds
-    ))
+fn license_detection_timeout(timeout_seconds: f64) -> FileScanError {
+    FileScanError::from_license_detection_timeout(timeout_seconds)
 }
 
 fn convert_detection_to_model(
