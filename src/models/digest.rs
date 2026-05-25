@@ -106,22 +106,13 @@ define_digest!(
     20
 );
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ParseDigestError {
+    #[error("invalid hex encoding")]
     InvalidHex,
+    #[error("invalid digest length")]
     InvalidLength,
 }
-
-impl std::fmt::Display for ParseDigestError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseDigestError::InvalidHex => write!(f, "invalid hex encoding"),
-            ParseDigestError::InvalidLength => write!(f, "invalid digest length"),
-        }
-    }
-}
-
-impl std::error::Error for ParseDigestError {}
 
 #[cfg(test)]
 mod tests {

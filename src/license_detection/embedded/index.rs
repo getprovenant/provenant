@@ -12,16 +12,9 @@ pub struct LoadedEmbeddedLicenseIndex {
     pub metadata: EmbeddedArtifactMetadata,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("License loader artifact error: {0}")]
 pub struct SerializationError(pub String);
-
-impl std::fmt::Display for SerializationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "License loader artifact error: {}", self.0)
-    }
-}
-
-impl std::error::Error for SerializationError {}
 
 pub fn load_loader_snapshot_from_bytes(
     bytes: &[u8],

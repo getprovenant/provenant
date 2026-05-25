@@ -23,36 +23,25 @@ pub use simplify::{
 };
 
 /// Error type for license expression parsing.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
     /// Empty expression
+    #[error("Empty license expression")]
     EmptyExpression,
 
     /// Unexpected token at position
+    #[error("Unexpected token '{token}' at position {position}")]
     UnexpectedToken { token: String, position: usize },
 
     /// Mismatched parentheses
+    #[error("Mismatched parentheses")]
     MismatchedParentheses,
 
     /// Generic parse error with message
+    #[error("Parse error: {0}")]
     ParseError(String),
 }
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::EmptyExpression => write!(f, "Empty license expression"),
-            Self::UnexpectedToken { token, position } => {
-                write!(f, "Unexpected token '{}' at position {}", token, position)
-            }
-            Self::MismatchedParentheses => write!(f, "Mismatched parentheses"),
-            Self::ParseError(msg) => write!(f, "Parse error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ParseError {}
 
 /// A parsed license expression represented as an AST.
 #[derive(Debug, Clone, PartialEq)]
