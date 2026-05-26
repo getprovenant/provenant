@@ -12,6 +12,8 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
+use http::header::{CONTENT_LENGTH, CONTENT_TYPE};
+use http::{HeaderMap, HeaderValue, Method, StatusCode};
 use serde_json::json;
 use tempfile::TempDir;
 use uuid::Uuid;
@@ -44,15 +46,15 @@ pub(crate) enum ServeError {
 }
 
 impl ServeError {
-    pub(crate) fn http_status_code(&self) -> u16 {
+    pub(crate) fn http_status_code(&self) -> StatusCode {
         match self {
-            Self::Ingest(IngestError::Validation(_)) => 422,
-            Self::Ingest(IngestError::PayloadTooLarge(_)) => 413,
-            Self::Ingest(IngestError::Upstream { .. }) => 502,
-            Self::Ingest(IngestError::Internal { .. }) => 500,
-            Self::Workflow(WorkflowError::InvalidOptions(_)) => 422,
-            Self::Workflow(WorkflowError::Pipeline(_)) => 500,
-            Self::Serialization(_) => 500,
+            Self::Ingest(IngestError::Validation(_)) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::Ingest(IngestError::PayloadTooLarge(_)) => StatusCode::PAYLOAD_TOO_LARGE,
+            Self::Ingest(IngestError::Upstream { .. }) => StatusCode::BAD_GATEWAY,
+            Self::Ingest(IngestError::Internal { .. }) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Workflow(WorkflowError::InvalidOptions(_)) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::Workflow(WorkflowError::Pipeline(_)) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Serialization(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -162,9 +164,9 @@ enum AsyncSubmitError {
 
 #[derive(Debug)]
 struct HttpRequest {
-    method: String,
+    method: Method,
     path: String,
-    headers: HashMap<String, String>,
+    headers: HeaderMap,
     body: Vec<u8>,
 }
 
@@ -320,7 +322,7 @@ impl AsyncJobController {
                     record.state = AsyncJobState::Failed;
                     record.result_body = None;
                     record.error_message = Some("async scan job failed".to_string());
-                    record.error_status_code = Some(error.http_status_code());
+                    record.error_status_code = Some(error.http_status_code().as_u16());
                 }
             }
 
@@ -471,7 +473,11 @@ fn handle_connection(mut stream: TcpStream, state: &ServeState) -> Result<()> {
         Err(error) => {
             return write_http_response(
                 &mut stream,
-                error_response(400, "Bad Request", "invalid_request", error.to_string()),
+                error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_request",
+                    error.to_string(),
+                ),
             );
         }
     };
@@ -488,7 +494,7 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<HttpRequest> {
         return Err(anyhow!("received empty HTTP request"));
     }
 
-    let mut headers = HashMap::new();
+    let mut headers = HeaderMap::new();
     loop {
         let mut header_line = String::new();
         reader.read_line(&mut header_line)?;
@@ -500,21 +506,34 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<HttpRequest> {
         let Some((name, value)) = header.split_once(':') else {
             return Err(anyhow!("invalid HTTP header line"));
         };
-        headers.insert(name.trim().to_ascii_lowercase(), value.trim().to_string());
+        let header_name = http::HeaderName::from_bytes(name.trim().as_bytes())
+            .map_err(|_| anyhow!("invalid header name: {}", name.trim()))?;
+        let header_value = HeaderValue::from_str(value.trim()).map_err(|_| {
+            anyhow!(
+                "invalid header value for {}: {:?}",
+                name.trim(),
+                value.trim()
+            )
+        })?;
+        headers.append(header_name, header_value);
     }
 
     let mut parts = request_line.split_whitespace();
-    let method = parts
+    let method_str = parts
         .next()
         .ok_or_else(|| anyhow!("missing HTTP method in request line"))?;
+    let method = Method::from_bytes(method_str.as_bytes())
+        .map_err(|_| anyhow!("unsupported HTTP method: {method_str}"))?;
     let path = parts
         .next()
         .ok_or_else(|| anyhow!("missing HTTP path in request line"))?;
 
     let content_length = headers
-        .get("content-length")
+        .get(CONTENT_LENGTH)
         .map(|value| {
             value
+                .to_str()
+                .context("invalid Content-Length header value")?
                 .parse::<usize>()
                 .context("invalid Content-Length header")
         })
@@ -534,7 +553,7 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<HttpRequest> {
     }
 
     Ok(HttpRequest {
-        method: method.to_string(),
+        method,
         path: path.to_string(),
         headers,
         body,
@@ -542,11 +561,7 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<HttpRequest> {
 }
 
 #[derive(Debug)]
-struct HttpResponse {
-    status_code: u16,
-    reason: &'static str,
-    body: String,
-}
+struct HttpResponse(StatusCode, String);
 
 #[derive(Debug)]
 struct SyncScanExecution {
@@ -565,24 +580,22 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
     if let Some(job_route) = parse_job_route(&request.path) {
         return match job_route {
             JobRoute::Status(job_id) => {
-                if request.method == "GET" {
+                if request.method == Method::GET {
                     handle_job_status_request(job_id, state)
                 } else {
                     error_response(
-                        405,
-                        "Method Not Allowed",
+                        StatusCode::METHOD_NOT_ALLOWED,
                         "method_not_allowed",
                         format!("use GET /v1/jobs/{job_id} to inspect async job state"),
                     )
                 }
             }
             JobRoute::Result(job_id) => {
-                if request.method == "GET" {
+                if request.method == Method::GET {
                     handle_job_result_request(job_id, state)
                 } else {
                     error_response(
-                        405,
-                        "Method Not Allowed",
+                        StatusCode::METHOD_NOT_ALLOWED,
                         "method_not_allowed",
                         format!("use GET /v1/jobs/{job_id}/result to fetch async job output"),
                     )
@@ -591,18 +604,16 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
         };
     }
 
-    match (request.method.as_str(), request.path.as_str()) {
-        ("GET", "/livez") => serialize_response(
-            200,
-            "OK",
+    match (&request.method, request.path.as_str()) {
+        (m, "/livez") if m == Method::GET => serialize_response(
+            StatusCode::OK,
             &ServeLivenessResponse {
                 status: "ok".to_string(),
             },
         ),
-        ("GET", "/readyz") => match readiness {
+        (m, "/readyz") if m == Method::GET => match readiness {
             ReadinessState::Pending => serialize_response(
-                503,
-                "Service Unavailable",
+                StatusCode::SERVICE_UNAVAILABLE,
                 &ServeReadinessResponse {
                     status: "warming".to_string(),
                     api_version: None,
@@ -613,8 +624,7 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
             ReadinessState::Ready {
                 spdx_license_list_version,
             } => serialize_response(
-                200,
-                "OK",
+                StatusCode::OK,
                 &ServeReadinessResponse {
                     status: "ready".to_string(),
                     api_version: Some(API_VERSION.to_string()),
@@ -623,8 +633,7 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
                 },
             ),
             ReadinessState::Failed { message } => serialize_response(
-                503,
-                "Service Unavailable",
+                StatusCode::SERVICE_UNAVAILABLE,
                 &ServeReadinessResponse {
                     status: "failed".to_string(),
                     api_version: None,
@@ -633,101 +642,75 @@ fn response_for_request(request: &HttpRequest, state: &ServeState) -> HttpRespon
                 },
             ),
         },
-        ("GET", "/version") => serialize_response(
-            200,
-            "OK",
+        (m, "/version") if m == Method::GET => serialize_response(
+            StatusCode::OK,
             &ServeVersionResponse {
                 service: "provenant-serve".to_string(),
                 api_version: API_VERSION.to_string(),
                 tool_version: BUILD_VERSION.to_string(),
             },
         ),
-        ("POST", "/v1/scans") => handle_sync_scan_request(request),
+        (m, "/v1/scans") if m == Method::POST => {
+            handle_sync_scan_request(request).unwrap_or_else(|e| e)
+        }
         (_, "/v1/scans") => error_response(
-            405,
-            "Method Not Allowed",
+            StatusCode::METHOD_NOT_ALLOWED,
             "method_not_allowed",
             "use POST /v1/scans for synchronous scan execution".to_string(),
         ),
-        ("POST", "/v1/scans:async") => handle_async_scan_request(request, state),
+        (m, "/v1/scans:async") if m == Method::POST => {
+            handle_async_scan_request(request, state).unwrap_or_else(|e| e)
+        }
         (_, "/v1/scans:async") => error_response(
-            405,
-            "Method Not Allowed",
+            StatusCode::METHOD_NOT_ALLOWED,
             "method_not_allowed",
             "use POST /v1/scans:async for asynchronous scan submission".to_string(),
         ),
-        _ => json_response(
-            404,
-            "Not Found",
-            json!({ "status": "not_found", "path": request.path }),
+        _ => HttpResponse(
+            StatusCode::NOT_FOUND,
+            json!({ "status": "not_found", "path": request.path }).to_string(),
         ),
     }
 }
 
-fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
-    let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans") {
-        Ok(sync_request) => sync_request,
-        Err(response) => return response,
-    };
+type HandlerResult = Result<HttpResponse, HttpResponse>;
 
-    let execution = match build_sync_scan_execution(sync_request) {
-        Ok(execution) => execution,
-        Err(error) => {
-            return serve_error_response(&error);
-        }
-    };
+impl From<ServeError> for HttpResponse {
+    fn from(error: ServeError) -> HttpResponse {
+        error_response(
+            error.http_status_code(),
+            error.error_type(),
+            error.to_string(),
+        )
+    }
+}
 
+fn handle_sync_scan_request(request: &HttpRequest) -> HandlerResult {
+    let sync_request = decode_scan_request_from_http(request, "POST /v1/scans")?;
+    let execution = build_sync_scan_execution(sync_request)?;
     match execute_scan_execution(execution) {
-        Ok(body) => HttpResponse {
-            status_code: 200,
-            reason: "OK",
-            body,
-        },
-        Err(error) => serve_error_response(&error),
+        Ok(body) => Ok(HttpResponse(StatusCode::OK, body)),
+        Err(error) => Err(error.into()),
     }
 }
 
-fn serve_error_response(error: &ServeError) -> HttpResponse {
-    let status_code = error.http_status_code();
-    let reason = http_status_reason(status_code);
-    error_response(status_code, reason, error.error_type(), error.to_string())
-}
-
-fn http_status_reason(code: u16) -> &'static str {
-    match code {
-        400 => "Bad Request",
-        413 => "Payload Too Large",
-        422 => "Unprocessable Entity",
-        500 => "Internal Server Error",
-        502 => "Bad Gateway",
-        503 => "Service Unavailable",
-        _ => "Error",
-    }
-}
-
-fn handle_async_scan_request(request: &HttpRequest, state: &ServeState) -> HttpResponse {
-    let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans:async") {
-        Ok(sync_request) => sync_request,
-        Err(response) => return response,
-    };
-
+fn handle_async_scan_request(request: &HttpRequest, state: &ServeState) -> HandlerResult {
+    let sync_request = decode_scan_request_from_http(request, "POST /v1/scans:async")?;
     match state.jobs.submit(sync_request) {
-        Ok(response) => serialize_response(202, "Accepted", &response),
-        Err(AsyncSubmitError::QueueFull) => error_response(
-            503,
-            "Service Unavailable",
+        Ok(response) => Ok(serialize_response(StatusCode::ACCEPTED, &response)),
+        Err(AsyncSubmitError::QueueFull) => Err(error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
             "server_busy",
             "async job queue is full; try again later".to_string(),
-        ),
+        )),
     }
 }
 
 fn handle_job_status_request(job_id: &str, state: &ServeState) -> HttpResponse {
     match state.jobs.status_snapshot(job_id) {
-        Some(snapshot) => serialize_response(200, "OK", &snapshot.into_status_response()),
+        Some(snapshot) => serialize_response(StatusCode::OK, &snapshot.into_status_response()),
         None => error_response(
-            404,
-            "Not Found",
+            StatusCode::NOT_FOUND,
             "job_not_found",
             format!("async job {job_id} was not found"),
         ),
@@ -737,36 +720,38 @@ fn handle_job_status_request(job_id: &str, state: &ServeState) -> HttpResponse {
 fn handle_job_result_request(job_id: &str, state: &ServeState) -> HttpResponse {
     let Some(snapshot) = state.jobs.result_snapshot(job_id) else {
         return error_response(
-            404,
-            "Not Found",
+            StatusCode::NOT_FOUND,
             "job_not_found",
             format!("async job {job_id} was not found"),
         );
     };
 
     match snapshot.state {
-        AsyncJobState::Succeeded => HttpResponse {
-            status_code: 200,
-            reason: "OK",
-            body: snapshot
+        AsyncJobState::Succeeded => HttpResponse(
+            StatusCode::OK,
+            snapshot
                 .result_body
                 .expect("successful async job should retain result body"),
-        },
+        ),
         AsyncJobState::Pending | AsyncJobState::Running => error_response(
-            409,
-            "Conflict",
+            StatusCode::CONFLICT,
             "job_not_ready",
             format!(
                 "async job {job_id} is currently {}",
-                async_job_state_label(snapshot.state)
+                match snapshot.state {
+                    AsyncJobState::Pending => "pending",
+                    AsyncJobState::Running => "running",
+                    _ => unreachable!(),
+                }
             ),
         ),
         AsyncJobState::Failed => {
-            let status_code = snapshot.error_status_code.unwrap_or(500);
-            let reason = http_status_reason(status_code);
+            let status_code = snapshot
+                .error_status_code
+                .and_then(|code| StatusCode::from_u16(code).ok())
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             error_response(
                 status_code,
-                reason,
                 "job_failed",
                 snapshot
                     .error_message
@@ -784,21 +769,25 @@ fn decode_scan_request_from_http(
     request: &HttpRequest,
     route_label: &str,
 ) -> std::result::Result<SyncScanRequest, HttpResponse> {
-    if !request
-        .headers
-        .get("content-type")
-        .is_some_and(|value| value.starts_with("application/json"))
-    {
+    if !request.headers.get(CONTENT_TYPE).is_some_and(|value| {
+        value
+            .to_str()
+            .is_ok_and(|v| v.starts_with("application/json"))
+    }) {
         return Err(error_response(
-            415,
-            "Unsupported Media Type",
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
             "unsupported_media_type",
             format!("{route_label} requires Content-Type: application/json"),
         ));
     }
 
-    decode_sync_scan_request(&request.body)
-        .map_err(|error| error_response(400, "Bad Request", "invalid_request", error.to_string()))
+    decode_sync_scan_request(&request.body).map_err(|error| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_request",
+            error.to_string(),
+        )
+    })
 }
 
 fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecution, ServeError> {
@@ -873,15 +862,6 @@ fn run_async_scan_request(
     execute_scan_execution(execution)
 }
 
-fn async_job_state_label(state: AsyncJobState) -> &'static str {
-    match state {
-        AsyncJobState::Pending => "pending",
-        AsyncJobState::Running => "running",
-        AsyncJobState::Succeeded => "succeeded",
-        AsyncJobState::Failed => "failed",
-    }
-}
-
 enum JobRoute<'a> {
     Status(&'a str),
     Result(&'a str),
@@ -900,35 +880,16 @@ fn is_valid_job_id(job_id: &str) -> bool {
     !job_id.is_empty() && !job_id.contains('/')
 }
 
-fn json_response(status_code: u16, reason: &'static str, body: serde_json::Value) -> HttpResponse {
-    HttpResponse {
+fn serialize_response<T: serde::Serialize>(status_code: StatusCode, body: &T) -> HttpResponse {
+    HttpResponse(
         status_code,
-        reason,
-        body: body.to_string(),
-    }
+        serde_json::to_string(body).expect("response body should serialize"),
+    )
 }
 
-fn serialize_response<T: serde::Serialize>(
-    status_code: u16,
-    reason: &'static str,
-    body: &T,
-) -> HttpResponse {
-    HttpResponse {
-        status_code,
-        reason,
-        body: serde_json::to_string(body).expect("response body should serialize"),
-    }
-}
-
-fn error_response(
-    status_code: u16,
-    reason: &'static str,
-    status: &'static str,
-    message: String,
-) -> HttpResponse {
+fn error_response(status_code: StatusCode, status: &'static str, message: String) -> HttpResponse {
     serialize_response(
         status_code,
-        reason,
         &ServeErrorResponse {
             status: status.to_string(),
             message,
@@ -938,12 +899,13 @@ fn error_response(
 }
 
 fn write_http_response(stream: &mut TcpStream, response: HttpResponse) -> Result<()> {
+    let reason = response.0.canonical_reason().unwrap_or("Error");
     let payload = format!(
         "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        response.status_code,
-        response.reason,
-        response.body.len(),
-        response.body,
+        response.0.as_u16(),
+        reason,
+        response.1.len(),
+        response.1,
     );
     stream.write_all(payload.as_bytes())?;
     stream.flush()?;
@@ -954,6 +916,19 @@ fn write_http_response(stream: &mut TcpStream, response: HttpResponse) -> Result
 mod tests {
     use super::*;
     use crate::serve_api::{SyncScanInput, SyncScanOptions};
+
+    fn test_request(method: Method, path: &str) -> HttpRequest {
+        HttpRequest {
+            method,
+            path: path.to_string(),
+            headers: HeaderMap::new(),
+            body: Vec::new(),
+        }
+    }
+
+    fn assert_status(response: &HttpResponse, expected: StatusCode) {
+        assert_eq!(response.0, expected);
+    }
 
     fn dummy_async_request() -> SyncScanRequest {
         SyncScanRequest {
@@ -997,60 +972,38 @@ mod tests {
 
     #[test]
     fn readyz_reports_ready_metadata() {
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            path: "/readyz".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-        let response = response_for_request(&request, &ready_state());
-        assert_eq!(response.status_code, 200);
-        assert!(response.body.contains("\"status\":\"ready\""));
-        assert!(response.body.contains("\"api_version\":\"v1\""));
+        let response = response_for_request(&test_request(Method::GET, "/readyz"), &ready_state());
+        assert_status(&response, StatusCode::OK);
+        assert!(response.1.contains("\"status\":\"ready\""));
+        assert!(response.1.contains("\"api_version\":\"v1\""));
     }
 
     #[test]
     fn async_scan_route_requires_post() {
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            path: "/v1/scans:async".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-        let response = response_for_request(&request, &ready_state());
-        assert_eq!(response.status_code, 405);
-        assert!(response.body.contains("method_not_allowed"));
+        let response = response_for_request(
+            &test_request(Method::GET, "/v1/scans:async"),
+            &ready_state(),
+        );
+        assert_status(&response, StatusCode::METHOD_NOT_ALLOWED);
+        assert!(response.1.contains("method_not_allowed"));
     }
 
     #[test]
     fn pending_job_status_reports_pending_state() {
         let state = ready_state_with_job("job-1", AsyncJobRecord::pending());
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            path: "/v1/jobs/job-1".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-
-        let response = response_for_request(&request, &state);
-        assert_eq!(response.status_code, 200);
-        assert!(response.body.contains("\"state\":\"pending\""));
-        assert!(response.body.contains("\"result_ready\":false"));
+        let response = response_for_request(&test_request(Method::GET, "/v1/jobs/job-1"), &state);
+        assert_status(&response, StatusCode::OK);
+        assert!(response.1.contains("\"state\":\"pending\""));
+        assert!(response.1.contains("\"result_ready\":false"));
     }
 
     #[test]
     fn pending_job_result_reports_not_ready() {
         let state = ready_state_with_job("job-2", AsyncJobRecord::pending());
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            path: "/v1/jobs/job-2/result".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-
-        let response = response_for_request(&request, &state);
-        assert_eq!(response.status_code, 409);
-        assert!(response.body.contains("job_not_ready"));
+        let response =
+            response_for_request(&test_request(Method::GET, "/v1/jobs/job-2/result"), &state);
+        assert_status(&response, StatusCode::CONFLICT);
+        assert!(response.1.contains("job_not_ready"));
     }
 
     #[test]
@@ -1065,16 +1018,10 @@ mod tests {
                 error_status_code: None,
             },
         );
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            path: "/v1/jobs/job-3/result".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-
-        let response = response_for_request(&request, &state);
-        assert_eq!(response.status_code, 200);
-        assert_eq!(response.body, "{\"status\":\"ok\"}");
+        let response =
+            response_for_request(&test_request(Method::GET, "/v1/jobs/job-3/result"), &state);
+        assert_status(&response, StatusCode::OK);
+        assert_eq!(response.1, "{\"status\":\"ok\"}");
     }
 
     #[test]
@@ -1089,17 +1036,11 @@ mod tests {
                 error_status_code: Some(500),
             },
         );
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            path: "/v1/jobs/job-4/result".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-
-        let response = response_for_request(&request, &state);
-        assert_eq!(response.status_code, 500);
-        assert!(response.body.contains("job_failed"));
-        assert!(response.body.contains("async scan job failed"));
+        let response =
+            response_for_request(&test_request(Method::GET, "/v1/jobs/job-4/result"), &state);
+        assert_status(&response, StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(response.1.contains("job_failed"));
+        assert!(response.1.contains("async scan job failed"));
     }
 
     #[test]
@@ -1229,16 +1170,10 @@ mod tests {
 
     #[test]
     fn sync_scan_requires_json_content_type() {
-        let request = HttpRequest {
-            method: "POST".to_string(),
-            path: "/v1/scans".to_string(),
-            headers: HashMap::new(),
-            body: Vec::new(),
-        };
-
-        let response = handle_sync_scan_request(&request);
-        assert_eq!(response.status_code, 415);
-        assert!(response.body.contains("unsupported_media_type"));
+        let response = handle_sync_scan_request(&test_request(Method::POST, "/v1/scans"))
+            .unwrap_or_else(|e| e);
+        assert_status(&response, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert!(response.1.contains("unsupported_media_type"));
     }
 
     #[test]

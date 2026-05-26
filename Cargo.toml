@@ -116,6 +116,7 @@ file-identify = "0.4.0"
 flate2 = "1.1.9"
  glob = { workspace = true }
 hex = "0.4.3"
+http = "1"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "tiff", "webp"] }
 indicatif = "0.18.4"
 indicatif-log-bridge = "0.2.3"
