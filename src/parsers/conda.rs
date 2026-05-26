@@ -1023,7 +1023,8 @@ fn extract_pip_dependencies(pip_deps: &[Value]) -> Vec<Dependency> {
         .take(MAX_ITERATION_COUNT)
         .filter_map(|pip_dep| {
             if let Some(pip_req_str) = pip_dep.as_str()
-                && let Ok(parsed_req) = pip_req_str.parse::<pep508_rs::Requirement>()
+                && let Some(parsed_req) =
+                    crate::parsers::pep508::parse_pep508_requirement(pip_req_str)
             {
                 create_pip_dependency(parsed_req, "dependencies", Some(pip_req_str))
             } else {
@@ -1034,20 +1035,24 @@ fn extract_pip_dependencies(pip_deps: &[Value]) -> Vec<Dependency> {
 }
 
 fn create_pip_dependency(
-    parsed_req: pep508_rs::Requirement,
+    parsed_req: crate::parsers::pep508::Pep508Requirement,
     scope: &str,
     raw_requirement: Option<&str>,
 ) -> Option<Dependency> {
-    let name = truncate_field(parsed_req.name.to_string());
+    let name = truncate_field(parsed_req.name);
 
     if name == "pip" || name == "python" {
         return None;
     }
 
-    let specs = parsed_req.version_or_url.as_ref().map(|v| match v {
-        pep508_rs::VersionOrUrl::VersionSpecifier(spec) => truncate_field(spec.to_string()),
-        pep508_rs::VersionOrUrl::Url(url) => truncate_field(url.to_string()),
-    });
+    let specs = if parsed_req.is_name_at_url {
+        parsed_req
+            .url
+            .as_ref()
+            .map(|url| truncate_field(url.clone()))
+    } else {
+        parsed_req.specifiers.clone()
+    };
 
     let extracted_requirement = if let Some(raw) = raw_requirement {
         let raw = raw.trim();
