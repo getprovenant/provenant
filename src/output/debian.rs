@@ -4,7 +4,6 @@
 use std::collections::HashSet;
 use std::io::{self, Write};
 
-use crate::models::FileType;
 use crate::output_schema::{Output, OutputFileInfo as FileInfo};
 
 const COPYRIGHT_FORMAT_URL: &str =
@@ -26,7 +25,7 @@ pub(crate) fn write_debian_copyright(output: &Output, writer: &mut dyn Write) ->
     let mut files: Vec<_> = output
         .files
         .iter()
-        .filter(|file| !matches!(file.file_type, FileType::Directory))
+        .filter(|file| file.file_type != "directory")
         .collect();
     files.sort_by(|left, right| left.path.cmp(&right.path));
 

@@ -173,11 +173,25 @@ mod tests {
             .into_iter()
             .filter(|file| !file.path.is_empty())
             .map(|file| {
+                let file_type_str = match file.file_type {
+                    crate::models::FileType::File => "file",
+                    crate::models::FileType::Directory => "directory",
+                };
+                let package_data: Vec<crate::output_schema::OutputPackageData> = file
+                    .package_data
+                    .iter()
+                    .map(crate::output_schema::OutputPackageData::from)
+                    .collect();
+                let for_packages: Vec<String> = file
+                    .for_packages
+                    .iter()
+                    .map(|uid| uid.to_string())
+                    .collect();
                 json!({
                     "path": file.path,
-                    "type": file.file_type,
-                    "package_data": file.package_data,
-                    "for_packages": file.for_packages,
+                    "type": file_type_str,
+                    "package_data": package_data,
+                    "for_packages": for_packages,
                     "scan_errors": file.scan_errors,
                 })
             })

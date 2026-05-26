@@ -9,6 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::str::FromStr;
 use strum::{EnumCount, EnumIter};
 
 /// Unique identifier for the type of package data source (file format).
@@ -19,13 +20,10 @@ use strum::{EnumCount, EnumIter};
 ///
 /// # Serialization
 ///
-/// Variants serialize to snake_case strings matching the Python reference values.
-/// The JSON output is identical to the Python ScanCode Toolkit.
-///
-/// For example, `DatasourceId::NpmPackageJson` formats as
-/// `npm_package_json` for both `AsRef<str>` and `Display`.
+/// Variants serialize as PascalCase in the cache/spill format (e.g., `NpmPackageJson`).
+/// For JSON output, use `as_str()` / `Display` which returns snake_case strings
+/// matching the Python ScanCode Toolkit values (e.g., `npm_package_json`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, EnumCount, EnumIter)]
-#[serde(rename_all = "snake_case")]
 pub enum DatasourceId {
     // ── About/README/OS ──
     AboutFile,
@@ -68,11 +66,7 @@ pub enum DatasourceId {
     BowerJson,
 
     // ── Buck ──
-    /// Matches Python reference value. More consistent name would be `buck_file`.
-    #[serde(rename = "buck_file")]
     BuckFile,
-    /// Matches Python reference value. More consistent name would be `buck_metadata`.
-    #[serde(rename = "buck_metadata")]
     BuckMetadata,
 
     // ── Bun ──
@@ -91,10 +85,8 @@ pub enum DatasourceId {
 
     // ── Chef ──
     /// Matches Python reference value.
-    #[serde(rename = "chef_cookbook_metadata_json")]
     ChefCookbookMetadataJson,
     /// Matches Python reference value.
-    #[serde(rename = "chef_cookbook_metadata_rb")]
     ChefCookbookMetadataRb,
 
     CitationCff,
@@ -106,17 +98,13 @@ pub enum DatasourceId {
     CocoapodsPodspecJson,
 
     // ── Conan ──
-    #[serde(rename = "conan_conandata_yml")]
     ConanConanDataYml,
-    #[serde(rename = "conan_conanfile_py")]
     ConanConanFilePy,
-    #[serde(rename = "conan_conanfile_txt")]
     ConanConanFileTxt,
     ConanLock,
 
     // ── Conda ──
     /// Matches Python reference value.
-    #[serde(rename = "conda_yaml")]
     CondaYaml,
     CondaMetaJson,
     CondaMetaYaml,
@@ -128,7 +116,6 @@ pub enum DatasourceId {
     // ── CPAN/Perl ──
     CpanDistIni,
     /// Matches Python reference value.
-    #[serde(rename = "cpan_makefile")]
     CpanMakefile,
     CpanManifest,
     CpanMetaJson,
@@ -150,19 +137,14 @@ pub enum DatasourceId {
     DebianCopyrightStandalone,
     DebianDeb,
     /// Matches Python reference value.
-    #[serde(rename = "debian_source_metadata_tarball")]
     DebianSourceMetadataTarball,
     DebianDistrolessInstalledDb,
     /// Matches Python reference value.
-    #[serde(rename = "debian_installed_files_list")]
     DebianInstalledFilesList,
-    #[serde(rename = "debian_installed_md5sums")]
     DebianInstalledMd5Sums,
     DebianInstalledStatusDb,
-    #[serde(rename = "debian_md5sums_in_extracted_deb")]
     DebianMd5SumsInExtractedDeb,
     /// Matches Python reference value.
-    #[serde(rename = "debian_original_source_tarball")]
     DebianOriginalSourceTarball,
     DebianSourceControlDsc,
 
@@ -263,9 +245,6 @@ pub enum DatasourceId {
     NugetProjectLockJson,
     NugetPackagesConfig,
     NugetPackagesLock,
-    /// Serializes to `"nuget_nuspec"` (corrected from typo `"nuget_nupsec"` in Python reference).
-    /// Legacy alias `"nuget_nupsec"` is supported for backward compatibility with `--from-json`.
-    #[serde(rename = "nuget_nuspec", alias = "nuget_nupsec")]
     NugetNuspec,
     NugetVbproj,
     NugetFsproj,
@@ -312,9 +291,6 @@ pub enum DatasourceId {
     RpmInstalledDatabaseSqlite,
     RpmMarinerManifest,
     RpmPackageLicenses,
-    /// Serializes to `"rpm_specfile"` (corrected from typo `"rpm_spefile"` in Python reference).
-    /// Legacy alias `"rpm_spefile"` is supported for backward compatibility with `--from-json`.
-    #[serde(rename = "rpm_specfile", alias = "rpm_spefile")]
     RpmSpecfile,
     RpmYumdb,
 
@@ -325,7 +301,6 @@ pub enum DatasourceId {
     GemfileLockExtracted,
     GemArchive,
     /// Matches Python reference value.
-    #[serde(rename = "gem_archive_extracted")]
     GemArchiveExtracted,
     Gemspec,
     GemspecExtracted,
@@ -669,6 +644,17 @@ impl fmt::Display for DatasourceId {
     }
 }
 
+impl FromStr for DatasourceId {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use strum::IntoEnumIterator;
+        Self::iter()
+            .find(|variant| variant.as_str() == s)
+            .ok_or_else(|| format!("unknown datasource id: {}", s))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -677,12 +663,12 @@ mod tests {
     fn test_serialization() {
         let id = DatasourceId::NpmPackageJson;
         let json = serde_json::to_string(&id).unwrap();
-        assert_eq!(json, r#""npm_package_json""#);
+        assert_eq!(json, r#""NpmPackageJson""#);
     }
 
     #[test]
     fn test_deserialization() {
-        let json = r#""npm_package_json""#;
+        let json = r#""NpmPackageJson""#;
         let id: DatasourceId = serde_json::from_str(json).unwrap();
         assert_eq!(id, DatasourceId::NpmPackageJson);
     }
@@ -750,29 +736,11 @@ mod tests {
     }
 
     #[test]
-    fn test_legacy_deserialization_aliases() {
-        // Test that legacy typo spellings are accepted for backward compatibility
-        let legacy_nuget: DatasourceId = serde_json::from_str(r#""nuget_nupsec""#).unwrap();
-        assert_eq!(legacy_nuget, DatasourceId::NugetNuspec);
-
-        let legacy_rpm: DatasourceId = serde_json::from_str(r#""rpm_spefile""#).unwrap();
-        assert_eq!(legacy_rpm, DatasourceId::RpmSpecfile);
-
-        // Canonical spellings should also work
-        let canonical_nuget: DatasourceId = serde_json::from_str(r#""nuget_nuspec""#).unwrap();
-        assert_eq!(canonical_nuget, DatasourceId::NugetNuspec);
-
-        let canonical_rpm: DatasourceId = serde_json::from_str(r#""rpm_specfile""#).unwrap();
-        assert_eq!(canonical_rpm, DatasourceId::RpmSpecfile);
-    }
-
-    #[test]
     fn test_canonical_serialization() {
-        // Test that canonical spellings are used for serialization
         let nuget_json = serde_json::to_string(&DatasourceId::NugetNuspec).unwrap();
-        assert_eq!(nuget_json, r#""nuget_nuspec""#);
+        assert_eq!(nuget_json, r#""NugetNuspec""#);
 
         let rpm_json = serde_json::to_string(&DatasourceId::RpmSpecfile).unwrap();
-        assert_eq!(rpm_json, r#""rpm_specfile""#);
+        assert_eq!(rpm_json, r#""RpmSpecfile""#);
     }
 }

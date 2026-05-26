@@ -24,14 +24,10 @@ use std::str::FromStr;
 ///
 /// # Serialization
 ///
-/// Variants serialize to lowercase/kebab-case strings matching the
-/// Python reference values. The JSON output is identical to the
-/// Python ScanCode Toolkit.
-///
-/// For example, `PackageType::Npm` formats as `npm` for both `AsRef<str>` and
-/// `Display`.
+/// Variants serialize as PascalCase in the cache/spill format (e.g., `JbossService`).
+/// For JSON output, use `as_str()` / `Display` which returns lowercase/kebab-case
+/// strings matching the Python ScanCode Toolkit values (e.g., `jboss-service`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum PackageType {
     About,
     Alpm,
@@ -76,9 +72,7 @@ pub enum PackageType {
     Iso,
     Ivy,
     Jar,
-    #[serde(rename = "jboss-service")]
     JbossService,
-    #[serde(rename = "linux-distro")]
     LinuxDistro,
     Maven,
     Meson,
@@ -90,7 +84,6 @@ pub enum PackageType {
     Nuget,
     Opam,
     Osgi,
-    #[serde(rename = "pnpm-lock")]
     PnpmLock,
     Pubspec,
     Pypi,
@@ -104,7 +97,6 @@ pub enum PackageType {
     Vcpkg,
     War,
     Winexe,
-    #[serde(rename = "windows-update")]
     WindowsUpdate,
 }
 
@@ -203,8 +195,78 @@ impl FromStr for PackageType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let json = format!("\"{}\"", s);
-        serde_json::from_str(&json).map_err(|_| format!("unknown package type: {}", s))
+        match s {
+            "about" => Ok(Self::About),
+            "alpm" => Ok(Self::Alpm),
+            "alpine" => Ok(Self::Alpine),
+            "android" => Ok(Self::Android),
+            "android_lib" => Ok(Self::AndroidLib),
+            "autotools" => Ok(Self::Autotools),
+            "axis2" => Ok(Self::Axis2),
+            "bazel" => Ok(Self::Bazel),
+            "bitbake" => Ok(Self::Bitbake),
+            "bower" => Ok(Self::Bower),
+            "buck" => Ok(Self::Buck),
+            "cab" => Ok(Self::Cab),
+            "cargo" => Ok(Self::Cargo),
+            "carthage" => Ok(Self::Carthage),
+            "chef" => Ok(Self::Chef),
+            "chrome" => Ok(Self::Chrome),
+            "cocoapods" => Ok(Self::Cocoapods),
+            "composer" => Ok(Self::Composer),
+            "conan" => Ok(Self::Conan),
+            "conda" => Ok(Self::Conda),
+            "cpan" => Ok(Self::Cpan),
+            "cran" => Ok(Self::Cran),
+            "dart" => Ok(Self::Dart),
+            "deb" => Ok(Self::Deb),
+            "deno" => Ok(Self::Deno),
+            "docker" => Ok(Self::Docker),
+            "dmg" => Ok(Self::Dmg),
+            "ear" => Ok(Self::Ear),
+            "freebsd" => Ok(Self::Freebsd),
+            "gem" => Ok(Self::Gem),
+            "generic" => Ok(Self::Generic),
+            "github" => Ok(Self::Github),
+            "golang" => Ok(Self::Golang),
+            "hackage" => Ok(Self::Hackage),
+            "haxe" => Ok(Self::Haxe),
+            "helm" => Ok(Self::Helm),
+            "hex" => Ok(Self::Hex),
+            "installshield" => Ok(Self::Installshield),
+            "julia" => Ok(Self::Julia),
+            "ios" => Ok(Self::Ios),
+            "iso" => Ok(Self::Iso),
+            "ivy" => Ok(Self::Ivy),
+            "jar" => Ok(Self::Jar),
+            "jboss-service" => Ok(Self::JbossService),
+            "linux-distro" => Ok(Self::LinuxDistro),
+            "maven" => Ok(Self::Maven),
+            "meson" => Ok(Self::Meson),
+            "meteor" => Ok(Self::Meteor),
+            "nix" => Ok(Self::Nix),
+            "mozilla" => Ok(Self::Mozilla),
+            "npm" => Ok(Self::Npm),
+            "nsis" => Ok(Self::Nsis),
+            "nuget" => Ok(Self::Nuget),
+            "opam" => Ok(Self::Opam),
+            "osgi" => Ok(Self::Osgi),
+            "pnpm-lock" => Ok(Self::PnpmLock),
+            "pubspec" => Ok(Self::Pubspec),
+            "pypi" => Ok(Self::Pypi),
+            "pixi" => Ok(Self::Pixi),
+            "publiccode" => Ok(Self::Publiccode),
+            "readme" => Ok(Self::Readme),
+            "rpm" => Ok(Self::Rpm),
+            "shar" => Ok(Self::Shar),
+            "squashfs" => Ok(Self::Squashfs),
+            "swift" => Ok(Self::Swift),
+            "vcpkg" => Ok(Self::Vcpkg),
+            "war" => Ok(Self::War),
+            "winexe" => Ok(Self::Winexe),
+            "windows-update" => Ok(Self::WindowsUpdate),
+            _ => Err(format!("unknown package type: {}", s)),
+        }
     }
 }
 
@@ -216,12 +278,12 @@ mod tests {
     fn test_serialization() {
         let pt = PackageType::Npm;
         let json = serde_json::to_string(&pt).unwrap();
-        assert_eq!(json, r#""npm""#);
+        assert_eq!(json, r#""Npm""#);
     }
 
     #[test]
     fn test_deserialization() {
-        let json = r#""npm""#;
+        let json = r#""Npm""#;
         let pt: PackageType = serde_json::from_str(json).unwrap();
         assert_eq!(pt, PackageType::Npm);
     }
@@ -257,21 +319,20 @@ mod tests {
         assert_eq!(PackageType::Winexe.as_str(), "winexe");
         assert_eq!(PackageType::WindowsUpdate.as_str(), "windows-update");
 
-        // Verify serialization matches
         let json = serde_json::to_string(&PackageType::JbossService).unwrap();
-        assert_eq!(json, r#""jboss-service""#);
+        assert_eq!(json, r#""JbossService""#);
 
         let json = serde_json::to_string(&PackageType::LinuxDistro).unwrap();
-        assert_eq!(json, r#""linux-distro""#);
+        assert_eq!(json, r#""LinuxDistro""#);
 
         let json = serde_json::to_string(&PackageType::PnpmLock).unwrap();
-        assert_eq!(json, r#""pnpm-lock""#);
+        assert_eq!(json, r#""PnpmLock""#);
 
         let json = serde_json::to_string(&PackageType::Winexe).unwrap();
-        assert_eq!(json, r#""winexe""#);
+        assert_eq!(json, r#""Winexe""#);
 
         let json = serde_json::to_string(&PackageType::WindowsUpdate).unwrap();
-        assert_eq!(json, r#""windows-update""#);
+        assert_eq!(json, r#""WindowsUpdate""#);
     }
 
     #[test]
@@ -279,24 +340,24 @@ mod tests {
         assert_eq!(PackageType::AndroidLib.as_str(), "android_lib");
 
         let json = serde_json::to_string(&PackageType::AndroidLib).unwrap();
-        assert_eq!(json, r#""android_lib""#);
+        assert_eq!(json, r#""AndroidLib""#);
     }
 
     #[test]
     fn test_deserialization_kebab_case() {
-        let pt: PackageType = serde_json::from_str(r#""jboss-service""#).unwrap();
+        let pt: PackageType = serde_json::from_str(r#""JbossService""#).unwrap();
         assert_eq!(pt, PackageType::JbossService);
 
-        let pt: PackageType = serde_json::from_str(r#""linux-distro""#).unwrap();
+        let pt: PackageType = serde_json::from_str(r#""LinuxDistro""#).unwrap();
         assert_eq!(pt, PackageType::LinuxDistro);
 
-        let pt: PackageType = serde_json::from_str(r#""pnpm-lock""#).unwrap();
+        let pt: PackageType = serde_json::from_str(r#""PnpmLock""#).unwrap();
         assert_eq!(pt, PackageType::PnpmLock);
 
-        let pt: PackageType = serde_json::from_str(r#""winexe""#).unwrap();
+        let pt: PackageType = serde_json::from_str(r#""Winexe""#).unwrap();
         assert_eq!(pt, PackageType::Winexe);
 
-        let pt: PackageType = serde_json::from_str(r#""windows-update""#).unwrap();
+        let pt: PackageType = serde_json::from_str(r#""WindowsUpdate""#).unwrap();
         assert_eq!(pt, PackageType::WindowsUpdate);
     }
 }

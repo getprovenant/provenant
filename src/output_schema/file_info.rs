@@ -26,8 +26,9 @@ pub struct OutputFileInfo {
     pub extension: String,
     pub path: String,
     #[serde(rename = "type")]
-    pub file_type: crate::models::FileType,
+    pub file_type: String,
     pub mime_type: Option<String>,
+    #[serde(rename = "file_type")]
     pub file_type_label: Option<String>,
     #[serde(default)]
     pub size: u64,
@@ -281,7 +282,10 @@ impl OutputFileInfo {
             base_name: value.base_name.clone(),
             extension: value.extension.clone(),
             path: value.path.clone(),
-            file_type: value.file_type.clone(),
+            file_type: match value.file_type {
+                crate::models::FileType::File => "file".to_string(),
+                crate::models::FileType::Directory => "directory".to_string(),
+            },
             mime_type: value.mime_type.clone(),
             file_type_label: value.file_type_label.clone(),
             size: value.size,
@@ -395,7 +399,11 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
             base_name: value.base_name.clone(),
             extension: value.extension.clone(),
             path: value.path.clone(),
-            file_type: value.file_type.clone(),
+            file_type: match value.file_type.as_str() {
+                "file" => crate::models::FileType::File,
+                "directory" => crate::models::FileType::Directory,
+                _ => return Err(format!("invalid file_type: {}", value.file_type)),
+            },
             mime_type: value.mime_type.clone(),
             file_type_label: value.file_type_label.clone(),
             size: value.size,
@@ -475,7 +483,6 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
 #[cfg(test)]
 mod tests {
     use super::OutputFileInfo;
-    use crate::models::FileType;
     use crate::output_schema::license_detection::OutputLicenseDetection;
 
     fn base_output_file_info() -> OutputFileInfo {
@@ -484,7 +491,7 @@ mod tests {
             base_name: "mod".to_string(),
             extension: ".rs".to_string(),
             path: "mod.rs".to_string(),
-            file_type: FileType::File,
+            file_type: "file".to_string(),
             mime_type: None,
             file_type_label: None,
             size: 0,

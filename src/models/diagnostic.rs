@@ -13,7 +13,7 @@ pub enum DiagnosticSeverity {
 pub struct ScanDiagnostic {
     pub severity: DiagnosticSeverity,
     pub message: String,
-    #[serde(default, skip)]
+    #[serde(default)]
     pub is_timeout: bool,
 }
 

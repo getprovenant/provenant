@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 use sha1::{Digest, Sha1};
 
-use crate::models::FileType;
 use crate::output_schema::{Output, OutputFileInfo as FileInfo, OutputMatch as Match};
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
@@ -315,7 +314,7 @@ fn sanitize_spdx_package_name(name: &str) -> String {
 fn spdx_files(output: &Output) -> Vec<&FileInfo> {
     sorted_files(&output.files)
         .into_iter()
-        .filter(|f| f.file_type == FileType::File)
+        .filter(|f| f.file_type == "file")
         .collect()
 }
 
@@ -492,7 +491,9 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{LicenseDetection, LineNumber, MatchScore, PackageData, PackageType};
+    use crate::models::{
+        FileType, LicenseDetection, LineNumber, MatchScore, PackageData, PackageType,
+    };
 
     #[test]
     fn spdx_file_license_info_includes_manifest_package_data_detections() {
