@@ -14,8 +14,8 @@ use crate::models::{
     Package, TopLevelDependency, TopLevelLicenseDetection,
 };
 use crate::output_schema::{
-    OutputFileInfo, OutputLicenseReference, OutputLicenseRuleReference, OutputMatch, OutputPackage,
-    OutputTopLevelDependency, OutputTopLevelLicenseDetection,
+    OutputFileInfo, OutputFileType, OutputLicenseReference, OutputLicenseRuleReference,
+    OutputMatch, OutputPackage, OutputTopLevelDependency, OutputTopLevelLicenseDetection,
 };
 use crate::scanner::ProcessResult;
 
@@ -76,21 +76,21 @@ impl JsonScanInput {
     pub(crate) fn directory_count(&self) -> usize {
         self.files
             .iter()
-            .filter(|file| file.file_type == "directory")
+            .filter(|file| file.file_type == OutputFileType::Directory)
             .count()
     }
 
     pub(crate) fn file_count(&self) -> usize {
         self.files
             .iter()
-            .filter(|file| file.file_type == "file")
+            .filter(|file| file.file_type == OutputFileType::File)
             .count()
     }
 
     pub(crate) fn file_size_count(&self) -> u64 {
         self.files
             .iter()
-            .filter(|file| file.file_type == "file")
+            .filter(|file| file.file_type == OutputFileType::File)
             .map(|file| file.size)
             .sum()
     }
@@ -432,7 +432,7 @@ fn directory_output_json_file(path: &str) -> OutputFileInfo {
         base_name: name,
         extension: String::new(),
         path: path.to_string(),
-        file_type: "directory".to_string(),
+        file_type: OutputFileType::Directory,
         mime_type: None,
         file_type_label: None,
         size: 0,
@@ -571,7 +571,7 @@ fn prefix_virtual_root(path: &str) -> String {
 fn derive_json_scan_root(files: &[OutputFileInfo]) -> Option<String> {
     let mut directories: Vec<&str> = files
         .iter()
-        .filter(|file| file.file_type == "directory")
+        .filter(|file| file.file_type == OutputFileType::Directory)
         .map(|file| file.path.as_str())
         .collect();
     directories.sort_by_key(|path| (path.matches('/').count(), path.len()));

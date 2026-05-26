@@ -7,7 +7,9 @@ use std::path::PathBuf;
 
 use sha1::{Digest, Sha1};
 
-use crate::output_schema::{Output, OutputFileInfo as FileInfo, OutputMatch as Match};
+use crate::output_schema::{
+    Output, OutputFileInfo as FileInfo, OutputFileType, OutputMatch as Match,
+};
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
 use super::shared::{sorted_files, xml_escape};
@@ -314,7 +316,7 @@ fn sanitize_spdx_package_name(name: &str) -> String {
 fn spdx_files(output: &Output) -> Vec<&FileInfo> {
     sorted_files(&output.files)
         .into_iter()
-        .filter(|f| f.file_type == "file")
+        .filter(|f| f.file_type == OutputFileType::File)
         .collect()
 }
 
