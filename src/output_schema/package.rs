@@ -3,16 +3,17 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::str::FromStr;
 
+use super::datasource_id::OutputDatasourceId;
 use super::license_detection::OutputLicenseDetection;
+use super::package_type::OutputPackageType;
 use super::party::OutputParty;
 use super::serde_helpers::serialize_optional_map_as_object;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputPackage {
     #[serde(rename = "type")]
-    pub package_type: Option<String>,
+    pub package_type: Option<OutputPackageType>,
     pub namespace: Option<String>,
     pub name: Option<String>,
     pub version: Option<String>,
@@ -62,13 +63,13 @@ pub struct OutputPackage {
     pub purl: Option<String>,
     pub package_uid: String,
     pub datafile_paths: Vec<String>,
-    pub datasource_ids: Vec<String>,
+    pub datasource_ids: Vec<OutputDatasourceId>,
 }
 
 impl From<&crate::models::Package> for OutputPackage {
     fn from(value: &crate::models::Package) -> Self {
         Self {
-            package_type: value.package_type.map(|pt| pt.to_string()),
+            package_type: value.package_type.map(OutputPackageType::from),
             namespace: value.namespace.clone(),
             name: value.name.clone(),
             version: value.version.clone(),
@@ -120,7 +121,7 @@ impl From<&crate::models::Package> for OutputPackage {
             datasource_ids: value
                 .datasource_ids
                 .iter()
-                .map(|d| d.as_str().to_string())
+                .map(OutputDatasourceId::from)
                 .collect(),
         }
     }
@@ -144,8 +145,7 @@ impl TryFrom<&OutputPackage> for crate::models::Package {
         Ok(Self {
             package_type: value
                 .package_type
-                .as_deref()
-                .map(crate::models::PackageType::from_str)
+                .map(crate::models::PackageType::try_from)
                 .transpose()?,
             namespace: value.namespace.clone(),
             name: value.name.clone(),
@@ -210,11 +210,9 @@ impl TryFrom<&OutputPackage> for crate::models::Package {
             datasource_ids: value
                 .datasource_ids
                 .iter()
-                .map(|s| {
-                    crate::models::DatasourceId::from_str(s)
-                        .map_err(|e| format!("invalid datasource_id: {}", e))
-                })
-                .collect::<Result<Vec<_>, _>>()?,
+                .map(|id| crate::models::DatasourceId::try_from(*id))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| format!("invalid datasource_id: {}", e))?,
         })
     }
 }

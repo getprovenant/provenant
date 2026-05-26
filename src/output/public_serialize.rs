@@ -7,8 +7,9 @@ use serde::ser::{SerializeMap, SerializeSeq};
 use serde::{Serialize, Serializer};
 
 use crate::output_schema::{
-    Output, OutputDependency, OutputFileInfo, OutputFileReference, OutputPackage,
-    OutputPackageData, OutputResolvedPackage, OutputTopLevelDependency,
+    Output, OutputDatasourceId, OutputDependency, OutputFileInfo, OutputFileReference,
+    OutputPackage, OutputPackageData, OutputPackageType, OutputResolvedPackage,
+    OutputTopLevelDependency,
 };
 
 pub(crate) struct PublicOutput<'a>(pub(crate) &'a Output);
@@ -137,7 +138,7 @@ struct PublicPackage<'a>(&'a OutputPackage);
 #[derive(Serialize)]
 struct PublicPackageFields<'a> {
     #[serde(rename = "type")]
-    package_type: &'a Option<String>,
+    package_type: &'a Option<OutputPackageType>,
     namespace: &'a Option<String>,
     name: &'a Option<String>,
     version: &'a Option<String>,
@@ -178,7 +179,7 @@ struct PublicPackageFields<'a> {
     purl: &'a Option<String>,
     package_uid: &'a str,
     datafile_paths: &'a [String],
-    datasource_ids: &'a [String],
+    datasource_ids: &'a [OutputDatasourceId],
 }
 
 impl Serialize for PublicPackage<'_> {
@@ -255,7 +256,7 @@ struct PublicPackageData<'a>(&'a OutputPackageData);
 #[derive(Serialize)]
 struct PublicPackageDataFields<'a> {
     #[serde(rename = "type")]
-    package_type: &'a Option<String>,
+    package_type: &'a Option<OutputPackageType>,
     namespace: &'a Option<String>,
     name: &'a Option<String>,
     version: &'a Option<String>,
@@ -295,7 +296,7 @@ struct PublicPackageDataFields<'a> {
     repository_homepage_url: &'a Option<String>,
     repository_download_url: &'a Option<String>,
     api_data_url: &'a Option<String>,
-    datasource_id: &'a Option<String>,
+    datasource_id: &'a Option<OutputDatasourceId>,
     purl: &'a Option<String>,
 }
 
@@ -358,7 +359,7 @@ struct PublicResolvedPackage<'a>(&'a OutputResolvedPackage);
 #[derive(Serialize)]
 struct PublicResolvedPackageFields<'a> {
     #[serde(rename = "type")]
-    package_type: &'a String,
+    package_type: &'a OutputPackageType,
     namespace: &'a String,
     name: &'a String,
     version: &'a String,
@@ -398,7 +399,7 @@ struct PublicResolvedPackageFields<'a> {
     repository_homepage_url: &'a Option<String>,
     repository_download_url: &'a Option<String>,
     api_data_url: &'a Option<String>,
-    datasource_id: &'a Option<String>,
+    datasource_id: &'a Option<OutputDatasourceId>,
     purl: &'a Option<String>,
 }
 
@@ -487,7 +488,7 @@ struct PublicTopLevelDependencyFields<'a> {
     dependency_uid: &'a str,
     for_package_uid: &'a Option<String>,
     datafile_path: &'a str,
-    datasource_id: &'a str,
+    datasource_id: &'a OutputDatasourceId,
     namespace: &'a Option<String>,
 }
 

@@ -3,8 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::str::FromStr;
 
+use super::datasource_id::OutputDatasourceId;
 use super::resolved_package::OutputResolvedPackage;
 use super::serde_helpers::serialize_optional_map_as_object;
 
@@ -23,7 +23,7 @@ pub struct OutputTopLevelDependency {
     pub dependency_uid: String,
     pub for_package_uid: Option<String>,
     pub datafile_path: String,
-    pub datasource_id: String,
+    pub datasource_id: OutputDatasourceId,
     pub namespace: Option<String>,
 }
 
@@ -45,7 +45,7 @@ impl From<&crate::models::TopLevelDependency> for OutputTopLevelDependency {
             dependency_uid: value.dependency_uid.to_string(),
             for_package_uid: value.for_package_uid.as_ref().map(|uid| uid.to_string()),
             datafile_path: value.datafile_path.clone(),
-            datasource_id: value.datasource_id.to_string(),
+            datasource_id: OutputDatasourceId::from(value.datasource_id),
             namespace: value.namespace.clone(),
         }
     }
@@ -75,7 +75,7 @@ impl TryFrom<&OutputTopLevelDependency> for crate::models::TopLevelDependency {
                 .as_ref()
                 .map(|s| crate::models::PackageUid::from_raw(s.clone())),
             datafile_path: value.datafile_path.clone(),
-            datasource_id: crate::models::DatasourceId::from_str(&value.datasource_id)
+            datasource_id: crate::models::DatasourceId::try_from(value.datasource_id)
                 .map_err(|e| format!("invalid datasource_id: {}", e))?,
             namespace: value.namespace.clone(),
         })

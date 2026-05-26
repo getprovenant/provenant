@@ -7,6 +7,7 @@ use serde_json::Map;
 use super::author::OutputAuthor;
 use super::copyright::OutputCopyright;
 use super::email::OutputEmail;
+use super::file_type::OutputFileType;
 use super::holder::OutputHolder;
 use super::license_detection::OutputLicenseDetection;
 use super::license_match::OutputMatch;
@@ -26,7 +27,7 @@ pub struct OutputFileInfo {
     pub extension: String,
     pub path: String,
     #[serde(rename = "type")]
-    pub file_type: String,
+    pub file_type: OutputFileType,
     pub mime_type: Option<String>,
     #[serde(rename = "file_type")]
     pub file_type_label: Option<String>,
@@ -176,7 +177,7 @@ impl Serialize for OutputFileInfo {
     {
         let mut map = Map::new();
         insert_json(&mut map, "path", &self.path)?;
-        insert_json(&mut map, "type", &self.file_type)?;
+        insert_json(&mut map, "type", self.file_type)?;
         insert_json(&mut map, "name", &self.name)?;
         insert_json(&mut map, "base_name", &self.base_name)?;
         insert_json(&mut map, "extension", &self.extension)?;
@@ -282,10 +283,7 @@ impl OutputFileInfo {
             base_name: value.base_name.clone(),
             extension: value.extension.clone(),
             path: value.path.clone(),
-            file_type: match value.file_type {
-                crate::models::FileType::File => "file".to_string(),
-                crate::models::FileType::Directory => "directory".to_string(),
-            },
+            file_type: OutputFileType::from(&value.file_type),
             mime_type: value.mime_type.clone(),
             file_type_label: value.file_type_label.clone(),
             size: value.size,
@@ -399,11 +397,7 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
             base_name: value.base_name.clone(),
             extension: value.extension.clone(),
             path: value.path.clone(),
-            file_type: match value.file_type.as_str() {
-                "file" => crate::models::FileType::File,
-                "directory" => crate::models::FileType::Directory,
-                _ => return Err(format!("invalid file_type: {}", value.file_type)),
-            },
+            file_type: crate::models::FileType::try_from(value.file_type)?,
             mime_type: value.mime_type.clone(),
             file_type_label: value.file_type_label.clone(),
             size: value.size,
@@ -483,6 +477,7 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
 #[cfg(test)]
 mod tests {
     use super::OutputFileInfo;
+    use crate::output_schema::OutputFileType;
     use crate::output_schema::license_detection::OutputLicenseDetection;
 
     fn base_output_file_info() -> OutputFileInfo {
@@ -491,7 +486,7 @@ mod tests {
             base_name: "mod".to_string(),
             extension: ".rs".to_string(),
             path: "mod.rs".to_string(),
-            file_type: "file".to_string(),
+            file_type: OutputFileType::File,
             mime_type: None,
             file_type_label: None,
             size: 0,
