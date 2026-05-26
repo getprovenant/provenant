@@ -319,7 +319,7 @@ fn current_system_environment() -> SystemEnvironment {
             env::consts::ARCH,
         ),
         platform_version: platform_version.unwrap_or_else(|| "unknown".to_string()),
-        rust_version: rustc_version_runtime::version().to_string(),
+        rust_version: env!("PROVENANT_RUSTC_VERSION").to_string(),
     }
 }
 

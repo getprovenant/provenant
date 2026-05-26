@@ -24,6 +24,8 @@ fn main() {
 
     println!("cargo:rustc-env=PROVENANT_BUILD_VERSION={build_version}");
 
+    set_rustc_version();
+
     generate_legalese_artifact();
 }
 
@@ -126,6 +128,18 @@ fn generate_overlay_entries(dir: &Path, extension: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn set_rustc_version() {
+    let output = Command::new(env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string()))
+        .arg("--version")
+        .output()
+        .expect("failed to run rustc --version");
+    let version = String::from_utf8(output.stdout)
+        .unwrap_or_else(|_| "unknown".to_string())
+        .trim()
+        .to_string();
+    println!("cargo:rustc-env=PROVENANT_RUSTC_VERSION={version}");
 }
 
 fn derive_build_version(package_version: &str) -> String {

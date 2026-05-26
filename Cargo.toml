@@ -142,7 +142,6 @@ rpm = { version = "0.23.5", default-features = false, features = ["payload", "gz
 ruff_python_ast = { version = "0.15.8", package = "rustpython-ruff_python_ast" }
 ruff_python_parser = { version = "0.15.8", package = "rustpython-ruff_python_parser" }
 rusqlite = { version = "0.39.0", features = ["bundled"], optional = true }
-rustc_version_runtime = "0.3.0"
 rusty-axml = "0.2.1"
 schemars = { version = "1.2.1", features = ["derive"] }
 serde = { workspace = true }
