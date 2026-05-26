@@ -32,12 +32,12 @@ pub(crate) use crate::license_detection::DEFAULT_LICENSEDB_URL_TEMPLATE;
 #[cfg(test)]
 use crate::models::Match;
 use crate::models::{
-    ExtraData, FileInfo, FileType, HEADER_NOTICE, Header, OUTPUT_FORMAT_VERSION, Output, Package,
-    SystemEnvironment, TOOL_NAME, TopLevelLicenseDetection,
+    DiagnosticSeverity, ExtraData, FileInfo, FileType, HEADER_NOTICE, Header,
+    OUTPUT_FORMAT_VERSION, Output, Package, SystemEnvironment, TOOL_NAME, TopLevelLicenseDetection,
 };
 use crate::progress::{
-    format_default_scan_error_from_list, format_default_scan_warning_from_list,
-    is_warning_scan_error,
+    format_default_scan_error_from_diagnostics, format_default_scan_error_from_list,
+    format_default_scan_warning_from_list, is_warning_scan_error,
 };
 use crate::scanner;
 use crate::time::format_scancode_timestamp;
@@ -246,13 +246,35 @@ fn summarize_header_messages(
     let mut warnings = Vec::new();
 
     for file in files {
-        let (file_errors, file_warnings) = partition_scan_messages(file);
-
-        if let Some(summary) = summarize_file_header_message(file, &file_errors, verbose, false) {
-            errors.push(summary);
-        }
-        if let Some(summary) = summarize_file_header_message(file, &file_warnings, verbose, true) {
-            warnings.push(summary);
+        if !file.scan_diagnostics.is_empty() {
+            if let Some(summary) = format_default_scan_error_from_diagnostics(
+                Path::new(&file.path),
+                &file.scan_diagnostics,
+            ) {
+                errors.push(summary);
+            }
+            let warning_messages: Vec<String> = file
+                .scan_diagnostics
+                .iter()
+                .filter(|d| d.severity == DiagnosticSeverity::Warning)
+                .map(|d| d.message.clone())
+                .collect();
+            if let Some(formatted) =
+                format_default_scan_warning_from_list(Path::new(&file.path), &warning_messages)
+            {
+                warnings.push(formatted);
+            }
+        } else {
+            let (file_errors, file_warnings) = partition_scan_messages(file);
+            if let Some(summary) = summarize_file_header_message(file, &file_errors, verbose, false)
+            {
+                errors.push(summary);
+            }
+            if let Some(summary) =
+                summarize_file_header_message(file, &file_warnings, verbose, true)
+            {
+                warnings.push(summary);
+            }
         }
     }
 

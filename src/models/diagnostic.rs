@@ -13,6 +13,8 @@ pub enum DiagnosticSeverity {
 pub struct ScanDiagnostic {
     pub severity: DiagnosticSeverity,
     pub message: String,
+    #[serde(default, skip)]
+    pub is_timeout: bool,
 }
 
 impl ScanDiagnostic {
@@ -20,6 +22,7 @@ impl ScanDiagnostic {
         Self {
             severity: DiagnosticSeverity::Warning,
             message: message.into(),
+            is_timeout: false,
         }
     }
 
@@ -27,6 +30,15 @@ impl ScanDiagnostic {
         Self {
             severity: DiagnosticSeverity::Error,
             message: message.into(),
+            is_timeout: false,
+        }
+    }
+
+    pub fn timeout(message: impl Into<String>) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            message: message.into(),
+            is_timeout: true,
         }
     }
 }

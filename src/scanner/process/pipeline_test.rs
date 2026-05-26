@@ -40,7 +40,7 @@ fn test_process_file_suppresses_non_actionable_pdf_extraction_failure() {
 #[test]
 fn test_processing_timeout_is_not_duplicated_after_stage_specific_timeout() {
     let started = Instant::now() - Duration::from_secs(2);
-    let mut scan_diagnostics = vec![ScanDiagnostic::error(
+    let mut scan_diagnostics = vec![ScanDiagnostic::timeout(
         "Timeout before license scan (> 1.00s)",
     )];
 

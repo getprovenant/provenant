@@ -434,7 +434,11 @@ pub(crate) fn record_parser_diagnostic(message: String, severity: DiagnosticSeve
         let Some(active) = stack.last_mut() else {
             return false;
         };
-        active.push(ScanDiagnostic { severity, message });
+        active.push(ScanDiagnostic {
+            severity,
+            message,
+            is_timeout: false,
+        });
         true
     })
 }

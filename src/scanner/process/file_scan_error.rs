@@ -78,10 +78,3 @@ impl From<LicenseDetectionError> for FileScanError {
         }
     }
 }
-
-pub(crate) fn is_timeout_diagnostic_message(message: &str) -> bool {
-    message.starts_with("Timeout while ")
-        || message.starts_with("Timeout before ")
-        || message.starts_with("Timeout during ")
-        || message.starts_with("Processing interrupted due to timeout")
-}

@@ -3,9 +3,7 @@
 
 use super::contacts::extract_email_url_information;
 use super::copyright::extract_copyright_information;
-use super::file_scan_error::{
-    FileScanError, FileScanTimeout, TimeoutPhase, is_timeout_diagnostic_message,
-};
+use super::file_scan_error::{FileScanError, FileScanTimeout, TimeoutPhase};
 use super::license::{LicenseExtractionInput, extract_license_information};
 use super::special_cases::{is_go_non_production_source, should_skip_text_detection};
 use crate::license_detection::LicenseDetectionEngine;
@@ -72,6 +70,9 @@ pub(super) fn process_file(
             generated_flag = is_generated;
             is_source_file = is_source;
             let _ = sha256;
+        }
+        Err(FileScanError::Timeout(timeout)) => {
+            scan_diagnostics.push(ScanDiagnostic::timeout(timeout.to_string()))
         }
         Err(e) => scan_diagnostics.push(ScanDiagnostic::error(e.to_string())),
     };
@@ -530,9 +531,9 @@ fn maybe_record_processing_timeout(
     if is_timeout_exceeded(started, timeout_seconds)
         && !scan_diagnostics
             .iter()
-            .any(|diagnostic| is_timeout_diagnostic_message(&diagnostic.message))
+            .any(|diagnostic| diagnostic.is_timeout)
     {
-        scan_diagnostics.push(ScanDiagnostic::error(format!(
+        scan_diagnostics.push(ScanDiagnostic::timeout(format!(
             "Processing interrupted due to timeout after {:.2} seconds",
             timeout_seconds
         )));

@@ -191,7 +191,9 @@ impl ScanProgress {
         match self.mode {
             ProgressMode::Quiet => {}
             ProgressMode::Default => {
-                if let Some(formatted) = format_default_scan_error_from_list(path, &errors) {
+                if let Some(formatted) =
+                    format_default_scan_error_from_diagnostics(path, scan_diagnostics)
+                {
                     self.error(&formatted);
                 } else if let Some(formatted) =
                     format_default_scan_warning_from_list(path, &warnings)
@@ -512,11 +514,33 @@ pub(crate) fn format_default_scan_error_from_list(
     path: &Path,
     scan_errors: &[String],
 ) -> Option<String> {
+    let is_timeout = |error: &str| {
+        error.starts_with("Timeout while ")
+            || error.starts_with("Timeout before ")
+            || error.starts_with("Timeout during ")
+            || error.starts_with("Processing interrupted due to timeout")
+    };
     scan_errors
         .iter()
-        .find(|error| is_timeout_scan_error(error))
+        .find(|error| is_timeout(error))
         .or_else(|| scan_errors.first())
         .map(|error| format_default_scan_error(path, error))
+}
+
+pub(crate) fn format_default_scan_error_from_diagnostics(
+    path: &Path,
+    scan_diagnostics: &[ScanDiagnostic],
+) -> Option<String> {
+    let errors: Vec<&ScanDiagnostic> = scan_diagnostics
+        .iter()
+        .filter(|d| d.severity == DiagnosticSeverity::Error)
+        .collect();
+
+    errors
+        .iter()
+        .find(|d| d.is_timeout)
+        .or_else(|| errors.first())
+        .map(|d| format_default_scan_error(path, &d.message))
 }
 
 pub(crate) fn format_default_scan_warning_from_list(
@@ -564,10 +588,6 @@ fn concise_scan_error_reason(err: &str) -> String {
     }
 
     first_line.to_string()
-}
-
-fn is_timeout_scan_error(err: &str) -> bool {
-    crate::scanner::process::is_timeout_diagnostic_message(err)
 }
 
 pub(crate) fn is_warning_scan_error(err: &str) -> bool {
