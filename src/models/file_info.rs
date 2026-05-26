@@ -34,13 +34,12 @@ pub struct FileInfo {
     pub base_name: String,
     pub extension: String,
     pub path: String,
-    #[serde(rename = "type")] // name used by ScanCode
     pub file_type: FileType,
     #[builder(default)]
     #[serde(default)]
     pub mime_type: Option<String>,
     #[builder(default)]
-    #[serde(rename = "file_type", default)]
+    #[serde(default)]
     pub file_type_label: Option<String>,
     pub size: u64,
     #[builder(default)]
@@ -64,8 +63,8 @@ pub struct FileInfo {
     #[builder(default)]
     #[serde(default)]
     pub package_data: Vec<PackageData>,
-    #[serde(rename = "detected_license_expression_spdx")] // name used by ScanCode
     #[builder(default)]
+    #[serde(default)]
     pub license_expression: Option<String>,
     #[builder(default)]
     #[serde(default)]
@@ -482,7 +481,6 @@ fn python_token_tuple_repr(tokens: &[String]) -> String {
 /// This is the primary data structure returned by all parsers.
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct PackageData {
-    #[serde(rename = "type")] // name used by ScanCode
     pub package_type: Option<PackageType>,
     pub namespace: Option<String>,
     pub name: Option<String>,
@@ -593,7 +591,7 @@ pub struct Match {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Copyright {
     pub copyright: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub normalized_copyright: Option<String>,
     pub start_line: LineNumber,
     pub end_line: LineNumber,
@@ -641,7 +639,6 @@ pub struct Dependency {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ResolvedPackage {
-    #[serde(rename = "type")]
     pub package_type: PackageType,
     pub namespace: String,
     pub name: String,
@@ -867,7 +864,6 @@ impl FileReference {
 /// - Excludes `dependencies` and `file_references` (hoisted to top-level)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Package {
-    #[serde(rename = "type")]
     pub package_type: Option<PackageType>,
     pub namespace: Option<String>,
     pub name: Option<String>,
@@ -1451,34 +1447,8 @@ pub struct LicensePolicyEntry {
     pub icon: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum FileType {
     File,
     Directory,
-}
-
-impl serde::Serialize for FileType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            FileType::File => serializer.serialize_str("file"),
-            FileType::Directory => serializer.serialize_str("directory"),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for FileType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = String::deserialize(deserializer)?;
-        match value.as_str() {
-            "file" => Ok(FileType::File),
-            "directory" => Ok(FileType::Directory),
-            _ => Err(serde::de::Error::custom("invalid file type")),
-        }
-    }
 }

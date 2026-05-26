@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use super::dependency::OutputDependency;
 use super::file_reference::OutputFileReference;
@@ -13,7 +14,7 @@ use super::serde_helpers::serialize_optional_map_as_object;
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct OutputPackageData {
     #[serde(rename = "type")]
-    pub package_type: Option<crate::models::PackageType>,
+    pub package_type: Option<String>,
     pub namespace: Option<String>,
     pub name: Option<String>,
     pub version: Option<String>,
@@ -64,14 +65,14 @@ pub struct OutputPackageData {
     pub repository_homepage_url: Option<String>,
     pub repository_download_url: Option<String>,
     pub api_data_url: Option<String>,
-    pub datasource_id: Option<crate::models::DatasourceId>,
+    pub datasource_id: Option<String>,
     pub purl: Option<String>,
 }
 
 impl From<&crate::models::PackageData> for OutputPackageData {
     fn from(value: &crate::models::PackageData) -> Self {
         Self {
-            package_type: value.package_type,
+            package_type: value.package_type.map(|pt| pt.to_string()),
             namespace: value.namespace.clone(),
             name: value.name.clone(),
             version: value.version.clone(),
@@ -127,7 +128,7 @@ impl From<&crate::models::PackageData> for OutputPackageData {
             repository_homepage_url: value.repository_homepage_url.clone(),
             repository_download_url: value.repository_download_url.clone(),
             api_data_url: value.api_data_url.clone(),
-            datasource_id: value.datasource_id,
+            datasource_id: value.datasource_id.map(|d| d.to_string()),
             purl: value.purl.clone(),
         }
     }
@@ -157,7 +158,11 @@ impl TryFrom<&OutputPackageData> for crate::models::PackageData {
             dependencies.push(crate::models::Dependency::try_from(d)?);
         }
         Ok(Self {
-            package_type: value.package_type,
+            package_type: value
+                .package_type
+                .as_deref()
+                .map(crate::models::PackageType::from_str)
+                .transpose()?,
             namespace: value.namespace.clone(),
             name: value.name.clone(),
             version: value.version.clone(),
@@ -217,7 +222,14 @@ impl TryFrom<&OutputPackageData> for crate::models::PackageData {
             repository_homepage_url: value.repository_homepage_url.clone(),
             repository_download_url: value.repository_download_url.clone(),
             api_data_url: value.api_data_url.clone(),
-            datasource_id: value.datasource_id,
+            datasource_id: value
+                .datasource_id
+                .as_deref()
+                .map(|s| {
+                    crate::models::DatasourceId::from_str(s)
+                        .map_err(|e| format!("invalid datasource_id: {}", e))
+                })
+                .transpose()?,
             purl: value.purl.clone(),
         })
     }

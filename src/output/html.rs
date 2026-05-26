@@ -6,7 +6,6 @@ use std::io::{self, Write};
 
 use tera::{Context, Tera};
 
-use crate::models::FileType;
 use crate::output_schema::Output;
 
 use super::shared::{io_other, sorted_files};
@@ -23,14 +22,7 @@ pub(crate) fn write_html_report(output: &Output, writer: &mut dyn Write) -> io::
     for file in sorted_files(&output.files) {
         let mut file_row = BTreeMap::new();
         file_row.insert("path".to_string(), file.path.clone());
-        file_row.insert(
-            "type".to_string(),
-            match file.file_type {
-                FileType::File => "file",
-                FileType::Directory => "directory",
-            }
-            .to_string(),
-        );
+        file_row.insert("type".to_string(), file.file_type.clone());
         file_row.insert("name".to_string(), file.name.clone());
         file_row.insert("extension".to_string(), file.extension.clone());
         file_row.insert("size".to_string(), file.size.to_string());
@@ -143,7 +135,7 @@ pub(crate) fn write_html_report(output: &Output, writer: &mut dyn Write) -> io::
 
             let mut row = BTreeMap::new();
             row.insert("path".to_string(), file.path.clone());
-            let package_type = serde_json::to_value(package_data.package_type)
+            let package_type = serde_json::to_value(package_data.package_type.clone())
                 .ok()
                 .and_then(|v| v.as_str().map(str::to_string));
             row.insert(
