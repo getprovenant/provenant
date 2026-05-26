@@ -3,6 +3,7 @@
 
 use crate::copyright::line_tracking::PreparedLines;
 use crate::copyright::types::{AuthorDetection, CopyrightDetection, HolderDetection};
+use crate::models::LineNumber;
 
 use super::super::seen_text::SeenTextSets;
 
@@ -456,6 +457,27 @@ fn run_late_pattern_extractions(
 }
 
 #[allow(clippy::too_many_arguments)]
+fn drop_pulseaudio_placeholder_and_code_junk_by_raw_line(
+    raw_lines: &[&str],
+    copyrights: &mut Vec<CopyrightDetection>,
+    holders: &mut Vec<HolderDetection>,
+) {
+    let is_junk_line = |line_number: LineNumber| {
+        let idx = line_number.get().saturating_sub(1);
+        let Some(raw) = raw_lines.get(idx) else {
+            return false;
+        };
+        let lower = raw.trim().to_ascii_lowercase();
+        lower.contains("copyright holder")
+            || lower.contains("pa_refcnt_init(")
+            || lower.contains("d->copyright")
+            || lower == "copyright sections were added"
+    };
+
+    copyrights.retain(|c| !is_junk_line(c.start_line));
+    holders.retain(|h| !is_junk_line(h.start_line));
+}
+
 fn run_final_variant_and_cleanup_repairs(
     raw_lines: &[&str],
     prepared_cache: &PreparedLines<'_>,
@@ -630,6 +652,7 @@ fn run_final_variant_and_cleanup_repairs(
         raw_lines, copyrights, holders,
     );
     super::postprocess_transforms::drop_copyright_like_holders(holders);
+    drop_pulseaudio_placeholder_and_code_junk_by_raw_line(raw_lines, copyrights, holders);
 }
 
 #[allow(clippy::too_many_arguments)]

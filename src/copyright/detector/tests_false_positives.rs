@@ -521,3 +521,67 @@ fn test_author_of_work_does_not_produce_author() {
         "authors should not contain 'rclone': {authors:?}"
     );
 }
+
+#[test]
+fn test_pulseaudio_placeholder_and_code_fragments_do_not_emit_detections() {
+    let input = concat!(
+        "Copyright (c) 2014 PulseAudio's COPYRIGHT HOLDER
+",
+        "PulseAudio's COPYRIGHT HOLDER
+",
+        "copyright sections were added
+",
+        "pa_log_debug(\"Copyright: %s\", d->Copyright)\n",
+        "PA_REFCNT_INIT(c); c->core = core
+",
+        "applying to the plugin. If
+",
+        "applies the
+",
+        "s d- Copyright
+",
+        "c- core core
+",
+    );
+    let (copyrights, holders, authors) = detect_copyrights_from_text(input);
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:#?}");
+    assert!(holders.is_empty(), "holders: {holders:#?}");
+    assert!(authors.is_empty(), "authors: {authors:#?}");
+}
+
+#[test]
+fn test_pulseaudio_ladspa_rfc_and_contact_fragments_do_not_emit_junk() {
+    let input = concat!(
+        "copyright applying to the plugin. If
+",
+        "sections were added
+",
+        "Copyright 2009 Nokia Corporation Contact: Maemo Multimedia <multimedia@maemo.org>
+",
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    let copyright_values: Vec<&str> = copyrights.iter().map(|c| c.copyright.as_str()).collect();
+    let holder_values: Vec<&str> = holders.iter().map(|h| h.holder.as_str()).collect();
+    assert!(
+        copyright_values.contains(&"Copyright 2009 Nokia Corporation"),
+        "copyrights: {copyright_values:?}"
+    );
+    assert!(
+        !copyright_values
+            .iter()
+            .any(|v| v.contains("applying to the plugin")
+                || v.contains("sections were added")
+                || v.contains("Contact:")),
+        "copyrights: {copyright_values:?}"
+    );
+    assert!(
+        holder_values.contains(&"Nokia Corporation"),
+        "holders: {holder_values:?}"
+    );
+    assert!(
+        !holder_values
+            .iter()
+            .any(|v| v.contains("sections were added") || v.contains("Contact:")),
+        "holders: {holder_values:?}"
+    );
+}
