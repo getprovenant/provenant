@@ -401,7 +401,7 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^s\s*d-\s*copyright$",
         r"(?i)^c-\s*core\s*core$",
         r"(?i)^sections\s+were\s+added$",
-        r"(?i)^(?:[\p{L}0-9._-]+(?:\.[\p{L}0-9._-]+)?'?s|PULSEAUDIO)\s+COPYRIGHT HOLDER$",
+        r"(?i)^[\p{L}0-9._-]+(?:\.[\p{L}0-9._-]+)?(?:'s)?\s+COPYRIGHT HOLDER$",
         r"(?i)^registered$",
         r"(?i)^component$",
         r"(?i)^count$",

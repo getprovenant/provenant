@@ -2382,7 +2382,7 @@ fn test_refine_copyright_strips_trailing_contributor_clause() {
 }
 
 #[test]
-fn test_refine_copyright_and_holder_drop_pulseaudio_placeholder_and_code_junk() {
+fn test_refine_copyright_and_holder_drop_placeholder_and_code_junk() {
     assert_eq!(
         refine_copyright("Copyright (c) 2014 PulseAudio's COPYRIGHT HOLDER"),
         None
@@ -2399,6 +2399,27 @@ fn test_refine_copyright_and_holder_drop_pulseaudio_placeholder_and_code_junk() 
     assert_eq!(refine_holder("applies the"), None);
     assert_eq!(refine_holder("s d- Copyright"), None);
     assert_eq!(refine_holder("c- core core"), None);
+}
+
+#[test]
+fn test_refine_copyright_preserves_non_placeholder_copyright_holder_lines() {
+    assert_eq!(
+        refine_copyright("Copyright Holder Fluendo S.L."),
+        Some("Copyright Holder Fluendo S.L.".to_string())
+    );
+    assert_eq!(
+        refine_copyright("copyright holder, Aladdin Enterprises of Menlo Park"),
+        Some("copyright holder, Aladdin Enterprises of Menlo Park".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            "Copyright Holders Kevin Vandersloot <kfv101@psu.edu> Erik Johnsson <zaphod@linux.nu>"
+        ),
+        Some(
+            "Copyright Holders Kevin Vandersloot <kfv101@psu.edu> Erik Johnsson <zaphod@linux.nu>"
+                .to_string()
+        )
+    );
 }
 
 #[test]
