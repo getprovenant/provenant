@@ -141,11 +141,10 @@ pub(crate) fn write_html_report(output: &Output, writer: &mut dyn Write) -> io::
 
             let mut row = BTreeMap::new();
             row.insert("path".to_string(), file.path.clone());
-            let package_type = package_data.package_type.and_then(|pt| {
-                serde_json::to_value(pt)
-                    .ok()
-                    .and_then(|v| v.as_str().map(str::to_string))
-            });
+            let package_type = package_data
+                .package_type
+                .as_ref()
+                .map(|pt| pt.as_str().to_string());
             row.insert(
                 "type".to_string(),
                 package_type.unwrap_or_else(|| "None".to_string()),

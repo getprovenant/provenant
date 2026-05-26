@@ -145,6 +145,7 @@ impl TryFrom<&OutputPackage> for crate::models::Package {
         Ok(Self {
             package_type: value
                 .package_type
+                .as_ref()
                 .map(crate::models::PackageType::try_from)
                 .transpose()?,
             namespace: value.namespace.clone(),
@@ -210,7 +211,7 @@ impl TryFrom<&OutputPackage> for crate::models::Package {
             datasource_ids: value
                 .datasource_ids
                 .iter()
-                .map(|id| crate::models::DatasourceId::try_from(*id))
+                .map(crate::models::DatasourceId::try_from)
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|e| format!("invalid datasource_id: {}", e))?,
         })
