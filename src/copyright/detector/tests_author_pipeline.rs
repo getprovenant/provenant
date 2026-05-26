@@ -185,6 +185,28 @@ fn test_author_span_legal_clause_not_detected() {
 }
 
 #[test]
+fn test_uc_berkeley_notice_author_does_not_absorb_following_legal_prose() {
+    let input = concat!(
+        "This product includes software developed by the University of\n",
+        "California, Berkeley and its contributors.\n",
+        "Effective immediately, licensees and distributors are no longer required to include the acknowledgement within advertising materials.\n",
+    );
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    let author_values: Vec<&str> = authors.iter().map(|a| a.author.as_str()).collect();
+    assert!(
+        author_values.contains(&"the University of California, Berkeley and its contributors"),
+        "authors: {authors:?}"
+    );
+    assert!(
+        !author_values
+            .iter()
+            .any(|a| a.contains("Effective immediately")),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_author_markdown_link_prose_not_detected() {
     let input = "the command [#7403] (https://github.com/pnpm/pnpm/issues/7403) changed behavior.";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
