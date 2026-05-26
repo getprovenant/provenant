@@ -1,0 +1,8 @@
+---
+license_expression: agpl-3.0-plus
+is_license_clue: yes
+relevance: 50
+notes: Bare versionless AGPL shorthand is too weak for a hard detection; preserve it as clue-only evidence.
+---
+
+AGPL
