@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> On the recorded runs in this document, Provenant was faster on all 199 targets, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 200 of 200 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -783,6 +783,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-25 · openssl-2710 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `58.93s`; ScanCode `1199.73s`
 - Broader package and dependency visibility (`1` vs `0` packages, `41` vs `0` dependencies) from bundled `external/perl/Text-Template-1.56` CPAN metadata plus committed `.gitmodules` and `test/quic-openssl-docker/Dockerfile` surfaces, with stronger `Written by ...` author recovery on OpenSSL-style comment headers and cleaner rejection of weak CPAL or MIT overcalls on standard OpenSSL license footers
+
+##### [pulseaudio/pulseaudio @ b096704](https://github.com/pulseaudio/pulseaudio/tree/b096704c0d42c5e784deb781a07b23cfb5286a82) — **30.35× faster**
+
+- Files: 867
+- Run context: 2026-05-26 · pulseaudio-17263 · macOS 26.5 · Apple M1 Max · 32 GB · arm64 · 4 proc
+- Timing: Provenant `17.68s`; ScanCode `536.58s`
+- Broader Meson dependency visibility (`8` vs `0` top-level dependencies) from `meson.build`, more correct LGPL-2.0/LGPL-2.1 notice classification across the source and manpage trees, and cleaner rejection of placeholder `COPYRIGHT HOLDER`, contributor-tail, and code-fragment noise, with the remaining deltas concentrated in low-value translation-header placeholders and source-faithful Unicode/name rendering
 
 ##### [protocolbuffers/protobuf @ e3370c2](https://github.com/protocolbuffers/protobuf/tree/e3370c2e26bbfaa63bc9f8e4ac0f8dc066ba3eeb) — **28.62× faster**
 
