@@ -771,8 +771,10 @@ fn contains_member_access_code_token(s: &str) -> bool {
     static MEMBER_ACCESS_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"\b(?:[a-z_][A-Za-z0-9_]{1,}\.){1,4}[A-Z][A-Za-z0-9_]{1,}(?:\.[A-Z][A-Za-z0-9_]{1,})*\b").unwrap()
     });
+    static C_STYLE_MEMBER_ACCESS_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"\b[a-z_][A-Za-z0-9_]*->[A-Za-z_][A-Za-z0-9_]*\b").unwrap());
 
-    MEMBER_ACCESS_RE.is_match(trimmed)
+    MEMBER_ACCESS_RE.is_match(trimmed) || C_STYLE_MEMBER_ACCESS_RE.is_match(trimmed)
 }
 
 fn contains_code_string_literal_fragment(s: &str) -> bool {
@@ -1125,6 +1127,22 @@ fn is_junk_c_sign_code_expression_fragment(s: &str) -> bool {
         || looks_like_lowercase_enum_blob(tail)
 }
 
+fn looks_like_embedded_c_sign_code_fragment(s: &str) -> bool {
+    static EMBEDDED_C_SIGN_CALL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\b[A-Za-z_][A-Za-z0-9_]*\(\s*c\s*\)\s*(?:;|=|->)").unwrap()
+    });
+
+    let trimmed = s.trim();
+    !has_copyright_year(trimmed) && EMBEDDED_C_SIGN_CALL_RE.is_match(trimmed)
+}
+
+fn is_copyright_edit_note(s: &str) -> bool {
+    static COPYRIGHT_EDIT_NOTE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^copyright\s+sections?\s+were\s+added$").unwrap());
+
+    COPYRIGHT_EDIT_NOTE_RE.is_match(s.trim())
+}
+
 fn contains_malformed_spaced_year(s: &str) -> bool {
     static SPACED_YEAR_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"\b(?:19|20)\s+\d{2}\b|\b\d{3}\s+\d{1,2}\b").unwrap());
@@ -1211,11 +1229,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     }
     let original = normalize_whitespace(&normalize_markup_rich_text_fragment(s));
     let original_lower = original.to_ascii_lowercase();
-    if original_lower.contains("copyright holder")
-        || original_lower.contains("pa_refcnt_init(")
-        || original_lower.contains("d->copyright")
-        || original_lower == "copyright sections were added"
-    {
+    if is_placeholder_or_code_junk_copyright(&original, &original_lower) {
         return None;
     }
     if contains_windows_versioninfo_token(&original)
@@ -1391,7 +1405,7 @@ fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
             | "copyright sections were added"
             | "copyright c- core core"
             | "copyright applying to the plugin. if"
-    ) || s.trim().to_ascii_lowercase().contains("copyright holder")
+    ) || is_placeholder_or_code_junk_copyright(s, &s.trim().to_ascii_lowercase())
 }
 
 fn strip_known_copyright_wrappers(s: &str) -> String {
@@ -1949,6 +1963,26 @@ fn strip_trailing_for_clause_after_email(s: &str) -> String {
         }
     }
     head.trim_end().to_string()
+}
+
+fn is_placeholder_or_code_junk_copyright(original: &str, _original_lower: &str) -> bool {
+    static COPYRIGHT_HOLDER_PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^copyright
+            (?:\s*\(c\))?
+            (?:\s+(?:19\d{2}|20\d{2})(?:-(?:19\d{2}|20\d{2}))?)?
+            \s+
+            [\p{L}0-9._-]+(?:'s)?
+            \s+copyright\s+holder
+            $",
+        )
+        .unwrap()
+    });
+
+    looks_like_embedded_c_sign_code_fragment(original)
+        || is_copyright_edit_note(original)
+        || COPYRIGHT_HOLDER_PLACEHOLDER_RE.is_match(original.trim())
 }
 
 fn strip_trailing_at_affiliation(s: &str) -> String {
