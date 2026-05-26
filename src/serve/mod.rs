@@ -25,13 +25,49 @@ use crate::serve_api::{
     SyncLicenseSource, SyncScanRequest,
 };
 use crate::version::BUILD_VERSION;
-use crate::workflow::{LicenseSource, ScanOptions, scan_paths};
-use ingest::prepare_sync_input;
+use crate::workflow::{LicenseSource, ScanOptions, WorkflowError, scan_paths};
+use ingest::{IngestError, prepare_sync_input};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_REQUEST_BODY_BYTES: usize = 24 * 1024 * 1024;
 const DEFAULT_ASYNC_MAX_PROCESSORS_PER_JOB: usize = 4;
 const DEFAULT_ASYNC_RETAINED_TERMINAL_JOBS: usize = 64;
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum ServeError {
+    #[error(transparent)]
+    Ingest(#[from] IngestError),
+    #[error(transparent)]
+    Workflow(#[from] WorkflowError),
+    #[error("{0}")]
+    Serialization(String),
+}
+
+impl ServeError {
+    pub(crate) fn http_status_code(&self) -> u16 {
+        match self {
+            Self::Ingest(IngestError::Validation(_)) => 422,
+            Self::Ingest(IngestError::PayloadTooLarge { .. }) => 413,
+            Self::Ingest(IngestError::Upstream { .. }) => 502,
+            Self::Ingest(IngestError::Internal { .. }) => 500,
+            Self::Workflow(WorkflowError::InvalidOptions(_)) => 422,
+            Self::Workflow(WorkflowError::Pipeline(_)) => 500,
+            Self::Serialization(_) => 500,
+        }
+    }
+
+    pub(crate) fn error_type(&self) -> &'static str {
+        match self {
+            Self::Ingest(IngestError::Validation(_)) => "invalid_scan_request",
+            Self::Ingest(IngestError::PayloadTooLarge { .. }) => "payload_too_large",
+            Self::Ingest(IngestError::Upstream { .. }) => "upstream_error",
+            Self::Ingest(IngestError::Internal { .. }) => "internal_error",
+            Self::Workflow(WorkflowError::InvalidOptions(_)) => "invalid_scan_request",
+            Self::Workflow(WorkflowError::Pipeline(_)) => "scan_failed",
+            Self::Serialization(_) => "scan_failed",
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct ServeConfig {
@@ -93,6 +129,7 @@ struct AsyncJobRecord {
     allocated_processors: Option<usize>,
     result_body: Option<String>,
     error_message: Option<String>,
+    error_status_code: Option<u16>,
 }
 
 #[derive(Debug)]
@@ -115,6 +152,7 @@ struct AsyncJobResultSnapshot {
     state: AsyncJobState,
     result_body: Option<String>,
     error_message: Option<String>,
+    error_status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -281,7 +319,8 @@ impl AsyncJobController {
                     eprintln!("serve async job {} failed: {error}", dispatched.job_id);
                     record.state = AsyncJobState::Failed;
                     record.result_body = None;
-                    record.error_message = Some("async scan job failed".to_string());
+                    record.error_message = Some(error.to_string());
+                    record.error_status_code = Some(error.http_status_code());
                 }
             }
 
@@ -317,6 +356,7 @@ impl AsyncJobControllerState {
             state: job.state,
             result_body: job.result_body.clone(),
             error_message: job.error_message.clone(),
+            error_status_code: job.error_status_code,
         })
     }
 
@@ -337,6 +377,7 @@ impl AsyncJobRecord {
             allocated_processors: None,
             result_body: None,
             error_message: None,
+            error_status_code: None,
         }
     }
 }
@@ -632,12 +673,7 @@ fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
     let execution = match build_sync_scan_execution(sync_request) {
         Ok(execution) => execution,
         Err(error) => {
-            return error_response(
-                422,
-                "Unprocessable Entity",
-                "invalid_scan_request",
-                error.to_string(),
-            );
+            return serve_error_response(&error);
         }
     };
 
@@ -647,12 +683,25 @@ fn handle_sync_scan_request(request: &HttpRequest) -> HttpResponse {
             reason: "OK",
             body,
         },
-        Err(error) => error_response(
-            422,
-            "Unprocessable Entity",
-            "scan_failed",
-            error.to_string(),
-        ),
+        Err(error) => serve_error_response(&error),
+    }
+}
+
+fn serve_error_response(error: &ServeError) -> HttpResponse {
+    let status_code = error.http_status_code();
+    let reason = http_status_reason(status_code);
+    error_response(status_code, reason, error.error_type(), error.to_string())
+}
+
+fn http_status_reason(code: u16) -> &'static str {
+    match code {
+        400 => "Bad Request",
+        413 => "Payload Too Large",
+        422 => "Unprocessable Entity",
+        500 => "Internal Server Error",
+        502 => "Bad Gateway",
+        503 => "Service Unavailable",
+        _ => "Error",
     }
 }
 
@@ -712,14 +761,18 @@ fn handle_job_result_request(job_id: &str, state: &ServeState) -> HttpResponse {
                 async_job_state_label(snapshot.state)
             ),
         ),
-        AsyncJobState::Failed => error_response(
-            422,
-            "Unprocessable Entity",
-            "job_failed",
-            snapshot
-                .error_message
-                .unwrap_or_else(|| format!("async job {job_id} failed")),
-        ),
+        AsyncJobState::Failed => {
+            let status_code = snapshot.error_status_code.unwrap_or(500);
+            let reason = http_status_reason(status_code);
+            error_response(
+                status_code,
+                reason,
+                "job_failed",
+                snapshot
+                    .error_message
+                    .unwrap_or_else(|| format!("async job {job_id} failed")),
+            )
+        }
     }
 }
 
@@ -748,7 +801,7 @@ fn decode_scan_request_from_http(
         .map_err(|error| error_response(400, "Bad Request", "invalid_request", error.to_string()))
 }
 
-fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecution> {
+fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecution, ServeError> {
     let prepared_input = prepare_sync_input(request.input)?;
 
     let mut options = ScanOptions::default();
@@ -798,16 +851,19 @@ fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecuti
     })
 }
 
-fn execute_scan_execution(execution: SyncScanExecution) -> Result<String> {
+fn execute_scan_execution(execution: SyncScanExecution) -> Result<String, ServeError> {
     let output = scan_paths(
         execution.paths.iter().map(|path| path.as_path()),
         &execution.options,
     )?;
     serde_json::to_string(&crate::output_schema::Output::from(&output))
-        .context("scan result should serialize")
+        .map_err(|e| ServeError::Serialization(format!("scan result should serialize: {e}")))
 }
 
-fn run_async_scan_request(request: SyncScanRequest, allocated_processors: usize) -> Result<String> {
+fn run_async_scan_request(
+    request: SyncScanRequest,
+    allocated_processors: usize,
+) -> Result<String, ServeError> {
     let mut execution = build_sync_scan_execution(request)?;
     execution.options.process_mode = if allocated_processors <= 1 {
         ProcessMode::SequentialWithTimeouts
@@ -1006,6 +1062,7 @@ mod tests {
                 allocated_processors: Some(2),
                 result_body: Some("{\"status\":\"ok\"}".to_string()),
                 error_message: None,
+                error_status_code: None,
             },
         );
         let request = HttpRequest {
@@ -1029,6 +1086,7 @@ mod tests {
                 allocated_processors: Some(1),
                 result_body: None,
                 error_message: Some("async scan job failed".to_string()),
+                error_status_code: Some(500),
             },
         );
         let request = HttpRequest {
@@ -1039,7 +1097,7 @@ mod tests {
         };
 
         let response = response_for_request(&request, &state);
-        assert_eq!(response.status_code, 422);
+        assert_eq!(response.status_code, 500);
         assert!(response.body.contains("job_failed"));
         assert!(response.body.contains("async scan job failed"));
     }
@@ -1104,6 +1162,7 @@ mod tests {
                         allocated_processors: Some(1),
                         result_body: Some("old".to_string()),
                         error_message: None,
+                        error_status_code: None,
                     },
                 ),
                 (
@@ -1113,6 +1172,7 @@ mod tests {
                         allocated_processors: Some(1),
                         result_body: Some("new".to_string()),
                         error_message: None,
+                        error_status_code: None,
                     },
                 ),
             ]),
