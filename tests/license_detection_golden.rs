@@ -713,4 +713,13 @@ mod golden_tests {
         )
         .unwrap();
     }
+    #[test]
+    fn test_golden_pulseaudio_default_pa_regression() {
+        run_explicit_golden(
+            Path::new("testdata/license-golden/provenant-regressions/pulseaudio-default.pa.in"),
+            Path::new("testdata/license-golden/provenant-regressions/pulseaudio-default.pa.in.yml"),
+            false,
+        )
+        .unwrap();
+    }
 }
