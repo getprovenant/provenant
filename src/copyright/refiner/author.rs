@@ -10,6 +10,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     }
     let had_obfuscated_angle_contact = contains_obfuscated_angle_contact(s);
     let mut a = remove_some_extra_words_and_punct(s);
+    a = truncate_trailing_collective_contributors_prose(&a);
     a = strip_leading_maintainers_label(&a);
     a = strip_trailing_javadoc_tags(&a);
     a = strip_trailing_paren_years(&a);
@@ -520,6 +521,51 @@ fn looks_like_collective_author_with_leading_the(s: &str) -> bool {
     ]
     .iter()
     .any(|suffix| lower.ends_with(suffix))
+}
+
+fn truncate_trailing_collective_contributors_prose(s: &str) -> String {
+    let trimmed = s.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    let needle = " and its contributors";
+    let Some(idx) = lower.find(needle) else {
+        return s.to_string();
+    };
+
+    let end = idx + needle.len();
+    if end >= trimmed.len() {
+        return s.to_string();
+    }
+
+    let prefix = trimmed[..end]
+        .trim_end_matches(&['.', ';', ',', '"', '\'', ' '][..])
+        .trim();
+    if !looks_like_institution_and_contributors_author(prefix) {
+        return s.to_string();
+    }
+
+    let tail = trimmed[end..]
+        .trim_start_matches(&['.', ';', ',', '"', '\'', ' '][..])
+        .trim();
+    if tail.is_empty() {
+        return prefix.to_string();
+    }
+
+    let tail_lower = tail.to_ascii_lowercase();
+    let starts_like_following_sentence = tail
+        .chars()
+        .find(|ch| ch.is_alphabetic())
+        .is_some_and(|ch| ch.is_uppercase())
+        || tail_lower.starts_with("effective immediately")
+        || tail_lower.starts_with("accordingly")
+        || tail_lower.starts_with("neither the name")
+        || tail_lower.starts_with("this software is provided")
+        || tail_lower.starts_with("all rights reserved");
+
+    if starts_like_following_sentence {
+        prefix.to_string()
+    } else {
+        s.to_string()
+    }
 }
 
 fn looks_like_leading_the_institution_author(s: &str) -> bool {
