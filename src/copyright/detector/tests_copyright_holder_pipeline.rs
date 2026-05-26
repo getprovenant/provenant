@@ -502,3 +502,37 @@ fn test_normalize_company_suffix_period_holder_variants() {
         "holders: {holders:?}"
     );
 }
+
+#[test]
+fn test_holder_for_company_after_email_preserved() {
+    let input = "Copyright 2006 Pierre Ossman <ossman@cendio.se> for Cendio AB";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter().any(|cr| cr.copyright == input),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter()
+            .any(|hh| hh.holder == "Pierre Ossman for Cendio AB"),
+        "holders: {:?}",
+        h.iter().map(|hh| &hh.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_holder_contributor_clause_stripped_to_primary_holder() {
+    let input = "Copyright 2010 Intel Corporation Contributor: Pierre-Louis Bossart <pierre-louis.bossart@intel.com>";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        c.iter()
+            .any(|cr| cr.copyright == "Copyright 2010 Intel Corporation"),
+        "copyrights: {:?}",
+        c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
+    );
+    assert!(
+        h.iter().any(|hh| hh.holder == "Intel Corporation"),
+        "holders: {:?}",
+        h.iter().map(|hh| &hh.holder).collect::<Vec<_>>()
+    );
+}

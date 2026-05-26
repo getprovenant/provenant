@@ -1210,6 +1210,14 @@ pub fn refine_copyright(s: &str) -> Option<String> {
         return None;
     }
     let original = normalize_whitespace(&normalize_markup_rich_text_fragment(s));
+    let original_lower = original.to_ascii_lowercase();
+    if original_lower.contains("copyright holder")
+        || original_lower.contains("pa_refcnt_init(")
+        || original_lower.contains("d->copyright")
+        || original_lower == "copyright sections were added"
+    {
+        return None;
+    }
     if contains_windows_versioninfo_token(&original)
         || (contains_xml_markup_declaration_token(&original) && !has_copyright_year(&original))
     {
@@ -1265,6 +1273,8 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_locale_timestamp_before_terminal_year_in_copyright(&c);
     c = strip_trailing_by_person_clause_after_company(&c);
     c = strip_trailing_division_of_company_suffix(&c);
+    c = strip_trailing_contributor_clause(&c);
+    c = strip_trailing_contact_clause(&c);
     c = strip_trailing_paren_at_without_domain(&c);
     c = strip_trailing_inc_after_today_year_placeholder(&c);
     c = truncate_trailing_boilerplate(&c);
@@ -1378,7 +1388,10 @@ fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
             | "copyright doctrines of fair use, fair dealing, or other equivalents."
             | "copyright licenses specified in the"
             | "copyright in its"
-    )
+            | "copyright sections were added"
+            | "copyright c- core core"
+            | "copyright applying to the plugin. if"
+    ) || s.trim().to_ascii_lowercase().contains("copyright holder")
 }
 
 fn strip_known_copyright_wrappers(s: &str) -> String {
@@ -1894,6 +1907,13 @@ fn strip_nickname_quotes(s: &str) -> String {
 }
 
 fn strip_trailing_for_clause_after_email(s: &str) -> String {
+    static COMPANY_SUFFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)(?:ab|ag|aps|a/s|as|inc\.?|corp\.?|corporation|company|co\.?|co\.,?|ltd\.?|limited|llc|gmbh|kg|oy|oyj|s\.?a\.?|s\.?r\.?o\.?|bv|nv)\s*$",
+        )
+        .unwrap()
+    });
+
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
     if !lower.contains(" for ") {
@@ -1922,7 +1942,8 @@ fn strip_trailing_for_clause_after_email(s: &str) -> String {
                     || lower_tail.contains("university")
                     || lower_tail.contains("department")
                     || lower_tail.contains("center"));
-            if looks_like_affiliation {
+            let looks_like_company = word_count >= 2 && COMPANY_SUFFIX_RE.is_match(tail);
+            if looks_like_affiliation || looks_like_company {
                 return s.to_string();
             }
         }
@@ -2357,6 +2378,42 @@ fn strip_trailing_component_descriptor_from_holder(s: &str) -> String {
     }
 
     s.to_string()
+}
+
+fn strip_trailing_contributor_clause(s: &str) -> String {
+    static CONTRIBUTOR_CLAUSE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>.+?)\s+Contributor:?\s+.+$").unwrap());
+
+    let trimmed = s.trim();
+    let Some(cap) = CONTRIBUTOR_CLAUSE_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+    prefix
+        .trim_end_matches(&[',', ';', ':', ' '][..])
+        .trim()
+        .to_string()
+}
+
+fn strip_trailing_contact_clause(s: &str) -> String {
+    static CONTACT_CLAUSE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^(?P<prefix>.+?)\s+Contact:?\s+.+$").unwrap());
+
+    let trimmed = s.trim();
+    let Some(cap) = CONTACT_CLAUSE_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+    prefix
+        .trim_end_matches(&[',', ';', ':', ' '][..])
+        .trim()
+        .to_string()
 }
 
 fn strip_trailing_holder_prose_clause(s: &str) -> String {
@@ -2995,6 +3052,8 @@ fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<String> {
 
     h = remove_some_extra_words_and_punct(&h);
     h = strip_trailing_incomplete_as_represented_by(&h);
+    h = strip_trailing_contributor_clause(&h);
+    h = strip_trailing_contact_clause(&h);
     h = strip_trailing_holder_prose_clause(&h);
     h = h.trim_matches(&['/', ' ', '~'][..]).to_string();
     h = refine_names(&h, prefixes);
