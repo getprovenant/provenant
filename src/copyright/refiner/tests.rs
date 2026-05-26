@@ -2363,3 +2363,59 @@ fn test_refine_holder_strips_trailing_prose_clauses() {
         Some("Andreas Dilger".to_string())
     );
 }
+
+#[test]
+fn test_refine_copyright_keeps_for_company_after_email() {
+    let result = refine_copyright("Copyright 2006 Pierre Ossman <ossman@cendio.se> for Cendio AB");
+    assert_eq!(
+        result,
+        Some("Copyright 2006 Pierre Ossman <ossman@cendio.se> for Cendio AB".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_strips_trailing_contributor_clause() {
+    let result = refine_copyright(
+        "Copyright 2010 Intel Corporation Contributor: Pierre-Louis Bossart <pierre-louis.bossart@intel.com>",
+    );
+    assert_eq!(result, Some("Copyright 2010 Intel Corporation".to_string()));
+}
+
+#[test]
+fn test_refine_copyright_and_holder_drop_pulseaudio_placeholder_and_code_junk() {
+    assert_eq!(
+        refine_copyright("Copyright (c) 2014 PulseAudio's COPYRIGHT HOLDER"),
+        None
+    );
+    assert_eq!(refine_copyright("copyright sections were added"), None);
+    assert_eq!(
+        refine_copyright("pa_log_debug(\"Copyright: %s\", d->Copyright)"),
+        None
+    );
+    assert_eq!(refine_copyright("PA_REFCNT_INIT(c); c->core = core"), None);
+    assert_eq!(refine_holder("PulseAudio's COPYRIGHT HOLDER"), None);
+    assert_eq!(refine_holder("PULSEAUDIO COPYRIGHT HOLDER"), None);
+    assert_eq!(refine_holder("applying to the plugin. If"), None);
+    assert_eq!(refine_holder("applies the"), None);
+    assert_eq!(refine_holder("s d- Copyright"), None);
+    assert_eq!(refine_holder("c- core core"), None);
+}
+
+#[test]
+fn test_refine_copyright_and_holder_trim_contact_and_ladspa_junk() {
+    assert_eq!(
+        refine_copyright("copyright applying to the plugin. If"),
+        None
+    );
+    assert_eq!(refine_holder("sections were added"), None);
+    assert_eq!(
+        refine_copyright(
+            "Copyright 2009 Nokia Corporation Contact: Maemo Multimedia <multimedia@maemo.org>"
+        ),
+        Some("Copyright 2009 Nokia Corporation".to_string())
+    );
+    assert_eq!(
+        refine_holder("Nokia Corporation Contact: Maemo Multimedia <multimedia@maemo.org>"),
+        Some("Nokia Corporation".to_string())
+    );
+}
