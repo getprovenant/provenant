@@ -319,7 +319,7 @@ impl AsyncJobController {
                     eprintln!("serve async job {} failed: {error}", dispatched.job_id);
                     record.state = AsyncJobState::Failed;
                     record.result_body = None;
-                    record.error_message = Some(error.to_string());
+                    record.error_message = Some("async scan job failed".to_string());
                     record.error_status_code = Some(error.http_status_code());
                 }
             }
