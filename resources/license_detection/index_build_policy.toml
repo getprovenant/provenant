@@ -38,6 +38,7 @@ ignored_licenses = []
 "gpl_bare_word_only.RULE" = "Treat bare GPL mentions as clue-only evidence so short shorthand stays inspectable without becoming a false-positive hard detection."
 "mit_attribution_no_endorsement.RULE" = "Preserve correct MIT-family classification for this vendor-specific variant without letting the embedded Sinusoidal Systems AB names drive the match."
 "lgpl-2.0-plus_pulseaudio_url_1.RULE" = "Cover the current PulseAudio LGPL-2.0-or-later notice variant that ends with the gnu.org URL so it wins over the weak AGPL notice overmatch on the same text."
+"lgpl-2.1-plus_pulseaudio_url_1.RULE" = "Cover the current PulseAudio LGPL-2.1-or-later notice variant that ends with the gnu.org URL so explicit 2.1 headers do not collapse to the looser LGPL-2.0 rule."
 "stable-diffusion-2022-08-22_required_phrase_1.RULE" = "Keep the dated Stable Diffusion August 22, 2022 CreativeML variant from collapsing into a different license variant during detection."
 "unknown_10.RULE" = "Narrow the upstream unknown-license-reference rule to the reviewed 'See LICENSE file for details' shape with a required LICENSE filename instead of letting broader mentions overmatch."
 
