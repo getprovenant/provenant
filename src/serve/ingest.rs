@@ -7,7 +7,6 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
-use anyhow::{Context, Result, anyhow, bail};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use bzip2::read::BzDecoder;
@@ -22,6 +21,8 @@ use zip::ZipArchive;
 
 use crate::serve_api::SyncScanInput;
 
+type Result<T> = std::result::Result<T, IngestError>;
+
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_REDIRECTS: usize = 5;
@@ -30,6 +31,59 @@ const MAX_UPLOADED_INPUT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRY_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_ARCHIVE_TOTAL_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRY_COUNT: usize = 10_000;
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum IngestError {
+    #[error("{0}")]
+    Validation(String),
+    #[error("payload exceeds max size of {limit} bytes")]
+    PayloadTooLarge { limit: usize },
+    #[error("{message}")]
+    Upstream {
+        message: String,
+        #[source]
+        source: Option<anyhow::Error>,
+    },
+    #[error("{message}")]
+    Internal {
+        message: String,
+        #[source]
+        source: Option<anyhow::Error>,
+    },
+}
+
+impl IngestError {
+    fn validation(msg: impl Into<String>) -> Self {
+        Self::Validation(msg.into())
+    }
+
+    fn upstream(msg: impl Into<String>) -> Self {
+        Self::Upstream {
+            message: msg.into(),
+            source: None,
+        }
+    }
+
+    fn upstream_with_source(
+        source: impl std::error::Error + Send + Sync + 'static,
+        msg: impl Into<String>,
+    ) -> Self {
+        Self::Upstream {
+            message: msg.into(),
+            source: Some(anyhow::Error::new(source)),
+        }
+    }
+
+    fn internal_with_source(
+        source: impl std::error::Error + Send + Sync + 'static,
+        msg: impl Into<String>,
+    ) -> Self {
+        Self::Internal {
+            message: msg.into(),
+            source: Some(anyhow::Error::new(source)),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub(super) struct PreparedSyncInput {
@@ -52,13 +106,18 @@ pub(super) fn prepare_sync_input(input: SyncScanInput) -> Result<PreparedSyncInp
 
 fn prepare_paths_input(paths: Vec<String>) -> Result<PreparedSyncInput> {
     if paths.is_empty() {
-        return Err(anyhow!("input.paths must contain at least one path"));
+        return Err(IngestError::validation(
+            "input.paths must contain at least one path",
+        ));
     }
 
     let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
     for path in &paths {
         if !path.exists() {
-            return Err(anyhow!("input path does not exist: {}", path.display()));
+            return Err(IngestError::validation(format!(
+                "input path does not exist: {}",
+                path.display()
+            )));
         }
     }
 
@@ -71,13 +130,15 @@ fn prepare_paths_input(paths: Vec<String>) -> Result<PreparedSyncInput> {
 
 fn prepare_repository_input(url: &str, reference: &str) -> Result<PreparedSyncInput> {
     if url.trim().is_empty() {
-        return Err(anyhow!("repository.url must not be empty"));
+        return Err(IngestError::validation("repository.url must not be empty"));
     }
     if reference.trim().is_empty() {
-        return Err(anyhow!("repository.ref must not be empty"));
+        return Err(IngestError::validation("repository.ref must not be empty"));
     }
 
-    let staging_dir = TempDir::new().context("failed to create repository staging directory")?;
+    let staging_dir = TempDir::new().map_err(|e| {
+        IngestError::internal_with_source(e, "failed to create repository staging directory")
+    })?;
     let repo_dir = staging_dir.path().join("repository");
 
     run_git(
@@ -112,18 +173,22 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<PreparedSyncIn
 
 fn prepare_url_input(url: &str) -> Result<PreparedSyncInput> {
     if url.trim().is_empty() {
-        return Err(anyhow!("url.url must not be empty"));
+        return Err(IngestError::validation("url.url must not be empty"));
     }
 
-    let parsed_url = Url::parse(url).context("url.url must be a valid URL")?;
+    let parsed_url =
+        Url::parse(url).map_err(|_| IngestError::validation("url.url must be a valid URL"))?;
     if !matches!(parsed_url.scheme(), "http" | "https") {
-        return Err(anyhow!("url.url must use http or https"));
+        return Err(IngestError::validation("url.url must use http or https"));
     }
 
-    let staging_dir = TempDir::new().context("failed to create URL staging directory")?;
+    let staging_dir = TempDir::new().map_err(|e| {
+        IngestError::internal_with_source(e, "failed to create URL staging directory")
+    })?;
     let download_dir = staging_dir.path().join("download");
-    fs::create_dir_all(&download_dir)
-        .with_context(|| format!("failed to create {}", download_dir.display()))?;
+    fs::create_dir_all(&download_dir).map_err(|e| {
+        IngestError::internal_with_source(e, format!("failed to create {}", download_dir.display()))
+    })?;
 
     let artifact_path = download_remote_input(url, &download_dir)?;
     materialize_downloaded_artifact(staging_dir, artifact_path)
@@ -131,31 +196,34 @@ fn prepare_url_input(url: &str) -> Result<PreparedSyncInput> {
 
 fn prepare_upload_input(filename: &str, content_base64: &str) -> Result<PreparedSyncInput> {
     let normalized_filename = validate_upload_filename(filename)?;
-    let decoded = STANDARD
-        .decode(content_base64)
-        .context("upload.content_base64 must be valid base64")?;
+    let decoded = STANDARD.decode(content_base64).map_err(|_| {
+        IngestError::Validation("upload.content_base64 must be valid base64".to_string())
+    })?;
 
     if decoded.is_empty() {
-        return Err(anyhow!(
-            "upload.content_base64 must not decode to an empty payload"
+        return Err(IngestError::validation(
+            "upload.content_base64 must not decode to an empty payload",
         ));
     }
 
     if decoded.len() > MAX_UPLOADED_INPUT_BYTES {
-        return Err(anyhow!(
-            "upload payload exceeds max size of {} bytes",
-            MAX_UPLOADED_INPUT_BYTES
-        ));
+        return Err(IngestError::PayloadTooLarge {
+            limit: MAX_UPLOADED_INPUT_BYTES,
+        });
     }
 
-    let staging_dir = TempDir::new().context("failed to create upload staging directory")?;
+    let staging_dir = TempDir::new().map_err(|e| {
+        IngestError::internal_with_source(e, "failed to create upload staging directory")
+    })?;
     let upload_dir = staging_dir.path().join("upload");
-    fs::create_dir_all(&upload_dir)
-        .with_context(|| format!("failed to create {}", upload_dir.display()))?;
+    fs::create_dir_all(&upload_dir).map_err(|e| {
+        IngestError::internal_with_source(e, format!("failed to create {}", upload_dir.display()))
+    })?;
 
     let artifact_path = upload_dir.join(normalized_filename);
-    fs::write(&artifact_path, decoded)
-        .with_context(|| format!("failed to write {}", artifact_path.display()))?;
+    fs::write(&artifact_path, decoded).map_err(|e| {
+        IngestError::internal_with_source(e, format!("failed to write {}", artifact_path.display()))
+    })?;
 
     materialize_downloaded_artifact(staging_dir, artifact_path)
 }
@@ -171,8 +239,12 @@ fn materialize_downloaded_artifact(
 
     if looks_like_supported_archive(artifact_name) {
         let extract_dir = staging_dir.path().join("extracted");
-        fs::create_dir_all(&extract_dir)
-            .with_context(|| format!("failed to create {}", extract_dir.display()))?;
+        fs::create_dir_all(&extract_dir).map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to create {}", extract_dir.display()),
+            )
+        })?;
         extract_archive(&artifact_path, &extract_dir)?;
         return Ok(PreparedSyncInput {
             paths: vec![extract_dir],
@@ -194,50 +266,61 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
         .timeout(DOWNLOAD_TIMEOUT)
         .redirect(Policy::limited(MAX_REDIRECTS))
         .build()
-        .context("failed to build remote-ingestion HTTP client")?;
+        .map_err(|e| {
+            IngestError::internal_with_source(e, "failed to build remote-ingestion HTTP client")
+        })?;
 
     let mut response = client
         .get(url)
         .header("User-Agent", "provenant-serve/remote-ingestion")
         .send()
-        .with_context(|| format!("failed to fetch remote input from {url}"))?
+        .map_err(|e| {
+            IngestError::upstream_with_source(e, format!("failed to fetch remote input from {url}"))
+        })?
         .error_for_status()
-        .with_context(|| format!("remote input fetch returned an error status for {url}"))?;
+        .map_err(|e| {
+            IngestError::upstream_with_source(
+                e,
+                format!("remote input fetch returned an error status for {url}"),
+            )
+        })?;
 
     if response
         .content_length()
         .is_some_and(|content_length| content_length > MAX_REMOTE_INPUT_BYTES)
     {
-        return Err(anyhow!(
-            "remote input exceeds max size of {} bytes",
-            MAX_REMOTE_INPUT_BYTES
-        ));
+        return Err(IngestError::PayloadTooLarge {
+            limit: MAX_REMOTE_INPUT_BYTES as usize,
+        });
     }
 
     let filename = derive_download_filename(response.url());
     let output_path = output_dir.join(filename);
-    let mut output_file = File::create(&output_path)
-        .with_context(|| format!("failed to create {}", output_path.display()))?;
+    let mut output_file = File::create(&output_path).map_err(|e| {
+        IngestError::internal_with_source(e, format!("failed to create {}", output_path.display()))
+    })?;
 
     let mut total_bytes = 0u64;
     let mut buffer = [0u8; 8192];
     loop {
-        let read_bytes = response
-            .read(&mut buffer)
-            .with_context(|| format!("failed to read remote input from {url}"))?;
+        let read_bytes = response.read(&mut buffer).map_err(|e| {
+            IngestError::upstream_with_source(e, format!("failed to read remote input from {url}"))
+        })?;
         if read_bytes == 0 {
             break;
         }
         total_bytes += read_bytes as u64;
         if total_bytes > MAX_REMOTE_INPUT_BYTES {
-            return Err(anyhow!(
-                "remote input exceeds max size of {} bytes",
-                MAX_REMOTE_INPUT_BYTES
-            ));
+            return Err(IngestError::PayloadTooLarge {
+                limit: MAX_REMOTE_INPUT_BYTES as usize,
+            });
         }
-        output_file
-            .write_all(&buffer[..read_bytes])
-            .with_context(|| format!("failed to write {}", output_path.display()))?;
+        output_file.write_all(&buffer[..read_bytes]).map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to write {}", output_path.display()),
+            )
+        })?;
     }
 
     Ok(output_path)
@@ -256,16 +339,20 @@ fn validate_upload_filename(filename: &str) -> Result<String> {
     let path = Path::new(filename);
     let mut components = path.components();
     let Some(Component::Normal(component)) = components.next() else {
-        return Err(anyhow!("upload.filename must be a simple file name"));
+        return Err(IngestError::validation(
+            "upload.filename must be a simple file name",
+        ));
     };
     if components.next().is_some() {
-        return Err(anyhow!("upload.filename must be a simple file name"));
+        return Err(IngestError::validation(
+            "upload.filename must be a simple file name",
+        ));
     }
     let normalized = component
         .to_str()
-        .ok_or_else(|| anyhow!("upload.filename must be valid UTF-8"))?;
+        .ok_or_else(|| IngestError::validation("upload.filename must be valid UTF-8"))?;
     if normalized.trim().is_empty() {
-        return Err(anyhow!("upload.filename must not be empty"));
+        return Err(IngestError::validation("upload.filename must not be empty"));
     }
     Ok(normalized.to_string())
 }
@@ -291,68 +378,86 @@ fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
         return extract_tar_archive(
             archive_path,
             output_dir,
-            GzDecoder::new(
-                File::open(archive_path)
-                    .with_context(|| format!("failed to open {}", archive_path.display()))?,
-            ),
+            GzDecoder::new(File::open(archive_path).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to open {}", archive_path.display()),
+                )
+            })?),
         );
     }
     if filename.ends_with(".tar.bz2") {
         return extract_tar_archive(
             archive_path,
             output_dir,
-            BzDecoder::new(
-                File::open(archive_path)
-                    .with_context(|| format!("failed to open {}", archive_path.display()))?,
-            ),
+            BzDecoder::new(File::open(archive_path).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to open {}", archive_path.display()),
+                )
+            })?),
         );
     }
     if filename.ends_with(".tar.xz") {
         return extract_tar_archive(
             archive_path,
             output_dir,
-            XzDecoder::new(
-                File::open(archive_path)
-                    .with_context(|| format!("failed to open {}", archive_path.display()))?,
-            ),
+            XzDecoder::new(File::open(archive_path).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to open {}", archive_path.display()),
+                )
+            })?),
         );
     }
     if filename.ends_with(".tar") {
         return extract_tar_archive(
             archive_path,
             output_dir,
-            File::open(archive_path)
-                .with_context(|| format!("failed to open {}", archive_path.display()))?,
+            File::open(archive_path).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to open {}", archive_path.display()),
+                )
+            })?,
         );
     }
 
-    Err(anyhow!(
+    Err(IngestError::validation(format!(
         "unsupported archive format for remote ingestion: {}",
         archive_path.display()
-    ))
+    )))
 }
 
 fn extract_zip_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
-    let file = File::open(archive_path)
-        .with_context(|| format!("failed to open {}", archive_path.display()))?;
-    let mut archive = ZipArchive::new(file)
-        .with_context(|| format!("failed to read zip archive {}", archive_path.display()))?;
+    let file = File::open(archive_path).map_err(|e| {
+        IngestError::internal_with_source(e, format!("failed to open {}", archive_path.display()))
+    })?;
+    let mut archive = ZipArchive::new(file).map_err(|e| {
+        IngestError::internal_with_source(
+            e,
+            format!("failed to read zip archive {}", archive_path.display()),
+        )
+    })?;
 
     let mut extracted_files = 0usize;
     let mut extracted_bytes = 0u64;
 
     for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
-            .with_context(|| format!("failed to read zip entry {index}"))?;
+        let mut entry = archive.by_index(index).map_err(|e| {
+            IngestError::internal_with_source(e, format!("failed to read zip entry {index}"))
+        })?;
         let Some(relative_path) = normalize_archive_path(Path::new(entry.name())) else {
             continue;
         };
         if entry.is_dir() {
-            fs::create_dir_all(output_dir.join(relative_path)).with_context(|| {
-                format!(
-                    "failed to create archive directory in {}",
-                    output_dir.display()
+            fs::create_dir_all(output_dir.join(relative_path)).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!(
+                        "failed to create archive directory in {}",
+                        output_dir.display()
+                    ),
                 )
             })?;
             continue;
@@ -361,17 +466,31 @@ fn extract_zip_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
         enforce_archive_limits(&mut extracted_files, &mut extracted_bytes, entry.size())?;
         let destination = output_dir.join(relative_path);
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to create {}", parent.display()),
+                )
+            })?;
         }
-        let mut output = File::create(&destination)
-            .with_context(|| format!("failed to create {}", destination.display()))?;
-        std::io::copy(&mut entry, &mut output)
-            .with_context(|| format!("failed to extract {}", destination.display()))?;
+        let mut output = File::create(&destination).map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to create {}", destination.display()),
+            )
+        })?;
+        std::io::copy(&mut entry, &mut output).map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to extract {}", destination.display()),
+            )
+        })?;
     }
 
     if extracted_files == 0 {
-        return Err(anyhow!("archive did not contain any safe files to scan"));
+        return Err(IngestError::validation(
+            "archive did not contain any safe files to scan",
+        ));
     }
 
     Ok(())
@@ -382,24 +501,36 @@ fn extract_tar_archive<R: Read>(archive_path: &Path, output_dir: &Path, reader: 
     let mut extracted_files = 0usize;
     let mut extracted_bytes = 0u64;
 
-    for entry in archive
-        .entries()
-        .with_context(|| format!("failed to enumerate tar archive {}", archive_path.display()))?
-    {
-        let mut entry = entry
-            .with_context(|| format!("failed to read tar entry in {}", archive_path.display()))?;
-        let entry_path = entry
-            .path()
-            .with_context(|| format!("failed to read tar path in {}", archive_path.display()))?;
+    for entry in archive.entries().map_err(|e| {
+        IngestError::internal_with_source(
+            e,
+            format!("failed to enumerate tar archive {}", archive_path.display()),
+        )
+    })? {
+        let mut entry = entry.map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to read tar entry in {}", archive_path.display()),
+            )
+        })?;
+        let entry_path = entry.path().map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to read tar path in {}", archive_path.display()),
+            )
+        })?;
         let Some(relative_path) = normalize_archive_path(&entry_path) else {
             continue;
         };
 
         if entry.header().entry_type().is_dir() {
-            fs::create_dir_all(output_dir.join(relative_path)).with_context(|| {
-                format!(
-                    "failed to create archive directory in {}",
-                    output_dir.display()
+            fs::create_dir_all(output_dir.join(relative_path)).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!(
+                        "failed to create archive directory in {}",
+                        output_dir.display()
+                    ),
                 )
             })?;
             continue;
@@ -412,23 +543,40 @@ fn extract_tar_archive<R: Read>(archive_path: &Path, output_dir: &Path, reader: 
         enforce_archive_limits(
             &mut extracted_files,
             &mut extracted_bytes,
-            entry.header().size().with_context(|| {
-                format!("failed to read tar size in {}", archive_path.display())
+            entry.header().size().map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to read tar size in {}", archive_path.display()),
+                )
             })?,
         )?;
         let destination = output_dir.join(relative_path);
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                IngestError::internal_with_source(
+                    e,
+                    format!("failed to create {}", parent.display()),
+                )
+            })?;
         }
-        let mut output = File::create(&destination)
-            .with_context(|| format!("failed to create {}", destination.display()))?;
-        std::io::copy(&mut entry, &mut output)
-            .with_context(|| format!("failed to extract {}", destination.display()))?;
+        let mut output = File::create(&destination).map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to create {}", destination.display()),
+            )
+        })?;
+        std::io::copy(&mut entry, &mut output).map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to extract {}", destination.display()),
+            )
+        })?;
     }
 
     if extracted_files == 0 {
-        return Err(anyhow!("archive did not contain any safe files to scan"));
+        return Err(IngestError::validation(
+            "archive did not contain any safe files to scan",
+        ));
     }
 
     Ok(())
@@ -440,26 +588,24 @@ fn enforce_archive_limits(
     entry_size: u64,
 ) -> Result<()> {
     if entry_size > MAX_ARCHIVE_ENTRY_BYTES {
-        bail!(
-            "archive entry exceeds max size of {} bytes",
-            MAX_ARCHIVE_ENTRY_BYTES
-        );
+        return Err(IngestError::PayloadTooLarge {
+            limit: MAX_ARCHIVE_ENTRY_BYTES as usize,
+        });
     }
 
     *extracted_files += 1;
     if *extracted_files > MAX_ARCHIVE_ENTRY_COUNT {
-        bail!(
+        return Err(IngestError::Validation(format!(
             "archive exceeds max entry count of {}",
             MAX_ARCHIVE_ENTRY_COUNT
-        );
+        )));
     }
 
     *extracted_bytes += entry_size;
     if *extracted_bytes > MAX_ARCHIVE_TOTAL_BYTES {
-        bail!(
-            "archive exceeds max extracted size of {} bytes",
-            MAX_ARCHIVE_TOTAL_BYTES
-        );
+        return Err(IngestError::PayloadTooLarge {
+            limit: MAX_ARCHIVE_TOTAL_BYTES as usize,
+        });
     }
 
     Ok(())
@@ -481,15 +627,15 @@ fn normalize_archive_path(path: &Path) -> Option<PathBuf> {
 fn run_git(command: &mut Command, context_message: &str) -> Result<()> {
     let output = command
         .output()
-        .with_context(|| context_message.to_string())?;
+        .map_err(|e| IngestError::upstream_with_source(e, context_message))?;
     if output.status.success() {
         Ok(())
     } else {
-        bail!(
+        Err(IngestError::upstream(format!(
             "{}: {}",
             context_message,
             String::from_utf8_lossy(&output.stderr).trim()
-        )
+        )))
     }
 }
 

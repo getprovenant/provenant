@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Result, anyhow};
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::path::{Path, PathBuf};
 
@@ -11,6 +10,14 @@ use crate::license_detection::DEFAULT_LICENSEDB_URL_TEMPLATE;
 use crate::progress::ProgressMode;
 use crate::scanner::MemoryMode;
 use crate::{Output, ProcessMode};
+
+#[derive(Debug, thiserror::Error)]
+pub enum WorkflowError {
+    #[error("{0}")]
+    InvalidOptions(String),
+    #[error(transparent)]
+    Pipeline(#[from] anyhow::Error),
+}
 
 /// Selects how the workflow facade sources license rules.
 #[derive(Debug, Clone)]
@@ -156,7 +163,7 @@ impl Default for ScanOptions {
 /// assert!(!output.headers[0].options.contains_key("input"));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-pub fn scan_path(path: impl AsRef<Path>, options: &ScanOptions) -> Result<Output> {
+pub fn scan_path(path: impl AsRef<Path>, options: &ScanOptions) -> Result<Output, WorkflowError> {
     scan_paths([path.as_ref()], options)
 }
 
@@ -188,20 +195,24 @@ pub fn scan_path(path: impl AsRef<Path>, options: &ScanOptions) -> Result<Output
 pub fn scan_paths<'a>(
     paths: impl IntoIterator<Item = &'a Path>,
     options: &ScanOptions,
-) -> Result<Output> {
+) -> Result<Output, WorkflowError> {
     let input_paths: Vec<String> = paths
         .into_iter()
         .map(|path| path.to_string_lossy().to_string())
         .collect();
 
     if input_paths.is_empty() {
-        return Err(anyhow!("At least one input path is required"));
+        return Err(WorkflowError::InvalidOptions(
+            "At least one input path is required".to_string(),
+        ));
     }
 
     let request = request_for_native_paths(input_paths, options);
     validate_workflow_request(&request)?;
 
-    execute_request(&request).map(|executed| executed.output)
+    execute_request(&request)
+        .map(|executed| executed.output)
+        .map_err(WorkflowError::Pipeline)
 }
 
 fn request_for_native_paths(input_paths: Vec<String>, options: &ScanOptions) -> ScanRequest {
@@ -286,87 +297,115 @@ fn request_for_native_paths(input_paths: Vec<String>, options: &ScanOptions) -> 
     }
 }
 
-fn validate_workflow_request(request: &ScanRequest) -> Result<()> {
+fn validate_workflow_request(request: &ScanRequest) -> Result<(), WorkflowError> {
     let license_enabled = request.license;
 
     if request.strip_root && request.full_root {
-        return Err(anyhow!("strip_root and full_root are mutually exclusive"));
+        return Err(WorkflowError::InvalidOptions(
+            "strip_root and full_root are mutually exclusive".to_string(),
+        ));
     }
 
     if request.license_text && !license_enabled {
-        return Err(anyhow!("license_text requires detect_license"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_text requires detect_license".to_string(),
+        ));
     }
 
     if request.license_text_diagnostics && !request.license_text {
-        return Err(anyhow!("license_text_diagnostics requires license_text"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_text_diagnostics requires license_text".to_string(),
+        ));
     }
 
     if request.license_diagnostics && !license_enabled {
-        return Err(anyhow!("license_diagnostics requires detect_license"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_diagnostics requires detect_license".to_string(),
+        ));
     }
 
     if request.unknown_licenses && !license_enabled {
-        return Err(anyhow!("unknown_licenses requires detect_license"));
+        return Err(WorkflowError::InvalidOptions(
+            "unknown_licenses requires detect_license".to_string(),
+        ));
     }
 
     if request.license_references && !license_enabled {
-        return Err(anyhow!("license_references requires detect_license"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_references requires detect_license".to_string(),
+        ));
     }
 
     if request.license_url_template != DEFAULT_LICENSEDB_URL_TEMPLATE && !license_enabled {
-        return Err(anyhow!("license_url_template requires detect_license"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_url_template requires detect_license".to_string(),
+        ));
     }
 
     if request.package_only && license_enabled {
-        return Err(anyhow!(
-            "package_only cannot be combined with detect_license"
+        return Err(WorkflowError::InvalidOptions(
+            "package_only cannot be combined with detect_license".to_string(),
         ));
     }
 
     if request.package_only && request.summary {
-        return Err(anyhow!("package_only cannot be combined with summary"));
+        return Err(WorkflowError::InvalidOptions(
+            "package_only cannot be combined with summary".to_string(),
+        ));
     }
 
     if request.package_only && request.package {
-        return Err(anyhow!(
-            "package_only cannot be combined with detect_packages"
+        return Err(WorkflowError::InvalidOptions(
+            "package_only cannot be combined with detect_packages".to_string(),
         ));
     }
 
     if request.package_only && request.system_package {
-        return Err(anyhow!(
-            "package_only cannot be combined with detect_system_packages"
+        return Err(WorkflowError::InvalidOptions(
+            "package_only cannot be combined with detect_system_packages".to_string(),
         ));
     }
 
     if request.summary && !request.classify {
-        return Err(anyhow!("summary requires classify"));
+        return Err(WorkflowError::InvalidOptions(
+            "summary requires classify".to_string(),
+        ));
     }
 
     if request.license_clarity_score && !request.classify {
-        return Err(anyhow!("license_clarity_score requires classify"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_clarity_score requires classify".to_string(),
+        ));
     }
 
     if request.tallies_key_files && !(request.tallies && request.classify) {
-        return Err(anyhow!("tallies_key_files requires tallies and classify"));
+        return Err(WorkflowError::InvalidOptions(
+            "tallies_key_files requires tallies and classify".to_string(),
+        ));
     }
 
     if request.tallies_by_facet && request.facet.is_empty() {
-        return Err(anyhow!(
-            "tallies_by_facet requires at least one facet definition"
+        return Err(WorkflowError::InvalidOptions(
+            "tallies_by_facet requires at least one facet definition".to_string(),
         ));
     }
 
     if request.tallies_by_facet && !request.tallies {
-        return Err(anyhow!("tallies_by_facet requires tallies"));
+        return Err(WorkflowError::InvalidOptions(
+            "tallies_by_facet requires tallies".to_string(),
+        ));
     }
 
     if request.mark_source && !request.info {
-        return Err(anyhow!("mark_source requires collect_info"));
+        return Err(WorkflowError::InvalidOptions(
+            "mark_source requires collect_info".to_string(),
+        ));
     }
 
     if request.license_score > 100 {
-        return Err(anyhow!("license_score must be between 0 and 100"));
+        return Err(WorkflowError::InvalidOptions(
+            "license_score must be between 0 and 100".to_string(),
+        ));
     }
 
     Ok(())
@@ -402,6 +441,7 @@ mod tests {
 
         let request = request_for_native_paths(vec!["src".to_string()], &options);
         let error = validate_workflow_request(&request).expect_err("validation should fail");
+        assert!(matches!(error, WorkflowError::InvalidOptions(_)));
         assert!(
             error
                 .to_string()
@@ -419,6 +459,7 @@ mod tests {
 
         let request = request_for_native_paths(vec!["src".to_string()], &options);
         let error = validate_workflow_request(&request).expect_err("validation should fail");
+        assert!(matches!(error, WorkflowError::InvalidOptions(_)));
         assert!(
             error
                 .to_string()
@@ -435,6 +476,7 @@ mod tests {
 
         let request = request_for_native_paths(vec!["src".to_string()], &options);
         let error = validate_workflow_request(&request).expect_err("validation should fail");
+        assert!(matches!(error, WorkflowError::InvalidOptions(_)));
         assert!(error.to_string().contains("summary requires classify"));
     }
 
