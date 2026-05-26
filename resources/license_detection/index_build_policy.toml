@@ -27,6 +27,7 @@ ignored_rules = [
 ignored_licenses = []
 
 [overlay_reasons.rules]
+"agpl-3.0-plus_101.RULE" = "Treat bare AGPL mentions as clue-only evidence so short comparative references stay inspectable without becoming hard detections."
 "apache-2.0_and_lgpl-2.1_1.RULE" = "Keep the mixed Apache-2.0/LGPL-2.1 notice detectable only when both COPYING.LGPL and COPYING.ASL2 references are actually present."
 "apache-2.0_and_lgpl-2.1_2.RULE" = "Preserve a real typoed Apache-2.0/LGPL-2.1 notice seen in the wild without broadening generic dual-license detection."
 "apache-2.0_and_lgpl-2.1_4.RULE" = "Cover the GNU/Linux wording variant of the typoed mixed Apache-2.0/LGPL-2.1 notice while keeping it tight enough to avoid loose partial matches."
