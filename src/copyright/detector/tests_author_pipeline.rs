@@ -807,3 +807,17 @@ fn test_maintainers_label_without_email_does_not_extract_author() {
     let (_c, _h, authors) = detect_copyrights_from_text(input);
     assert!(authors.is_empty(), "authors: {authors:?}");
 }
+
+#[test]
+fn test_markup_authors_section_collective_author_detected() {
+    let input = r#"<section name="Authors"><p>The PulseAudio Developers &lt;bugs@example.org&gt;; PulseAudio is available from <url href="https://example.org"/></p></section>"#;
+
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .any(|a| a.author == "The PulseAudio Developers"),
+        "authors: {authors:?}"
+    );
+}

@@ -129,6 +129,13 @@ pub(in super::super) fn extract_markup_authors(content: &str, authors: &mut Vec<
         .unwrap()
     });
 
+    static AUTHOR_SECTION_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?is)<section[^>]*\bname\s*=\s*(?:\"Authors\"|'Authors')[^>]*>.*?<p>\s*(?P<who>The\s+[^<&;]{1,200}?(?:Authors?|Developers|Maintainers?|Committers|Contributors|Project|Foundation|Group|Team|Committee))\b"#,
+        )
+        .unwrap()
+    });
+
     let mut seen: HashSet<(String, LineNumber)> = authors
         .iter()
         .map(|a| (a.author.clone(), a.start_line))
@@ -169,6 +176,29 @@ pub(in super::super) fn extract_markup_authors(content: &str, authors: &mut Vec<
             continue;
         }
         let Some(author) = refine_author(&format!("{first} {last}")) else {
+            continue;
+        };
+        let line = line_number_for_offset(content, full.start());
+        if seen.insert((author.clone(), line)) {
+            authors.push(AuthorDetection {
+                author,
+                start_line: line,
+                end_line: line,
+            });
+        }
+    }
+
+    for cap in AUTHOR_SECTION_RE.captures_iter(content) {
+        let Some(full) = cap.get(0) else {
+            continue;
+        };
+        let who = cap.name("who").map(|m| m.as_str()).unwrap_or("").trim();
+        if who.is_empty() {
+            continue;
+        }
+        let Some(author) =
+            refine_notice_collective_author(who).or_else(|| refine_author_or_institution(who))
+        else {
             continue;
         };
         let line = line_number_for_offset(content, full.start());
@@ -279,9 +309,20 @@ fn refine_notice_collective_author(who: &str) -> Option<String> {
         return None;
     }
 
-    let collective_suffix = [" project", " foundation", " group", " team", " committee"]
-        .iter()
-        .any(|suffix| lower.contains(suffix));
+    let collective_suffix = [
+        " project",
+        " foundation",
+        " group",
+        " team",
+        " committee",
+        " developers",
+        " authors",
+        " maintainers",
+        " committers",
+        " contributors",
+    ]
+    .iter()
+    .any(|suffix| lower.contains(suffix));
     if !collective_suffix {
         return None;
     }
