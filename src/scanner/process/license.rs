@@ -482,6 +482,13 @@ fn process_successful_detections(
         model_clues.extend(clue_matches);
     }
 
+    prune_contextual_short_reference_matches(
+        path,
+        text_content,
+        license_options.include_diagnostics,
+        &mut model_detections,
+        &mut model_clues,
+    );
     model_detections.extend(supplement_nix_manifest_license_detections(
         path,
         text_content,
@@ -765,6 +772,185 @@ fn prune_redundant_readme_conjunctive_detections(
                 *candidate_keys == keys && ranges_overlap(start, end, *other_start, *other_end)
             })
     });
+}
+
+fn prune_contextual_short_reference_matches(
+    path: &Path,
+    text_content: &str,
+    include_diagnostics: bool,
+    detections: &mut Vec<PublicLicenseDetection>,
+    clues: &mut Vec<Match>,
+) {
+    let source_lines: Vec<&str> = text_content.lines().collect();
+    if source_lines.is_empty() {
+        return;
+    }
+
+    clues.retain(|detection_match| {
+        !should_prune_contextual_short_reference_match(detection_match, &source_lines)
+    });
+
+    detections.retain_mut(|detection| {
+        let original_match_count = detection.matches.len();
+        detection.matches.retain(|detection_match| {
+            !should_prune_contextual_short_reference_match(detection_match, &source_lines)
+        });
+
+        if detection.matches.is_empty() {
+            return false;
+        }
+
+        if detection.matches.len() != original_match_count {
+            refresh_public_detection_after_context_prune(detection, path, include_diagnostics);
+        }
+
+        true
+    });
+}
+
+fn refresh_public_detection_after_context_prune(
+    detection: &mut PublicLicenseDetection,
+    path: &Path,
+    include_diagnostics: bool,
+) {
+    detection.license_expression =
+        crate::utils::spdx::combine_license_expressions_preserving_structure(
+            detection
+                .matches
+                .iter()
+                .map(|detection_match| detection_match.license_expression.clone())
+                .collect::<Vec<_>>(),
+        )
+        .unwrap_or_else(|| detection.matches[0].license_expression.clone());
+    detection.license_expression_spdx =
+        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
+            detection
+                .matches
+                .iter()
+                .map(|detection_match| detection_match.license_expression_spdx.clone())
+                .filter(|expression| !expression.is_empty())
+                .collect::<Vec<_>>(),
+        )
+        .unwrap_or_default();
+    detection.identifier = None;
+    if include_diagnostics
+        && !detection
+            .detection_log
+            .iter()
+            .any(|log| log == "contextual-short-license-mention-pruned")
+    {
+        detection
+            .detection_log
+            .push("contextual-short-license-mention-pruned".to_string());
+    }
+    crate::models::file_info::enrich_license_detection_provenance(
+        detection,
+        &path.to_string_lossy(),
+    );
+}
+
+fn should_prune_contextual_short_reference_match(
+    detection_match: &Match,
+    source_lines: &[&str],
+) -> bool {
+    if !(is_short_reference_like_public_match(detection_match)
+        || is_unknown_reference_like_public_match(detection_match))
+    {
+        return false;
+    }
+
+    let start_line = detection_match.start_line.get();
+    let end_line = detection_match.end_line.get().min(source_lines.len());
+    if start_line == 0 || start_line > end_line || start_line > source_lines.len() {
+        return false;
+    }
+
+    (start_line..=end_line).any(|line_number| {
+        is_markdown_license_table_row(line_number, source_lines)
+            || is_negative_or_comparative_license_mention_line(source_lines[line_number - 1])
+    })
+}
+
+fn is_short_reference_like_public_match(detection_match: &Match) -> bool {
+    detection_match.matched_length.unwrap_or(usize::MAX) <= 3
+}
+
+fn is_unknown_reference_like_public_match(detection_match: &Match) -> bool {
+    detection_match.license_expression == "unknown-license-reference"
+        || detection_match.license_expression_spdx
+            == "LicenseRef-scancode-unknown-license-reference"
+        || detection_match
+            .rule_identifier
+            .as_deref()
+            .is_some_and(|rule_identifier| rule_identifier.to_ascii_lowercase().contains("unknown"))
+}
+
+fn is_markdown_license_table_row(line_number: usize, source_lines: &[&str]) -> bool {
+    let Some(line) = source_lines.get(line_number.saturating_sub(1)) else {
+        return false;
+    };
+    if !is_markdown_table_line(line) {
+        return false;
+    }
+
+    let mut block_start = line_number - 1;
+    while block_start > 0 && is_markdown_table_line(source_lines[block_start - 1]) {
+        block_start -= 1;
+    }
+
+    let Some(header_line) = source_lines.get(block_start) else {
+        return false;
+    };
+    let Some(separator_line) = source_lines.get(block_start + 1) else {
+        return false;
+    };
+
+    header_line.to_ascii_lowercase().contains("license")
+        && is_markdown_table_separator_line(separator_line)
+        && line_number > block_start + 2
+}
+
+fn is_markdown_table_line(line: &str) -> bool {
+    let trimmed = strip_markdown_table_comment_prefix(line).trim();
+    trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.matches('|').count() >= 2
+}
+
+fn is_markdown_table_separator_line(line: &str) -> bool {
+    let trimmed = strip_markdown_table_comment_prefix(line).trim();
+    is_markdown_table_line(trimmed)
+        && trimmed
+            .chars()
+            .all(|ch| matches!(ch, '|' | '-' | ':' | ' ' | '\t'))
+}
+
+fn strip_markdown_table_comment_prefix(line: &str) -> &str {
+    let trimmed = line.trim_start();
+    for prefix in ["//!", "///", "//", "*"] {
+        if let Some(rest) = trimmed.strip_prefix(prefix) {
+            return rest.trim_start();
+        }
+    }
+    trimmed
+}
+
+fn is_negative_or_comparative_license_mention_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    (lower.contains("no ") && lower.contains("restriction"))
+        || (line_has_possessive_without_license_phrase(&lower))
+        || (lower.contains("unlike ") && line.contains('(') && line.contains(')'))
+        || lower.contains("-licensed alternative")
+        || lower.contains("-licensed alternatives")
+        || line_has_negated_license_shorthand_list(line)
+}
+
+fn line_has_possessive_without_license_phrase(lower: &str) -> bool {
+    lower.contains("without its ") && lower.contains(" license")
+        || lower.contains("without their ") && lower.contains(" license")
+}
+
+fn line_has_negated_license_shorthand_list(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.contains("no ") && line.contains('/') && line.chars().any(|ch| ch.is_ascii_uppercase())
 }
 
 fn expand_dual_licensed_under_readme_choice_detections(

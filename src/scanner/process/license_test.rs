@@ -5,7 +5,7 @@ use super::{
     LicenseExtractionInput, MAX_OUTPUT_MATCHED_TEXT_BYTES, MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH,
     compute_percentage_of_license_text, convert_detection_to_model, extract_license_information,
     normalize_optional_spdx_expression, promote_legal_notice_low_quality_detections,
-    prune_redundant_readme_conjunctive_detections,
+    prune_contextual_short_reference_matches, prune_redundant_readme_conjunctive_detections,
 };
 use crate::license_detection::LicenseDetection as InternalLicenseDetection;
 use crate::license_detection::LicenseDetectionEngine;
@@ -145,6 +145,47 @@ fn make_public_detection(
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
+        detection_log: Vec::new(),
+        identifier: None,
+    }
+}
+
+fn make_public_match(
+    expr: &str,
+    expr_spdx: &str,
+    start_line: usize,
+    end_line: usize,
+    matched_length: usize,
+    rule_identifier: &str,
+) -> Match {
+    Match {
+        license_expression: expr.to_string(),
+        license_expression_spdx: expr_spdx.to_string(),
+        from_file: Some("README.md".to_string()),
+        start_line: LineNumber::new(start_line).unwrap(),
+        end_line: LineNumber::new(end_line).unwrap(),
+        matcher: Some("2-aho".to_string()),
+        score: MatchScore::MAX,
+        matched_length: Some(matched_length),
+        match_coverage: Some(100.0),
+        rule_relevance: Some(100),
+        rule_identifier: Some(rule_identifier.to_string()),
+        rule_url: None,
+        matched_text: None,
+        referenced_filenames: None,
+        matched_text_diagnostics: None,
+    }
+}
+
+fn make_public_detection_with_matches(
+    expr: &str,
+    expr_spdx: &str,
+    matches: Vec<Match>,
+) -> PublicLicenseDetection {
+    PublicLicenseDetection {
+        license_expression: expr.to_string(),
+        license_expression_spdx: expr_spdx.to_string(),
+        matches,
         detection_log: Vec::new(),
         identifier: None,
     }
@@ -501,6 +542,287 @@ fn test_prune_redundant_readme_conjunctive_detections_keeps_non_overlapping_and_
     );
 
     assert_eq!(detections.len(), 2, "detections: {detections:#?}");
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_drops_markdown_license_table_rows() {
+    let text = concat!(
+        "| Library | Mean | License |\n",
+        "|---------|------|---------|\n",
+        "| pdf_oxide | 0.8ms | MIT |\n",
+        "| PyMuPDF | 4.6ms | AGPL-3.0 |\n",
+        "| pypdfium2 | 4.1ms | Apache-2.0 |\n",
+    );
+    let mut detections = vec![make_public_detection_with_matches(
+        "agpl-3.0 AND apache-2.0",
+        "AGPL-3.0-only AND Apache-2.0",
+        vec![
+            make_public_match("agpl-3.0", "AGPL-3.0-only", 4, 4, 3, "agpl-3.0_5.RULE"),
+            make_public_match(
+                "apache-2.0",
+                "Apache-2.0",
+                5,
+                5,
+                3,
+                "spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+            ),
+        ],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("README.md"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert!(detections.is_empty(), "detections: {detections:#?}");
+    assert!(clues.is_empty());
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_drops_doc_comment_markdown_license_table_rows() {
+    let text = concat!(
+        "//! | Library | Mean | License |\n",
+        "//! |---------|------|---------|\n",
+        "//! | pdf_oxide | 0.8ms | MIT |\n",
+        "//! | PyMuPDF | 4.6ms | AGPL-3.0 |\n",
+    );
+    let mut detections = vec![make_public_detection_with_matches(
+        "agpl-3.0",
+        "AGPL-3.0-only",
+        vec![make_public_match(
+            "agpl-3.0",
+            "AGPL-3.0-only",
+            4,
+            4,
+            3,
+            "agpl-3.0_5.RULE",
+        )],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("src/lib.rs"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert!(detections.is_empty(), "detections: {detections:#?}");
+    assert!(clues.is_empty());
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_drops_negative_policy_lines() {
+    let text = "accepted = [\"Apache-2.0\"] # no GPL/AGPL/SSPL\n";
+    let mut detections = vec![make_public_detection_with_matches(
+        "agpl-3.0-plus AND mongodb-sspl-1.0",
+        "AGPL-3.0-or-later AND SSPL-1.0",
+        vec![
+            make_public_match(
+                "agpl-3.0-plus",
+                "AGPL-3.0-or-later",
+                1,
+                1,
+                1,
+                "agpl-3.0-plus_101.RULE",
+            ),
+            make_public_match(
+                "mongodb-sspl-1.0",
+                "SSPL-1.0",
+                1,
+                1,
+                1,
+                "mongodb-sspl-1.0_60.RULE",
+            ),
+        ],
+    )];
+    let mut clues = vec![make_public_match(
+        "gpl-1.0-plus",
+        "GPL-1.0-or-later",
+        1,
+        1,
+        1,
+        "gpl_bare_word_only.RULE",
+    )];
+
+    prune_contextual_short_reference_matches(
+        Path::new("deny.toml"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert!(detections.is_empty(), "detections: {detections:#?}");
+    assert!(clues.is_empty(), "clues: {clues:#?}");
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_keeps_dual_license_choice_but_drops_comparative_suffix()
+ {
+    let text = "Dual-licensed under MIT or Apache-2.0 at your option. Unlike AGPL-licensed alternatives, this project is permissive.\n";
+    let mut detections = vec![make_public_detection_with_matches(
+        "unknown-license-reference AND apache-2.0 OR mit AND agpl-3.0-plus",
+        "LicenseRef-scancode-unknown-license-reference AND (Apache-2.0 OR MIT) AND AGPL-3.0-or-later",
+        vec![
+            make_public_match(
+                "unknown-license-reference",
+                "LicenseRef-scancode-unknown-license-reference",
+                1,
+                1,
+                4,
+                "lead-in_unknown_30.RULE",
+            ),
+            make_public_match(
+                "apache-2.0 OR mit",
+                "Apache-2.0 OR MIT",
+                1,
+                1,
+                6,
+                "apache-2.0_or_mit_13.RULE",
+            ),
+            make_public_match(
+                "agpl-3.0-plus",
+                "AGPL-3.0-or-later",
+                1,
+                1,
+                1,
+                "agpl-3.0-plus_101.RULE",
+            ),
+        ],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("README.md"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert_eq!(detections.len(), 1, "detections: {detections:#?}");
+    assert_eq!(detections[0].license_expression_spdx, "Apache-2.0 OR MIT");
+    assert_eq!(detections[0].matches.len(), 1);
+    assert_eq!(
+        detections[0].matches[0].rule_identifier.as_deref(),
+        Some("apache-2.0_or_mit_13.RULE")
+    );
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_drops_unlike_parenthetical_competitor_license() {
+    let text = "- **Permissive license** — MIT / Apache-2.0, unlike PyMuPDF (AGPL-3.0) — use freely in commercial and closed-source projects\n";
+    let mut detections = vec![make_public_detection_with_matches(
+        "apache-2.0 OR mit AND agpl-3.0",
+        "(Apache-2.0 OR MIT) AND AGPL-3.0-only",
+        vec![
+            make_public_match(
+                "apache-2.0 OR mit",
+                "Apache-2.0 OR MIT",
+                1,
+                1,
+                6,
+                "apache-2.0_or_mit_44.RULE",
+            ),
+            make_public_match("agpl-3.0", "AGPL-3.0-only", 1, 1, 3, "agpl-3.0_5.RULE"),
+        ],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("python/README.md"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert_eq!(detections.len(), 1, "detections: {detections:#?}");
+    assert_eq!(detections[0].license_expression_spdx, "Apache-2.0 OR MIT");
+    assert_eq!(detections[0].matches.len(), 1);
+    assert_eq!(
+        detections[0].matches[0].rule_identifier.as_deref(),
+        Some("apache-2.0_or_mit_44.RULE")
+    );
+    assert!(clues.is_empty());
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_respects_include_diagnostics_flag() {
+    let text = "Dual-licensed under MIT or Apache-2.0 at your option. Unlike AGPL-licensed alternatives, this project is permissive.\n";
+    let mut detections = vec![make_public_detection_with_matches(
+        "unknown-license-reference AND apache-2.0 OR mit AND agpl-3.0-plus",
+        "LicenseRef-scancode-unknown-license-reference AND (Apache-2.0 OR MIT) AND AGPL-3.0-or-later",
+        vec![
+            make_public_match(
+                "unknown-license-reference",
+                "LicenseRef-scancode-unknown-license-reference",
+                1,
+                1,
+                4,
+                "lead-in_unknown_30.RULE",
+            ),
+            make_public_match(
+                "apache-2.0 OR mit",
+                "Apache-2.0 OR MIT",
+                1,
+                1,
+                6,
+                "apache-2.0_or_mit_13.RULE",
+            ),
+            make_public_match(
+                "agpl-3.0-plus",
+                "AGPL-3.0-or-later",
+                1,
+                1,
+                1,
+                "agpl-3.0-plus_101.RULE",
+            ),
+        ],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("README.md"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert_eq!(detections.len(), 1);
+    assert_eq!(detections[0].license_expression_spdx, "Apache-2.0 OR MIT");
+    assert!(detections[0].detection_log.is_empty(), "{detections:#?}");
+}
+
+#[test]
+fn test_prune_contextual_short_reference_matches_keeps_short_license_notice_with_without_warranty()
+{
+    let text = "Licensed under the MIT License without warranty.\n";
+    let mut detections = vec![make_public_detection_with_matches(
+        "mit",
+        "MIT",
+        vec![make_public_match("mit", "MIT", 1, 1, 2, "mit_126.RULE")],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("README.md"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert_eq!(detections.len(), 1, "detections: {detections:#?}");
+    assert_eq!(detections[0].license_expression_spdx, "MIT");
+    assert!(clues.is_empty());
 }
 
 #[test]
