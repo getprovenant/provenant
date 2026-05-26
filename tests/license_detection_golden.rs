@@ -722,4 +722,14 @@ mod golden_tests {
         )
         .unwrap();
     }
+
+    #[test]
+    fn test_golden_pulseaudio_caps_lgpl21_regression() {
+        run_explicit_golden(
+            Path::new("testdata/license-golden/provenant-regressions/pulseaudio-caps.h"),
+            Path::new("testdata/license-golden/provenant-regressions/pulseaudio-caps.h.yml"),
+            false,
+        )
+        .unwrap();
+    }
 }
