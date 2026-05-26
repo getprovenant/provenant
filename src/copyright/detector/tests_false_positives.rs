@@ -523,7 +523,7 @@ fn test_author_of_work_does_not_produce_author() {
 }
 
 #[test]
-fn test_pulseaudio_placeholder_and_code_fragments_do_not_emit_detections() {
+fn test_copyright_holder_placeholder_and_code_fragments_do_not_emit_detections() {
     let input = concat!(
         "Copyright (c) 2014 PulseAudio's COPYRIGHT HOLDER
 ",

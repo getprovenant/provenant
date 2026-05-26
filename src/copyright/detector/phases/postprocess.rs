@@ -4,6 +4,8 @@
 use crate::copyright::line_tracking::PreparedLines;
 use crate::copyright::types::{AuthorDetection, CopyrightDetection, HolderDetection};
 use crate::models::LineNumber;
+use regex::Regex;
+use std::sync::LazyLock;
 
 use super::super::seen_text::SeenTextSets;
 
@@ -457,7 +459,7 @@ fn run_late_pattern_extractions(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn drop_pulseaudio_placeholder_and_code_junk_by_raw_line(
+fn drop_placeholder_and_code_junk_by_raw_line(
     raw_lines: &[&str],
     copyrights: &mut Vec<CopyrightDetection>,
     holders: &mut Vec<HolderDetection>,
@@ -467,15 +469,49 @@ fn drop_pulseaudio_placeholder_and_code_junk_by_raw_line(
         let Some(raw) = raw_lines.get(idx) else {
             return false;
         };
-        let lower = raw.trim().to_ascii_lowercase();
-        lower.contains("copyright holder")
-            || lower.contains("pa_refcnt_init(")
-            || lower.contains("d->copyright")
-            || lower == "copyright sections were added"
+        let trimmed = raw.trim();
+        is_embedded_c_sign_code_fragment_line(trimmed)
+            || is_copyright_edit_note_line(trimmed)
+            || is_copyright_holder_placeholder_line(trimmed)
     };
 
     copyrights.retain(|c| !is_junk_line(c.start_line));
     holders.retain(|h| !is_junk_line(h.start_line));
+}
+
+fn is_copyright_holder_placeholder_line(line: &str) -> bool {
+    static COPYRIGHT_HOLDER_PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?:
+                [\p{L}0-9._-]+(?:'s)?\s+COPYRIGHT\s+HOLDER
+                |
+                copyright
+                (?:\s*\(c\))?
+                (?:\s+(?:19\d{2}|20\d{2})(?:-(?:19\d{2}|20\d{2}))?)?
+                \s+[\p{L}0-9._-]+(?:'s)?\s+COPYRIGHT\s+HOLDER
+            )$
+            ",
+        )
+        .unwrap()
+    });
+
+    COPYRIGHT_HOLDER_PLACEHOLDER_RE.is_match(line.trim())
+}
+
+fn is_embedded_c_sign_code_fragment_line(line: &str) -> bool {
+    static EMBEDDED_C_SIGN_CALL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\b[A-Za-z_][A-Za-z0-9_]*\(\s*c\s*\)\s*(?:;|=|->)").unwrap()
+    });
+
+    EMBEDDED_C_SIGN_CALL_RE.is_match(line.trim())
+}
+
+fn is_copyright_edit_note_line(line: &str) -> bool {
+    static COPYRIGHT_EDIT_NOTE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)^copyright\s+sections?\s+were\s+added$").unwrap());
+
+    COPYRIGHT_EDIT_NOTE_RE.is_match(line.trim())
 }
 
 fn run_final_variant_and_cleanup_repairs(
@@ -652,7 +688,7 @@ fn run_final_variant_and_cleanup_repairs(
         raw_lines, copyrights, holders,
     );
     super::postprocess_transforms::drop_copyright_like_holders(holders);
-    drop_pulseaudio_placeholder_and_code_junk_by_raw_line(raw_lines, copyrights, holders);
+    drop_placeholder_and_code_junk_by_raw_line(raw_lines, copyrights, holders);
 }
 
 #[allow(clippy::too_many_arguments)]
