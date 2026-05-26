@@ -36,8 +36,8 @@ const MAX_ARCHIVE_ENTRY_COUNT: usize = 10_000;
 pub(crate) enum IngestError {
     #[error("{0}")]
     Validation(String),
-    #[error("payload exceeds max size of {limit} bytes")]
-    PayloadTooLarge { limit: usize },
+    #[error("{0}")]
+    PayloadTooLarge(String),
     #[error("{message}")]
     Upstream {
         message: String,
@@ -196,9 +196,9 @@ fn prepare_url_input(url: &str) -> Result<PreparedSyncInput> {
 
 fn prepare_upload_input(filename: &str, content_base64: &str) -> Result<PreparedSyncInput> {
     let normalized_filename = validate_upload_filename(filename)?;
-    let decoded = STANDARD.decode(content_base64).map_err(|_| {
-        IngestError::Validation("upload.content_base64 must be valid base64".to_string())
-    })?;
+    let decoded = STANDARD
+        .decode(content_base64)
+        .map_err(|_| IngestError::validation("upload.content_base64 must be valid base64"))?;
 
     if decoded.is_empty() {
         return Err(IngestError::validation(
@@ -207,9 +207,10 @@ fn prepare_upload_input(filename: &str, content_base64: &str) -> Result<Prepared
     }
 
     if decoded.len() > MAX_UPLOADED_INPUT_BYTES {
-        return Err(IngestError::PayloadTooLarge {
-            limit: MAX_UPLOADED_INPUT_BYTES,
-        });
+        return Err(IngestError::PayloadTooLarge(format!(
+            "upload payload exceeds max size of {} bytes",
+            MAX_UPLOADED_INPUT_BYTES
+        )));
     }
 
     let staging_dir = TempDir::new().map_err(|e| {
@@ -289,9 +290,10 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
         .content_length()
         .is_some_and(|content_length| content_length > MAX_REMOTE_INPUT_BYTES)
     {
-        return Err(IngestError::PayloadTooLarge {
-            limit: MAX_REMOTE_INPUT_BYTES as usize,
-        });
+        return Err(IngestError::PayloadTooLarge(format!(
+            "remote input exceeds max size of {} bytes",
+            MAX_REMOTE_INPUT_BYTES
+        )));
     }
 
     let filename = derive_download_filename(response.url());
@@ -311,9 +313,10 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
         }
         total_bytes += read_bytes as u64;
         if total_bytes > MAX_REMOTE_INPUT_BYTES {
-            return Err(IngestError::PayloadTooLarge {
-                limit: MAX_REMOTE_INPUT_BYTES as usize,
-            });
+            return Err(IngestError::PayloadTooLarge(format!(
+                "remote input exceeds max size of {} bytes",
+                MAX_REMOTE_INPUT_BYTES
+            )));
         }
         output_file.write_all(&buffer[..read_bytes]).map_err(|e| {
             IngestError::internal_with_source(
@@ -588,14 +591,15 @@ fn enforce_archive_limits(
     entry_size: u64,
 ) -> Result<()> {
     if entry_size > MAX_ARCHIVE_ENTRY_BYTES {
-        return Err(IngestError::PayloadTooLarge {
-            limit: MAX_ARCHIVE_ENTRY_BYTES as usize,
-        });
+        return Err(IngestError::PayloadTooLarge(format!(
+            "archive entry exceeds max size of {} bytes",
+            MAX_ARCHIVE_ENTRY_BYTES
+        )));
     }
 
     *extracted_files += 1;
     if *extracted_files > MAX_ARCHIVE_ENTRY_COUNT {
-        return Err(IngestError::Validation(format!(
+        return Err(IngestError::PayloadTooLarge(format!(
             "archive exceeds max entry count of {}",
             MAX_ARCHIVE_ENTRY_COUNT
         )));
@@ -603,9 +607,10 @@ fn enforce_archive_limits(
 
     *extracted_bytes += entry_size;
     if *extracted_bytes > MAX_ARCHIVE_TOTAL_BYTES {
-        return Err(IngestError::PayloadTooLarge {
-            limit: MAX_ARCHIVE_TOTAL_BYTES as usize,
-        });
+        return Err(IngestError::PayloadTooLarge(format!(
+            "archive exceeds max extracted size of {} bytes",
+            MAX_ARCHIVE_TOTAL_BYTES
+        )));
     }
 
     Ok(())
