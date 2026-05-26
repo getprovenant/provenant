@@ -514,6 +514,10 @@ pub(crate) fn format_default_scan_error_from_list(
     path: &Path,
     scan_errors: &[String],
 ) -> Option<String> {
+    // TODO: This string-based timeout detection operates on the legacy scan_errors: Vec<String>
+    // field which is populated from ScanDiagnostic display messages. Once scan_errors is replaced
+    // by scan_diagnostics throughout the output schema, this can match on
+    // ScanDiagnostic::is_timeout instead.
     let is_timeout = |error: &str| {
         error.starts_with("Timeout while ")
             || error.starts_with("Timeout before ")

@@ -47,7 +47,7 @@ impl ServeError {
     pub(crate) fn http_status_code(&self) -> u16 {
         match self {
             Self::Ingest(IngestError::Validation(_)) => 422,
-            Self::Ingest(IngestError::PayloadTooLarge { .. }) => 413,
+            Self::Ingest(IngestError::PayloadTooLarge(_)) => 413,
             Self::Ingest(IngestError::Upstream { .. }) => 502,
             Self::Ingest(IngestError::Internal { .. }) => 500,
             Self::Workflow(WorkflowError::InvalidOptions(_)) => 422,
@@ -59,7 +59,7 @@ impl ServeError {
     pub(crate) fn error_type(&self) -> &'static str {
         match self {
             Self::Ingest(IngestError::Validation(_)) => "invalid_scan_request",
-            Self::Ingest(IngestError::PayloadTooLarge { .. }) => "payload_too_large",
+            Self::Ingest(IngestError::PayloadTooLarge(_)) => "payload_too_large",
             Self::Ingest(IngestError::Upstream { .. }) => "upstream_error",
             Self::Ingest(IngestError::Internal { .. }) => "internal_error",
             Self::Workflow(WorkflowError::InvalidOptions(_)) => "invalid_scan_request",
