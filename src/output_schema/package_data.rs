@@ -161,6 +161,7 @@ impl TryFrom<&OutputPackageData> for crate::models::PackageData {
         Ok(Self {
             package_type: value
                 .package_type
+                .as_ref()
                 .map(crate::models::PackageType::try_from)
                 .transpose()?,
             namespace: value.namespace.clone(),
@@ -224,6 +225,7 @@ impl TryFrom<&OutputPackageData> for crate::models::PackageData {
             api_data_url: value.api_data_url.clone(),
             datasource_id: value
                 .datasource_id
+                .as_ref()
                 .map(crate::models::DatasourceId::try_from)
                 .transpose()?,
             purl: value.purl.clone(),

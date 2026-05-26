@@ -159,7 +159,7 @@ impl TryFrom<&OutputResolvedPackage> for crate::models::ResolvedPackage {
             dependencies.push(crate::models::Dependency::try_from(d)?);
         }
         Ok(Self {
-            package_type: crate::models::PackageType::try_from(value.package_type)?,
+            package_type: crate::models::PackageType::try_from(&value.package_type)?,
             namespace: value.namespace.clone(),
             name: value.name.clone(),
             version: value.version.clone(),
@@ -221,6 +221,7 @@ impl TryFrom<&OutputResolvedPackage> for crate::models::ResolvedPackage {
             api_data_url: value.api_data_url.clone(),
             datasource_id: value
                 .datasource_id
+                .as_ref()
                 .map(crate::models::DatasourceId::try_from)
                 .transpose()?,
             purl: value.purl.clone(),

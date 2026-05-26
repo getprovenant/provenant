@@ -75,7 +75,7 @@ impl TryFrom<&OutputTopLevelDependency> for crate::models::TopLevelDependency {
                 .as_ref()
                 .map(|s| crate::models::PackageUid::from_raw(s.clone())),
             datafile_path: value.datafile_path.clone(),
-            datasource_id: crate::models::DatasourceId::try_from(value.datasource_id)
+            datasource_id: crate::models::DatasourceId::try_from(&value.datasource_id)
                 .map_err(|e| format!("invalid datasource_id: {}", e))?,
             namespace: value.namespace.clone(),
         })
