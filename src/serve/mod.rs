@@ -196,6 +196,7 @@ fn handle_request(mut request: tiny_http::Request, state: &ServeState) -> Result
 fn parse_request(request: &mut tiny_http::Request) -> Result<ParsedRequest, ServeError> {
     let content_length = request.body_length().unwrap_or(0);
 
+    // Early-out: reject oversized Content-Length before reading the body.
     if content_length > MAX_REQUEST_BODY_BYTES {
         return Err(ServeError::Ingest(IngestError::PayloadTooLarge(format!(
             "request body exceeds max size of {} bytes",
@@ -215,6 +216,8 @@ fn parse_request(request: &mut tiny_http::Request) -> Result<ParsedRequest, Serv
             })
         })?;
 
+    // Second check: catches chunked transfer encoding where body_length()
+    // returns 0 and the actual size only becomes known after reading.
     if body.len() > MAX_REQUEST_BODY_BYTES {
         return Err(ServeError::Ingest(IngestError::PayloadTooLarge(format!(
             "request body exceeds max size of {} bytes",
