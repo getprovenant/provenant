@@ -101,12 +101,6 @@ pub(super) fn process_file(
                 .flatten(),
         )
         .scan_diagnostics(scan_diagnostics.clone())
-        .scan_errors(
-            scan_diagnostics
-                .iter()
-                .map(|diagnostic| diagnostic.message.clone())
-                .collect(),
-        )
         .build()
         .expect("FileInformationBuild not completely initialized");
 
@@ -468,15 +462,11 @@ fn merge_parse_results(results: Vec<ParsePackagesResult>) -> Option<ParsePackage
     let mut has_content = false;
 
     for result in results {
-        if !result.packages.is_empty()
-            || !result.scan_diagnostics.is_empty()
-            || !result.scan_errors.is_empty()
-        {
+        if !result.packages.is_empty() || !result.scan_diagnostics.is_empty() {
             has_content = true;
         }
         merged.packages.extend(result.packages);
         merged.scan_diagnostics.extend(result.scan_diagnostics);
-        merged.scan_errors.extend(result.scan_errors);
     }
 
     has_content.then_some(merged)
@@ -531,7 +521,7 @@ fn maybe_record_processing_timeout(
     if is_timeout_exceeded(started, timeout_seconds)
         && !scan_diagnostics
             .iter()
-            .any(|diagnostic| diagnostic.is_timeout)
+            .any(|diagnostic| diagnostic.is_timeout())
     {
         scan_diagnostics.push(ScanDiagnostic::timeout(format!(
             "Processing interrupted due to timeout after {:.2} seconds",

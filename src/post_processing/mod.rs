@@ -36,8 +36,7 @@ use crate::models::{
     OUTPUT_FORMAT_VERSION, Output, Package, SystemEnvironment, TOOL_NAME, TopLevelLicenseDetection,
 };
 use crate::progress::{
-    format_default_scan_error_from_diagnostics, format_default_scan_error_from_list,
-    format_default_scan_warning_from_list, is_warning_scan_error,
+    format_default_scan_error_from_diagnostics, format_default_scan_warning_from_list,
 };
 use crate::scanner;
 use crate::time::format_scancode_timestamp;
@@ -251,78 +250,56 @@ fn summarize_header_messages(
                 Path::new(&file.path),
                 &file.scan_diagnostics,
             ) {
-                errors.push(summary);
+                let message = if verbose {
+                    let details = file
+                        .scan_diagnostics
+                        .iter()
+                        .filter(|d| {
+                            d.severity == DiagnosticSeverity::Error
+                                || d.severity == DiagnosticSeverity::Timeout
+                        })
+                        .flat_map(|d| d.message.lines().map(|line| format!("  {line}")))
+                        .collect::<Vec<_>>();
+                    if details.is_empty() {
+                        summary
+                    } else {
+                        std::iter::once(summary)
+                            .chain(details)
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    }
+                } else {
+                    summary
+                };
+                errors.push(message);
             }
-            let warning_messages: Vec<String> = file
-                .scan_diagnostics
-                .iter()
-                .filter(|d| d.severity == DiagnosticSeverity::Warning)
-                .map(|d| d.message.clone())
-                .collect();
-            if let Some(formatted) =
-                format_default_scan_warning_from_list(Path::new(&file.path), &warning_messages)
-            {
-                warnings.push(formatted);
-            }
-        } else {
-            let (file_errors, file_warnings) = partition_scan_messages(file);
-            if let Some(summary) = summarize_file_header_message(file, &file_errors, verbose, false)
-            {
-                errors.push(summary);
-            }
+            let (_, file_warnings) =
+                crate::progress::partition_scan_diagnostics(&file.scan_diagnostics);
             if let Some(summary) =
-                summarize_file_header_message(file, &file_warnings, verbose, true)
+                format_default_scan_warning_from_list(Path::new(&file.path), &file_warnings)
             {
-                warnings.push(summary);
+                let message = if verbose {
+                    let details = file_warnings
+                        .iter()
+                        .flat_map(|w| w.lines().map(|line| format!("  {line}")))
+                        .collect::<Vec<_>>();
+                    if details.is_empty() {
+                        summary
+                    } else {
+                        std::iter::once(summary)
+                            .chain(details)
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    }
+                } else {
+                    summary
+                };
+                warnings.push(message);
             }
         }
     }
 
     (errors, warnings)
-}
-
-fn partition_scan_messages(file: &FileInfo) -> (Vec<String>, Vec<String>) {
-    if !file.scan_diagnostics.is_empty() {
-        return crate::progress::partition_scan_diagnostics(&file.scan_diagnostics);
-    }
-
-    file.scan_errors
-        .iter()
-        .cloned()
-        .partition(|message| !is_warning_scan_error(message))
-}
-
-fn summarize_file_header_message(
-    file: &FileInfo,
-    messages: &[String],
-    verbose: bool,
-    warning: bool,
-) -> Option<String> {
-    let summary = if warning {
-        format_default_scan_warning_from_list(Path::new(&file.path), messages)?
-    } else {
-        format_default_scan_error_from_list(Path::new(&file.path), messages)?
-    };
-
-    if !verbose {
-        return Some(summary);
-    }
-
-    let details = messages
-        .iter()
-        .flat_map(|error| error.lines().map(|line| format!("  {line}")))
-        .collect::<Vec<_>>();
-
-    if details.is_empty() {
-        Some(summary)
-    } else {
-        Some(
-            std::iter::once(summary)
-                .chain(details)
-                .collect::<Vec<_>>()
-                .join("\n"),
-        )
-    }
 }
 
 fn current_system_environment() -> SystemEnvironment {

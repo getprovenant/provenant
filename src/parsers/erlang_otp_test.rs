@@ -500,7 +500,7 @@ mod tests {
     fn test_dispatch_app_src() {
         let result = try_parse_file(&PathBuf::from("testdata/erlang-otp/app-src/lager.app.src"))
             .expect("should be claimed by parser dispatch");
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(
             result.packages[0].datasource_id,
@@ -514,7 +514,7 @@ mod tests {
             "testdata/erlang-otp/rebar-config/rebar.config",
         ))
         .expect("should be claimed by parser dispatch");
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(
             result.packages[0].datasource_id,
@@ -526,7 +526,7 @@ mod tests {
     fn test_dispatch_rebar_lock() {
         let result = try_parse_file(&PathBuf::from("testdata/erlang-otp/rebar-lock/rebar.lock"))
             .expect("should be claimed by parser dispatch");
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(
             result.packages[0].datasource_id,

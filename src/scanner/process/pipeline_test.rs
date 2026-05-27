@@ -34,7 +34,7 @@ fn test_process_file_suppresses_non_actionable_pdf_extraction_failure() {
         &TextDetectionOptions::default(),
     );
 
-    assert!(file_info.scan_errors.is_empty());
+    assert!(file_info.scan_diagnostics.is_empty());
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn test_processing_timeout_is_recorded_when_no_timeout_error_exists() {
     maybe_record_processing_timeout(&mut scan_diagnostics, started, 1.0);
 
     assert_eq!(scan_diagnostics.len(), 1);
-    assert_eq!(scan_diagnostics[0].severity, DiagnosticSeverity::Error);
+    assert_eq!(scan_diagnostics[0].severity, DiagnosticSeverity::Timeout);
     assert_eq!(
         scan_diagnostics[0].message,
         "Processing interrupted due to timeout after 1.00 seconds"
@@ -264,7 +264,6 @@ fn test_merge_parse_results_keeps_multiple_package_surfaces() {
             ..Default::default()
         }],
         scan_diagnostics: vec![ScanDiagnostic::error("windows metadata warning")],
-        scan_errors: vec!["windows metadata warning".to_string()],
     };
 
     let merged = merge_parse_results(vec![misc, winexe]).expect("merged parse result");
@@ -283,7 +282,10 @@ fn test_merge_parse_results_keeps_multiple_package_surfaces() {
             .any(|pkg| pkg.datasource_id == Some(DatasourceId::WindowsExecutable))
     );
     assert_eq!(merged.scan_diagnostics.len(), 1);
-    assert_eq!(merged.scan_errors, vec!["windows metadata warning"]);
+    assert_eq!(
+        merged.scan_diagnostics[0].message,
+        "windows metadata warning"
+    );
 }
 
 #[test]

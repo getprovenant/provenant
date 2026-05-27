@@ -144,7 +144,7 @@ fn has_findings(file: &FileInfo) -> bool {
         || !file.emails.is_empty()
         || !file.urls.is_empty()
         || !file.package_data.is_empty()
-        || !file.scan_errors.is_empty()
+        || !file.scan_diagnostics.is_empty()
         || file.is_generated == Some(true)
 }
 

@@ -92,7 +92,9 @@ fn only_findings_drops_directories_without_findings() {
 #[test]
 fn only_findings_keeps_directories_with_findings() {
     let mut files = vec![dir("project"), file("project/a.txt")];
-    files[0].scan_errors = vec!["permission denied".to_string()];
+    files[0].scan_diagnostics = vec![crate::models::ScanDiagnostic::error(
+        "permission denied".to_string(),
+    )];
 
     apply_only_findings_filter(&mut files);
 
@@ -463,7 +465,9 @@ fn ignore_resource_filter_removes_matching_files_and_preserves_needed_dirs() {
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
-    files[4].scan_errors = vec!["should still be dropped".to_string()];
+    files[4].scan_diagnostics = vec![crate::models::ScanDiagnostic::error(
+        "should still be dropped".to_string(),
+    )];
 
     let ignored_holders = vec![Regex::new("Example Corp").expect("valid holder regex")];
     let ignored_authors = vec![Regex::new("Jane.*").expect("valid author regex")];
@@ -686,7 +690,7 @@ fn only_findings_keeps_all_supported_finding_types() {
         detection_log: vec![],
     }];
     files[2].package_data = vec![crate::models::PackageData::default()];
-    files[3].scan_errors = vec!["boom".to_string()];
+    files[3].scan_diagnostics = vec![crate::models::ScanDiagnostic::error("boom".to_string())];
 
     apply_only_findings_filter(&mut files);
 

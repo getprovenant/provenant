@@ -489,7 +489,7 @@ third_party {
 
         let result =
             try_parse_file(&apk_path).expect("android apk should be claimed by parser dispatch");
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(
             result.packages[0].datasource_id,
@@ -551,7 +551,11 @@ third_party {
         let result = try_parse_file(&manifest_path).expect("android manifest should be claimed");
 
         assert!(result.packages.is_empty());
-        assert_eq!(result.scan_errors.len(), 1);
-        assert!(result.scan_errors[0].contains("Failed to parse AndroidManifest.xml as text XML"));
+        assert_eq!(result.scan_diagnostics.len(), 1);
+        assert!(
+            result.scan_diagnostics[0]
+                .message
+                .contains("Failed to parse AndroidManifest.xml as text XML")
+        );
     }
 }

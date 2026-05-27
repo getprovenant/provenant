@@ -320,7 +320,11 @@ impl OutputFileInfo {
                 .iter()
                 .map(|uid| uid.to_string())
                 .collect(),
-            scan_errors: value.scan_errors.clone(),
+            scan_errors: value
+                .scan_diagnostics
+                .iter()
+                .map(|d| d.message.clone())
+                .collect(),
             license_policy: value
                 .license_policy
                 .as_ref()
@@ -442,7 +446,6 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
                 .iter()
                 .map(|s| crate::models::PackageUid::from_raw(s.clone()))
                 .collect(),
-            scan_errors: value.scan_errors.clone(),
             scan_diagnostics: crate::models::diagnostics_from_legacy_scan_errors(
                 &value.scan_errors,
             ),

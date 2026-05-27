@@ -420,8 +420,8 @@ fn test_scanner_handles_parse_errors_gracefully() {
         .expect("Should find package.json file");
 
     assert!(
-        !json_file.scan_errors.is_empty(),
-        "Malformed file should surface parser failures in scan_errors"
+        !json_file.scan_diagnostics.is_empty(),
+        "Malformed file should surface parser failures in scan_diagnostics"
     );
 }
 

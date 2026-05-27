@@ -232,7 +232,7 @@ mod tests {
             .expect("duplicate policy should not abort scan");
 
         assert_eq!(files[0].license_policy, Some(vec![]));
-        assert!(files[0].scan_errors.is_empty());
+        assert!(files[0].scan_diagnostics.is_empty());
         assert!(
             errors
                 .iter()

@@ -206,7 +206,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(result.packages[0].package_type, Some(PackageType::Maven));
         assert_eq!(
@@ -233,7 +233,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert!(result.packages[0].name.is_none());
     }
@@ -257,7 +257,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(result.packages[0].package_type, Some(PackageType::Maven));
         assert_eq!(
@@ -290,7 +290,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
 
         let package_data = &result.packages[0];
@@ -316,7 +316,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
 
         let package_data = &result.packages[0];
@@ -348,7 +348,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
 
         let package_data = &result.packages[0];
@@ -375,7 +375,7 @@ mod tests {
             None,
         );
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
 
         let package_data = &result.packages[0];

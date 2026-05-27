@@ -211,7 +211,7 @@ where
 fn is_imported_file_summary_error(error: &str, files: &[FileInfo]) -> bool {
     files
         .iter()
-        .filter(|file| !file.scan_errors.is_empty())
+        .filter(|file| !file.scan_diagnostics.is_empty())
         .any(|file| header_error_matches_file_summary(error, &file.path))
 }
 
@@ -227,7 +227,7 @@ fn restore_imported_warning_severities(
     imported_header_errors: &[String],
 ) {
     for file in files {
-        if file.scan_errors.is_empty() {
+        if file.scan_diagnostics.is_empty() {
             continue;
         }
 

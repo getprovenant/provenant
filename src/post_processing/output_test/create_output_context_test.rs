@@ -115,7 +115,9 @@ fn create_output_projects_file_scan_errors_into_headers_and_serialized_files() {
         "Failed to read or parse package.json at \"project/package.json\": expected value";
 
     let mut manifest = file("project/package.json");
-    manifest.scan_errors = vec![parse_error.to_string()];
+    manifest.scan_diagnostics = vec![crate::models::ScanDiagnostic::error(
+        parse_error.to_string(),
+    )];
 
     let output = create_output(
         start,
@@ -245,7 +247,10 @@ fn create_output_header_errors_summarize_errored_paths_by_default() {
     let second_error = "Timeout before license scan (> 120.00s)";
 
     let mut manifest = file("project/package.json");
-    manifest.scan_errors = vec![first_error.to_string(), second_error.to_string()];
+    manifest.scan_diagnostics = vec![
+        crate::models::ScanDiagnostic::error(first_error.to_string()),
+        crate::models::ScanDiagnostic::timeout(second_error.to_string()),
+    ];
 
     let output = create_output(
         start,
@@ -297,7 +302,10 @@ fn create_output_header_errors_expand_scan_error_details_in_verbose_mode() {
     let second_error = "Timeout before license scan (> 120.00s)";
 
     let mut manifest = file("project/package.json");
-    manifest.scan_errors = vec![first_error.to_string(), second_error.to_string()];
+    manifest.scan_diagnostics = vec![
+        crate::models::ScanDiagnostic::error(first_error.to_string()),
+        crate::models::ScanDiagnostic::timeout(second_error.to_string()),
+    ];
 
     let output = create_output(
         start,
@@ -443,9 +451,13 @@ fn create_output_routes_warning_like_scan_errors_into_header_warnings() {
     let end = start;
 
     let mut manifest = file("project/pom.xml");
-    manifest.scan_errors = vec![
-        "Maven property missing key compiler.version".to_string(),
-        "Circular include detected: requirements.txt".to_string(),
+    manifest.scan_diagnostics = vec![
+        crate::models::ScanDiagnostic::warning(
+            "Maven property missing key compiler.version".to_string(),
+        ),
+        crate::models::ScanDiagnostic::warning(
+            "Circular include detected: requirements.txt".to_string(),
+        ),
     ];
 
     let output = create_output(
@@ -497,7 +509,6 @@ fn create_output_routes_structured_warning_diagnostics_into_header_warnings() {
     let end = start;
 
     let mut manifest = file("project/custom.txt");
-    manifest.scan_errors = vec!["custom recoverable warning".to_string()];
     manifest.scan_diagnostics = vec![crate::models::ScanDiagnostic::warning(
         "custom recoverable warning",
     )];
@@ -553,7 +564,9 @@ fn create_output_deduplicates_header_summary_errors() {
         "Failed to read or parse package.json at \"project/package.json\": expected value";
 
     let mut manifest = file("project/package.json");
-    manifest.scan_errors = vec![parse_error.to_string()];
+    manifest.scan_diagnostics = vec![crate::models::ScanDiagnostic::error(
+        parse_error.to_string(),
+    )];
 
     let output = create_output(
         start,

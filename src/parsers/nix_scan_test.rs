@@ -56,7 +56,7 @@ mod tests {
     }
 
     #[test]
-    fn test_nix_scan_handles_mongodb_style_vendored_nix_files_without_scan_errors() {
+    fn test_nix_scan_handles_mongodb_style_vendored_nix_files_without_scan_diagnostics() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         let root = temp_dir.path().join("vendor-nix");
         fs::create_dir_all(&root).expect("create nix fixture dir");
@@ -127,9 +127,9 @@ stdenv.mkDerivation rec {
             .find(|file| file.path.ends_with("/flake.nix"))
             .expect("flake.nix should be scanned");
         assert!(
-            flake_file.scan_errors.is_empty(),
+            flake_file.scan_diagnostics.is_empty(),
             "{:?}",
-            flake_file.scan_errors
+            flake_file.scan_diagnostics
         );
 
         let default_file = files
@@ -137,9 +137,9 @@ stdenv.mkDerivation rec {
             .find(|file| file.path.ends_with("/default.nix"))
             .expect("default.nix should be scanned");
         assert!(
-            default_file.scan_errors.is_empty(),
+            default_file.scan_diagnostics.is_empty(),
             "{:?}",
-            default_file.scan_errors
+            default_file.scan_diagnostics
         );
 
         let package = result
@@ -195,9 +195,9 @@ stdenv.mkDerivation rec {
             .find(|file| file.path.ends_with("/flake.nix"))
             .expect("flake.nix should be scanned");
         assert!(
-            flake_file.scan_errors.is_empty(),
+            flake_file.scan_diagnostics.is_empty(),
             "{:?}",
-            flake_file.scan_errors
+            flake_file.scan_diagnostics
         );
         assert!(flake_file.package_data.iter().any(|package| {
             package.datasource_id == Some(DatasourceId::NixFlakeNix)
@@ -209,9 +209,9 @@ stdenv.mkDerivation rec {
             .find(|file| file.path.ends_with("/default.nix"))
             .expect("default.nix should be scanned");
         assert!(
-            default_file.scan_errors.is_empty(),
+            default_file.scan_diagnostics.is_empty(),
             "{:?}",
-            default_file.scan_errors
+            default_file.scan_diagnostics
         );
         assert!(
             default_file
@@ -258,9 +258,9 @@ in stdenv.mkDerivation {
             .find(|file| file.path.ends_with("/default.nix"))
             .expect("default.nix should be scanned");
         assert!(
-            default_file.scan_errors.is_empty(),
+            default_file.scan_diagnostics.is_empty(),
             "{:?}",
-            default_file.scan_errors
+            default_file.scan_diagnostics
         );
 
         let package = result
@@ -315,9 +315,9 @@ in flake.defaultNix
             .find(|file| file.path.ends_with("/default.nix"))
             .expect("default.nix should be scanned");
         assert!(
-            default_file.scan_errors.is_empty(),
+            default_file.scan_diagnostics.is_empty(),
             "{:?}",
-            default_file.scan_errors
+            default_file.scan_diagnostics
         );
         assert!(
             default_file
