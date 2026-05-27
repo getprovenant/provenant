@@ -5,26 +5,23 @@ mod ingest;
 mod job_controller;
 
 use std::io::Read;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 use anyhow::{Context, Result, anyhow};
 use serde::Serialize;
 use serde_json::json;
-use tempfile::TempDir;
-use tiny_http::{Header, Response, Server, StatusCode};
+use tiny_http::{Header, Method, Response, Server, StatusCode};
 
-use crate::ProcessMode;
 use crate::cli::ServeArgs;
 use crate::license_detection::LicenseDetectionEngine;
-use crate::serve::ingest::{IngestError, prepare_sync_input};
+use crate::serve::ingest::{IngestError, ScanError, SyncScanExecution};
 use crate::serve::job_controller::{
     AsyncJobController, AsyncSubmitError, DispatchedAsyncJob, JobOutcome,
 };
-use crate::serve_api::{API_VERSION, AsyncJobState, SyncLicenseSource, SyncScanRequest};
+use crate::serve_api::{API_VERSION, AsyncJobState, SyncScanRequest};
 use crate::version::BUILD_VERSION;
-use crate::workflow::{LicenseSource, ScanOptions, WorkflowError, scan_paths};
+use crate::workflow::WorkflowError;
 
 const MAX_REQUEST_BODY_BYTES: usize = 24 * 1024 * 1024;
 
@@ -33,9 +30,9 @@ pub(crate) enum ServeError {
     #[error(transparent)]
     Ingest(#[from] IngestError),
     #[error(transparent)]
+    Scan(#[from] ScanError),
+    #[error(transparent)]
     Workflow(#[from] WorkflowError),
-    #[error("{0}")]
-    Serialization(String),
 }
 
 impl ServeError {
@@ -45,9 +42,13 @@ impl ServeError {
             Self::Ingest(IngestError::PayloadTooLarge(_)) => StatusCode::from(413),
             Self::Ingest(IngestError::Upstream { .. }) => StatusCode::from(502),
             Self::Ingest(IngestError::Internal { .. }) => StatusCode::from(500),
+            Self::Scan(ScanError::Workflow(WorkflowError::InvalidOptions(_))) => {
+                StatusCode::from(422)
+            }
+            Self::Scan(ScanError::Workflow(WorkflowError::Pipeline(_))) => StatusCode::from(500),
+            Self::Scan(ScanError::Serialization(_)) => StatusCode::from(500),
             Self::Workflow(WorkflowError::InvalidOptions(_)) => StatusCode::from(422),
             Self::Workflow(WorkflowError::Pipeline(_)) => StatusCode::from(500),
-            Self::Serialization(_) => StatusCode::from(500),
         }
     }
 
@@ -57,9 +58,13 @@ impl ServeError {
             Self::Ingest(IngestError::PayloadTooLarge(_)) => "payload_too_large",
             Self::Ingest(IngestError::Upstream { .. }) => "upstream_error",
             Self::Ingest(IngestError::Internal { .. }) => "internal_error",
+            Self::Scan(ScanError::Workflow(WorkflowError::InvalidOptions(_))) => {
+                "invalid_scan_request"
+            }
+            Self::Scan(ScanError::Workflow(WorkflowError::Pipeline(_))) => "scan_failed",
+            Self::Scan(ScanError::Serialization(_)) => "scan_failed",
             Self::Workflow(WorkflowError::InvalidOptions(_)) => "invalid_scan_request",
             Self::Workflow(WorkflowError::Pipeline(_)) => "scan_failed",
-            Self::Serialization(_) => "scan_failed",
         }
     }
 }
@@ -96,15 +101,8 @@ struct ServeState {
     jobs: AsyncJobController,
 }
 
-#[derive(Debug)]
-struct SyncScanExecution {
-    paths: Vec<PathBuf>,
-    options: ScanOptions,
-    _staging_dir: Option<TempDir>,
-}
-
 struct ParsedRequest {
-    method: tiny_http::Method,
+    method: Method,
     path: String,
     headers: Vec<Header>,
     body: Vec<u8>,
@@ -272,7 +270,7 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
     if let Some(job_route) = parse_job_route(&request.path) {
         return match job_route {
             JobRoute::Status(job_id) => {
-                if request.method == tiny_http::Method::Get {
+                if request.method == Method::Get {
                     handle_job_status_request(job_id, state)
                 } else {
                     error_response(
@@ -283,7 +281,7 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
                 }
             }
             JobRoute::Result(job_id) => {
-                if request.method == tiny_http::Method::Get {
+                if request.method == Method::Get {
                     handle_job_result_request(job_id, state)
                 } else {
                     error_response(
@@ -297,13 +295,13 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
     }
 
     match (&request.method, request.path.as_str()) {
-        (m, "/livez") if *m == tiny_http::Method::Get => json_response(
+        (m, "/livez") if *m == Method::Get => json_response(
             StatusCode::from(200),
             &crate::serve_api::ServeLivenessResponse {
                 status: "ok".to_string(),
             },
         ),
-        (m, "/readyz") if *m == tiny_http::Method::Get => match readiness {
+        (m, "/readyz") if *m == Method::Get => match readiness {
             ReadinessState::Pending => json_response(
                 StatusCode::from(503),
                 &crate::serve_api::ServeReadinessResponse {
@@ -334,7 +332,7 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
                 },
             ),
         },
-        (m, "/version") if *m == tiny_http::Method::Get => json_response(
+        (m, "/version") if *m == Method::Get => json_response(
             StatusCode::from(200),
             &crate::serve_api::ServeVersionResponse {
                 service: "provenant-serve".to_string(),
@@ -342,7 +340,7 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
                 tool_version: BUILD_VERSION.to_string(),
             },
         ),
-        (m, "/v1/scans") if *m == tiny_http::Method::Post => {
+        (m, "/v1/scans") if *m == Method::Post => {
             handle_sync_scan_request(request).unwrap_or_else(|e| e)
         }
         (_, "/v1/scans") => error_response(
@@ -350,7 +348,7 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
             "method_not_allowed",
             "use POST /v1/scans for synchronous scan execution".to_string(),
         ),
-        (m, "/v1/scans:async") if *m == tiny_http::Method::Post => {
+        (m, "/v1/scans:async") if *m == Method::Post => {
             handle_async_scan_request(request, state).unwrap_or_else(|e| e)
         }
         (_, "/v1/scans:async") => error_response(
@@ -379,13 +377,14 @@ impl From<ServeError> for HttpResponse {
 
 fn handle_sync_scan_request(request: &ParsedRequest) -> HandlerResult {
     let sync_request = decode_scan_request_from_http(request, "POST /v1/scans")?;
-    let execution = build_sync_scan_execution(sync_request)?;
-    match execute_scan_execution(execution) {
+    let execution = SyncScanExecution::new(sync_request)
+        .map_err(|e| HttpResponse::from(ServeError::from(e)))?;
+    match execution.execute() {
         Ok(body) => Ok(HttpResponse {
             status: StatusCode::from(200),
             body,
         }),
-        Err(error) => Err(error.into()),
+        Err(error) => Err(ServeError::from(error).into()),
     }
 }
 
@@ -494,96 +493,30 @@ fn decode_scan_request_from_http(
     })
 }
 
-fn build_sync_scan_execution(request: SyncScanRequest) -> Result<SyncScanExecution, ServeError> {
-    let prepared_input = prepare_sync_input(request.input)?;
-
-    let mut options = ScanOptions::default();
-    options.collect_info = request.options.collect_info;
-    options.detect_license = match request.options.detect_license {
-        SyncLicenseSource::Disabled => LicenseSource::Disabled,
-        SyncLicenseSource::Embedded => LicenseSource::Embedded,
-        SyncLicenseSource::Directory { path } => LicenseSource::Directory(PathBuf::from(path)),
-    };
-    options.detect_packages = request.options.detect_packages;
-    options.detect_system_packages = request.options.detect_system_packages;
-    options.detect_packages_in_compiled = request.options.detect_packages_in_compiled;
-    options.detect_copyrights = request.options.detect_copyrights;
-    options.detect_emails = request.options.detect_emails;
-    options.detect_urls = request.options.detect_urls;
-    options.detect_generated = request.options.detect_generated;
-    options.include = request.options.include;
-    options.exclude = request.options.exclude;
-    if prepared_input.strip_staging_root {
-        options.strip_root = true;
-        options.full_root = false;
-    } else {
-        options.strip_root = request.options.strip_root;
-        options.full_root = request.options.full_root;
-    }
-    options.license_text = request.options.license_text;
-    options.license_text_diagnostics = request.options.license_text_diagnostics;
-    options.license_diagnostics = request.options.license_diagnostics;
-    options.unknown_licenses = request.options.unknown_licenses;
-    options.license_score = request.options.license_score;
-    options.only_findings = request.options.only_findings;
-    options.mark_source = request.options.mark_source;
-    options.classify = request.options.classify;
-    options.summary = request.options.summary;
-    options.license_clarity_score = request.options.license_clarity_score;
-    options.license_references = request.options.license_references;
-    options.tallies = request.options.tallies;
-    options.tallies_key_files = request.options.tallies_key_files;
-    options.tallies_with_details = request.options.tallies_with_details;
-    options.facets = request.options.facets;
-    options.tallies_by_facet = request.options.tallies_by_facet;
-
-    Ok(SyncScanExecution {
-        paths: prepared_input.paths,
-        options,
-        _staging_dir: prepared_input.staging_dir,
-    })
-}
-
-fn execute_scan_execution(execution: SyncScanExecution) -> Result<String, ServeError> {
-    let output = scan_paths(
-        execution.paths.iter().map(|path| path.as_path()),
-        &execution.options,
-    )?;
-    serde_json::to_string(&crate::output_schema::Output::from(&output))
-        .map_err(|e| ServeError::Serialization(format!("scan result should serialize: {e}")))
-}
-
-fn run_async_scan_request(
-    request: SyncScanRequest,
-    allocated_processors: usize,
-) -> Result<String, ServeError> {
-    let mut execution = build_sync_scan_execution(request)?;
-    execution.options.process_mode = if allocated_processors <= 1 {
-        ProcessMode::SequentialWithTimeouts
-    } else {
-        ProcessMode::Parallel(allocated_processors)
-    };
-    execute_scan_execution(execution)
-}
-
 fn spawn_dispatches(controller: AsyncJobController, dispatches: Vec<DispatchedAsyncJob>) {
     for dispatched in dispatches {
         let controller = controller.clone();
         thread::spawn(move || {
-            let outcome =
-                match run_async_scan_request(dispatched.request, dispatched.allocated_processors) {
-                    Ok(result_body) => {
-                        eprintln!("serve async job {} succeeded", dispatched.job_id);
-                        JobOutcome::Succeeded { result_body }
+            let result = SyncScanExecution::new(dispatched.request)
+                .map_err(ServeError::from)
+                .and_then(|e| {
+                    e.run_async(dispatched.allocated_processors)
+                        .map_err(ServeError::from)
+                });
+
+            let outcome = match result {
+                Ok(result_body) => {
+                    eprintln!("serve async job {} succeeded", dispatched.job_id);
+                    JobOutcome::Succeeded { result_body }
+                }
+                Err(error) => {
+                    eprintln!("serve async job {} failed: {error}", dispatched.job_id);
+                    JobOutcome::Failed {
+                        message: "async scan job failed".to_string(),
+                        status_code: error.http_status_code().0,
                     }
-                    Err(error) => {
-                        eprintln!("serve async job {} failed: {error}", dispatched.job_id);
-                        JobOutcome::Failed {
-                            message: "async scan job failed".to_string(),
-                            status_code: error.http_status_code().0,
-                        }
-                    }
-                };
+                }
+            };
             let follow_up_dispatches = controller.complete_job(
                 dispatched.job_id,
                 dispatched.allocated_processors,
@@ -618,7 +551,7 @@ mod tests {
     use crate::serve::job_controller::AsyncJobController;
     use crate::serve_api::{SyncScanInput, SyncScanOptions};
 
-    fn test_request(method: tiny_http::Method, path: &str) -> ParsedRequest {
+    fn test_request(method: Method, path: &str) -> ParsedRequest {
         ParsedRequest {
             method,
             path: path.to_string(),
@@ -661,10 +594,7 @@ mod tests {
 
     #[test]
     fn readyz_reports_ready_metadata() {
-        let response = response_for_request(
-            &test_request(tiny_http::Method::Get, "/readyz"),
-            &ready_state(),
-        );
+        let response = response_for_request(&test_request(Method::Get, "/readyz"), &ready_state());
         assert_status(&response, 200);
         assert!(response.body.contains("\"status\":\"ready\""));
         assert!(response.body.contains("\"api_version\":\"v1\""));
@@ -673,7 +603,7 @@ mod tests {
     #[test]
     fn async_scan_route_requires_post() {
         let response = response_for_request(
-            &test_request(tiny_http::Method::Get, "/v1/scans:async"),
+            &test_request(Method::Get, "/v1/scans:async"),
             &ready_state(),
         );
         assert_status(&response, 405);
@@ -686,10 +616,7 @@ mod tests {
             "job-1",
             crate::serve::job_controller::AsyncJobRecord::pending(),
         );
-        let response = response_for_request(
-            &test_request(tiny_http::Method::Get, "/v1/jobs/job-1"),
-            &state,
-        );
+        let response = response_for_request(&test_request(Method::Get, "/v1/jobs/job-1"), &state);
         assert_status(&response, 200);
         assert!(response.body.contains("\"state\":\"pending\""));
         assert!(response.body.contains("\"result_ready\":false"));
@@ -701,10 +628,8 @@ mod tests {
             "job-2",
             crate::serve::job_controller::AsyncJobRecord::pending(),
         );
-        let response = response_for_request(
-            &test_request(tiny_http::Method::Get, "/v1/jobs/job-2/result"),
-            &state,
-        );
+        let response =
+            response_for_request(&test_request(Method::Get, "/v1/jobs/job-2/result"), &state);
         assert_status(&response, 409);
         assert!(response.body.contains("job_not_ready"));
     }
@@ -718,10 +643,8 @@ mod tests {
                 2,
             ),
         );
-        let response = response_for_request(
-            &test_request(tiny_http::Method::Get, "/v1/jobs/job-3/result"),
-            &state,
-        );
+        let response =
+            response_for_request(&test_request(Method::Get, "/v1/jobs/job-3/result"), &state);
         assert_status(&response, 200);
         assert_eq!(response.body, "{\"status\":\"ok\"}");
     }
@@ -736,10 +659,8 @@ mod tests {
                 1,
             ),
         );
-        let response = response_for_request(
-            &test_request(tiny_http::Method::Get, "/v1/jobs/job-4/result"),
-            &state,
-        );
+        let response =
+            response_for_request(&test_request(Method::Get, "/v1/jobs/job-4/result"), &state);
         assert_status(&response, 500);
         assert!(response.body.contains("job_failed"));
         assert!(response.body.contains("async scan job failed"));
@@ -747,7 +668,7 @@ mod tests {
 
     #[test]
     fn decode_sync_scan_request_rejects_empty_paths() {
-        let error = build_sync_scan_execution(SyncScanRequest {
+        let error = SyncScanExecution::new(SyncScanRequest {
             input: SyncScanInput::Paths { paths: Vec::new() },
             options: SyncScanOptions::default(),
         })
@@ -762,7 +683,7 @@ mod tests {
 
     #[test]
     fn url_input_requires_http_or_https() {
-        let error = build_sync_scan_execution(SyncScanRequest {
+        let error = SyncScanExecution::new(SyncScanRequest {
             input: SyncScanInput::Url {
                 url: "file:///tmp/input.txt".to_string(),
             },
@@ -787,9 +708,8 @@ mod tests {
 
     #[test]
     fn sync_scan_requires_json_content_type() {
-        let response =
-            handle_sync_scan_request(&test_request(tiny_http::Method::Post, "/v1/scans"))
-                .unwrap_or_else(|e| e);
+        let response = handle_sync_scan_request(&test_request(Method::Post, "/v1/scans"))
+            .unwrap_or_else(|e| e);
         assert_status(&response, 415);
         assert!(response.body.contains("unsupported_media_type"));
     }
