@@ -19,7 +19,7 @@ use crate::serve::ingest::{IngestError, ScanError, SyncScanExecution};
 use crate::serve::job_controller::{
     AsyncJobController, AsyncSubmitError, DispatchedAsyncJob, JobOutcome,
 };
-use crate::serve_api::{API_VERSION, AsyncJobState, SyncScanRequest};
+use crate::serve_api::{API_VERSION, AsyncJobState, ServeScanRequest};
 use crate::version::BUILD_VERSION;
 use crate::workflow::WorkflowError;
 
@@ -474,7 +474,7 @@ fn handle_job_result_request(job_id: &str, state: &ServeState) -> HttpResponse {
 fn decode_scan_request_from_http(
     request: &ParsedRequest,
     route_label: &str,
-) -> std::result::Result<SyncScanRequest, HttpResponse> {
+) -> std::result::Result<ServeScanRequest, HttpResponse> {
     let has_json_content_type = request
         .headers
         .iter()
@@ -488,7 +488,7 @@ fn decode_scan_request_from_http(
         ));
     }
 
-    SyncScanRequest::decode(&request.body).map_err(|error| {
+    ServeScanRequest::decode(&request.body).map_err(|error| {
         HttpResponse::error(StatusCode::from(400), "invalid_request", error.to_string())
     })
 }
@@ -549,7 +549,7 @@ fn is_valid_job_id(job_id: &str) -> bool {
 mod tests {
     use super::*;
     use crate::serve::job_controller::AsyncJobController;
-    use crate::serve_api::{SyncScanInput, SyncScanOptions};
+    use crate::serve_api::{ServeScanInput, ServeScanOptions};
 
     fn test_request(method: Method, path: &str) -> ParsedRequest {
         ParsedRequest {
@@ -668,9 +668,9 @@ mod tests {
 
     #[test]
     fn decode_sync_scan_request_rejects_empty_paths() {
-        let error = SyncScanExecution::new(SyncScanRequest {
-            input: SyncScanInput::Paths { paths: Vec::new() },
-            options: SyncScanOptions::default(),
+        let error = SyncScanExecution::new(ServeScanRequest {
+            input: ServeScanInput::Paths { paths: Vec::new() },
+            options: ServeScanOptions::default(),
         })
         .expect_err("empty paths should fail");
 
@@ -683,11 +683,11 @@ mod tests {
 
     #[test]
     fn url_input_requires_http_or_https() {
-        let error = SyncScanExecution::new(SyncScanRequest {
-            input: SyncScanInput::Url {
+        let error = SyncScanExecution::new(ServeScanRequest {
+            input: ServeScanInput::Url {
                 url: "file:///tmp/input.txt".to_string(),
             },
-            options: SyncScanOptions::default(),
+            options: ServeScanOptions::default(),
         })
         .expect_err("unsupported URL scheme should fail");
 
@@ -697,7 +697,7 @@ mod tests {
     #[test]
     fn decode_sync_scan_request_requires_valid_json() {
         let error =
-            SyncScanRequest::decode(br#"{"input": }"#).expect_err("malformed JSON should fail");
+            ServeScanRequest::decode(br#"{"input": }"#).expect_err("malformed JSON should fail");
 
         assert!(
             error
