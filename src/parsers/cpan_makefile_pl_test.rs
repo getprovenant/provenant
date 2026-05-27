@@ -7,6 +7,7 @@ mod tests {
     use super::super::cpan_makefile_pl::*;
     use crate::models::DatasourceId;
     use crate::models::PackageType;
+    use crate::models::PartyType;
     use std::fs;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -74,7 +75,7 @@ WriteMakefile(
         assert_eq!(pkg.parties[0].role.as_deref(), Some("author"));
         assert_eq!(pkg.parties[0].name.as_deref(), Some("Jane Smith"));
         assert_eq!(pkg.parties[0].email.as_deref(), Some("jane@example.com"));
-        assert_eq!(pkg.parties[0].r#type.as_deref(), Some("person"));
+        assert_eq!(pkg.parties[0].r#type, Some(PartyType::Person));
 
         // Check extra_data
         assert!(pkg.extra_data.is_some());

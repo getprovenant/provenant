@@ -5,6 +5,7 @@
 mod tests {
     use crate::models::DatasourceId;
     use crate::models::PackageType;
+    use crate::models::PartyType;
     use std::path::PathBuf;
 
     use crate::parsers::PackageParser;
@@ -79,7 +80,7 @@ mod tests {
 
         assert_eq!(result.parties.len(), 1);
         let party = &result.parties[0];
-        assert_eq!(party.r#type, Some("person".to_string()));
+        assert_eq!(party.r#type, Some(PartyType::Person));
         assert_eq!(party.role, Some("owner".to_string()));
         assert_eq!(party.name, Some("ActiveState".to_string()));
     }

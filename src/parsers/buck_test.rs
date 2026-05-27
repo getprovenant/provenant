@@ -3,7 +3,7 @@
 
 //! Tests for Buck BUILD and METADATA.bzl parsers
 
-use crate::models::{DatasourceId, PackageType, Sha1Digest};
+use crate::models::{DatasourceId, PackageType, PartyType, Sha1Digest};
 
 use std::path::PathBuf;
 
@@ -175,7 +175,7 @@ fn test_parse_metadata_bzl_basic() {
     assert_eq!(pkg.parties.len(), 1);
     assert_eq!(pkg.parties[0].name, Some("oss_foundation".to_string()));
     assert_eq!(pkg.parties[0].role, Some("maintainer".to_string()));
-    assert_eq!(pkg.parties[0].r#type, Some("organization".to_string()));
+    assert_eq!(pkg.parties[0].r#type, Some(PartyType::Organization));
 
     // Check extra_data
     assert!(pkg.extra_data.is_some());

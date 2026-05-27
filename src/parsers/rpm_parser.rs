@@ -34,7 +34,7 @@ use rpm::{
     RPM_MAGIC,
 };
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
 
 use super::PackageParser;
@@ -399,7 +399,7 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
     let mut parties = Vec::new();
     if let Some(vendor) = fields.vendor.clone() {
         parties.push(Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             role: Some("vendor".to_string()),
             name: Some(vendor),
             email: None,
@@ -411,7 +411,7 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
     }
     if let Some(distribution) = fields.distribution.clone() {
         parties.push(Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             role: Some("distributor".to_string()),
             name: Some(distribution),
             email: None,
@@ -424,7 +424,7 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
     if let Some(packager) = fields.packager.as_deref() {
         let (name_opt, email_opt) = parse_packager(packager);
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("packager".to_string()),
             name: name_opt.map(truncate_field),
             email: email_opt.map(truncate_field),
@@ -614,7 +614,7 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
         && !vendor.is_empty()
     {
         parties.push(Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             role: Some("vendor".to_string()),
             name: Some(truncate_field(vendor.to_string())),
             email: None,
@@ -627,7 +627,7 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
 
     if let Some(distribution_name) = distribution.as_ref() {
         parties.push(Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             role: Some("distributor".to_string()),
             name: Some(distribution_name.clone()),
             email: None,
@@ -643,7 +643,7 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
     {
         let (name_opt, email_opt) = parse_packager(packager);
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("packager".to_string()),
             name: name_opt.map(truncate_field),
             email: email_opt.map(truncate_field),

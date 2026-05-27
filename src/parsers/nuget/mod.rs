@@ -43,7 +43,7 @@ mod nuget_test;
 use std::fs;
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
 use packageurl::PackageUrl;
 
 use super::utils::MAX_MANIFEST_SIZE;
@@ -85,7 +85,7 @@ pub(super) struct RepositoryMetadata {
 
 pub(super) fn build_nuget_party(role: &str, name: String) -> Party {
     Party {
-        r#type: Some("person".to_string()),
+        r#type: Some(PartyType::Person),
         role: Some(role.to_string()),
         name: Some(name),
         email: None,

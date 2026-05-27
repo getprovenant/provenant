@@ -22,7 +22,7 @@
 //! - Graceful error handling: logs warnings and returns default on parse failure
 //! - Authors field can be string, object, or array of either
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -279,7 +279,7 @@ fn extract_party_from_author(author: &Value) -> Option<Party> {
         Value::String(s) => {
             let (name, email) = parse_author_string(s);
             Some(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("author".to_string()),
                 name: name.map(truncate_field),
                 email: email.map(truncate_field),
@@ -304,7 +304,7 @@ fn extract_party_from_author(author: &Value) -> Option<Party> {
                 .map(|s| truncate_field(s.to_string()));
 
             Some(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("author".to_string()),
                 name,
                 email,
@@ -315,7 +315,7 @@ fn extract_party_from_author(author: &Value) -> Option<Party> {
             })
         }
         _ => Some(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("author".to_string()),
             name: Some(truncate_field(format!("{:?}", author))),
             email: None,

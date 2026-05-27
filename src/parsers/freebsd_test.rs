@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::models::PackageType;
+use crate::models::{PackageType, PartyType};
 use std::path::PathBuf;
 
 use super::PackageParser;
@@ -207,7 +207,7 @@ fn test_maintainer_party() {
     assert_eq!(pkg.parties[0].role, Some("maintainer".to_string()));
     assert_eq!(pkg.parties[0].email, Some("anders@FreeBSD.org".to_string()));
     assert_eq!(pkg.parties[0].name, None);
-    assert_eq!(pkg.parties[0].r#type, Some("person".to_string()));
+    assert_eq!(pkg.parties[0].r#type, Some(PartyType::Person));
 }
 
 #[test]

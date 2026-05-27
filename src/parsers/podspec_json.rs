@@ -31,7 +31,7 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_f
 use packageurl::PackageUrl;
 use serde_json::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
@@ -414,7 +414,7 @@ fn extract_parties(json: &Value) -> Vec<Party> {
                     });
 
                     parties.push(Party {
-                        r#type: Some("organization".to_string()),
+                        r#type: Some(PartyType::Organization),
                         role: Some("owner".to_string()),
                         name: Some(name_str),
                         email: None,
@@ -430,7 +430,7 @@ fn extract_parties(json: &Value) -> Vec<Party> {
             let authors_trimmed = truncate_field(authors_str.trim().to_string());
             if !authors_trimmed.is_empty() {
                 parties.push(Party {
-                    r#type: Some("organization".to_string()),
+                    r#type: Some(PartyType::Organization),
                     role: Some("owner".to_string()),
                     name: Some(authors_trimmed),
                     email: None,

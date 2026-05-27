@@ -22,7 +22,7 @@
 //! - Graceful error handling: logs warnings and returns default on parse failure
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, Party, Sha1Digest, Sha256Digest,
+    DatasourceId, Dependency, PackageData, PackageType, Party, PartyType, Sha1Digest, Sha256Digest,
     Sha512Digest,
 };
 use crate::parser_warn as warn;
@@ -541,7 +541,7 @@ fn extract_party_from_field(field: &Value) -> Option<Party> {
         Value::String(s) => {
             if let Some(email) = extract_email_from_string(s) {
                 Some(Party {
-                    r#type: Some("person".to_string()),
+                    r#type: Some(PartyType::Person),
                     role: None,
                     name: extract_name_from_author_string(s).map(truncate_field),
                     email: Some(truncate_field(email)),
@@ -552,7 +552,7 @@ fn extract_party_from_field(field: &Value) -> Option<Party> {
                 })
             } else {
                 Some(Party {
-                    r#type: Some("person".to_string()),
+                    r#type: Some(PartyType::Person),
                     role: None,
                     name: Some(truncate_field(s.clone())),
                     email: None,
@@ -564,7 +564,7 @@ fn extract_party_from_field(field: &Value) -> Option<Party> {
             }
         }
         Value::Object(obj) => Some(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: obj
                 .get("role")
                 .and_then(|v| v.as_str())

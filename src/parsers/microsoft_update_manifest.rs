@@ -12,7 +12,7 @@
 //! - Format: XML with assembly and package metadata
 //! - Spec: Windows Update manifests
 
-use crate::models::{DatasourceId, PackageType, Party};
+use crate::models::{DatasourceId, PackageType, Party, PartyType};
 use std::path::Path;
 
 use crate::parser_warn as warn;
@@ -185,7 +185,7 @@ pub(crate) fn parse_mum_xml(content: &str) -> PackageData {
 
     let parties = company.clone().map_or_else(Vec::new, |company_name| {
         vec![Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             role: Some("owner".to_string()),
             name: Some(company_name),
             email: None,

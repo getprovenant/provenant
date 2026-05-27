@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -21,7 +23,7 @@ pub struct OutputParty {
 impl From<&crate::models::Party> for OutputParty {
     fn from(value: &crate::models::Party) -> Self {
         Self {
-            r#type: value.r#type.clone(),
+            r#type: value.r#type.map(|t| t.to_string()),
             role: value.role.clone(),
             name: value.name.clone(),
             email: value.email.clone(),
@@ -37,7 +39,11 @@ impl TryFrom<&OutputParty> for crate::models::Party {
     type Error = String;
     fn try_from(value: &OutputParty) -> Result<Self, Self::Error> {
         Ok(Self {
-            r#type: value.r#type.clone(),
+            r#type: value
+                .r#type
+                .as_deref()
+                .map(crate::models::PartyType::from_str)
+                .transpose()?,
             role: value.role.clone(),
             name: value.name.clone(),
             email: value.email.clone(),

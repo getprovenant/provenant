@@ -31,7 +31,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use regex::Regex;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -396,7 +396,7 @@ fn parse_party(info: &str, role: &str) -> Option<Party> {
 
             if !email.contains('@') {
                 return Some(Party {
-                    r#type: Some(truncate_field("person".to_string())),
+                    r#type: Some(PartyType::Person),
                     role: Some(truncate_field(role.to_string())),
                     name: Some(truncate_field(info.to_string())),
                     email: None,
@@ -408,7 +408,7 @@ fn parse_party(info: &str, role: &str) -> Option<Party> {
             }
 
             return Some(Party {
-                r#type: Some(truncate_field("person".to_string())),
+                r#type: Some(PartyType::Person),
                 role: Some(truncate_field(role.to_string())),
                 name: if name.is_empty() {
                     None
@@ -430,7 +430,7 @@ fn parse_party(info: &str, role: &str) -> Option<Party> {
 
     // Just a name or email
     Some(Party {
-        r#type: Some(truncate_field("person".to_string())),
+        r#type: Some(PartyType::Person),
         role: Some(truncate_field(role.to_string())),
         name: Some(truncate_field(info.to_string())),
         email: None,

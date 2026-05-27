@@ -9,7 +9,7 @@ use regex::Regex;
 use serde_json::Value as JsonValue;
 use yaml_serde::{Mapping, Value as YamlValue};
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
 };
@@ -989,7 +989,7 @@ fn build_party(value: &str, role: &str) -> Option<Party> {
     }
 
     Some(Party {
-        r#type: Some("person".to_string()),
+        r#type: Some(PartyType::Person),
         role: Some(role.to_string()),
         name,
         email,

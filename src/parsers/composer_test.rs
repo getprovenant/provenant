@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod tests {
-    use crate::models::{DatasourceId, Dependency, PackageType, Sha1Digest};
+    use crate::models::{DatasourceId, Dependency, PackageType, PartyType, Sha1Digest};
     use crate::parsers::{ComposerJsonParser, ComposerLockParser, PackageParser};
     use serde_json::Value;
     use std::fs;
@@ -290,8 +290,8 @@ mod tests {
             Some("git+https://github.com/acme/demo.git@abc123")
         );
         assert_eq!(package_data.parties.len(), 2);
-        assert_eq!(package_data.parties[0].r#type.as_deref(), Some("person"));
-        assert_eq!(package_data.parties[1].r#type.as_deref(), Some("person"));
+        assert_eq!(package_data.parties[0].r#type, Some(PartyType::Person));
+        assert_eq!(package_data.parties[1].r#type, Some(PartyType::Person));
     }
 
     #[test]

@@ -28,7 +28,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde::Deserialize;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{read_file_to_string, truncate_field};
 use crate::utils::spdx::{ExpressionRelation, combine_license_expressions_with_relation};
 
@@ -133,7 +133,7 @@ pub(crate) fn parse_freebsd_manifest(content: &str) -> PackageData {
     let mut parties = Vec::new();
     if let Some(maintainer_email) = manifest.maintainer {
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("maintainer".to_string()),
             name: None,
             email: Some(truncate_field(maintainer_email)),

@@ -11,7 +11,7 @@ use object::pe;
 use object::read::FileKind;
 use packageurl::PackageUrl;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::metadata::ParserMetadata;
 use crate::utils::file::extract_printable_strings;
@@ -701,7 +701,7 @@ fn build_windows_executable_package(
             .map(truncate_field)
     {
         package.parties.push(Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             role: Some("author".to_string()),
             name: Some(company_name),
             email: None,

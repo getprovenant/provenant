@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::models::{PackageData, Party};
+use crate::models::{PackageData, Party, PartyType};
 use crate::parsers::maven::coordinates::build_maven_qualifiers;
 use crate::parsers::maven::pom::properties::{PropertyResolver, resolve_option};
 use crate::parsers::maven::pom::tags::KnownTag;
@@ -151,7 +151,7 @@ impl ProjectMetadata {
     pub(super) fn add_owner_party(&self, package_data: &mut PackageData) {
         if self.organization_name.is_some() || self.organization_url.is_some() {
             package_data.parties.push(Party {
-                r#type: Some("organization".to_string()),
+                r#type: Some(PartyType::Organization),
                 role: Some("owner".to_string()),
                 name: self.organization_name.clone(),
                 email: None,

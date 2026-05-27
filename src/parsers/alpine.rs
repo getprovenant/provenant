@@ -30,7 +30,7 @@ use crate::utils::magic;
 use super::metadata::ParserMetadata;
 use crate::models::{
     DatasourceId, Dependency, FileReference, LicenseDetection, PackageData, PackageType, Party,
-    Sha1Digest,
+    PartyType, Sha1Digest,
 };
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
@@ -1311,7 +1311,7 @@ fn parse_pkginfo(content: &str) -> PackageData {
     if let Some(maint) = maintainer_str {
         let (maint_name, maint_email) = split_name_email(maint);
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("maintainer".to_string()),
             name: maint_name,
             email: maint_email,
