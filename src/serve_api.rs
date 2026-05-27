@@ -447,3 +447,20 @@ pub fn openapi_document() -> Value {
 fn schema_json<T: JsonSchema>() -> Value {
     serde_json::to_value(schema_for!(T)).expect("schema should serialize")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decode_rejects_invalid_json() {
+        let error =
+            ServeScanRequest::decode(br#"{"input": }"#).expect_err("malformed JSON should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("request body must be valid JSON")
+        );
+    }
+}
