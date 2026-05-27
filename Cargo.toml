@@ -116,7 +116,7 @@ file-identify = "0.4.0"
 flate2 = "1.1.9"
  glob = { workspace = true }
 hex = "0.4.3"
-http = "1.4.1"
+http = "1.4.0"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "tiff", "webp"] }
 indicatif = "0.18.4"
 indicatif-log-bridge = "0.2.3"
@@ -129,7 +129,7 @@ mime_guess = "2.0.5"
 object = { version = "0.39.1", default-features = false, features = ["read_core", "elf", "macho", "pe"] }
 os_info = "3.14.0"
 packageurl = "0.6.0"
-pdf_oxide = "0.3.53"
+pdf_oxide = "0.3.54"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
 quick-xml = "0.40.1"
