@@ -8,7 +8,7 @@ use std::thread;
 use uuid::Uuid;
 
 use crate::serve_api::{
-    AsyncJobState, AsyncJobStatusResponse, AsyncScanAcceptedResponse, SyncScanRequest,
+    AsyncJobState, AsyncJobStatusResponse, AsyncScanAcceptedResponse, ServeScanRequest,
 };
 
 const DEFAULT_ASYNC_MAX_PROCESSORS_PER_JOB: usize = 4;
@@ -38,7 +38,7 @@ struct AsyncJobControllerState {
 #[derive(Debug)]
 struct PendingAsyncJob {
     job_id: String,
-    request: SyncScanRequest,
+    request: ServeScanRequest,
 }
 
 #[derive(Debug)]
@@ -53,7 +53,7 @@ pub(super) struct AsyncJobRecord {
 #[derive(Debug)]
 pub(super) struct DispatchedAsyncJob {
     pub(super) job_id: String,
-    pub(super) request: SyncScanRequest,
+    pub(super) request: ServeScanRequest,
     pub(super) allocated_processors: usize,
 }
 
@@ -108,7 +108,7 @@ impl AsyncJobController {
 
     pub(super) fn submit(
         &self,
-        request: SyncScanRequest,
+        request: ServeScanRequest,
     ) -> std::result::Result<(AsyncScanAcceptedResponse, Vec<DispatchedAsyncJob>), AsyncSubmitError>
     {
         let mut inner = self
@@ -330,14 +330,14 @@ impl AsyncJobSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::serve_api::{SyncScanInput, SyncScanOptions};
+    use crate::serve_api::{ServeScanInput, ServeScanOptions};
 
-    fn dummy_async_request() -> SyncScanRequest {
-        SyncScanRequest {
-            input: SyncScanInput::Paths {
+    fn dummy_async_request() -> ServeScanRequest {
+        ServeScanRequest {
+            input: ServeScanInput::Paths {
                 paths: vec!["/tmp".to_string()],
             },
-            options: SyncScanOptions::default(),
+            options: ServeScanOptions::default(),
         }
     }
 

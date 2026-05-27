@@ -68,13 +68,13 @@ pub struct AsyncJobStatusResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct SyncScanRequest {
-    pub input: SyncScanInput,
+pub struct ServeScanRequest {
+    pub input: ServeScanInput,
     #[serde(default)]
-    pub options: SyncScanOptions,
+    pub options: ServeScanOptions,
 }
 
-impl SyncScanRequest {
+impl ServeScanRequest {
     pub fn decode(body: &[u8]) -> Result<Self> {
         serde_json::from_slice(body).context("request body must be valid JSON")
     }
@@ -82,7 +82,7 @@ impl SyncScanRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum SyncScanInput {
+pub enum ServeScanInput {
     Paths {
         paths: Vec<String>,
     },
@@ -102,7 +102,7 @@ pub enum SyncScanInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum SyncLicenseSource {
+pub enum ServeLicenseSource {
     Disabled,
     Embedded,
     Directory { path: String },
@@ -110,9 +110,9 @@ pub enum SyncLicenseSource {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-pub struct SyncScanOptions {
+pub struct ServeScanOptions {
     pub collect_info: bool,
-    pub detect_license: SyncLicenseSource,
+    pub detect_license: ServeLicenseSource,
     pub detect_packages: bool,
     pub detect_system_packages: bool,
     pub detect_packages_in_compiled: bool,
@@ -142,11 +142,11 @@ pub struct SyncScanOptions {
     pub tallies_by_facet: bool,
 }
 
-impl Default for SyncScanOptions {
+impl Default for ServeScanOptions {
     fn default() -> Self {
         Self {
             collect_info: false,
-            detect_license: SyncLicenseSource::Disabled,
+            detect_license: ServeLicenseSource::Disabled,
             detect_packages: false,
             detect_system_packages: false,
             detect_packages_in_compiled: false,
@@ -251,7 +251,7 @@ pub fn openapi_document() -> Value {
                         "required": true,
                         "content": {
                             "application/json": {
-                                "schema": {"$ref": "#/components/schemas/SyncScanRequest"}
+                                "schema": {"$ref": "#/components/schemas/ServeScanRequest"}
                             }
                         }
                     },
@@ -302,7 +302,7 @@ pub fn openapi_document() -> Value {
                         "required": true,
                         "content": {
                             "application/json": {
-                                "schema": {"$ref": "#/components/schemas/SyncScanRequest"}
+                                "schema": {"$ref": "#/components/schemas/ServeScanRequest"}
                             }
                         }
                     },
@@ -435,10 +435,10 @@ pub fn openapi_document() -> Value {
                 "AsyncJobState": schema_json::<AsyncJobState>(),
                 "AsyncScanAcceptedResponse": schema_json::<AsyncScanAcceptedResponse>(),
                 "AsyncJobStatusResponse": schema_json::<AsyncJobStatusResponse>(),
-                "SyncScanRequest": schema_json::<SyncScanRequest>(),
-                "SyncScanInput": schema_json::<SyncScanInput>(),
-                "SyncLicenseSource": schema_json::<SyncLicenseSource>(),
-                "SyncScanOptions": schema_json::<SyncScanOptions>()
+                "ServeScanRequest": schema_json::<ServeScanRequest>(),
+                "ServeScanInput": schema_json::<ServeScanInput>(),
+                "ServeLicenseSource": schema_json::<ServeLicenseSource>(),
+                "ServeScanOptions": schema_json::<ServeScanOptions>()
             }
         }
     })

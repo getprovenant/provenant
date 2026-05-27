@@ -20,21 +20,21 @@ use url::Url;
 use zip::ZipArchive;
 
 use crate::ProcessMode;
-use crate::serve_api::{SyncLicenseSource, SyncScanInput, SyncScanOptions, SyncScanRequest};
+use crate::serve_api::{ServeLicenseSource, ServeScanInput, ServeScanOptions, ServeScanRequest};
 use crate::workflow::{LicenseSource, ScanOptions, WorkflowError, scan_paths};
 
-impl From<SyncLicenseSource> for LicenseSource {
-    fn from(source: SyncLicenseSource) -> Self {
+impl From<ServeLicenseSource> for LicenseSource {
+    fn from(source: ServeLicenseSource) -> Self {
         match source {
-            SyncLicenseSource::Disabled => LicenseSource::Disabled,
-            SyncLicenseSource::Embedded => LicenseSource::Embedded,
-            SyncLicenseSource::Directory { path } => LicenseSource::Directory(PathBuf::from(path)),
+            ServeLicenseSource::Disabled => LicenseSource::Disabled,
+            ServeLicenseSource::Embedded => LicenseSource::Embedded,
+            ServeLicenseSource::Directory { path } => LicenseSource::Directory(PathBuf::from(path)),
         }
     }
 }
 
-impl From<SyncScanOptions> for ScanOptions {
-    fn from(options: SyncScanOptions) -> Self {
+impl From<ServeScanOptions> for ScanOptions {
+    fn from(options: ServeScanOptions) -> Self {
         Self {
             collect_info: options.collect_info,
             detect_license: LicenseSource::from(options.detect_license),
@@ -134,7 +134,7 @@ impl IngestError {
     }
 }
 
-impl SyncScanInput {
+impl ServeScanInput {
     fn prepare(self) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
         match self {
             Self::Paths { paths } => prepare_paths_input(paths),
@@ -691,7 +691,7 @@ pub(super) struct SyncScanExecution {
 }
 
 impl SyncScanExecution {
-    pub(super) fn new(request: SyncScanRequest) -> Result<Self> {
+    pub(super) fn new(request: ServeScanRequest) -> Result<Self> {
         let (paths, _staging_dir) = request.input.prepare()?;
 
         let mut options = ScanOptions::from(request.options);
