@@ -745,6 +745,38 @@ mod tests {
     }
 
     #[test]
+    fn sync_scan_execution_rejects_empty_paths() {
+        use crate::serve_api::{ServeScanInput, ServeScanOptions, ServeScanRequest};
+
+        let error = SyncScanExecution::new(ServeScanRequest {
+            input: ServeScanInput::Paths { paths: Vec::new() },
+            options: ServeScanOptions::default(),
+        })
+        .expect_err("empty paths should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("input.paths must contain at least one path")
+        );
+    }
+
+    #[test]
+    fn sync_scan_execution_rejects_non_http_url() {
+        use crate::serve_api::{ServeScanInput, ServeScanOptions, ServeScanRequest};
+
+        let error = SyncScanExecution::new(ServeScanRequest {
+            input: ServeScanInput::Url {
+                url: "file:///tmp/input.txt".to_string(),
+            },
+            options: ServeScanOptions::default(),
+        })
+        .expect_err("unsupported URL scheme should fail");
+
+        assert!(error.to_string().contains("http or https"));
+    }
+
+    #[test]
     fn upload_input_rejects_invalid_base64() {
         let error = prepare_upload_input("input.txt", "%%%%")
             .expect_err("invalid base64 upload should fail");
