@@ -5,6 +5,7 @@ use std::fs;
 
 use super::test_utils::{dir, file, package, scan_and_assemble_with_keyfiles};
 use super::*;
+use crate::license_detection::MatcherKind;
 use crate::models::{
     Copyright, DatasourceId, FileReference, Holder, LineNumber, Match, MatchScore, Package,
     PackageType, PackageUid,
@@ -57,7 +58,7 @@ fn classify_key_files_marks_nested_ruby_license_from_file_references() {
             from_file: Some("inspec-6.8.2/inspec-bin/LICENSE".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::new(20).unwrap(),
-            matcher: None,
+            matcher: MatcherKind::Hash,
             score: MatchScore::MAX,
             matched_length: Some(161),
             match_coverage: Some(100.0),

@@ -311,7 +311,7 @@ pub(crate) fn build_declared_license_detection(
             from_file: None,
             start_line: metadata.start_line,
             end_line: metadata.end_line,
-            matcher: Some(PARSER_DECLARED_MATCHER.to_string()),
+            matcher: crate::license_detection::MatcherKind::Declared,
             score: MatchScore::MAX,
             matched_length: Some(metadata.matched_text.split_whitespace().count()),
             match_coverage: Some(100.0),
@@ -782,8 +782,8 @@ mod tests {
         assert_eq!(declared_spdx.as_deref(), Some("MIT"));
         assert_eq!(detections.len(), 1);
         assert_eq!(
-            detections[0].matches[0].matcher.as_deref(),
-            Some(PARSER_DECLARED_MATCHER)
+            detections[0].matches[0].matcher,
+            crate::license_detection::MatcherKind::Declared
         );
     }
 
@@ -876,8 +876,8 @@ mod tests {
         );
 
         assert_eq!(
-            detection.matches[0].matcher.as_deref(),
-            Some(PARSER_DECLARED_MATCHER)
+            detection.matches[0].matcher,
+            crate::license_detection::MatcherKind::Declared
         );
         assert_eq!(
             detection.matches[0].start_line,

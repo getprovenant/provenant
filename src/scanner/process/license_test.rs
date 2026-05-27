@@ -134,7 +134,7 @@ fn make_public_detection(
             from_file: Some("README.md".to_string()),
             start_line: LineNumber::new(start_line).unwrap(),
             end_line: LineNumber::new(end_line).unwrap(),
-            matcher: Some("3-seq".to_string()),
+            matcher: MatcherKind::Seq,
             score: MatchScore::MAX,
             matched_length: Some(1),
             match_coverage: Some(100.0),

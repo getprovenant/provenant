@@ -641,7 +641,7 @@ fn create_output_preserves_top_level_license_detections_from_context() {
                     from_file: Some("project/LICENSE".to_string()),
                     start_line: LineNumber::ONE,
                     end_line: LineNumber::new(20).unwrap(),
-                    matcher: Some("1-hash".to_string()),
+                    matcher: MatcherKind::Hash,
                     score: MatchScore::MAX,
                     matched_length: Some(20),
                     match_coverage: Some(100.0),

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use provenant::license_detection::MatcherKind;
 use provenant::models::{
     Copyright, DatasourceId, DependencyUid, ExtraData, FacetTallies, FileInfo, FileType, Header,
     Holder, LineNumber, MatchScore, Md5Digest, Output, Package, PackageData, PackageType,
@@ -128,7 +129,7 @@ fn test_debian_output_matches_local_expected_fixture() {
             from_file: Some("scan/src/main.rs".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("1-hash".to_string()),
+            matcher: MatcherKind::Hash,
             score: MatchScore::MAX,
             matched_length: Some(1),
             match_coverage: Some(100.0),

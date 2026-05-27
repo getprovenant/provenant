@@ -1385,11 +1385,7 @@ fn public_match_to_internal(
         end_line: detection_match.end_line,
         start_token: 0,
         end_token: 0,
-        matcher: detection_match
-            .matcher
-            .as_deref()
-            .and_then(|matcher| matcher.parse().ok())
-            .unwrap_or(crate::license_detection::models::MatcherKind::Hash),
+        matcher: detection_match.matcher,
         score: detection_match.score,
         matched_length: detection_match.matched_length.unwrap_or_default(),
         rule_length: detection_match.matched_length.unwrap_or_default(),
@@ -1398,7 +1394,10 @@ fn public_match_to_internal(
         rule_identifier: detection_match
             .rule_identifier
             .clone()
-            .or_else(|| detection_match.matcher.clone())
+            .or_else(|| {
+                let s = detection_match.matcher.to_string();
+                (!s.is_empty()).then_some(s)
+            })
             .unwrap_or_default(),
         rule_url: detection_match.rule_url.clone().unwrap_or_default(),
         matched_text: detection_match.matched_text.clone(),
@@ -1426,7 +1425,7 @@ fn internal_match_to_public(
         from_file: detection_match.from_file,
         start_line: detection_match.start_line,
         end_line: detection_match.end_line,
-        matcher: Some(detection_match.matcher.to_string()),
+        matcher: detection_match.matcher,
         score,
         matched_length: Some(detection_match.matched_length),
         match_coverage: Some(match_coverage),
@@ -1443,6 +1442,7 @@ fn internal_match_to_public(
 #[cfg(test)]
 mod tests {
     use super::{apply_package_reference_following, collect_top_level_license_detections};
+    use crate::license_detection::MatcherKind;
     use crate::models::{LineNumber, Match, MatchScore};
     use crate::post_processing::test_utils::file;
 
@@ -1458,7 +1458,7 @@ mod tests {
                 from_file: Some("project/src/lib.rs".to_string()),
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::new(3).unwrap(),
-                matcher: Some("1-hash".to_string()),
+                matcher: MatcherKind::Hash,
                 score: MatchScore::MAX,
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
@@ -1483,7 +1483,7 @@ mod tests {
                 from_file: Some("project/src/other.rs".to_string()),
                 start_line: LineNumber::new(4).unwrap(),
                 end_line: LineNumber::new(6).unwrap(),
-                matcher: Some("1-hash".to_string()),
+                matcher: MatcherKind::Hash,
                 score: MatchScore::MAX,
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
@@ -1544,7 +1544,7 @@ mod tests {
                 from_file: Some("fonts/OFL.txt".to_string()),
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::new(3).unwrap(),
-                matcher: Some("2-aho".to_string()),
+                matcher: MatcherKind::Aho,
                 score: MatchScore::MAX,
                 matched_length: Some(10),
                 match_coverage: Some(100.0),

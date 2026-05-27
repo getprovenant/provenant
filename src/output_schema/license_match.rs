@@ -39,7 +39,7 @@ impl From<&crate::models::Match> for OutputMatch {
             from_file: value.from_file.clone(),
             start_line: value.start_line.get() as u64,
             end_line: value.end_line.get() as u64,
-            matcher: value.matcher.clone(),
+            matcher: Some(value.matcher.to_string()),
             score: value.score,
             matched_length: value.matched_length,
             match_coverage: value.match_coverage,
@@ -67,7 +67,11 @@ impl TryFrom<&OutputMatch> for crate::models::Match {
             from_file: value.from_file.clone(),
             start_line,
             end_line,
-            matcher: value.matcher.clone(),
+            matcher: value
+                .matcher
+                .as_deref()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(crate::license_detection::MatcherKind::Unknown),
             score: value.score,
             matched_length: value.matched_length,
             match_coverage: value.match_coverage,

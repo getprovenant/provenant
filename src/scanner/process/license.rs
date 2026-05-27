@@ -1303,7 +1303,7 @@ fn convert_match_to_model(
         from_file: m.from_file.clone(),
         start_line: m.start_line,
         end_line: m.end_line,
-        matcher: Some(m.matcher.to_string()),
+        matcher: m.matcher,
         score: m.score,
         matched_length: Some(m.matched_length),
         match_coverage: Some((f64::from(m.coverage()) * 100.0).round() / 100.0),

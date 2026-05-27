@@ -22,6 +22,7 @@ use super::Sha1Digest;
 use super::Sha256Digest;
 use super::Sha512Digest;
 
+use crate::license_detection::MatcherKind;
 use crate::license_detection::tokenize::tokenize_without_stopwords;
 use crate::models::output::Tallies;
 use crate::utils::spdx::combine_license_expressions;
@@ -359,7 +360,7 @@ pub(crate) fn enrich_license_detection_provenance(detection: &mut LicenseDetecti
         }
 
         if detection_match.rule_identifier.is_none() {
-            detection_match.rule_identifier = detection_match.matcher.clone();
+            detection_match.rule_identifier = Some(detection_match.matcher.to_string());
         }
     }
 
@@ -394,7 +395,7 @@ fn format_public_detection_content(detection: &LicenseDetection) -> String {
                 detection_match
                     .rule_identifier
                     .as_deref()
-                    .or(detection_match.matcher.as_deref())
+                    .or(Some(detection_match.matcher.as_str()))
                     .unwrap_or("parser-declared-license")
             ),
             detection_match.score.value() as f32,
@@ -562,7 +563,8 @@ pub struct Match {
     pub from_file: Option<String>,
     pub start_line: LineNumber,
     pub end_line: LineNumber,
-    pub matcher: Option<String>,
+    #[serde(default)]
+    pub matcher: MatcherKind,
     pub score: MatchScore,
     pub matched_length: Option<usize>,
     pub match_coverage: Option<f64>,
@@ -1208,7 +1210,7 @@ mod tests {
                     from_file: None,
                     start_line: LineNumber::ONE,
                     end_line: LineNumber::ONE,
-                    matcher: Some("parser-declared-license".to_string()),
+                    matcher: MatcherKind::Declared,
                     score: MatchScore::MAX,
                     matched_length: Some(1),
                     match_coverage: Some(100.0),
@@ -1292,7 +1294,7 @@ mod tests {
                     from_file: None,
                     start_line: LineNumber::ONE,
                     end_line: LineNumber::ONE,
-                    matcher: Some("parser-declared-license".to_string()),
+                    matcher: MatcherKind::Declared,
                     score: MatchScore::MAX,
                     matched_length: Some(1),
                     match_coverage: Some(100.0),

@@ -3,7 +3,7 @@
 
 //! License match result from a matching strategy.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
@@ -84,7 +84,9 @@ impl Default for MatchCoordinates {
 }
 
 /// Internal matcher kind used to create a license match.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize,
+)]
 pub enum MatcherKind {
     #[serde(rename = "1-hash")]
     #[default]
@@ -97,6 +99,8 @@ pub enum MatcherKind {
     Seq,
     #[serde(rename = "5-undetected", alias = "undetected")]
     Undetected,
+    #[serde(rename = "parser-declared-license")]
+    Declared,
     #[serde(rename = "6-unknown")]
     Unknown,
 }
@@ -109,6 +113,7 @@ impl MatcherKind {
             Self::SpdxId => 2,
             Self::Seq => 3,
             Self::Undetected => 4,
+            Self::Declared => 5,
             Self::Unknown => 6,
         }
     }
@@ -120,6 +125,7 @@ impl MatcherKind {
             Self::Aho => "2-aho",
             Self::Seq => "3-seq",
             Self::Undetected => "5-undetected",
+            Self::Declared => "parser-declared-license",
             Self::Unknown => "6-unknown",
         }
     }
@@ -141,6 +147,7 @@ impl FromStr for MatcherKind {
             "2-aho" => Ok(Self::Aho),
             "3-seq" | "4-seq" => Ok(Self::Seq),
             "5-undetected" | "undetected" => Ok(Self::Undetected),
+            "parser-declared-license" => Ok(Self::Declared),
             "6-unknown" => Ok(Self::Unknown),
             _ => Err("unknown matcher kind"),
         }

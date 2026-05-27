@@ -64,7 +64,6 @@ use crate::license_detection::detection::{
     attach_source_path_to_detections, empty_detection, populate_detection_from_group_with_spdx,
     split_groups_across_frontmatter_boundary,
 };
-use crate::license_detection::models::MatcherKind;
 
 /// Path to the license rules directory in the reference scancode-toolkit submodule.
 /// Used by test code and the xtask generate-license-loader-artifact binary.
@@ -94,6 +93,7 @@ pub(crate) use detection::{
     LicenseDetection, group_matches_by_region, post_process_detections, sort_matches_by_line,
 };
 pub use models::LicenseMatch;
+pub use models::MatcherKind;
 
 pub use aho_match::aho_match;
 pub use hash_match::hash_match;
