@@ -608,4 +608,35 @@ mod tests {
         assert_status(&response, 415);
         assert!(response.body.contains("unsupported_media_type"));
     }
+
+    #[test]
+    fn unknown_path_returns_not_found() {
+        let response =
+            response_for_request(&test_request(Method::Get, "/nonexistent"), &ready_state());
+        assert_status(&response, 404);
+        assert!(response.body.contains("not_found"));
+    }
+
+    #[test]
+    fn parse_job_route_rejects_empty_job_id() {
+        assert!(parse_job_route("/v1/jobs/").is_none());
+    }
+
+    #[test]
+    fn parse_job_route_rejects_embedded_slashes() {
+        assert!(parse_job_route("/v1/jobs/abc/def").is_none());
+        assert!(parse_job_route("/v1/jobs/abc/def/result").is_none());
+    }
+
+    #[test]
+    fn failed_job_result_with_invalid_status_code_falls_back_to_500() {
+        let state = ready_state_with_job(
+            "job-5",
+            crate::serve::job_controller::AsyncJobRecord::failed("bad status".to_string(), 999, 1),
+        );
+        let response =
+            response_for_request(&test_request(Method::Get, "/v1/jobs/job-5/result"), &state);
+        assert_status(&response, 500);
+        assert!(response.body.contains("job_failed"));
+    }
 }
