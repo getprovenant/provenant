@@ -5,7 +5,6 @@ mod ingest;
 mod job_controller;
 
 use std::io::Read;
-use std::sync::{Arc, Mutex};
 use std::thread;
 
 use anyhow::{Result, anyhow};
@@ -82,16 +81,9 @@ impl TryFrom<&ServeArgs> for ServeConfig {
     }
 }
 
-#[derive(Debug, Clone)]
-enum ReadinessState {
-    Pending,
-    Ready { spdx_license_list_version: String },
-    Failed { message: String },
-}
-
 #[derive(Debug)]
 struct ServeState {
-    readiness: Arc<Mutex<ReadinessState>>,
+    spdx_license_list_version: String,
     jobs: AsyncJobController,
 }
 
@@ -147,12 +139,12 @@ impl HttpResponse {
 pub(crate) fn run(args: &ServeArgs) -> Result<()> {
     let config = ServeConfig::try_from(args)?;
 
+    let spdx_license_list_version = LicenseDetectionEngine::embedded_spdx_license_list_version()
+        .map_err(|e| anyhow!("license detection engine failed to initialize: {e}"))?;
+
     let server = Server::http(&config.bind)
         .map_err(|e| anyhow!("Failed to bind provenant serve to {}: {e}", config.bind))?;
     let local_addr = server.server_addr();
-
-    let readiness = Arc::new(Mutex::new(ReadinessState::Pending));
-    start_warm_init(Arc::clone(&readiness));
 
     eprintln!(
         "Starting provenant serve on http://{} (api {API_VERSION})",
@@ -160,28 +152,10 @@ pub(crate) fn run(args: &ServeArgs) -> Result<()> {
     );
 
     let state = ServeState {
-        readiness,
+        spdx_license_list_version,
         jobs: AsyncJobController::new(),
     };
     serve_forever(server, state)
-}
-
-fn start_warm_init(readiness: Arc<Mutex<ReadinessState>>) {
-    thread::spawn(move || {
-        let next_state = match LicenseDetectionEngine::embedded_spdx_license_list_version() {
-            Ok(version) => ReadinessState::Ready {
-                spdx_license_list_version: version,
-            },
-            Err(error) => ReadinessState::Failed {
-                message: error.to_string(),
-            },
-        };
-
-        let mut current = readiness
-            .lock()
-            .expect("serve readiness lock should not be poisoned");
-        *current = next_state;
-    });
 }
 
 fn serve_forever(server: Server, state: ServeState) -> Result<()> {
@@ -257,12 +231,6 @@ fn parse_request(request: &mut tiny_http::Request) -> Result<ParsedRequest, Serv
 }
 
 fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResponse {
-    let readiness = state
-        .readiness
-        .lock()
-        .expect("serve readiness lock should not be poisoned")
-        .clone();
-
     if let Some(job_route) = parse_job_route(&request.path) {
         return match job_route {
             JobRoute::Status(job_id) => {
@@ -297,37 +265,15 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
                 status: "ok".to_string(),
             },
         ),
-        (m, "/readyz") if *m == Method::Get => match readiness {
-            ReadinessState::Pending => HttpResponse::json(
-                StatusCode::from(503),
-                &crate::serve_api::ServeReadinessResponse {
-                    status: "warming".to_string(),
-                    api_version: None,
-                    spdx_license_list_version: None,
-                    message: None,
-                },
-            ),
-            ReadinessState::Ready {
-                spdx_license_list_version,
-            } => HttpResponse::json(
-                StatusCode::from(200),
-                &crate::serve_api::ServeReadinessResponse {
-                    status: "ready".to_string(),
-                    api_version: Some(API_VERSION.to_string()),
-                    spdx_license_list_version: Some(spdx_license_list_version),
-                    message: None,
-                },
-            ),
-            ReadinessState::Failed { message } => HttpResponse::json(
-                StatusCode::from(503),
-                &crate::serve_api::ServeReadinessResponse {
-                    status: "failed".to_string(),
-                    api_version: None,
-                    spdx_license_list_version: None,
-                    message: Some(message),
-                },
-            ),
-        },
+        (m, "/readyz") if *m == Method::Get => HttpResponse::json(
+            StatusCode::from(200),
+            &crate::serve_api::ServeReadinessResponse {
+                status: "ready".to_string(),
+                api_version: Some(API_VERSION.to_string()),
+                spdx_license_list_version: Some(state.spdx_license_list_version.clone()),
+                message: None,
+            },
+        ),
         (m, "/version") if *m == Method::Get => HttpResponse::json(
             StatusCode::from(200),
             &crate::serve_api::ServeVersionResponse {
@@ -560,9 +506,7 @@ mod tests {
 
     fn ready_state() -> ServeState {
         ServeState {
-            readiness: Arc::new(Mutex::new(ReadinessState::Ready {
-                spdx_license_list_version: "3.28".to_string(),
-            })),
+            spdx_license_list_version: "3.28".to_string(),
             jobs: AsyncJobController::with_limits(2, 2, 8),
         }
     }
