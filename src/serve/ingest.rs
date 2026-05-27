@@ -277,7 +277,7 @@ fn materialize_downloaded_artifact(
         .and_then(|name| name.to_str())
         .unwrap_or("downloaded");
 
-    if looks_like_supported_archive(artifact_name) {
+    if let Some(format) = detect_archive_format(artifact_name) {
         let extract_dir = staging_dir.path().join("extracted");
         fs::create_dir_all(&extract_dir).map_err(|e| {
             IngestError::internal_with_source(
@@ -285,7 +285,7 @@ fn materialize_downloaded_artifact(
                 format!("failed to create {}", extract_dir.display()),
             )
         })?;
-        extract_archive(&artifact_path, &extract_dir)?;
+        extract_archive(&artifact_path, &extract_dir, format)?;
         return Ok((vec![extract_dir], Some(staging_dir)));
     }
 
@@ -391,82 +391,85 @@ fn validate_upload_filename(filename: &str) -> Result<String> {
     Ok(normalized.to_string())
 }
 
-fn looks_like_supported_archive(filename: &str) -> bool {
-    let filename = filename.to_ascii_lowercase();
-    [".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz"]
-        .iter()
-        .any(|suffix| filename.ends_with(suffix))
+enum ArchiveFormat {
+    Zip,
+    Tar,
+    TarGz,
+    TarBz2,
+    TarXz,
 }
 
-fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
-    let filename = archive_path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-
+fn detect_archive_format(filename: &str) -> Option<ArchiveFormat> {
+    let filename = filename.to_ascii_lowercase();
     if filename.ends_with(".zip") {
-        return extract_zip_archive(archive_path, output_dir);
+        return Some(ArchiveFormat::Zip);
     }
     if filename.ends_with(".tar.gz") || filename.ends_with(".tgz") {
-        return extract_tar_archive(
-            archive_path,
-            output_dir,
-            GzDecoder::new(File::open(archive_path).map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to open {}", archive_path.display()),
-                )
-            })?),
-        );
+        return Some(ArchiveFormat::TarGz);
     }
     if filename.ends_with(".tar.bz2") {
-        return extract_tar_archive(
-            archive_path,
-            output_dir,
-            BzDecoder::new(File::open(archive_path).map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to open {}", archive_path.display()),
-                )
-            })?),
-        );
+        return Some(ArchiveFormat::TarBz2);
     }
     if filename.ends_with(".tar.xz") {
-        return extract_tar_archive(
-            archive_path,
-            output_dir,
-            XzDecoder::new(File::open(archive_path).map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to open {}", archive_path.display()),
-                )
-            })?),
-        );
+        return Some(ArchiveFormat::TarXz);
     }
     if filename.ends_with(".tar") {
-        return extract_tar_archive(
-            archive_path,
-            output_dir,
-            File::open(archive_path).map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to open {}", archive_path.display()),
-                )
-            })?,
-        );
+        return Some(ArchiveFormat::Tar);
     }
-
-    Err(IngestError::validation(format!(
-        "unsupported archive format for remote ingestion: {}",
-        archive_path.display()
-    )))
+    None
 }
 
-fn extract_zip_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
+fn extract_archive(archive_path: &Path, output_dir: &Path, format: ArchiveFormat) -> Result<()> {
     let file = File::open(archive_path).map_err(|e| {
         IngestError::internal_with_source(e, format!("failed to open {}", archive_path.display()))
     })?;
+
+    match format {
+        ArchiveFormat::Zip => extract_zip_archive(archive_path, file, output_dir),
+        ArchiveFormat::TarGz => extract_tar_archive(archive_path, GzDecoder::new(file), output_dir),
+        ArchiveFormat::TarBz2 => {
+            extract_tar_archive(archive_path, BzDecoder::new(file), output_dir)
+        }
+        ArchiveFormat::TarXz => extract_tar_archive(archive_path, XzDecoder::new(file), output_dir),
+        ArchiveFormat::Tar => extract_tar_archive(archive_path, file, output_dir),
+    }
+}
+
+fn extract_entry(
+    output_dir: &Path,
+    relative_path: &Path,
+    entry_size: u64,
+    extracted_files: &mut usize,
+    extracted_bytes: &mut u64,
+    entry_reader: &mut dyn std::io::Read,
+    archive_context: &str,
+) -> Result<()> {
+    enforce_archive_limits(extracted_files, extracted_bytes, entry_size)?;
+
+    let destination = output_dir.join(relative_path);
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+            IngestError::internal_with_source(e, format!("failed to create {}", parent.display()))
+        })?;
+    }
+    let mut output = File::create(&destination).map_err(|e| {
+        IngestError::internal_with_source(e, format!("failed to create {}", destination.display()))
+    })?;
+    std::io::copy(entry_reader, &mut output).map_err(|e| {
+        IngestError::internal_with_source(
+            e,
+            format!(
+                "failed to extract {}{}",
+                archive_context,
+                relative_path.display()
+            ),
+        )
+    })?;
+
+    Ok(())
+}
+
+fn extract_zip_archive(archive_path: &Path, file: File, output_dir: &Path) -> Result<()> {
     let mut archive = ZipArchive::new(file).map_err(|e| {
         IngestError::internal_with_source(
             e,
@@ -476,6 +479,7 @@ fn extract_zip_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
 
     let mut extracted_files = 0usize;
     let mut extracted_bytes = 0u64;
+    let archive_context = format!("{}/", archive_path.display());
 
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).map_err(|e| {
@@ -497,28 +501,15 @@ fn extract_zip_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
             continue;
         }
 
-        enforce_archive_limits(&mut extracted_files, &mut extracted_bytes, entry.size())?;
-        let destination = output_dir.join(relative_path);
-        if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to create {}", parent.display()),
-                )
-            })?;
-        }
-        let mut output = File::create(&destination).map_err(|e| {
-            IngestError::internal_with_source(
-                e,
-                format!("failed to create {}", destination.display()),
-            )
-        })?;
-        std::io::copy(&mut entry, &mut output).map_err(|e| {
-            IngestError::internal_with_source(
-                e,
-                format!("failed to extract {}", destination.display()),
-            )
-        })?;
+        extract_entry(
+            output_dir,
+            &relative_path,
+            entry.size(),
+            &mut extracted_files,
+            &mut extracted_bytes,
+            &mut entry,
+            &archive_context,
+        )?;
     }
 
     if extracted_files == 0 {
@@ -530,10 +521,11 @@ fn extract_zip_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn extract_tar_archive<R: Read>(archive_path: &Path, output_dir: &Path, reader: R) -> Result<()> {
+fn extract_tar_archive<R: Read>(archive_path: &Path, reader: R, output_dir: &Path) -> Result<()> {
     let mut archive = Archive::new(reader);
     let mut extracted_files = 0usize;
     let mut extracted_bytes = 0u64;
+    let archive_context = format!("{}/", archive_path.display());
 
     for entry in archive.entries().map_err(|e| {
         IngestError::internal_with_source(
@@ -574,37 +566,22 @@ fn extract_tar_archive<R: Read>(archive_path: &Path, output_dir: &Path, reader: 
             continue;
         }
 
-        enforce_archive_limits(
+        let entry_size = entry.header().size().map_err(|e| {
+            IngestError::internal_with_source(
+                e,
+                format!("failed to read tar size in {}", archive_path.display()),
+            )
+        })?;
+
+        extract_entry(
+            output_dir,
+            &relative_path,
+            entry_size,
             &mut extracted_files,
             &mut extracted_bytes,
-            entry.header().size().map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to read tar size in {}", archive_path.display()),
-                )
-            })?,
+            &mut entry,
+            &archive_context,
         )?;
-        let destination = output_dir.join(relative_path);
-        if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).map_err(|e| {
-                IngestError::internal_with_source(
-                    e,
-                    format!("failed to create {}", parent.display()),
-                )
-            })?;
-        }
-        let mut output = File::create(&destination).map_err(|e| {
-            IngestError::internal_with_source(
-                e,
-                format!("failed to create {}", destination.display()),
-            )
-        })?;
-        std::io::copy(&mut entry, &mut output).map_err(|e| {
-            IngestError::internal_with_source(
-                e,
-                format!("failed to extract {}", destination.display()),
-            )
-        })?;
     }
 
     if extracted_files == 0 {
