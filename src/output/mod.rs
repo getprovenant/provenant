@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn test_debian_writer_outputs_dep5_style_document() {
         let mut internal = sample_internal_output();
-        internal.files[0].license_expression = Some("mit".to_string());
+        internal.files[0].detected_license_expression = Some("mit".to_string());
         internal.files[0].license_detections[0].matches[0].matched_text = Some(
             "Permission is hereby granted, free of charge, to any person obtaining a copy"
                 .to_string(),
@@ -227,7 +227,7 @@ mod tests {
                 vec![],
             ),
         );
-        internal.files[1].license_expression = Some("mit".to_string());
+        internal.files[1].detected_license_expression = Some("mit".to_string());
         internal.files[1].license_detections[0].matches[0].matched_text =
             Some("Same text".to_string());
         internal.files[1].license_detections[0].matches.push(Match {
@@ -374,7 +374,7 @@ mod tests {
     #[test]
     fn test_detected_license_expression_spdx_prefers_detection_spdx_values() {
         let mut internal = sample_internal_output();
-        internal.files[0].license_expression = Some("mit".to_string());
+        internal.files[0].detected_license_expression = Some("mit".to_string());
 
         let schema_file = OutputFileInfo::from(&internal.files[0]);
         let schema_value = serde_json::to_value(&schema_file).expect("file info serializes");
@@ -403,7 +403,7 @@ mod tests {
             detection_log: vec![],
             identifier: None,
         }];
-        internal.files[0].license_expression = None;
+        internal.files[0].detected_license_expression = None;
 
         let schema_file = OutputFileInfo::from(&internal.files[0]);
         let schema_value = serde_json::to_value(&schema_file).expect("file info serializes");
@@ -432,7 +432,7 @@ mod tests {
                 identifier: None,
             },
         ];
-        internal.files[0].license_expression = None;
+        internal.files[0].detected_license_expression = None;
 
         let schema_file = OutputFileInfo::from(&internal.files[0]);
         let schema_value = serde_json::to_value(&schema_file).expect("file info serializes");

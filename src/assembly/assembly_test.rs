@@ -45,7 +45,7 @@ mod tests {
                 dependencies,
                 ..Default::default()
             }],
-            license_expression: None,
+            detected_license_expression: None,
             license_detections: vec![],
             license_clues: vec![],
             percentage_of_license_text: None,
@@ -3849,7 +3849,7 @@ mod tests {
                     ..Default::default()
                 },
             ],
-            license_expression: None,
+            detected_license_expression: None,
             license_detections: vec![],
             license_clues: vec![],
             percentage_of_license_text: None,

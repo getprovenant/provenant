@@ -27,7 +27,10 @@ pub(crate) fn collect_top_level_license_references(
     let mut rule_identifiers = BTreeSet::new();
 
     for file in files {
-        collect_license_keys_from_expression(file.license_expression.as_deref(), &mut license_keys);
+        collect_license_keys_from_expression(
+            file.detected_license_expression.as_deref(),
+            &mut license_keys,
+        );
         collect_rule_identifiers_from_detections(&file.license_detections, &mut rule_identifiers);
         collect_rule_identifiers_from_matches(&file.license_clues, &mut rule_identifiers);
 

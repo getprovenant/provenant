@@ -41,7 +41,7 @@ fn apply_package_reference_following_resolves_manifest_origin_local_file() {
     }];
 
     let mut license = file("project/LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -92,7 +92,7 @@ fn apply_package_reference_following_resolves_manifest_origin_local_file() {
 #[test]
 fn apply_package_reference_following_resolves_absolute_rootfs_license_reference() {
     let mut common_license = file("usr/share/common-licenses/GPL-2");
-    common_license.license_expression = Some("gpl-2.0".to_string());
+    common_license.detected_license_expression = Some("gpl-2.0".to_string());
     common_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-2.0".to_string(),
         license_expression_spdx: "GPL-2.0-only".to_string(),
@@ -118,7 +118,7 @@ fn apply_package_reference_following_resolves_absolute_rootfs_license_reference(
     }];
 
     let mut service = file("usr/sbin/service");
-    service.license_expression = Some("gpl-2.0-plus".to_string());
+    service.detected_license_expression = Some("gpl-2.0-plus".to_string());
     service.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-2.0-plus".to_string(),
         license_expression_spdx: "GPL-2.0-or-later".to_string(),
@@ -174,7 +174,7 @@ fn apply_package_reference_following_resolves_absolute_rootfs_license_reference(
         .find(|file| file.path == "usr/sbin/service")
         .expect("service file should exist");
     assert_eq!(
-        service.license_expression.as_deref(),
+        service.detected_license_expression.as_deref(),
         Some("gpl-2.0 AND gpl-2.0-plus")
     );
     assert_eq!(
@@ -197,7 +197,7 @@ fn apply_package_reference_following_resolves_absolute_rootfs_license_reference(
 #[test]
 fn apply_package_reference_following_falls_back_to_root_when_package_missing() {
     let mut root_copying = file("project/COPYING");
-    root_copying.license_expression = Some("gpl-3.0".to_string());
+    root_copying.detected_license_expression = Some("gpl-3.0".to_string());
     root_copying.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-3.0".to_string(),
         license_expression_spdx: "GPL-3.0-only".to_string(),
@@ -223,7 +223,7 @@ fn apply_package_reference_following_falls_back_to_root_when_package_missing() {
     }];
 
     let mut po = file("project/po/en_US.po");
-    po.license_expression = Some("unknown-license-reference".to_string());
+    po.detected_license_expression = Some("unknown-license-reference".to_string());
     po.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -256,7 +256,7 @@ fn apply_package_reference_following_falls_back_to_root_when_package_missing() {
         .iter()
         .find(|file| file.path == "project/po/en_US.po")
         .expect("po file should exist");
-    assert_eq!(po.license_expression.as_deref(), Some("gpl-3.0"));
+    assert_eq!(po.detected_license_expression.as_deref(), Some("gpl-3.0"));
     assert_eq!(
         po.license_detections[0].detection_log,
         vec!["unknown-reference-to-local-file"]
@@ -266,7 +266,7 @@ fn apply_package_reference_following_falls_back_to_root_when_package_missing() {
 #[test]
 fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tree_root_notice() {
     let mut repo_root_license = file("project/LICENSE");
-    repo_root_license.license_expression = Some("apache-2.0".to_string());
+    repo_root_license.detected_license_expression = Some("apache-2.0".to_string());
     repo_root_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -292,7 +292,7 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
     }];
 
     let mut nested_license = file("project/java/LICENSE");
-    nested_license.license_expression = Some("mit".to_string());
+    nested_license.detected_license_expression = Some("mit".to_string());
     nested_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -318,7 +318,7 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
     }];
 
     let mut source = file("project/java/src/com/example/Callback.java");
-    source.license_expression = Some("mit".to_string());
+    source.detected_license_expression = Some("mit".to_string());
     source.license_detections = vec![
         crate::models::LicenseDetection {
             license_expression: "mit".to_string(),
@@ -400,7 +400,7 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
         .find(|file| file.path == "project/java/src/com/example/Callback.java")
         .expect("source file should exist");
     assert_eq!(
-        source.license_expression.as_deref(),
+        source.detected_license_expression.as_deref(),
         Some("apache-2.0 AND mit")
     );
     assert_eq!(source.license_detections.len(), 2);
@@ -464,7 +464,7 @@ fn reference_root_language_accepts_project_scope_but_not_bare_root_directory() {
 #[test]
 fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() {
     let mut root_license = file("LICENSE");
-    root_license.license_expression = Some("mit".to_string());
+    root_license.detected_license_expression = Some("mit".to_string());
     root_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -490,7 +490,7 @@ fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() 
     }];
 
     let mut nested_license = file("docs/LICENSE");
-    nested_license.license_expression = Some("apache-2.0".to_string());
+    nested_license.detected_license_expression = Some("apache-2.0".to_string());
     nested_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -516,7 +516,7 @@ fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() 
     }];
 
     let mut manpage = file("docs/man-xlate/nmap-id.1");
-    manpage.license_expression = Some("unknown-license-reference".to_string());
+    manpage.detected_license_expression = Some("unknown-license-reference".to_string());
     manpage.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -555,7 +555,7 @@ fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() 
         .iter()
         .find(|file| file.path == "docs/man-xlate/nmap-id.1")
         .expect("manpage file should exist");
-    assert_eq!(manpage.license_expression.as_deref(), Some("mit"));
+    assert_eq!(manpage.detected_license_expression.as_deref(), Some("mit"));
     assert_eq!(
         manpage.license_detections[0].detection_log,
         vec!["unknown-reference-to-local-file"]
@@ -599,7 +599,7 @@ fn apply_package_reference_following_inherits_license_from_package_context() {
 
     let mut source = file("project/locale/django.po");
     source.for_packages = vec![PackageUid::from_raw(package_uid.clone())];
-    source.license_expression = Some("free-unknown".to_string());
+    source.detected_license_expression = Some("free-unknown".to_string());
     source.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "free-unknown".to_string(),
         license_expression_spdx: "LicenseRef-scancode-free-unknown".to_string(),
@@ -632,7 +632,10 @@ fn apply_package_reference_following_inherits_license_from_package_context() {
         .iter()
         .find(|file| file.path == "project/locale/django.po")
         .expect("source file should exist");
-    assert_eq!(source.license_expression.as_deref(), Some("bsd-new"));
+    assert_eq!(
+        source.detected_license_expression.as_deref(),
+        Some("bsd-new")
+    );
     assert_eq!(
         source.license_detections[0].detection_log,
         vec!["unknown-reference-in-file-to-package"]
@@ -647,7 +650,7 @@ fn apply_package_reference_following_inherits_license_from_package_context() {
 #[test]
 fn apply_package_reference_following_falls_back_to_root_for_missing_package_reference() {
     let mut root_copying = file("project/COPYING");
-    root_copying.license_expression = Some("gpl-3.0".to_string());
+    root_copying.detected_license_expression = Some("gpl-3.0".to_string());
     root_copying.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-3.0".to_string(),
         license_expression_spdx: "GPL-3.0-only".to_string(),
@@ -673,7 +676,7 @@ fn apply_package_reference_following_falls_back_to_root_for_missing_package_refe
     }];
 
     let mut po = file("project/po/en_US.po");
-    po.license_expression = Some("free-unknown".to_string());
+    po.detected_license_expression = Some("free-unknown".to_string());
     po.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "free-unknown".to_string(),
         license_expression_spdx: "LicenseRef-scancode-free-unknown".to_string(),
@@ -706,7 +709,7 @@ fn apply_package_reference_following_falls_back_to_root_for_missing_package_refe
         .iter()
         .find(|file| file.path == "project/po/en_US.po")
         .expect("po file should exist");
-    assert_eq!(po.license_expression.as_deref(), Some("gpl-3.0"));
+    assert_eq!(po.detected_license_expression.as_deref(), Some("gpl-3.0"));
     assert_eq!(
         po.license_detections[0].detection_log,
         vec!["unknown-reference-in-file-to-nonexistent-package"]
@@ -779,7 +782,7 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
         PackageUid::from_raw(first_uid),
         PackageUid::from_raw(second_uid),
     ];
-    shared_file.license_expression = Some("free-unknown".to_string());
+    shared_file.detected_license_expression = Some("free-unknown".to_string());
     shared_file.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "free-unknown".to_string(),
         license_expression_spdx: "LicenseRef-scancode-free-unknown".to_string(),
@@ -813,7 +816,7 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
         .find(|file| file.path == "project/shared/locale.po")
         .expect("shared file should exist");
     assert_eq!(
-        shared_file.license_expression.as_deref(),
+        shared_file.detected_license_expression.as_deref(),
         Some("free-unknown")
     );
     assert_eq!(shared_file.license_detections[0].matches.len(), 1);

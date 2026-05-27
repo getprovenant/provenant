@@ -38,7 +38,7 @@ fn key_file_license_clues_feed_summary_without_mutating_package_license_provenan
     license_file
         .for_packages
         .push(PackageUid::from_raw(uid.to_string()));
-    license_file.license_expression = Some("Apache-2.0".to_string());
+    license_file.detected_license_expression = Some("Apache-2.0".to_string());
     license_file.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -142,7 +142,7 @@ fn manifest_declared_license_survives_into_package_and_summary() {
     let package =
         Package::from_package_data(&gemspec.package_data[0], "demo/demo.gemspec".to_string());
     gemspec.for_packages.push(package.package_uid.clone());
-    gemspec.license_expression = Some("mit".to_string());
+    gemspec.detected_license_expression = Some("mit".to_string());
     gemspec.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -346,7 +346,7 @@ fn compute_summary_prefers_file_license_detections_over_duplicate_package_data_d
     manifest.is_key_file = true;
     manifest.is_top_level = true;
     manifest.license_detections = vec![detection.clone()];
-    manifest.license_expression = Some("mit".to_string());
+    manifest.detected_license_expression = Some("mit".to_string());
     manifest.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Cargo),
         datasource_id: Some(DatasourceId::CargoToml),
@@ -479,7 +479,7 @@ fn compute_summary_deduplicates_duplicate_primary_package_data_entries_per_file(
 #[test]
 fn compute_summary_uses_root_prefixed_top_level_key_files() {
     let mut files = vec![dir("project"), file("project/LICENSE")];
-    files[1].license_expression = Some("mit".to_string());
+    files[1].detected_license_expression = Some("mit".to_string());
     files[1].license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -557,13 +557,13 @@ fn compute_summary_prefers_package_origin_info_and_preserves_other_tallies() {
     readme.is_key_file = true;
     readme.is_readme = true;
     readme.is_top_level = true;
-    readme.license_expression = Some("apache-2.0 AND (apache-2.0 OR mit)".to_string());
+    readme.detected_license_expression = Some("apache-2.0 AND (apache-2.0 OR mit)".to_string());
 
     let mut apache = file("codebase/apache-2.0.LICENSE");
     apache.is_key_file = true;
     apache.is_legal = true;
     apache.is_top_level = true;
-    apache.license_expression = Some("apache-2.0".to_string());
+    apache.detected_license_expression = Some("apache-2.0".to_string());
     apache.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -592,7 +592,7 @@ fn compute_summary_prefers_package_origin_info_and_preserves_other_tallies() {
     mit.is_key_file = true;
     mit.is_legal = true;
     mit.is_top_level = true;
-    mit.license_expression = Some("mit".to_string());
+    mit.detected_license_expression = Some("mit".to_string());
     mit.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -633,7 +633,7 @@ fn compute_summary_resolves_joined_primary_license_without_ambiguity() {
     readme.is_key_file = true;
     readme.is_readme = true;
     readme.is_top_level = true;
-    readme.license_expression = Some("apache-2.0 AND (apache-2.0 OR mit)".to_string());
+    readme.detected_license_expression = Some("apache-2.0 AND (apache-2.0 OR mit)".to_string());
     readme.copyrights = vec![Copyright {
         copyright: "Copyright Example Corp.".to_string(),
         normalized_copyright: None,
@@ -645,7 +645,7 @@ fn compute_summary_resolves_joined_primary_license_without_ambiguity() {
     apache.is_key_file = true;
     apache.is_legal = true;
     apache.is_top_level = true;
-    apache.license_expression = Some("apache-2.0".to_string());
+    apache.detected_license_expression = Some("apache-2.0".to_string());
     apache.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -674,7 +674,7 @@ fn compute_summary_resolves_joined_primary_license_without_ambiguity() {
     mit.is_key_file = true;
     mit.is_legal = true;
     mit.is_top_level = true;
-    mit.license_expression = Some("mit".to_string());
+    mit.detected_license_expression = Some("mit".to_string());
     mit.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -727,7 +727,7 @@ fn compute_summary_penalizes_conflicting_non_key_licenses_without_false_ambiguit
     mit.is_key_file = true;
     mit.is_legal = true;
     mit.is_top_level = true;
-    mit.license_expression = Some("mit".to_string());
+    mit.detected_license_expression = Some("mit".to_string());
     mit.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -753,7 +753,7 @@ fn compute_summary_penalizes_conflicting_non_key_licenses_without_false_ambiguit
     }];
 
     let mut non_key_gpl = file("codebase/tests/test_a.py");
-    non_key_gpl.license_expression = Some("gpl-2.0-only".to_string());
+    non_key_gpl.detected_license_expression = Some("gpl-2.0-only".to_string());
     non_key_gpl.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-2.0-only".to_string(),
         license_expression_spdx: "GPL-2.0-only".to_string(),
@@ -891,7 +891,7 @@ fn compute_summary_keeps_null_other_license_expressions_when_declared_expression
     mit.is_key_file = true;
     mit.is_legal = true;
     mit.is_top_level = true;
-    mit.license_expression = Some("mit".to_string());
+    mit.detected_license_expression = Some("mit".to_string());
     mit.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -1074,7 +1074,7 @@ fn compute_summary_combines_package_licenses_when_present_datafile_is_not_key_cl
     cargo_toml.is_key_file = true;
     cargo_toml.is_top_level = true;
     cargo_toml.for_packages = vec![cargo.package_uid.clone()];
-    cargo_toml.license_expression = Some("mit".to_string());
+    cargo_toml.detected_license_expression = Some("mit".to_string());
     cargo_toml.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -1117,7 +1117,7 @@ fn compute_summary_serializes_empty_declared_holder_when_none_found() {
     pkg_info.is_key_file = true;
     pkg_info.is_top_level = true;
     pkg_info.for_packages = vec![package.package_uid.clone()];
-    pkg_info.license_expression = Some("mit".to_string());
+    pkg_info.detected_license_expression = Some("mit".to_string());
     pkg_info.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -1152,7 +1152,7 @@ fn compute_summary_joins_multiple_holders_from_single_top_level_license_file() {
     license.is_key_file = true;
     license.is_legal = true;
     license.is_top_level = true;
-    license.license_expression = Some("jetty".to_string());
+    license.detected_license_expression = Some("jetty".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "jetty".to_string(),
         license_expression_spdx: "LicenseRef-scancode-jetty".to_string(),
@@ -1271,7 +1271,7 @@ fn compute_score_mode_uses_single_joined_expression_without_ambiguity() {
     cargo.is_manifest = true;
     cargo.is_key_file = true;
     cargo.is_top_level = true;
-    cargo.license_expression = Some("mit OR apache-2.0".to_string());
+    cargo.detected_license_expression = Some("mit OR apache-2.0".to_string());
     cargo.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit OR apache-2.0".to_string(),
         license_expression_spdx: "MIT OR Apache-2.0".to_string(),
@@ -1305,7 +1305,7 @@ fn compute_score_mode_uses_single_joined_expression_without_ambiguity() {
     apache.is_legal = true;
     apache.is_key_file = true;
     apache.is_top_level = true;
-    apache.license_expression = Some("apache-2.0".to_string());
+    apache.detected_license_expression = Some("apache-2.0".to_string());
     apache.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -1333,7 +1333,7 @@ fn compute_score_mode_uses_single_joined_expression_without_ambiguity() {
     mit.is_legal = true;
     mit.is_key_file = true;
     mit.is_top_level = true;
-    mit.license_expression = Some("mit".to_string());
+    mit.detected_license_expression = Some("mit".to_string());
     mit.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -1386,7 +1386,7 @@ fn compute_score_mode_does_not_treat_with_expression_as_covering_base_license() 
     manifest.is_manifest = true;
     manifest.is_key_file = true;
     manifest.is_top_level = true;
-    manifest.license_expression = Some("gpl-2.0 WITH classpath-exception-2.0".to_string());
+    manifest.detected_license_expression = Some("gpl-2.0 WITH classpath-exception-2.0".to_string());
     manifest.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-2.0 WITH classpath-exception-2.0".to_string(),
         license_expression_spdx: "GPL-2.0-only WITH Classpath-exception-2.0".to_string(),
@@ -1421,7 +1421,7 @@ fn compute_score_mode_does_not_treat_with_expression_as_covering_base_license() 
     gpl.is_legal = true;
     gpl.is_key_file = true;
     gpl.is_top_level = true;
-    gpl.license_expression = Some("gpl-2.0".to_string());
+    gpl.detected_license_expression = Some("gpl-2.0".to_string());
     gpl.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-2.0".to_string(),
         license_expression_spdx: "GPL-2.0-only".to_string(),
@@ -1466,7 +1466,7 @@ fn compute_score_mode_scores_nested_manifest_key_file_without_copyright() {
     pom.is_manifest = true;
     pom.is_key_file = true;
     pom.is_top_level = true;
-    pom.license_expression = Some("apache-2.0".to_string());
+    pom.detected_license_expression = Some("apache-2.0".to_string());
     pom.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),
@@ -1496,7 +1496,7 @@ fn compute_score_mode_scores_nested_manifest_key_file_without_copyright() {
     license.is_legal = true;
     license.is_key_file = true;
     license.is_top_level = true;
-    license.license_expression = Some("apache-2.0".to_string());
+    license.detected_license_expression = Some("apache-2.0".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "apache-2.0".to_string(),
         license_expression_spdx: "Apache-2.0".to_string(),

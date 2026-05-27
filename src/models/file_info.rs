@@ -65,7 +65,7 @@ pub struct FileInfo {
     pub package_data: Vec<PackageData>,
     #[builder(default)]
     #[serde(default)]
-    pub license_expression: Option<String>,
+    pub detected_license_expression: Option<String>,
     #[builder(default)]
     #[serde(default)]
     pub license_detections: Vec<LicenseDetection>,
@@ -176,7 +176,7 @@ impl FileInfoBuilder {
             self.sha256.flatten(),
             self.programming_language.clone().flatten(),
             self.package_data.clone().unwrap_or_default(),
-            self.license_expression.clone().flatten(),
+            self.detected_license_expression.clone().flatten(),
             self.license_detections.clone().unwrap_or_default(),
             self.license_clues.clone().unwrap_or_default(),
             self.copyrights.clone().unwrap_or_default(),
@@ -219,7 +219,7 @@ impl FileInfo {
         sha256: Option<Sha256Digest>,
         programming_language: Option<String>,
         package_data: Vec<PackageData>,
-        mut license_expression: Option<String>,
+        mut detected_license_expression: Option<String>,
         mut license_detections: Vec<LicenseDetection>,
         license_clues: Vec<Match>,
         copyrights: Vec<Copyright>,
@@ -235,8 +235,8 @@ impl FileInfo {
             enrich_package_data_license_provenance(package, &path);
         }
 
-        // Combine license expressions from package data if license_expression is None
-        license_expression = license_expression.or_else(|| {
+        // Combine license expressions from package data if detected_license_expression is None
+        detected_license_expression = detected_license_expression.or_else(|| {
             let expressions = package_data
                 .iter()
                 .filter_map(|pkg| pkg.get_license_expression());
@@ -250,13 +250,13 @@ impl FileInfo {
             }
         }
 
-        // Combine license expressions from license detections if license_expression is still None
-        if license_expression.is_none() && !license_detections.is_empty() {
+        // Combine license expressions from license detections if detected_license_expression is still None
+        if detected_license_expression.is_none() && !license_detections.is_empty() {
             let expressions = license_detections
                 .iter()
                 .map(|detection| detection.license_expression.clone());
             let expressions: Vec<String> = expressions.collect();
-            license_expression = crate::utils::spdx::select_primary_license_expression(
+            detected_license_expression = crate::utils::spdx::select_primary_license_expression(
                 expressions.clone(),
             )
             .or_else(|| {
@@ -280,7 +280,7 @@ impl FileInfo {
             sha1_git: None,
             programming_language,
             package_data,
-            license_expression,
+            detected_license_expression,
             license_detections,
             license_clues,
             percentage_of_license_text: None,

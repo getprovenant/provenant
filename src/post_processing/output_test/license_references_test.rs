@@ -30,7 +30,7 @@ fn collect_top_level_license_references_includes_clues_packages_and_sorted_dedup
         ),
     ];
     let mut source = file("project/src/lib.rs");
-    source.license_expression = Some("mit".to_string());
+    source.detected_license_expression = Some("mit".to_string());
     source.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -256,7 +256,7 @@ fn collect_top_level_license_references_applies_custom_license_url_template() {
     }
 
     let mut source = file("project/src/lib.rs");
-    source.license_expression = Some("mit".to_string());
+    source.detected_license_expression = Some("mit".to_string());
     source.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
