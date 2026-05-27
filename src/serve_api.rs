@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{Context, Result};
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -71,6 +72,12 @@ pub struct SyncScanRequest {
     pub input: SyncScanInput,
     #[serde(default)]
     pub options: SyncScanOptions,
+}
+
+impl SyncScanRequest {
+    pub fn decode(body: &[u8]) -> Result<Self> {
+        serde_json::from_slice(body).context("request body must be valid JSON")
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
