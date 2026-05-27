@@ -189,7 +189,11 @@ mod tests {
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let result = try_parse_file(&pom_path).expect("pom.xml should still be recognized");
 
-        assert!(result.scan_errors.is_empty(), "{:?}", result.scan_errors);
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "{:?}",
+            result.scan_diagnostics
+        );
         assert_eq!(result.packages.len(), 1);
         assert_eq!(
             result.packages[0].purl.as_deref(),
@@ -231,7 +235,11 @@ mod tests {
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let result = try_parse_file(&pom_path).expect("pom.xml should still be recognized");
 
-        assert!(result.scan_errors.is_empty(), "{:?}", result.scan_errors);
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "{:?}",
+            result.scan_diagnostics
+        );
         assert_eq!(result.packages.len(), 1);
         let package_data = &result.packages[0];
         assert_eq!(package_data.namespace.as_deref(), Some("org.gradle"));
@@ -996,7 +1004,11 @@ mod tests {
         let (_temp_dir, pom_path) = create_temp_maven_file(content, "missing-version-pom.xml");
         let result = try_parse_file(&pom_path).expect("suffix pom.xml should be recognized");
 
-        assert!(result.scan_errors.is_empty(), "{:?}", result.scan_errors);
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "{:?}",
+            result.scan_diagnostics
+        );
         assert_eq!(result.packages.len(), 1);
         assert_eq!(result.packages[0].name.as_deref(), Some("missing"));
         assert_eq!(
@@ -1071,7 +1083,11 @@ mod tests {
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let result = try_parse_file(&pom_path).expect("pom.xml should still be recognized");
 
-        assert!(result.scan_errors.is_empty(), "{:?}", result.scan_errors);
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "{:?}",
+            result.scan_diagnostics
+        );
         assert_eq!(
             result.packages[0].version.as_deref(),
             Some("${project.version}")

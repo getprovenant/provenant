@@ -196,8 +196,7 @@ mod tests {
                     "path": file.path,
                     "type": file.file_type,
                     "is_generated": file.is_generated,
-                    "scan_errors": file.scan_errors,
-                }))
+                    "scan_errors": file.scan_diagnostics.iter().map(|d| d.message.clone()).collect::<Vec<_>>(),                }))
                 .collect::<Vec<_>>()
         });
         let expected: Value = serde_json::from_str(
@@ -281,8 +280,7 @@ Copyright - split out libs\0\xff",
                     "urls": sorted(file.urls.into_iter().map(|url| url.url).collect::<Vec<_>>()),
                     "copyrights": sorted(file.copyrights.into_iter().map(|copyright| copyright.copyright).collect::<Vec<_>>()),
                     "holders": sorted(file.holders.into_iter().map(|holder| holder.holder).collect::<Vec<_>>()),
-                    "scan_errors": file.scan_errors,
-                }))
+                    "scan_errors": file.scan_diagnostics.iter().map(|d| d.message.clone()).collect::<Vec<_>>(),                }))
                 .collect::<Vec<_>>()
         });
 

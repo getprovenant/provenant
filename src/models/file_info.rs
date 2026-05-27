@@ -21,7 +21,7 @@ use super::ScanDiagnostic;
 use super::Sha1Digest;
 use super::Sha256Digest;
 use super::Sha512Digest;
-use super::diagnostics_from_legacy_scan_errors;
+
 use crate::license_detection::tokenize::tokenize_without_stopwords;
 use crate::models::output::Tallies;
 use crate::utils::spdx::combine_license_expressions;
@@ -93,9 +93,6 @@ pub struct FileInfo {
     #[builder(default)]
     #[serde(default)]
     pub for_packages: Vec<PackageUid>,
-    #[builder(default)]
-    #[serde(default)]
-    pub scan_errors: Vec<String>,
     #[builder(default)]
     #[serde(default)]
     pub scan_diagnostics: Vec<ScanDiagnostic>,
@@ -188,18 +185,8 @@ impl FileInfoBuilder {
             self.emails.clone().unwrap_or_default(),
             self.urls.clone().unwrap_or_default(),
             self.for_packages.clone().unwrap_or_default(),
-            self.scan_errors.clone().unwrap_or_default(),
+            self.scan_diagnostics.clone().unwrap_or_default(),
         );
-        file_info.scan_diagnostics = if let Some(diagnostics) = &self.scan_diagnostics {
-            diagnostics.clone()
-        } else {
-            diagnostics_from_legacy_scan_errors(&file_info.scan_errors)
-        };
-        file_info.scan_errors = file_info
-            .scan_diagnostics
-            .iter()
-            .map(|diagnostic| diagnostic.message.clone())
-            .collect();
         file_info.license_policy = self.license_policy.clone().flatten();
         file_info.sha1_git = self.sha1_git.flatten();
         file_info.is_binary = self.is_binary.flatten();
@@ -241,7 +228,7 @@ impl FileInfo {
         emails: Vec<OutputEmail>,
         urls: Vec<OutputURL>,
         for_packages: Vec<PackageUid>,
-        scan_errors: Vec<String>,
+        scan_diagnostics: Vec<ScanDiagnostic>,
     ) -> Self {
         let mut package_data = package_data;
         for package in &mut package_data {
@@ -303,8 +290,7 @@ impl FileInfo {
             emails,
             urls,
             for_packages,
-            scan_diagnostics: diagnostics_from_legacy_scan_errors(&scan_errors),
-            scan_errors,
+            scan_diagnostics,
             license_policy: None,
             is_generated: None,
             is_binary: None,
@@ -350,9 +336,10 @@ impl FileInfo {
     }
 
     pub fn error_diagnostics(&self) -> impl Iterator<Item = &ScanDiagnostic> {
-        self.scan_diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
+        self.scan_diagnostics.iter().filter(|diagnostic| {
+            diagnostic.severity == DiagnosticSeverity::Error
+                || diagnostic.severity == DiagnosticSeverity::Timeout
+        })
     }
 }
 

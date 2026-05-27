@@ -134,7 +134,6 @@ mod tests {
                 emails: vec![],
                 urls: vec![],
                 for_packages: vec![],
-                scan_errors: vec![],
                 scan_diagnostics: vec![],
                 license_policy: None,
                 is_source: None,

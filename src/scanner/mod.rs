@@ -1110,9 +1110,9 @@ mod tests {
             .expect("scanned file entry");
 
         assert!(
-            scanned.scan_errors.is_empty(),
-            "scan_errors: {:#?}",
-            scanned.scan_errors
+            scanned.scan_diagnostics.is_empty(),
+            "scan_diagnostics: {:#?}",
+            scanned.scan_diagnostics
         );
         assert_eq!(
             scanned.package_data.len(),
@@ -1168,9 +1168,9 @@ mod tests {
             .expect("scanned file entry");
 
         assert!(
-            scanned.scan_errors.is_empty(),
-            "scan_errors: {:#?}",
-            scanned.scan_errors
+            scanned.scan_diagnostics.is_empty(),
+            "scan_diagnostics: {:#?}",
+            scanned.scan_diagnostics
         );
         assert_eq!(
             scanned.package_data.len(),
@@ -1234,9 +1234,9 @@ mod tests {
             .expect("scanned file entry");
 
         assert!(
-            scanned.scan_errors.is_empty(),
-            "scan_errors: {:#?}",
-            scanned.scan_errors
+            scanned.scan_diagnostics.is_empty(),
+            "scan_diagnostics: {:#?}",
+            scanned.scan_diagnostics
         );
         assert_eq!(
             scanned.package_data.len(),
@@ -1291,9 +1291,9 @@ mod tests {
             .expect("scanned file entry");
 
         assert!(
-            scanned.scan_errors.is_empty(),
-            "scan_errors: {:#?}",
-            scanned.scan_errors
+            scanned.scan_diagnostics.is_empty(),
+            "scan_diagnostics: {:#?}",
+            scanned.scan_diagnostics
         );
         assert_eq!(
             scanned.package_data.len(),

@@ -337,7 +337,7 @@ line-length = 79
         let (_temp_dir, file_path) = create_temp_file(content, "pyproject.toml");
         let result = try_parse_file(&file_path).expect("pyproject should still be recognized");
 
-        assert!(result.scan_errors.is_empty());
+        assert!(result.scan_diagnostics.is_empty());
         assert_eq!(result.packages.len(), 1);
         assert_eq!(
             result.packages[0].datasource_id,

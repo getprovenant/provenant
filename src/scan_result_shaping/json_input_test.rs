@@ -642,11 +642,11 @@ fn into_parts_restores_file_warning_severity_from_header_warnings() {
 
     assert!(extra_errors.is_empty());
     assert_eq!(process_result.files.len(), 1);
-    assert_eq!(
-        process_result.files[0].scan_errors,
-        vec!["custom recoverable warning"]
-    );
     assert_eq!(process_result.files[0].scan_diagnostics.len(), 1);
+    assert_eq!(
+        process_result.files[0].scan_diagnostics[0].message,
+        "custom recoverable warning"
+    );
     assert_eq!(
         process_result.files[0].scan_diagnostics[0].severity,
         crate::models::DiagnosticSeverity::Warning

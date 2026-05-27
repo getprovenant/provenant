@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn spilled_files_preserve_scan_diagnostic_severity() {
         let mut store = FileInfoSpillStore::new();
-        let mut file = FileInfo::new(
+        let file = FileInfo::new(
             "custom.txt".to_string(),
             "custom".to_string(),
             ".txt".to_string(),
@@ -135,9 +135,8 @@ mod tests {
             Vec::new(),
             Vec::new(),
             Vec::new(),
-            vec!["custom recoverable warning".to_string()],
+            vec![ScanDiagnostic::warning("custom recoverable warning")],
         );
-        file.scan_diagnostics = vec![ScanDiagnostic::warning("custom recoverable warning")];
 
         store.spill(vec![file]);
         let loaded = store.load_all();

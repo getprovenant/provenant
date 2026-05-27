@@ -188,7 +188,7 @@ mod tests {
                     "type": crate::output_schema::OutputFileType::from(file.file_type),
                     "package_data": package_data,
                     "for_packages": for_packages,
-                    "scan_errors": file.scan_errors,
+                    "scan_errors": file.scan_diagnostics.iter().map(|d| d.message.clone()).collect::<Vec<_>>(),
                 })
             })
             .collect();

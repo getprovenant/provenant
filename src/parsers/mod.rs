@@ -336,7 +336,6 @@ thread_local! {
 pub struct ParsePackagesResult {
     pub packages: Vec<PackageData>,
     pub scan_diagnostics: Vec<ScanDiagnostic>,
-    pub scan_errors: Vec<String>,
 }
 
 fn panic_payload_to_string(payload: &(dyn std::any::Any + Send)) -> String {
@@ -384,10 +383,6 @@ where
     match extract_result {
         Ok(packages) => ParsePackagesResult {
             packages,
-            scan_errors: scan_diagnostics
-                .iter()
-                .map(|diagnostic| diagnostic.message.clone())
-                .collect(),
             scan_diagnostics,
         },
         Err(payload) => {
@@ -399,10 +394,6 @@ where
             )));
             ParsePackagesResult {
                 packages: Vec::new(),
-                scan_errors: scan_diagnostics
-                    .iter()
-                    .map(|diagnostic| diagnostic.message.clone())
-                    .collect(),
                 scan_diagnostics,
             }
         }
@@ -434,11 +425,7 @@ pub(crate) fn record_parser_diagnostic(message: String, severity: DiagnosticSeve
         let Some(active) = stack.last_mut() else {
             return false;
         };
-        active.push(ScanDiagnostic {
-            severity,
-            message,
-            is_timeout: false,
-        });
+        active.push(ScanDiagnostic { severity, message });
         true
     })
 }
@@ -473,7 +460,7 @@ macro_rules! parser_warn {
 ///
 /// Parsers should handle errors gracefully by returning default/empty `PackageData`
 /// and logging warnings with [`crate::parser_warn!`] rather than panicking. Scanner
-/// dispatch captures those warnings and attaches them to `FileInfo.scan_errors` so
+/// dispatch captures those warnings and attaches them to `FileInfo.scan_diagnostics` so
 /// CI output and serialized scan results stay aligned.
 /// This allows the scan to continue processing other files even when individual
 /// files fail to parse.
@@ -1056,15 +1043,18 @@ mod panic_isolation_tests {
         );
 
         assert!(result.packages.is_empty());
-        assert_eq!(result.scan_errors.len(), 1);
         assert_eq!(result.scan_diagnostics.len(), 1);
         assert_eq!(
             result.scan_diagnostics[0].severity,
             DiagnosticSeverity::Error
         );
-        assert!(result.scan_errors[0].contains("PanicParser"));
-        assert!(result.scan_errors[0].contains("fixtures/panic-package.json"));
-        assert!(result.scan_errors[0].contains("panic boom"));
+        assert!(result.scan_diagnostics[0].message.contains("PanicParser"));
+        assert!(
+            result.scan_diagnostics[0]
+                .message
+                .contains("fixtures/panic-package.json")
+        );
+        assert!(result.scan_diagnostics[0].message.contains("panic boom"));
     }
 
     #[test]
@@ -1092,8 +1082,11 @@ mod panic_isolation_tests {
         );
 
         assert_eq!(result.packages.len(), 1);
-        assert_eq!(result.scan_errors, vec!["recoverable parser warning"]);
         assert_eq!(result.scan_diagnostics.len(), 1);
+        assert_eq!(
+            result.scan_diagnostics[0].message,
+            "recoverable parser warning"
+        );
         assert_eq!(
             result.scan_diagnostics[0].severity,
             DiagnosticSeverity::Warning

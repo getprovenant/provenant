@@ -14,9 +14,7 @@ use indicatif_log_bridge::LogWrapper;
 use log::LevelFilter;
 
 use crate::cli::ProcessMode;
-use crate::models::{
-    DiagnosticSeverity, FileInfo, FileType, Header, ScanDiagnostic, is_legacy_warning_message,
-};
+use crate::models::{DiagnosticSeverity, FileInfo, FileType, Header, ScanDiagnostic};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProgressMode {
@@ -510,39 +508,20 @@ pub(crate) fn format_default_scan_error(path: &Path, err: &str) -> String {
     format!("{reason}: {}", path.to_string_lossy())
 }
 
-pub(crate) fn format_default_scan_error_from_list(
-    path: &Path,
-    scan_errors: &[String],
-) -> Option<String> {
-    // TODO: This string-based timeout detection operates on the legacy scan_errors: Vec<String>
-    // field which is populated from ScanDiagnostic display messages. Once scan_errors is replaced
-    // by scan_diagnostics throughout the output schema, this can match on
-    // ScanDiagnostic::is_timeout instead.
-    let is_timeout = |error: &str| {
-        error.starts_with("Timeout while ")
-            || error.starts_with("Timeout before ")
-            || error.starts_with("Timeout during ")
-            || error.starts_with("Processing interrupted due to timeout")
-    };
-    scan_errors
-        .iter()
-        .find(|error| is_timeout(error))
-        .or_else(|| scan_errors.first())
-        .map(|error| format_default_scan_error(path, error))
-}
-
 pub(crate) fn format_default_scan_error_from_diagnostics(
     path: &Path,
     scan_diagnostics: &[ScanDiagnostic],
 ) -> Option<String> {
     let errors: Vec<&ScanDiagnostic> = scan_diagnostics
         .iter()
-        .filter(|d| d.severity == DiagnosticSeverity::Error)
+        .filter(|d| {
+            d.severity == DiagnosticSeverity::Error || d.severity == DiagnosticSeverity::Timeout
+        })
         .collect();
 
     errors
         .iter()
-        .find(|d| d.is_timeout)
+        .find(|d| d.is_timeout())
         .or_else(|| errors.first())
         .map(|d| format_default_scan_error(path, &d.message))
 }
@@ -564,7 +543,9 @@ pub(crate) fn partition_scan_diagnostics(
 
     for diagnostic in scan_diagnostics {
         match diagnostic.severity {
-            DiagnosticSeverity::Error => errors.push(diagnostic.message.clone()),
+            DiagnosticSeverity::Error | DiagnosticSeverity::Timeout => {
+                errors.push(diagnostic.message.clone())
+            }
             DiagnosticSeverity::Warning => warnings.push(diagnostic.message.clone()),
         }
     }
@@ -592,10 +573,6 @@ fn concise_scan_error_reason(err: &str) -> String {
     }
 
     first_line.to_string()
-}
-
-pub(crate) fn is_warning_scan_error(err: &str) -> bool {
-    is_legacy_warning_message(err)
 }
 
 fn is_structured_error_prefix(prefix: &str) -> bool {
@@ -780,9 +757,9 @@ pub fn format_size(bytes: f64) -> String {
 mod tests {
     use super::{
         ProgressMode, ScanProgress, ScanStats, apply_default_log_filters_from,
-        build_summary_messages, concise_scan_error_reason, format_default_scan_error,
-        format_default_scan_error_from_list, format_size, pdf_oxide_default_log_filter_from,
-        pluralize_files, should_filter_pdf_oxide_default_warnings_from,
+        build_summary_messages, concise_scan_error_reason, format_default_scan_error, format_size,
+        pdf_oxide_default_log_filter_from, pluralize_files,
+        should_filter_pdf_oxide_default_warnings_from,
     };
     use crate::cli::ProcessMode;
     use crate::models::ScanDiagnostic;
@@ -939,23 +916,6 @@ mod tests {
         assert_eq!(
             formatted,
             "Failed to read or parse package.json: fixtures/package.json"
-        );
-    }
-
-    #[test]
-    fn default_scan_error_format_prefers_timeout_from_error_list() {
-        let formatted = format_default_scan_error_from_list(
-            Path::new("fixtures/package.json"),
-            &[
-                "Failed to read or parse package.json at \"fixtures/package.json\": expected value"
-                    .to_string(),
-                "Timeout before license scan (> 120.00s)".to_string(),
-            ],
-        );
-
-        assert_eq!(
-            formatted.as_deref(),
-            Some("Timeout before license scan (> 120.00s): fixtures/package.json")
         );
     }
 

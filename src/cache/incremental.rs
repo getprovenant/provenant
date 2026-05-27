@@ -234,7 +234,6 @@ mod tests {
             .entries
             .get_mut("src/main.rs")
             .expect("manifest entry");
-        entry.file_info.scan_errors = vec!["custom recoverable warning".to_string()];
         entry.file_info.scan_diagnostics =
             vec![ScanDiagnostic::warning("custom recoverable warning")];
 

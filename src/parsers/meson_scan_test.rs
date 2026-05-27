@@ -40,7 +40,11 @@ custom_target(
             .find(|file| file.path.ends_with("/meson.build"))
             .expect("meson.build should be scanned");
 
-        assert!(file.scan_errors.is_empty(), "{:?}", file.scan_errors);
+        assert!(
+            file.scan_diagnostics.is_empty(),
+            "{:?}",
+            file.scan_diagnostics
+        );
         assert!(
             file.package_data
                 .iter()
