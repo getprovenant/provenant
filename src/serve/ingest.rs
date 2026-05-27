@@ -19,7 +19,9 @@ use tempfile::TempDir;
 use url::Url;
 use zip::ZipArchive;
 
-use crate::serve_api::SyncScanInput;
+use crate::ProcessMode;
+use crate::serve_api::{SyncLicenseSource, SyncScanInput, SyncScanRequest};
+use crate::workflow::{LicenseSource, ScanOptions, WorkflowError, scan_paths};
 
 type Result<T> = std::result::Result<T, IngestError>;
 
@@ -641,6 +643,91 @@ fn run_git(command: &mut Command, context_message: &str) -> Result<()> {
             context_message,
             String::from_utf8_lossy(&output.stderr).trim()
         )))
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum ScanError {
+    #[error(transparent)]
+    Workflow(#[from] WorkflowError),
+    #[error("{0}")]
+    Serialization(String),
+}
+
+#[derive(Debug)]
+pub(super) struct SyncScanExecution {
+    paths: Vec<PathBuf>,
+    options: ScanOptions,
+    _staging_dir: Option<TempDir>,
+}
+
+impl SyncScanExecution {
+    pub(super) fn new(request: SyncScanRequest) -> Result<Self> {
+        let prepared_input = prepare_sync_input(request.input)?;
+
+        let mut options = ScanOptions::default();
+        options.collect_info = request.options.collect_info;
+        options.detect_license = match request.options.detect_license {
+            SyncLicenseSource::Disabled => LicenseSource::Disabled,
+            SyncLicenseSource::Embedded => LicenseSource::Embedded,
+            SyncLicenseSource::Directory { path } => LicenseSource::Directory(PathBuf::from(path)),
+        };
+        options.detect_packages = request.options.detect_packages;
+        options.detect_system_packages = request.options.detect_system_packages;
+        options.detect_packages_in_compiled = request.options.detect_packages_in_compiled;
+        options.detect_copyrights = request.options.detect_copyrights;
+        options.detect_emails = request.options.detect_emails;
+        options.detect_urls = request.options.detect_urls;
+        options.detect_generated = request.options.detect_generated;
+        options.include = request.options.include;
+        options.exclude = request.options.exclude;
+        if prepared_input.strip_staging_root {
+            options.strip_root = true;
+            options.full_root = false;
+        } else {
+            options.strip_root = request.options.strip_root;
+            options.full_root = request.options.full_root;
+        }
+        options.license_text = request.options.license_text;
+        options.license_text_diagnostics = request.options.license_text_diagnostics;
+        options.license_diagnostics = request.options.license_diagnostics;
+        options.unknown_licenses = request.options.unknown_licenses;
+        options.license_score = request.options.license_score;
+        options.only_findings = request.options.only_findings;
+        options.mark_source = request.options.mark_source;
+        options.classify = request.options.classify;
+        options.summary = request.options.summary;
+        options.license_clarity_score = request.options.license_clarity_score;
+        options.license_references = request.options.license_references;
+        options.tallies = request.options.tallies;
+        options.tallies_key_files = request.options.tallies_key_files;
+        options.tallies_with_details = request.options.tallies_with_details;
+        options.facets = request.options.facets;
+        options.tallies_by_facet = request.options.tallies_by_facet;
+
+        Ok(Self {
+            paths: prepared_input.paths,
+            options,
+            _staging_dir: prepared_input.staging_dir,
+        })
+    }
+
+    pub(super) fn execute(self) -> std::result::Result<String, ScanError> {
+        let output = scan_paths(self.paths.iter().map(|p| p.as_path()), &self.options)?;
+        serde_json::to_string(&crate::output_schema::Output::from(&output))
+            .map_err(|e| ScanError::Serialization(format!("scan result should serialize: {e}")))
+    }
+
+    pub(super) fn run_async(
+        mut self,
+        allocated_processors: usize,
+    ) -> std::result::Result<String, ScanError> {
+        self.options.process_mode = if allocated_processors <= 1 {
+            ProcessMode::SequentialWithTimeouts
+        } else {
+            ProcessMode::Parallel(allocated_processors)
+        };
+        self.execute()
     }
 }
 
