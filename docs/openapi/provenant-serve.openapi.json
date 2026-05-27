@@ -79,7 +79,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SyncScanRequest"
+                "$ref": "#/components/schemas/ServeScanRequest"
               }
             }
           }
@@ -138,7 +138,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SyncScanRequest"
+                "$ref": "#/components/schemas/ServeScanRequest"
               }
             }
           }
@@ -470,16 +470,16 @@
           }
         }
       },
-      "SyncScanRequest": {
+      "ServeScanRequest": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "SyncScanRequest",
+        "title": "ServeScanRequest",
         "type": "object",
         "properties": {
           "input": {
-            "$ref": "#/$defs/SyncScanInput"
+            "$ref": "#/$defs/ServeScanInput"
           },
           "options": {
-            "$ref": "#/$defs/SyncScanOptions",
+            "$ref": "#/$defs/ServeScanOptions",
             "default": {
               "collect_info": false,
               "detect_license": {
@@ -519,7 +519,7 @@
           "input"
         ],
         "$defs": {
-          "SyncScanInput": {
+          "ServeScanInput": {
             "oneOf": [
               {
                 "type": "object",
@@ -598,7 +598,7 @@
               }
             ]
           },
-          "SyncScanOptions": {
+          "ServeScanOptions": {
             "type": "object",
             "properties": {
               "collect_info": {
@@ -606,7 +606,7 @@
                 "default": false
               },
               "detect_license": {
-                "$ref": "#/$defs/SyncLicenseSource",
+                "$ref": "#/$defs/ServeLicenseSource",
                 "default": {
                   "type": "disabled"
                 }
@@ -733,7 +733,7 @@
               }
             }
           },
-          "SyncLicenseSource": {
+          "ServeLicenseSource": {
             "oneOf": [
               {
                 "type": "object",
@@ -779,9 +779,9 @@
           }
         }
       },
-      "SyncScanInput": {
+      "ServeScanInput": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "SyncScanInput",
+        "title": "ServeScanInput",
         "oneOf": [
           {
             "type": "object",
@@ -860,9 +860,9 @@
           }
         ]
       },
-      "SyncLicenseSource": {
+      "ServeLicenseSource": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "SyncLicenseSource",
+        "title": "ServeLicenseSource",
         "oneOf": [
           {
             "type": "object",
@@ -906,9 +906,9 @@
           }
         ]
       },
-      "SyncScanOptions": {
+      "ServeScanOptions": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "SyncScanOptions",
+        "title": "ServeScanOptions",
         "type": "object",
         "properties": {
           "collect_info": {
@@ -916,7 +916,7 @@
             "default": false
           },
           "detect_license": {
-            "$ref": "#/$defs/SyncLicenseSource",
+            "$ref": "#/$defs/ServeLicenseSource",
             "default": {
               "type": "disabled"
             }
@@ -1043,7 +1043,7 @@
           }
         },
         "$defs": {
-          "SyncLicenseSource": {
+          "ServeLicenseSource": {
             "oneOf": [
               {
                 "type": "object",
