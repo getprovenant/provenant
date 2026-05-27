@@ -118,7 +118,7 @@ fn test_debian_output_matches_local_expected_fixture() {
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
-    file.license_expression = Some("MIT".to_string());
+    file.detected_license_expression = Some("MIT".to_string());
     file.license_detections = vec![provenant::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -510,7 +510,7 @@ fn test_json_contract_keeps_empty_license_clues_when_license_surface_active() {
         vec![],
     );
     file.percentage_of_license_text = Some(0.0);
-    file.license_expression = None;
+    file.detected_license_expression = None;
     file.license_detections = vec![];
     file.license_clues = vec![];
 

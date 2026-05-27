@@ -6,7 +6,7 @@ use super::*;
 #[test]
 fn apply_local_file_reference_following_resolves_root_license_file() {
     let mut license = file("project/LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -32,7 +32,7 @@ fn apply_local_file_reference_following_resolves_root_license_file() {
     }];
 
     let mut notice = file("project/src/notice.js");
-    notice.license_expression = Some("unknown-license-reference".to_string());
+    notice.detected_license_expression = Some("unknown-license-reference".to_string());
     notice.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -65,7 +65,7 @@ fn apply_local_file_reference_following_resolves_root_license_file() {
         .iter()
         .find(|file| file.path == "project/src/notice.js")
         .expect("notice file should exist");
-    assert_eq!(notice.license_expression.as_deref(), Some("mit"));
+    assert_eq!(notice.detected_license_expression.as_deref(), Some("mit"));
     assert_eq!(
         notice.license_detections[0].detection_log,
         vec!["unknown-reference-to-local-file"]
@@ -80,7 +80,7 @@ fn apply_local_file_reference_following_resolves_root_license_file() {
 #[test]
 fn apply_local_file_reference_following_resolves_multi_match_root_license_reference() {
     let mut license = file("LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -106,7 +106,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
     }];
 
     let mut faqs = file("docs/faqs.md");
-    faqs.license_expression = Some("unknown-license-reference".to_string());
+    faqs.detected_license_expression = Some("unknown-license-reference".to_string());
     faqs.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -160,7 +160,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
         .iter()
         .find(|file| file.path == "docs/faqs.md")
         .expect("faqs file should exist");
-    assert_eq!(faqs.license_expression.as_deref(), Some("mit"));
+    assert_eq!(faqs.detected_license_expression.as_deref(), Some("mit"));
     assert_eq!(
         faqs.license_detections[0].detection_log,
         vec!["unknown-reference-to-local-file"]
@@ -181,7 +181,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
 fn apply_local_file_reference_following_resolves_multi_match_root_license_reference_with_dot_paths()
 {
     let mut license = file("./LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -207,7 +207,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
     }];
 
     let mut faqs = file("./docs/faqs.md");
-    faqs.license_expression = Some("unknown-license-reference".to_string());
+    faqs.detected_license_expression = Some("unknown-license-reference".to_string());
     faqs.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -261,7 +261,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
         .iter()
         .find(|file| file.path == "./docs/faqs.md")
         .expect("faqs file should exist");
-    assert_eq!(faqs.license_expression.as_deref(), Some("mit"));
+    assert_eq!(faqs.detected_license_expression.as_deref(), Some("mit"));
     assert_eq!(faqs.license_detections[0].license_expression_spdx, "MIT");
 }
 
@@ -270,7 +270,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
     let scan_root = "/tmp/conan-ref-min";
 
     let mut license = file("./LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -296,7 +296,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
     }];
 
     let mut faqs = file("./docs/faqs.md");
-    faqs.license_expression = Some("unknown-license-reference".to_string());
+    faqs.detected_license_expression = Some("unknown-license-reference".to_string());
     faqs.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -350,7 +350,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
         .iter()
         .find(|file| file.path == "./docs/faqs.md")
         .expect("faqs file should exist");
-    assert_eq!(faqs.license_expression.as_deref(), Some("mit"));
+    assert_eq!(faqs.detected_license_expression.as_deref(), Some("mit"));
     assert_eq!(faqs.license_detections[0].license_expression_spdx, "MIT");
     assert_eq!(
         faqs.license_detections[0].detection_log,
@@ -361,7 +361,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
 #[test]
 fn apply_local_file_reference_following_preserves_notice_expression_alongside_resolved_license() {
     let mut license = file("LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -387,7 +387,7 @@ fn apply_local_file_reference_following_preserves_notice_expression_alongside_re
     }];
 
     let mut patch = file("patches/example.patch");
-    patch.license_expression = Some("bsd-new".to_string());
+    patch.detected_license_expression = Some("bsd-new".to_string());
     patch.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "bsd-new".to_string(),
         license_expression_spdx: "BSD-3-Clause".to_string(),
@@ -420,7 +420,10 @@ fn apply_local_file_reference_following_preserves_notice_expression_alongside_re
         .iter()
         .find(|file| file.path == "patches/example.patch")
         .expect("patch file should exist");
-    assert_eq!(patch.license_expression.as_deref(), Some("bsd-new AND mit"));
+    assert_eq!(
+        patch.detected_license_expression.as_deref(),
+        Some("bsd-new AND mit")
+    );
     assert_eq!(
         patch.license_detections[0].license_expression_spdx,
         "BSD-3-Clause AND MIT"
@@ -452,7 +455,7 @@ fn apply_local_file_reference_following_preserves_notice_expression_alongside_re
 #[test]
 fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdir_reference() {
     let mut root_license = file("LICENSE");
-    root_license.license_expression = Some("npsl-exception-0.95".to_string());
+    root_license.detected_license_expression = Some("npsl-exception-0.95".to_string());
     root_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "npsl-exception-0.95".to_string(),
         license_expression_spdx: "LicenseRef-scancode-npsl-exception-0.95".to_string(),
@@ -478,7 +481,7 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
     }];
 
     let mut sibling_license = file("third_party/LICENSE");
-    sibling_license.license_expression = Some("bsd-new".to_string());
+    sibling_license.detected_license_expression = Some("bsd-new".to_string());
     sibling_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "bsd-new".to_string(),
         license_expression_spdx: "BSD-3-Clause".to_string(),
@@ -504,7 +507,7 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
     }];
 
     let mut header = file("src/FPEngine.h");
-    header.license_expression = Some("gpl-1.0-plus OR mit".to_string());
+    header.detected_license_expression = Some("gpl-1.0-plus OR mit".to_string());
     header.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "gpl-1.0-plus OR mit".to_string(),
         license_expression_spdx: "GPL-1.0-or-later OR MIT".to_string(),
@@ -544,7 +547,7 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
         .find(|file| file.path == "src/FPEngine.h")
         .expect("header file should exist");
     assert_eq!(
-        header.license_expression.as_deref(),
+        header.detected_license_expression.as_deref(),
         Some("npsl-exception-0.95")
     );
     assert_eq!(
@@ -565,7 +568,7 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
 #[test]
 fn apply_local_file_reference_following_does_not_reuse_followed_license_as_second_hop_source() {
     let mut root_license = file("project/LICENSE");
-    root_license.license_expression = Some("mit".to_string());
+    root_license.detected_license_expression = Some("mit".to_string());
     root_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -591,7 +594,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
     }];
 
     let mut followed_license = file("project/ncat/LICENSE");
-    followed_license.license_expression = Some("mit".to_string());
+    followed_license.detected_license_expression = Some("mit".to_string());
     followed_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -637,7 +640,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
     }];
 
     let mut source = file("project/ncat/ncat_core.h");
-    source.license_expression = Some("unknown-license-reference".to_string());
+    source.detected_license_expression = Some("unknown-license-reference".to_string());
     source.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -677,7 +680,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
         .find(|file| file.path == "project/ncat/ncat_core.h")
         .expect("source file should exist");
     assert_eq!(
-        source.license_expression.as_deref(),
+        source.detected_license_expression.as_deref(),
         Some("unknown-license-reference")
     );
     assert_eq!(
@@ -690,7 +693,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
 #[test]
 fn apply_local_file_reference_following_requires_exact_filename_match() {
     let mut license = file("project/LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -716,7 +719,7 @@ fn apply_local_file_reference_following_requires_exact_filename_match() {
     }];
 
     let mut notice = file("project/src/notice.js");
-    notice.license_expression = Some("unknown-license-reference".to_string());
+    notice.detected_license_expression = Some("unknown-license-reference".to_string());
     notice.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -750,7 +753,7 @@ fn apply_local_file_reference_following_requires_exact_filename_match() {
         .find(|file| file.path == "project/src/notice.js")
         .expect("notice file should exist");
     assert_eq!(
-        notice.license_expression.as_deref(),
+        notice.detected_license_expression.as_deref(),
         Some("unknown-license-reference")
     );
     assert_eq!(notice.license_detections[0].matches.len(), 1);
@@ -759,7 +762,7 @@ fn apply_local_file_reference_following_requires_exact_filename_match() {
 #[test]
 fn apply_local_file_reference_following_does_not_search_unrelated_top_level_directories() {
     let mut nested_copying = file("libssh2/COPYING");
-    nested_copying.license_expression = Some("bsd-new".to_string());
+    nested_copying.detected_license_expression = Some("bsd-new".to_string());
     nested_copying.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "bsd-new".to_string(),
         license_expression_spdx: "BSD-3-Clause".to_string(),
@@ -785,7 +788,7 @@ fn apply_local_file_reference_following_does_not_search_unrelated_top_level_dire
     }];
 
     let mut notice = file("docs/3rd-party-licenses.txt");
-    notice.license_expression = Some("unknown-license-reference".to_string());
+    notice.detected_license_expression = Some("unknown-license-reference".to_string());
     notice.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -819,7 +822,7 @@ fn apply_local_file_reference_following_does_not_search_unrelated_top_level_dire
         .find(|file| file.path == "docs/3rd-party-licenses.txt")
         .expect("notice file should exist");
     assert_eq!(
-        notice.license_expression.as_deref(),
+        notice.detected_license_expression.as_deref(),
         Some("unknown-license-reference")
     );
     assert_eq!(notice.license_detections[0].matches.len(), 1);
@@ -829,7 +832,7 @@ fn apply_local_file_reference_following_does_not_search_unrelated_top_level_dire
 #[test]
 fn apply_local_file_reference_following_drops_unknown_intro_from_resolved_target() {
     let mut license = file("project/LICENSE");
-    license.license_expression = Some("apache-2.0".to_string());
+    license.detected_license_expression = Some("apache-2.0".to_string());
     license.license_detections = vec![
         crate::models::LicenseDetection {
             license_expression: "unknown-license-reference".to_string(),
@@ -881,7 +884,7 @@ fn apply_local_file_reference_following_drops_unknown_intro_from_resolved_target
     ];
 
     let mut notice = file("project/src/notice.js");
-    notice.license_expression = Some("unknown-license-reference".to_string());
+    notice.detected_license_expression = Some("unknown-license-reference".to_string());
     notice.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -914,7 +917,10 @@ fn apply_local_file_reference_following_drops_unknown_intro_from_resolved_target
         .iter()
         .find(|file| file.path == "project/src/notice.js")
         .expect("notice file should exist");
-    assert_eq!(notice.license_expression.as_deref(), Some("apache-2.0"));
+    assert_eq!(
+        notice.detected_license_expression.as_deref(),
+        Some("apache-2.0")
+    );
     assert_eq!(
         notice.license_detections[0].detection_log,
         vec!["unknown-reference-to-local-file"]
@@ -933,7 +939,7 @@ fn apply_local_file_reference_following_resolves_files_beside_manifest() {
     package.datafile_paths = vec!["project/demo.dist-info/METADATA".to_string()];
 
     let mut license = file("project/demo.dist-info/LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -960,7 +966,7 @@ fn apply_local_file_reference_following_resolves_files_beside_manifest() {
 
     let mut source = file("project/demo/__init__.py");
     source.for_packages = vec![PackageUid::from_raw(package_uid.clone())];
-    source.license_expression = Some("unknown-license-reference".to_string());
+    source.detected_license_expression = Some("unknown-license-reference".to_string());
     source.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "unknown-license-reference".to_string(),
         license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
@@ -993,7 +999,7 @@ fn apply_local_file_reference_following_resolves_files_beside_manifest() {
         .iter()
         .find(|file| file.path == "project/demo/__init__.py")
         .expect("source file should exist");
-    assert_eq!(source.license_expression.as_deref(), Some("mit"));
+    assert_eq!(source.detected_license_expression.as_deref(), Some("mit"));
     assert_eq!(
         source.license_detections[0].matches[1].from_file.as_deref(),
         Some("project/demo.dist-info/LICENSE")

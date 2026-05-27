@@ -243,7 +243,7 @@ pub(super) fn summary_license_expression(file: &FileInfo) -> Option<String> {
         };
     }
 
-    file.license_expression
+    file.detected_license_expression
         .as_deref()
         .map(canonicalize_summary_expression)
 }

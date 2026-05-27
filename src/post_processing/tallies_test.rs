@@ -12,7 +12,7 @@ fn compute_tallies_counts_file_findings_and_missing_values() {
     let mut mit_file = file("project/src/lib.rs");
     mit_file.programming_language = Some("Rust".to_string());
     mit_file.is_source = Some(true);
-    mit_file.license_expression = Some("mit".to_string());
+    mit_file.detected_license_expression = Some("mit".to_string());
     mit_file.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -56,7 +56,7 @@ fn compute_tallies_counts_file_findings_and_missing_values() {
     let mut dual_license_file = file("project/src/main.c");
     dual_license_file.programming_language = Some("C".to_string());
     dual_license_file.is_source = Some(true);
-    dual_license_file.license_expression = Some("apache-2.0 AND mit".to_string());
+    dual_license_file.detected_license_expression = Some("apache-2.0 AND mit".to_string());
     dual_license_file.license_detections = vec![
         crate::models::LicenseDetection {
             license_expression: "apache-2.0".to_string(),
@@ -154,7 +154,7 @@ fn compute_tallies_counts_file_findings_and_missing_values() {
 fn compute_key_file_tallies_only_counts_key_files_and_drops_missing_values() {
     let mut key_license = file("project/LICENSE");
     key_license.is_key_file = true;
-    key_license.license_expression = Some("apache-2.0".to_string());
+    key_license.detected_license_expression = Some("apache-2.0".to_string());
     key_license.copyrights = vec![Copyright {
         copyright: "Copyright (c) Example Corp.".to_string(),
         normalized_copyright: None,
@@ -178,7 +178,7 @@ fn compute_key_file_tallies_only_counts_key_files_and_drops_missing_values() {
 
     let mut non_key_source = file("project/src/lib.rs");
     non_key_source.programming_language = Some("Rust".to_string());
-    non_key_source.license_expression = Some("mit".to_string());
+    non_key_source.detected_license_expression = Some("mit".to_string());
 
     let tallies = compute_key_file_tallies(&[key_license, key_readme, non_key_source])
         .expect("key-file tallies exist");
@@ -454,7 +454,7 @@ fn compute_tallies_do_not_double_count_duplicate_file_and_package_detections() {
     let mut manifest = file("project/Cargo.toml");
     manifest.is_key_file = true;
     manifest.license_detections = vec![detection.clone()];
-    manifest.license_expression = Some("mit".to_string());
+    manifest.detected_license_expression = Some("mit".to_string());
     manifest.package_data = vec![PackageData {
         package_type: Some(PackageType::Cargo),
         license_detections: vec![detection],
@@ -681,7 +681,7 @@ fn compute_detailed_tallies_assigns_file_and_directory_rollups() {
         file("project/README.md"),
     ];
 
-    files[3].license_expression = Some("mit".to_string());
+    files[3].detected_license_expression = Some("mit".to_string());
     files[3].programming_language = Some("Rust".to_string());
     files[3].authors = vec![Author {
         author: "Alice".to_string(),

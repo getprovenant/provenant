@@ -298,7 +298,7 @@ impl OutputFileInfo {
                 .iter()
                 .map(OutputPackageData::from)
                 .collect(),
-            license_expression: value.license_expression.clone(),
+            license_expression: value.detected_license_expression.clone(),
             license_detections: value
                 .license_detections
                 .iter()
@@ -432,7 +432,7 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
                 .map_err(|e| format!("invalid sha1_git: {}", e))?,
             programming_language: value.programming_language.clone(),
             package_data,
-            license_expression: value.license_expression.clone(),
+            detected_license_expression: value.license_expression.clone(),
             license_detections,
             license_clues,
             percentage_of_license_text: value.percentage_of_license_text,

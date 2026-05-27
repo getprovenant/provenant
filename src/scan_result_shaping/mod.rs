@@ -135,7 +135,7 @@ pub(crate) fn populate_info_resource_counts(files: &mut [FileInfo]) {
 }
 
 fn has_findings(file: &FileInfo) -> bool {
-    file.license_expression.is_some()
+    file.detected_license_expression.is_some()
         || !file.license_detections.is_empty()
         || !file.license_clues.is_empty()
         || !file.copyrights.is_empty()

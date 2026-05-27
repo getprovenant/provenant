@@ -459,7 +459,7 @@ fn ignore_resource_filter_removes_matching_files_and_preserves_needed_dirs() {
         start_line: LineNumber::ONE,
         end_line: LineNumber::ONE,
     }];
-    files[3].license_expression = Some("mit".to_string());
+    files[3].detected_license_expression = Some("mit".to_string());
     files[4].holders = vec![crate::models::Holder {
         holder: "Example Corp".to_string(),
         start_line: LineNumber::ONE,

@@ -124,7 +124,7 @@ mod tests {
                 sha256: None,
                 programming_language: None,
                 package_data: package_data_vec,
-                license_expression: None,
+                detected_license_expression: None,
                 license_detections: vec![],
                 license_clues: vec![],
                 percentage_of_license_text: None,

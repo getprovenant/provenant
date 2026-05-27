@@ -86,7 +86,7 @@ pub(super) fn process_directory(
         sha1_git: None,
         programming_language: None,
         package_data: Vec::new(),
-        license_expression: None,
+        detected_license_expression: None,
         license_detections: Vec::new(),
         license_clues: Vec::new(),
         percentage_of_license_text: license_enabled.then_some(0.0),

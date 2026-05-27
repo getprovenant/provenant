@@ -59,7 +59,7 @@ fn create_output_gates_summary_tallies_and_generated_sections() {
 
     let mut enabled_license = file(&license_rel);
     enabled_license.is_generated = Some(true);
-    enabled_license.license_expression = Some("mit".to_string());
+    enabled_license.detected_license_expression = Some("mit".to_string());
     enabled_license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -203,7 +203,7 @@ fn create_output_score_only_keeps_clarity_without_full_summary_fields() {
     let start = Utc::now();
     let end = start;
     let mut license = file("project/LICENSE");
-    license.license_expression = Some("mit".to_string());
+    license.detected_license_expression = Some("mit".to_string());
     license.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),
@@ -554,7 +554,7 @@ fn create_output_summary_still_resolves_after_strip_root_normalization() {
         purl: Some("pkg:gem/demo@1.0.0".to_string()),
         ..Default::default()
     }];
-    manifest.license_expression = Some("mit".to_string());
+    manifest.detected_license_expression = Some("mit".to_string());
     manifest.license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
         license_expression_spdx: "MIT".to_string(),

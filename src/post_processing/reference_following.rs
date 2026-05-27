@@ -526,7 +526,7 @@ fn follow_references_for_file(file: &mut FileInfo, snapshot: &ReferenceFollowSna
     }
 
     if modified {
-        file.license_expression = combine_license_expressions(
+        file.detected_license_expression = combine_license_expressions(
             file.license_detections
                 .iter()
                 .map(|detection| detection.license_expression.clone()),
@@ -564,7 +564,7 @@ fn inherit_same_directory_legal_detections_for_file(
     }
 
     file.license_detections = inherited_detections;
-    file.license_expression = combine_license_expressions(
+    file.detected_license_expression = combine_license_expressions(
         file.license_detections
             .iter()
             .map(|detection| detection.license_expression.clone()),
@@ -705,7 +705,7 @@ fn sync_packages_from_followed_package_data(
                             .iter()
                             .map(|detection| detection.license_expression.clone()),
                     )
-                    .or_else(|| manifest_file.license_expression.clone());
+                    .or_else(|| manifest_file.detected_license_expression.clone());
                 }
                 if next_declared_license_expression_spdx.is_none() {
                     next_declared_license_expression_spdx = combine_license_expressions(
@@ -1558,13 +1558,13 @@ mod tests {
             detection_log: vec![],
             identifier: Some("ofl-1.1-font".to_string()),
         }];
-        legal.license_expression = Some("ofl-1.1".to_string());
+        legal.detected_license_expression = Some("ofl-1.1".to_string());
 
         let mut files = vec![font.clone(), legal];
         apply_package_reference_following(&mut files, &mut []);
         font = files.remove(0);
 
-        assert_eq!(font.license_expression.as_deref(), Some("ofl-1.1"));
+        assert_eq!(font.detected_license_expression.as_deref(), Some("ofl-1.1"));
         assert_eq!(font.license_detections.len(), 1);
         assert_eq!(
             font.license_detections[0].matches[0].from_file.as_deref(),

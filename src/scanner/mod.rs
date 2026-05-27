@@ -469,7 +469,10 @@ mod tests {
             "urls: {:#?}",
             scanned.urls
         );
-        assert_eq!(scanned.license_expression.as_deref(), Some("Apache-2.0"));
+        assert_eq!(
+            scanned.detected_license_expression.as_deref(),
+            Some("Apache-2.0")
+        );
     }
 
     #[test]
@@ -547,7 +550,7 @@ mod tests {
             .expect("scanned file entry");
 
         assert_eq!(
-            scanned.license_expression.as_deref(),
+            scanned.detected_license_expression.as_deref(),
             Some("Apache-2.0 OR BSL-1.0")
         );
         assert!(
@@ -1640,19 +1643,19 @@ mod tests {
             .expect("scanned file entry");
 
         assert!(
-            scanned.license_expression.is_some(),
+            scanned.detected_license_expression.is_some(),
             "license detections: {:#?}",
             scanned.license_detections
         );
         assert!(
             scanned
-                .license_expression
+                .detected_license_expression
                 .as_deref()
                 .is_some_and(
                     |expression| expression.contains("OFL-1.1") || expression.contains("ofl-1.1")
                 ),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
     }
 
@@ -1684,19 +1687,19 @@ mod tests {
             .expect("scanned file entry");
 
         assert!(
-            scanned.license_expression.is_some(),
+            scanned.detected_license_expression.is_some(),
             "license detections: {:#?}",
             scanned.license_detections
         );
         assert!(
             scanned
-                .license_expression
+                .detected_license_expression
                 .as_deref()
                 .is_some_and(|expression| {
                     expression.contains("lgpl") || expression.contains("LGPL")
                 }),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
     }
 
@@ -1779,11 +1782,11 @@ mod tests {
 
         assert!(
             scanned
-                .license_expression
+                .detected_license_expression
                 .as_deref()
                 .is_some_and(|expression| expression.contains("proprietary-license")),
             "license expression: {:?}, detections: {:#?}",
-            scanned.license_expression,
+            scanned.detected_license_expression,
             scanned.license_detections
         );
     }
@@ -1798,13 +1801,13 @@ mod tests {
 
         assert!(
             scanned
-                .license_expression
+                .detected_license_expression
                 .as_deref()
                 .is_some_and(|expression| {
                     expression.contains("cc-by-4.0") || expression.contains("CC-BY-4.0")
                 }),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
     }
 
@@ -1818,13 +1821,13 @@ mod tests {
 
         assert!(
             scanned
-                .license_expression
+                .detected_license_expression
                 .as_deref()
                 .is_some_and(|expression| {
                     expression.contains("mit") || expression.contains("MIT")
                 }),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
     }
 
@@ -1838,13 +1841,13 @@ mod tests {
 
         assert!(
             scanned
-                .license_expression
+                .detected_license_expression
                 .as_deref()
                 .is_some_and(|expression| {
                     expression.contains("apache-2.0") || expression.contains("Apache-2.0")
                 }),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
     }
 
@@ -1868,11 +1871,11 @@ mod tests {
 
         assert!(
             matches!(
-                scanned.license_expression.as_deref(),
+                scanned.detected_license_expression.as_deref(),
                 Some("Apache-2.0 OR MIT") | Some("MIT OR Apache-2.0")
             ),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
         assert!(
             !scanned
@@ -1924,11 +1927,11 @@ mod tests {
 
         assert!(
             matches!(
-                scanned.license_expression.as_deref(),
+                scanned.detected_license_expression.as_deref(),
                 Some("Apache-2.0 OR MIT") | Some("MIT OR Apache-2.0")
             ),
             "license expression: {:?}",
-            scanned.license_expression
+            scanned.detected_license_expression
         );
         assert!(scanned.license_detections.iter().any(|detection| {
             detection

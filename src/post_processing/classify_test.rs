@@ -36,7 +36,7 @@ fn classify_key_files_marks_nested_ruby_license_from_file_references() {
     license_file
         .for_packages
         .push(PackageUid::from_raw(uid.to_string()));
-    license_file.license_expression = Some("Apache-2.0".to_string());
+    license_file.detected_license_expression = Some("Apache-2.0".to_string());
     license_file.copyrights = vec![Copyright {
         copyright: "Copyright (c) 2019 Chef Software Inc.".to_string(),
         normalized_copyright: None,

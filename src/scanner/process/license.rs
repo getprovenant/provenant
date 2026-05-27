@@ -516,7 +516,7 @@ fn process_successful_detections(
                         )
                     });
             if let Some(expr) = combined {
-                file_info_builder.license_expression(Some(expr));
+                file_info_builder.detected_license_expression(Some(expr));
             }
         }
     }

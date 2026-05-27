@@ -192,7 +192,7 @@ fn package_declared_license_expression(
                         indexes
                             .file_ix_by_path(datafile_path)
                             .and_then(|index| files.get(index.0))
-                            .and_then(|file| file.license_expression.clone())
+                            .and_then(|file| file.detected_license_expression.clone())
                     })
                 })
             }),

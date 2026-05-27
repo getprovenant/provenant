@@ -211,7 +211,7 @@ pub(super) fn summary_detected_license_values(file: &FileInfo) -> Vec<String> {
 
     if detection_expressions.is_empty() {
         return file
-            .license_expression
+            .detected_license_expression
             .as_deref()
             .map(canonicalize_summary_expression)
             .into_iter()
@@ -412,7 +412,7 @@ fn detected_license_values(file: &FileInfo) -> Vec<String> {
 
     if detection_expressions.is_empty() {
         return file
-            .license_expression
+            .detected_license_expression
             .as_deref()
             .map(canonicalize_summary_expression)
             .into_iter()
