@@ -2,7 +2,7 @@
 
 ## Overview
 
-Provenant is an independent Rust implementation for [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit)-compatible workflows, focused on trustworthy compatibility, explicit behavioral documentation, and targeted improvements where Rust makes the result safer or easier to maintain. Provenant is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc.
+Provenant is an independent Rust implementation for [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit)-compatible workflows, focused on trustworthy compatibility, explicit behavioral documentation, and targeted improvements where Rust makes the result safer or easier to maintain.
 
 - **Strong compatibility goals**: preserve ScanCode behavior where users depend on it
 - **Better performance**: native code, parallel processing, and efficient parsing

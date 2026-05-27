@@ -4,7 +4,7 @@ This guide is for people who already know ScanCode Toolkit and want to understan
 
 For many common scan-and-consume workflows, the answer is: **not much**.
 
-Provenant targets strong CLI and output compatibility with ScanCode where practical. It is developed independently and is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc. If you mostly run scans and consume the usual output formats, you can often start with the same broad habits and adjust only a few power-user workflows.
+Provenant targets strong CLI and output compatibility with ScanCode where practical. If you mostly run scans and consume the usual output formats, you can often start with the same broad habits and adjust only a few power-user workflows.
 
 ## Who needs this guide?
 
