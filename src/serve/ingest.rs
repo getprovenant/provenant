@@ -20,8 +20,55 @@ use url::Url;
 use zip::ZipArchive;
 
 use crate::ProcessMode;
-use crate::serve_api::{SyncLicenseSource, SyncScanInput, SyncScanRequest};
+use crate::serve_api::{SyncLicenseSource, SyncScanInput, SyncScanOptions, SyncScanRequest};
 use crate::workflow::{LicenseSource, ScanOptions, WorkflowError, scan_paths};
+
+impl From<SyncLicenseSource> for LicenseSource {
+    fn from(source: SyncLicenseSource) -> Self {
+        match source {
+            SyncLicenseSource::Disabled => LicenseSource::Disabled,
+            SyncLicenseSource::Embedded => LicenseSource::Embedded,
+            SyncLicenseSource::Directory { path } => LicenseSource::Directory(PathBuf::from(path)),
+        }
+    }
+}
+
+impl From<SyncScanOptions> for ScanOptions {
+    fn from(options: SyncScanOptions) -> Self {
+        Self {
+            collect_info: options.collect_info,
+            detect_license: LicenseSource::from(options.detect_license),
+            detect_packages: options.detect_packages,
+            detect_system_packages: options.detect_system_packages,
+            detect_packages_in_compiled: options.detect_packages_in_compiled,
+            detect_copyrights: options.detect_copyrights,
+            detect_emails: options.detect_emails,
+            detect_urls: options.detect_urls,
+            detect_generated: options.detect_generated,
+            include: options.include,
+            exclude: options.exclude,
+            strip_root: options.strip_root,
+            full_root: options.full_root,
+            license_text: options.license_text,
+            license_text_diagnostics: options.license_text_diagnostics,
+            license_diagnostics: options.license_diagnostics,
+            unknown_licenses: options.unknown_licenses,
+            license_score: options.license_score,
+            only_findings: options.only_findings,
+            mark_source: options.mark_source,
+            classify: options.classify,
+            summary: options.summary,
+            license_clarity_score: options.license_clarity_score,
+            license_references: options.license_references,
+            tallies: options.tallies,
+            tallies_key_files: options.tallies_key_files,
+            tallies_with_details: options.tallies_with_details,
+            facets: options.facets,
+            tallies_by_facet: options.tallies_by_facet,
+            ..Self::default()
+        }
+    }
+}
 
 type Result<T> = std::result::Result<T, IngestError>;
 
@@ -87,26 +134,21 @@ impl IngestError {
     }
 }
 
-#[derive(Debug)]
-pub(super) struct PreparedSyncInput {
-    pub(super) paths: Vec<PathBuf>,
-    pub(super) staging_dir: Option<TempDir>,
-    pub(super) strip_staging_root: bool,
-}
-
-pub(super) fn prepare_sync_input(input: SyncScanInput) -> Result<PreparedSyncInput> {
-    match input {
-        SyncScanInput::Paths { paths } => prepare_paths_input(paths),
-        SyncScanInput::Repository { url, reference } => prepare_repository_input(&url, &reference),
-        SyncScanInput::Url { url } => prepare_url_input(&url),
-        SyncScanInput::Upload {
-            filename,
-            content_base64,
-        } => prepare_upload_input(&filename, &content_base64),
+impl SyncScanInput {
+    fn prepare(self) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
+        match self {
+            Self::Paths { paths } => prepare_paths_input(paths),
+            Self::Repository { url, reference } => prepare_repository_input(&url, &reference),
+            Self::Url { url } => prepare_url_input(&url),
+            Self::Upload {
+                filename,
+                content_base64,
+            } => prepare_upload_input(&filename, &content_base64),
+        }
     }
 }
 
-fn prepare_paths_input(paths: Vec<String>) -> Result<PreparedSyncInput> {
+fn prepare_paths_input(paths: Vec<String>) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     if paths.is_empty() {
         return Err(IngestError::validation(
             "input.paths must contain at least one path",
@@ -123,14 +165,10 @@ fn prepare_paths_input(paths: Vec<String>) -> Result<PreparedSyncInput> {
         }
     }
 
-    Ok(PreparedSyncInput {
-        paths,
-        staging_dir: None,
-        strip_staging_root: false,
-    })
+    Ok((paths, None))
 }
 
-fn prepare_repository_input(url: &str, reference: &str) -> Result<PreparedSyncInput> {
+fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     if url.trim().is_empty() {
         return Err(IngestError::validation("repository.url must not be empty"));
     }
@@ -166,14 +204,10 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<PreparedSyncIn
         "failed to checkout fetched repository ref",
     )?;
 
-    Ok(PreparedSyncInput {
-        paths: vec![repo_dir],
-        staging_dir: Some(staging_dir),
-        strip_staging_root: true,
-    })
+    Ok((vec![repo_dir], Some(staging_dir)))
 }
 
-fn prepare_url_input(url: &str) -> Result<PreparedSyncInput> {
+fn prepare_url_input(url: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     if url.trim().is_empty() {
         return Err(IngestError::validation("url.url must not be empty"));
     }
@@ -196,7 +230,10 @@ fn prepare_url_input(url: &str) -> Result<PreparedSyncInput> {
     materialize_downloaded_artifact(staging_dir, artifact_path)
 }
 
-fn prepare_upload_input(filename: &str, content_base64: &str) -> Result<PreparedSyncInput> {
+fn prepare_upload_input(
+    filename: &str,
+    content_base64: &str,
+) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     let normalized_filename = validate_upload_filename(filename)?;
     let decoded = STANDARD
         .decode(content_base64)
@@ -234,7 +271,7 @@ fn prepare_upload_input(filename: &str, content_base64: &str) -> Result<Prepared
 fn materialize_downloaded_artifact(
     staging_dir: TempDir,
     artifact_path: PathBuf,
-) -> Result<PreparedSyncInput> {
+) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     let artifact_name = artifact_path
         .file_name()
         .and_then(|name| name.to_str())
@@ -249,18 +286,10 @@ fn materialize_downloaded_artifact(
             )
         })?;
         extract_archive(&artifact_path, &extract_dir)?;
-        return Ok(PreparedSyncInput {
-            paths: vec![extract_dir],
-            staging_dir: Some(staging_dir),
-            strip_staging_root: true,
-        });
+        return Ok((vec![extract_dir], Some(staging_dir)));
     }
 
-    Ok(PreparedSyncInput {
-        paths: vec![artifact_path],
-        staging_dir: Some(staging_dir),
-        strip_staging_root: true,
-    })
+    Ok((vec![artifact_path], Some(staging_dir)))
 }
 
 fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
@@ -663,52 +692,18 @@ pub(super) struct SyncScanExecution {
 
 impl SyncScanExecution {
     pub(super) fn new(request: SyncScanRequest) -> Result<Self> {
-        let prepared_input = prepare_sync_input(request.input)?;
+        let (paths, _staging_dir) = request.input.prepare()?;
 
-        let mut options = ScanOptions::default();
-        options.collect_info = request.options.collect_info;
-        options.detect_license = match request.options.detect_license {
-            SyncLicenseSource::Disabled => LicenseSource::Disabled,
-            SyncLicenseSource::Embedded => LicenseSource::Embedded,
-            SyncLicenseSource::Directory { path } => LicenseSource::Directory(PathBuf::from(path)),
-        };
-        options.detect_packages = request.options.detect_packages;
-        options.detect_system_packages = request.options.detect_system_packages;
-        options.detect_packages_in_compiled = request.options.detect_packages_in_compiled;
-        options.detect_copyrights = request.options.detect_copyrights;
-        options.detect_emails = request.options.detect_emails;
-        options.detect_urls = request.options.detect_urls;
-        options.detect_generated = request.options.detect_generated;
-        options.include = request.options.include;
-        options.exclude = request.options.exclude;
-        if prepared_input.strip_staging_root {
+        let mut options = ScanOptions::from(request.options);
+        if _staging_dir.is_some() {
             options.strip_root = true;
             options.full_root = false;
-        } else {
-            options.strip_root = request.options.strip_root;
-            options.full_root = request.options.full_root;
         }
-        options.license_text = request.options.license_text;
-        options.license_text_diagnostics = request.options.license_text_diagnostics;
-        options.license_diagnostics = request.options.license_diagnostics;
-        options.unknown_licenses = request.options.unknown_licenses;
-        options.license_score = request.options.license_score;
-        options.only_findings = request.options.only_findings;
-        options.mark_source = request.options.mark_source;
-        options.classify = request.options.classify;
-        options.summary = request.options.summary;
-        options.license_clarity_score = request.options.license_clarity_score;
-        options.license_references = request.options.license_references;
-        options.tallies = request.options.tallies;
-        options.tallies_key_files = request.options.tallies_key_files;
-        options.tallies_with_details = request.options.tallies_with_details;
-        options.facets = request.options.facets;
-        options.tallies_by_facet = request.options.tallies_by_facet;
 
         Ok(Self {
-            paths: prepared_input.paths,
+            paths,
             options,
-            _staging_dir: prepared_input.staging_dir,
+            _staging_dir,
         })
     }
 

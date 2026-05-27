@@ -80,7 +80,7 @@ pub(super) enum AsyncSubmitError {
 
 impl AsyncJobController {
     pub(super) fn new() -> Self {
-        let processor_budget = default_async_processor_budget();
+        let processor_budget = Self::default_processor_budget();
         Self::with_limits(
             processor_budget,
             processor_budget.clamp(1, DEFAULT_ASYNC_MAX_PROCESSORS_PER_JOB),
@@ -238,6 +238,11 @@ impl AsyncJobController {
 
         dispatches
     }
+
+    fn default_processor_budget() -> usize {
+        let cpus = thread::available_parallelism().map_or(1, |count| count.get());
+        if cpus > 1 { cpus - 1 } else { 1 }
+    }
 }
 
 impl AsyncJobControllerState {
@@ -320,11 +325,6 @@ impl AsyncJobSnapshot {
             message: self.error_message,
         }
     }
-}
-
-fn default_async_processor_budget() -> usize {
-    let cpus = thread::available_parallelism().map_or(1, |count| count.get());
-    if cpus > 1 { cpus - 1 } else { 1 }
 }
 
 #[cfg(test)]
