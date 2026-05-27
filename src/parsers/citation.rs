@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 
 use super::PackageParser;
@@ -142,7 +142,7 @@ fn extract_author_parties(value: Option<&yaml_serde::Value>) -> Vec<Party> {
             }
 
             Some(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("author".to_string()),
                 name,
                 email,

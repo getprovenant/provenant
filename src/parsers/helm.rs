@@ -10,7 +10,7 @@ use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 use yaml_serde::{Mapping, Value};
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -272,7 +272,7 @@ fn extract_maintainers(yaml_content: &Value) -> Vec<Party> {
             let email = mapping_get(mapping, "email").and_then(yaml_value_to_string);
             let url = mapping_get(mapping, "url").and_then(yaml_value_to_string);
             Some(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("maintainer".to_string()),
                 name: Some(name),
                 email,

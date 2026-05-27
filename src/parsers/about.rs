@@ -24,7 +24,7 @@
 //! - Type can be overridden by 'type' field or extracted from 'purl' field
 //! - Graceful error handling: logs warnings and returns default on parse failure
 
-use crate::models::{DatasourceId, FileReference, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, FileReference, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -426,7 +426,7 @@ fn extract_owner_party(yaml: &yaml_serde::Mapping) -> Vec<Party> {
     if let Some(owner_name) = owner {
         if !owner_name.is_empty() {
             vec![Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("owner".to_string()),
                 name: Some(owner_name),
                 email: None,

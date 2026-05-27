@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
 
 use super::PackageParser;
@@ -132,7 +132,7 @@ fn extract_maintainers(json: &Value) -> Vec<Party> {
         .map(|entry| {
             let (name, email) = split_name_email(&entry);
             Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("maintainer".to_string()),
                 name: name.map(truncate_field),
                 email: email.map(truncate_field),

@@ -5,6 +5,7 @@ use super::super::PackageParser;
 use super::{MavenParser, manifest::*};
 use crate::models::DatasourceId;
 use crate::models::PackageType;
+use crate::models::PartyType;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -33,7 +34,7 @@ fn test_parse_manifest_mf_implementation() {
 
     assert_eq!(package_data.parties.len(), 1);
     let vendor = &package_data.parties[0];
-    assert_eq!(vendor.r#type, Some("organization".to_string()));
+    assert_eq!(vendor.r#type, Some(PartyType::Organization));
     assert_eq!(vendor.role, Some("vendor".to_string()));
     assert_eq!(vendor.name, Some("Spring Framework".to_string()));
 }

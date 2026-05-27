@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
 };
@@ -310,7 +310,7 @@ fn build_package_from_arch_metadata(
         if let Some(packager) = get_first(fields, "packager") {
             let (packager_name, packager_email) = split_name_email(&packager);
             package.parties.push(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("packager".to_string()),
                 name: packager_name.map(truncate_field),
                 email: packager_email.map(truncate_field),

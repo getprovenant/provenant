@@ -28,7 +28,7 @@ use starlark_syntax::syntax::ast;
 use starlark_syntax::syntax::module::AstModuleFields;
 use starlark_syntax::syntax::{AstModule, Dialect};
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party, Sha1Digest};
+use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType, Sha1Digest};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -398,7 +398,7 @@ fn build_package_from_metadata(fields: HashMap<String, MetadataValue>) -> Packag
     // Extract maintainers
     if let Some(maintainers) = get_metadata_list(&fields, &["maintainers"]) {
         pkg.parties.extend(maintainers.iter().map(|name| Party {
-            r#type: Some("organization".to_string()),
+            r#type: Some(PartyType::Organization),
             name: Some(name.clone()),
             role: Some("maintainer".to_string()),
             email: None,

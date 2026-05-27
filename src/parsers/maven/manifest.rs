@@ -3,7 +3,7 @@
 
 use super::coordinates::{build_maven_purl, infer_meta_inf_maven_coordinates};
 use super::default_package_data;
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use std::collections::HashMap;
@@ -143,7 +143,7 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
             .or_else(|| headers_map.get("Implementation-Vendor"))
         {
             package_data.parties.push(Party {
-                r#type: Some("organization".to_string()),
+                r#type: Some(PartyType::Organization),
                 role: Some("vendor".to_string()),
                 name: Some(vendor.clone()),
                 email: None,
@@ -201,7 +201,7 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
 
         if let Some(vendor_name) = vendor {
             package_data.parties.push(Party {
-                r#type: Some("organization".to_string()),
+                r#type: Some(PartyType::Organization),
                 role: Some("vendor".to_string()),
                 name: Some(vendor_name),
                 email: None,

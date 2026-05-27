@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::{CpanManifestParser, CpanMetaJsonParser, CpanMetaYmlParser, PackageParser};
-    use crate::models::{DatasourceId, PackageData, PackageType};
+    use crate::models::{DatasourceId, PackageData, PackageType, PartyType};
     use std::path::PathBuf;
 
     fn assert_cpan_fallback_identity(package: &PackageData, datasource_id: DatasourceId) {
@@ -96,7 +96,7 @@ mod tests {
         assert_eq!(first_author.role, Some("author".to_string()));
         assert_eq!(first_author.name, Some("John Doe".to_string()));
         assert_eq!(first_author.email, Some("john@example.com".to_string()));
-        assert_eq!(first_author.r#type, Some("person".to_string()));
+        assert_eq!(first_author.r#type, Some(PartyType::Person));
 
         let second_author = &package.parties[1];
         assert_eq!(second_author.role, Some("author".to_string()));
@@ -231,7 +231,7 @@ mod tests {
         assert_eq!(author.role, Some("author".to_string()));
         assert_eq!(author.name, Some("Alice Developer".to_string()));
         assert_eq!(author.email, Some("alice@cpan.org".to_string()));
-        assert_eq!(author.r#type, Some("person".to_string()));
+        assert_eq!(author.r#type, Some(PartyType::Person));
     }
 
     #[test]

@@ -11,6 +11,7 @@ mod tests {
     };
     use crate::models::DatasourceId;
     use crate::models::PackageType;
+    use crate::models::PartyType;
     use std::io::Write;
     use std::path::PathBuf;
     use tempfile::{Builder, NamedTempFile, TempDir};
@@ -169,8 +170,8 @@ mod tests {
         let package_data = NuspecParser::extract_first_package(temp_file.path());
 
         assert_eq!(package_data.parties.len(), 2);
-        assert_eq!(package_data.parties[0].r#type.as_deref(), Some("person"));
-        assert_eq!(package_data.parties[1].r#type.as_deref(), Some("person"));
+        assert_eq!(package_data.parties[0].r#type, Some(PartyType::Person));
+        assert_eq!(package_data.parties[1].r#type, Some(PartyType::Person));
     }
 
     #[test]
@@ -1841,7 +1842,7 @@ mod tests {
         assert_eq!(package_data.datasource_id, Some(DatasourceId::NugetCsproj));
         assert_eq!(package_data.name.as_deref(), Some("Contoso.Utility"));
         assert_eq!(package_data.version.as_deref(), Some("1.0.0"));
-        assert_eq!(package_data.parties[0].r#type.as_deref(), Some("person"));
+        assert_eq!(package_data.parties[0].r#type, Some(PartyType::Person));
         assert_eq!(
             package_data.extracted_license_statement.as_deref(),
             Some("MIT")

@@ -7,6 +7,7 @@ mod tests {
     use super::super::bower::BowerJsonParser;
     use crate::models::DatasourceId;
     use crate::models::PackageType;
+    use crate::models::PartyType;
     use std::path::PathBuf;
 
     #[test]
@@ -106,7 +107,7 @@ mod tests {
         assert_eq!(author.name, Some("Betty Beta".to_string()));
         assert_eq!(author.email, Some("bbeta@example.com".to_string()));
         assert_eq!(author.role, Some("author".to_string()));
-        assert_eq!(author.r#type, Some("person".to_string()));
+        assert_eq!(author.r#type, Some(PartyType::Person));
     }
 
     #[test]

@@ -31,7 +31,9 @@ use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 use yaml_serde::Value as YamlValue;
 
-use crate::models::{DatasourceId, Dependency, FileReference, PackageData, PackageType, Party};
+use crate::models::{
+    DatasourceId, Dependency, FileReference, PackageData, PackageType, Party, PartyType,
+};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -450,7 +452,7 @@ fn extract_parties_from_json(json: &serde_json::Map<String, JsonValue>) -> Vec<P
                     author.as_str().map(|s| {
                         let (name, email) = parse_author_string(s);
                         Party {
-                            r#type: Some("person".to_string()),
+                            r#type: Some(PartyType::Person),
                             role: Some("author".to_string()),
                             name,
                             email,
@@ -476,7 +478,7 @@ fn extract_parties_from_yaml(yaml: &yaml_serde::Mapping) -> Vec<Party> {
                     author.as_str().map(|s| {
                         let (name, email) = parse_author_string(s);
                         Party {
-                            r#type: Some("person".to_string()),
+                            r#type: Some(PartyType::Person),
                             role: Some("author".to_string()),
                             name,
                             email,

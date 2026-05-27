@@ -22,7 +22,7 @@ pub use digest::{GitSha1, Md5Digest, Sha1Digest, Sha256Digest, Sha512Digest};
 pub use file_info::{
     Author, Copyright, Dependency, FileInfo, FileInfoBuilder, FileReference, FileType, Holder,
     LicenseDetection, LicensePolicyEntry, Match, OutputEmail, OutputURL, Package, PackageData,
-    Party, ResolvedPackage, TopLevelDependency,
+    Party, PartyType, ResolvedPackage, TopLevelDependency,
 };
 pub use line_number::LineNumber;
 pub use match_score::MatchScore;

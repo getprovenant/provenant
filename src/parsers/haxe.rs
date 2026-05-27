@@ -19,7 +19,7 @@
 //! - License must be one of: GPL, LGPL, BSD, Public, MIT, Apache
 //! - All fields are extracted with graceful error handling
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde::{Deserialize, Serialize};
@@ -125,7 +125,7 @@ impl PackageParser for HaxeParser {
             .take(MAX_ITERATION_COUNT)
         {
             parties.push(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("contributor".to_string()),
                 name: Some(truncate_field(contrib.clone())),
                 email: None,

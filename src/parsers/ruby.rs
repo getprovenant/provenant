@@ -27,7 +27,7 @@
 //! - Graceful error handling: logs warnings and returns default on parse failure
 //! - PURL type: "gem"
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
@@ -1608,7 +1608,7 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
         };
 
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("author".to_string()),
             name: authors.first().cloned().or(parsed_email_name),
             email: parsed_email.or_else(|| {
@@ -1624,7 +1624,7 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
     } else {
         for author_name in authors {
             parties.push(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("author".to_string()),
                 name: Some(author_name),
                 email: None,
@@ -1642,7 +1642,7 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
                 (None, None)
             };
             parties.push(Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 role: Some("author".to_string()),
                 name: parsed_email_name,
                 email: parsed_email.or_else(|| email_str.contains('@').then_some(email_str)),
@@ -1970,7 +1970,7 @@ fn parse_gem_metadata_yaml(
         let party_name = author_name.map(|s| s.to_string()).or(parsed_email_name);
 
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("author".to_string()),
             name: party_name,
             email: parsed_email.or_else(|| {

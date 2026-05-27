@@ -25,7 +25,7 @@ use packageurl::PackageUrl;
 use regex::Regex;
 use serde_json::json;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 
 use super::PackageParser;
 use super::license_normalization::{
@@ -489,7 +489,7 @@ fn build_author_party(name: Option<String>, email: Option<String>) -> Option<Par
         role: Some("author".to_string()),
         name,
         email,
-        r#type: Some("person".to_string()),
+        r#type: Some(PartyType::Person),
         url: None,
         organization: None,
         organization_url: None,

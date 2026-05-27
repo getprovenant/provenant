@@ -6,6 +6,7 @@ use packageurl::PackageUrl;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
+use std::fmt;
 use std::str::FromStr;
 
 use super::DatasourceId;
@@ -784,12 +785,39 @@ impl ResolvedPackage {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PartyType {
+    Person,
+    Organization,
+}
+
+impl fmt::Display for PartyType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PartyType::Person => write!(f, "person"),
+            PartyType::Organization => write!(f, "organization"),
+        }
+    }
+}
+
+impl FromStr for PartyType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "person" => Ok(PartyType::Person),
+            "organization" => Ok(PartyType::Organization),
+            other => Err(format!("unknown party type: {other}")),
+        }
+    }
+}
+
 /// Author, maintainer, or contributor information.
 ///
 /// Represents a person or organization associated with a package.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Party {
-    pub r#type: Option<String>,
+    pub r#type: Option<PartyType>,
     pub role: Option<String>,
     pub name: Option<String>,
     pub email: Option<String>,
@@ -802,7 +830,7 @@ pub struct Party {
 impl Party {
     pub(crate) fn person(role: &str, name: Option<String>, email: Option<String>) -> Self {
         Self {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some(role.to_string()),
             name,
             email,

@@ -33,7 +33,7 @@ use packageurl::PackageUrl;
 use regex::Regex;
 
 use super::metadata::ParserMetadata;
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::PackageParser;
 use crate::parsers::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data_from_pair,
@@ -104,7 +104,7 @@ impl PackageParser for PodspecParser {
         let parties = authors
             .into_iter()
             .map(|(name, email)| Party {
-                r#type: Some("person".to_string()),
+                r#type: Some(PartyType::Person),
                 name: Some(truncate_field(name)),
                 email: email.map(truncate_field),
                 url: None,

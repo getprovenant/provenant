@@ -30,8 +30,8 @@ use regex::Regex;
 
 use super::metadata::ParserMetadata;
 use crate::models::{
-    DatasourceId, Dependency, Md5Digest, PackageData, PackageType, Party, Sha1Digest, Sha256Digest,
-    Sha512Digest,
+    DatasourceId, Dependency, Md5Digest, PackageData, PackageType, Party, PartyType, Sha1Digest,
+    Sha256Digest, Sha512Digest,
 };
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -613,7 +613,7 @@ fn extract_parties(authors: &[String], maintainers: &[String]) -> Vec<Party> {
     // Add authors
     for author in authors {
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("author".to_string()),
             name: Some(truncate_field(author.clone())),
             email: None,
@@ -627,7 +627,7 @@ fn extract_parties(authors: &[String], maintainers: &[String]) -> Vec<Party> {
     // Add maintainers (as email)
     for maintainer in maintainers {
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("maintainer".to_string()),
             name: None,
             email: Some(truncate_field(maintainer.clone())),

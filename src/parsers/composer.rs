@@ -28,8 +28,8 @@ use packageurl::PackageUrl;
 use serde_json::Value;
 
 use crate::models::{
-    DatasourceId, Dependency, LicenseDetection, PackageData, PackageType, Party, ResolvedPackage,
-    Sha1Digest, Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, LicenseDetection, PackageData, PackageType, Party, PartyType,
+    ResolvedPackage, Sha1Digest, Sha256Digest, Sha512Digest,
 };
 
 use super::PackageParser;
@@ -773,7 +773,7 @@ fn extract_parties(json_content: &Value, namespace: &Option<String>) -> Vec<Part
 
                 if name.is_some() || email.is_some() || url.is_some() {
                     parties.push(Party {
-                        r#type: Some("person".to_string()),
+                        r#type: Some(PartyType::Person),
                         role,
                         name,
                         email,
@@ -793,7 +793,7 @@ fn extract_parties(json_content: &Value, namespace: &Option<String>) -> Vec<Part
         .filter(|value| !value.is_empty())
     {
         parties.push(Party {
-            r#type: Some("person".to_string()),
+            r#type: Some(PartyType::Person),
             role: Some("vendor".to_string()),
             name: Some(truncate_field(vendor.to_string())),
             email: None,

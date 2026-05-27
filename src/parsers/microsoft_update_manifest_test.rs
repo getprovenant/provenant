@@ -8,6 +8,7 @@ mod tests {
     use crate::models::DatasourceId;
     use crate::models::PackageType;
     use crate::models::Party;
+    use crate::models::PartyType;
     use std::path::PathBuf;
 
     #[test]
@@ -54,7 +55,7 @@ mod tests {
         assert_eq!(
             pkg.parties,
             vec![Party {
-                r#type: Some("organization".to_string()),
+                r#type: Some(PartyType::Organization),
                 role: Some("owner".to_string()),
                 name: Some("Microsoft Corporation".to_string()),
                 email: None,

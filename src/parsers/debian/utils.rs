@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use packageurl::PackageUrl;
 
-use crate::models::{Dependency, Party};
+use crate::models::{Dependency, Party, PartyType};
 use crate::parsers::utils::truncate_field;
 
 use super::PACKAGE_TYPE;
@@ -17,7 +17,7 @@ pub(super) fn make_party(
     email: Option<String>,
 ) -> Party {
     Party {
-        r#type: r#type.map(|t| t.to_string()),
+        r#type: r#type.and_then(|t| t.parse::<PartyType>().ok()),
         role: Some(role.to_string()),
         name,
         email,
