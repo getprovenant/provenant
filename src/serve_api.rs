@@ -100,15 +100,18 @@ pub enum ServeScanInput {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServeLicenseSource {
+    #[default]
     Disabled,
     Embedded,
-    Directory { path: String },
+    Directory {
+        path: String,
+    },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct ServeScanOptions {
     pub collect_info: bool,
@@ -140,42 +143,6 @@ pub struct ServeScanOptions {
     pub tallies_with_details: bool,
     pub facets: Vec<String>,
     pub tallies_by_facet: bool,
-}
-
-impl Default for ServeScanOptions {
-    fn default() -> Self {
-        Self {
-            collect_info: false,
-            detect_license: ServeLicenseSource::Disabled,
-            detect_packages: false,
-            detect_system_packages: false,
-            detect_packages_in_compiled: false,
-            detect_copyrights: false,
-            detect_emails: false,
-            detect_urls: false,
-            detect_generated: false,
-            include: Vec::new(),
-            exclude: Vec::new(),
-            strip_root: false,
-            full_root: false,
-            license_text: false,
-            license_text_diagnostics: false,
-            license_diagnostics: false,
-            unknown_licenses: false,
-            license_score: 0,
-            only_findings: false,
-            mark_source: false,
-            classify: false,
-            summary: false,
-            license_clarity_score: false,
-            license_references: false,
-            tallies: false,
-            tallies_key_files: false,
-            tallies_with_details: false,
-            facets: Vec::new(),
-            tallies_by_facet: false,
-        }
-    }
 }
 
 pub fn openapi_document() -> Value {
