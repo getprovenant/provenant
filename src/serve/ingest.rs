@@ -749,4 +749,16 @@ mod tests {
     fn normalize_archive_path_rejects_parent_dirs() {
         assert!(normalize_archive_path(Path::new("../escape.txt")).is_none());
     }
+
+    #[test]
+    fn normalize_archive_path_strips_cur_dir_components() {
+        let result = normalize_archive_path(Path::new("./foo.txt"));
+        assert_eq!(result.as_deref(), Some(Path::new("foo.txt")));
+    }
+
+    #[test]
+    fn detect_archive_format_returns_none_for_unsupported() {
+        assert!(detect_archive_format("data.rar").is_none());
+        assert!(detect_archive_format("readme.txt").is_none());
+    }
 }
