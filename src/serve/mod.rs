@@ -16,9 +16,9 @@ use crate::cli::ServeArgs;
 use crate::license_detection::LicenseDetectionEngine;
 use crate::serve::ingest::{IngestError, ScanError, SyncScanExecution};
 use crate::serve::job_controller::{
-    AsyncJobController, AsyncSubmitError, DispatchedAsyncJob, JobOutcome,
+    AsyncJobController, AsyncSubmitError, DispatchedAsyncJob, JobOutcome, JobResult,
 };
-use crate::serve_api::{API_VERSION, AsyncJobState, ServeScanRequest};
+use crate::serve_api::{API_VERSION, ServeScanRequest};
 use crate::version::BUILD_VERSION;
 use crate::workflow::WorkflowError;
 
@@ -362,7 +362,7 @@ fn handle_job_status_request(job_id: &str, state: &ServeState) -> HttpResponse {
 }
 
 fn handle_job_result_request(job_id: &str, state: &ServeState) -> HttpResponse {
-    let Some(snapshot) = state.jobs.result_snapshot(job_id) else {
+    let Some(result) = state.jobs.get_job_result(job_id) else {
         return HttpResponse::error(
             StatusCode::from(404),
             "job_not_found",
@@ -370,43 +370,38 @@ fn handle_job_result_request(job_id: &str, state: &ServeState) -> HttpResponse {
         );
     };
 
-    match snapshot.state {
-        AsyncJobState::Succeeded => HttpResponse {
+    match result {
+        JobResult::Succeeded { result_body } => HttpResponse {
             status: StatusCode::from(200),
-            body: snapshot
-                .result_body
-                .expect("successful async job should retain result body"),
+            body: result_body,
         },
-        AsyncJobState::Pending | AsyncJobState::Running => HttpResponse::error(
+        JobResult::Pending => HttpResponse::error(
             StatusCode::from(409),
             "job_not_ready",
-            format!(
-                "async job {job_id} is currently {}",
-                match snapshot.state {
-                    AsyncJobState::Pending => "pending",
-                    AsyncJobState::Running => "running",
-                    _ => unreachable!(),
-                }
-            ),
+            format!("async job {job_id} is currently pending"),
         ),
-        AsyncJobState::Failed => {
-            let status_code = snapshot
-                .error_status_code
-                .and_then(|code| {
-                    let status = StatusCode::from(code);
-                    if status.0 >= 400 && status.0 < 600 {
-                        Some(status)
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or(StatusCode::from(500));
+        JobResult::Running => HttpResponse::error(
+            StatusCode::from(409),
+            "job_not_ready",
+            format!("async job {job_id} is currently running"),
+        ),
+        JobResult::Failed {
+            message,
+            status_code,
+        } => {
+            let status = if (400..600).contains(&status_code) {
+                StatusCode::from(status_code)
+            } else {
+                StatusCode::from(500)
+            };
             HttpResponse::error(
-                status_code,
+                status,
                 "job_failed",
-                snapshot
-                    .error_message
-                    .unwrap_or_else(|| format!("async job {job_id} failed")),
+                if message.is_empty() {
+                    format!("async job {job_id} failed")
+                } else {
+                    message
+                },
             )
         }
     }

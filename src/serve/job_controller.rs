@@ -65,12 +65,11 @@ pub(super) struct AsyncJobSnapshot {
     error_message: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub(super) struct AsyncJobResultSnapshot {
-    pub(super) state: AsyncJobState,
-    pub(super) result_body: Option<String>,
-    pub(super) error_message: Option<String>,
-    pub(super) error_status_code: Option<u16>,
+pub(super) enum JobResult {
+    Succeeded { result_body: String },
+    Pending,
+    Running,
+    Failed { message: String, status_code: u16 },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -146,11 +145,11 @@ impl AsyncJobController {
             .status_snapshot(job_id)
     }
 
-    pub(super) fn result_snapshot(&self, job_id: &str) -> Option<AsyncJobResultSnapshot> {
+    pub(super) fn get_job_result(&self, job_id: &str) -> Option<JobResult> {
         self.inner
             .lock()
             .expect("serve async job lock should not be poisoned")
-            .result_snapshot(job_id)
+            .get_job_result(job_id)
     }
 
     pub(super) fn complete_job(
@@ -262,12 +261,20 @@ impl AsyncJobControllerState {
         })
     }
 
-    fn result_snapshot(&self, job_id: &str) -> Option<AsyncJobResultSnapshot> {
-        self.jobs.get(job_id).map(|job| AsyncJobResultSnapshot {
-            state: job.state,
-            result_body: job.result_body.clone(),
-            error_message: job.error_message.clone(),
-            error_status_code: job.error_status_code,
+    fn get_job_result(&self, job_id: &str) -> Option<JobResult> {
+        self.jobs.get(job_id).map(|job| match job.state {
+            AsyncJobState::Succeeded => JobResult::Succeeded {
+                result_body: job
+                    .result_body
+                    .clone()
+                    .expect("succeeded job should have result_body"),
+            },
+            AsyncJobState::Pending => JobResult::Pending,
+            AsyncJobState::Running => JobResult::Running,
+            AsyncJobState::Failed => JobResult::Failed {
+                message: job.error_message.clone().unwrap_or_default(),
+                status_code: job.error_status_code.unwrap_or(500),
+            },
         })
     }
 
