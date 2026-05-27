@@ -314,7 +314,7 @@ fn merge_public_detection(
         }
     }
 
-    if existing.identifier.is_none() {
+    if existing.identifier.is_empty() {
         existing.identifier = detection.identifier;
     }
 }
@@ -558,7 +558,7 @@ fn convert_detection_to_model(
                 } else {
                     Vec::new()
                 },
-                identifier: detection.identifier.clone(),
+                identifier: detection.identifier.clone().unwrap_or_default(),
             }),
             Vec::new(),
         )
@@ -617,7 +617,7 @@ fn promote_reference_url_clue_detection(
         } else {
             Vec::new()
         },
-        identifier: detection.identifier.clone(),
+        identifier: detection.identifier.clone().unwrap_or_default(),
     })
 }
 
@@ -996,7 +996,7 @@ fn expand_dual_licensed_under_readme_choice_detections(
                 license_expression_spdx: detection_match.license_expression_spdx.clone(),
                 matches: vec![detection_match.clone()],
                 detection_log: detection.detection_log.clone(),
-                identifier: None,
+                identifier: String::new(),
             });
         }
     }
@@ -1308,7 +1308,7 @@ fn convert_match_to_model(
         matched_length: Some(m.matched_length),
         match_coverage: Some((f64::from(m.coverage()) * 100.0).round() / 100.0),
         rule_relevance: Some(m.rule_relevance),
-        rule_identifier: Some(m.rule_identifier.clone()),
+        rule_identifier: m.rule_identifier.clone(),
         rule_url,
         matched_text,
         referenced_filenames: m.referenced_filenames.clone(),

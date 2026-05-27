@@ -22,14 +22,14 @@ fn apply_package_reference_following_resolves_manifest_origin_local_file() {
             matched_length: Some(1),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: None,
+            rule_identifier: String::new(),
             rule_url: None,
             matched_text: Some("MIT".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-ref".to_string()),
+        identifier: "unknown-ref".to_string(),
     }];
 
     let mut manifest = file("project/Cargo.toml");
@@ -56,14 +56,14 @@ fn apply_package_reference_following_resolves_manifest_origin_local_file() {
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut files = vec![dir("project"), manifest, license];
@@ -107,14 +107,14 @@ fn apply_package_reference_following_resolves_absolute_rootfs_license_reference(
             matched_length: Some(2931),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("gpl-2.0.LICENSE".to_string()),
+            rule_identifier: "gpl-2.0.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("gpl-root".to_string()),
+        identifier: "gpl-root".to_string(),
     }];
 
     let mut service = file("usr/sbin/service");
@@ -133,14 +133,14 @@ fn apply_package_reference_following_resolves_absolute_rootfs_license_reference(
             matched_length: Some(139),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("gpl-2.0-plus_233.RULE".to_string()),
+            rule_identifier: "gpl-2.0-plus_233.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: Some(vec!["/usr/share/common-licenses/GPL-2".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("service-gpl".to_string()),
+        identifier: "service-gpl".to_string(),
     }];
 
     let mut files = vec![
@@ -212,14 +212,14 @@ fn apply_package_reference_following_falls_back_to_root_when_package_missing() {
             matched_length: Some(50),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("gpl-3.0.LICENSE".to_string()),
+            rule_identifier: "gpl-3.0.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("gpl-root".to_string()),
+        identifier: "gpl-root".to_string(),
     }];
 
     let mut po = file("project/po/en_US.po");
@@ -238,14 +238,14 @@ fn apply_package_reference_following_falls_back_to_root_when_package_missing() {
             matched_length: Some(5),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("same license as package".to_string()),
             referenced_filenames: Some(vec!["COPYING".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-ref".to_string()),
+        identifier: "unknown-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), root_copying, po];
@@ -281,14 +281,14 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
             matched_length: Some(50),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("apache-2.0.LICENSE".to_string()),
+            rule_identifier: "apache-2.0.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("apache-root".to_string()),
+        identifier: "apache-root".to_string(),
     }];
 
     let mut nested_license = file("project/java/LICENSE");
@@ -307,14 +307,14 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
             matched_length: Some(120),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-java".to_string()),
+        identifier: "mit-java".to_string(),
     }];
 
     let mut source = file("project/java/src/com/example/Callback.java");
@@ -334,7 +334,7 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
                 matched_length: Some(22),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit_101.RULE".to_string()),
+                rule_identifier: "mit_101.RULE".to_string(),
                 rule_url: None,
                 matched_text: Some(
                     "This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.".to_string(),
@@ -343,7 +343,7 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("source-mit".to_string()),
+            identifier: "source-mit".to_string(),
         },
         crate::models::LicenseDetection {
             license_expression: "apache-2.0".to_string(),
@@ -359,14 +359,14 @@ fn apply_package_reference_following_prefers_intermediate_ancestor_for_source_tr
                 matched_length: Some(85),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("apache-2.0_7.RULE".to_string()),
+                rule_identifier: "apache-2.0_7.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("source-apache".to_string()),
+            identifier: "source-apache".to_string(),
         },
     ];
 
@@ -434,7 +434,7 @@ fn reference_root_language_accepts_project_scope_but_not_bare_root_directory() {
         matched_length: Some(10),
         match_coverage: Some(100.0),
         rule_relevance: Some(100),
-        rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+        rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
         rule_url: None,
         matched_text: Some(
             "This source code is licensed under the BSD-style license found in the LICENSE file in the root directory of this project.".to_string(),
@@ -479,14 +479,14 @@ fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() 
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-root".to_string()),
+        identifier: "mit-root".to_string(),
     }];
 
     let mut nested_license = file("docs/LICENSE");
@@ -505,14 +505,14 @@ fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() 
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("apache-2.0.LICENSE".to_string()),
+            rule_identifier: "apache-2.0.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("apache-docs".to_string()),
+        identifier: "apache-docs".to_string(),
     }];
 
     let mut manpage = file("docs/man-xlate/nmap-id.1");
@@ -531,14 +531,14 @@ fn apply_package_reference_following_falls_back_past_nested_root_to_repo_root() 
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("manpage-ref".to_string()),
+        identifier: "manpage-ref".to_string(),
     }];
 
     let mut files = vec![
@@ -587,14 +587,14 @@ fn apply_package_reference_following_inherits_license_from_package_context() {
             matched_length: Some(5),
             match_coverage: Some(100.0),
             rule_relevance: Some(99),
-            rule_identifier: Some("pypi_bsd_license.RULE".to_string()),
+            rule_identifier: "pypi_bsd_license.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("package-license".to_string()),
+        identifier: "package-license".to_string(),
     }];
 
     let mut source = file("project/locale/django.po");
@@ -614,14 +614,14 @@ fn apply_package_reference_following_inherits_license_from_package_context() {
             matched_length: Some(11),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("free-unknown-package_1.RULE".to_string()),
+            rule_identifier: "free-unknown-package_1.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: Some(vec!["INHERIT_LICENSE_FROM_PACKAGE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-package-ref".to_string()),
+        identifier: "unknown-package-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), source];
@@ -665,14 +665,14 @@ fn apply_package_reference_following_falls_back_to_root_for_missing_package_refe
             matched_length: Some(50),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("gpl-3.0.LICENSE".to_string()),
+            rule_identifier: "gpl-3.0.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("gpl-root".to_string()),
+        identifier: "gpl-root".to_string(),
     }];
 
     let mut po = file("project/po/en_US.po");
@@ -691,14 +691,14 @@ fn apply_package_reference_following_falls_back_to_root_for_missing_package_refe
             matched_length: Some(5),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("free-unknown-package_2.RULE".to_string()),
+            rule_identifier: "free-unknown-package_2.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: Some(vec!["INHERIT_LICENSE_FROM_PACKAGE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-package-ref".to_string()),
+        identifier: "unknown-package-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), root_copying, po];
@@ -741,14 +741,14 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
             matched_length: Some(5),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut second_package = super::test_utils::package(&second_uid, "project/b/PKG-INFO");
@@ -767,14 +767,14 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
             matched_length: Some(5),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("apache-2.0.LICENSE".to_string()),
+            rule_identifier: "apache-2.0.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("apache-license".to_string()),
+        identifier: "apache-license".to_string(),
     }];
 
     let mut shared_file = file("project/shared/locale.po");
@@ -797,14 +797,14 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
             matched_length: Some(11),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("free-unknown-package_1.RULE".to_string()),
+            rule_identifier: "free-unknown-package_1.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: Some(vec!["INHERIT_LICENSE_FROM_PACKAGE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-package-ref".to_string()),
+        identifier: "unknown-package-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), shared_file];

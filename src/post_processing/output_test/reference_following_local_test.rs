@@ -21,14 +21,14 @@ fn apply_local_file_reference_following_resolves_root_license_file() {
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut notice = file("project/src/notice.js");
@@ -47,14 +47,14 @@ fn apply_local_file_reference_following_resolves_root_license_file() {
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-ref".to_string()),
+        identifier: "unknown-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), license, notice];
@@ -95,14 +95,14 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
             matched_length: Some(161),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut faqs = file("docs/faqs.md");
@@ -123,7 +123,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -141,7 +141,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -149,7 +149,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
             },
         ],
         detection_log: vec![],
-        identifier: Some("unknown-ref-faqs".to_string()),
+        identifier: "unknown-ref-faqs".to_string(),
     }];
 
     let mut files = vec![dir("docs"), license, faqs];
@@ -196,14 +196,14 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
             matched_length: Some(161),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut faqs = file("./docs/faqs.md");
@@ -224,7 +224,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -242,7 +242,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -250,7 +250,7 @@ fn apply_local_file_reference_following_resolves_multi_match_root_license_refere
             },
         ],
         detection_log: vec![],
-        identifier: Some("unknown-ref-faqs-dot".to_string()),
+        identifier: "unknown-ref-faqs-dot".to_string(),
     }];
 
     let mut files = vec![dir("."), dir("./docs"), license, faqs];
@@ -285,14 +285,14 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
             matched_length: Some(161),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut faqs = file("./docs/faqs.md");
@@ -313,7 +313,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -331,7 +331,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -339,7 +339,7 @@ fn apply_local_file_reference_following_accepts_absolute_match_sources_for_curre
             },
         ],
         detection_log: vec![],
-        identifier: Some("unknown-ref-faqs-abs".to_string()),
+        identifier: "unknown-ref-faqs-abs".to_string(),
     }];
 
     let mut files = vec![dir("."), dir("./docs"), license, faqs];
@@ -376,14 +376,14 @@ fn apply_local_file_reference_following_preserves_notice_expression_alongside_re
             matched_length: Some(161),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut patch = file("patches/example.patch");
@@ -402,14 +402,14 @@ fn apply_local_file_reference_following_preserves_notice_expression_alongside_re
             matched_length: Some(19),
             match_coverage: Some(100.0),
             rule_relevance: Some(95),
-            rule_identifier: Some("bsd-new_1169.RULE".to_string()),
+            rule_identifier: "bsd-new_1169.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("bsd-ref".to_string()),
+        identifier: "bsd-ref".to_string(),
     }];
 
     let mut files = vec![dir("patches"), license, patch];
@@ -470,14 +470,14 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
             matched_length: Some(4720),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("npsl-exception-0.95.LICENSE".to_string()),
+            rule_identifier: "npsl-exception-0.95.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("npsl-license".to_string()),
+        identifier: "npsl-license".to_string(),
     }];
 
     let mut sibling_license = file("third_party/LICENSE");
@@ -496,14 +496,14 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
             matched_length: Some(150),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("bsd-new.LICENSE".to_string()),
+            rule_identifier: "bsd-new.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("bsd-license".to_string()),
+        identifier: "bsd-license".to_string(),
     }];
 
     let mut header = file("src/FPEngine.h");
@@ -522,14 +522,14 @@ fn apply_local_file_reference_following_prefers_root_license_for_imperfect_subdi
             matched_length: Some(28),
             match_coverage: Some(41.79),
             rule_relevance: Some(100),
-            rule_identifier: Some("gpl-1.0-plus_or_mit_2.RULE".to_string()),
+            rule_identifier: "gpl-1.0-plus_or_mit_2.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("nmap-header-ref".to_string()),
+        identifier: "nmap-header-ref".to_string(),
     }];
 
     let mut files = vec![
@@ -583,14 +583,14 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("root-license".to_string()),
+        identifier: "root-license".to_string(),
     }];
 
     let mut followed_license = file("project/ncat/LICENSE");
@@ -611,7 +611,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+                rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: Some("See LICENSE".to_string()),
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
@@ -628,7 +628,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
                 matched_length: Some(100),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit.LICENSE".to_string()),
+                rule_identifier: "mit.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
@@ -636,7 +636,7 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
             },
         ],
         detection_log: vec!["unknown-reference-to-local-file".to_string()],
-        identifier: Some("followed-license".to_string()),
+        identifier: "followed-license".to_string(),
     }];
 
     let mut source = file("project/ncat/ncat_core.h");
@@ -655,14 +655,14 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("second-hop-source".to_string()),
+        identifier: "second-hop-source".to_string(),
     }];
 
     let mut files = vec![
@@ -708,14 +708,14 @@ fn apply_local_file_reference_following_requires_exact_filename_match() {
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut notice = file("project/src/notice.js");
@@ -734,14 +734,14 @@ fn apply_local_file_reference_following_requires_exact_filename_match() {
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE.txt".to_string()),
             referenced_filenames: Some(vec!["LICENSE.txt".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-ref".to_string()),
+        identifier: "unknown-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), license, notice];
@@ -777,14 +777,14 @@ fn apply_local_file_reference_following_does_not_search_unrelated_top_level_dire
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("bsd-new.LICENSE".to_string()),
+            rule_identifier: "bsd-new.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("nested-copying".to_string()),
+        identifier: "nested-copying".to_string(),
     }];
 
     let mut notice = file("docs/3rd-party-licenses.txt");
@@ -803,14 +803,14 @@ fn apply_local_file_reference_following_does_not_search_unrelated_top_level_dire
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See COPYING".to_string()),
             referenced_filenames: Some(vec!["COPYING".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("docs-copying-ref".to_string()),
+        identifier: "docs-copying-ref".to_string(),
     }];
 
     let mut files = vec![dir("docs"), dir("libssh2"), nested_copying, notice];
@@ -849,14 +849,14 @@ fn apply_local_file_reference_following_drops_unknown_intro_from_resolved_target
                 matched_length: Some(2),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(50),
-                rule_identifier: Some("license-intro_2.RULE".to_string()),
+                rule_identifier: "license-intro_2.RULE".to_string(),
                 rule_url: None,
                 matched_text: Some("Apache License".to_string()),
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("license-intro".to_string()),
+            identifier: "license-intro".to_string(),
         },
         crate::models::LicenseDetection {
             license_expression: "apache-2.0".to_string(),
@@ -872,14 +872,14 @@ fn apply_local_file_reference_following_drops_unknown_intro_from_resolved_target
                 matched_length: Some(1584),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("apache-2.0.LICENSE".to_string()),
+                rule_identifier: "apache-2.0.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("apache-license".to_string()),
+            identifier: "apache-license".to_string(),
         },
     ];
 
@@ -899,14 +899,14 @@ fn apply_local_file_reference_following_drops_unknown_intro_from_resolved_target
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-ref".to_string()),
+        identifier: "unknown-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), license, notice];
@@ -954,14 +954,14 @@ fn apply_local_file_reference_following_resolves_files_beside_manifest() {
             matched_length: Some(100),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     let mut source = file("project/demo/__init__.py");
@@ -981,14 +981,14 @@ fn apply_local_file_reference_following_resolves_files_beside_manifest() {
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("unknown-license-reference_see-license_1.RULE".to_string()),
+            rule_identifier: "unknown-license-reference_see-license_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("unknown-ref".to_string()),
+        identifier: "unknown-ref".to_string(),
     }];
 
     let mut files = vec![dir("project"), license, source];

@@ -134,14 +134,14 @@ fn test_debian_output_matches_local_expected_fixture() {
             matched_length: Some(1),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit_1.RULE".to_string()),
+            rule_identifier: "mit_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("Permission is hereby granted.".to_string()),
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }];
 
     let output = sample_output_with_sections(1, 0, vec![], vec![], vec![file]);

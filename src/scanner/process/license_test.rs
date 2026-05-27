@@ -139,14 +139,14 @@ fn make_public_detection(
             matched_length: Some(1),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("test.RULE".to_string()),
+            rule_identifier: "test.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: Vec::new(),
-        identifier: None,
+        identifier: String::new(),
     }
 }
 
@@ -293,10 +293,7 @@ fn test_convert_detection_to_model_routes_expressionless_detection_to_license_cl
         clues[0].license_expression_spdx,
         "LicenseRef-scancode-unknown-license-reference"
     );
-    assert_eq!(
-        clues[0].rule_identifier.as_deref(),
-        Some("license-clue_1.RULE")
-    );
+    assert_eq!(clues[0].rule_identifier.as_str(), "license-clue_1.RULE");
     assert_eq!(clues[0].matched_text.as_deref(), Some("MIT"));
     assert_eq!(clues[0].matched_text_diagnostics, None);
 }
@@ -423,7 +420,7 @@ fn test_supplement_nix_manifest_license_detections_adds_only_missing_browser_sym
         license_expression_spdx: "LGPL-2.1-or-later AND LGPL-3.0-or-later".to_string(),
         matches: vec![],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }];
 
     let detections = super::supplement_nix_manifest_license_detections(
@@ -1049,15 +1046,15 @@ fn test_extract_license_information_maps_timeout_to_stage_error() {
 #[test]
 fn test_collapse_repeated_sourcemap_license_detections_combines_concrete_detections() {
     let mut first = make_public_detection("mit", "MIT", 1, 3);
-    first.identifier = Some("mit-first".to_string());
+    first.identifier = "mit-first".to_string();
     first.detection_log = vec!["first-log".to_string()];
 
     let mut second = make_public_detection("mit", "MIT", 10, 12);
-    second.identifier = Some("mit-second".to_string());
+    second.identifier = "mit-second".to_string();
     second.detection_log = vec!["second-log".to_string()];
 
     let mut third = make_public_detection("cc-by-3.0", "CC-BY-3.0", 20, 24);
-    third.identifier = Some("cc-by".to_string());
+    third.identifier = "cc-by".to_string();
 
     let sourcemap_result = super::collapse_repeated_sourcemap_license_detections(
         Path::new("bundle.js.map"),
@@ -1075,7 +1072,7 @@ fn test_collapse_repeated_sourcemap_license_detections_combines_concrete_detecti
         sourcemap_result[0].license_expression_spdx,
         "MIT AND CC-BY-3.0"
     );
-    assert_eq!(sourcemap_result[0].identifier.as_deref(), Some("mit-first"));
+    assert_eq!(sourcemap_result[0].identifier.as_str(), "mit-first");
     assert_eq!(sourcemap_result[0].matches.len(), 3);
     assert_eq!(
         sourcemap_result[0].detection_log,

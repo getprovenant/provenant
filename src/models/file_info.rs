@@ -360,13 +360,13 @@ pub(crate) fn enrich_license_detection_provenance(detection: &mut LicenseDetecti
             detection_match.from_file = Some(path.to_string());
         }
 
-        if detection_match.rule_identifier.is_none() {
-            detection_match.rule_identifier = Some(detection_match.matcher.to_string());
+        if detection_match.rule_identifier.is_empty() {
+            detection_match.rule_identifier = detection_match.matcher.to_string();
         }
     }
 
-    if detection.identifier.is_none() {
-        detection.identifier = Some(compute_public_detection_identifier(detection));
+    if detection.identifier.is_empty() {
+        detection.identifier = compute_public_detection_identifier(detection);
     }
 }
 
@@ -392,13 +392,11 @@ fn format_public_detection_content(detection: &LicenseDetection) -> String {
         }
         result.push_str(&format!(
             "({}, {}, {})",
-            python_str_repr(
-                detection_match
-                    .rule_identifier
-                    .as_deref()
-                    .or(Some(detection_match.matcher.as_str()))
-                    .unwrap_or("parser-declared-license")
-            ),
+            python_str_repr(if detection_match.rule_identifier.is_empty() {
+                detection_match.matcher.as_str()
+            } else {
+                detection_match.rule_identifier.as_str()
+            }),
             detection_match.score.value() as f32,
             python_token_tuple_repr(&tokenize_without_stopwords(
                 detection_match.matched_text.as_deref().unwrap_or_default(),
@@ -551,7 +549,8 @@ pub struct LicenseDetection {
     pub matches: Vec<Match>,
     #[serde(default)]
     pub detection_log: Vec<String>,
-    pub identifier: Option<String>,
+    #[serde(default = "String::new")]
+    pub identifier: String,
 }
 
 /// Individual license text match with location and confidence score.
@@ -570,7 +569,8 @@ pub struct Match {
     pub matched_length: Option<usize>,
     pub match_coverage: Option<f64>,
     pub rule_relevance: Option<u8>,
-    pub rule_identifier: Option<String>,
+    #[serde(default = "String::new")]
+    pub rule_identifier: String,
     pub rule_url: Option<String>,
     pub matched_text: Option<String>,
     pub matched_text_diagnostics: Option<String>,
@@ -1243,14 +1243,14 @@ mod tests {
                     matched_length: Some(1),
                     match_coverage: Some(100.0),
                     rule_relevance: Some(100),
-                    rule_identifier: None,
+                    rule_identifier: String::new(),
                     rule_url: None,
                     matched_text: Some("MIT".to_string()),
                     referenced_filenames: None,
                     matched_text_diagnostics: None,
                 }],
                 detection_log: vec![],
-                identifier: None,
+                identifier: String::new(),
             }],
             ..PackageData::default()
         };
@@ -1289,7 +1289,7 @@ mod tests {
                 .as_deref(),
             Some("project/package.json")
         );
-        assert!(file_info.license_detections[0].identifier.is_some());
+        assert!(!file_info.license_detections[0].identifier.is_empty());
         assert_eq!(
             file_info.package_data[0].license_detections[0].matches[0]
                 .from_file
@@ -1297,15 +1297,13 @@ mod tests {
             Some("project/package.json")
         );
         assert_eq!(
-            file_info.package_data[0].license_detections[0].matches[0]
-                .rule_identifier
-                .as_deref(),
-            Some("parser-declared-license")
+            file_info.package_data[0].license_detections[0].matches[0].rule_identifier,
+            "parser-declared-license"
         );
         assert!(
-            file_info.package_data[0].license_detections[0]
+            !file_info.package_data[0].license_detections[0]
                 .identifier
-                .is_some()
+                .is_empty()
         );
     }
 
@@ -1327,14 +1325,14 @@ mod tests {
                     matched_length: Some(1),
                     match_coverage: Some(100.0),
                     rule_relevance: Some(100),
-                    rule_identifier: None,
+                    rule_identifier: String::new(),
                     rule_url: None,
                     matched_text: Some("MIT".to_string()),
                     referenced_filenames: None,
                     matched_text_diagnostics: None,
                 }],
                 detection_log: vec![],
-                identifier: None,
+                identifier: String::new(),
             }],
             ..PackageData::default()
         };
@@ -1348,12 +1346,10 @@ mod tests {
             Some("project/package.json")
         );
         assert_eq!(
-            package.license_detections[0].matches[0]
-                .rule_identifier
-                .as_deref(),
-            Some("parser-declared-license")
+            package.license_detections[0].matches[0].rule_identifier,
+            "parser-declared-license"
         );
-        assert!(package.license_detections[0].identifier.is_some());
+        assert!(!package.license_detections[0].identifier.is_empty());
     }
 
     #[test]

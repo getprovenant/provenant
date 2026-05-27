@@ -542,14 +542,14 @@ mod tests {
                     matched_length: Some(1),
                     match_coverage: Some(100.0),
                     rule_relevance: Some(100),
-                    rule_identifier: None,
+                    rule_identifier: String::new(),
                     rule_url: None,
                     matched_text: Some("MIT".to_string()),
                     referenced_filenames: Some(vec!["LICENSE".to_string()]),
                     matched_text_diagnostics: None,
                 }],
                 detection_log: vec!["unknown-reference-to-local-file".to_string()],
-                identifier: None,
+                identifier: String::new(),
             }],
             ..Default::default()
         }];

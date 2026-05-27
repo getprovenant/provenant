@@ -435,7 +435,9 @@ fn collect_rule_ignorables(
         )
     {
         for detection_match in &detection.matches {
-            let Some(rule_identifier) = detection_match.rule_identifier.as_deref() else {
+            let Some(rule_identifier) = (!detection_match.rule_identifier.is_empty())
+                .then_some(detection_match.rule_identifier.as_str())
+            else {
                 continue;
             };
             let Some(match_coverage) = detection_match.match_coverage else {

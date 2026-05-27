@@ -63,13 +63,13 @@ fn classify_key_files_marks_nested_ruby_license_from_file_references() {
             matched_length: Some(161),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: None,
+            rule_identifier: String::new(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
-        identifier: None,
+        identifier: String::new(),
         detection_log: vec![],
     }];
 
