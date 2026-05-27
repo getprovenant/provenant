@@ -642,6 +642,7 @@ fn is_good_match(license_match: &Match) -> bool {
 #[cfg(test)]
 mod tests {
     use super::is_good_match;
+    use crate::license_detection::MatcherKind;
     use crate::models::LineNumber;
     use crate::models::MatchScore;
     use crate::models::file_info::Match;
@@ -653,7 +654,7 @@ mod tests {
             from_file: None,
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("1-hash".to_string()),
+            matcher: MatcherKind::Hash,
             score: MatchScore::from_percentage(score),
             matched_length: Some(3),
             match_coverage: coverage,

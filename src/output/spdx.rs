@@ -493,6 +493,7 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::license_detection::MatcherKind;
     use crate::models::{
         FileType, LicenseDetection, LineNumber, MatchScore, PackageData, PackageType,
     };
@@ -536,7 +537,7 @@ mod tests {
                     from_file: Some("project/Cargo.toml".to_string()),
                     start_line: LineNumber::ONE,
                     end_line: LineNumber::ONE,
-                    matcher: Some("parser-declared-license".to_string()),
+                    matcher: MatcherKind::Declared,
                     score: MatchScore::MAX,
                     matched_length: Some(1),
                     match_coverage: Some(100.0),

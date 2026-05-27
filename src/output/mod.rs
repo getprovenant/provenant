@@ -120,6 +120,7 @@ mod tests {
     use serde_json::Value;
     use std::fs;
 
+    use crate::license_detection::MatcherKind;
     use crate::models::{
         Author, Copyright, ExtraData, FileInfo, FileType, GitSha1, Header, Holder,
         LicenseDetection, LineNumber, Match, MatchScore, Md5Digest, OutputEmail, OutputURL,
@@ -236,7 +237,7 @@ mod tests {
             from_file: Some("src/main.rs".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("2-aho".to_string()),
+            matcher: MatcherKind::Aho,
             score: MatchScore::MAX,
             matched_length: Some(1),
             match_coverage: Some(100.0),
@@ -620,7 +621,7 @@ mod tests {
                 from_file: Some("src/main.rs".to_string()),
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::new(2).unwrap(),
-                matcher: Some("2-aho".to_string()),
+                matcher: MatcherKind::Aho,
                 score: MatchScore::MAX,
                 matched_length: Some(4),
                 match_coverage: Some(100.0),
@@ -1106,7 +1107,7 @@ mod tests {
                 from_file: Some("src/main.rs".to_string()),
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::new(3).unwrap(),
-                matcher: Some("1-hash".to_string()),
+                matcher: MatcherKind::Hash,
                 score: MatchScore::MAX,
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
@@ -1542,7 +1543,7 @@ mod tests {
                         from_file: None,
                         start_line: LineNumber::ONE,
                         end_line: LineNumber::ONE,
-                        matcher: None,
+                        matcher: MatcherKind::Hash,
                         score: MatchScore::MAX,
                         matched_length: None,
                         match_coverage: None,

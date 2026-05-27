@@ -13,6 +13,7 @@ use crate::app::scan_runtime::{
 };
 use crate::assembly;
 use crate::cli::ProcessMode;
+use crate::license_detection::MatcherKind;
 use crate::models::{LineNumber, MatchScore};
 use crate::scan_result_shaping::{apply_only_findings_filter, normalize_paths};
 use serde_json::json;
@@ -470,7 +471,7 @@ fn from_json_loaded_manifest_detections_can_be_recomputed_into_top_level_uniques
                 from_file: None,
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::ONE,
-                matcher: Some("parser-declared-license".to_string()),
+                matcher: MatcherKind::Declared,
                 score: MatchScore::MAX,
                 matched_length: Some(1),
                 match_coverage: Some(100.0),
@@ -520,7 +521,7 @@ fn from_json_recomputes_top_level_uniques_even_without_shaping_flags() {
                 from_file: None,
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::ONE,
-                matcher: Some("parser-declared-license".to_string()),
+                matcher: MatcherKind::Declared,
                 score: MatchScore::MAX,
                 matched_length: Some(1),
                 match_coverage: Some(100.0),
@@ -665,7 +666,7 @@ fn from_json_recomputes_top_level_outputs_after_manifest_reference_following() {
             from_file: Some("project/Cargo.toml".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("2-aho".to_string()),
+            matcher: MatcherKind::Aho,
             score: MatchScore::MAX,
             matched_length: Some(2),
             match_coverage: Some(100.0),
@@ -690,7 +691,7 @@ fn from_json_recomputes_top_level_outputs_after_manifest_reference_following() {
             from_file: Some("project/LICENSE".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::new(10).unwrap(),
-            matcher: Some("1-hash".to_string()),
+            matcher: MatcherKind::Hash,
             score: MatchScore::MAX,
             matched_length: Some(50),
             match_coverage: Some(100.0),
@@ -772,7 +773,7 @@ fn from_json_recomputes_top_level_outputs_after_package_inheritance_following() 
             ),
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("1-hash".to_string()),
+            matcher: MatcherKind::Hash,
             score: MatchScore::MAX,
             matched_length: Some(1),
             match_coverage: Some(100.0),
@@ -802,7 +803,7 @@ fn from_json_recomputes_top_level_outputs_after_package_inheritance_following() 
             from_file: Some("venv/lib/python3.11/site-packages/locale/django.po".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("2-aho".to_string()),
+            matcher: MatcherKind::Aho,
             score: MatchScore::MAX,
             matched_length: Some(11),
             match_coverage: Some(100.0),
@@ -897,7 +898,7 @@ fn from_json_keeps_multi_datafile_package_license_provenance_on_manifest_package
             from_file: Some("project/package-lock.json".to_string()),
             start_line: LineNumber::ONE,
             end_line: LineNumber::ONE,
-            matcher: Some("2-aho".to_string()),
+            matcher: MatcherKind::Aho,
             score: MatchScore::MAX,
             matched_length: Some(10),
             match_coverage: Some(100.0),
@@ -928,7 +929,7 @@ fn from_json_keeps_multi_datafile_package_license_provenance_on_manifest_package
                 from_file: Some("project/package.json".to_string()),
                 start_line: LineNumber::ONE,
                 end_line: LineNumber::ONE,
-                matcher: Some("2-aho".to_string()),
+                matcher: MatcherKind::Aho,
                 score: MatchScore::MAX,
                 matched_length: Some(3),
                 match_coverage: Some(100.0),

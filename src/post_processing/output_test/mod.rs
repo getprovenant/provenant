@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use super::test_utils::{dir, file};
 use super::*;
 use crate::assembly;
+use crate::license_detection::MatcherKind;
 use crate::license_detection::index::{IndexedRuleMetadata, LicenseIndex};
 use crate::license_detection::models::{License as RuntimeLicense, Rule, RuleKind};
 use crate::models::{
