@@ -96,12 +96,12 @@ pub(crate) fn collect_top_level_license_detections(
         }
 
         for detection in file_detections {
-            let Some(identifier) = detection.identifier.as_ref() else {
+            if detection.identifier.is_empty() {
                 continue;
-            };
+            }
 
             let entry = detections_by_identifier
-                .entry(identifier.clone())
+                .entry(detection.identifier.clone())
                 .or_insert_with(|| AggregatedDetection {
                     representative: RepresentativeDetection { detection },
                     seen_regions: HashSet::new(),
@@ -857,7 +857,7 @@ fn apply_resolved_reference_targets(
         internal_detection.matches = combined_matches;
     }
     let mut public_detection = internal_detection_to_public(internal_detection);
-    public_detection.identifier = None;
+    public_detection.identifier = String::new();
     crate::models::file_info::enrich_license_detection_provenance(
         &mut public_detection,
         current_path,
@@ -1351,7 +1351,7 @@ fn public_detection_to_internal(
             .then(|| detection.license_expression_spdx.clone()),
         matches: matches.clone(),
         detection_log: detection.detection_log.clone(),
-        identifier: detection.identifier.clone(),
+        identifier: (!detection.identifier.is_empty()).then(|| detection.identifier.clone()),
         file_regions,
     }
 }
@@ -1368,7 +1368,7 @@ fn internal_detection_to_public(
             .map(internal_match_to_public)
             .collect(),
         detection_log: detection.detection_log,
-        identifier: detection.identifier,
+        identifier: detection.identifier.unwrap_or_default(),
     }
 }
 
@@ -1391,14 +1391,11 @@ fn public_match_to_internal(
         rule_length: detection_match.matched_length.unwrap_or_default(),
         match_coverage: detection_match.match_coverage.unwrap_or_default() as f32,
         rule_relevance: detection_match.rule_relevance.unwrap_or_default(),
-        rule_identifier: detection_match
-            .rule_identifier
-            .clone()
-            .or_else(|| {
-                let s = detection_match.matcher.to_string();
-                (!s.is_empty()).then_some(s)
-            })
-            .unwrap_or_default(),
+        rule_identifier: if detection_match.rule_identifier.is_empty() {
+            detection_match.matcher.to_string()
+        } else {
+            detection_match.rule_identifier.clone()
+        },
         rule_url: detection_match.rule_url.clone().unwrap_or_default(),
         matched_text: detection_match.matched_text.clone(),
         referenced_filenames: detection_match.referenced_filenames.clone(),
@@ -1430,8 +1427,7 @@ fn internal_match_to_public(
         matched_length: Some(detection_match.matched_length),
         match_coverage: Some(match_coverage),
         rule_relevance: Some(detection_match.rule_relevance),
-        rule_identifier: (!detection_match.rule_identifier.is_empty())
-            .then_some(detection_match.rule_identifier),
+        rule_identifier: detection_match.rule_identifier,
         rule_url: (!detection_match.rule_url.is_empty()).then_some(detection_match.rule_url),
         matched_text: detection_match.matched_text,
         referenced_filenames: detection_match.referenced_filenames,
@@ -1463,14 +1459,14 @@ mod tests {
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit.LICENSE".to_string()),
+                rule_identifier: "mit.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("mit-shared-id".to_string()),
+            identifier: "mit-shared-id".to_string(),
         }];
 
         let mut second = file("project/src/other.rs");
@@ -1488,14 +1484,14 @@ mod tests {
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit.LICENSE".to_string()),
+                rule_identifier: "mit.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec!["imperfect-match-coverage".to_string()],
-            identifier: Some("mit-shared-id".to_string()),
+            identifier: "mit-shared-id".to_string(),
         }];
 
         let detections = collect_top_level_license_detections(&[first, second]);
@@ -1520,7 +1516,7 @@ mod tests {
             license_expression_spdx: "MIT".to_string(),
             matches: vec![],
             detection_log: vec![],
-            identifier: Some("mit-empty".to_string()),
+            identifier: "mit-empty".to_string(),
         }];
 
         let detections = collect_top_level_license_detections(&[file]);
@@ -1549,14 +1545,14 @@ mod tests {
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("ofl-1.1_0.RULE".to_string()),
+                rule_identifier: "ofl-1.1_0.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("ofl-1.1-font".to_string()),
+            identifier: "ofl-1.1-font".to_string(),
         }];
         legal.detected_license_expression = Some("ofl-1.1".to_string());
 

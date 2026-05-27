@@ -22,7 +22,7 @@ impl From<&crate::models::LicenseDetection> for OutputLicenseDetection {
             license_expression_spdx: value.license_expression_spdx.clone(),
             matches: value.matches.iter().map(OutputMatch::from).collect(),
             detection_log: value.detection_log.clone(),
-            identifier: value.identifier.clone(),
+            identifier: (!value.identifier.is_empty()).then(|| value.identifier.clone()),
         }
     }
 }
@@ -39,7 +39,7 @@ impl TryFrom<&OutputLicenseDetection> for crate::models::LicenseDetection {
             license_expression_spdx: value.license_expression_spdx.clone(),
             matches,
             detection_log: value.detection_log.clone(),
-            identifier: value.identifier.clone(),
+            identifier: value.identifier.clone().unwrap_or_default(),
         })
     }
 }

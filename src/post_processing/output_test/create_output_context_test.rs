@@ -646,7 +646,7 @@ fn create_output_preserves_top_level_license_detections_from_context() {
                     matched_length: Some(20),
                     match_coverage: Some(100.0),
                     rule_relevance: Some(100),
-                    rule_identifier: Some("mit.LICENSE".to_string()),
+                    rule_identifier: "mit.LICENSE".to_string(),
                     rule_url: None,
                     matched_text: None,
                     referenced_filenames: None,

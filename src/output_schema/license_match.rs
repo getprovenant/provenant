@@ -44,7 +44,8 @@ impl From<&crate::models::Match> for OutputMatch {
             matched_length: value.matched_length,
             match_coverage: value.match_coverage,
             rule_relevance: value.rule_relevance,
-            rule_identifier: value.rule_identifier.clone(),
+            rule_identifier: (!value.rule_identifier.is_empty())
+                .then(|| value.rule_identifier.clone()),
             rule_url: value.rule_url.clone(),
             matched_text: value.matched_text.clone(),
             matched_text_diagnostics: value.matched_text_diagnostics.clone(),
@@ -76,7 +77,7 @@ impl TryFrom<&OutputMatch> for crate::models::Match {
             matched_length: value.matched_length,
             match_coverage: value.match_coverage,
             rule_relevance: value.rule_relevance,
-            rule_identifier: value.rule_identifier.clone(),
+            rule_identifier: value.rule_identifier.clone().unwrap_or_default(),
             rule_url: value.rule_url.clone(),
             matched_text: value.matched_text.clone(),
             matched_text_diagnostics: value.matched_text_diagnostics.clone(),

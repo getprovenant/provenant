@@ -236,8 +236,8 @@ fn collect_rule_identifiers_from_matches(
     rule_identifiers: &mut BTreeSet<String>,
 ) {
     for license_match in matches {
-        if let Some(rule_identifier) = license_match.rule_identifier.as_ref() {
-            rule_identifiers.insert(rule_identifier.clone());
+        if !license_match.rule_identifier.is_empty() {
+            rule_identifiers.insert(license_match.rule_identifier.clone());
         }
     }
 }

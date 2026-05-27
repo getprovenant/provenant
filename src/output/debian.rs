@@ -106,7 +106,7 @@ fn unique_license_texts(detections: &[crate::output_schema::OutputLicenseDetecti
             let key = (
                 match_item.start_line,
                 match_item.end_line,
-                match_item.rule_identifier.as_deref().unwrap_or_default(),
+                match_item.rule_identifier.as_deref(),
             );
 
             if seen.insert(key) {

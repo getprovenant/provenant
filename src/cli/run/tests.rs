@@ -476,14 +476,14 @@ fn from_json_loaded_manifest_detections_can_be_recomputed_into_top_level_uniques
                 matched_length: Some(1),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: None,
+                rule_identifier: String::new(),
                 rule_url: None,
                 matched_text: Some("MIT".to_string()),
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: None,
+            identifier: String::new(),
         }],
         ..Default::default()
     }];
@@ -502,8 +502,8 @@ fn from_json_loaded_manifest_detections_can_be_recomputed_into_top_level_uniques
         Some("project/package.json")
     );
     assert_eq!(
-        top_level[0].reference_matches[0].rule_identifier.as_deref(),
-        Some("parser-declared-license")
+        top_level[0].reference_matches[0].rule_identifier.as_str(),
+        "parser-declared-license"
     );
 }
 
@@ -526,14 +526,14 @@ fn from_json_recomputes_top_level_uniques_even_without_shaping_flags() {
                 matched_length: Some(1),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: None,
+                rule_identifier: String::new(),
                 rule_url: None,
                 matched_text: Some("GPL-2.0-only".to_string()),
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: None,
+            identifier: String::new(),
         }],
         ..Default::default()
     }];
@@ -549,8 +549,8 @@ fn from_json_recomputes_top_level_uniques_even_without_shaping_flags() {
     assert_eq!(top_level[0].license_expression, "gpl-2.0-only");
     assert_ne!(top_level[0].identifier, "stale-id");
     assert_eq!(
-        top_level[0].reference_matches[0].rule_identifier.as_deref(),
-        Some("parser-declared-license")
+        top_level[0].reference_matches[0].rule_identifier.as_str(),
+        "parser-declared-license"
     );
 }
 
@@ -671,16 +671,14 @@ fn from_json_recomputes_top_level_outputs_after_manifest_reference_following() {
             matched_length: Some(2),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some(
-                "unknown-license-reference_see_license_at_manifest_1.RULE".to_string(),
-            ),
+            rule_identifier: "unknown-license-reference_see_license_at_manifest_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("See LICENSE".to_string()),
             referenced_filenames: Some(vec!["LICENSE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }];
     files[1].license_detections = vec![crate::models::LicenseDetection {
         license_expression: "mit".to_string(),
@@ -696,14 +694,14 @@ fn from_json_recomputes_top_level_outputs_after_manifest_reference_following() {
             matched_length: Some(50),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-license".to_string()),
+        identifier: "mit-license".to_string(),
     }];
 
     for file in &mut files {
@@ -778,14 +776,14 @@ fn from_json_recomputes_top_level_outputs_after_package_inheritance_following() 
             matched_length: Some(1),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("bsd-new_195.RULE".to_string()),
+            rule_identifier: "bsd-new_195.RULE".to_string(),
             rule_url: None,
             matched_text: Some("BSD-3-Clause".to_string()),
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }];
     let mut package = crate::models::Package::from_package_data(
         &files[0].package_data[0],
@@ -808,14 +806,14 @@ fn from_json_recomputes_top_level_outputs_after_package_inheritance_following() 
             matched_length: Some(11),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("free-unknown-package_1.RULE".to_string()),
+            rule_identifier: "free-unknown-package_1.RULE".to_string(),
             rule_url: None,
             matched_text: Some("same license as package".to_string()),
             referenced_filenames: Some(vec!["INHERIT_LICENSE_FROM_PACKAGE".to_string()]),
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }];
 
     for file in &mut files {
@@ -903,14 +901,14 @@ fn from_json_keeps_multi_datafile_package_license_provenance_on_manifest_package
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("apache-2.0_65.RULE".to_string()),
+            rule_identifier: "apache-2.0_65.RULE".to_string(),
             rule_url: None,
             matched_text: Some("Apache-2.0".to_string()),
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }];
 
     files[1].package_data = vec![crate::models::PackageData {
@@ -934,14 +932,14 @@ fn from_json_keeps_multi_datafile_package_license_provenance_on_manifest_package
                 matched_length: Some(3),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit_30.RULE".to_string()),
+                rule_identifier: "mit_30.RULE".to_string(),
                 rule_url: None,
                 matched_text: Some("MIT".to_string()),
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: None,
+            identifier: String::new(),
         }],
         ..Default::default()
     }];

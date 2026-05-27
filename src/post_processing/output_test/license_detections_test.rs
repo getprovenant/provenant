@@ -20,14 +20,14 @@ fn collect_top_level_license_detections_groups_file_detections_and_preserves_pat
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec!["imperfect-match-coverage".to_string()],
-        identifier: Some("mit-shared-id".to_string()),
+        identifier: "mit-shared-id".to_string(),
     }];
 
     let mut second = file("project/src/other.rs");
@@ -45,14 +45,14 @@ fn collect_top_level_license_detections_groups_file_detections_and_preserves_pat
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-shared-id".to_string()),
+        identifier: "mit-shared-id".to_string(),
     }];
 
     let mut third = file("project/src/apache.rs");
@@ -70,14 +70,14 @@ fn collect_top_level_license_detections_groups_file_detections_and_preserves_pat
             matched_length: Some(120),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("apache-2.0_2.RULE".to_string()),
+            rule_identifier: "apache-2.0_2.RULE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("apache-2.0-id".to_string()),
+        identifier: "apache-2.0-id".to_string(),
     }];
 
     let detections = collect_top_level_license_detections(&[first, second, third]);
@@ -116,14 +116,14 @@ fn collect_top_level_license_detections_counts_same_identifier_regions_in_one_fi
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit.LICENSE".to_string()),
+                rule_identifier: "mit.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("mit-shared-id".to_string()),
+            identifier: "mit-shared-id".to_string(),
         },
         crate::models::LicenseDetection {
             license_expression: "mit".to_string(),
@@ -139,14 +139,14 @@ fn collect_top_level_license_detections_counts_same_identifier_regions_in_one_fi
                 matched_length: Some(12),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit_3.RULE".to_string()),
+                rule_identifier: "mit_3.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("mit-shared-id".to_string()),
+            identifier: "mit-shared-id".to_string(),
         },
     ];
 
@@ -175,14 +175,14 @@ fn collect_top_level_license_detections_deduplicates_identical_regions() {
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit.LICENSE".to_string()),
+                rule_identifier: "mit.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("mit-shared-id".to_string()),
+            identifier: "mit-shared-id".to_string(),
         },
         crate::models::LicenseDetection {
             license_expression: "mit".to_string(),
@@ -198,14 +198,14 @@ fn collect_top_level_license_detections_deduplicates_identical_regions() {
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit_1.RULE".to_string()),
+                rule_identifier: "mit_1.RULE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("mit-shared-id".to_string()),
+            identifier: "mit-shared-id".to_string(),
         },
     ];
 
@@ -233,14 +233,14 @@ fn collect_top_level_license_detections_recomputes_empty_expression_from_matches
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-shared-id".to_string()),
+        identifier: "mit-shared-id".to_string(),
     }];
 
     let detections = collect_top_level_license_detections(&[file]);
@@ -269,14 +269,14 @@ fn collect_top_level_license_detections_includes_package_origin_detections() {
                 matched_length: Some(1),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: None,
+                rule_identifier: String::new(),
                 rule_url: None,
                 matched_text: Some("MIT".to_string()),
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: None,
+            identifier: String::new(),
         }],
         other_license_detections: vec![crate::models::LicenseDetection {
             license_expression: "apache-2.0".to_string(),
@@ -292,14 +292,14 @@ fn collect_top_level_license_detections_includes_package_origin_detections() {
                 matched_length: Some(1),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: None,
+                rule_identifier: String::new(),
                 rule_url: None,
                 matched_text: Some("Apache-2.0".to_string()),
                 referenced_filenames: None,
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: None,
+            identifier: String::new(),
         }],
         ..PackageData::default()
     }];
@@ -315,10 +315,8 @@ fn collect_top_level_license_detections_includes_package_origin_detections() {
         Some("project/package.json")
     );
     assert_eq!(
-        detections[1].reference_matches[0]
-            .rule_identifier
-            .as_deref(),
-        Some("parser-declared-license")
+        detections[1].reference_matches[0].rule_identifier.as_str(),
+        "parser-declared-license"
     );
 }
 
@@ -339,14 +337,14 @@ fn collect_top_level_license_detections_prefers_later_logged_representative() {
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: Some("mit-shared-id".to_string()),
+        identifier: "mit-shared-id".to_string(),
     }];
 
     let mut second = file("project/src/other.rs");
@@ -364,14 +362,14 @@ fn collect_top_level_license_detections_prefers_later_logged_representative() {
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
         detection_log: vec!["imperfect-match-coverage".to_string()],
-        identifier: Some("mit-shared-id".to_string()),
+        identifier: "mit-shared-id".to_string(),
     }];
 
     let detections = collect_top_level_license_detections(&[first, second]);
@@ -396,7 +394,7 @@ fn collect_top_level_license_detections_keeps_identifier_with_zero_match_detecti
         license_expression_spdx: "MIT".to_string(),
         matches: vec![],
         detection_log: vec![],
-        identifier: Some("mit-empty".to_string()),
+        identifier: "mit-empty".to_string(),
     }];
 
     let detections = collect_top_level_license_detections(&[file]);

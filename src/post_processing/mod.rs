@@ -659,7 +659,7 @@ mod tests {
             matched_length: Some(3),
             match_coverage: coverage,
             rule_relevance: relevance,
-            rule_identifier: Some("mit.LICENSE".to_string()),
+            rule_identifier: "mit.LICENSE".to_string(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,

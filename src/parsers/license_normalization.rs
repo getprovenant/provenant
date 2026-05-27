@@ -316,7 +316,7 @@ pub(crate) fn build_declared_license_detection(
             matched_length: Some(metadata.matched_text.split_whitespace().count()),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some(rule_identifier),
+            rule_identifier,
             rule_url,
             matched_text: Some(metadata.matched_text.to_string()),
             referenced_filenames: metadata
@@ -325,7 +325,7 @@ pub(crate) fn build_declared_license_detection(
             matched_text_diagnostics: None,
         }],
         detection_log: vec![],
-        identifier: None,
+        identifier: String::new(),
     }
 }
 
@@ -884,12 +884,7 @@ mod tests {
             LineNumber::new(4).expect("valid")
         );
         assert_eq!(detection.matches[0].matched_text.as_deref(), Some("MIT"));
-        assert!(
-            detection.matches[0]
-                .rule_identifier
-                .as_deref()
-                .is_some_and(|identifier| !identifier.is_empty())
-        );
+        assert!(!detection.matches[0].rule_identifier.is_empty());
     }
 
     #[test]
@@ -914,8 +909,8 @@ mod tests {
 
         assert_ne!(expected_rule_identifier, PARSER_DECLARED_MATCHER);
         assert_eq!(
-            detection.matches[0].rule_identifier.as_deref(),
-            Some(expected_rule_identifier.as_str())
+            detection.matches[0].rule_identifier.as_str(),
+            expected_rule_identifier.as_str()
         );
         assert_eq!(detection.matches[0].rule_url, expected_rule_url);
     }

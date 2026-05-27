@@ -242,7 +242,7 @@ mod tests {
             matched_length: Some(1),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: Some("mit_rule".to_string()),
+            rule_identifier: "mit_rule".to_string(),
             rule_url: None,
             matched_text: Some("Same text again".to_string()),
             referenced_filenames: None,
@@ -402,7 +402,7 @@ mod tests {
             license_expression_spdx: "MIT AND (Apache-2.0 OR MIT)".to_string(),
             matches: vec![],
             detection_log: vec![],
-            identifier: None,
+            identifier: String::new(),
         }];
         internal.files[0].detected_license_expression = None;
 
@@ -423,14 +423,14 @@ mod tests {
                 license_expression_spdx: "Apache-2.0 OR MIT".to_string(),
                 matches: vec![],
                 detection_log: vec![],
-                identifier: None,
+                identifier: String::new(),
             },
             crate::models::LicenseDetection {
                 license_expression: "apache-2.0".to_string(),
                 license_expression_spdx: "Apache-2.0".to_string(),
                 matches: vec![],
                 detection_log: vec![],
-                identifier: None,
+                identifier: String::new(),
             },
         ];
         internal.files[0].detected_license_expression = None;
@@ -626,14 +626,14 @@ mod tests {
                 matched_length: Some(4),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("unknown-license-reference.RULE".to_string()),
+                rule_identifier: "unknown-license-reference.RULE".to_string(),
                 rule_url: Some("https://example.com/unknown-license-reference.LICENSE".to_string()),
                 matched_text: Some("Custom license text".to_string()),
                 referenced_filenames: Some(vec!["LICENSE".to_string()]),
                 matched_text_diagnostics: None,
             }],
             detection_log: vec![],
-            identifier: Some("unknown-ref-id".to_string()),
+            identifier: "unknown-ref-id".to_string(),
         }];
         internal.license_references = vec![crate::models::LicenseReference {
             key: Some("unknown-license-reference".to_string()),
@@ -1112,7 +1112,7 @@ mod tests {
                 matched_length: Some(10),
                 match_coverage: Some(100.0),
                 rule_relevance: Some(100),
-                rule_identifier: Some("mit.LICENSE".to_string()),
+                rule_identifier: "mit.LICENSE".to_string(),
                 rule_url: None,
                 matched_text: None,
                 referenced_filenames: None,
@@ -1548,14 +1548,14 @@ mod tests {
                         matched_length: None,
                         match_coverage: None,
                         rule_relevance: None,
-                        rule_identifier: Some("mit_rule".to_string()),
+                        rule_identifier: "mit_rule".to_string(),
                         rule_url: None,
                         matched_text: None,
                         referenced_filenames: None,
                         matched_text_diagnostics: None,
                     }],
                     detection_log: vec![],
-                    identifier: None,
+                    identifier: String::new(),
                 }],
                 vec![],
                 vec![Copyright {

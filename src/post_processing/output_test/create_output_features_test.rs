@@ -74,13 +74,13 @@ fn create_output_gates_summary_tallies_and_generated_sections() {
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: None,
+            rule_identifier: String::new(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
-        identifier: None,
+        identifier: String::new(),
         detection_log: vec![],
     }];
 
@@ -218,13 +218,13 @@ fn create_output_score_only_keeps_clarity_without_full_summary_fields() {
             matched_length: Some(10),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: None,
+            rule_identifier: String::new(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
-        identifier: None,
+        identifier: String::new(),
         detection_log: vec![],
     }];
 
@@ -290,7 +290,7 @@ fn create_output_preserves_file_level_license_clues_in_json_shape() {
         matched_length: Some(19),
         match_coverage: Some(100.0),
         rule_relevance: Some(100),
-        rule_identifier: Some("license-clue_1.RULE".to_string()),
+        rule_identifier: "license-clue_1.RULE".to_string(),
         rule_url: Some("https://example.com/license-clue_1.RULE".to_string()),
         matched_text: Some(
             "This product currently only contains code developed by authors".to_string(),
@@ -569,13 +569,13 @@ fn create_output_summary_still_resolves_after_strip_root_normalization() {
             matched_length: Some(1),
             match_coverage: Some(100.0),
             rule_relevance: Some(100),
-            rule_identifier: None,
+            rule_identifier: String::new(),
             rule_url: None,
             matched_text: None,
             referenced_filenames: None,
             matched_text_diagnostics: None,
         }],
-        identifier: None,
+        identifier: String::new(),
         detection_log: vec![],
     }];
 
