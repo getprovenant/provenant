@@ -31,8 +31,6 @@ pub(crate) enum ServeError {
     Ingest(#[from] IngestError),
     #[error(transparent)]
     Scan(#[from] ScanError),
-    #[error(transparent)]
-    Workflow(#[from] WorkflowError),
 }
 
 impl ServeError {
@@ -47,8 +45,6 @@ impl ServeError {
             }
             Self::Scan(ScanError::Workflow(WorkflowError::Pipeline(_))) => StatusCode::from(500),
             Self::Scan(ScanError::Serialization(_)) => StatusCode::from(500),
-            Self::Workflow(WorkflowError::InvalidOptions(_)) => StatusCode::from(422),
-            Self::Workflow(WorkflowError::Pipeline(_)) => StatusCode::from(500),
         }
     }
 
@@ -63,8 +59,6 @@ impl ServeError {
             }
             Self::Scan(ScanError::Workflow(WorkflowError::Pipeline(_))) => "scan_failed",
             Self::Scan(ScanError::Serialization(_)) => "scan_failed",
-            Self::Workflow(WorkflowError::InvalidOptions(_)) => "invalid_scan_request",
-            Self::Workflow(WorkflowError::Pipeline(_)) => "scan_failed",
         }
     }
 }
