@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
@@ -17,8 +17,11 @@ const PACKAGE_TYPE: PackageType = PackageType::Golang;
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Go".to_string()),
         datasource_id: Some(DatasourceId::GoModGraph),
+        core: PackageCore {
+            primary_language: Some("Go".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -135,15 +138,22 @@ pub(crate) fn parse_go_mod_graph(content: &str) -> PackageData {
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Go".to_string()),
         datasource_id: Some(DatasourceId::GoModGraph),
         namespace: namespace.map(truncate_field),
         name: (!name.is_empty()).then_some(truncate_field(name)),
-        homepage_url: homepage_url.clone(),
-        repository_homepage_url: homepage_url,
-        vcs_url,
-        purl,
         dependencies: dependency_map.into_values().collect(),
+        core: PackageCore {
+            primary_language: Some("Go".to_string()),
+
+            homepage_url: homepage_url.clone(),
+
+            repository_homepage_url: homepage_url,
+
+            vcs_url,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

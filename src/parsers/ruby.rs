@@ -27,7 +27,9 @@
 //! - Graceful error handling: logs warnings and returns default on parse failure
 //! - PURL type: "gem"
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
@@ -299,10 +301,15 @@ fn parse_gemfile(content: &str) -> PackageData {
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Ruby".to_string()),
         dependencies,
-        extra_data,
         datasource_id: Some(DatasourceId::Gemfile),
+        core: PackageCore {
+            primary_language: Some("Ruby".to_string()),
+
+            extra_data,
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -804,19 +811,29 @@ fn parse_gemfile_lock(content: &str) -> PackageData {
         package_type: Some(PACKAGE_TYPE),
         name: package_name,
         version: package_version,
-        primary_language: Some("Ruby".to_string()),
-        download_url,
         dependencies,
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
         datasource_id: Some(DatasourceId::GemfileLock),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Ruby".to_string()),
+
+            download_url,
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            purl,
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -983,7 +1000,10 @@ fn get_rubygems_urls(
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Ruby".to_string()),
+        core: PackageCore {
+            primary_language: Some("Ruby".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -991,6 +1011,10 @@ fn default_package_data() -> PackageData {
 fn default_package_data_with_datasource(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -1727,21 +1751,37 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
         package_type: Some(PACKAGE_TYPE),
         name,
         version,
-        primary_language: Some("Ruby".to_string()),
-        description: final_description,
-        homepage_url: homepage,
-        download_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        parties,
         dependencies,
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
         datasource_id: Some(DatasourceId::Gemspec),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Ruby".to_string()),
+
+            description: final_description,
+
+            homepage_url: homepage,
+
+            download_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            parties,
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            purl,
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -2060,27 +2100,48 @@ fn parse_gem_metadata_yaml(
         package_type: Some(PACKAGE_TYPE),
         name,
         version,
-        qualifiers,
-        primary_language: Some("Ruby".to_string()),
-        description: description.or(summary),
-        release_date,
-        homepage_url: homepage,
-        download_url,
-        bug_tracking_url,
-        code_view_url,
-        declared_license_expression: license_expression,
-        declared_license_expression_spdx: license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
         file_references,
-        parties,
         dependencies,
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
         datasource_id: Some(datasource_id),
-        purl,
-        vcs_url,
+        core: PackageCore {
+            qualifiers,
+
+            primary_language: Some("Ruby".to_string()),
+
+            description: description.or(summary),
+
+            release_date,
+
+            homepage_url: homepage,
+
+            download_url,
+
+            bug_tracking_url,
+
+            code_view_url,
+
+            declared_license_expression: license_expression,
+
+            declared_license_expression_spdx: license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            parties,
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            purl,
+
+            vcs_url,
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     })
 }

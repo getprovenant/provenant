@@ -16,6 +16,7 @@ use super::GitSha1;
 use super::LineNumber;
 use super::MatchScore;
 use super::Md5Digest;
+use super::PackageCore;
 use super::PackageType;
 use super::PackageUid;
 use super::ScanDiagnostic;
@@ -473,54 +474,25 @@ pub struct PackageData {
     pub name: Option<String>,
     pub version: Option<String>,
     #[serde(default)]
-    pub qualifiers: Option<HashMap<String, String>>,
-    pub subpath: Option<String>,
-    pub primary_language: Option<String>,
-    pub description: Option<String>,
-    pub release_date: Option<String>,
-    #[serde(default)]
-    pub parties: Vec<Party>,
-    #[serde(default)]
-    pub keywords: Vec<String>,
-    pub homepage_url: Option<String>,
-    pub download_url: Option<String>,
-    pub size: Option<u64>,
-    pub sha1: Option<Sha1Digest>,
-    pub md5: Option<Md5Digest>,
-    pub sha256: Option<Sha256Digest>,
-    pub sha512: Option<Sha512Digest>,
-    pub bug_tracking_url: Option<String>,
-    pub code_view_url: Option<String>,
-    pub vcs_url: Option<String>,
-    pub copyright: Option<String>,
-    pub holder: Option<String>,
-    pub declared_license_expression: Option<String>,
-    pub declared_license_expression_spdx: Option<String>,
-    #[serde(default)]
-    pub license_detections: Vec<LicenseDetection>,
-    pub other_license_expression: Option<String>,
-    pub other_license_expression_spdx: Option<String>,
-    #[serde(default)]
-    pub other_license_detections: Vec<LicenseDetection>,
-    pub extracted_license_statement: Option<String>,
-    pub notice_text: Option<String>,
-    #[serde(default)]
-    pub source_packages: Vec<String>,
-    #[serde(default)]
     pub file_references: Vec<FileReference>,
     #[serde(default)]
-    pub is_private: bool,
-    #[serde(default)]
-    pub is_virtual: bool,
-    #[serde(default)]
-    pub extra_data: Option<HashMap<String, serde_json::Value>>,
-    #[serde(default)]
     pub dependencies: Vec<Dependency>,
-    pub repository_homepage_url: Option<String>,
-    pub repository_download_url: Option<String>,
-    pub api_data_url: Option<String>,
     pub datasource_id: Option<DatasourceId>,
-    pub purl: Option<String>,
+    #[serde(flatten)]
+    pub core: PackageCore,
+}
+
+impl std::ops::Deref for PackageData {
+    type Target = PackageCore;
+    fn deref(&self) -> &Self::Target {
+        &self.core
+    }
+}
+
+impl std::ops::DerefMut for PackageData {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.core
+    }
 }
 
 impl PackageData {
@@ -634,54 +606,25 @@ pub struct ResolvedPackage {
     pub name: String,
     pub version: String,
     #[serde(default)]
-    pub qualifiers: Option<HashMap<String, String>>,
-    pub subpath: Option<String>,
-    pub primary_language: Option<String>,
-    pub description: Option<String>,
-    pub release_date: Option<String>,
-    #[serde(default)]
-    pub parties: Vec<Party>,
-    #[serde(default)]
-    pub keywords: Vec<String>,
-    pub homepage_url: Option<String>,
-    pub download_url: Option<String>,
-    pub size: Option<u64>,
-    pub sha1: Option<Sha1Digest>,
-    pub md5: Option<Md5Digest>,
-    pub sha256: Option<Sha256Digest>,
-    pub sha512: Option<Sha512Digest>,
-    pub bug_tracking_url: Option<String>,
-    pub code_view_url: Option<String>,
-    pub vcs_url: Option<String>,
-    pub copyright: Option<String>,
-    pub holder: Option<String>,
-    pub declared_license_expression: Option<String>,
-    pub declared_license_expression_spdx: Option<String>,
-    #[serde(default)]
-    pub license_detections: Vec<LicenseDetection>,
-    pub other_license_expression: Option<String>,
-    pub other_license_expression_spdx: Option<String>,
-    #[serde(default)]
-    pub other_license_detections: Vec<LicenseDetection>,
-    pub extracted_license_statement: Option<String>,
-    pub notice_text: Option<String>,
-    #[serde(default)]
-    pub source_packages: Vec<String>,
-    #[serde(default)]
     pub file_references: Vec<FileReference>,
     #[serde(default)]
-    pub is_private: bool,
-    #[serde(default)]
-    pub is_virtual: bool,
-    #[serde(default)]
-    pub extra_data: Option<HashMap<String, serde_json::Value>>,
-    #[serde(default)]
     pub dependencies: Vec<Dependency>,
-    pub repository_homepage_url: Option<String>,
-    pub repository_download_url: Option<String>,
-    pub api_data_url: Option<String>,
     pub datasource_id: Option<DatasourceId>,
-    pub purl: Option<String>,
+    #[serde(flatten)]
+    pub core: PackageCore,
+}
+
+impl std::ops::Deref for ResolvedPackage {
+    type Target = PackageCore;
+    fn deref(&self) -> &Self::Target {
+        &self.core
+    }
+}
+
+impl std::ops::DerefMut for ResolvedPackage {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.core
+    }
 }
 
 impl ResolvedPackage {
@@ -696,44 +639,10 @@ impl ResolvedPackage {
             namespace,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties: vec![],
-            keywords: vec![],
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: vec![],
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: vec![],
-            extracted_license_statement: None,
-            notice_text: None,
-            source_packages: vec![],
             file_references: vec![],
-            is_private: false,
-            is_virtual: false,
-            extra_data: None,
             dependencies: vec![],
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: None,
-            purl: None,
+            core: PackageCore::default(),
         }
     }
 
@@ -743,44 +652,10 @@ impl ResolvedPackage {
             namespace: package_data.namespace.clone().unwrap_or_default(),
             name: package_data.name.clone().unwrap_or_default(),
             version: package_data.version.clone().unwrap_or_default(),
-            qualifiers: package_data.qualifiers.clone(),
-            subpath: package_data.subpath.clone(),
-            primary_language: package_data.primary_language.clone(),
-            description: package_data.description.clone(),
-            release_date: package_data.release_date.clone(),
-            parties: package_data.parties.clone(),
-            keywords: package_data.keywords.clone(),
-            homepage_url: package_data.homepage_url.clone(),
-            download_url: package_data.download_url.clone(),
-            size: package_data.size,
-            sha1: package_data.sha1,
-            md5: package_data.md5,
-            sha256: package_data.sha256,
-            sha512: package_data.sha512,
-            bug_tracking_url: package_data.bug_tracking_url.clone(),
-            code_view_url: package_data.code_view_url.clone(),
-            vcs_url: package_data.vcs_url.clone(),
-            copyright: package_data.copyright.clone(),
-            holder: package_data.holder.clone(),
-            declared_license_expression: package_data.declared_license_expression.clone(),
-            declared_license_expression_spdx: package_data.declared_license_expression_spdx.clone(),
-            license_detections: package_data.license_detections.clone(),
-            other_license_expression: package_data.other_license_expression.clone(),
-            other_license_expression_spdx: package_data.other_license_expression_spdx.clone(),
-            other_license_detections: package_data.other_license_detections.clone(),
-            extracted_license_statement: package_data.extracted_license_statement.clone(),
-            notice_text: package_data.notice_text.clone(),
-            source_packages: package_data.source_packages.clone(),
             file_references: package_data.file_references.clone(),
-            is_private: package_data.is_private,
-            is_virtual: package_data.is_virtual,
-            extra_data: package_data.extra_data.clone(),
             dependencies: package_data.dependencies.clone(),
-            repository_homepage_url: package_data.repository_homepage_url.clone(),
-            repository_download_url: package_data.repository_download_url.clone(),
-            api_data_url: package_data.api_data_url.clone(),
             datasource_id: package_data.datasource_id,
-            purl: package_data.purl.clone(),
+            core: package_data.core.clone(),
         }
     }
 }
@@ -884,56 +759,27 @@ pub struct Package {
     pub namespace: Option<String>,
     pub name: Option<String>,
     pub version: Option<String>,
-    #[serde(default)]
-    pub qualifiers: Option<HashMap<String, String>>,
-    pub subpath: Option<String>,
-    pub primary_language: Option<String>,
-    pub description: Option<String>,
-    pub release_date: Option<String>,
-    #[serde(default)]
-    pub parties: Vec<Party>,
-    #[serde(default)]
-    pub keywords: Vec<String>,
-    pub homepage_url: Option<String>,
-    pub download_url: Option<String>,
-    pub size: Option<u64>,
-    pub sha1: Option<Sha1Digest>,
-    pub md5: Option<Md5Digest>,
-    pub sha256: Option<Sha256Digest>,
-    pub sha512: Option<Sha512Digest>,
-    pub bug_tracking_url: Option<String>,
-    pub code_view_url: Option<String>,
-    pub vcs_url: Option<String>,
-    pub copyright: Option<String>,
-    pub holder: Option<String>,
-    pub declared_license_expression: Option<String>,
-    pub declared_license_expression_spdx: Option<String>,
-    #[serde(default)]
-    pub license_detections: Vec<LicenseDetection>,
-    pub other_license_expression: Option<String>,
-    pub other_license_expression_spdx: Option<String>,
-    #[serde(default)]
-    pub other_license_detections: Vec<LicenseDetection>,
-    pub extracted_license_statement: Option<String>,
-    pub notice_text: Option<String>,
-    #[serde(default)]
-    pub source_packages: Vec<String>,
-    #[serde(default)]
-    pub is_private: bool,
-    #[serde(default)]
-    pub is_virtual: bool,
-    #[serde(default)]
-    pub extra_data: Option<HashMap<String, serde_json::Value>>,
-    pub repository_homepage_url: Option<String>,
-    pub repository_download_url: Option<String>,
-    pub api_data_url: Option<String>,
-    pub purl: Option<String>,
     /// Unique identifier for this package instance (PURL with UUID qualifier).
     pub package_uid: PackageUid,
     /// Paths to all datafiles that contributed to this package.
     pub datafile_paths: Vec<String>,
     /// Datasource identifiers for all parsers that contributed to this package.
     pub datasource_ids: Vec<DatasourceId>,
+    #[serde(flatten)]
+    pub core: PackageCore,
+}
+
+impl std::ops::Deref for Package {
+    type Target = PackageCore;
+    fn deref(&self) -> &Self::Target {
+        &self.core
+    }
+}
+
+impl std::ops::DerefMut for Package {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.core
+    }
 }
 
 impl Package {
@@ -951,41 +797,7 @@ impl Package {
             namespace: package_data.namespace.clone(),
             name: package_data.name.clone(),
             version: package_data.version.clone(),
-            qualifiers: package_data.qualifiers.clone(),
-            subpath: package_data.subpath.clone(),
-            primary_language: package_data.primary_language.clone(),
-            description: package_data.description.clone(),
-            release_date: package_data.release_date.clone(),
-            parties: package_data.parties.clone(),
-            keywords: package_data.keywords.clone(),
-            homepage_url: package_data.homepage_url.clone(),
-            download_url: package_data.download_url.clone(),
-            size: package_data.size,
-            sha1: package_data.sha1,
-            md5: package_data.md5,
-            sha256: package_data.sha256,
-            sha512: package_data.sha512,
-            bug_tracking_url: package_data.bug_tracking_url.clone(),
-            code_view_url: package_data.code_view_url.clone(),
-            vcs_url: package_data.vcs_url.clone(),
-            copyright: package_data.copyright.clone(),
-            holder: package_data.holder.clone(),
-            declared_license_expression: package_data.declared_license_expression.clone(),
-            declared_license_expression_spdx: package_data.declared_license_expression_spdx.clone(),
-            license_detections: package_data.license_detections.clone(),
-            other_license_expression: package_data.other_license_expression.clone(),
-            other_license_expression_spdx: package_data.other_license_expression_spdx.clone(),
-            other_license_detections: package_data.other_license_detections.clone(),
-            extracted_license_statement: package_data.extracted_license_statement.clone(),
-            notice_text: package_data.notice_text.clone(),
-            source_packages: package_data.source_packages.clone(),
-            is_private: package_data.is_private,
-            is_virtual: package_data.is_virtual,
-            extra_data: package_data.extra_data.clone(),
-            repository_homepage_url: package_data.repository_homepage_url.clone(),
-            repository_download_url: package_data.repository_download_url.clone(),
-            api_data_url: package_data.api_data_url.clone(),
-            purl: package_data.purl.clone(),
+            core: package_data.core.clone(),
             package_uid: PackageUid::empty(),
             datafile_paths: vec![datafile_path],
             datasource_ids: if let Some(dsid) = package_data.datasource_id {
@@ -1017,58 +829,23 @@ impl Package {
         }
         self.datafile_paths.push(datafile_path);
 
-        macro_rules! fill_if_empty {
-            ($field:ident) => {
-                if self.$field.is_none() {
-                    self.$field = package_data.$field;
-                }
-            };
+        if self.package_type.is_none() {
+            self.package_type = package_data.package_type;
+        }
+        if self.name.is_none() {
+            self.name = package_data.name;
+        }
+        if self.namespace.is_none() {
+            self.namespace = package_data.namespace;
+        }
+        if self.version.is_none() {
+            self.version = package_data.version;
         }
 
-        fill_if_empty!(package_type);
-        fill_if_empty!(name);
-        fill_if_empty!(namespace);
-        fill_if_empty!(version);
-        fill_if_empty!(qualifiers);
-        fill_if_empty!(subpath);
-        fill_if_empty!(primary_language);
-        fill_if_empty!(description);
-        fill_if_empty!(release_date);
-        fill_if_empty!(homepage_url);
-        fill_if_empty!(download_url);
-        fill_if_empty!(size);
-        fill_if_empty!(sha1);
-        fill_if_empty!(md5);
-        fill_if_empty!(sha256);
-        fill_if_empty!(sha512);
-        fill_if_empty!(bug_tracking_url);
-        fill_if_empty!(code_view_url);
-        fill_if_empty!(vcs_url);
-        fill_if_empty!(copyright);
-        fill_if_empty!(holder);
-        fill_if_empty!(declared_license_expression);
-        fill_if_empty!(declared_license_expression_spdx);
-        fill_if_empty!(other_license_expression);
-        fill_if_empty!(other_license_expression_spdx);
-        fill_if_empty!(extracted_license_statement);
-        fill_if_empty!(notice_text);
-        match (&mut self.extra_data, &package_data.extra_data) {
-            (None, Some(extra_data)) => {
-                self.extra_data = Some(extra_data.clone());
-            }
-            (Some(existing), Some(incoming)) => {
-                for (key, value) in incoming {
-                    existing.entry(key.clone()).or_insert_with(|| value.clone());
-                }
-            }
-            _ => {}
-        }
-        fill_if_empty!(repository_homepage_url);
-        fill_if_empty!(repository_download_url);
-        fill_if_empty!(api_data_url);
+        self.core.fill_if_empty_from(&package_data.core);
 
-        for party in &package_data.parties {
-            if let Some(existing) = self.parties.iter_mut().find(|p| {
+        for party in &package_data.core.parties {
+            if let Some(existing) = self.core.parties.iter_mut().find(|p| {
                 p.role == party.role
                     && ((p.name.is_some() && p.name == party.name)
                         || (p.email.is_some() && p.email == party.email))
@@ -1084,23 +861,23 @@ impl Package {
             }
         }
 
-        for keyword in &package_data.keywords {
-            if !self.keywords.contains(keyword) {
-                self.keywords.push(keyword.clone());
+        for keyword in &package_data.core.keywords {
+            if !self.core.keywords.contains(keyword) {
+                self.core.keywords.push(keyword.clone());
             }
         }
 
-        for detection in &package_data.license_detections {
-            self.license_detections.push(detection.clone());
+        for detection in &package_data.core.license_detections {
+            self.core.license_detections.push(detection.clone());
         }
 
-        for detection in &package_data.other_license_detections {
-            self.other_license_detections.push(detection.clone());
+        for detection in &package_data.core.other_license_detections {
+            self.core.other_license_detections.push(detection.clone());
         }
 
-        for source_pkg in &package_data.source_packages {
-            if !self.source_packages.contains(source_pkg) {
-                self.source_packages.push(source_pkg.clone());
+        for source_pkg in &package_data.core.source_packages {
+            if !self.core.source_packages.contains(source_pkg) {
+                self.core.source_packages.push(source_pkg.clone());
             }
         }
 
@@ -1228,29 +1005,32 @@ mod tests {
     fn file_info_new_backfills_package_detection_provenance() {
         let package_data = PackageData {
             package_type: Some(PackageType::Npm),
-            license_detections: vec![LicenseDetection {
-                license_expression: "mit".to_string(),
-                license_expression_spdx: "MIT".to_string(),
-                matches: vec![Match {
+            core: PackageCore {
+                license_detections: vec![LicenseDetection {
                     license_expression: "mit".to_string(),
                     license_expression_spdx: "MIT".to_string(),
-                    from_file: None,
-                    start_line: LineNumber::ONE,
-                    end_line: LineNumber::ONE,
-                    matcher: MatcherKind::Declared,
-                    score: MatchScore::MAX,
-                    matched_length: Some(1),
-                    match_coverage: Some(100.0),
-                    rule_relevance: Some(100),
-                    rule_identifier: String::new(),
-                    rule_url: None,
-                    matched_text: Some("MIT".to_string()),
-                    referenced_filenames: None,
-                    matched_text_diagnostics: None,
+                    matches: vec![Match {
+                        license_expression: "mit".to_string(),
+                        license_expression_spdx: "MIT".to_string(),
+                        from_file: None,
+                        start_line: LineNumber::ONE,
+                        end_line: LineNumber::ONE,
+                        matcher: MatcherKind::Declared,
+                        score: MatchScore::MAX,
+                        matched_length: Some(1),
+                        match_coverage: Some(100.0),
+                        rule_relevance: Some(100),
+                        rule_identifier: String::new(),
+                        rule_url: None,
+                        matched_text: Some("MIT".to_string()),
+                        referenced_filenames: None,
+                        matched_text_diagnostics: None,
+                    }],
+                    detection_log: vec![],
+                    identifier: String::new(),
                 }],
-                detection_log: vec![],
-                identifier: String::new(),
-            }],
+                ..PackageCore::default()
+            },
             ..PackageData::default()
         };
 
@@ -1310,29 +1090,32 @@ mod tests {
     fn package_from_package_data_backfills_detection_provenance() {
         let package_data = PackageData {
             package_type: Some(PackageType::Npm),
-            license_detections: vec![LicenseDetection {
-                license_expression: "mit".to_string(),
-                license_expression_spdx: "MIT".to_string(),
-                matches: vec![Match {
+            core: PackageCore {
+                license_detections: vec![LicenseDetection {
                     license_expression: "mit".to_string(),
                     license_expression_spdx: "MIT".to_string(),
-                    from_file: None,
-                    start_line: LineNumber::ONE,
-                    end_line: LineNumber::ONE,
-                    matcher: MatcherKind::Declared,
-                    score: MatchScore::MAX,
-                    matched_length: Some(1),
-                    match_coverage: Some(100.0),
-                    rule_relevance: Some(100),
-                    rule_identifier: String::new(),
-                    rule_url: None,
-                    matched_text: Some("MIT".to_string()),
-                    referenced_filenames: None,
-                    matched_text_diagnostics: None,
+                    matches: vec![Match {
+                        license_expression: "mit".to_string(),
+                        license_expression_spdx: "MIT".to_string(),
+                        from_file: None,
+                        start_line: LineNumber::ONE,
+                        end_line: LineNumber::ONE,
+                        matcher: MatcherKind::Declared,
+                        score: MatchScore::MAX,
+                        matched_length: Some(1),
+                        match_coverage: Some(100.0),
+                        rule_relevance: Some(100),
+                        rule_identifier: String::new(),
+                        rule_url: None,
+                        matched_text: Some("MIT".to_string()),
+                        referenced_filenames: None,
+                        matched_text_diagnostics: None,
+                    }],
+                    detection_log: vec![],
+                    identifier: String::new(),
                 }],
-                detection_log: vec![],
-                identifier: String::new(),
-            }],
+                ..PackageCore::default()
+            },
             ..PackageData::default()
         };
 
@@ -1358,7 +1141,10 @@ mod tests {
             namespace: Some("alpine".to_string()),
             name: Some("busybox".to_string()),
             version: Some("1.35.0-r17".to_string()),
-            purl: Some("pkg:alpine/busybox@1.35.0-r17?arch=x86_64".to_string()),
+            core: PackageCore {
+                purl: Some("pkg:alpine/busybox@1.35.0-r17?arch=x86_64".to_string()),
+                ..PackageCore::default()
+            },
             ..PackageData::default()
         };
 

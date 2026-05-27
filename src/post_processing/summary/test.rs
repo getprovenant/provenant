@@ -10,7 +10,7 @@ use super::*;
 use crate::license_detection::MatcherKind;
 use crate::models::{
     Copyright, DatasourceId, FileReference, Holder, LineNumber, Match, MatchScore, Package,
-    PackageType, PackageUid, TallyEntry,
+    PackageCore, PackageType, PackageUid, TallyEntry,
 };
 
 #[test]
@@ -32,6 +32,9 @@ fn key_file_license_clues_feed_summary_without_mutating_package_license_provenan
             sha512: None,
             extra_data: None,
         }],
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -112,31 +115,36 @@ fn manifest_declared_license_survives_into_package_and_summary() {
     gemspec.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Gem),
         datasource_id: Some(DatasourceId::Gemspec),
-        declared_license_expression: Some("mit".to_string()),
-        declared_license_expression_spdx: Some("MIT".to_string()),
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![Match {
+        core: PackageCore {
+            declared_license_expression: Some("mit".to_string()),
+
+            declared_license_expression_spdx: Some("MIT".to_string()),
+
+            license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "mit".to_string(),
                 license_expression_spdx: "MIT".to_string(),
-                from_file: Some("demo/demo.gemspec".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Hash,
-                score: MatchScore::MAX,
-                matched_length: None,
-                match_coverage: None,
-                rule_relevance: None,
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: None,
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: Some("demo/demo.gemspec".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Hash,
+                    score: MatchScore::MAX,
+                    matched_length: None,
+                    match_coverage: None,
+                    rule_relevance: None,
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: None,
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                identifier: String::new(),
+                detection_log: vec![],
             }],
-            identifier: String::new(),
-            detection_log: vec![],
-        }],
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -235,29 +243,32 @@ fn compute_summary_includes_package_other_license_detections_as_other_expression
     let mut manifest = file("project/package.json");
     manifest.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Npm),
-        other_license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "gpl-2.0-only".to_string(),
-            license_expression_spdx: "GPL-2.0-only".to_string(),
-            matches: vec![Match {
+        core: PackageCore {
+            other_license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "gpl-2.0-only".to_string(),
                 license_expression_spdx: "GPL-2.0-only".to_string(),
-                from_file: Some("project/package.json".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(1),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: Some("GPL-2.0-only".to_string()),
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![Match {
+                    license_expression: "gpl-2.0-only".to_string(),
+                    license_expression_spdx: "GPL-2.0-only".to_string(),
+                    from_file: Some("project/package.json".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(1),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: Some("GPL-2.0-only".to_string()),
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                identifier: "gpl-package-id".to_string(),
+                detection_log: vec![],
             }],
-            identifier: "gpl-package-id".to_string(),
-            detection_log: vec![],
-        }],
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -280,31 +291,36 @@ fn compute_summary_uses_manifest_package_license_detections_when_file_detections
     manifest.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Cargo),
         datasource_id: Some(DatasourceId::CargoToml),
-        declared_license_expression: Some("mit".to_string()),
-        declared_license_expression_spdx: Some("MIT".to_string()),
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![Match {
+        core: PackageCore {
+            declared_license_expression: Some("mit".to_string()),
+
+            declared_license_expression_spdx: Some("MIT".to_string()),
+
+            license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "mit".to_string(),
                 license_expression_spdx: "MIT".to_string(),
-                from_file: Some("project/Cargo.toml".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(1),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: Some("MIT".to_string()),
-                referenced_filenames: Some(vec!["LICENSE".to_string()]),
-                matched_text_diagnostics: None,
+                matches: vec![Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: Some("project/Cargo.toml".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(1),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: Some("MIT".to_string()),
+                    referenced_filenames: Some(vec!["LICENSE".to_string()]),
+                    matched_text_diagnostics: None,
+                }],
+                identifier: String::new(),
+                detection_log: vec!["unknown-reference-to-local-file".to_string()],
             }],
-            identifier: String::new(),
-            detection_log: vec!["unknown-reference-to-local-file".to_string()],
-        }],
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -351,9 +367,14 @@ fn compute_summary_prefers_file_license_detections_over_duplicate_package_data_d
     manifest.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Cargo),
         datasource_id: Some(DatasourceId::CargoToml),
-        declared_license_expression: Some("mit".to_string()),
-        declared_license_expression_spdx: Some("MIT".to_string()),
-        license_detections: vec![detection],
+        core: PackageCore {
+            declared_license_expression: Some("mit".to_string()),
+
+            declared_license_expression_spdx: Some("MIT".to_string()),
+
+            license_detections: vec![detection],
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -397,12 +418,18 @@ fn compute_summary_deduplicates_duplicate_other_license_package_data_entries_per
     manifest.package_data = vec![
         crate::models::PackageData {
             package_type: Some(PackageType::Npm),
-            other_license_detections: vec![other_detection.clone()],
+            core: PackageCore {
+                other_license_detections: vec![other_detection.clone()],
+                ..PackageCore::default()
+            },
             ..Default::default()
         },
         crate::models::PackageData {
             package_type: Some(PackageType::Npm),
-            other_license_detections: vec![other_detection],
+            core: PackageCore {
+                other_license_detections: vec![other_detection],
+                ..PackageCore::default()
+            },
             ..Default::default()
         },
     ];
@@ -452,17 +479,27 @@ fn compute_summary_deduplicates_duplicate_primary_package_data_entries_per_file(
         crate::models::PackageData {
             package_type: Some(PackageType::Cargo),
             datasource_id: Some(DatasourceId::CargoToml),
-            declared_license_expression: Some("mit".to_string()),
-            declared_license_expression_spdx: Some("MIT".to_string()),
-            license_detections: vec![detection.clone()],
+            core: PackageCore {
+                declared_license_expression: Some("mit".to_string()),
+
+                declared_license_expression_spdx: Some("MIT".to_string()),
+
+                license_detections: vec![detection.clone()],
+                ..PackageCore::default()
+            },
             ..Default::default()
         },
         crate::models::PackageData {
             package_type: Some(PackageType::Cargo),
             datasource_id: Some(DatasourceId::CargoToml),
-            declared_license_expression: Some("mit".to_string()),
-            declared_license_expression_spdx: Some("MIT".to_string()),
-            license_detections: vec![detection],
+            core: PackageCore {
+                declared_license_expression: Some("mit".to_string()),
+
+                declared_license_expression_spdx: Some("MIT".to_string()),
+
+                license_detections: vec![detection],
+                ..PackageCore::default()
+            },
             ..Default::default()
         },
     ];

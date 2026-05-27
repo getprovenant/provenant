@@ -3,7 +3,9 @@
 
 use std::path::Path;
 
-use crate::models::{DatasourceId, FileReference, Md5Digest, PackageData, PackageType};
+use crate::models::{
+    DatasourceId, FileReference, Md5Digest, PackageCore, PackageData, PackageType,
+};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
 
@@ -169,6 +171,9 @@ fn parse_debian_file_list(
         namespace: namespace.clone(),
         name: name.clone(),
         file_references,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     };
 

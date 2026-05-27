@@ -29,8 +29,8 @@ use crate::utils::magic;
 
 use super::metadata::ParserMetadata;
 use crate::models::{
-    DatasourceId, Dependency, FileReference, LicenseDetection, PackageData, PackageType, Party,
-    PartyType, Sha1Digest,
+    DatasourceId, Dependency, FileReference, LicenseDetection, PackageCore, PackageData,
+    PackageType, Party, PartyType, Sha1Digest,
 };
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
@@ -53,6 +53,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -303,26 +306,38 @@ fn parse_alpine_package_paragraph(
         namespace: namespace.clone(),
         name: name.clone(),
         version: version.clone(),
-        description,
-        homepage_url,
-        vcs_url,
-        parties,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        source_packages,
         dependencies,
         file_references,
-        purl: name
-            .as_ref()
-            .and_then(|n| build_alpine_purl(n, version.as_deref(), architecture.as_deref())),
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
+        core: PackageCore {
+            description,
+
+            homepage_url,
+
+            vcs_url,
+
+            parties,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            source_packages,
+
+            purl: name
+                .as_ref()
+                .and_then(|n| build_alpine_purl(n, version.as_deref(), architecture.as_deref())),
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+            ..PackageCore::default()
         },
-        ..Default::default()
     }
 }
 
@@ -390,17 +405,28 @@ fn parse_apkbuild(content: &str) -> PackageData {
         namespace: None,
         name: name.clone(),
         version: version.clone(),
-        description,
-        homepage_url,
-        extracted_license_statement,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
         dependencies,
-        purl: name
-            .as_deref()
-            .and_then(|n| build_alpine_purl(n, version.as_deref(), None)),
-        extra_data: (!extra_data.is_empty()).then_some(extra_data),
+        core: PackageCore {
+            description,
+
+            homepage_url,
+
+            extracted_license_statement,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            purl: name
+                .as_deref()
+                .and_then(|n| build_alpine_purl(n, version.as_deref(), None)),
+
+            extra_data: (!extra_data.is_empty()).then_some(extra_data),
+            ..PackageCore::default()
+        },
+
         ..default_package_data(DatasourceId::AlpineApkbuild)
     }
 }
@@ -1143,6 +1169,9 @@ impl PackageParser for AlpineApkParser {
                 PackageData {
                     package_type: Some(PACKAGE_TYPE),
                     datasource_id: Some(DatasourceId::AlpineApkArchive),
+                    core: PackageCore {
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }
             }
@@ -1354,20 +1383,31 @@ fn parse_pkginfo(content: &str) -> PackageData {
         namespace: Some("alpine".to_string()),
         name,
         version,
-        description,
-        homepage_url: homepage,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: license,
-        parties,
         dependencies,
-        purl,
-        extra_data: origin.map(|o| {
-            let mut map = HashMap::new();
-            map.insert("origin".to_string(), serde_json::Value::String(o));
-            map
-        }),
+        core: PackageCore {
+            description,
+
+            homepage_url: homepage,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: license,
+
+            parties,
+
+            purl,
+
+            extra_data: origin.map(|o| {
+                let mut map = HashMap::new();
+                map.insert("origin".to_string(), serde_json::Value::String(o));
+                map
+            }),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

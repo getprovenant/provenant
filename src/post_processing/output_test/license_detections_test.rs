@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::models::PackageCore;
 
 #[test]
 fn collect_top_level_license_detections_groups_file_detections_and_preserves_paths() {
@@ -255,52 +256,57 @@ fn collect_top_level_license_detections_includes_package_origin_detections() {
     let mut manifest = file("project/package.json");
     manifest.package_data = vec![PackageData {
         package_type: Some(PackageType::Npm),
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![Match {
+        core: PackageCore {
+            license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "mit".to_string(),
                 license_expression_spdx: "MIT".to_string(),
-                from_file: None,
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(1),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: Some("MIT".to_string()),
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: None,
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(1),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: Some("MIT".to_string()),
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: String::new(),
             }],
-            detection_log: vec![],
-            identifier: String::new(),
-        }],
-        other_license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "apache-2.0".to_string(),
-            license_expression_spdx: "Apache-2.0".to_string(),
-            matches: vec![Match {
+
+            other_license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "apache-2.0".to_string(),
                 license_expression_spdx: "Apache-2.0".to_string(),
-                from_file: None,
-                start_line: LineNumber::new(2).unwrap(),
-                end_line: LineNumber::new(2).unwrap(),
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(1),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: Some("Apache-2.0".to_string()),
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![Match {
+                    license_expression: "apache-2.0".to_string(),
+                    license_expression_spdx: "Apache-2.0".to_string(),
+                    from_file: None,
+                    start_line: LineNumber::new(2).unwrap(),
+                    end_line: LineNumber::new(2).unwrap(),
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(1),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: Some("Apache-2.0".to_string()),
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: String::new(),
             }],
-            detection_log: vec![],
-            identifier: String::new(),
-        }],
+            ..PackageCore::default()
+        },
+
         ..PackageData::default()
     }];
     manifest.backfill_license_provenance();

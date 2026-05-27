@@ -10,7 +10,9 @@ use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 use yaml_serde::{Mapping, Value};
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -95,19 +97,31 @@ fn parse_chart_yaml(yaml_content: &Value) -> PackageData {
         package_type: Some(PackageType::Helm),
         name: name.clone(),
         version: version.clone(),
-        primary_language: Some("YAML".to_string()),
-        description,
-        parties,
-        keywords,
-        homepage_url,
-        code_view_url,
-        is_private: false,
-        extra_data,
         dependencies,
         datasource_id: Some(DatasourceId::HelmChartYaml),
-        purl: name
-            .as_deref()
-            .and_then(|name| build_helm_purl(name, version.as_deref())),
+        core: PackageCore {
+            primary_language: Some("YAML".to_string()),
+
+            description,
+
+            parties,
+
+            keywords,
+
+            homepage_url,
+
+            code_view_url,
+
+            is_private: false,
+
+            extra_data,
+
+            purl: name
+                .as_deref()
+                .and_then(|name| build_helm_purl(name, version.as_deref())),
+            ..PackageCore::default()
+        },
+
         ..default_package_data(Some(DatasourceId::HelmChartYaml))
     }
 }
@@ -363,6 +377,9 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(PackageType::Helm),
         datasource_id,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, truncate_field};
 
@@ -51,8 +51,11 @@ impl PackageParser for YarnPnpParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(YarnPnpParser::PACKAGE_TYPE),
-        primary_language: Some("JavaScript".to_string()),
         datasource_id: Some(DatasourceId::YarnPnpCjs),
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

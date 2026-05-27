@@ -793,7 +793,7 @@ mod tests {
 
     use super::{active_parser_license_engine, capture_parser_diagnostics};
     use crate::license_detection::LicenseDetectionEngine;
-    use crate::models::PackageData;
+    use crate::models::{PackageCore, PackageData};
     use crate::parsers::license_normalization::{
         clear_last_parser_license_engine_ptr, last_parser_license_engine_ptr,
     };
@@ -828,13 +828,19 @@ mod tests {
         let result = capture_parser_diagnostics(
             || {
                 vec![PackageData {
-                    declared_license_expression: Some("mit".to_string()),
-                    declared_license_expression_spdx: Some("MIT".to_string()),
-                    extracted_license_statement: Some("MIT".to_string()),
-                    extra_data: Some(HashMap::from([(
-                        "license_file".to_string(),
-                        serde_json::Value::String("LICENSE".to_string()),
-                    )])),
+                    core: PackageCore {
+                        declared_license_expression: Some("mit".to_string()),
+
+                        declared_license_expression_spdx: Some("MIT".to_string()),
+
+                        extracted_license_statement: Some("MIT".to_string()),
+
+                        extra_data: Some(HashMap::from([(
+                            "license_file".to_string(),
+                            serde_json::Value::String("LICENSE".to_string()),
+                        )])),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }]
             },
@@ -1030,7 +1036,7 @@ register_package_handlers! {
 #[cfg(test)]
 mod panic_isolation_tests {
     use super::*;
-    use crate::models::DiagnosticSeverity;
+    use crate::models::{DiagnosticSeverity, PackageCore};
 
     #[test]
     fn capture_parser_diagnostics_turns_panics_into_scan_errors() {
@@ -1073,6 +1079,9 @@ mod panic_isolation_tests {
                 crate::parser_warn!("recoverable parser warning");
                 vec![PackageData {
                     package_type: Some(PackageType::Npm),
+                    core: PackageCore {
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }]
             },

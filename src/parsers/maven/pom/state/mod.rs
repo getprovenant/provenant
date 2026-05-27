@@ -585,7 +585,7 @@ impl PomAccumulator {
             self.package_data.namespace.as_deref(),
             self.package_data.name.as_deref(),
         ) {
-            self.package_data.repository_homepage_url = Some(build_maven_repository_url(
+            self.package_data.core.repository_homepage_url = Some(build_maven_repository_url(
                 group_id,
                 artifact_id,
                 self.package_data.version.as_deref(),
@@ -593,7 +593,7 @@ impl PomAccumulator {
             ));
 
             if let Some(ver) = self.package_data.version.as_deref() {
-                self.package_data.repository_download_url = Some(build_maven_download_url(
+                self.package_data.core.repository_download_url = Some(build_maven_download_url(
                     group_id,
                     artifact_id,
                     ver,
@@ -601,12 +601,12 @@ impl PomAccumulator {
                     self.project_details.packaging_str(),
                 ));
             } else {
-                self.package_data.repository_download_url = None;
+                self.package_data.core.repository_download_url = None;
             }
 
             if let Some(ver) = self.package_data.version.as_deref() {
                 let pom_filename = format!("{artifact_id}-{ver}.pom");
-                self.package_data.api_data_url = Some(build_maven_repository_url(
+                self.package_data.core.api_data_url = Some(build_maven_repository_url(
                     group_id,
                     artifact_id,
                     Some(ver),

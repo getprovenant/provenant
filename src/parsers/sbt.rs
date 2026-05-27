@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::json;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 
 use super::PackageParser;
 use super::utils::{MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field};
@@ -46,16 +46,23 @@ impl PackageParser for SbtParser {
 
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
-            primary_language: Some("Scala".to_string()),
             namespace: parsed.organization.map(truncate_field),
             name: parsed.name.map(truncate_field),
             version: parsed.version.map(truncate_field),
-            description: parsed.description.map(truncate_field),
-            homepage_url: homepage_url.map(truncate_field),
-            extracted_license_statement: extracted_license_statement.map(truncate_field),
             dependencies: parsed.dependencies,
             datasource_id: Some(DatasourceId::SbtBuildSbt),
-            purl,
+            core: PackageCore {
+                primary_language: Some("Scala".to_string()),
+
+                description: parsed.description.map(truncate_field),
+
+                homepage_url: homepage_url.map(truncate_field),
+
+                extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+                purl,
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }
@@ -74,8 +81,11 @@ impl PackageParser for SbtParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(SbtParser::PACKAGE_TYPE),
-        primary_language: Some("Scala".to_string()),
         datasource_id: Some(DatasourceId::SbtBuildSbt),
+        core: PackageCore {
+            primary_language: Some("Scala".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

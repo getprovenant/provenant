@@ -22,7 +22,7 @@
 //! - Project.toml `[deps]` lists direct dependencies by name → UUID
 //! - Manifest.toml `[[deps]]` entries contain resolved version + tree SHA
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
@@ -135,44 +135,80 @@ impl PackageParser for JuliaProjectTomlParser {
             namespace: None,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("Julia".to_string()),
-            description,
-            release_date: None,
-            parties: extract_parties(&toml_content),
-            keywords: Vec::new(),
-            homepage_url,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: repository_url,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private,
-            is_virtual: false,
-            extra_data,
             dependencies,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::JuliaProjectToml),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("Julia".to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties: extract_parties(&toml_content),
+
+                keywords: Vec::new(),
+
+                homepage_url,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: repository_url,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private,
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl,
+            },
         }]
     }
 
@@ -415,48 +451,84 @@ fn extract_manifest_packages(toml_content: &Value) -> Vec<PackageData> {
                 namespace: None,
                 name,
                 version,
-                qualifiers: None,
-                subpath: None,
-                primary_language: Some("Julia".to_string()),
-                description: None,
-                release_date: None,
-                parties: Vec::new(),
-                keywords: Vec::new(),
-                homepage_url: None,
-                download_url: None,
-                size: None,
-                sha1: None,
-                md5: None,
-                sha256: None,
-                sha512: None,
-                bug_tracking_url: None,
-                code_view_url: None,
-                vcs_url: source_url,
-                copyright: None,
-                holder: None,
-                declared_license_expression: None,
-                declared_license_expression_spdx: None,
-                license_detections: Vec::new(),
-                other_license_expression: None,
-                other_license_expression_spdx: None,
-                other_license_detections: Vec::new(),
-                extracted_license_statement: None,
-                notice_text: None,
-                source_packages: Vec::new(),
                 file_references: Vec::new(),
-                is_private: false,
-                is_virtual: false,
-                extra_data: if extra_data_map.is_empty() {
-                    None
-                } else {
-                    Some(extra_data_map)
-                },
                 dependencies: Vec::new(),
-                repository_homepage_url: None,
-                repository_download_url: None,
-                api_data_url: None,
                 datasource_id: Some(DatasourceId::JuliaManifestToml),
-                purl,
+                core: PackageCore {
+                    qualifiers: None,
+
+                    subpath: None,
+
+                    primary_language: Some("Julia".to_string()),
+
+                    description: None,
+
+                    release_date: None,
+
+                    parties: Vec::new(),
+
+                    keywords: Vec::new(),
+
+                    homepage_url: None,
+
+                    download_url: None,
+
+                    size: None,
+
+                    sha1: None,
+
+                    md5: None,
+
+                    sha256: None,
+
+                    sha512: None,
+
+                    bug_tracking_url: None,
+
+                    code_view_url: None,
+
+                    vcs_url: source_url,
+
+                    copyright: None,
+
+                    holder: None,
+
+                    declared_license_expression: None,
+
+                    declared_license_expression_spdx: None,
+
+                    license_detections: Vec::new(),
+
+                    other_license_expression: None,
+
+                    other_license_expression_spdx: None,
+
+                    other_license_detections: Vec::new(),
+
+                    extracted_license_statement: None,
+
+                    notice_text: None,
+
+                    source_packages: Vec::new(),
+
+                    is_private: false,
+
+                    is_virtual: false,
+
+                    extra_data: if extra_data_map.is_empty() {
+                        None
+                    } else {
+                        Some(extra_data_map)
+                    },
+
+                    repository_homepage_url: None,
+
+                    repository_download_url: None,
+
+                    api_data_url: None,
+
+                    purl,
+                },
             });
         }
     }
@@ -536,6 +608,9 @@ fn default_project_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Julia),
         datasource_id: Some(DatasourceId::JuliaProjectToml),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

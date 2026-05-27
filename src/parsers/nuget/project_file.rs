@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
-use crate::models::{Dependency, PackageData, PackageType};
+use crate::models::{Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use quick_xml::Reader;
 use quick_xml::events::Event;
@@ -359,25 +359,42 @@ impl PackageParser for PackageReferenceProjectParser {
             package_type: Some(Self::PACKAGE_TYPE),
             name: name.clone().map(truncate_field),
             version: version.clone().map(truncate_field),
-            purl: build_nuget_purl(name.as_deref(), version.as_deref()),
-            description: description.map(truncate_field),
-            homepage_url: homepage_url.map(truncate_field),
-            parties,
             dependencies,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            extracted_license_statement: extracted_license_statement.map(truncate_field),
-            copyright: copyright.map(truncate_field),
-            vcs_url: vcs_url.map(truncate_field),
-            extra_data: if extra_data.is_empty() {
-                None
-            } else {
-                Some(extra_data.into_iter().collect())
+            core: PackageCore {
+                purl: build_nuget_purl(name.as_deref(), version.as_deref()),
+
+                description: description.map(truncate_field),
+
+                homepage_url: homepage_url.map(truncate_field),
+
+                parties,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+                copyright: copyright.map(truncate_field),
+
+                vcs_url: vcs_url.map(truncate_field),
+
+                extra_data: if extra_data.is_empty() {
+                    None
+                } else {
+                    Some(extra_data.into_iter().collect())
+                },
+
+                repository_homepage_url,
+
+                repository_download_url,
+
+                api_data_url,
+                ..PackageCore::default()
             },
-            repository_homepage_url,
-            repository_download_url,
-            api_data_url,
+
             ..default_package_data(Some(datasource_id))
         }]
     }

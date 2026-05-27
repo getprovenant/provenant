@@ -11,7 +11,7 @@ use object::pe;
 use object::read::FileKind;
 use packageurl::PackageUrl;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::metadata::ParserMetadata;
 use crate::utils::file::extract_printable_strings;
@@ -684,15 +684,20 @@ fn build_windows_executable_package(
         datasource_id: Some(DatasourceId::WindowsExecutable),
         name: Some(name.clone()),
         version: version.clone(),
-        description: combined_string_with_fallback(
-            strings,
-            fallback,
-            &["FileDescription", "Comments"],
-        )
-        .map(truncate_field),
-        homepage_url: preferred_string_with_fallback(strings, fallback, &["URL", "WWW"])
+        core: PackageCore {
+            description: combined_string_with_fallback(
+                strings,
+                fallback,
+                &["FileDescription", "Comments"],
+            )
             .map(truncate_field),
-        purl: create_winexe_purl(&name, version.as_deref()).map(truncate_field),
+
+            homepage_url: preferred_string_with_fallback(strings, fallback, &["URL", "WWW"])
+                .map(truncate_field),
+
+            purl: create_winexe_purl(&name, version.as_deref()).map(truncate_field),
+            ..PackageCore::default()
+        },
         ..Default::default()
     };
 
@@ -742,7 +747,10 @@ fn build_windows_executable_fallback(path: &Path) -> Option<PackageData> {
         package_type: Some(PackageType::Winexe),
         datasource_id: Some(DatasourceId::WindowsExecutable),
         name: Some(name.clone()),
-        purl: create_winexe_purl(&name, None).map(truncate_field),
+        core: PackageCore {
+            purl: create_winexe_purl(&name, None).map(truncate_field),
+            ..PackageCore::default()
+        },
         ..Default::default()
     })
 }

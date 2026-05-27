@@ -19,7 +19,9 @@
 //! - Located in conda-meta/ directory in rootfs
 //! - Spec: https://docs.conda.io/
 
-use crate::models::{DatasourceId, FileReference, Md5Digest, PackageType, Sha256Digest};
+use crate::models::{
+    DatasourceId, FileReference, Md5Digest, PackageCore, PackageType, Sha256Digest,
+};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -37,8 +39,11 @@ const PACKAGE_TYPE: PackageType = PackageType::Conda;
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id: Some(DatasourceId::CondaMetaJson),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -178,20 +183,30 @@ pub(crate) fn parse_conda_meta_json_with_path(content: &str, _path: Option<&Path
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         name: metadata.name.map(truncate_field),
         version: metadata.version.map(truncate_field),
-        extracted_license_statement: metadata.license.map(truncate_field),
-        download_url: metadata.url.map(truncate_field),
-        size: metadata.size,
-        md5: metadata.md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
-        sha256: metadata
-            .sha256
-            .and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        extra_data: extra_data_opt,
         file_references,
         datasource_id: Some(DatasourceId::CondaMetaJson),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            extracted_license_statement: metadata.license.map(truncate_field),
+
+            download_url: metadata.url.map(truncate_field),
+
+            size: metadata.size,
+
+            md5: metadata.md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
+
+            sha256: metadata
+                .sha256
+                .and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            extra_data: extra_data_opt,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

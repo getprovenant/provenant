@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::default_package_data;
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
 use std::path::Path;
@@ -15,8 +15,11 @@ pub(super) fn parse_pom_properties(path: &Path) -> PackageData {
             warn!("Failed to read pom.properties at {:?}: {}", path, e);
             return PackageData {
                 package_type: Some(PackageType::Maven),
-                primary_language: Some("Java".to_string()),
                 datasource_id: Some(DatasourceId::MavenPomProperties),
+                core: PackageCore {
+                    primary_language: Some("Java".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             };
         }

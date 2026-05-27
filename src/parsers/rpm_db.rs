@@ -26,7 +26,7 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::models::{Dependency, FileReference};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
 
@@ -75,6 +75,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -454,47 +457,83 @@ fn build_package_data(pkg: RpmQueryPackage, datasource_id: DatasourceId) -> Pack
         namespace,
         name,
         version,
-        qualifiers: architecture.as_ref().map(|arch| {
-            let mut q = std::collections::HashMap::new();
-            q.insert("arch".to_string(), arch.clone());
-            q
-        }),
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: pkg.size.filter(|size| *size > 0),
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement,
-        notice_text: None,
-        source_packages,
         file_references,
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl,
+        core: PackageCore {
+            qualifiers: architecture.as_ref().map(|arch| {
+                let mut q = std::collections::HashMap::new();
+                q.insert("arch".to_string(), arch.clone());
+                q
+            }),
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: pkg.size.filter(|size| *size > 0),
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement,
+
+            notice_text: None,
+
+            source_packages,
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 

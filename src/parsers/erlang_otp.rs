@@ -8,7 +8,7 @@ use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
@@ -574,8 +574,11 @@ impl PackageParser for ErlangAppSrcParser {
 fn default_app_src_package() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Hex),
-        primary_language: Some("Erlang".to_string()),
         datasource_id: Some(DatasourceId::ErlangOtpAppSrc),
+        core: PackageCore {
+            primary_language: Some("Erlang".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -717,17 +720,17 @@ fn parse_app_src(content: &str) -> Result<PackageData, String> {
     }
 
     if let Some(ref name) = package.name {
-        package.purl = build_hex_purl(name, package.version.as_deref()).map(truncate_field);
-        package.repository_homepage_url =
+        package.core.purl = build_hex_purl(name, package.version.as_deref()).map(truncate_field);
+        package.core.repository_homepage_url =
             Some(truncate_field(format!("https://hex.pm/packages/{}", name)));
-        package.api_data_url = Some(truncate_field(format!(
+        package.core.api_data_url = Some(truncate_field(format!(
             "https://hex.pm/api/packages/{}",
             name
         )));
     }
 
     if !extra_data.is_empty() {
-        package.extra_data = Some(extra_data);
+        package.core.extra_data = Some(extra_data);
     }
 
     Ok(package)
@@ -816,8 +819,11 @@ impl PackageParser for RebarConfigParser {
 fn default_rebar_config_package() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Hex),
-        primary_language: Some("Erlang".to_string()),
         datasource_id: Some(DatasourceId::RebarConfig),
+        core: PackageCore {
+            primary_language: Some("Erlang".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -1104,8 +1110,11 @@ impl PackageParser for RebarLockParser {
 fn default_rebar_lock_package() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Hex),
-        primary_language: Some("Erlang".to_string()),
         datasource_id: Some(DatasourceId::RebarLock),
+        core: PackageCore {
+            primary_language: Some("Erlang".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -1190,19 +1199,28 @@ fn parse_lock_dep(term: &ErlTerm, hashes: &HashMap<String, String>) -> Option<De
         .and_then(|h| Sha256Digest::from_hex(h).ok());
 
     let resolved_package = ResolvedPackage {
-        primary_language: Some("Erlang".to_string()),
-        sha256,
-        is_virtual: true,
         datasource_id: Some(DatasourceId::RebarLock),
-        purl: build_hex_purl(&package_name, version.as_deref()).map(truncate_field),
-        repository_homepage_url: Some(truncate_field(format!(
-            "https://hex.pm/packages/{}",
-            package_name
-        ))),
-        api_data_url: Some(truncate_field(format!(
-            "https://hex.pm/api/packages/{}",
-            package_name
-        ))),
+        core: PackageCore {
+            primary_language: Some("Erlang".to_string()),
+
+            sha256,
+
+            is_virtual: true,
+
+            purl: build_hex_purl(&package_name, version.as_deref()).map(truncate_field),
+
+            repository_homepage_url: Some(truncate_field(format!(
+                "https://hex.pm/packages/{}",
+                package_name
+            ))),
+
+            api_data_url: Some(truncate_field(format!(
+                "https://hex.pm/api/packages/{}",
+                package_name
+            ))),
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PackageType::Hex,
             String::new(),

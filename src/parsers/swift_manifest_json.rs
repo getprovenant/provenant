@@ -10,7 +10,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 
 use super::PackageParser;
 
@@ -105,48 +105,84 @@ fn parse_swift_manifest(manifest: &Value) -> PackageData {
         namespace: None,
         name,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Swift".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::SwiftPackageManifestJson),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Swift".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 
@@ -435,8 +471,11 @@ fn default_package_data(path: &Path) -> PackageData {
 
     PackageData {
         package_type: Some(SwiftManifestJsonParser::PACKAGE_TYPE),
-        primary_language: Some("Swift".to_string()),
         datasource_id: Some(DatasourceId::SwiftPackageManifestJson),
+        core: PackageCore {
+            primary_language: Some("Swift".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -18,7 +18,7 @@
 use std::path::Path;
 
 use super::PackageParser;
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::utils::magic;
 
 /// Helper macro to define file-type recognizers with minimal boilerplate.
@@ -48,6 +48,9 @@ macro_rules! file_recognizer {
                 vec![PackageData {
                     package_type: Some($pkg_type),
                     datasource_id: Some($datasource),
+                    core: PackageCore {
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }]
             }

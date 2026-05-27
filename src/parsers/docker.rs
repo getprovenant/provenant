@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::parser_warn as warn;
 use serde_json::json;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -20,8 +20,11 @@ const OCI_LABEL_PREFIX: &str = "org.opencontainers.image.";
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Dockerfile".to_string()),
         datasource_id: Some(DatasourceId::Dockerfile),
+        core: PackageCore {
+            primary_language: Some("Dockerfile".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -85,28 +88,39 @@ pub(crate) fn parse_dockerfile(content: &str) -> PackageData {
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Dockerfile".to_string()),
         datasource_id: Some(DatasourceId::Dockerfile),
         name: oci_labels
             .get("org.opencontainers.image.title")
             .map(|v| truncate_field(v.clone())),
-        description: oci_labels
-            .get("org.opencontainers.image.description")
-            .map(|v| truncate_field(v.clone())),
-        homepage_url: oci_labels
-            .get("org.opencontainers.image.url")
-            .map(|v| truncate_field(v.clone())),
-        vcs_url: oci_labels
-            .get("org.opencontainers.image.source")
-            .map(|v| truncate_field(v.clone())),
         version: oci_labels
             .get("org.opencontainers.image.version")
             .map(|v| truncate_field(v.clone())),
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: extracted_license_statement.map(truncate_field),
-        extra_data,
+        core: PackageCore {
+            primary_language: Some("Dockerfile".to_string()),
+
+            description: oci_labels
+                .get("org.opencontainers.image.description")
+                .map(|v| truncate_field(v.clone())),
+
+            homepage_url: oci_labels
+                .get("org.opencontainers.image.url")
+                .map(|v| truncate_field(v.clone())),
+
+            vcs_url: oci_labels
+                .get("org.opencontainers.image.source")
+                .map(|v| truncate_field(v.clone())),
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+            extra_data,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

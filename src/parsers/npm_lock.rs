@@ -23,7 +23,8 @@
 //! - Direct dependencies determined by top-level `dependencies` and `devDependencies`
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha1Digest, Sha512Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha1Digest,
+    Sha512Digest,
 };
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
@@ -136,6 +137,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(NpmLockParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::NpmPackageLockJson),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -275,44 +279,80 @@ fn parse_lockfile_v2_plus(
         namespace: namespace.clone(),
         name,
         version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::NpmPackageLockJson),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 
@@ -370,44 +410,80 @@ fn parse_lockfile_v1(
         namespace: namespace.clone(),
         name,
         version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::NpmPackageLockJson),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 
@@ -827,20 +903,35 @@ fn build_npm_dependency(
     }
 
     let resolved_package = ResolvedPackage {
-        primary_language: Some("JavaScript".to_string()),
-        download_url,
-        sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
-        sha256: None,
-        sha512: sha512_from_integrity.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: None,
-        is_virtual: true,
-        extra_data: None,
         dependencies: nested_deps,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::NpmPackageLockJson),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+
+            download_url,
+
+            sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
+
+            sha256: None,
+
+            sha512: sha512_from_integrity.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             NpmLockParser::PACKAGE_TYPE,
             purl_namespace,

@@ -31,7 +31,9 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use regex::Regex;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -128,44 +130,80 @@ impl PackageParser for CranParser {
             namespace: None,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("R".to_string()),
-            description,
-            release_date: None,
-            parties,
-            keywords: Vec::new(),
-            homepage_url,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: Vec::new(),
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private: false,
-            is_virtual: false,
-            extra_data: None,
             dependencies,
-            repository_homepage_url,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::CranDescription),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("R".to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties,
+
+                keywords: Vec::new(),
+
+                homepage_url,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression: None,
+
+                declared_license_expression_spdx: None,
+
+                license_detections: Vec::new(),
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data: None,
+
+                repository_homepage_url,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl,
+            },
         }]
     }
 
@@ -472,8 +510,11 @@ fn create_package_url(name: &Option<String>, version: &Option<String>) -> Option
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(CranParser::PACKAGE_TYPE),
-        primary_language: Some("R".to_string()),
         datasource_id: Some(DatasourceId::CranDescription),
+        core: PackageCore {
+            primary_language: Some("R".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

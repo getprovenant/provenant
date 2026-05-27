@@ -498,7 +498,7 @@ spec:
         let package_data = CondaMetaYamlParser::extract_first_package(&path);
 
         // Check extra_data contains pip and python
-        let extra_data = package_data.extra_data.unwrap_or_default();
+        let extra_data = package_data.extra_data.clone().unwrap_or_default();
         assert!(extra_data.contains_key("host"));
         assert!(extra_data.contains_key("run"));
 
@@ -547,7 +547,7 @@ spec:
         assert_eq!(package_data.primary_language, Some("Python".to_string()));
 
         // Check channels in extra_data
-        let extra_data = package_data.extra_data.unwrap_or_default();
+        let extra_data = package_data.extra_data.clone().unwrap_or_default();
         assert!(extra_data.contains_key("channels"));
         let channels = extra_data.get("channels").unwrap().as_array();
         assert!(channels.is_some());

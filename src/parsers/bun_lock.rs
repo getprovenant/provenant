@@ -8,8 +8,8 @@ use crate::parser_warn as warn;
 use serde_json::{Map, Value as JsonValue};
 
 use crate::models::{
-    DatasourceId, Dependency, Md5Digest, PackageData, PackageType, ResolvedPackage, Sha1Digest,
-    Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, Md5Digest, PackageCore, PackageData, PackageType, ResolvedPackage,
+    Sha1Digest, Sha256Digest, Sha512Digest,
 };
 use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, parse_sri, truncate_field};
 
@@ -75,9 +75,13 @@ impl PackageParser for BunLockParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(BunLockParser::PACKAGE_TYPE),
-        primary_language: Some(truncate_field("JavaScript".to_string())),
         datasource_id: Some(DatasourceId::BunLock),
-        extra_data: Some(HashMap::new()),
+        core: PackageCore {
+            primary_language: Some(truncate_field("JavaScript".to_string())),
+
+            extra_data: Some(HashMap::new()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -292,20 +296,35 @@ fn parse_package_entry(
     let namespace = namespace.map(truncate_field);
     let name = name.map(truncate_field);
     let resolved_package = ResolvedPackage {
-        primary_language: Some(truncate_field("JavaScript".to_string())),
-        download_url: resolved_download_url,
-        sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
-        sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
-        is_virtual: true,
-        extra_data: None,
         dependencies: nested_dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::BunLock),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some(truncate_field("JavaScript".to_string())),
+
+            download_url: resolved_download_url,
+
+            sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
+
+            sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             BunLockParser::PACKAGE_TYPE,
             namespace.unwrap_or_default(),

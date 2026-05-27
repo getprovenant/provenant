@@ -21,7 +21,9 @@
 //! - Graceful error handling with `warn!()` logs
 //! - Direct dependencies: all in manifest are direct (no lockfile)
 
-use crate::models::{DatasourceId, Dependency, FileReference, PackageData, PackageType, Party};
+use crate::models::{
+    DatasourceId, Dependency, FileReference, PackageCore, PackageData, PackageType, Party,
+};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, split_name_email, truncate_field,
@@ -162,44 +164,80 @@ impl PackageParser for CargoParser {
             namespace: None,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("Rust".to_string()),
-            description,
-            release_date: None,
-            parties: extract_parties(&toml_content),
-            keywords,
-            homepage_url,
-            download_url,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: repository_url,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references,
-            is_private,
-            is_virtual: false,
-            extra_data,
             dependencies: [dependencies, dev_dependencies, build_dependencies].concat(),
-            repository_homepage_url,
-            repository_download_url,
-            api_data_url,
             datasource_id: Some(DatasourceId::CargoToml),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("Rust".to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties: extract_parties(&toml_content),
+
+                keywords,
+
+                homepage_url,
+
+                download_url,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: repository_url,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private,
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url,
+
+                repository_download_url,
+
+                api_data_url,
+
+                purl,
+            },
         }]
     }
 

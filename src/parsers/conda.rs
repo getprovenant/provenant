@@ -36,7 +36,9 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_f
 use regex::Regex;
 use yaml_serde::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Sha256Digest};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Sha256Digest,
+};
 
 use super::PackageParser;
 use super::license_normalization::{
@@ -48,6 +50,9 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(CondaMetaYamlParser::PACKAGE_TYPE),
         datasource_id,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

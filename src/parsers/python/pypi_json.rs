@@ -8,7 +8,7 @@ use super::utils::{
     ProjectUrls, apply_project_url_mappings, build_pypi_urls, default_package_data,
     extract_requires_dist_dependencies, has_private_classifier, parse_setup_cfg_keywords,
 };
-use crate::models::{DatasourceId, Dependency, PackageData, Party, Sha256Digest};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, Party, Sha256Digest};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
@@ -20,6 +20,9 @@ pub(super) fn extract_from_pypi_json(path: &Path) -> Vec<PackageData> {
     let default = PackageData {
         package_type: Some(PythonParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::PypiJson),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     };
 
@@ -159,34 +162,56 @@ pub(super) fn extract_from_pypi_json(path: &Path) -> Vec<PackageData> {
         package_type: Some(PythonParser::PACKAGE_TYPE),
         name,
         version,
-        description,
-        parties,
-        keywords,
-        homepage_url: project_urls
-            .homepage_url
-            .or(pypi_urls.repository_homepage_url.clone()),
-        download_url,
-        size,
-        sha256,
-        bug_tracking_url: project_urls.bug_tracking_url,
-        code_view_url: project_urls.code_view_url,
-        vcs_url: project_urls.vcs_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: license,
-        is_private: has_private_classifier(&classifiers),
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
         dependencies,
-        repository_homepage_url: pypi_urls.repository_homepage_url,
-        repository_download_url: pypi_urls.repository_download_url,
-        api_data_url: pypi_urls.api_data_url,
         datasource_id: Some(DatasourceId::PypiJson),
-        purl: pypi_urls.purl,
+        core: PackageCore {
+            description,
+
+            parties,
+
+            keywords,
+
+            homepage_url: project_urls
+                .homepage_url
+                .or(pypi_urls.repository_homepage_url.clone()),
+
+            download_url,
+
+            size,
+
+            sha256,
+
+            bug_tracking_url: project_urls.bug_tracking_url,
+
+            code_view_url: project_urls.code_view_url,
+
+            vcs_url: project_urls.vcs_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: license,
+
+            is_private: has_private_classifier(&classifiers),
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            repository_homepage_url: pypi_urls.repository_homepage_url,
+
+            repository_download_url: pypi_urls.repository_download_url,
+
+            api_data_url: pypi_urls.api_data_url,
+
+            purl: pypi_urls.purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }]
 }
@@ -376,24 +401,38 @@ pub(super) fn extract_from_pip_inspect(path: &Path) -> Vec<PackageData> {
                 package_type: Some(PythonParser::PACKAGE_TYPE),
                 name,
                 version,
-                primary_language: Some("Python".to_string()),
-                description: description.or(summary),
-                parties,
-                keywords,
-                homepage_url: home_page,
-                declared_license_expression,
-                declared_license_expression_spdx,
-                license_detections,
-                extracted_license_statement,
-                is_virtual: true,
-                extra_data: if extra_data.is_empty() {
-                    None
-                } else {
-                    Some(extra_data)
-                },
                 dependencies: parsed_dependencies,
                 datasource_id: Some(DatasourceId::PypiInspectDeplock),
-                purl,
+                core: PackageCore {
+                    primary_language: Some("Python".to_string()),
+
+                    description: description.or(summary),
+
+                    parties,
+
+                    keywords,
+
+                    homepage_url: home_page,
+
+                    declared_license_expression,
+
+                    declared_license_expression_spdx,
+
+                    license_detections,
+
+                    extracted_license_statement,
+
+                    is_virtual: true,
+
+                    extra_data: if extra_data.is_empty() {
+                        None
+                    } else {
+                        Some(extra_data)
+                    },
+
+                    purl,
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             });
         } else {
@@ -401,19 +440,32 @@ pub(super) fn extract_from_pip_inspect(path: &Path) -> Vec<PackageData> {
                 package_type: Some(PythonParser::PACKAGE_TYPE),
                 name: name.clone(),
                 version: version.clone(),
-                primary_language: Some("Python".to_string()),
-                description: description.or(summary),
-                parties,
-                keywords,
-                homepage_url: home_page,
-                declared_license_expression,
-                declared_license_expression_spdx,
-                license_detections,
-                extracted_license_statement,
-                is_virtual: true,
                 dependencies: parsed_dependencies,
                 datasource_id: Some(DatasourceId::PypiInspectDeplock),
-                purl: purl.clone(),
+                core: PackageCore {
+                    primary_language: Some("Python".to_string()),
+
+                    description: description.or(summary),
+
+                    parties,
+
+                    keywords,
+
+                    homepage_url: home_page,
+
+                    declared_license_expression,
+
+                    declared_license_expression_spdx,
+
+                    license_detections,
+
+                    extracted_license_statement,
+
+                    is_virtual: true,
+
+                    purl: purl.clone(),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             };
 

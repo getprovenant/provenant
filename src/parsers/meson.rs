@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
@@ -295,6 +295,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Meson),
         datasource_id: Some(DatasourceId::MesonBuild),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::models::PackageCore;
 
 #[test]
 fn apply_package_reference_following_resolves_manifest_origin_local_file() {
@@ -36,7 +37,10 @@ fn apply_package_reference_following_resolves_manifest_origin_local_file() {
     manifest.for_packages = vec![PackageUid::from_raw(package_uid.clone())];
     manifest.package_data = vec![PackageData {
         package_type: Some(PackageType::Cargo),
-        license_detections: package.license_detections.clone(),
+        core: PackageCore {
+            license_detections: package.license_detections.clone(),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 

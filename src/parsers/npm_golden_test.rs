@@ -245,8 +245,8 @@ mod golden_tests {
         )
         .expect("valid expected metadata json");
 
-        let package_extra =
-            serde_json::to_value(package_data.extra_data).expect("serialize package extra_data");
+        let package_extra = serde_json::to_value(package_data.extra_data.clone())
+            .expect("serialize package extra_data");
         assert_eq!(
             package_extra,
             metadata_expected
@@ -294,8 +294,8 @@ mod golden_tests {
         );
 
         let package_data = NpmParser::extract_first_package(&test_file);
-        let actual_extra_data =
-            serde_json::to_value(package_data.extra_data).expect("serialize npm extra_data");
+        let actual_extra_data = serde_json::to_value(package_data.extra_data.clone())
+            .expect("serialize npm extra_data");
         let expected_extra_data: Value = serde_json::from_str(
             &fs::read_to_string(expected_file).expect("expected npm metadata fixture"),
         )

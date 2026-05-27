@@ -9,7 +9,7 @@ use base64::Engine;
 use serde_json::Value as JsonValue;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha512Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha512Digest,
 };
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard, npm_purl, parse_sri, truncate_field,
@@ -125,9 +125,13 @@ impl PackageParser for BunLockbParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(BunLockbParser::PACKAGE_TYPE),
-        primary_language: Some("JavaScript".to_string()),
         datasource_id: Some(DatasourceId::BunLockb),
-        extra_data: Some(HashMap::new()),
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+
+            extra_data: Some(HashMap::new()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -485,30 +489,45 @@ fn build_resolved_package(
         );
         let (namespace, name) = split_namespace_name(&package.name);
         return Ok(ResolvedPackage {
-            primary_language: Some("JavaScript".to_string()),
-            download_url: package
-                .resolution
-                .resolved
-                .as_ref()
-                .map(|s| truncate_field(s.clone())),
-            sha1: None,
-            sha256: None,
-            sha512: package
-                .integrity
-                .as_ref()
-                .and_then(|s| {
-                    parse_sri(s).and_then(|(alg, hash)| (alg == "sha512").then_some(hash))
-                })
-                .and_then(|h| Sha512Digest::from_hex(&h).ok()),
-            md5: None,
-            is_virtual: true,
-            extra_data: None,
             dependencies: vec![],
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::BunLockb),
-            purl: None,
+            core: PackageCore {
+                primary_language: Some("JavaScript".to_string()),
+
+                download_url: package
+                    .resolution
+                    .resolved
+                    .as_ref()
+                    .map(|s| truncate_field(s.clone())),
+
+                sha1: None,
+
+                sha256: None,
+
+                sha512: package
+                    .integrity
+                    .as_ref()
+                    .and_then(|s| {
+                        parse_sri(s).and_then(|(alg, hash)| (alg == "sha512").then_some(hash))
+                    })
+                    .and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+                md5: None,
+
+                is_virtual: true,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+                ..PackageCore::default()
+            },
+
             ..ResolvedPackage::new(
                 PackageType::Npm,
                 namespace.map(truncate_field).unwrap_or_default(),
@@ -522,22 +541,6 @@ fn build_resolved_package(
     let (namespace, name) = split_namespace_name(&package.name);
 
     Ok(ResolvedPackage {
-        primary_language: Some("JavaScript".to_string()),
-        download_url: package
-            .resolution
-            .resolved
-            .as_ref()
-            .map(|s| truncate_field(s.clone())),
-        sha1: None,
-        sha256: None,
-        sha512: package
-            .integrity
-            .as_ref()
-            .and_then(|s| parse_sri(s).and_then(|(alg, hash)| (alg == "sha512").then_some(hash)))
-            .and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: None,
-        is_virtual: true,
-        extra_data: None,
         dependencies: build_dependencies_for_package(
             package,
             packages,
@@ -547,11 +550,44 @@ fn build_resolved_package(
             false,
             guard,
         )?,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::BunLockb),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+
+            download_url: package
+                .resolution
+                .resolved
+                .as_ref()
+                .map(|s| truncate_field(s.clone())),
+
+            sha1: None,
+
+            sha256: None,
+
+            sha512: package
+                .integrity
+                .as_ref()
+                .and_then(|s| {
+                    parse_sri(s).and_then(|(alg, hash)| (alg == "sha512").then_some(hash))
+                })
+                .and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PackageType::Npm,
             namespace.map(truncate_field).unwrap_or_default(),

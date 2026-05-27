@@ -32,7 +32,8 @@ use serde_json::Value as JsonValue;
 use yaml_serde::Value as YamlValue;
 
 use crate::models::{
-    DatasourceId, Dependency, FileReference, PackageData, PackageType, Party, PartyType,
+    DatasourceId, Dependency, FileReference, PackageCore, PackageData, PackageType, Party,
+    PartyType,
 };
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
@@ -107,19 +108,32 @@ impl PackageParser for CpanMetaJsonParser {
             package_type: Some(Self::PACKAGE_TYPE),
             name,
             version,
-            description,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            extracted_license_statement,
-            parties,
             dependencies,
-            homepage_url,
-            vcs_url,
-            code_view_url,
-            bug_tracking_url,
-            primary_language: Some("Perl".to_string()),
             datasource_id: Some(DatasourceId::CpanMetaJson),
+            core: PackageCore {
+                description,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                extracted_license_statement,
+
+                parties,
+
+                homepage_url,
+
+                vcs_url,
+
+                code_view_url,
+
+                bug_tracking_url,
+
+                primary_language: Some("Perl".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }
@@ -185,18 +199,30 @@ impl PackageParser for CpanMetaYmlParser {
             package_type: Some(Self::PACKAGE_TYPE),
             name,
             version,
-            description,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            extracted_license_statement,
-            parties,
             dependencies,
-            homepage_url,
-            vcs_url,
-            bug_tracking_url,
-            primary_language: Some("Perl".to_string()),
             datasource_id: Some(DatasourceId::CpanMetaYml),
+            core: PackageCore {
+                description,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                extracted_license_statement,
+
+                parties,
+
+                homepage_url,
+
+                vcs_url,
+
+                bug_tracking_url,
+
+                primary_language: Some("Perl".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }
@@ -255,8 +281,11 @@ impl PackageParser for CpanManifestParser {
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
             file_references,
-            primary_language: Some("Perl".to_string()),
             datasource_id: Some(DatasourceId::CpanManifest),
+            core: PackageCore {
+                primary_language: Some("Perl".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }
@@ -275,8 +304,11 @@ impl PackageParser for CpanManifestParser {
 fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(CpanMetaJsonParser::PACKAGE_TYPE),
-        primary_language: Some("Perl".to_string()),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            primary_language: Some("Perl".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

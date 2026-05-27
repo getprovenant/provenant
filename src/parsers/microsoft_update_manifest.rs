@@ -12,7 +12,7 @@
 //! - Format: XML with assembly and package metadata
 //! - Spec: Windows Update manifests
 
-use crate::models::{DatasourceId, PackageType, Party, PartyType};
+use crate::models::{DatasourceId, PackageCore, PackageType, Party, PartyType};
 use std::path::Path;
 
 use crate::parser_warn as warn;
@@ -54,6 +54,9 @@ impl PackageParser for MicrosoftUpdateManifestParser {
                 return vec![PackageData {
                     package_type: Some(PACKAGE_TYPE),
                     datasource_id: Some(DatasourceId::MicrosoftUpdateManifestMum),
+                    core: PackageCore {
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }];
             }
@@ -200,12 +203,19 @@ pub(crate) fn parse_mum_xml(content: &str) -> PackageData {
         package_type: Some(PACKAGE_TYPE),
         name,
         version,
-        description,
-        parties,
-        homepage_url,
-        copyright,
-        holder: company,
         datasource_id: Some(DatasourceId::MicrosoftUpdateManifestMum),
+        core: PackageCore {
+            description,
+
+            parties,
+
+            homepage_url,
+
+            copyright,
+
+            holder: company,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

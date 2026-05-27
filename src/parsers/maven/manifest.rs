@@ -236,11 +236,13 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
     package_data.name = package_data.name.map(truncate_field);
     package_data.version = package_data.version.map(truncate_field);
     package_data.namespace = package_data.namespace.map(truncate_field);
-    package_data.description = package_data.description.map(truncate_field);
-    package_data.homepage_url = package_data.homepage_url.map(truncate_field);
-    package_data.extracted_license_statement =
-        package_data.extracted_license_statement.map(truncate_field);
-    package_data.purl = package_data.purl.map(truncate_field);
+    package_data.core.description = package_data.core.description.map(truncate_field);
+    package_data.core.homepage_url = package_data.core.homepage_url.map(truncate_field);
+    package_data.core.extracted_license_statement = package_data
+        .core
+        .extracted_license_statement
+        .map(truncate_field);
+    package_data.core.purl = package_data.core.purl.map(truncate_field);
     for dep in &mut package_data.dependencies {
         dep.purl = dep.purl.take().map(truncate_field);
         dep.extracted_requirement = dep.extracted_requirement.take().map(truncate_field);

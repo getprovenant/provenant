@@ -5,8 +5,8 @@
 mod tests {
     use super::super::assemble;
     use crate::models::{
-        DatasourceId, Dependency, FileInfo, FileType, Package, PackageData, PackageType,
-        Sha256Digest,
+        DatasourceId, Dependency, FileInfo, FileType, Package, PackageCore, PackageData,
+        PackageType, Sha256Digest,
     };
     use serde_json::json;
     use std::collections::HashMap;
@@ -39,10 +39,13 @@ mod tests {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(datasource_id),
-                purl: purl.map(|s| s.to_string()),
                 name: name.map(|s| s.to_string()),
                 version: version.map(|s| s.to_string()),
                 dependencies,
+                core: PackageCore {
+                    purl: purl.map(|s| s.to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -3661,10 +3664,14 @@ mod tests {
     fn test_package_update_merges_fields() {
         let initial_pkg_data = PackageData {
             datasource_id: Some(DatasourceId::NpmPackageJson),
-            purl: Some("pkg:npm/test@1.0.0".to_string()),
             name: Some("test".to_string()),
             version: Some("1.0.0".to_string()),
-            description: Some("Initial description".to_string()),
+            core: PackageCore {
+                purl: Some("pkg:npm/test@1.0.0".to_string()),
+
+                description: Some("Initial description".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -3672,16 +3679,21 @@ mod tests {
 
         let update_pkg_data = PackageData {
             datasource_id: Some(DatasourceId::NpmPackageLockJson),
-            purl: Some("pkg:npm/test@1.0.0".to_string()),
             name: Some("test".to_string()),
             version: Some("1.0.0".to_string()),
-            homepage_url: Some("https://example.com".to_string()),
-            sha256: Some(
-                Sha256Digest::from_hex(
-                    "abc1230000000000000000000000000000000000000000000000000000000000",
-                )
-                .unwrap(),
-            ),
+            core: PackageCore {
+                purl: Some("pkg:npm/test@1.0.0".to_string()),
+
+                homepage_url: Some("https://example.com".to_string()),
+
+                sha256: Some(
+                    Sha256Digest::from_hex(
+                        "abc1230000000000000000000000000000000000000000000000000000000000",
+                    )
+                    .unwrap(),
+                ),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -3740,9 +3752,12 @@ mod tests {
     fn test_package_update_refreshes_purl_when_version_is_backfilled() {
         let initial_pkg_data = PackageData {
             datasource_id: Some(DatasourceId::PypiPyprojectToml),
-            purl: Some("pkg:pypi/test-package".to_string()),
             name: Some("test-package".to_string()),
             version: None,
+            core: PackageCore {
+                purl: Some("pkg:pypi/test-package".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -3752,9 +3767,12 @@ mod tests {
 
         let update_pkg_data = PackageData {
             datasource_id: Some(DatasourceId::PypiUvLock),
-            purl: Some("pkg:pypi/test-package@0.2.0".to_string()),
             name: Some("test-package".to_string()),
             version: Some("0.2.0".to_string()),
+            core: PackageCore {
+                purl: Some("pkg:pypi/test-package@0.2.0".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -3834,18 +3852,24 @@ mod tests {
             package_data: vec![
                 PackageData {
                     datasource_id: Some(DatasourceId::AlpineInstalledDb),
-                    purl: Some("pkg:alpine/musl@1.2.3-r0".to_string()),
                     name: Some("musl".to_string()),
                     version: Some("1.2.3-r0".to_string()),
                     dependencies: vec![dep],
+                    core: PackageCore {
+                        purl: Some("pkg:alpine/musl@1.2.3-r0".to_string()),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 },
                 PackageData {
                     datasource_id: Some(DatasourceId::AlpineInstalledDb),
-                    purl: Some("pkg:alpine/busybox@1.35.0-r13".to_string()),
                     name: Some("busybox".to_string()),
                     version: Some("1.35.0-r13".to_string()),
                     dependencies: vec![],
+                    core: PackageCore {
+                        purl: Some("pkg:alpine/busybox@1.35.0-r13".to_string()),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 },
             ],

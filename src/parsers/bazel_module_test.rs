@@ -62,7 +62,7 @@ mod tests {
         assert_eq!(dev_dep.is_runtime, Some(false));
         assert_eq!(dev_dep.is_optional, Some(true));
 
-        let extra_data = package.extra_data.expect("extra_data should exist");
+        let extra_data = package.extra_data.clone().expect("extra_data should exist");
         assert_eq!(
             extra_data
                 .get("bazel_compatibility")
@@ -122,7 +122,7 @@ multiple_version_override(
         fs::write(&file_path, content).unwrap();
 
         let package = BazelModuleParser::extract_first_package(&file_path);
-        let extra_data = package.extra_data.expect("extra_data should exist");
+        let extra_data = package.extra_data.clone().expect("extra_data should exist");
         assert_eq!(
             extra_data
                 .get("compatibility_level")

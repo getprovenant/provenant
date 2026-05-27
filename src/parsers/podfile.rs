@@ -31,7 +31,7 @@ use packageurl::PackageUrl;
 use regex::Regex;
 
 use super::metadata::ParserMetadata;
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
@@ -81,44 +81,80 @@ impl PackageParser for PodfileParser {
             namespace: None,
             name: None,
             version: None,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("Objective-C".to_string()),
-            description: None,
-            release_date: None,
-            parties: Vec::new(),
-            keywords: Vec::new(),
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: Vec::new(),
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement: None,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            extra_data: None,
             dependencies,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::CocoapodsPodfile),
-            purl: None,
-            is_private: false,
-            is_virtual: false,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("Objective-C".to_string()),
+
+                description: None,
+
+                release_date: None,
+
+                parties: Vec::new(),
+
+                keywords: Vec::new(),
+
+                homepage_url: None,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression: None,
+
+                declared_license_expression_spdx: None,
+
+                license_detections: Vec::new(),
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement: None,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+
+                is_private: false,
+
+                is_virtual: false,
+            },
         }]
     }
 }
@@ -126,8 +162,11 @@ impl PackageParser for PodfileParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PodfileParser::PACKAGE_TYPE),
-        primary_language: Some("Objective-C".to_string()),
         datasource_id: Some(DatasourceId::CocoapodsPodfile),
+        core: PackageCore {
+            primary_language: Some("Objective-C".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

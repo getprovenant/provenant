@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use super::metadata::ParserMetadata;
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -42,10 +42,14 @@ impl PackageParser for CarthageCartfileParser {
 
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
-            primary_language: Some("Objective-C".to_string()),
-            is_private,
             dependencies,
             datasource_id: Some(DatasourceId::CarthageCartfile),
+            core: PackageCore {
+                primary_language: Some("Objective-C".to_string()),
+
+                is_private,
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }
@@ -86,9 +90,12 @@ impl PackageParser for CarthageCartfileResolvedParser {
 
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
-            primary_language: Some("Objective-C".to_string()),
             dependencies,
             datasource_id: Some(DatasourceId::CarthageCartfileResolved),
+            core: PackageCore {
+                primary_language: Some("Objective-C".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }
@@ -288,9 +295,13 @@ fn is_private_cartfile_path(path: &Path) -> bool {
 fn default_cartfile_package_data(is_private: bool) -> PackageData {
     PackageData {
         package_type: Some(PackageType::Carthage),
-        primary_language: Some("Objective-C".to_string()),
-        is_private,
         datasource_id: Some(DatasourceId::CarthageCartfile),
+        core: PackageCore {
+            primary_language: Some("Objective-C".to_string()),
+
+            is_private,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -298,8 +309,11 @@ fn default_cartfile_package_data(is_private: bool) -> PackageData {
 fn default_cartfile_resolved_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Carthage),
-        primary_language: Some("Objective-C".to_string()),
         datasource_id: Some(DatasourceId::CarthageCartfileResolved),
+        core: PackageCore {
+            primary_language: Some("Objective-C".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

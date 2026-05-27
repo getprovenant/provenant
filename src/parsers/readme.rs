@@ -25,7 +25,7 @@
 //! - Separator precedence: the first separator (`:` or `=`) on each line is used
 
 use crate::models::PackageData;
-use crate::models::{DatasourceId, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use std::path::Path;
@@ -149,6 +149,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(ReadmeParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::Readme),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

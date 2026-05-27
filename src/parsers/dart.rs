@@ -34,7 +34,7 @@ use packageurl::PackageUrl;
 use yaml_serde::{Mapping, Value};
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 
 use super::PackageParser;
@@ -232,47 +232,83 @@ fn parse_pubspec_yaml(yaml_content: &Value) -> PackageData {
         namespace: None,
         name,
         version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("dart".to_string()),
-        description,
-        release_date: None,
-        parties,
-        keywords,
-        homepage_url,
-        download_url,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url,
-        code_view_url: None,
-        vcs_url,
-        copyright: None,
-        holder: None,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: raw_license,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: yaml_content
-            .get(FIELD_PUBLISH_TO)
-            .and_then(Value::as_str)
-            .is_some_and(|value| value.trim() == "none"),
-        is_virtual: false,
-        extra_data,
         dependencies,
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
         datasource_id: Some(DatasourceId::PubspecYaml),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("dart".to_string()),
+
+            description,
+
+            release_date: None,
+
+            parties,
+
+            keywords,
+
+            homepage_url,
+
+            download_url,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url,
+
+            code_view_url: None,
+
+            vcs_url,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: raw_license,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: yaml_content
+                .get(FIELD_PUBLISH_TO)
+                .and_then(Value::as_str)
+                .is_some_and(|value| value.trim() == "none"),
+
+            is_virtual: false,
+
+            extra_data,
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            purl,
+        },
     }
 }
 
@@ -445,20 +481,35 @@ fn build_resolved_package(
     dependencies: Vec<Dependency>,
 ) -> ResolvedPackage {
     ResolvedPackage {
-        primary_language: Some("dart".to_string()),
-        download_url: None,
-        sha1: None,
-        sha256,
-        sha512: None,
-        md5: None,
-        is_virtual: true,
-        extra_data,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: None,
-        purl: None,
+        core: PackageCore {
+            primary_language: Some("dart".to_string()),
+
+            download_url: None,
+
+            sha1: None,
+
+            sha256,
+
+            sha512: None,
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PubspecLockParser::PACKAGE_TYPE,
             String::new(),
@@ -653,7 +704,10 @@ fn default_package_data() -> PackageData {
 fn default_package_data_with_type(package_type: &str) -> PackageData {
     PackageData {
         package_type: package_type.parse::<PackageType>().ok(),
-        primary_language: Some("dart".to_string()),
+        core: PackageCore {
+            primary_language: Some("dart".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -396,7 +396,7 @@ download_url: https://raw.githubusercontent.com/docker/docker/ff2de8dace1ba1c1f5
             PathBuf::from("testdata/copyright-golden/copyrights/misco2/regexhq/regexhq.ABOUT");
         let result = AboutFileParser::extract_first_package(&path);
 
-        let extra = result.extra_data.expect("extra data should exist");
+        let extra = result.extra_data.clone().expect("extra data should exist");
         assert!(extra.contains_key("notice_file"));
         assert!(extra.contains_key("notes"));
     }

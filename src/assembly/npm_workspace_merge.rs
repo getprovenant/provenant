@@ -881,7 +881,7 @@ fn workspace_member_name(package: &Package) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::PackageType;
+    use crate::models::{PackageCore, PackageType};
 
     #[test]
     fn test_matches_workspace_pattern_exact() {
@@ -983,7 +983,10 @@ mod tests {
         let pkg_data = PackageData {
             package_type: Some(PackageType::Npm),
             datasource_id: Some(DatasourceId::NpmPackageJson),
-            extra_data: Some(extra_data),
+            core: PackageCore {
+                extra_data: Some(extra_data),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -998,10 +1001,13 @@ mod tests {
         let pkg_data = PackageData {
             package_type: Some(PackageType::Npm),
             datasource_id: Some(DatasourceId::NpmPackageJson),
-            extra_data: Some(std::collections::HashMap::from([(
-                "workspaces".to_string(),
-                serde_json::Value::String("packages/*".to_string()),
-            )])),
+            core: PackageCore {
+                extra_data: Some(std::collections::HashMap::from([(
+                    "workspaces".to_string(),
+                    serde_json::Value::String("packages/*".to_string()),
+                )])),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -1014,10 +1020,13 @@ mod tests {
         let pkg_data = PackageData {
             package_type: Some(PackageType::Npm),
             datasource_id: Some(DatasourceId::NpmPackageJson),
-            extra_data: Some(std::collections::HashMap::from([(
-                "workspaces".to_string(),
-                serde_json::json!({ "packages": ["packages/*", "apps/*"] }),
-            )])),
+            core: PackageCore {
+                extra_data: Some(std::collections::HashMap::from([(
+                    "workspaces".to_string(),
+                    serde_json::json!({ "packages": ["packages/*", "apps/*"] }),
+                )])),
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 
@@ -1030,6 +1039,9 @@ mod tests {
         let pkg_data = PackageData {
             package_type: Some(PackageType::Npm),
             datasource_id: Some(DatasourceId::NpmPackageJson),
+            core: PackageCore {
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 

@@ -215,6 +215,7 @@ mod tests {
         let package_data = ComposerJsonParser::extract_first_package(&composer_path);
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("Expected extra_data to be set");
         let psr4 = extra_data
             .get("autoload_psr4")
@@ -245,6 +246,7 @@ mod tests {
         let package_data = ComposerJsonParser::extract_first_package(&composer_path);
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("Expected extra_data to be set");
         let repos = extra_data
             .get("repositories")

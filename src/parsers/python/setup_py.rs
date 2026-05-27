@@ -8,7 +8,7 @@ use super::utils::{
     default_package_data, extract_setup_py_dependencies, extract_setup_value,
     has_private_classifier,
 };
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
@@ -890,22 +890,38 @@ fn build_setup_py_package_data(kw: &SetupKeywords) -> PackageData {
         package_type: Some(PythonParser::PACKAGE_TYPE),
         name,
         version,
-        primary_language: Some("Python".to_string()),
-        description,
-        parties,
-        homepage_url: homepage_url.or(project_urls.homepage_url),
-        bug_tracking_url: project_urls.bug_tracking_url,
-        code_view_url: project_urls.code_view_url,
-        vcs_url: project_urls.vcs_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        is_private: has_private_classifier(&classifiers),
-        extra_data,
         dependencies,
         datasource_id: Some(DatasourceId::PypiSetupPy),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            description,
+
+            parties,
+
+            homepage_url: homepage_url.or(project_urls.homepage_url),
+
+            bug_tracking_url: project_urls.bug_tracking_url,
+
+            code_view_url: project_urls.code_view_url,
+
+            vcs_url: project_urls.vcs_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            is_private: has_private_classifier(&classifiers),
+
+            extra_data,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -997,15 +1013,24 @@ fn extract_from_setup_py_regex(content: &str) -> PackageData {
         package_type: Some(PythonParser::PACKAGE_TYPE),
         name,
         version,
-        primary_language: Some("Python".to_string()),
-        homepage_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
         dependencies,
         datasource_id: Some(DatasourceId::PypiSetupPy),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            homepage_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

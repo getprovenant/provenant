@@ -14,7 +14,7 @@ use crate::app::scan_runtime::{
 use crate::assembly;
 use crate::cli::ProcessMode;
 use crate::license_detection::MatcherKind;
-use crate::models::{LineNumber, MatchScore};
+use crate::models::{LineNumber, MatchScore, PackageCore};
 use crate::scan_result_shaping::{apply_only_findings_filter, normalize_paths};
 use serde_json::json;
 use std::fs;
@@ -461,30 +461,33 @@ fn from_json_skips_final_native_projection_block() {
 fn from_json_loaded_manifest_detections_can_be_recomputed_into_top_level_uniques() {
     let mut file0 = json_file("project/package.json", crate::models::FileType::File);
     file0.package_data = vec![crate::models::PackageData {
-        package_type: Some(crate::models::PackageType::Npm),
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![crate::models::Match {
+        core: PackageCore {
+            license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "mit".to_string(),
                 license_expression_spdx: "MIT".to_string(),
-                from_file: None,
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(1),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: Some("MIT".to_string()),
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![crate::models::Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: None,
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(1),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: Some("MIT".to_string()),
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: String::new(),
             }],
-            detection_log: vec![],
-            identifier: String::new(),
-        }],
+            ..PackageCore::default()
+        },
+        package_type: Some(crate::models::PackageType::Npm),
         ..Default::default()
     }];
     let mut files = vec![file0];
@@ -511,30 +514,33 @@ fn from_json_loaded_manifest_detections_can_be_recomputed_into_top_level_uniques
 fn from_json_recomputes_top_level_uniques_even_without_shaping_flags() {
     let mut file0 = json_file("project/package.json", crate::models::FileType::File);
     file0.package_data = vec![crate::models::PackageData {
-        package_type: Some(crate::models::PackageType::Npm),
-        other_license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "gpl-2.0-only".to_string(),
-            license_expression_spdx: "GPL-2.0-only".to_string(),
-            matches: vec![crate::models::Match {
+        core: PackageCore {
+            other_license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "gpl-2.0-only".to_string(),
                 license_expression_spdx: "GPL-2.0-only".to_string(),
-                from_file: None,
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(1),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: String::new(),
-                rule_url: None,
-                matched_text: Some("GPL-2.0-only".to_string()),
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![crate::models::Match {
+                    license_expression: "gpl-2.0-only".to_string(),
+                    license_expression_spdx: "GPL-2.0-only".to_string(),
+                    from_file: None,
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(1),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: String::new(),
+                    rule_url: None,
+                    matched_text: Some("GPL-2.0-only".to_string()),
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: String::new(),
             }],
-            detection_log: vec![],
-            identifier: String::new(),
-        }],
+            ..PackageCore::default()
+        },
+        package_type: Some(crate::models::PackageType::Npm),
         ..Default::default()
     }];
     let mut files = vec![file0];
@@ -912,35 +918,38 @@ fn from_json_keeps_multi_datafile_package_license_provenance_on_manifest_package
     }];
 
     files[1].package_data = vec![crate::models::PackageData {
+        core: PackageCore {
+            declared_license_expression: Some("mit".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            license_detections: vec![crate::models::LicenseDetection {
+                license_expression: "mit".to_string(),
+                license_expression_spdx: "MIT".to_string(),
+                matches: vec![crate::models::Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: Some("project/package.json".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Aho,
+                    score: MatchScore::MAX,
+                    matched_length: Some(3),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: "mit_30.RULE".to_string(),
+                    rule_url: None,
+                    matched_text: Some("MIT".to_string()),
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: String::new(),
+            }],
+            ..PackageCore::default()
+        },
         package_type: Some(crate::models::PackageType::Npm),
         datasource_id: Some(crate::models::DatasourceId::NpmPackageJson),
         name: Some("phoenix".to_string()),
         version: Some("1.8.5".to_string()),
-        declared_license_expression: Some("mit".to_string()),
-        declared_license_expression_spdx: Some("MIT".to_string()),
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![crate::models::Match {
-                license_expression: "mit".to_string(),
-                license_expression_spdx: "MIT".to_string(),
-                from_file: Some("project/package.json".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::ONE,
-                matcher: MatcherKind::Aho,
-                score: MatchScore::MAX,
-                matched_length: Some(3),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: "mit_30.RULE".to_string(),
-                rule_url: None,
-                matched_text: Some("MIT".to_string()),
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
-            }],
-            detection_log: vec![],
-            identifier: String::new(),
-        }],
         ..Default::default()
     }];
 

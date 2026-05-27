@@ -31,7 +31,9 @@ use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_f
 use packageurl::PackageUrl;
 use serde_json::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
@@ -232,44 +234,80 @@ impl PackageParser for PodspecJsonParser {
             namespace: None,
             name: name.clone(),
             version: version.clone(),
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some(PRIMARY_LANGUAGE.to_string()),
-            description,
-            release_date: None,
-            parties,
-            keywords: Vec::new(),
-            homepage_url,
-            download_url,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url,
-            code_view_url,
-            vcs_url,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private: false,
-            is_virtual: false,
-            extra_data,
             dependencies,
-            repository_homepage_url,
-            repository_download_url,
-            api_data_url,
             datasource_id: Some(DatasourceId::CocoapodsPodspecJson),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some(PRIMARY_LANGUAGE.to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties,
+
+                keywords: Vec::new(),
+
+                homepage_url,
+
+                download_url,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url,
+
+                code_view_url,
+
+                vcs_url,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url,
+
+                repository_download_url,
+
+                api_data_url,
+
+                purl,
+            },
         }]
     }
 
@@ -289,8 +327,11 @@ fn read_json_file(path: &Path) -> Result<Value, String> {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PodspecJsonParser::PACKAGE_TYPE),
-        primary_language: Some(PRIMARY_LANGUAGE.to_string()),
         datasource_id: Some(DatasourceId::CocoapodsPodspecJson),
+        core: PackageCore {
+            primary_language: Some(PRIMARY_LANGUAGE.to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

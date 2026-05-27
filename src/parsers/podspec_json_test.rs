@@ -105,7 +105,7 @@ mod tests {
         let package_data = PodspecJsonParser::extract_first_package(&file_path);
 
         // License dict values should be joined with space
-        let license_statement = package_data.extracted_license_statement.unwrap();
+        let license_statement = package_data.extracted_license_statement.clone().unwrap();
         assert!(license_statement.contains("MIT"));
         assert!(license_statement.contains("Copyright 2024 Test"));
         assert_eq!(
@@ -309,7 +309,7 @@ mod tests {
         let package_data = PodspecJsonParser::extract_first_package(&file_path);
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
 
         // Check that podspec.json key exists
         assert!(extra_data.contains_key("podspec.json"));
@@ -364,6 +364,7 @@ mod tests {
         assert!(
             package_data
                 .api_data_url
+                .clone()
                 .unwrap()
                 .contains("https://raw.githubusercontent.com/CocoaPods/Specs")
         );
@@ -380,7 +381,7 @@ mod tests {
         let package_data = PodspecJsonParser::extract_first_package(&file_path);
 
         assert!(package_data.purl.is_some());
-        let purl = package_data.purl.unwrap();
+        let purl = package_data.purl.clone().unwrap();
         assert!(purl.contains("pkg:cocoapods/TestPod"));
         assert!(purl.contains("1.0.0"));
     }
@@ -464,6 +465,7 @@ mod tests {
         assert!(
             package_data
                 .extracted_license_statement
+                .clone()
                 .unwrap()
                 .contains("Copyright")
         );

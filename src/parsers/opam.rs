@@ -30,8 +30,8 @@ use regex::Regex;
 
 use super::metadata::ParserMetadata;
 use crate::models::{
-    DatasourceId, Dependency, Md5Digest, PackageData, PackageType, Party, PartyType, Sha1Digest,
-    Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, Md5Digest, PackageCore, PackageData, PackageType, Party, PartyType,
+    Sha1Digest, Sha256Digest, Sha512Digest,
 };
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -101,8 +101,11 @@ struct OpamData {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(OpamParser::PACKAGE_TYPE),
-        primary_language: Some("Ocaml".to_string()),
         datasource_id: Some(DatasourceId::OpamFile),
+        core: PackageCore {
+            primary_language: Some("Ocaml".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -125,44 +128,80 @@ fn parse_opam(text: &str) -> PackageData {
         namespace: None,
         name: opam_data.name,
         version: opam_data.version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Ocaml".to_string()),
-        description,
-        release_date: None,
-        parties,
-        keywords: Vec::new(),
-        homepage_url: opam_data.homepage,
-        download_url: opam_data.src,
-        size: None,
-        sha1: opam_data.sha1,
-        md5: opam_data.md5,
-        sha256: opam_data.sha256,
-        sha512: opam_data.sha512,
-        bug_tracking_url: opam_data.bug_reports,
-        code_view_url: None,
-        vcs_url: opam_data.dev_repo,
-        copyright: None,
-        holder: None,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: opam_data.license,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
         dependencies,
-        repository_homepage_url,
-        repository_download_url: None,
-        api_data_url,
         datasource_id: Some(DatasourceId::OpamFile),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Ocaml".to_string()),
+
+            description,
+
+            release_date: None,
+
+            parties,
+
+            keywords: Vec::new(),
+
+            homepage_url: opam_data.homepage,
+
+            download_url: opam_data.src,
+
+            size: None,
+
+            sha1: opam_data.sha1,
+
+            md5: opam_data.md5,
+
+            sha256: opam_data.sha256,
+
+            sha512: opam_data.sha512,
+
+            bug_tracking_url: opam_data.bug_reports,
+
+            code_view_url: None,
+
+            vcs_url: opam_data.dev_repo,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: opam_data.license,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url,
+
+            repository_download_url: None,
+
+            api_data_url,
+
+            purl,
+        },
     }
 }
 

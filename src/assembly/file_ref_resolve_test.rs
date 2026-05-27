@@ -3,7 +3,8 @@
 
 use super::*;
 use crate::models::{
-    DependencyUid, FileReference, FileType, Md5Digest, PackageData, PackageType, PackageUid,
+    DependencyUid, FileReference, FileType, Md5Digest, PackageCore, PackageData, PackageType,
+    PackageUid,
 };
 use strum::IntoEnumIterator;
 
@@ -122,7 +123,6 @@ fn test_resolve_rpm_sqlite_file_references_from_legacy_var_lib_path() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::RpmInstalledDatabaseSqlite),
-                purl: Some("pkg:rpm/fedora/libgcc@13.1.1-2.fc38?arch=x86_64".to_string()),
                 name: Some("libgcc".to_string()),
                 file_references: vec![FileReference {
                     path: "/usr/share/licenses/libgcc/COPYING".to_string(),
@@ -133,6 +133,10 @@ fn test_resolve_rpm_sqlite_file_references_from_legacy_var_lib_path() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:rpm/fedora/libgcc@13.1.1-2.fc38?arch=x86_64".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -223,46 +227,82 @@ fn test_resolve_rpm_sqlite_file_references_from_legacy_var_lib_path() {
         namespace: Some("fedora".to_string()),
         name: Some("libgcc".to_string()),
         version: Some("13.1.1-2.fc38".to_string()),
-        qualifiers: Some(std::iter::once(("arch".to_string(), "x86_64".to_string())).collect()),
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:rpm/fedora/libgcc@13.1.1-2.fc38?arch=x86_64".to_string()),
         package_uid: PackageUid::from_raw(
             "pkg:rpm/fedora/libgcc@13.1.1-2.fc38?uuid=test-uuid".to_string(),
         ),
         datafile_paths: vec!["rootfs/var/lib/rpm/rpmdb.sqlite".to_string()],
         datasource_ids: vec![DatasourceId::RpmInstalledDatabaseSqlite],
+        core: PackageCore {
+            qualifiers: Some(std::iter::once(("arch".to_string(), "x86_64".to_string())).collect()),
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:rpm/fedora/libgcc@13.1.1-2.fc38?arch=x86_64".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -295,7 +335,6 @@ fn test_resolve_basic_alpine() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::AlpineInstalledDb),
-                purl: Some("pkg:alpine/musl@1.2.3".to_string()),
                 name: Some("musl".to_string()),
                 file_references: vec![
                     FileReference {
@@ -317,6 +356,10 @@ fn test_resolve_basic_alpine() {
                         extra_data: None,
                     },
                 ],
+                core: PackageCore {
+                    purl: Some("pkg:alpine/musl@1.2.3".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -455,44 +498,80 @@ fn test_resolve_basic_alpine() {
         namespace: None,
         name: Some("musl".to_string()),
         version: Some("1.2.3".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:alpine/musl@1.2.3".to_string()),
         package_uid: PackageUid::from_raw("pkg:alpine/musl@1.2.3?uuid=test-uuid".to_string()),
         datafile_paths: vec!["lib/apk/db/installed".to_string()],
         datasource_ids: vec![DatasourceId::AlpineInstalledDb],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:alpine/musl@1.2.3".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -529,7 +608,6 @@ fn test_resolve_missing_refs() {
         programming_language: None,
         package_data: vec![PackageData {
             datasource_id: Some(DatasourceId::AlpineInstalledDb),
-            purl: Some("pkg:alpine/test@1.0".to_string()),
             name: Some("test".to_string()),
             file_references: vec![
                 FileReference {
@@ -551,6 +629,10 @@ fn test_resolve_missing_refs() {
                     extra_data: None,
                 },
             ],
+            core: PackageCore {
+                purl: Some("pkg:alpine/test@1.0".to_string()),
+                ..PackageCore::default()
+            },
             ..Default::default()
         }],
         detected_license_expression: None,
@@ -592,44 +674,80 @@ fn test_resolve_missing_refs() {
         namespace: None,
         name: Some("test".to_string()),
         version: Some("1.0".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:alpine/test@1.0".to_string()),
         package_uid: PackageUid::from_raw("pkg:alpine/test@1.0?uuid=test-uuid".to_string()),
         datafile_paths: vec!["lib/apk/db/installed".to_string()],
         datasource_ids: vec![DatasourceId::AlpineInstalledDb],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:alpine/test@1.0".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -667,9 +785,12 @@ fn test_resolve_rpm_namespace() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::RpmInstalledDatabaseBdb),
-                purl: Some("pkg:rpm/bash@5.0".to_string()),
                 name: Some("bash".to_string()),
                 file_references: vec![],
+                core: PackageCore {
+                    purl: Some("pkg:rpm/bash@5.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -723,6 +844,9 @@ fn test_resolve_rpm_namespace() {
                 datasource_id: Some(DatasourceId::EtcOsRelease),
                 namespace: Some("fedora".to_string()),
                 name: Some("fedora".to_string()),
+                core: PackageCore {
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -765,44 +889,80 @@ fn test_resolve_rpm_namespace() {
         namespace: None,
         name: Some("bash".to_string()),
         version: Some("5.0".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:rpm/bash@5.0".to_string()),
         package_uid: PackageUid::from_raw("pkg:rpm/bash@5.0?uuid=test-uuid".to_string()),
         datafile_paths: vec!["rootfs/var/lib/rpm/Packages".to_string()],
         datasource_ids: vec![DatasourceId::RpmInstalledDatabaseBdb],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:rpm/bash@5.0".to_string()),
+        },
     }];
 
     let mut dependencies = vec![TopLevelDependency {
@@ -955,103 +1115,179 @@ fn test_merge_rpm_yumdb_metadata() {
             namespace: None,
             name: Some("bash".to_string()),
             version: Some("5.0-1.el8".to_string()),
-            qualifiers: Some(std::iter::once(("arch".to_string(), "x86_64".to_string())).collect()),
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties: vec![],
-            keywords: vec![],
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: vec![],
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: vec![],
-            extracted_license_statement: None,
-            notice_text: None,
-            source_packages: vec![],
-            is_private: false,
-            is_virtual: false,
-            extra_data: None,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
-            purl: Some("pkg:rpm/bash@5.0-1.el8?arch=x86_64".to_string()),
             package_uid: PackageUid::from_raw("pkg:rpm/bash@5.0-1.el8?uuid=rpm-uuid".to_string()),
             datafile_paths: vec!["rootfs/var/lib/rpm/Packages".to_string()],
             datasource_ids: vec![DatasourceId::RpmInstalledDatabaseBdb],
+            core: PackageCore {
+                qualifiers: Some(
+                    std::iter::once(("arch".to_string(), "x86_64".to_string())).collect(),
+                ),
+
+                subpath: None,
+
+                primary_language: None,
+
+                description: None,
+
+                release_date: None,
+
+                parties: vec![],
+
+                keywords: vec![],
+
+                homepage_url: None,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression: None,
+
+                declared_license_expression_spdx: None,
+
+                license_detections: vec![],
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: vec![],
+
+                extracted_license_statement: None,
+
+                notice_text: None,
+
+                source_packages: vec![],
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: Some("pkg:rpm/bash@5.0-1.el8?arch=x86_64".to_string()),
+            },
         },
         Package {
             package_type: Some(PackageType::Rpm),
             namespace: None,
             name: Some("bash".to_string()),
             version: Some("5.0-1.el8".to_string()),
-            qualifiers: Some(std::iter::once(("arch".to_string(), "x86_64".to_string())).collect()),
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties: vec![],
-            keywords: vec![],
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: vec![],
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: vec![],
-            extracted_license_statement: None,
-            notice_text: None,
-            source_packages: vec![],
-            is_private: false,
-            is_virtual: true,
-            extra_data: Some(
-                [
-                    (
-                        "from_repo".to_string(),
-                        serde_json::Value::String("baseos".to_string()),
-                    ),
-                    (
-                        "releasever".to_string(),
-                        serde_json::Value::String("8".to_string()),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            ),
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
-            purl: Some("pkg:rpm/bash@5.0-1.el8?arch=x86_64".to_string()),
             package_uid: PackageUid::from_raw("pkg:rpm/bash@5.0-1.el8?uuid=yumdb-uuid".to_string()),
             datafile_paths: vec![
                 "rootfs/var/lib/yum/yumdb/p/abc123-bash-5.0-1.el8.x86_64/from_repo".to_string(),
             ],
             datasource_ids: vec![DatasourceId::RpmYumdb],
+            core: PackageCore {
+                qualifiers: Some(
+                    std::iter::once(("arch".to_string(), "x86_64".to_string())).collect(),
+                ),
+
+                subpath: None,
+
+                primary_language: None,
+
+                description: None,
+
+                release_date: None,
+
+                parties: vec![],
+
+                keywords: vec![],
+
+                homepage_url: None,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression: None,
+
+                declared_license_expression_spdx: None,
+
+                license_detections: vec![],
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: vec![],
+
+                extracted_license_statement: None,
+
+                notice_text: None,
+
+                source_packages: vec![],
+
+                is_private: false,
+
+                is_virtual: true,
+
+                extra_data: Some(
+                    [
+                        (
+                            "from_repo".to_string(),
+                            serde_json::Value::String("baseos".to_string()),
+                        ),
+                        (
+                            "releasever".to_string(),
+                            serde_json::Value::String("8".to_string()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: Some("pkg:rpm/bash@5.0-1.el8?arch=x86_64".to_string()),
+            },
         },
     ];
 
@@ -1100,7 +1336,6 @@ fn test_strip_leading_slash() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::AlpineInstalledDb),
-                purl: Some("pkg:alpine/test@1.0".to_string()),
                 name: Some("test".to_string()),
                 file_references: vec![FileReference {
                     path: "/lib/test.so".to_string(),
@@ -1111,6 +1346,10 @@ fn test_strip_leading_slash() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:alpine/test@1.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -1201,44 +1440,80 @@ fn test_strip_leading_slash() {
         namespace: None,
         name: Some("test".to_string()),
         version: Some("1.0".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:alpine/test@1.0".to_string()),
         package_uid: PackageUid::from_raw("pkg:alpine/test@1.0?uuid=test-uuid".to_string()),
         datafile_paths: vec!["lib/apk/db/installed".to_string()],
         datasource_ids: vec![DatasourceId::AlpineInstalledDb],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:alpine/test@1.0".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -1271,7 +1546,6 @@ fn test_resolve_python_metadata_file_references() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::PypiWheelMetadata),
-                purl: Some("pkg:pypi/click@8.0.4".to_string()),
                 name: Some("click".to_string()),
                 version: Some("8.0.4".to_string()),
                 file_references: vec![
@@ -1303,6 +1577,10 @@ fn test_resolve_python_metadata_file_references() {
                         extra_data: None,
                     },
                 ],
+                core: PackageCore {
+                    purl: Some("pkg:pypi/click@8.0.4".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -1489,46 +1767,82 @@ fn test_resolve_python_metadata_file_references() {
         namespace: None,
         name: Some("click".to_string()),
         version: Some("8.0.4".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:pypi/click@8.0.4".to_string()),
         package_uid: PackageUid::from_raw("pkg:pypi/click@8.0.4?uuid=test-uuid".to_string()),
         datafile_paths: vec![
             "venv/lib/python3.11/site-packages/click-8.0.4.dist-info/METADATA".to_string(),
         ],
         datasource_ids: vec![DatasourceId::PypiWheelMetadata],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:pypi/click@8.0.4".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -1563,7 +1877,6 @@ fn test_resolve_python_pkg_info_installed_files_references() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::PypiEditableEggPkginfo),
-                purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
                 name: Some("examplepkg".to_string()),
                 version: Some("1.0.0".to_string()),
                 file_references: vec![FileReference {
@@ -1575,6 +1888,10 @@ fn test_resolve_python_pkg_info_installed_files_references() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -1665,46 +1982,82 @@ fn test_resolve_python_pkg_info_installed_files_references() {
         namespace: None,
         name: Some("examplepkg".to_string()),
         version: Some("1.0.0".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
         package_uid: PackageUid::from_raw("pkg:pypi/examplepkg@1.0.0?uuid=test-uuid".to_string()),
         datafile_paths: vec![
             "venv/lib/python3.11/site-packages/examplepkg.egg-info/PKG-INFO".to_string(),
         ],
         datasource_ids: vec![DatasourceId::PypiEditableEggPkginfo],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -1738,7 +2091,6 @@ fn test_resolve_python_metadata_file_references_in_dist_packages() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::PypiWheelMetadata),
-                purl: Some("pkg:pypi/click@8.0.4".to_string()),
                 name: Some("click".to_string()),
                 version: Some("8.0.4".to_string()),
                 file_references: vec![FileReference {
@@ -1750,6 +2102,10 @@ fn test_resolve_python_metadata_file_references_in_dist_packages() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:pypi/click@8.0.4".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -1840,46 +2196,82 @@ fn test_resolve_python_metadata_file_references_in_dist_packages() {
         namespace: None,
         name: Some("click".to_string()),
         version: Some("8.0.4".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:pypi/click@8.0.4".to_string()),
         package_uid: PackageUid::from_raw("pkg:pypi/click@8.0.4?uuid=test-uuid".to_string()),
         datafile_paths: vec![
             "usr/lib/python3/dist-packages/click-8.0.4.dist-info/METADATA".to_string(),
         ],
         datasource_ids: vec![DatasourceId::PypiWheelMetadata],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:pypi/click@8.0.4".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -1913,7 +2305,6 @@ fn test_python_metadata_file_references_do_not_assign_outside_packages_dirs() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::PypiWheelMetadata),
-                purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
                 name: Some("examplepkg".to_string()),
                 version: Some("1.0.0".to_string()),
                 file_references: vec![FileReference {
@@ -1925,6 +2316,10 @@ fn test_python_metadata_file_references_do_not_assign_outside_packages_dirs() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2015,44 +2410,80 @@ fn test_python_metadata_file_references_do_not_assign_outside_packages_dirs() {
         namespace: None,
         name: Some("examplepkg".to_string()),
         version: Some("1.0.0".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
         package_uid: PackageUid::from_raw("pkg:pypi/examplepkg@1.0.0?uuid=test-uuid".to_string()),
         datafile_paths: vec!["project/metadata/METADATA".to_string()],
         datasource_ids: vec![DatasourceId::PypiWheelMetadata],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:pypi/examplepkg@1.0.0".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -2081,7 +2512,6 @@ fn test_python_sources_file_references_do_not_escape_project_root() {
             programming_language: None,
             package_data: vec![PackageData {
                 datasource_id: Some(DatasourceId::PypiEditableEggPkginfo),
-                purl: Some("pkg:pypi/PyJPString@0.0.3".to_string()),
                 name: Some("PyJPString".to_string()),
                 version: Some("0.0.3".to_string()),
                 file_references: vec![FileReference {
@@ -2093,6 +2523,10 @@ fn test_python_sources_file_references_do_not_escape_project_root() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:pypi/PyJPString@0.0.3".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2183,44 +2617,80 @@ fn test_python_sources_file_references_do_not_escape_project_root() {
         namespace: None,
         name: Some("PyJPString".to_string()),
         version: Some("0.0.3".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:pypi/PyJPString@0.0.3".to_string()),
         package_uid: PackageUid::from_raw("pkg:pypi/PyJPString@0.0.3?uuid=test-uuid".to_string()),
         datafile_paths: vec!["project/PyJPString.egg-info/PKG-INFO".to_string()],
         datasource_ids: vec![DatasourceId::PypiEditableEggPkginfo],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:pypi/PyJPString@0.0.3".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -2260,7 +2730,10 @@ fn test_resolve_debian_installed_file_references_from_status_db() {
                 namespace: Some("debian".to_string()),
                 name: Some("bash".to_string()),
                 version: Some("5.2-1".to_string()),
-                purl: Some("pkg:deb/debian/bash@5.2-1?arch=amd64".to_string()),
+                core: PackageCore {
+                    purl: Some("pkg:deb/debian/bash@5.2-1?arch=amd64".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2315,7 +2788,6 @@ fn test_resolve_debian_installed_file_references_from_status_db() {
                 package_type: Some(PackageType::Deb),
                 namespace: Some("debian".to_string()),
                 name: Some("bash".to_string()),
-                purl: Some("pkg:deb/debian/bash".to_string()),
                 file_references: vec![
                     FileReference {
                         path: "/bin/bash".to_string(),
@@ -2336,6 +2808,10 @@ fn test_resolve_debian_installed_file_references_from_status_db() {
                         extra_data: None,
                     },
                 ],
+                core: PackageCore {
+                    purl: Some("pkg:deb/debian/bash".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2390,7 +2866,6 @@ fn test_resolve_debian_installed_file_references_from_status_db() {
                 package_type: Some(PackageType::Deb),
                 namespace: Some("debian".to_string()),
                 name: Some("bash".to_string()),
-                purl: Some("pkg:deb/debian/bash".to_string()),
                 file_references: vec![FileReference {
                     path: "bin/bash".to_string(),
                     size: None,
@@ -2400,6 +2875,10 @@ fn test_resolve_debian_installed_file_references_from_status_db() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:deb/debian/bash".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2538,46 +3017,82 @@ fn test_resolve_debian_installed_file_references_from_status_db() {
         namespace: Some("debian".to_string()),
         name: Some("bash".to_string()),
         version: Some("5.2-1".to_string()),
-        qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:deb/debian/bash@5.2-1?arch=amd64".to_string()),
         package_uid: PackageUid::from_raw(
             "pkg:deb/debian/bash@5.2-1?arch=amd64&uuid=test-uuid".to_string(),
         ),
         datafile_paths: vec!["rootfs/var/lib/dpkg/status".to_string()],
         datasource_ids: vec![DatasourceId::DebianInstalledStatusDb],
+        core: PackageCore {
+            qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:deb/debian/bash@5.2-1?arch=amd64".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -2620,7 +3135,10 @@ fn test_resolve_debian_installed_file_references_matches_ubuntu_package_namespac
                 namespace: Some("ubuntu".to_string()),
                 name: Some("bash".to_string()),
                 version: Some("5.2-1ubuntu1".to_string()),
-                purl: Some("pkg:deb/ubuntu/bash@5.2-1ubuntu1?arch=amd64".to_string()),
+                core: PackageCore {
+                    purl: Some("pkg:deb/ubuntu/bash@5.2-1ubuntu1?arch=amd64".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2675,7 +3193,6 @@ fn test_resolve_debian_installed_file_references_matches_ubuntu_package_namespac
                 package_type: Some(PackageType::Deb),
                 namespace: Some("debian".to_string()),
                 name: Some("bash".to_string()),
-                purl: Some("pkg:deb/debian/bash".to_string()),
                 file_references: vec![FileReference {
                     path: "/bin/bash".to_string(),
                     size: None,
@@ -2685,6 +3202,10 @@ fn test_resolve_debian_installed_file_references_matches_ubuntu_package_namespac
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    purl: Some("pkg:deb/debian/bash".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2775,46 +3296,82 @@ fn test_resolve_debian_installed_file_references_matches_ubuntu_package_namespac
         namespace: Some("ubuntu".to_string()),
         name: Some("bash".to_string()),
         version: Some("5.2-1ubuntu1".to_string()),
-        qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:deb/ubuntu/bash@5.2-1ubuntu1?arch=amd64".to_string()),
         package_uid: PackageUid::from_raw(
             "pkg:deb/ubuntu/bash@5.2-1ubuntu1?arch=amd64&uuid=test-uuid".to_string(),
         ),
         datafile_paths: vec!["rootfs/var/lib/dpkg/status".to_string()],
         datasource_ids: vec![DatasourceId::DebianInstalledStatusDb],
+        core: PackageCore {
+            qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:deb/ubuntu/bash@5.2-1ubuntu1?arch=amd64".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];
@@ -2851,8 +3408,12 @@ fn test_resolve_debian_installed_file_references_respects_arch_qualifier() {
                 namespace: Some("debian".to_string()),
                 name: Some("libc6".to_string()),
                 version: Some("2.36-1".to_string()),
-                purl: Some("pkg:deb/debian/libc6@2.36-1?arch=amd64".to_string()),
-                qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
+                core: PackageCore {
+                    purl: Some("pkg:deb/debian/libc6@2.36-1?arch=amd64".to_string()),
+
+                    qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2907,8 +3468,6 @@ fn test_resolve_debian_installed_file_references_respects_arch_qualifier() {
                 package_type: Some(PackageType::Deb),
                 namespace: Some("debian".to_string()),
                 name: Some("libc6".to_string()),
-                qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
-                purl: Some("pkg:deb/debian/libc6?arch=amd64".to_string()),
                 file_references: vec![FileReference {
                     path: "/lib/x86_64-linux-gnu/libc.so.6".to_string(),
                     size: None,
@@ -2918,6 +3477,12 @@ fn test_resolve_debian_installed_file_references_respects_arch_qualifier() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
+
+                    purl: Some("pkg:deb/debian/libc6?arch=amd64".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -2972,8 +3537,6 @@ fn test_resolve_debian_installed_file_references_respects_arch_qualifier() {
                 package_type: Some(PackageType::Deb),
                 namespace: Some("debian".to_string()),
                 name: Some("libc6".to_string()),
-                qualifiers: Some(HashMap::from([("arch".to_string(), "i386".to_string())])),
-                purl: Some("pkg:deb/debian/libc6?arch=i386".to_string()),
                 file_references: vec![FileReference {
                     path: "/lib/i386-linux-gnu/libc.so.6".to_string(),
                     size: None,
@@ -2983,6 +3546,12 @@ fn test_resolve_debian_installed_file_references_respects_arch_qualifier() {
                     sha512: None,
                     extra_data: None,
                 }],
+                core: PackageCore {
+                    qualifiers: Some(HashMap::from([("arch".to_string(), "i386".to_string())])),
+
+                    purl: Some("pkg:deb/debian/libc6?arch=i386".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
             detected_license_expression: None,
@@ -3121,46 +3690,82 @@ fn test_resolve_debian_installed_file_references_respects_arch_qualifier() {
         namespace: Some("debian".to_string()),
         name: Some("libc6".to_string()),
         version: Some("2.36-1".to_string()),
-        qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some("pkg:deb/debian/libc6@2.36-1?arch=amd64".to_string()),
         package_uid: PackageUid::from_raw(
             "pkg:deb/debian/libc6@2.36-1?arch=amd64&uuid=test-uuid".to_string(),
         ),
         datafile_paths: vec!["rootfs/var/lib/dpkg/status".to_string()],
         datasource_ids: vec![DatasourceId::DebianInstalledStatusDb],
+        core: PackageCore {
+            qualifiers: Some(HashMap::from([("arch".to_string(), "amd64".to_string())])),
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:deb/debian/libc6@2.36-1?arch=amd64".to_string()),
+        },
     }];
 
     let mut dependencies = vec![];

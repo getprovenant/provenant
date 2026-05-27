@@ -24,7 +24,9 @@
 //! - Type can be overridden by 'type' field or extracted from 'purl' field
 //! - Graceful error handling: logs warnings and returns default on parse failure
 
-use crate::models::{DatasourceId, FileReference, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, FileReference, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -272,44 +274,80 @@ impl PackageParser for AboutFileParser {
             namespace,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties,
-            keywords: Vec::new(),
-            homepage_url,
-            download_url,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url,
-            copyright,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references,
-            is_private: false,
-            is_virtual: false,
-            extra_data,
             dependencies: Vec::new(),
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::AboutFile),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: None,
+
+                description: None,
+
+                release_date: None,
+
+                parties,
+
+                keywords: Vec::new(),
+
+                homepage_url,
+
+                download_url,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url,
+
+                copyright,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl,
+            },
         }]
     }
 
@@ -489,6 +527,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::About),
         datasource_id: Some(DatasourceId::AboutFile),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

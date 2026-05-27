@@ -9,7 +9,7 @@ use super::utils::{
     has_private_classifier, normalize_python_dependency_name, normalize_python_package_name,
     read_toml_file,
 };
-use crate::models::{DatasourceId, Dependency, PackageData, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, Party};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::pep508::parse_pep508_requirement;
@@ -214,33 +214,51 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
         package_type: Some(PythonParser::PACKAGE_TYPE),
         name,
         version,
-        description,
-        parties: extract_parties(selected_metadata),
-        keywords,
-        homepage_url: urls.homepage_url.or(pypi_homepage_url),
-        download_url: urls.download_url.or(pypi_download_url),
-        bug_tracking_url: urls.bug_tracking_url,
-        code_view_url: urls.code_view_url,
-        vcs_url: urls.vcs_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: extracted_license_statement
-            .or_else(|| build_extracted_license_statement(None, &license_classifiers)),
-        is_private: has_private_classifier(&classifiers),
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
         dependencies: [dependencies, optional_dependencies].concat(),
-        api_data_url,
         datasource_id: Some(if is_poetry_pyproject {
             DatasourceId::PypiPoetryPyprojectToml
         } else {
             DatasourceId::PypiPyprojectToml
         }),
-        purl,
+        core: PackageCore {
+            description,
+
+            parties: extract_parties(selected_metadata),
+
+            keywords,
+
+            homepage_url: urls.homepage_url.or(pypi_homepage_url),
+
+            download_url: urls.download_url.or(pypi_download_url),
+
+            bug_tracking_url: urls.bug_tracking_url,
+
+            code_view_url: urls.code_view_url,
+
+            vcs_url: urls.vcs_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: extracted_license_statement
+                .or_else(|| build_extracted_license_statement(None, &license_classifiers)),
+
+            is_private: has_private_classifier(&classifiers),
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            api_data_url,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }]
 }

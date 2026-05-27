@@ -25,7 +25,7 @@
 //! - Graceful error handling with `warn!()` logs
 //! - Supports Go 1.11+ module syntax
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -266,44 +266,80 @@ pub fn parse_go_mod(content: &str) -> PackageData {
         namespace,
         name,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Go".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data,
         dependencies,
-        repository_homepage_url,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::GoMod),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Go".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data,
+
+            repository_homepage_url,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 
@@ -502,7 +538,10 @@ pub(crate) fn create_golang_purl(module_path: &str, version: Option<&str>) -> Op
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Go".to_string()),
+        core: PackageCore {
+            primary_language: Some("Go".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -510,6 +549,10 @@ fn default_package_data() -> PackageData {
 fn default_go_mod_package_data() -> PackageData {
     PackageData {
         datasource_id: Some(DatasourceId::GoMod),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -517,6 +560,10 @@ fn default_go_mod_package_data() -> PackageData {
 fn default_go_sum_package_data() -> PackageData {
     PackageData {
         datasource_id: Some(DatasourceId::GoSum),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -524,6 +571,10 @@ fn default_go_sum_package_data() -> PackageData {
 fn default_go_work_package_data() -> PackageData {
     PackageData {
         datasource_id: Some(DatasourceId::GoWork),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -531,6 +582,10 @@ fn default_go_work_package_data() -> PackageData {
 fn default_godeps_package_data() -> PackageData {
     PackageData {
         datasource_id: Some(DatasourceId::Godeps),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }
@@ -617,44 +672,80 @@ pub fn parse_go_sum(content: &str) -> PackageData {
         namespace: None,
         name: None,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Go".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::GoSum),
-        purl: None,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Go".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+        },
     }
 }
 
@@ -812,44 +903,80 @@ pub fn parse_go_work(content: &str, work_path: &Path) -> PackageData {
         namespace: None,
         name: None,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Go".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: Some(extra_data),
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::GoWork),
-        purl: None,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Go".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: Some(extra_data),
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+        },
     }
 }
 
@@ -1148,43 +1275,79 @@ pub fn parse_godeps_json(content: &str) -> PackageData {
         namespace,
         name,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Go".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::Godeps),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Go".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }

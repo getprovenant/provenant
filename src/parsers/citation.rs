@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 
 use super::PackageParser;
@@ -54,6 +54,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(CitationCffParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::CitationCff),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

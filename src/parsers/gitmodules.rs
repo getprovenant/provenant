@@ -25,7 +25,7 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -37,6 +37,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::Gitmodules),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -94,6 +97,9 @@ impl PackageParser for GitmodulesParser {
             package_type: Some(PACKAGE_TYPE),
             datasource_id: Some(DatasourceId::Gitmodules),
             dependencies,
+            core: PackageCore {
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }

@@ -6,7 +6,7 @@ use super::utils::{
     build_pypi_urls, calculate_file_checksums, default_package_data, normalize_python_package_name,
     parse_requires_txt, strip_python_archive_extension,
 };
-use crate::models::{DatasourceId, FileReference, PackageData, Sha256Digest};
+use crate::models::{DatasourceId, FileReference, PackageCore, PackageData, Sha256Digest};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -857,13 +857,13 @@ pub(super) fn extract_from_wheel_archive(path: &Path) -> Vec<PackageData> {
             ),
         )]));
 
-        package_data.purl = build_wheel_purl(
+        package_data.core.purl = build_wheel_purl(
             package_data.name.as_deref(),
             package_data.version.as_deref(),
             &wheel_info,
         );
 
-        let mut extra_data = package_data.extra_data.unwrap_or_default();
+        let mut extra_data = package_data.core.extra_data.unwrap_or_default();
         extra_data.insert(
             "python_requires".to_string(),
             serde_json::Value::String(wheel_info.python_tag.clone()),
@@ -876,7 +876,7 @@ pub(super) fn extract_from_wheel_archive(path: &Path) -> Vec<PackageData> {
             "platform_tag".to_string(),
             serde_json::Value::String(wheel_info.platform_tag.clone()),
         );
-        package_data.extra_data = Some(extra_data);
+        package_data.core.extra_data = Some(extra_data);
     }
 
     vec![package_data]
@@ -934,16 +934,16 @@ pub(super) fn extract_from_egg_archive(path: &Path) -> Vec<PackageData> {
         }
 
         if let Some(python_version) = &egg_info.python_version {
-            let mut extra_data = package_data.extra_data.unwrap_or_default();
+            let mut extra_data = package_data.core.extra_data.unwrap_or_default();
             extra_data.insert(
                 "python_version".to_string(),
                 serde_json::Value::String(python_version.clone()),
             );
-            package_data.extra_data = Some(extra_data);
+            package_data.core.extra_data = Some(extra_data);
         }
     }
 
-    package_data.purl = build_egg_purl(
+    package_data.core.purl = build_egg_purl(
         package_data.name.as_deref(),
         package_data.version.as_deref(),
     );
@@ -1275,17 +1275,26 @@ pub(super) fn extract_from_pip_origin_json(path: &Path) -> Vec<PackageData> {
 
     vec![PackageData {
         package_type: Some(PythonParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         name: Some(truncate_field(name)),
         version: Some(version),
         datasource_id: Some(DatasourceId::PypiPipOriginJson),
-        download_url: Some(truncate_field(download_url.to_string())),
-        sha256: extract_sha256_from_origin_json(&root)
-            .and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        repository_homepage_url: urls.repository_homepage_url,
-        repository_download_url: urls.repository_download_url,
-        api_data_url: urls.api_data_url,
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            download_url: Some(truncate_field(download_url.to_string())),
+
+            sha256: extract_sha256_from_origin_json(&root)
+                .and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            repository_homepage_url: urls.repository_homepage_url,
+
+            repository_download_url: urls.repository_download_url,
+
+            api_data_url: urls.api_data_url,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }]
 }

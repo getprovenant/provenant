@@ -11,7 +11,7 @@ use toml::Value as TomlValue;
 use toml::map::Map as TomlMap;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 use crate::parsers::python::read_toml_file;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
@@ -262,23 +262,38 @@ fn build_resolved_package(
     let download_url = download_url.map(truncate_field);
 
     ResolvedPackage {
-        primary_language: Some("Python".to_string()),
-        download_url,
-        sha1: None,
-        sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        sha512: None,
-        md5: None,
-        is_virtual: true,
-        extra_data: build_package_extra_data(package_table),
         dependencies: collect_package_dependency_edges(package_table)
             .into_iter()
             .map(|edge| edge_to_dependency(edge, package_lookup))
             .collect(),
-        repository_homepage_url,
-        repository_download_url: repository_download_url.map(truncate_field),
-        api_data_url: api_data_url.map(truncate_field),
         datasource_id: Some(DatasourceId::PypiUvLock),
-        purl: purl.map(truncate_field),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            download_url,
+
+            sha1: None,
+
+            sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            sha512: None,
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: build_package_extra_data(package_table),
+
+            repository_homepage_url,
+
+            repository_download_url: repository_download_url.map(truncate_field),
+
+            api_data_url: api_data_url.map(truncate_field),
+
+            purl: purl.map(truncate_field),
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(UvLockParser::PACKAGE_TYPE, String::new(), name, version)
     }
 }
@@ -976,8 +991,11 @@ fn toml_value_to_json_recursive(value: &TomlValue, guard: &mut RecursionGuard<()
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(UvLockParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id: Some(DatasourceId::PypiUvLock),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::models::{
-    DatasourceId, Dependency, FileReference, Md5Digest, PackageData, PackageType, Sha1Digest,
-    Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, FileReference, Md5Digest, PackageCore, PackageData, PackageType,
+    Sha1Digest, Sha256Digest, Sha512Digest,
 };
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
@@ -206,6 +206,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PackageType::Bitbake),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

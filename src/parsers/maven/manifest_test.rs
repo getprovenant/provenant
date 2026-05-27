@@ -201,7 +201,7 @@ fn test_osgi_export_package_extra_data() {
     let package = MavenParser::extract_first_package(&path);
 
     assert!(package.extra_data.is_some());
-    let extra_data = package.extra_data.unwrap();
+    let extra_data = package.extra_data.clone().unwrap();
     assert!(extra_data.contains_key("export_packages"));
     assert_eq!(
         extra_data.get("export_packages"),
@@ -428,7 +428,7 @@ fn test_osgi_manifest_with_strong_maven_identity_prefers_maven_package() {
         Some("pkg:maven/com.fasterxml.jackson.core/Jackson-core@2.18.0".to_string())
     );
 
-    let extra_data = package.extra_data.expect("expected extra data");
+    let extra_data = package.extra_data.clone().expect("expected extra data");
     assert_eq!(
         extra_data.get("osgi_bundle_symbolic_name"),
         Some(&serde_json::Value::String(

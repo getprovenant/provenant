@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::models::PackageCore;
 
 #[test]
 fn create_output_gates_summary_tallies_and_generated_sections() {
@@ -365,6 +366,10 @@ fn create_output_preserves_empty_package_data_license_and_dependency_arrays() {
         package_type: Some(PackageType::Npm),
         name: Some("demo".to_string()),
         version: Some("1.0.0".to_string()),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..PackageData::default()
     }];
 
@@ -490,6 +495,10 @@ fn create_output_promotes_package_metadata_without_summary_flags() {
     let package = Package {
         package_uid: PackageUid::from_raw(package_uid),
         datafile_paths: vec!["project/package.json".to_string()],
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..super::test_utils::package("pkg:npm/demo?uuid=test", "project/package.json")
     };
 
@@ -549,9 +558,14 @@ fn create_output_summary_still_resolves_after_strip_root_normalization() {
     manifest.package_data = vec![crate::models::PackageData {
         package_type: Some(crate::models::PackageType::Gem),
         datasource_id: Some(crate::models::DatasourceId::Gemspec),
-        declared_license_expression: Some("mit".to_string()),
-        declared_license_expression_spdx: Some("MIT".to_string()),
-        purl: Some("pkg:gem/demo@1.0.0".to_string()),
+        core: PackageCore {
+            declared_license_expression: Some("mit".to_string()),
+
+            declared_license_expression_spdx: Some("MIT".to_string()),
+
+            purl: Some("pkg:gem/demo@1.0.0".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
     manifest.detected_license_expression = Some("mit".to_string());

@@ -31,7 +31,7 @@ use toml::Value as TomlValue;
 use toml::map::Map as TomlMap;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 use crate::parsers::python::{build_pypi_urls, read_toml_file};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
@@ -113,44 +113,80 @@ fn parse_poetry_lock(toml_content: &TomlValue) -> PackageData {
         namespace: None,
         name: None,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Python".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: build_metadata_extra_data(metadata),
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::PypiPoetryLock),
-        purl: None,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Python".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: build_metadata_extra_data(metadata),
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+        },
     }
 }
 
@@ -252,20 +288,35 @@ fn build_resolved_package(
     let sha256 = extract_sha256_from_files(package_table);
 
     ResolvedPackage {
-        primary_language: Some("Python".to_string()),
-        download_url: None,
-        sha1: None,
-        sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        sha512: None,
-        md5: None,
-        is_virtual: true,
-        extra_data: None,
         dependencies,
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
         datasource_id: Some(DatasourceId::PypiPoetryLock),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            download_url: None,
+
+            sha1: None,
+
+            sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            sha512: None,
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            purl,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PoetryLockParser::PACKAGE_TYPE,
             String::new(),
@@ -438,8 +489,11 @@ fn extract_sha256_from_files(package_table: &TomlMap<String, TomlValue>) -> Opti
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PoetryLockParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id: Some(DatasourceId::PypiPoetryLock),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

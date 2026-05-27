@@ -407,7 +407,7 @@ license-file = "LICENSE.txt"
 
         // Then: license-file should be extracted to extra_data
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert_eq!(extra_data.get("license_file"), Some(&json!("LICENSE.txt")));
     }
 
@@ -427,7 +427,7 @@ publish = false
         let (_temp_file, cargo_path) = create_temp_cargo_toml(content);
         let package_data = CargoParser::extract_first_package(&cargo_path);
 
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert_eq!(extra_data.get("readme_file"), Some(&json!("README.md")));
         assert_eq!(extra_data.get("publish"), Some(&json!(false)));
         assert!(package_data.is_private);

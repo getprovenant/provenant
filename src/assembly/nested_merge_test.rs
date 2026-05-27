@@ -4,7 +4,7 @@
 use super::*;
 use std::path::Path;
 
-use crate::models::{DatasourceId, FileType};
+use crate::models::{DatasourceId, FileType, PackageCore};
 
 fn test_file(path: &str, package_data: Vec<PackageData>) -> FileInfo {
     let file_name = Path::new(path)
@@ -236,11 +236,15 @@ fn test_maven_nested_merge_skips_multiple_nested_poms() {
             vec![PackageData {
                 datasource_id: Some(DatasourceId::JavaJarManifest),
                 package_type: Some(crate::models::PackageType::Maven),
-                primary_language: Some("Java".to_string()),
-                purl: Some("pkg:maven/com.example/app-one@1.0.0".to_string()),
                 name: Some("app-one".to_string()),
                 namespace: Some("com.example".to_string()),
                 version: Some("1.0.0".to_string()),
+                core: PackageCore {
+                    primary_language: Some("Java".to_string()),
+
+                    purl: Some("pkg:maven/com.example/app-one@1.0.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
         ),
@@ -249,11 +253,15 @@ fn test_maven_nested_merge_skips_multiple_nested_poms() {
             vec![PackageData {
                 datasource_id: Some(DatasourceId::MavenPom),
                 package_type: Some(crate::models::PackageType::Maven),
-                primary_language: Some("Java".to_string()),
-                purl: Some("pkg:maven/com.example/app-one@1.0.0".to_string()),
                 name: Some("app-one".to_string()),
                 namespace: Some("com.example".to_string()),
                 version: Some("1.0.0".to_string()),
+                core: PackageCore {
+                    primary_language: Some("Java".to_string()),
+
+                    purl: Some("pkg:maven/com.example/app-one@1.0.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
         ),
@@ -262,11 +270,15 @@ fn test_maven_nested_merge_skips_multiple_nested_poms() {
             vec![PackageData {
                 datasource_id: Some(DatasourceId::MavenPom),
                 package_type: Some(crate::models::PackageType::Maven),
-                primary_language: Some("Java".to_string()),
-                purl: Some("pkg:maven/com.example/app-two@2.0.0".to_string()),
                 name: Some("app-two".to_string()),
                 namespace: Some("com.example".to_string()),
                 version: Some("2.0.0".to_string()),
+                core: PackageCore {
+                    primary_language: Some("Java".to_string()),
+
+                    purl: Some("pkg:maven/com.example/app-two@2.0.0".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             }],
         ),

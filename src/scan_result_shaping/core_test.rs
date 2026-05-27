@@ -5,7 +5,7 @@ use super::*;
 use crate::license_detection::MatcherKind;
 use crate::models::{
     Author, Copyright, DatasourceId, Dependency, FileReference, LineNumber, MatchScore,
-    OutputEmail, OutputURL, Package, PackageData, PackageUid, TopLevelDependency,
+    OutputEmail, OutputURL, Package, PackageCore, PackageData, PackageUid, TopLevelDependency,
 };
 use crate::scan_result_shaping::test_fixtures::{dir, file};
 use regex::Regex;
@@ -349,29 +349,32 @@ fn filter_redundant_clues_suppresses_cross_clues_without_license_rules() {
 fn filter_redundant_clues_with_rules_uses_package_origin_detections() {
     let mut files = vec![file("project/package.json")];
     files[0].package_data = vec![PackageData {
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![crate::models::Match {
+        core: PackageCore {
+            license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "mit".to_string(),
                 license_expression_spdx: "MIT".to_string(),
-                from_file: Some("project/package.json".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::new(5).unwrap(),
-                matcher: MatcherKind::Declared,
-                score: MatchScore::MAX,
-                matched_length: Some(42),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: "mit_1.RULE".to_string(),
-                rule_url: None,
-                matched_text: None,
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![crate::models::Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: Some("project/package.json".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::new(5).unwrap(),
+                    matcher: MatcherKind::Declared,
+                    score: MatchScore::MAX,
+                    matched_length: Some(42),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: "mit_1.RULE".to_string(),
+                    rule_url: None,
+                    matched_text: None,
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                identifier: "mit-from-package".to_string(),
+                detection_log: vec![],
             }],
-            identifier: "mit-from-package".to_string(),
-            detection_log: vec![],
-        }],
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
     files[0].emails = vec![OutputEmail {
@@ -608,52 +611,55 @@ fn normalize_paths_updates_license_match_from_file_paths_too() {
 fn normalize_paths_updates_package_level_license_match_from_file_paths_too() {
     let mut manifest = file("project/package.json");
     manifest.package_data = vec![PackageData {
-        license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "mit".to_string(),
-            license_expression_spdx: "MIT".to_string(),
-            matches: vec![crate::models::Match {
+        core: PackageCore {
+            license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "mit".to_string(),
                 license_expression_spdx: "MIT".to_string(),
-                from_file: Some("project/LICENSE".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::new(5).unwrap(),
-                matcher: MatcherKind::Aho,
-                score: MatchScore::MAX,
-                matched_length: Some(42),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: "mit_1.RULE".to_string(),
-                rule_url: None,
-                matched_text: None,
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![crate::models::Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: Some("project/LICENSE".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::new(5).unwrap(),
+                    matcher: MatcherKind::Aho,
+                    score: MatchScore::MAX,
+                    matched_length: Some(42),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: "mit_1.RULE".to_string(),
+                    rule_url: None,
+                    matched_text: None,
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                identifier: String::new(),
+                detection_log: vec![],
             }],
-            identifier: String::new(),
-            detection_log: vec![],
-        }],
-        other_license_detections: vec![crate::models::LicenseDetection {
-            license_expression: "apache-2.0".to_string(),
-            license_expression_spdx: "Apache-2.0".to_string(),
-            matches: vec![crate::models::Match {
+            other_license_detections: vec![crate::models::LicenseDetection {
                 license_expression: "apache-2.0".to_string(),
                 license_expression_spdx: "Apache-2.0".to_string(),
-                from_file: Some("project/NOTICE".to_string()),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::new(3).unwrap(),
-                matcher: MatcherKind::Aho,
-                score: MatchScore::MAX,
-                matched_length: Some(30),
-                match_coverage: Some(100.0),
-                rule_relevance: Some(100),
-                rule_identifier: "apache_2_0_1.RULE".to_string(),
-                rule_url: None,
-                matched_text: None,
-                referenced_filenames: None,
-                matched_text_diagnostics: None,
+                matches: vec![crate::models::Match {
+                    license_expression: "apache-2.0".to_string(),
+                    license_expression_spdx: "Apache-2.0".to_string(),
+                    from_file: Some("project/NOTICE".to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::new(3).unwrap(),
+                    matcher: MatcherKind::Aho,
+                    score: MatchScore::MAX,
+                    matched_length: Some(30),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: "apache_2_0_1.RULE".to_string(),
+                    rule_url: None,
+                    matched_text: None,
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                identifier: String::new(),
+                detection_log: vec![],
             }],
-            identifier: String::new(),
-            detection_log: vec![],
-        }],
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 

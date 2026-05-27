@@ -12,7 +12,7 @@ use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 
 use super::PackageParser;
@@ -78,8 +78,11 @@ impl PackageParser for HexLockParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Hex),
-        primary_language: Some("Elixir".to_string()),
         datasource_id: Some(DatasourceId::HexMixLock),
+        core: PackageCore {
+            primary_language: Some("Elixir".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -139,41 +142,59 @@ fn build_dependency_from_lock_entry(
 
     let purl = build_hex_purl(&package_name, Some(&version), Some(&repo));
     let resolved_package = ResolvedPackage {
-        primary_language: Some("Elixir".to_string()),
-        download_url: None,
-        sha1: None,
-        sha256: Sha256Digest::from_hex(&inner_checksum).ok(),
-        sha512: None,
-        md5: None,
-        is_virtual: true,
-        extra_data: Some(HashMap::from([
-            (
-                "repo".to_string(),
-                JsonValue::String(truncate_field(repo.clone())),
-            ),
-            (
-                "outer_checksum".to_string(),
-                JsonValue::String(truncate_field(outer_checksum.clone())),
-            ),
-            (
-                "managers".to_string(),
-                JsonValue::Array(
-                    managers
-                        .into_iter()
-                        .map(|m| JsonValue::String(truncate_field(m)))
-                        .collect(),
-                ),
-            ),
-        ])),
         dependencies: nested_dependencies
             .into_iter()
             .map(build_nested_dependency)
             .collect::<Result<Vec<_>, _>>()?,
-        repository_homepage_url: Some(truncate_field(build_hexdocs_homepage(&package_name, &repo))),
-        repository_download_url: None,
-        api_data_url: Some(truncate_field(build_hex_api_url(&package_name, &repo))),
         datasource_id: Some(DatasourceId::HexMixLock),
-        purl: build_hex_purl(&package_name, Some(&version), Some(&repo)).map(truncate_field),
+        core: PackageCore {
+            primary_language: Some("Elixir".to_string()),
+
+            download_url: None,
+
+            sha1: None,
+
+            sha256: Sha256Digest::from_hex(&inner_checksum).ok(),
+
+            sha512: None,
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: Some(HashMap::from([
+                (
+                    "repo".to_string(),
+                    JsonValue::String(truncate_field(repo.clone())),
+                ),
+                (
+                    "outer_checksum".to_string(),
+                    JsonValue::String(truncate_field(outer_checksum.clone())),
+                ),
+                (
+                    "managers".to_string(),
+                    JsonValue::Array(
+                        managers
+                            .into_iter()
+                            .map(|m| JsonValue::String(truncate_field(m)))
+                            .collect(),
+                    ),
+                ),
+            ])),
+
+            repository_homepage_url: Some(truncate_field(build_hexdocs_homepage(
+                &package_name,
+                &repo,
+            ))),
+
+            repository_download_url: None,
+
+            api_data_url: Some(truncate_field(build_hex_api_url(&package_name, &repo))),
+
+            purl: build_hex_purl(&package_name, Some(&version), Some(&repo)).map(truncate_field),
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PackageType::Hex,
             if repo == "hexpm" {

@@ -43,7 +43,7 @@ mod nuget_test;
 use std::fs;
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType, Party, PartyType};
 use packageurl::PackageUrl;
 
 use super::utils::MAX_MANIFEST_SIZE;
@@ -226,6 +226,9 @@ pub(super) fn default_package_data(datasource_id: Option<DatasourceId>) -> Packa
     PackageData {
         package_type: Some(PackageType::Nuget),
         datasource_id,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

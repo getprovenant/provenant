@@ -394,33 +394,36 @@ pub(crate) fn finalize_package_declared_license_references(package_data: &mut Pa
         .with_referenced_filenames(&referenced_filename_slices);
         let (_, _, detections) =
             build_declared_license_data_from_pair(declared, declared_spdx, metadata);
-        package_data.license_detections = detections;
+        package_data.core.license_detections = detections;
         return;
     }
 
-    if let Some(statement) = package_data.extracted_license_statement.as_deref() {
+    if let Some(statement) = package_data.core.extracted_license_statement.as_deref() {
         if let Some(normalized) = normalize_spdx_expression(statement) {
             let (_, _, detections) = build_declared_license_data(
                 normalized,
                 DeclaredLicenseMatchMetadata::single_line(statement)
                     .with_referenced_filenames(&referenced_filename_slices),
             );
-            package_data.license_detections = detections;
-            package_data.declared_license_expression = package_data
+            package_data.core.license_detections = detections;
+            package_data.core.declared_license_expression = package_data
+                .core
                 .license_detections
                 .first()
                 .map(|detection| detection.license_expression.clone());
-            package_data.declared_license_expression_spdx = package_data
+            package_data.core.declared_license_expression_spdx = package_data
+                .core
                 .license_detections
                 .first()
                 .map(|detection| detection.license_expression_spdx.clone());
             return;
         }
 
-        package_data.declared_license_expression = Some("unknown-license-reference".to_string());
-        package_data.declared_license_expression_spdx =
+        package_data.core.declared_license_expression =
+            Some("unknown-license-reference".to_string());
+        package_data.core.declared_license_expression_spdx =
             Some("LicenseRef-scancode-unknown-license-reference".to_string());
-        package_data.license_detections = vec![build_declared_license_detection(
+        package_data.core.license_detections = vec![build_declared_license_detection(
             &NormalizedDeclaredLicense::new(
                 "unknown-license-reference",
                 "LicenseRef-scancode-unknown-license-reference",

@@ -21,7 +21,9 @@
 //! - Comments and empty lines are skipped
 //! - All dependencies are pinned (is_pinned: true)
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage,
+};
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use std::collections::HashMap;
@@ -73,44 +75,80 @@ impl PackageParser for GradleLockfileParser {
             namespace: None,
             name: None,
             version: None,
-            qualifiers: None,
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties: Vec::new(),
-            keywords: Vec::new(),
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: Vec::new(),
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement: None,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private: false,
-            is_virtual: false,
-            extra_data: None,
             dependencies,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::GradleLockfile),
-            purl: None,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: None,
+
+                description: None,
+
+                release_date: None,
+
+                parties: Vec::new(),
+
+                keywords: Vec::new(),
+
+                homepage_url: None,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression: None,
+
+                declared_license_expression_spdx: None,
+
+                license_detections: Vec::new(),
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement: None,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+            },
         }]
     }
 }
@@ -205,20 +243,35 @@ fn parse_dependency_line(line: &str) -> Option<Dependency> {
 
     // Create resolved_package
     let resolved_package = ResolvedPackage {
-        primary_language: None,
-        download_url: None,
-        sha1: None,
-        sha256: None,
-        sha512: None,
-        md5: None,
-        is_virtual: false,
-        extra_data: None,
         dependencies: Vec::new(),
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::GradleLockfile),
-        purl: purl.clone(),
+        core: PackageCore {
+            primary_language: None,
+
+            download_url: None,
+
+            sha1: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            md5: None,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: purl.clone(),
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(PackageType::Maven, group, artifact, version)
     };
 
@@ -240,6 +293,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(GradleLockfileParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::GradleLockfile),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

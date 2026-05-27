@@ -4,9 +4,9 @@
 use provenant::license_detection::MatcherKind;
 use provenant::models::{
     Copyright, DatasourceId, DependencyUid, ExtraData, FacetTallies, FileInfo, FileType, Header,
-    Holder, LineNumber, MatchScore, Md5Digest, Output, Package, PackageData, PackageType,
-    PackageUid, Party, ResolvedPackage, Sha1Digest, SystemEnvironment, Tallies, TallyEntry,
-    TopLevelDependency,
+    Holder, LineNumber, MatchScore, Md5Digest, Output, Package, PackageCore, PackageData,
+    PackageType, PackageUid, Party, ResolvedPackage, Sha1Digest, SystemEnvironment, Tallies,
+    TallyEntry, TopLevelDependency,
 };
 use provenant::output_schema::Output as OutputSchemaOutput;
 use provenant::{OutputFormat, OutputWriteConfig, OutputWriter, writer_for_format};
@@ -1872,22 +1872,25 @@ fn sample_cyclonedx_rich_output() -> Output {
         package_type: Some(PackageType::Npm),
         name: Some("npm".to_string()),
         version: Some("2.13.5".to_string()),
-        description: Some("a package manager for JavaScript".to_string()),
-        purl: Some("pkg:npm/npm@2.13.5".to_string()),
-        sha1: Some(Sha1Digest::from_hex("a124386bce4a90506f28ad4b1d1a804a17baaf32").unwrap()),
-        declared_license_expression_spdx: Some("Artistic-2.0".to_string()),
-        homepage_url: Some("https://docs.npmjs.com/".to_string()),
-        repository_homepage_url: Some("https://www.npmjs.com/package/npm".to_string()),
-        download_url: Some("https://registry.npmjs.org/npm/-/npm-2.13.5.tgz".to_string()),
-        repository_download_url: Some(
-            "https://registry.npmjs.org/npm/-/npm-2.13.5.tgz".to_string(),
-        ),
-        api_data_url: Some("https://registry.npmjs.org/npm/2.13.5".to_string()),
-        vcs_url: Some(
-            "git+https://github.com/npm/npm.git@fc7bbf03e39cc48a8924b90696d28345a6a90f3c"
-                .to_string(),
-        ),
-        bug_tracking_url: Some("http://github.com/npm/npm/issues".to_string()),
+        core: PackageCore {
+            description: Some("a package manager for JavaScript".to_string()),
+            purl: Some("pkg:npm/npm@2.13.5".to_string()),
+            sha1: Some(Sha1Digest::from_hex("a124386bce4a90506f28ad4b1d1a804a17baaf32").unwrap()),
+            declared_license_expression_spdx: Some("Artistic-2.0".to_string()),
+            homepage_url: Some("https://docs.npmjs.com/".to_string()),
+            repository_homepage_url: Some("https://www.npmjs.com/package/npm".to_string()),
+            download_url: Some("https://registry.npmjs.org/npm/-/npm-2.13.5.tgz".to_string()),
+            repository_download_url: Some(
+                "https://registry.npmjs.org/npm/-/npm-2.13.5.tgz".to_string(),
+            ),
+            api_data_url: Some("https://registry.npmjs.org/npm/2.13.5".to_string()),
+            vcs_url: Some(
+                "git+https://github.com/npm/npm.git@fc7bbf03e39cc48a8924b90696d28345a6a90f3c"
+                    .to_string(),
+            ),
+            bug_tracking_url: Some("http://github.com/npm/npm/issues".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
     pkg_data.parties = vec![Party {
@@ -1916,20 +1919,23 @@ fn sample_cyclonedx_dependency_output() -> Output {
         is_pinned: Some(true),
         is_direct: Some(true),
         resolved_package: Some(Box::new(ResolvedPackage {
-            primary_language: None,
-            download_url: None,
-            sha1: None,
-            sha256: None,
-            sha512: None,
-            md5: None,
-            is_virtual: false,
-            extra_data: None,
+            core: PackageCore {
+                primary_language: None,
+                download_url: None,
+                sha1: None,
+                sha256: None,
+                sha512: None,
+                md5: None,
+                is_virtual: false,
+                extra_data: None,
+                repository_homepage_url: None,
+                repository_download_url: None,
+                api_data_url: None,
+                purl: Some("pkg:npm/dep@2.0.0".to_string()),
+                ..Default::default()
+            },
             dependencies: vec![],
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: None,
-            purl: Some("pkg:npm/dep@2.0.0".to_string()),
             ..ResolvedPackage::new(
                 PackageType::Npm,
                 String::new(),

@@ -24,8 +24,8 @@
 //! - Direct dependencies tracked via `importers['.'].dependencies`
 
 use crate::models::{
-    DatasourceId, Dependency, Md5Digest, PackageData, PackageType, ResolvedPackage, Sha1Digest,
-    Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, Md5Digest, PackageCore, PackageData, PackageType, ResolvedPackage,
+    Sha1Digest, Sha256Digest, Sha512Digest,
 };
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, npm_purl, parse_sri, read_file_to_string, truncate_field,
@@ -87,8 +87,11 @@ impl PackageParser for PnpmLockParser {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PnpmLockParser::PACKAGE_TYPE),
-        extra_data: Some(std::collections::HashMap::new()),
         datasource_id: Some(DatasourceId::PnpmLockYaml),
+        core: PackageCore {
+            extra_data: Some(std::collections::HashMap::new()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -552,20 +555,35 @@ pub fn extract_dependency(
     let all_dependencies = parse_nested_dependencies(data);
 
     let resolved_package = ResolvedPackage {
-        primary_language: Some("JavaScript".to_string()),
-        download_url: None,
-        sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
-        sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
-        is_virtual: true,
-        extra_data: None,
         dependencies: all_dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::PnpmLockYaml),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+
+            download_url: None,
+
+            sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
+
+            sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PackageType::Npm,
             namespace.clone().unwrap_or_default(),

@@ -21,7 +21,9 @@
 //! - Direct dependencies determined from root package's dependency list
 //! - Uses TOML parsing for structured data extraction
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Sha256Digest};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Sha256Digest,
+};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -120,44 +122,80 @@ impl PackageParser for CargoLockParser {
             namespace: None,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties: Vec::new(),
-            keywords: Vec::new(),
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: Vec::new(),
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement: None,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private: false,
-            is_virtual: false,
-            extra_data,
             dependencies,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url,
             datasource_id: Some(DatasourceId::CargoLock),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: None,
+
+                description: None,
+
+                release_date: None,
+
+                parties: Vec::new(),
+
+                keywords: Vec::new(),
+
+                homepage_url: None,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression: None,
+
+                declared_license_expression_spdx: None,
+
+                license_detections: Vec::new(),
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement: None,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url,
+
+                purl,
+            },
         }]
     }
 
@@ -551,6 +589,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(CargoLockParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::CargoLock),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

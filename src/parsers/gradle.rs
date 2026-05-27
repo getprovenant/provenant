@@ -36,7 +36,7 @@ use packageurl::PackageUrl;
 use serde_json::json;
 
 use super::metadata::ParserMetadata;
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parsers::PackageParser;
 
 use super::license_normalization::{
@@ -112,44 +112,80 @@ impl PackageParser for GradleParser {
             namespace: None,
             name: None,
             version: None,
-            qualifiers: None,
-            subpath: None,
-            primary_language: None,
-            description: None,
-            release_date: None,
-            parties: Vec::new(),
-            keywords: Vec::new(),
-            homepage_url: None,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            extra_data: None,
             dependencies,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::BuildGradle),
-            purl: None,
-            is_private: false,
-            is_virtual: false,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: None,
+
+                description: None,
+
+                release_date: None,
+
+                parties: Vec::new(),
+
+                keywords: Vec::new(),
+
+                homepage_url: None,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+
+                is_private: false,
+
+                is_virtual: false,
+            },
         }]
     }
 }
@@ -158,6 +194,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(GradleParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::BuildGradle),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

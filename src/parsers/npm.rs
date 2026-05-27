@@ -22,8 +22,8 @@
 //! - Graceful error handling: logs warnings and returns default on parse failure
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, Party, PartyType, Sha1Digest, Sha256Digest,
-    Sha512Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType, Sha1Digest,
+    Sha256Digest, Sha512Digest,
 };
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, parse_sri, truncate_field};
@@ -185,41 +185,7 @@ impl PackageParser for NpmParser {
             namespace,
             name: package_name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("JavaScript".to_string()),
-            description,
-            release_date: None,
-            parties: extract_parties(&json),
-            keywords: keywords_vec,
-            homepage_url: extract_homepage_url(&json),
-            download_url,
-            size: None,
-            sha1: dist_sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
-            md5: None,
-            sha256: dist_sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-            sha512: dist_sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-            bug_tracking_url: extract_bugs(&json),
-            code_view_url: None,
-            vcs_url,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private: json
-                .get("private")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false),
-            is_virtual: false,
-            extra_data,
             dependencies: [
                 dependencies,
                 dev_dependencies,
@@ -228,11 +194,81 @@ impl PackageParser for NpmParser {
                 bundled_dependencies,
             ]
             .concat(),
-            repository_homepage_url,
-            repository_download_url,
-            api_data_url,
             datasource_id: Some(DatasourceId::NpmPackageJson),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("JavaScript".to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties: extract_parties(&json),
+
+                keywords: keywords_vec,
+
+                homepage_url: extract_homepage_url(&json),
+
+                download_url,
+
+                size: None,
+
+                sha1: dist_sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
+
+                md5: None,
+
+                sha256: dist_sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+                sha512: dist_sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+                bug_tracking_url: extract_bugs(&json),
+
+                code_view_url: None,
+
+                vcs_url,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: json
+                    .get("private")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url,
+
+                repository_download_url,
+
+                api_data_url,
+
+                purl,
+            },
         }]
     }
 
@@ -632,8 +668,11 @@ fn extract_name_from_author_string(author_str: &str) -> Option<String> {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(NpmParser::PACKAGE_TYPE),
-        primary_language: Some("JavaScript".to_string()),
         datasource_id: Some(DatasourceId::NpmPackageJson),
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

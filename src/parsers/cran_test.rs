@@ -59,7 +59,7 @@ mod tests {
 
         // Description (Title + Description combined)
         assert!(package_data.description.is_some());
-        let desc = package_data.description.unwrap();
+        let desc = package_data.description.clone().unwrap();
         assert!(desc.contains("Mesh Generation and Surface Tessellation"));
         assert!(desc.contains("Qhull"));
 
@@ -151,7 +151,7 @@ mod tests {
 
         // Description
         assert!(package_data.description.is_some());
-        let desc = package_data.description.unwrap();
+        let desc = package_data.description.clone().unwrap();
         assert!(desc.contains("Code Analysis Tools for R"));
         assert!(desc.contains("Code analysis tools for R"));
 

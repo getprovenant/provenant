@@ -25,7 +25,9 @@ use packageurl::PackageUrl;
 use regex::Regex;
 use serde_json::json;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 
 use super::PackageParser;
 use super::license_normalization::{
@@ -79,8 +81,11 @@ impl PackageParser for CpanMakefilePlParser {
                 warn!("Failed to read Makefile.PL file {:?}: {}", path, e);
                 return vec![PackageData {
                     package_type: Some(PACKAGE_TYPE),
-                    primary_language: Some("Perl".to_string()),
                     datasource_id: Some(DatasourceId::CpanMakefile),
+                    core: PackageCore {
+                        primary_language: Some("Perl".to_string()),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }];
             }
@@ -179,21 +184,32 @@ pub(crate) fn parse_makefile_pl_with_base(content: &str, base_dir: Option<&Path>
         namespace: Some("cpan".to_string()),
         name,
         version,
-        description,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        parties,
         dependencies,
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
-        purl,
         datasource_id: Some(DatasourceId::CpanMakefile),
-        primary_language: Some("Perl".to_string()),
+        core: PackageCore {
+            description,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            parties,
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            purl,
+
+            primary_language: Some("Perl".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -207,8 +223,11 @@ struct ResolvedMetadata {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Perl".to_string()),
         datasource_id: Some(DatasourceId::CpanMakefile),
+        core: PackageCore {
+            primary_language: Some("Perl".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

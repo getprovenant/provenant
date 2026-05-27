@@ -151,61 +151,6 @@ impl TryFrom<&OutputPackage> for crate::models::Package {
             namespace: value.namespace.clone(),
             name: value.name.clone(),
             version: value.version.clone(),
-            qualifiers: value.qualifiers.clone(),
-            subpath: value.subpath.clone(),
-            primary_language: value.primary_language.clone(),
-            description: value.description.clone(),
-            release_date: value.release_date.clone(),
-            parties,
-            keywords: value.keywords.clone(),
-            homepage_url: value.homepage_url.clone(),
-            download_url: value.download_url.clone(),
-            size: value.size,
-            sha1: value
-                .sha1
-                .as_ref()
-                .map(|s| crate::models::Sha1Digest::from_hex(s))
-                .transpose()
-                .map_err(|e| format!("invalid sha1: {}", e))?,
-            md5: value
-                .md5
-                .as_ref()
-                .map(|s| crate::models::Md5Digest::from_hex(s))
-                .transpose()
-                .map_err(|e| format!("invalid md5: {}", e))?,
-            sha256: value
-                .sha256
-                .as_ref()
-                .map(|s| crate::models::Sha256Digest::from_hex(s))
-                .transpose()
-                .map_err(|e| format!("invalid sha256: {}", e))?,
-            sha512: value
-                .sha512
-                .as_ref()
-                .map(|s| crate::models::Sha512Digest::from_hex(s))
-                .transpose()
-                .map_err(|e| format!("invalid sha512: {}", e))?,
-            bug_tracking_url: value.bug_tracking_url.clone(),
-            code_view_url: value.code_view_url.clone(),
-            vcs_url: value.vcs_url.clone(),
-            copyright: value.copyright.clone(),
-            holder: value.holder.clone(),
-            declared_license_expression: value.declared_license_expression.clone(),
-            declared_license_expression_spdx: value.declared_license_expression_spdx.clone(),
-            license_detections,
-            other_license_expression: value.other_license_expression.clone(),
-            other_license_expression_spdx: value.other_license_expression_spdx.clone(),
-            other_license_detections,
-            extracted_license_statement: value.extracted_license_statement.clone(),
-            notice_text: value.notice_text.clone(),
-            source_packages: value.source_packages.clone(),
-            is_private: value.is_private,
-            is_virtual: value.is_virtual,
-            extra_data: value.extra_data.clone(),
-            repository_homepage_url: value.repository_homepage_url.clone(),
-            repository_download_url: value.repository_download_url.clone(),
-            api_data_url: value.api_data_url.clone(),
-            purl: value.purl.clone(),
             package_uid: crate::models::PackageUid::from_raw(value.package_uid.clone()),
             datafile_paths: value.datafile_paths.clone(),
             datasource_ids: value
@@ -214,6 +159,63 @@ impl TryFrom<&OutputPackage> for crate::models::Package {
                 .map(crate::models::DatasourceId::try_from)
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|e| format!("invalid datasource_id: {}", e))?,
+            core: crate::models::PackageCore {
+                qualifiers: value.qualifiers.clone(),
+                subpath: value.subpath.clone(),
+                primary_language: value.primary_language.clone(),
+                description: value.description.clone(),
+                release_date: value.release_date.clone(),
+                parties,
+                keywords: value.keywords.clone(),
+                homepage_url: value.homepage_url.clone(),
+                download_url: value.download_url.clone(),
+                size: value.size,
+                sha1: value
+                    .sha1
+                    .as_ref()
+                    .map(|s| crate::models::Sha1Digest::from_hex(s))
+                    .transpose()
+                    .map_err(|e| format!("invalid sha1: {}", e))?,
+                md5: value
+                    .md5
+                    .as_ref()
+                    .map(|s| crate::models::Md5Digest::from_hex(s))
+                    .transpose()
+                    .map_err(|e| format!("invalid md5: {}", e))?,
+                sha256: value
+                    .sha256
+                    .as_ref()
+                    .map(|s| crate::models::Sha256Digest::from_hex(s))
+                    .transpose()
+                    .map_err(|e| format!("invalid sha256: {}", e))?,
+                sha512: value
+                    .sha512
+                    .as_ref()
+                    .map(|s| crate::models::Sha512Digest::from_hex(s))
+                    .transpose()
+                    .map_err(|e| format!("invalid sha512: {}", e))?,
+                bug_tracking_url: value.bug_tracking_url.clone(),
+                code_view_url: value.code_view_url.clone(),
+                vcs_url: value.vcs_url.clone(),
+                copyright: value.copyright.clone(),
+                holder: value.holder.clone(),
+                declared_license_expression: value.declared_license_expression.clone(),
+                declared_license_expression_spdx: value.declared_license_expression_spdx.clone(),
+                license_detections,
+                other_license_expression: value.other_license_expression.clone(),
+                other_license_expression_spdx: value.other_license_expression_spdx.clone(),
+                other_license_detections,
+                extracted_license_statement: value.extracted_license_statement.clone(),
+                notice_text: value.notice_text.clone(),
+                source_packages: value.source_packages.clone(),
+                is_private: value.is_private,
+                is_virtual: value.is_virtual,
+                extra_data: value.extra_data.clone(),
+                repository_homepage_url: value.repository_homepage_url.clone(),
+                repository_download_url: value.repository_download_url.clone(),
+                api_data_url: value.api_data_url.clone(),
+                purl: value.purl.clone(),
+            },
         })
     }
 }

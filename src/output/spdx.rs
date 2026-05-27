@@ -495,7 +495,7 @@ mod tests {
     use super::*;
     use crate::license_detection::MatcherKind;
     use crate::models::{
-        FileType, LicenseDetection, LineNumber, MatchScore, PackageData, PackageType,
+        FileType, LicenseDetection, LineNumber, MatchScore, PackageCore, PackageData, PackageType,
     };
 
     #[test]
@@ -527,30 +527,33 @@ mod tests {
             Vec::new(),
         );
         file.package_data = vec![PackageData {
-            package_type: Some(PackageType::Cargo),
-            license_detections: vec![LicenseDetection {
-                license_expression: "mit".to_string(),
-                license_expression_spdx: "MIT".to_string(),
-                matches: vec![crate::models::Match {
+            core: PackageCore {
+                license_detections: vec![LicenseDetection {
                     license_expression: "mit".to_string(),
                     license_expression_spdx: "MIT".to_string(),
-                    from_file: Some("project/Cargo.toml".to_string()),
-                    start_line: LineNumber::ONE,
-                    end_line: LineNumber::ONE,
-                    matcher: MatcherKind::Declared,
-                    score: MatchScore::MAX,
-                    matched_length: Some(1),
-                    match_coverage: Some(100.0),
-                    rule_relevance: Some(100),
-                    rule_identifier: String::new(),
-                    rule_url: None,
-                    matched_text: Some("MIT".to_string()),
-                    referenced_filenames: Some(vec!["LICENSE".to_string()]),
-                    matched_text_diagnostics: None,
+                    matches: vec![crate::models::Match {
+                        license_expression: "mit".to_string(),
+                        license_expression_spdx: "MIT".to_string(),
+                        from_file: Some("project/Cargo.toml".to_string()),
+                        start_line: LineNumber::ONE,
+                        end_line: LineNumber::ONE,
+                        matcher: MatcherKind::Declared,
+                        score: MatchScore::MAX,
+                        matched_length: Some(1),
+                        match_coverage: Some(100.0),
+                        rule_relevance: Some(100),
+                        rule_identifier: String::new(),
+                        rule_url: None,
+                        matched_text: Some("MIT".to_string()),
+                        referenced_filenames: Some(vec!["LICENSE".to_string()]),
+                        matched_text_diagnostics: None,
+                    }],
+                    detection_log: vec!["unknown-reference-to-local-file".to_string()],
+                    identifier: String::new(),
                 }],
-                detection_log: vec!["unknown-reference-to-local-file".to_string()],
-                identifier: String::new(),
-            }],
+                ..PackageCore::default()
+            },
+            package_type: Some(PackageType::Cargo),
             ..Default::default()
         }];
 

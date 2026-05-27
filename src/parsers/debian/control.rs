@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::parsers::rfc822::{self, Rfc822Metadata};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
@@ -378,25 +378,37 @@ pub(super) fn build_package_from_paragraph(
         namespace: namespace.clone(),
         name: Some(name),
         version,
-        qualifiers,
-        description,
-        parties,
-        keywords,
-        homepage_url,
-        bug_tracking_url,
-        code_view_url,
-        vcs_url,
-        source_packages,
         file_references: Vec::new(),
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
         dependencies,
         datasource_id: Some(datasource_id),
-        purl,
-        ..Default::default()
+        core: PackageCore {
+            qualifiers,
+
+            description,
+
+            parties,
+
+            keywords,
+
+            homepage_url,
+
+            bug_tracking_url,
+
+            code_view_url,
+
+            vcs_url,
+
+            source_packages,
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            purl,
+            ..PackageCore::default()
+        },
     })
 }
 
@@ -419,15 +431,24 @@ fn build_package_from_source_paragraph(paragraph: &Rfc822Metadata) -> Option<Pac
         namespace: namespace.clone(),
         name: Some(name),
         version,
-        parties: source_meta.parties,
-        keywords,
-        homepage_url: source_meta.homepage_url,
-        bug_tracking_url: source_meta.bug_tracking_url,
-        code_view_url: source_meta.code_view_url,
-        vcs_url: source_meta.vcs_url,
         dependencies,
         datasource_id: Some(DatasourceId::DebianControlInSource),
-        purl,
+        core: PackageCore {
+            parties: source_meta.parties,
+
+            keywords,
+
+            homepage_url: source_meta.homepage_url,
+
+            bug_tracking_url: source_meta.bug_tracking_url,
+
+            code_view_url: source_meta.code_view_url,
+
+            vcs_url: source_meta.vcs_url,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     })
 }

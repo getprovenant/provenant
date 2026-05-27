@@ -24,7 +24,7 @@
 //! - Graceful error handling with `warn!()` logs
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha512Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha512Digest,
 };
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, parse_sri, truncate_field};
@@ -164,20 +164,35 @@ fn parse_yarn_v2(
         };
 
         let resolved_package = ResolvedPackage {
-            primary_language: Some("JavaScript".to_string()),
-            download_url: None,
-            sha1: None,
-            sha256: None,
-            sha512: checksum.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-            md5: None,
-            is_virtual: true,
-            extra_data: resolved_extra_data,
             dependencies: all_deps,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::YarnLockV2),
-            purl: None,
+            core: PackageCore {
+                primary_language: Some("JavaScript".to_string()),
+
+                download_url: None,
+
+                sha1: None,
+
+                sha256: None,
+
+                sha512: checksum.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+                md5: None,
+
+                is_virtual: true,
+
+                extra_data: resolved_extra_data,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+                ..PackageCore::default()
+            },
+
             ..ResolvedPackage::new(
                 YarnLockParser::PACKAGE_TYPE,
                 namespace.clone(),
@@ -220,44 +235,80 @@ fn parse_yarn_v2(
         namespace: None,
         name: None,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: package_extra_data,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::YarnLockV2),
-        purl: None,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: package_extra_data,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+        },
     }
 }
 
@@ -290,44 +341,80 @@ fn parse_yarn_v1(
         namespace: None,
         name: None,
         version: None,
-        qualifiers: None,
-        subpath: None,
-        primary_language: None,
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::YarnLockV1),
-        purl: None,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: None,
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+        },
     }
 }
 
@@ -380,6 +467,9 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(YarnLockParser::PACKAGE_TYPE),
         datasource_id,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -473,24 +563,39 @@ fn parse_yarn_v1_block(
         .unwrap_or((None, None, None, None));
 
     let resolved_package = ResolvedPackage {
-        primary_language: Some("JavaScript".to_string()),
-        download_url: if resolved_url.is_empty() {
-            None
-        } else {
-            Some(resolved_url)
-        },
-        sha1: None,
-        sha256: None,
-        sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: None,
-        is_virtual: true,
-        extra_data: None,
         dependencies: nested_deps,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::YarnLockV1),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+
+            download_url: if resolved_url.is_empty() {
+                None
+            } else {
+                Some(resolved_url)
+            },
+
+            sha1: None,
+
+            sha256: None,
+
+            sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             YarnLockParser::PACKAGE_TYPE,
             namespace.clone(),

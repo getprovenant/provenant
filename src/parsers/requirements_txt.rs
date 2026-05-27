@@ -32,7 +32,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parsers::pep508::{Pep508Requirement, parse_pep508_requirement};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard, read_file_to_string, truncate_field,
@@ -341,10 +341,14 @@ fn default_package_data(
 ) -> PackageData {
     PackageData {
         package_type: Some(RequirementsTxtParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
-        extra_data,
         dependencies,
         datasource_id: Some(DatasourceId::PipRequirements),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            extra_data,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

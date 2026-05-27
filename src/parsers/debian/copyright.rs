@@ -4,7 +4,9 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::models::{DatasourceId, LicenseDetection, LineNumber, PackageData, PackageType};
+use crate::models::{
+    DatasourceId, LicenseDetection, LineNumber, PackageCore, PackageData, PackageType,
+};
 use crate::parser_warn as warn;
 use crate::parsers::rfc822::{self, Rfc822Metadata};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
@@ -223,15 +225,26 @@ pub(super) fn parse_copyright_file(content: &str, package_name: Option<&str>) ->
         package_type: Some(PACKAGE_TYPE),
         namespace: namespace.clone(),
         name: package_name.map(|s| truncate_field(s.to_string())),
-        parties,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        other_license_expression,
-        other_license_expression_spdx,
-        other_license_detections,
-        extracted_license_statement,
-        purl: package_name.and_then(|n| build_debian_purl(n, None, namespace.as_deref(), None)),
+        core: PackageCore {
+            parties,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            other_license_expression,
+
+            other_license_expression_spdx,
+
+            other_license_detections,
+
+            extracted_license_statement,
+
+            purl: package_name.and_then(|n| build_debian_purl(n, None, namespace.as_deref(), None)),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

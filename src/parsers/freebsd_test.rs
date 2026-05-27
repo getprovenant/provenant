@@ -163,7 +163,7 @@ fn test_qualifiers() {
 
     let pkg = parse_freebsd_manifest(content);
 
-    let qualifiers = pkg.qualifiers.unwrap();
+    let qualifiers = pkg.qualifiers.clone().unwrap();
     assert_eq!(
         qualifiers.get("arch"),
         Some(&"freebsd:10:x86:64".to_string())
@@ -180,7 +180,7 @@ fn test_qualifiers_only_arch() {
 
     let pkg = parse_freebsd_manifest(content);
 
-    let qualifiers = pkg.qualifiers.unwrap();
+    let qualifiers = pkg.qualifiers.clone().unwrap();
     assert_eq!(
         qualifiers.get("arch"),
         Some(&"freebsd:10:x86:64".to_string())
@@ -304,7 +304,7 @@ fn test_basic_file() {
     assert_eq!(pkg.parties.len(), 1);
     assert_eq!(pkg.parties[0].email, Some("anders@FreeBSD.org".to_string()));
 
-    let qualifiers = pkg.qualifiers.unwrap();
+    let qualifiers = pkg.qualifiers.clone().unwrap();
     assert_eq!(
         qualifiers.get("arch"),
         Some(&"freebsd:10:x86:64".to_string())

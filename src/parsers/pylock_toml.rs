@@ -12,8 +12,8 @@ use toml::Value as TomlValue;
 use toml::map::Map as TomlMap;
 
 use crate::models::{
-    DatasourceId, Dependency, Md5Digest, PackageData, PackageType, ResolvedPackage, Sha256Digest,
-    Sha512Digest,
+    DatasourceId, Dependency, Md5Digest, PackageCore, PackageData, PackageType, ResolvedPackage,
+    Sha256Digest, Sha512Digest,
 };
 use crate::parsers::python::read_toml_file;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
@@ -283,24 +283,39 @@ fn build_resolved_package(
     let (download_url, sha256, sha512, md5) = extract_artifact_metadata(package_table);
 
     ResolvedPackage {
-        primary_language: Some("Python".to_string()),
-        download_url,
-        sha1: None,
-        sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
-        is_virtual: false,
-        extra_data: build_package_extra_data(package_table),
         dependencies: dependency_indices
             .iter()
             .filter_map(|child_index| package_tables.get(*child_index))
             .filter_map(|child| build_resolved_dependency(child))
             .collect(),
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
         datasource_id: Some(DatasourceId::PypiPylockToml),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            download_url,
+
+            sha1: None,
+
+            sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: md5.and_then(|h| Md5Digest::from_hex(&h).ok()),
+
+            is_virtual: false,
+
+            extra_data: build_package_extra_data(package_table),
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            purl,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(PylockTomlParser::PACKAGE_TYPE, String::new(), name, version)
     }
 }
@@ -768,8 +783,11 @@ fn toml_value_to_json(value: &TomlValue) -> JsonValue {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PylockTomlParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id: Some(DatasourceId::PypiPylockToml),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

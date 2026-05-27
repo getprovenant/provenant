@@ -290,6 +290,7 @@ Documentation = "https://airflow.apache.org/docs/"
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
         let project_urls = extra_data
             .get("project_urls")
@@ -991,7 +992,7 @@ This is a test package.
 
         // Verify Requires-Python is stored in extra_data
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert_eq!(
             extra_data.get("requires_python").and_then(|v| v.as_str()),
             Some(">=3.8")
@@ -1033,7 +1034,7 @@ pip - The Python Package Installer
         );
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
 
         assert_eq!(
             extra_data.get("changelog_url").and_then(|v| v.as_str()),
@@ -1136,7 +1137,7 @@ Trimesh is a pure Python library for loading and using triangular meshes.
         );
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         let project_urls = extra_data.get("project_urls").and_then(|v| v.as_object());
         assert!(
             project_urls.is_some(),
@@ -1180,7 +1181,7 @@ Test package description.
         );
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         let project_urls = extra_data.get("project_urls").and_then(|v| v.as_object());
         assert!(project_urls.is_some(), "All Project-URLs should be stored");
 
@@ -1212,6 +1213,7 @@ Test package description.
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
 
         let license_files = extra_data
@@ -1295,7 +1297,10 @@ Test package description.
             Some("pkg:pypi/demo@1.0.0?extension=py2.py3-none-any")
         );
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         let wheel_tags = extra_data
             .get("wheel_tags")
             .and_then(|value| value.as_array())
@@ -1770,11 +1775,14 @@ Test package description.
         );
 
         assert!(package_data.purl.is_some());
-        let purl = package_data.purl.unwrap();
+        let purl = package_data.purl.clone().unwrap();
         assert!(purl.starts_with("pkg:pypi/atomicwrites@1.2.1"));
         assert!(purl.contains("extension="));
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         assert!(extra_data.contains_key("python_requires"));
         assert!(extra_data.contains_key("abi_tag"));
         assert!(extra_data.contains_key("platform_tag"));
@@ -1808,7 +1816,7 @@ Test package description.
         );
 
         assert!(package_data.purl.is_some());
-        let purl = package_data.purl.unwrap();
+        let purl = package_data.purl.clone().unwrap();
         assert!(purl.starts_with("pkg:pypi/commoncode@21.5.12"));
         assert!(purl.contains("type=egg"));
 
@@ -2080,7 +2088,7 @@ Test package description.
 
         let package_data = PythonParser::extract_first_package(&wheel_path);
 
-        let purl = package_data.purl.expect("PURL should be present");
+        let purl = package_data.purl.clone().expect("PURL should be present");
         assert!(
             purl.contains("extension=py2.py3-none-any"),
             "PURL should contain extension qualifiers: {}",
@@ -2095,7 +2103,7 @@ Test package description.
 
         let package_data = PythonParser::extract_first_package(&egg_path);
 
-        let purl = package_data.purl.expect("PURL should be present");
+        let purl = package_data.purl.clone().expect("PURL should be present");
         assert!(
             purl.contains("type=egg"),
             "PURL should contain type=egg qualifier: {}",
@@ -2321,6 +2329,7 @@ Test package description.
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
         assert_eq!(
             extra_data.get("pip_version").and_then(|v| v.as_str()),

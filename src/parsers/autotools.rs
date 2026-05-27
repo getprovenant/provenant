@@ -19,7 +19,7 @@
 //! - Returns minimal PackageData with only package_type and name fields
 
 use crate::models::PackageData;
-use crate::models::{DatasourceId, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageType};
 use packageurl::PackageUrl;
 use std::fs;
 use std::path::Path;
@@ -88,7 +88,10 @@ impl PackageParser for AutotoolsConfigureParser {
             package_type: Some(Self::PACKAGE_TYPE),
             name,
             datasource_id: Some(DatasourceId::AutotoolsConfigure),
-            purl,
+            core: PackageCore {
+                purl,
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }

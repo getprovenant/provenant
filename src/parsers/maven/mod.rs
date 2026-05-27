@@ -35,7 +35,7 @@ mod scan_test;
 use self::{manifest::parse_manifest_mf, pom::parse_pom_xml, properties::parse_pom_properties};
 use super::PackageParser;
 use super::metadata::ParserMetadata;
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use std::path::Path;
 
 /// Maven package parser supporting pom.xml, pom.properties, and MANIFEST.MF files.
@@ -91,6 +91,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PackageType::Maven),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

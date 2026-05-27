@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
 };
@@ -2049,8 +2049,11 @@ fn split_derivation_name(name: &str) -> (String, Option<String>) {
 fn default_flake_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Nix),
-        primary_language: Some("Nix".to_string()),
         datasource_id: Some(DatasourceId::NixFlakeNix),
+        core: PackageCore {
+            primary_language: Some("Nix".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -2058,8 +2061,11 @@ fn default_flake_package_data() -> PackageData {
 fn default_flake_lock_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Nix),
-        primary_language: Some("JSON".to_string()),
         datasource_id: Some(DatasourceId::NixFlakeLock),
+        core: PackageCore {
+            primary_language: Some("JSON".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -2067,8 +2073,11 @@ fn default_flake_lock_package_data() -> PackageData {
 fn default_default_nix_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Nix),
-        primary_language: Some("Nix".to_string()),
         datasource_id: Some(DatasourceId::NixDefaultNix),
+        core: PackageCore {
+            primary_language: Some("Nix".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -29,7 +29,7 @@ use crate::parser_warn as warn;
 use yaml_serde::Value;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha1Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha1Digest,
 };
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
@@ -292,24 +292,39 @@ fn build_pod_dependency(
     }
 
     let resolved_package = ResolvedPackage {
-        primary_language: Some(PRIMARY_LANGUAGE.to_string()),
-        download_url: None,
-        sha1: checksum.and_then(|h| Sha1Digest::from_hex(&h).ok()),
-        sha256: None,
-        sha512: None,
-        md5: None,
-        is_virtual: true,
-        extra_data: if resolved_extra_data.is_empty() {
-            None
-        } else {
-            Some(resolved_extra_data)
-        },
         dependencies: nested_deps,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::CocoapodsPodfileLock),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some(PRIMARY_LANGUAGE.to_string()),
+
+            download_url: None,
+
+            sha1: checksum.and_then(|h| Sha1Digest::from_hex(&h).ok()),
+
+            sha256: None,
+
+            sha512: None,
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: if resolved_extra_data.is_empty() {
+                None
+            } else {
+                Some(resolved_extra_data)
+            },
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             PodfileLockParser::PACKAGE_TYPE,
             namespace.clone().unwrap_or_default(),
@@ -474,8 +489,11 @@ fn process_external_source(mapping: &yaml_serde::Mapping) -> String {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PodfileLockParser::PACKAGE_TYPE),
-        primary_language: Some(PRIMARY_LANGUAGE.to_string()),
         datasource_id: Some(DatasourceId::CocoapodsPodfileLock),
+        core: PackageCore {
+            primary_language: Some(PRIMARY_LANGUAGE.to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

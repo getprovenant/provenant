@@ -19,7 +19,9 @@
 //! - License must be one of: GPL, LGPL, BSD, Public, MIT, Apache
 //! - All fields are extracted with graceful error handling
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde::{Deserialize, Serialize};
@@ -141,49 +143,85 @@ impl PackageParser for HaxeParser {
             namespace: None,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("Haxe".to_string()),
-            description: json_content.description.map(truncate_field),
-            release_date: None,
-            parties,
-            keywords: json_content
-                .tags
-                .into_iter()
-                .take(MAX_ITERATION_COUNT)
-                .map(truncate_field)
-                .collect(),
-            homepage_url: json_content.url.map(truncate_field),
-            download_url,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url: None,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private: false,
-            is_virtual: false,
-            extra_data: None,
             dependencies,
-            repository_homepage_url,
-            repository_download_url,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::HaxelibJson),
-            purl,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("Haxe".to_string()),
+
+                description: json_content.description.map(truncate_field),
+
+                release_date: None,
+
+                parties,
+
+                keywords: json_content
+                    .tags
+                    .into_iter()
+                    .take(MAX_ITERATION_COUNT)
+                    .map(truncate_field)
+                    .collect(),
+
+                homepage_url: json_content.url.map(truncate_field),
+
+                download_url,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url: None,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private: false,
+
+                is_virtual: false,
+
+                extra_data: None,
+
+                repository_homepage_url,
+
+                repository_download_url,
+
+                api_data_url: None,
+
+                purl,
+            },
         }]
     }
 }
@@ -272,8 +310,11 @@ fn create_dep_package_url(name: &str, version: &str, is_pinned: bool) -> Option<
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(HaxeParser::PACKAGE_TYPE),
-        primary_language: Some("Haxe".to_string()),
         datasource_id: Some(DatasourceId::HaxelibJson),
+        core: PackageCore {
+            primary_language: Some("Haxe".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

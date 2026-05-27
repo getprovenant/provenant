@@ -627,6 +627,7 @@ mod tests {
         );
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("expected lockfile extra_data");
         assert_eq!(
             extra_data.get("lockfileVersion"),

@@ -296,7 +296,10 @@ mod tests {
 
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let package_data = MavenParser::extract_first_package(&pom_path);
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let repositories = extra_data
             .get("repositories")
@@ -370,7 +373,10 @@ mod tests {
 
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let package_data = MavenParser::extract_first_package(&pom_path);
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let mailing_lists = extra_data
             .get("mailing_lists")
@@ -666,7 +672,10 @@ mod tests {
         assert_eq!(package_data.name, Some("test-repo".to_string()));
         assert_eq!(package_data.version, Some("1.0.0".to_string()));
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let repositories = extra_data
             .get("repositories")
@@ -730,7 +739,10 @@ mod tests {
         assert_eq!(package_data.name, Some("multi-module-parent".to_string()));
         assert_eq!(package_data.version, Some("1.0.0".to_string()));
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let modules = extra_data
             .get("modules")
@@ -756,7 +768,10 @@ mod tests {
         assert_eq!(package_data.name, Some("commons-lang3".to_string()));
         assert_eq!(package_data.version, Some("3.12.0".to_string()));
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let mailing_lists = extra_data
             .get("mailing_lists")
@@ -832,7 +847,10 @@ mod tests {
                 == Some("pkg:maven/org.springframework.boot/spring-boot-dependencies@2.7.0")
         }));
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let dep_mgmt = extra_data
             .get("dependency_management")
@@ -894,7 +912,10 @@ mod tests {
         assert_eq!(package_data.name, Some("my-service".to_string()));
         assert_eq!(package_data.version, Some("2.7.0".to_string()));
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
 
         let parent = extra_data
             .get("parent")
@@ -1364,7 +1385,10 @@ mod tests {
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let package_data = MavenParser::extract_first_package(&pom_path);
 
-        let qualifiers = package_data.qualifiers.expect("qualifiers should exist");
+        let qualifiers = package_data
+            .qualifiers
+            .clone()
+            .expect("qualifiers should exist");
         assert_eq!(
             qualifiers.get("classifier").map(String::as_str),
             Some("jakarta")
@@ -1444,7 +1468,10 @@ mod tests {
             Some("Use the relocated coordinates")
         );
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         let relocation = extra_data
             .get("relocation")
             .and_then(|value| value.as_object())
@@ -1538,7 +1565,10 @@ mod tests {
 
         let (_temp_dir, pom_path) = create_temp_pom_xml(content);
         let package_data = MavenParser::extract_first_package(&pom_path);
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         let relocation = extra_data
             .get("relocation")
             .and_then(|value| value.as_object())

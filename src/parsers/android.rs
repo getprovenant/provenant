@@ -13,7 +13,7 @@ use quick_xml::events::Event;
 use rusty_axml::{find_nodes_by_type, get_requested_permissions, parse_from_reader};
 use zip::ZipArchive;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
 use crate::utils::magic;
@@ -32,6 +32,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

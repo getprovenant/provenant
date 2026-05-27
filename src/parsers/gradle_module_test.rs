@@ -44,6 +44,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
         assert_eq!(
             extra_data
@@ -185,6 +186,7 @@ mod tests {
         assert_eq!(package_data.file_references.len(), 1);
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
         assert_eq!(
             extra_data
@@ -232,6 +234,7 @@ mod tests {
         let package_data = GradleModuleParser::extract_first_package(&file_path);
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
         let variants = extra_data
             .get("variants")

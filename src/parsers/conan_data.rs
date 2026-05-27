@@ -21,7 +21,7 @@
 //! - Patches section contains version→[{patch_file, patch_description, patch_type}]
 //! - Spec: https://docs.conan.io/2/tutorial/creating_packages/handle_sources_in_packages.html
 
-use crate::models::{DatasourceId, PackageType, Sha256Digest};
+use crate::models::{DatasourceId, PackageCore, PackageType, Sha256Digest};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -39,8 +39,11 @@ const PACKAGE_TYPE: PackageType = PackageType::Conan;
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("C++".to_string()),
         datasource_id: Some(DatasourceId::ConanConanDataYml),
+        core: PackageCore {
+            primary_language: Some("C++".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -240,18 +243,24 @@ pub(crate) fn parse_conandata_yml(content: &str) -> Vec<PackageData> {
 
         packages.push(PackageData {
             package_type: Some(PACKAGE_TYPE),
-            primary_language: Some("C++".to_string()),
             version: Some(truncate_field(version)),
-            download_url,
-            sha256: primary_source
-                .and_then(|source_info| source_info.sha256.as_deref())
-                .and_then(|hash| Sha256Digest::from_hex(hash).ok()),
-            extra_data: if extra_data.is_empty() {
-                None
-            } else {
-                Some(extra_data)
-            },
             datasource_id: Some(DatasourceId::ConanConanDataYml),
+            core: PackageCore {
+                primary_language: Some("C++".to_string()),
+
+                download_url,
+
+                sha256: primary_source
+                    .and_then(|source_info| source_info.sha256.as_deref())
+                    .and_then(|hash| Sha256Digest::from_hex(hash).ok()),
+
+                extra_data: if extra_data.is_empty() {
+                    None
+                } else {
+                    Some(extra_data)
+                },
+                ..PackageCore::default()
+            },
             ..Default::default()
         });
     }

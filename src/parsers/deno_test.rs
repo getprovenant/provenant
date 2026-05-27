@@ -84,7 +84,7 @@ mod tests {
             .unwrap();
         assert!(remote_dep.purl.is_some());
 
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert!(extra_data.contains_key("exports"));
         assert!(extra_data.contains_key("scopes"));
         assert!(extra_data.contains_key("links"));

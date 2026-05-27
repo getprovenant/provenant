@@ -17,7 +17,7 @@ mod tests {
         assert_eq!(package_data.package_type, Some(PackageType::Npm));
 
         // Check workspaces are extracted
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert_eq!(
             extra_data.get("datasource_id").unwrap().as_str().unwrap(),
             "pnpm_workspace_yaml"
@@ -36,7 +36,7 @@ mod tests {
 
         assert_eq!(package_data.package_type, Some(PackageType::Npm));
 
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         let workspaces = extra_data.get("workspaces").unwrap().as_array().unwrap();
         assert_eq!(workspaces.len(), 3);
         assert_eq!(workspaces[0], "packages/*");
@@ -53,7 +53,7 @@ mod tests {
 
         assert_eq!(package_data.package_type, Some(PackageType::Npm));
 
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         let workspaces = extra_data.get("workspaces").unwrap().as_array().unwrap();
         assert_eq!(workspaces.len(), 3);
         assert_eq!(workspaces[0], "**/packages/*");

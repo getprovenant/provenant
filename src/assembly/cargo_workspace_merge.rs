@@ -596,45 +596,88 @@ fn hoist_root_lock_dependencies(
 fn apply_workspace_inheritance(pkg_data: &mut PackageData, workspace_data: &WorkspaceData) {
     use packageurl::PackageUrl;
 
-    let extra_data = if let Some(ed) = &mut pkg_data.extra_data {
-        ed
-    } else {
+    if pkg_data.core.extra_data.is_none() {
         return;
-    };
+    }
 
-    if extra_data.get("version").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("version")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(version_value) = workspace_data.package.get("version")
         && let Some(version_str) = version_value.as_str()
     {
         pkg_data.version = Some(version_str.to_string());
-        extra_data.remove("version");
+        pkg_data.core.extra_data.as_mut().unwrap().remove("version");
     }
 
-    if extra_data.get("license").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("license")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(license_value) = workspace_data.package.get("license")
         && let Some(license_str) = license_value.as_str()
     {
-        pkg_data.extracted_license_statement = Some(license_str.to_string());
-        extra_data.remove("license");
+        pkg_data.core.extracted_license_statement = Some(license_str.to_string());
+        pkg_data.core.extra_data.as_mut().unwrap().remove("license");
     }
 
-    if extra_data.get("homepage").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("homepage")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(homepage_value) = workspace_data.package.get("homepage")
         && let Some(homepage_str) = homepage_value.as_str()
     {
-        pkg_data.homepage_url = Some(homepage_str.to_string());
-        extra_data.remove("homepage");
+        pkg_data.core.homepage_url = Some(homepage_str.to_string());
+        pkg_data
+            .core
+            .extra_data
+            .as_mut()
+            .unwrap()
+            .remove("homepage");
     }
 
-    if extra_data.get("repository").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("repository")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(repo_value) = workspace_data.package.get("repository")
         && let Some(repo_str) = repo_value.as_str()
     {
-        pkg_data.vcs_url = Some(repo_str.to_string());
-        extra_data.remove("repository");
+        pkg_data.core.vcs_url = Some(repo_str.to_string());
+        pkg_data
+            .core
+            .extra_data
+            .as_mut()
+            .unwrap()
+            .remove("repository");
     }
 
-    if extra_data.get("categories").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("categories")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(categories_value) = workspace_data.package.get("categories")
         && let Some(categories_arr) = categories_value.as_array()
     {
@@ -643,30 +686,66 @@ fn apply_workspace_inheritance(pkg_data: &mut PackageData, workspace_data: &Work
             .filter_map(|v| v.as_str())
             .map(|s| s.to_string())
             .collect();
-        pkg_data.keywords.extend(categories);
-        extra_data.remove("categories");
+        pkg_data.core.keywords.extend(categories);
+        pkg_data
+            .core
+            .extra_data
+            .as_mut()
+            .unwrap()
+            .remove("categories");
     }
 
-    if extra_data.get("edition").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("edition")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(edition_value) = workspace_data.package.get("edition")
         && let Some(edition_str) = edition_value.as_str()
     {
-        extra_data.insert("rust_edition".to_string(), serde_json::json!(edition_str));
-        extra_data.remove("edition");
+        pkg_data
+            .core
+            .extra_data
+            .as_mut()
+            .unwrap()
+            .insert("rust_edition".to_string(), serde_json::json!(edition_str));
+        pkg_data.core.extra_data.as_mut().unwrap().remove("edition");
     }
 
-    if extra_data.get("rust-version").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("rust-version")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(rust_version_value) = workspace_data.package.get("rust-version")
         && let Some(rust_version_str) = rust_version_value.as_str()
     {
-        extra_data.insert(
+        pkg_data.core.extra_data.as_mut().unwrap().insert(
             "rust_version".to_string(),
             serde_json::json!(rust_version_str),
         );
-        extra_data.remove("rust-version");
+        pkg_data
+            .core
+            .extra_data
+            .as_mut()
+            .unwrap()
+            .remove("rust-version");
     }
 
-    if extra_data.get("authors").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("authors")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(authors_value) = workspace_data.package.get("authors")
         && let Some(authors_arr) = authors_value.as_array()
     {
@@ -688,16 +767,28 @@ fn apply_workspace_inheritance(pkg_data: &mut PackageData, workspace_data: &Work
                 }
             })
             .collect();
-        pkg_data.parties = parties;
-        extra_data.remove("authors");
+        pkg_data.core.parties = parties;
+        pkg_data.core.extra_data.as_mut().unwrap().remove("authors");
     }
 
-    if extra_data.get("readme").and_then(|v| v.as_str()) == Some("workspace")
+    if pkg_data
+        .core
+        .extra_data
+        .as_ref()
+        .unwrap()
+        .get("readme")
+        .and_then(|v| v.as_str())
+        == Some("workspace")
         && let Some(readme_value) = workspace_data.package.get("readme")
         && let Some(readme_str) = readme_value.as_str()
     {
-        extra_data.insert("readme_file".to_string(), serde_json::json!(readme_str));
-        extra_data.remove("readme");
+        pkg_data
+            .core
+            .extra_data
+            .as_mut()
+            .unwrap()
+            .insert("readme_file".to_string(), serde_json::json!(readme_str));
+        pkg_data.core.extra_data.as_mut().unwrap().remove("readme");
     }
 
     if let (Some(name), Some(version)) = (&pkg_data.name, &pkg_data.version)
@@ -705,9 +796,9 @@ fn apply_workspace_inheritance(pkg_data: &mut PackageData, workspace_data: &Work
     {
         let mut purl = purl;
         let _ = purl.with_version(version);
-        pkg_data.purl = Some(purl.to_string());
+        pkg_data.core.purl = Some(purl.to_string());
 
-        pkg_data.repository_download_url = Some(format!(
+        pkg_data.core.repository_download_url = Some(format!(
             "https://crates.io/api/v1/crates/{}/{}/download",
             name, version
         ));

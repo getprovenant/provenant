@@ -36,7 +36,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use regex::Regex;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
 };
@@ -69,6 +69,9 @@ impl PackageParser for RpmSpecfileParser {
                 return vec![PackageData {
                     package_type: Some(PACKAGE_TYPE),
                     datasource_id: Some(DatasourceId::RpmSpecfile),
+                    core: PackageCore {
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }];
             }
@@ -386,17 +389,26 @@ fn parse_specfile(content: &str) -> PackageData {
     PackageData {
         datasource_id: Some(DatasourceId::RpmSpecfile),
         package_type: Some(PACKAGE_TYPE),
-        namespace: None, // RPM namespace is optional
+        namespace: None,
         name,
         version,
-        description: description_text,
-        homepage_url: url,
-        download_url,
-        extracted_license_statement: license,
-        parties,
         dependencies,
-        purl,
-        extra_data: extra_data_opt,
+        core: PackageCore {
+            description: description_text,
+
+            homepage_url: url,
+
+            download_url,
+
+            extracted_license_statement: license,
+
+            parties,
+
+            purl,
+
+            extra_data: extra_data_opt,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

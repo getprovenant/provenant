@@ -10,7 +10,9 @@ use serde_json::{Map as JsonMap, Value as JsonValue};
 use toml::Value as TomlValue;
 use toml::map::Map as TomlMap;
 
-use crate::models::{DatasourceId, Dependency, FileReference, PackageData, PackageType, Party};
+use crate::models::{
+    DatasourceId, Dependency, FileReference, PackageCore, PackageData, PackageType, Party,
+};
 use crate::parsers::conda::build_purl as build_conda_purl;
 use crate::parsers::python::read_toml_file;
 use crate::parsers::utils::{
@@ -824,6 +826,9 @@ fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(PackageType::Pixi),
         datasource_id,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

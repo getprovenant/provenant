@@ -8,7 +8,9 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
 };
@@ -79,6 +81,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
         package_type: Some(PACKAGE_TYPE),
         namespace: Some(PACKAGE_NAMESPACE.to_string()),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

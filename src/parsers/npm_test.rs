@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(package_data.namespace, Some("@org".to_string()));
 
         // Check purl contains the expected components rather than exact match
-        let purl = package_data.purl.unwrap();
+        let purl = package_data.purl.clone().unwrap();
         assert!(purl.starts_with("pkg:npm/"));
         assert!(purl.contains("test-package"));
         assert!(purl.ends_with("@1.0.0"));
@@ -290,7 +290,7 @@ mod tests {
         let package_data_1 = NpmParser::extract_first_package(&path_1);
 
         // Check if repository extraction is working
-        if let Some(download_url) = package_data_1.download_url {
+        if let Some(download_url) = package_data_1.download_url.clone() {
             assert!(download_url.contains("registry.npmjs.org"));
             assert!(download_url.contains("test-package"));
         }
@@ -311,7 +311,7 @@ mod tests {
         let package_data_2 = NpmParser::extract_first_package(&path_2);
 
         // Check if repository object extraction is working
-        if let Some(download_url) = package_data_2.download_url {
+        if let Some(download_url) = package_data_2.download_url.clone() {
             // Should contain registry and the package name
             assert!(download_url.contains("registry.npmjs.org"));
             assert!(download_url.contains("test-package"));
@@ -506,7 +506,10 @@ mod tests {
         let (_temp_file, package_path) = create_temp_package_json(content);
         let package_data = NpmParser::extract_first_package(&package_path);
 
-        let extra_data = package_data.extra_data.expect("expected extra_data");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("expected extra_data");
         let overrides = extra_data
             .get("overrides")
             .expect("expected overrides field");
@@ -647,6 +650,7 @@ mod tests {
         // Should have resolutions in extra_data
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with resolutions");
 
         assert!(
@@ -726,6 +730,7 @@ mod tests {
         // Verify resolutions are in extra_data
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with resolutions");
         assert!(extra_data.contains_key("resolutions"));
     }
@@ -781,6 +786,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with engines");
         assert!(extra_data.contains_key("engines"));
 
@@ -814,6 +820,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with platform metadata");
 
         assert_eq!(
@@ -863,6 +870,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with packageManager");
         assert!(extra_data.contains_key("packageManager"));
 
@@ -881,6 +889,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with workspaces");
         assert!(extra_data.contains_key("workspaces"));
 
@@ -907,6 +916,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with private");
         assert!(extra_data.contains_key("private"));
 
@@ -935,6 +945,7 @@ mod tests {
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present with all metadata");
 
         assert!(extra_data.contains_key("engines"));
@@ -995,7 +1006,7 @@ mod tests {
         assert!(!package_data.keywords.is_empty());
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert!(extra_data.contains_key("engines"));
         assert!(extra_data.contains_key("packageManager"));
         assert!(extra_data.contains_key("workspaces"));

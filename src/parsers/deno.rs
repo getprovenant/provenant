@@ -10,7 +10,7 @@ use packageurl::PackageUrl;
 use serde_json::Value;
 use url::Url;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -93,44 +93,80 @@ fn parse_deno_config(json: &Value) -> PackageData {
         namespace,
         name,
         version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("TypeScript".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data,
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::DenoJson),
-        purl: purl.map(truncate_field),
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("TypeScript".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: purl.map(truncate_field),
+        },
     }
 }
 
@@ -307,8 +343,11 @@ fn is_exact_version(version: &str) -> bool {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(DenoParser::PACKAGE_TYPE),
-        primary_language: Some("TypeScript".to_string()),
         datasource_id: Some(DatasourceId::DenoJson),
+        core: PackageCore {
+            primary_language: Some("TypeScript".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

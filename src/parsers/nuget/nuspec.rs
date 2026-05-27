@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use quick_xml::Reader;
@@ -218,26 +218,44 @@ impl PackageParser for NuspecParser {
             package_type: Some(Self::PACKAGE_TYPE),
             name: name.map(truncate_field),
             version: version.map(truncate_field),
-            purl,
-            description: final_description.map(truncate_field),
-            homepage_url: homepage_url.map(truncate_field),
-            parties,
             dependencies,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            extracted_license_statement: extracted_license_statement.map(truncate_field),
-            copyright: copyright.map(truncate_field),
-            holder,
-            vcs_url: vcs_url.map(truncate_field),
-            extra_data: if extra_data.is_empty() {
-                None
-            } else {
-                Some(extra_data.into_iter().collect())
+            core: PackageCore {
+                purl,
+
+                description: final_description.map(truncate_field),
+
+                homepage_url: homepage_url.map(truncate_field),
+
+                parties,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+                copyright: copyright.map(truncate_field),
+
+                holder,
+
+                vcs_url: vcs_url.map(truncate_field),
+
+                extra_data: if extra_data.is_empty() {
+                    None
+                } else {
+                    Some(extra_data.into_iter().collect())
+                },
+
+                repository_homepage_url,
+
+                repository_download_url,
+
+                api_data_url,
+                ..PackageCore::default()
             },
-            repository_homepage_url,
-            repository_download_url,
-            api_data_url,
+
             ..default_package_data(Some(DatasourceId::NugetNuspec))
         }]
     }
@@ -465,25 +483,42 @@ pub(super) fn parse_nuspec_content(content: &str) -> Result<PackageData, String>
         package_type: Some(super::nupkg::NupkgParser::PACKAGE_TYPE),
         name: name.map(truncate_field),
         version: version.map(truncate_field),
-        description: description.map(truncate_field),
-        homepage_url: homepage_url.map(truncate_field),
-        parties,
         dependencies,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: extracted_license_statement.map(truncate_field),
-        copyright: copyright.map(truncate_field),
-        holder,
-        vcs_url: vcs_url.map(truncate_field),
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data.into_iter().collect())
+        core: PackageCore {
+            description: description.map(truncate_field),
+
+            homepage_url: homepage_url.map(truncate_field),
+
+            parties,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+            copyright: copyright.map(truncate_field),
+
+            holder,
+
+            vcs_url: vcs_url.map(truncate_field),
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data.into_iter().collect())
+            },
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+            ..PackageCore::default()
         },
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
+
         ..default_package_data(Some(DatasourceId::NugetNupkg))
     })
 }

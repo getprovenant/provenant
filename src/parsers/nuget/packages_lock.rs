@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 
@@ -122,6 +122,10 @@ impl PackageParser for PackagesLockParser {
             datasource_id: Some(DatasourceId::NugetPackagesLock),
             package_type: Some(Self::PACKAGE_TYPE),
             dependencies,
+            core: PackageCore {
+                ..PackageCore::default()
+            },
+
             ..default_package_data(Some(DatasourceId::NugetPackagesLock))
         }]
     }

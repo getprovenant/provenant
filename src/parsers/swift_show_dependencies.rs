@@ -20,7 +20,9 @@ use std::path::Path;
 use crate::parser_warn as warn;
 use serde::{Deserialize, Serialize};
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage,
+};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
 };
@@ -32,8 +34,11 @@ const PACKAGE_TYPE: PackageType = PackageType::Swift;
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Swift".to_string()),
         datasource_id: Some(DatasourceId::SwiftPackageShowDependencies),
+        core: PackageCore {
+            primary_language: Some("Swift".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -112,13 +117,18 @@ pub(crate) fn parse_swift_show_dependencies(content: &str) -> PackageData {
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Swift".to_string()),
         name: data.name.map(truncate_field),
         version: version.map(truncate_field),
-        homepage_url: homepage_url.map(truncate_field),
         dependencies,
         datasource_id: Some(DatasourceId::SwiftPackageShowDependencies),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Swift".to_string()),
+
+            homepage_url: homepage_url.map(truncate_field),
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -205,20 +215,35 @@ fn build_dependency(
         is_pinned: Some(version.is_some()),
         is_direct: Some(is_direct),
         resolved_package: Some(Box::new(ResolvedPackage {
-            primary_language: Some("Swift".to_string()),
-            download_url: None,
-            sha1: None,
-            sha256: None,
-            sha512: None,
-            md5: None,
-            is_virtual: true,
-            extra_data: None,
             dependencies: nested_dependencies,
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::SwiftPackageShowDependencies),
-            purl: None,
+            core: PackageCore {
+                primary_language: Some("Swift".to_string()),
+
+                download_url: None,
+
+                sha1: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                md5: None,
+
+                is_virtual: true,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+                ..PackageCore::default()
+            },
+
             ..ResolvedPackage::new(
                 PACKAGE_TYPE,
                 truncate_field(extract_namespace(dep.url.as_deref()).unwrap_or_default()),

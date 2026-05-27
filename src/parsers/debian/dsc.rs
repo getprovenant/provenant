@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::rfc822;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
@@ -109,10 +109,16 @@ fn parse_dsc_content(content: &str) -> PackageData {
         namespace: namespace.clone(),
         name: name.clone(),
         version: version.clone(),
-        description: rfc822::get_header_first(headers, "description").map(truncate_field),
-        homepage_url: rfc822::get_header_first(headers, "homepage").map(truncate_field),
-        vcs_url: rfc822::get_header_first(headers, "vcs-git").map(truncate_field),
-        code_view_url: rfc822::get_header_first(headers, "vcs-browser").map(truncate_field),
+        core: PackageCore {
+            description: rfc822::get_header_first(headers, "description").map(truncate_field),
+
+            homepage_url: rfc822::get_header_first(headers, "homepage").map(truncate_field),
+
+            vcs_url: rfc822::get_header_first(headers, "vcs-git").map(truncate_field),
+
+            code_view_url: rfc822::get_header_first(headers, "vcs-browser").map(truncate_field),
+            ..PackageCore::default()
+        },
         ..Default::default()
     };
 

@@ -19,7 +19,7 @@
 //! ## Reference
 //! Python implementation: `reference/scancode-toolkit/src/packagedcode/build.py` (BazelBuildHandler)
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::{Map as JsonMap, Value as JsonValue};
@@ -112,9 +112,14 @@ fn extract_package_from_statement(statement: &ast::AstStmt) -> Option<PackageDat
     Some(PackageData {
         package_type: Some(BazelBuildParser::PACKAGE_TYPE),
         name: Some(truncate_field(name)),
-        extracted_license_statement: licenses.map(|licenses| truncate_field(licenses.join(", "))),
         datasource_id: Some(DatasourceId::BazelBuild),
-        purl,
+        core: PackageCore {
+            extracted_license_statement: licenses
+                .map(|licenses| truncate_field(licenses.join(", "))),
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     })
 }
@@ -134,12 +139,15 @@ fn fallback_package_data(path: &Path) -> PackageData {
 
     PackageData {
         package_type: Some(BazelBuildParser::PACKAGE_TYPE),
-        purl: name
-            .as_deref()
-            .and_then(|name| build_bazel_purl(name, None))
-            .map(truncate_field),
-        name,
+        name: name.clone(),
         datasource_id: Some(DatasourceId::BazelBuild),
+        core: PackageCore {
+            purl: name
+                .as_deref()
+                .and_then(|name| build_bazel_purl(name, None))
+                .map(truncate_field),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -480,6 +488,9 @@ fn default_bazel_module_package_data() -> PackageData {
     PackageData {
         package_type: Some(BazelModuleParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::BazelModule),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

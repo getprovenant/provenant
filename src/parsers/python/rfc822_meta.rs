@@ -11,7 +11,7 @@ use super::utils::{
     ProjectUrls, apply_project_url_mappings, build_pypi_urls, extract_rfc822_dependencies,
     parse_requires_txt,
 };
-use crate::models::{DatasourceId, FileReference, PackageData, Party};
+use crate::models::{DatasourceId, FileReference, PackageCore, PackageData, Party};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
@@ -413,27 +413,47 @@ fn build_package_data_from_rfc822(
         package_type: Some(PythonParser::PACKAGE_TYPE),
         name,
         version,
-        primary_language: Some("Python".to_string()),
-        description,
-        parties,
-        keywords,
-        homepage_url: urls.homepage_url,
-        download_url,
-        bug_tracking_url: urls.bug_tracking_url,
-        code_view_url: urls.code_view_url,
-        vcs_url: urls.vcs_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
         file_references,
-        extra_data,
         dependencies,
-        repository_homepage_url: pypi_urls.repository_homepage_url,
-        repository_download_url: pypi_urls.repository_download_url,
-        api_data_url: pypi_urls.api_data_url,
         datasource_id: Some(datasource_id),
-        purl: pypi_urls.purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            description,
+
+            parties,
+
+            keywords,
+
+            homepage_url: urls.homepage_url,
+
+            download_url,
+
+            bug_tracking_url: urls.bug_tracking_url,
+
+            code_view_url: urls.code_view_url,
+
+            vcs_url: urls.vcs_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            extra_data,
+
+            repository_homepage_url: pypi_urls.repository_homepage_url,
+
+            repository_download_url: pypi_urls.repository_download_url,
+
+            api_data_url: pypi_urls.api_data_url,
+
+            purl: pypi_urls.purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

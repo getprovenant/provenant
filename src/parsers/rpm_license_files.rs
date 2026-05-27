@@ -6,7 +6,7 @@
 //! Identifies packages from their license files installed in the standard
 //! /usr/share/licenses/ location, primarily used in Mariner distroless containers.
 
-use crate::models::{DatasourceId, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageType};
 use std::path::Path;
 
 use crate::models::PackageData;
@@ -78,6 +78,9 @@ impl PackageParser for RpmLicenseFilesParser {
             datasource_id: Some(DatasourceId::RpmPackageLicenses),
             namespace: Some("mariner".to_string()),
             name: name.clone(),
+            core: PackageCore {
+                ..PackageCore::default()
+            },
             ..Default::default()
         };
 

@@ -20,7 +20,7 @@
 //! - Returns package data representing the workspace configuration itself
 
 use crate::models::PackageData;
-use crate::models::{DatasourceId, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use std::path::Path;
@@ -80,6 +80,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(NpmWorkspaceParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::PnpmWorkspaceYaml),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -100,25 +103,29 @@ fn parse_workspace_file(workspace_data: &Value) -> PackageData {
 
             PackageData {
                 package_type: Some(NpmWorkspaceParser::PACKAGE_TYPE),
-                extra_data: if workspaces_vec.is_empty() {
-                    None
-                } else {
-                    let mut extra = std::collections::HashMap::new();
-                    extra.insert(
-                        "datasource_id".to_string(),
-                        serde_json::Value::String("pnpm_workspace_yaml".to_string()),
-                    );
-                    extra.insert(
-                        "workspaces".to_string(),
-                        serde_json::Value::Array(
-                            workspaces_vec
-                                .into_iter()
-                                .map(serde_json::Value::String)
-                                .collect(),
-                        ),
-                    );
-                    Some(extra)
+                core: PackageCore {
+                    extra_data: if workspaces_vec.is_empty() {
+                        None
+                    } else {
+                        let mut extra = std::collections::HashMap::new();
+                        extra.insert(
+                            "datasource_id".to_string(),
+                            serde_json::Value::String("pnpm_workspace_yaml".to_string()),
+                        );
+                        extra.insert(
+                            "workspaces".to_string(),
+                            serde_json::Value::Array(
+                                workspaces_vec
+                                    .into_iter()
+                                    .map(serde_json::Value::String)
+                                    .collect(),
+                            ),
+                        );
+                        Some(extra)
+                    },
+                    ..PackageCore::default()
                 },
+
                 ..default_package_data()
             }
         }
@@ -126,14 +133,18 @@ fn parse_workspace_file(workspace_data: &Value) -> PackageData {
             // No workspaces found, return basic package data
             PackageData {
                 package_type: Some(NpmWorkspaceParser::PACKAGE_TYPE),
-                extra_data: {
-                    let mut extra = std::collections::HashMap::new();
-                    extra.insert(
-                        "datasource_id".to_string(),
-                        serde_json::Value::String("pnpm_workspace_yaml".to_string()),
-                    );
-                    Some(extra)
+                core: PackageCore {
+                    extra_data: {
+                        let mut extra = std::collections::HashMap::new();
+                        extra.insert(
+                            "datasource_id".to_string(),
+                            serde_json::Value::String("pnpm_workspace_yaml".to_string()),
+                        );
+                        Some(extra)
+                    },
+                    ..PackageCore::default()
                 },
+
                 ..default_package_data()
             }
         }
@@ -166,7 +177,7 @@ packages:
 
         assert_eq!(result.package_type, Some(PackageType::Npm));
 
-        let extra_data = result.extra_data.unwrap();
+        let extra_data = result.extra_data.clone().unwrap();
         assert_eq!(
             extra_data.get("datasource_id").unwrap().as_str().unwrap(),
             "pnpm_workspace_yaml"
@@ -188,7 +199,7 @@ packages:
         let workspace_data: Value = yaml_serde::from_str(yaml_content).unwrap();
         let result = parse_workspace_file(&workspace_data);
 
-        let extra_data = result.extra_data.unwrap();
+        let extra_data = result.extra_data.clone().unwrap();
         let workspaces = extra_data.get("workspaces").unwrap().as_array().unwrap();
         assert_eq!(workspaces.len(), 3);
         assert_eq!(workspaces[0], "packages/*");
@@ -206,7 +217,7 @@ packages:
         let workspace_data: Value = yaml_serde::from_str(yaml_content).unwrap();
         let result = parse_workspace_file(&workspace_data);
 
-        let extra_data = result.extra_data.unwrap();
+        let extra_data = result.extra_data.clone().unwrap();
         let workspaces = extra_data.get("workspaces").unwrap().as_array().unwrap();
         assert_eq!(workspaces.len(), 1);
         assert_eq!(workspaces[0], "*");
@@ -223,7 +234,7 @@ packages:
         let workspace_data: Value = yaml_serde::from_str(yaml_content).unwrap();
         let result = parse_workspace_file(&workspace_data);
 
-        let extra_data = result.extra_data.unwrap();
+        let extra_data = result.extra_data.clone().unwrap();
         let workspaces = extra_data.get("workspaces").unwrap().as_array().unwrap();
         assert_eq!(workspaces.len(), 2);
         assert_eq!(workspaces[0], "packages/*");
@@ -240,7 +251,7 @@ packages:
         let workspace_data: Value = yaml_serde::from_str(yaml_content).unwrap();
         let result = parse_workspace_file(&workspace_data);
 
-        let extra_data = result.extra_data.unwrap();
+        let extra_data = result.extra_data.clone().unwrap();
         let workspaces = extra_data.get("workspaces").unwrap().as_array().unwrap();
         assert_eq!(workspaces.len(), 1);
         assert_eq!(workspaces[0], "**/components/*");
@@ -257,7 +268,7 @@ name: my-workspace
 
         assert_eq!(result.package_type, Some(PackageType::Npm));
         assert!(result.extra_data.is_some());
-        let extra_data = result.extra_data.unwrap();
+        let extra_data = result.extra_data.clone().unwrap();
         assert_eq!(
             extra_data.get("datasource_id").unwrap().as_str().unwrap(),
             "pnpm_workspace_yaml"
@@ -276,7 +287,12 @@ packages: []
 
         assert_eq!(result.package_type, Some(PackageType::Npm));
         assert!(
-            result.extra_data.is_none() || !result.extra_data.unwrap().contains_key("workspaces")
+            result.extra_data.is_none()
+                || !result
+                    .extra_data
+                    .clone()
+                    .unwrap()
+                    .contains_key("workspaces")
         );
     }
 

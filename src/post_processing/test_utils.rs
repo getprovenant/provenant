@@ -7,7 +7,9 @@ use std::sync::Arc;
 use super::*;
 use crate::assembly;
 use crate::cache::{DEFAULT_CACHE_DIR_NAME, build_collection_exclude_patterns};
-use crate::models::{DatasourceId, FileInfo, FileType, Package, PackageType, PackageUid};
+use crate::models::{
+    DatasourceId, FileInfo, FileType, Package, PackageCore, PackageType, PackageUid,
+};
 use crate::progress::{ProgressMode, ScanProgress};
 use crate::scanner::{LicenseScanOptions, TextDetectionOptions, collect_paths, process_collected};
 
@@ -95,44 +97,80 @@ pub(super) fn package(uid: &str, path: &str) -> Package {
         namespace: None,
         name: Some("inspec-bin".to_string()),
         version: Some("6.8.2".to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Ruby".to_string()),
-        description: None,
-        release_date: None,
-        parties: vec![],
-        keywords: vec![],
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: vec![],
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: vec![],
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: vec![],
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_ids: vec![DatasourceId::GemArchiveExtracted],
-        purl: Some("pkg:gem/inspec-bin@6.8.2".to_string()),
         package_uid: PackageUid::from_raw(uid.to_string()),
         datafile_paths: vec![path.to_string()],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Ruby".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: vec![],
+
+            keywords: vec![],
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: vec![],
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: vec![],
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: vec![],
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some("pkg:gem/inspec-bin@6.8.2".to_string()),
+        },
     }
 }
 

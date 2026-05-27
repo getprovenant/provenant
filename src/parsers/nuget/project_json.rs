@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 
 use super::super::PackageParser;
@@ -213,15 +213,26 @@ fn parse_project_json_manifest(parsed: &serde_json::Value) -> PackageData {
         package_type: Some(PackageType::Nuget),
         name: name.clone().map(truncate_field),
         version: version.clone().map(truncate_field),
-        purl: build_nuget_purl(name.as_deref(), version.as_deref()),
-        description: description.map(truncate_field),
-        homepage_url: homepage_url.map(truncate_field),
-        parties,
         dependencies,
-        extracted_license_statement: extracted_license_statement.map(truncate_field),
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
+        core: PackageCore {
+            purl: build_nuget_purl(name.as_deref(), version.as_deref()),
+
+            description: description.map(truncate_field),
+
+            homepage_url: homepage_url.map(truncate_field),
+
+            parties,
+
+            extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+            ..PackageCore::default()
+        },
+
         ..default_package_data(Some(DatasourceId::NugetProjectJson))
     }
 }
@@ -333,6 +344,10 @@ fn parse_project_lock_manifest(parsed: &serde_json::Value) -> PackageData {
         datasource_id: Some(DatasourceId::NugetProjectLockJson),
         package_type: Some(PackageType::Nuget),
         dependencies,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..default_package_data(Some(DatasourceId::NugetProjectLockJson))
     }
 }

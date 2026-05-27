@@ -3,7 +3,7 @@
 
 use super::PythonParser;
 use super::archive::is_likely_python_sdist_filename;
-use crate::models::{DatasourceId, Dependency, PackageData, Sha256Digest};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, Sha256Digest};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::utils::MAX_ITERATION_COUNT;
@@ -49,8 +49,11 @@ use toml::Value as TomlValue;
 pub(super) fn default_package_data(path: &Path) -> Vec<PackageData> {
     vec![PackageData {
         package_type: Some(PythonParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id: infer_python_datasource_id(path),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }]
 }

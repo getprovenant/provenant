@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::models::PackageCore;
 
 #[test]
 fn collect_top_level_license_references_includes_clues_packages_and_sorted_deduped_refs() {
@@ -73,7 +74,11 @@ fn collect_top_level_license_references_includes_clues_packages_and_sorted_dedup
     }];
     source.package_data = vec![PackageData {
         package_type: Some(PackageType::Npm),
-        declared_license_expression: Some("bsd-simplified".to_string()),
+        core: PackageCore {
+            declared_license_expression: Some("bsd-simplified".to_string()),
+            ..PackageCore::default()
+        },
+
         ..PackageData::default()
     }];
 

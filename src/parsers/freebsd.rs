@@ -28,7 +28,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde::Deserialize;
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{read_file_to_string, truncate_field};
 use crate::utils::spdx::{ExpressionRelation, combine_license_expressions_with_relation};
 
@@ -45,6 +45,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::FreebsdCompactManifest),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -190,22 +193,36 @@ pub(crate) fn parse_freebsd_manifest(content: &str) -> PackageData {
         package_type: Some(PACKAGE_TYPE),
         name,
         version,
-        description,
-        homepage_url,
-        keywords,
-        parties,
-        qualifiers: if qualifiers.is_empty() {
-            None
-        } else {
-            Some(qualifiers)
+        core: PackageCore {
+            description,
+
+            homepage_url,
+
+            keywords,
+
+            parties,
+
+            qualifiers: if qualifiers.is_empty() {
+                None
+            } else {
+                Some(qualifiers)
+            },
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: extracted_license_statement.map(truncate_field),
+
+            code_view_url,
+
+            download_url,
+
+            purl,
+            ..PackageCore::default()
         },
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: extracted_license_statement.map(truncate_field),
-        code_view_url,
-        download_url,
-        purl,
         ..Default::default()
     }
 }

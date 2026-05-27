@@ -10,8 +10,8 @@ use packageurl::PackageUrl;
 use serde_json::{Map as JsonMap, Value};
 
 use crate::models::{
-    DatasourceId, Dependency, FileReference, Md5Digest, PackageData, PackageType, Sha1Digest,
-    Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, FileReference, Md5Digest, PackageCore, PackageData, PackageType,
+    Sha1Digest, Sha256Digest, Sha512Digest,
 };
 
 use super::PackageParser;
@@ -209,44 +209,80 @@ fn parse_gradle_module(json: &Value) -> PackageData {
         namespace,
         name,
         version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("Java".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size,
-        sha1,
-        md5,
-        sha256,
-        sha512,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references,
-        is_private: false,
-        is_virtual: false,
-        extra_data: (!extra_data.is_empty()).then_some(extra_data),
         dependencies,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::GradleModule),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("Java".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size,
+
+            sha1,
+
+            md5,
+
+            sha256,
+
+            sha512,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: (!extra_data.is_empty()).then_some(extra_data),
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 
@@ -702,6 +738,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(GradleModuleParser::PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::GradleModule),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

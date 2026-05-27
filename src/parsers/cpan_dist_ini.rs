@@ -21,7 +21,7 @@ use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use serde_json::json;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party};
 
 use super::PackageParser;
 use super::license_normalization::{
@@ -47,8 +47,11 @@ impl PackageParser for CpanDistIniParser {
                 warn!("Failed to read dist.ini file {:?}: {}", path, e);
                 return vec![PackageData {
                     package_type: Some(PACKAGE_TYPE),
-                    primary_language: Some("Perl".to_string()),
                     datasource_id: Some(DatasourceId::CpanDistIni),
+                    core: PackageCore {
+                        primary_language: Some("Perl".to_string()),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }];
             }
@@ -111,20 +114,30 @@ pub(crate) fn parse_dist_ini(content: &str) -> PackageData {
         namespace: Some("cpan".to_string()),
         name,
         version,
-        description,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        parties,
         dependencies,
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data)
-        },
         datasource_id: Some(DatasourceId::CpanDistIni),
-        primary_language: Some("Perl".to_string()),
+        core: PackageCore {
+            description,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            parties,
+
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+
+            primary_language: Some("Perl".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -11,7 +11,7 @@ use crate::parsers::utils::{
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 
 use super::PackageParser;
 
@@ -813,8 +813,11 @@ fn looks_like_template_project_clj(content: &str) -> bool {
 fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(PackageType::Maven),
-        primary_language: Some("Clojure".to_string()),
         datasource_id,
+        core: PackageCore {
+            primary_language: Some("Clojure".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

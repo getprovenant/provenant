@@ -11,7 +11,7 @@ use packageurl::PackageUrl;
 use serde::Deserialize;
 
 use super::metadata::ParserMetadata;
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
 
@@ -175,21 +175,34 @@ fn build_rust_binary_package(
     PackageData {
         package_type: Some(PackageType::Cargo),
         datasource_id: Some(DatasourceId::RustBinary),
-        primary_language: Some("Rust".to_string()),
         name: Some(truncate_field(package.name.clone())),
         version: Some(truncate_field(package.version.clone())),
-        is_private,
-        repository_homepage_url,
-        repository_download_url,
-        api_data_url,
-        purl,
         dependencies,
         file_references: Vec::new(),
-        extra_data: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
+        core: PackageCore {
+            primary_language: Some("Rust".to_string()),
+
+            is_private,
+
+            repository_homepage_url,
+
+            repository_download_url,
+
+            api_data_url,
+
+            purl,
+
+            extra_data: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -339,14 +352,21 @@ fn build_go_binary_package(
     PackageData {
         package_type: Some(PackageType::Golang),
         datasource_id: Some(DatasourceId::GoBinary),
-        primary_language: Some("Go".to_string()),
         namespace,
         name: Some(name),
         version,
-        homepage_url: repository_homepage_url.clone(),
-        repository_homepage_url,
-        purl,
-        is_private,
+        core: PackageCore {
+            primary_language: Some("Go".to_string()),
+
+            homepage_url: repository_homepage_url.clone(),
+
+            repository_homepage_url,
+
+            purl,
+
+            is_private,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

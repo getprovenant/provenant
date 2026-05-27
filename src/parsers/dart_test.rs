@@ -460,6 +460,7 @@ executables:
 
         let extra_data = package_data
             .extra_data
+            .clone()
             .expect("extra_data should be present");
 
         assert_eq!(

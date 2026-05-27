@@ -8,7 +8,9 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use serde_json::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
 
 use super::PackageParser;
@@ -57,6 +59,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Vcpkg),
         datasource_id: Some(DatasourceId::VcpkgJson),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -76,19 +81,30 @@ fn parse_vcpkg_manifest(path: &Path, json: &Value) -> PackageData {
         namespace: None,
         name: name.clone(),
         version: version.clone(),
-        primary_language: Some("C++".to_string()),
-        description,
-        parties,
-        homepage_url,
-        extracted_license_statement,
-        is_private: name.is_none(),
         dependencies,
-        extra_data,
         datasource_id: Some(DatasourceId::VcpkgJson),
-        purl: name
-            .as_deref()
-            .and_then(|name| build_vcpkg_purl(name, version.as_deref()))
-            .map(truncate_field),
+        core: PackageCore {
+            primary_language: Some("C++".to_string()),
+
+            description,
+
+            parties,
+
+            homepage_url,
+
+            extracted_license_statement,
+
+            is_private: name.is_none(),
+
+            extra_data,
+
+            purl: name
+                .as_deref()
+                .and_then(|name| build_vcpkg_purl(name, version.as_deref()))
+                .map(truncate_field),
+            ..PackageCore::default()
+        },
+
         ..default_package_data()
     }
 }

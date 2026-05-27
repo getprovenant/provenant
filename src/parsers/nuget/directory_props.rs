@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::active_parser_scan_root;
 use quick_xml::Reader;
@@ -654,11 +654,15 @@ fn build_directory_packages_package_data(
         datasource_id: Some(DatasourceId::NugetDirectoryPackagesProps),
         package_type: Some(PackageType::Nuget),
         dependencies: data.dependencies,
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data.into_iter().collect())
+        core: PackageCore {
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data.into_iter().collect())
+            },
+            ..PackageCore::default()
         },
+
         ..default_package_data(Some(DatasourceId::NugetDirectoryPackagesProps))
     }
 }
@@ -712,11 +716,15 @@ fn build_directory_build_props_package_data(
     PackageData {
         datasource_id: Some(DatasourceId::NugetDirectoryBuildProps),
         package_type: Some(PackageType::Nuget),
-        extra_data: if extra_data.is_empty() {
-            None
-        } else {
-            Some(extra_data.into_iter().collect())
+        core: PackageCore {
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data.into_iter().collect())
+            },
+            ..PackageCore::default()
         },
+
         ..default_package_data(Some(DatasourceId::NugetDirectoryBuildProps))
     }
 }

@@ -182,7 +182,7 @@ fn test_macro_expansion() {
     let pkg = RpmSpecfileParser::extract_first_package(&test_file);
 
     // The Release field should have %{?dist} stripped
-    if let Some(extra) = pkg.extra_data
+    if let Some(ref extra) = pkg.extra_data
         && let Some(release) = extra.get("release")
     {
         let release_str = release.as_str().unwrap();

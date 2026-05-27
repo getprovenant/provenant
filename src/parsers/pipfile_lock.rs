@@ -31,7 +31,9 @@ use serde_json::Value as JsonValue;
 use toml::Value as TomlValue;
 use toml::map::Map as TomlMap;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Sha256Digest};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Sha256Digest,
+};
 use crate::parsers::python::read_toml_file;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
@@ -433,8 +435,11 @@ fn create_pypi_purl(name: &str, version: Option<&str>) -> Option<String> {
 fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(PipfileLockParser::PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

@@ -10,7 +10,8 @@ use serde_json::Value;
 use url::Url;
 
 use crate::models::{
-    DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, ResolvedPackage, Sha256Digest,
+    Sha512Digest,
 };
 
 use super::PackageParser;
@@ -143,23 +144,38 @@ fn parse_deno_lock(json: &Value) -> PackageData {
                 truncate_field(remote_name(target_url).unwrap_or_else(|| source.to_string()));
             let purl = create_remote_purl(target_url).map(truncate_field);
             let resolved_package = ResolvedPackage {
-                primary_language: Some("TypeScript".to_string()),
-                download_url: Some(truncate_field(target_url.to_string())),
-                sha1: None,
-                sha256: hash,
-                sha512: None,
-                md5: None,
-                is_virtual: true,
-                extra_data: Some(HashMap::from([(
-                    "redirect_source".to_string(),
-                    Value::String(truncate_field(source.to_string())),
-                )])),
                 dependencies: Vec::new(),
-                repository_homepage_url: None,
-                repository_download_url: None,
-                api_data_url: None,
                 datasource_id: Some(DatasourceId::DenoLock),
-                purl: purl.clone(),
+                core: PackageCore {
+                    primary_language: Some("TypeScript".to_string()),
+
+                    download_url: Some(truncate_field(target_url.to_string())),
+
+                    sha1: None,
+
+                    sha256: hash,
+
+                    sha512: None,
+
+                    md5: None,
+
+                    is_virtual: true,
+
+                    extra_data: Some(HashMap::from([(
+                        "redirect_source".to_string(),
+                        Value::String(truncate_field(source.to_string())),
+                    )])),
+
+                    repository_homepage_url: None,
+
+                    repository_download_url: None,
+
+                    api_data_url: None,
+
+                    purl: purl.clone(),
+                    ..PackageCore::default()
+                },
+
                 ..ResolvedPackage::new(
                     DenoLockParser::PACKAGE_TYPE,
                     String::new(),
@@ -199,10 +215,14 @@ fn parse_deno_lock(json: &Value) -> PackageData {
 
     PackageData {
         package_type: Some(DenoLockParser::PACKAGE_TYPE),
-        primary_language: Some("TypeScript".to_string()),
         dependencies,
-        extra_data: Some(extra_data),
         datasource_id: Some(DatasourceId::DenoLock),
+        core: PackageCore {
+            primary_language: Some("TypeScript".to_string()),
+
+            extra_data: Some(extra_data),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -247,30 +267,45 @@ fn build_jsr_dependency(
         is_pinned: Some(true),
         is_direct: Some(is_direct),
         resolved_package: Some(Box::new(ResolvedPackage {
-            primary_language: Some("TypeScript".to_string()),
-            download_url: None,
-            sha1: None,
-            sha256: jsr_object
-                .get("integrity")
-                .and_then(Value::as_str)
-                .and_then(|value| {
-                    parse_sri(value)
-                        .and_then(|(algo, hex)| {
-                            (algo == "sha256").then(|| Sha256Digest::from_hex(&hex).ok())
-                        })
-                        .flatten()
-                        .or_else(|| Sha256Digest::from_hex(value).ok())
-                }),
-            sha512: None,
-            md5: None,
-            is_virtual: true,
-            extra_data: None,
             dependencies: extract_jsr_resolved_dependencies(jsr_object),
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::DenoLock),
-            purl,
+            core: PackageCore {
+                primary_language: Some("TypeScript".to_string()),
+
+                download_url: None,
+
+                sha1: None,
+
+                sha256: jsr_object
+                    .get("integrity")
+                    .and_then(Value::as_str)
+                    .and_then(|value| {
+                        parse_sri(value)
+                            .and_then(|(algo, hex)| {
+                                (algo == "sha256").then(|| Sha256Digest::from_hex(&hex).ok())
+                            })
+                            .flatten()
+                            .or_else(|| Sha256Digest::from_hex(value).ok())
+                    }),
+
+                sha512: None,
+
+                md5: None,
+
+                is_virtual: true,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl,
+                ..PackageCore::default()
+            },
+
             ..ResolvedPackage::new(DenoLockParser::PACKAGE_TYPE, namespace, name, version_str)
         })),
         extra_data: None,
@@ -300,26 +335,6 @@ fn build_npm_dependency(
         is_pinned: Some(true),
         is_direct: Some(is_direct),
         resolved_package: Some(Box::new(ResolvedPackage {
-            primary_language: Some("JavaScript".to_string()),
-            download_url: npm_object
-                .get("tarball")
-                .and_then(Value::as_str)
-                .map(|value| truncate_field(value.to_string())),
-            sha1: None,
-            sha256: None,
-            sha512: npm_object
-                .get("integrity")
-                .and_then(Value::as_str)
-                .and_then(|value| {
-                    parse_sri(value)
-                        .and_then(|(algo, hex)| {
-                            (algo == "sha512").then(|| Sha512Digest::from_hex(&hex).ok())
-                        })
-                        .flatten()
-                }),
-            md5: None,
-            is_virtual: true,
-            extra_data: None,
             dependencies: npm_object
                 .get(FIELD_DEPENDENCIES)
                 .and_then(Value::as_array)
@@ -343,11 +358,46 @@ fn build_npm_dependency(
                     })
                 })
                 .collect(),
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::DenoLock),
-            purl,
+            core: PackageCore {
+                primary_language: Some("JavaScript".to_string()),
+
+                download_url: npm_object
+                    .get("tarball")
+                    .and_then(Value::as_str)
+                    .map(|value| truncate_field(value.to_string())),
+
+                sha1: None,
+
+                sha256: None,
+
+                sha512: npm_object
+                    .get("integrity")
+                    .and_then(Value::as_str)
+                    .and_then(|value| {
+                        parse_sri(value)
+                            .and_then(|(algo, hex)| {
+                                (algo == "sha512").then(|| Sha512Digest::from_hex(&hex).ok())
+                            })
+                            .flatten()
+                    }),
+
+                md5: None,
+
+                is_virtual: true,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl,
+                ..PackageCore::default()
+            },
+
             ..ResolvedPackage::new(
                 PackageType::Npm,
                 namespace.unwrap_or_default(),
@@ -522,8 +572,11 @@ fn is_exact_version(version: &str) -> bool {
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(DenoLockParser::PACKAGE_TYPE),
-        primary_language: Some("TypeScript".to_string()),
         datasource_id: Some(DatasourceId::DenoLock),
+        core: PackageCore {
+            primary_language: Some("TypeScript".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

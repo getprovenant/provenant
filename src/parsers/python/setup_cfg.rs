@@ -7,7 +7,7 @@ use super::utils::{
     extract_setup_cfg_dependency_name, has_private_classifier, normalize_rfc822_requirement,
     parse_setup_cfg_keywords, parse_setup_cfg_project_urls,
 };
-use crate::models::{DatasourceId, Dependency, PackageData, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, Party};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{read_file_to_string, truncate_field};
@@ -94,23 +94,40 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
         package_type: Some(PythonParser::PACKAGE_TYPE),
         name,
         version,
-        primary_language: Some("Python".to_string()),
-        description,
-        parties,
-        keywords,
-        homepage_url: urls.homepage_url,
-        bug_tracking_url: urls.bug_tracking_url,
-        code_view_url: urls.code_view_url,
-        vcs_url: urls.vcs_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        is_private: has_private_classifier(&classifiers),
-        extra_data,
         dependencies,
         datasource_id: Some(DatasourceId::PypiSetupCfg),
-        purl,
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            description,
+
+            parties,
+
+            keywords,
+
+            homepage_url: urls.homepage_url,
+
+            bug_tracking_url: urls.bug_tracking_url,
+
+            code_view_url: urls.code_view_url,
+
+            vcs_url: urls.vcs_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            is_private: has_private_classifier(&classifiers),
+
+            extra_data,
+
+            purl,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }]
 }

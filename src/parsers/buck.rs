@@ -28,7 +28,9 @@ use starlark_syntax::syntax::ast;
 use starlark_syntax::syntax::module::AstModuleFields;
 use starlark_syntax::syntax::{AstModule, Dialect};
 
-use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType, Sha1Digest};
+use crate::models::{
+    DatasourceId, PackageCore, PackageData, PackageType, Party, PartyType, Sha1Digest,
+};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -93,6 +95,9 @@ impl PackageParser for BuckMetadataBzlParser {
                 warn!("Failed to parse Buck METADATA.bzl {:?}: {}", path, e);
                 PackageData {
                     datasource_id: Some(DatasourceId::BuckMetadata),
+                    core: PackageCore {
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }
             }
@@ -136,6 +141,9 @@ fn parse_metadata_bzl(path: &Path) -> Result<PackageData, String> {
     // No METADATA found
     Ok(PackageData {
         datasource_id: Some(DatasourceId::BuckMetadata),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     })
 }
@@ -321,6 +329,9 @@ fn insert_license_reference_extra_data(
 fn build_package_from_metadata(fields: HashMap<String, MetadataValue>) -> PackageData {
     let mut pkg = PackageData {
         datasource_id: Some(DatasourceId::BuckMetadata),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     };
     let mut license_references = Vec::new();
@@ -533,9 +544,13 @@ fn extract_build_package_from_statement(statement: &ast::AstStmt) -> Option<Pack
     Some(PackageData {
         package_type: Some(BuckBuildParser::PACKAGE_TYPE),
         name: Some(truncate_field(package_name)),
-        extracted_license_statement,
-        extra_data: (!extra_data.is_empty()).then_some(extra_data),
         datasource_id: Some(DatasourceId::BuckFile),
+        core: PackageCore {
+            extracted_license_statement,
+
+            extra_data: (!extra_data.is_empty()).then_some(extra_data),
+            ..PackageCore::default()
+        },
         ..Default::default()
     })
 }
@@ -607,6 +622,9 @@ fn fallback_package_data(path: &Path) -> PackageData {
         package_type: Some(BuckBuildParser::PACKAGE_TYPE),
         name,
         datasource_id: Some(DatasourceId::BuckFile),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

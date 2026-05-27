@@ -9,7 +9,7 @@ use packageurl::PackageUrl;
 
 use crate::cache::DEFAULT_CACHE_DIR_NAME;
 use crate::models::{
-    DatasourceId, Dependency, FileInfo, Package, PackageData, PackageType, PackageUid,
+    DatasourceId, Dependency, FileInfo, Package, PackageCore, PackageData, PackageType, PackageUid,
     TopLevelDependency,
 };
 
@@ -261,44 +261,80 @@ fn build_package_from_resolved_dependency(
         namespace: parsed.namespace().map(|namespace| namespace.to_string()),
         name: Some(parsed.name().to_string()),
         version: parsed.version().map(|version| version.to_string()),
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some("swift".to_string()),
-        description: None,
-        release_date: None,
-        parties: Vec::new(),
-        keywords: Vec::new(),
-        homepage_url: None,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: None,
-        code_view_url: None,
-        vcs_url: None,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: None,
-        notice_text: None,
-        source_packages: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
-        purl: Some(purl.to_string()),
         package_uid: PackageUid::new(purl),
         datafile_paths: vec![datafile_path.to_string()],
         datasource_ids: vec![DatasourceId::SwiftPackageResolved],
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some("swift".to_string()),
+
+            description: None,
+
+            release_date: None,
+
+            parties: Vec::new(),
+
+            keywords: Vec::new(),
+
+            homepage_url: None,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: None,
+
+            code_view_url: None,
+
+            vcs_url: None,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: None,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: Some(purl.to_string()),
+        },
     })
 }
 
@@ -421,9 +457,6 @@ mod tests {
             package_data: PackageData {
                 package_type: Some(PackageType::Swift),
                 name: Some("RootPkg".to_string()),
-                primary_language: Some("Swift".to_string()),
-                homepage_url: Some("https://manifest.example/root".to_string()),
-                extra_data: Some(HashMap::from([("platforms".to_string(), json!(["ios"]))])),
                 dependencies: vec![Dependency {
                     purl: Some("pkg:swift/manifest-dep".to_string()),
                     extracted_requirement: None,
@@ -436,7 +469,16 @@ mod tests {
                     extra_data: None,
                 }],
                 datasource_id: Some(DatasourceId::SwiftPackageManifestJson),
-                purl: Some("pkg:swift/RootPkg".to_string()),
+                core: PackageCore {
+                    primary_language: Some("Swift".to_string()),
+
+                    homepage_url: Some("https://manifest.example/root".to_string()),
+
+                    extra_data: Some(HashMap::from([("platforms".to_string(), json!(["ios"]))])),
+
+                    purl: Some("pkg:swift/RootPkg".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             },
         };
@@ -448,12 +490,6 @@ mod tests {
                 package_type: Some(PackageType::Swift),
                 name: Some("DifferentRoot".to_string()),
                 version: Some("9.9.9".to_string()),
-                primary_language: Some("Swift".to_string()),
-                homepage_url: Some("https://showdeps.example/root".to_string()),
-                extra_data: Some(HashMap::from([(
-                    "from_show_dependencies".to_string(),
-                    json!(true),
-                )])),
                 dependencies: vec![Dependency {
                     purl: Some("pkg:swift/github.com/example/showdep@1.2.3".to_string()),
                     extracted_requirement: Some("1.2.3".to_string()),
@@ -466,7 +502,19 @@ mod tests {
                     extra_data: None,
                 }],
                 datasource_id: Some(DatasourceId::SwiftPackageShowDependencies),
-                purl: Some("pkg:swift/DifferentRoot@9.9.9".to_string()),
+                core: PackageCore {
+                    primary_language: Some("Swift".to_string()),
+
+                    homepage_url: Some("https://showdeps.example/root".to_string()),
+
+                    extra_data: Some(HashMap::from([(
+                        "from_show_dependencies".to_string(),
+                        json!(true),
+                    )])),
+
+                    purl: Some("pkg:swift/DifferentRoot@9.9.9".to_string()),
+                    ..PackageCore::default()
+                },
                 ..Default::default()
             },
         };
@@ -529,7 +577,10 @@ mod tests {
                 "Package.swift.json",
                 vec![PackageData {
                     datasource_id: Some(DatasourceId::SwiftPackageManifestJson),
-                    purl: Some("pkg:swift/RootPkg".to_string()),
+                    core: PackageCore {
+                        purl: Some("pkg:swift/RootPkg".to_string()),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }],
             ),
@@ -538,7 +589,10 @@ mod tests {
                 "examples/demo/Package.swift.json",
                 vec![PackageData {
                     datasource_id: Some(DatasourceId::SwiftPackageManifestJson),
-                    purl: Some("pkg:swift/DemoPkg".to_string()),
+                    core: PackageCore {
+                        purl: Some("pkg:swift/DemoPkg".to_string()),
+                        ..PackageCore::default()
+                    },
                     ..Default::default()
                 }],
             ),
@@ -557,6 +611,9 @@ mod tests {
                     path: "Package.swift.json".to_string(),
                     package_data: PackageData {
                         datasource_id: Some(DatasourceId::SwiftPackageManifestJson),
+                        core: PackageCore {
+                            ..PackageCore::default()
+                        },
                         ..Default::default()
                     },
                 }),

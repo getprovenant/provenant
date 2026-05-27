@@ -28,8 +28,8 @@ use packageurl::PackageUrl;
 use serde_json::Value;
 
 use crate::models::{
-    DatasourceId, Dependency, LicenseDetection, PackageData, PackageType, Party, PartyType,
-    ResolvedPackage, Sha1Digest, Sha256Digest, Sha512Digest,
+    DatasourceId, Dependency, LicenseDetection, PackageCore, PackageData, PackageType, Party,
+    PartyType, ResolvedPackage, Sha1Digest, Sha256Digest, Sha512Digest,
 };
 
 use super::PackageParser;
@@ -136,38 +136,7 @@ impl PackageParser for ComposerJsonParser {
             namespace: namespace.clone(),
             name: name.clone(),
             version: version.clone(),
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("PHP".to_string()),
-            description,
-            release_date: None,
-            parties,
-            keywords,
-            homepage_url,
-            download_url,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url,
-            code_view_url,
-            vcs_url,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private,
-            is_virtual: false,
-            extra_data,
             dependencies: [
                 dependencies,
                 dev_dependencies,
@@ -177,11 +146,78 @@ impl PackageParser for ComposerJsonParser {
                 suggest_dependencies,
             ]
             .concat(),
-            repository_homepage_url: build_repository_homepage_url(&namespace, &name),
-            repository_download_url: None,
-            api_data_url: build_api_data_url(&namespace, &name),
             datasource_id: Some(DatasourceId::PhpComposerJson),
-            purl: build_package_purl(&namespace, &name, &version),
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("PHP".to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties,
+
+                keywords,
+
+                homepage_url,
+
+                download_url,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url,
+
+                code_view_url,
+
+                vcs_url,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private,
+
+                is_virtual: false,
+
+                extra_data,
+
+                repository_homepage_url: build_repository_homepage_url(&namespace, &name),
+
+                repository_download_url: None,
+
+                api_data_url: build_api_data_url(&namespace, &name),
+
+                purl: build_package_purl(&namespace, &name, &version),
+            },
         }]
     }
 
@@ -481,20 +517,35 @@ fn build_lock_dependency(
     };
 
     let resolved_package = ResolvedPackage {
-        primary_language: Some("PHP".to_string()),
-        download_url: dist_url,
-        sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
-        sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
-        sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
-        md5: None,
-        is_virtual: true,
-        extra_data: None,
         dependencies: Vec::new(),
-        repository_homepage_url: None,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::PhpComposerLock),
-        purl: None,
+        core: PackageCore {
+            primary_language: Some("PHP".to_string()),
+
+            download_url: dist_url,
+
+            sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
+
+            sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),
+
+            sha512: sha512.and_then(|h| Sha512Digest::from_hex(&h).ok()),
+
+            md5: None,
+
+            is_virtual: true,
+
+            extra_data: None,
+
+            repository_homepage_url: None,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl: None,
+            ..PackageCore::default()
+        },
+
         ..ResolvedPackage::new(
             ComposerLockParser::PACKAGE_TYPE,
             namespace.clone().unwrap_or_default(),
@@ -1063,8 +1114,11 @@ fn is_composer_version_pinned(version: &str) -> bool {
 fn default_package_data(datasource_id: Option<DatasourceId>) -> PackageData {
     PackageData {
         package_type: Some(ComposerJsonParser::PACKAGE_TYPE),
-        primary_language: Some("PHP".to_string()),
         datasource_id,
+        core: PackageCore {
+            primary_language: Some("PHP".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

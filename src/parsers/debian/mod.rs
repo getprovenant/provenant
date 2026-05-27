@@ -59,7 +59,7 @@ pub use self::tarball::{DebianDebianTarParser, DebianOrigTarParser};
 
 use std::sync::LazyLock;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use regex::Regex;
 
 const PACKAGE_TYPE: PackageType = PackageType::Deb;
@@ -79,6 +79,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

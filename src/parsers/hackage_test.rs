@@ -208,7 +208,10 @@ index-state: 2024-01-01T00:00:00Z
             Some(2)
         );
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         assert_eq!(
             extra_data
                 .get("allow_newer")
@@ -292,7 +295,10 @@ ghc-options:
             Some("sha256:abcdef,1234")
         );
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         assert_eq!(
             extra_data.get("resolver").and_then(|value| value.as_str()),
             Some("lts-22.10")

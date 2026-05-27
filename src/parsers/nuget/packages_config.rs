@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use quick_xml::Reader;
@@ -83,6 +83,10 @@ impl PackageParser for PackagesConfigParser {
             datasource_id: Some(DatasourceId::NugetPackagesConfig),
             package_type: Some(Self::PACKAGE_TYPE),
             dependencies,
+            core: PackageCore {
+                ..PackageCore::default()
+            },
+
             ..default_package_data(Some(DatasourceId::NugetPackagesConfig))
         }]
     }

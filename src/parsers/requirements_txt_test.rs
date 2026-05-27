@@ -69,7 +69,7 @@ mod tests {
         );
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert!(extra_data.contains_key("requirements_includes"));
     }
 
@@ -150,7 +150,7 @@ mod tests {
         );
 
         assert!(package_data.extra_data.is_some());
-        let extra_data = package_data.extra_data.unwrap();
+        let extra_data = package_data.extra_data.clone().unwrap();
         assert!(extra_data.contains_key("constraints"));
     }
 

@@ -9,7 +9,9 @@ use regex::Regex;
 use serde_json::Value as JsonValue;
 use yaml_serde::{Mapping, Value as YamlValue};
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parsers::utils::{
     MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
 };
@@ -154,8 +156,11 @@ struct CabalData {
 fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some(PRIMARY_LANGUAGE.to_string()),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            primary_language: Some(PRIMARY_LANGUAGE.to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -184,44 +189,80 @@ fn parse_cabal_manifest(content: &str) -> PackageData {
         namespace: None,
         name: parsed.name,
         version: parsed.version,
-        qualifiers: None,
-        subpath: None,
-        primary_language: Some(PRIMARY_LANGUAGE.to_string()),
-        description,
-        release_date: None,
-        parties,
-        keywords,
-        homepage_url: parsed.homepage_url,
-        download_url: None,
-        size: None,
-        sha1: None,
-        md5: None,
-        sha256: None,
-        sha512: None,
-        bug_tracking_url: parsed.bug_tracking_url,
-        code_view_url: None,
-        vcs_url: parsed.vcs_url,
-        copyright: None,
-        holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
-        other_license_expression: None,
-        other_license_expression_spdx: None,
-        other_license_detections: Vec::new(),
-        extracted_license_statement: parsed.license,
-        notice_text: None,
-        source_packages: Vec::new(),
         file_references: Vec::new(),
-        is_private: false,
-        is_virtual: false,
-        extra_data: None,
         dependencies: parsed.dependencies,
-        repository_homepage_url,
-        repository_download_url: None,
-        api_data_url: None,
         datasource_id: Some(DatasourceId::HackageCabal),
-        purl,
+        core: PackageCore {
+            qualifiers: None,
+
+            subpath: None,
+
+            primary_language: Some(PRIMARY_LANGUAGE.to_string()),
+
+            description,
+
+            release_date: None,
+
+            parties,
+
+            keywords,
+
+            homepage_url: parsed.homepage_url,
+
+            download_url: None,
+
+            size: None,
+
+            sha1: None,
+
+            md5: None,
+
+            sha256: None,
+
+            sha512: None,
+
+            bug_tracking_url: parsed.bug_tracking_url,
+
+            code_view_url: None,
+
+            vcs_url: parsed.vcs_url,
+
+            copyright: None,
+
+            holder: None,
+
+            declared_license_expression: None,
+
+            declared_license_expression_spdx: None,
+
+            license_detections: Vec::new(),
+
+            other_license_expression: None,
+
+            other_license_expression_spdx: None,
+
+            other_license_detections: Vec::new(),
+
+            extracted_license_statement: parsed.license,
+
+            notice_text: None,
+
+            source_packages: Vec::new(),
+
+            is_private: false,
+
+            is_virtual: false,
+
+            extra_data: None,
+
+            repository_homepage_url,
+
+            repository_download_url: None,
+
+            api_data_url: None,
+
+            purl,
+        },
     }
 }
 

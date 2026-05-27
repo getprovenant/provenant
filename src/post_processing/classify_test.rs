@@ -8,7 +8,7 @@ use super::*;
 use crate::license_detection::MatcherKind;
 use crate::models::{
     Copyright, DatasourceId, FileReference, Holder, LineNumber, Match, MatchScore, Package,
-    PackageType, PackageUid,
+    PackageCore, PackageType, PackageUid,
 };
 
 #[test]
@@ -30,6 +30,9 @@ fn classify_key_files_marks_nested_ruby_license_from_file_references() {
             sha512: None,
             extra_data: None,
         }],
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -97,6 +100,9 @@ fn classify_key_files_does_not_tag_unreferenced_nested_legal_file() {
     gemspec.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Gem),
         datasource_id: Some(DatasourceId::Gemspec),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -143,6 +149,9 @@ fn classify_key_files_matches_scan_code_cli_fixture_patterns() {
     let mut haxelib = file("cli/haxelib.json");
     haxelib.package_data = vec![crate::models::PackageData {
         package_type: Some(PackageType::Haxe),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }];
 
@@ -241,6 +250,10 @@ fn classify_key_files_marks_package_data_ancestry_like_with_package_data_fixture
         datafile_paths: vec![
             "jar/META-INF/maven/org.jboss.logging/jboss-logging/pom.xml".to_string(),
         ],
+        core: PackageCore {
+            ..PackageCore::default()
+        },
+
         ..package(
             uid,
             "jar/META-INF/maven/org.jboss.logging/jboss-logging/pom.xml",

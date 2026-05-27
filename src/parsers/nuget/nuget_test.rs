@@ -313,7 +313,7 @@ mod tests {
         temp_file.write_all(xml.as_bytes()).unwrap();
 
         let package_data = NuspecParser::extract_first_package(temp_file.path());
-        let extra = package_data.extra_data.unwrap();
+        let extra = package_data.extra_data.clone().unwrap();
 
         assert_eq!(
             package_data.extracted_license_statement.as_deref(),
@@ -347,7 +347,7 @@ mod tests {
         temp_file.write_all(xml.as_bytes()).unwrap();
 
         let package_data = NuspecParser::extract_first_package(temp_file.path());
-        let extra = package_data.extra_data.unwrap();
+        let extra = package_data.extra_data.clone().unwrap();
 
         assert_eq!(
             package_data.extracted_license_statement.as_deref(),
@@ -383,7 +383,7 @@ mod tests {
         temp_file.write_all(xml.as_bytes()).unwrap();
 
         let package_data = NuspecParser::extract_first_package(temp_file.path());
-        let extra = package_data.extra_data.unwrap();
+        let extra = package_data.extra_data.clone().unwrap();
 
         assert_eq!(
             package_data.vcs_url.as_deref(),
@@ -1837,7 +1837,7 @@ mod tests {
         temp_file.write_all(xml.as_bytes()).unwrap();
 
         let package_data = PackageReferenceProjectParser::extract_first_package(temp_file.path());
-        let extra = package_data.extra_data.unwrap();
+        let extra = package_data.extra_data.clone().unwrap();
 
         assert_eq!(package_data.datasource_id, Some(DatasourceId::NugetCsproj));
         assert_eq!(package_data.name.as_deref(), Some("Contoso.Utility"));
@@ -2003,7 +2003,7 @@ mod tests {
         assert_eq!(package_data.name, Some("TestPackage".to_string()));
         assert!(package_data.description.is_some());
 
-        let desc = package_data.description.unwrap();
+        let desc = package_data.description.clone().unwrap();
         assert!(
             desc.contains("Test Package Title"),
             "Description should contain title"

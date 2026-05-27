@@ -25,6 +25,8 @@ use std::path::Path;
 #[cfg(test)]
 use crate::models::DatasourceId;
 #[cfg(test)]
+use crate::models::PackageCore;
+#[cfg(test)]
 use crate::parser_warn as warn;
 #[cfg(test)]
 use serde::{Deserialize, Serialize};
@@ -47,8 +49,11 @@ const PACKAGE_TYPE: PackageType = PackageType::Pypi;
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         datasource_id: Some(DatasourceId::PypiInspectDeplock),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -177,22 +182,36 @@ pub(crate) fn parse_pip_inspect_deplock(content: &str) -> PackageData {
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
-        primary_language: Some("Python".to_string()),
         name: metadata.name.as_ref().map(|v| truncate_field(v.clone())),
         version: metadata.version.as_ref().map(|v| truncate_field(v.clone())),
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement: metadata.license.as_ref().map(|v| truncate_field(v.clone())),
-        description: metadata
-            .description
-            .as_ref()
-            .map(|v| truncate_field(v.clone())),
-        keywords,
-        is_virtual: true,
-        extra_data: extra_data_opt,
         dependencies,
         datasource_id: Some(DatasourceId::PypiInspectDeplock),
+        core: PackageCore {
+            primary_language: Some("Python".to_string()),
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement: metadata
+                .license
+                .as_ref()
+                .map(|v| truncate_field(v.clone())),
+
+            description: metadata
+                .description
+                .as_ref()
+                .map(|v| truncate_field(v.clone())),
+
+            keywords,
+
+            is_virtual: true,
+
+            extra_data: extra_data_opt,
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

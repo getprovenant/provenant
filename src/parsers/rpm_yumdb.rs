@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -18,6 +18,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::RpmYumdb),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -117,10 +120,16 @@ impl PackageParser for RpmYumdbParser {
             package_type: Some(PACKAGE_TYPE),
             name: Some(name.clone()),
             version: Some(version.clone()),
-            qualifiers: Some(qualifiers),
-            purl: build_yumdb_purl(&name, &version, &arch),
-            extra_data: (!extra_data.is_empty()).then_some(extra_data),
-            is_virtual: true,
+            core: PackageCore {
+                qualifiers: Some(qualifiers),
+
+                purl: build_yumdb_purl(&name, &version, &arch),
+
+                extra_data: (!extra_data.is_empty()).then_some(extra_data),
+
+                is_virtual: true,
+                ..PackageCore::default()
+            },
             ..Default::default()
         }]
     }

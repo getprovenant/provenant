@@ -34,7 +34,9 @@ use rpm::{
     RPM_MAGIC,
 };
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
 
 use super::PackageParser;
@@ -60,6 +62,9 @@ fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         datasource_id: Some(DatasourceId::RpmArchive),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -474,25 +479,39 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
         namespace: namespace.clone(),
         name: Some(name.clone()),
         version: version.clone(),
-        qualifiers,
-        description: fields.description.or(fields.summary),
-        homepage_url: fields.url,
-        parties,
-        keywords: fields.group.into_iter().collect(),
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
-        source_packages: fields.source_rpm.into_iter().collect(),
-        extra_data: (!extra_data.is_empty()).then_some(extra_data),
-        purl: build_rpm_purl(
-            &name,
-            version.as_deref(),
-            namespace.as_deref(),
-            fields.arch.as_deref(),
-            is_source,
-        )
-        .map(truncate_field),
+        core: PackageCore {
+            qualifiers,
+
+            description: fields.description.or(fields.summary),
+
+            homepage_url: fields.url,
+
+            parties,
+
+            keywords: fields.group.into_iter().collect(),
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            source_packages: fields.source_rpm.into_iter().collect(),
+
+            extra_data: (!extra_data.is_empty()).then_some(extra_data),
+
+            purl: build_rpm_purl(
+                &name,
+                version.as_deref(),
+                namespace.as_deref(),
+                fields.arch.as_deref(),
+                is_source,
+            )
+            .map(truncate_field),
+            ..PackageCore::default()
+        },
         ..Default::default()
     })
 }
@@ -760,31 +779,48 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
         namespace: namespace.clone(),
         name: name.clone(),
         version: version.clone(),
-        qualifiers,
-        description,
-        homepage_url,
-        size: metadata.get_installed_size().ok(),
-        parties,
-        keywords,
-        bug_tracking_url,
-        declared_license_expression,
-        declared_license_expression_spdx,
-        license_detections,
-        extracted_license_statement,
         dependencies,
-        source_packages: source_rpm.into_iter().collect(),
-        vcs_url,
-        extra_data: (!extra_data.is_empty()).then_some(extra_data),
-        purl: name.as_ref().and_then(|n| {
-            build_rpm_purl(
-                n,
-                version.as_deref(),
-                namespace.as_deref(),
-                architecture.as_deref(),
-                is_source,
-            )
-            .map(truncate_field)
-        }),
+        core: PackageCore {
+            qualifiers,
+
+            description,
+
+            homepage_url,
+
+            size: metadata.get_installed_size().ok(),
+
+            parties,
+
+            keywords,
+
+            bug_tracking_url,
+
+            declared_license_expression,
+
+            declared_license_expression_spdx,
+
+            license_detections,
+
+            extracted_license_statement,
+
+            source_packages: source_rpm.into_iter().collect(),
+
+            vcs_url,
+
+            extra_data: (!extra_data.is_empty()).then_some(extra_data),
+
+            purl: name.as_ref().and_then(|n| {
+                build_rpm_purl(
+                    n,
+                    version.as_deref(),
+                    namespace.as_deref(),
+                    architecture.as_deref(),
+                    is_source,
+                )
+                .map(truncate_field)
+            }),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

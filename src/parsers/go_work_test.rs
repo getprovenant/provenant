@@ -29,7 +29,10 @@ mod tests {
         assert!(package_data.name.is_none());
         assert!(package_data.purl.is_none());
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         assert_eq!(
             extra_data
                 .get("go_version")
@@ -207,7 +210,10 @@ use (
         let package_data = GoWorkParser::extract_first_package(&file_path);
         assert!(package_data.dependencies.is_empty());
 
-        let extra_data = package_data.extra_data.expect("extra_data should exist");
+        let extra_data = package_data
+            .extra_data
+            .clone()
+            .expect("extra_data should exist");
         let unresolved = extra_data
             .get("unresolved_use_paths")
             .and_then(|value| value.as_array())

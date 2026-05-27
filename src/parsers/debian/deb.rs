@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, PackageCore, PackageData, PackageType};
 use crate::parser_warn as warn;
 use crate::parsers::rfc822;
 use crate::parsers::utils::truncate_field;
@@ -412,12 +412,15 @@ fn parse_deb_filename(filename: &str) -> PackageData {
         namespace: namespace.clone(),
         name: Some(name.clone()),
         version: Some(version.clone()),
-        purl: build_debian_purl(
-            &name,
-            Some(&version),
-            namespace.as_deref(),
-            architecture.as_deref(),
-        ),
+        core: PackageCore {
+            purl: build_debian_purl(
+                &name,
+                Some(&version),
+                namespace.as_deref(),
+                architecture.as_deref(),
+            ),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -562,6 +565,9 @@ fn parse_md5sums_in_package(content: &str, package_name: Option<&str>) -> Packag
         namespace: namespace.clone(),
         name: package_name.map(|s| truncate_field(s.to_string())),
         file_references,
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     };
 

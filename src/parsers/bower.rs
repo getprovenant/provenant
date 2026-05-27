@@ -22,7 +22,9 @@
 //! - Graceful error handling: logs warnings and returns default on parse failure
 //! - Authors field can be string, object, or array of either
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party, PartyType,
+};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
@@ -111,44 +113,80 @@ impl PackageParser for BowerJsonParser {
             namespace: None,
             name,
             version,
-            qualifiers: None,
-            subpath: None,
-            primary_language: Some("JavaScript".to_string()),
-            description,
-            release_date: None,
-            parties,
-            keywords,
-            homepage_url,
-            download_url: None,
-            size: None,
-            sha1: None,
-            md5: None,
-            sha256: None,
-            sha512: None,
-            bug_tracking_url: None,
-            code_view_url: None,
-            vcs_url,
-            copyright: None,
-            holder: None,
-            declared_license_expression,
-            declared_license_expression_spdx,
-            license_detections,
-            other_license_expression: None,
-            other_license_expression_spdx: None,
-            other_license_detections: Vec::new(),
-            extracted_license_statement,
-            notice_text: None,
-            source_packages: Vec::new(),
             file_references: Vec::new(),
-            is_private,
-            is_virtual: false,
-            extra_data: None,
             dependencies: [dependencies, dev_dependencies].concat(),
-            repository_homepage_url: None,
-            repository_download_url: None,
-            api_data_url: None,
             datasource_id: Some(DatasourceId::BowerJson),
-            purl: None,
+            core: PackageCore {
+                qualifiers: None,
+
+                subpath: None,
+
+                primary_language: Some("JavaScript".to_string()),
+
+                description,
+
+                release_date: None,
+
+                parties,
+
+                keywords,
+
+                homepage_url,
+
+                download_url: None,
+
+                size: None,
+
+                sha1: None,
+
+                md5: None,
+
+                sha256: None,
+
+                sha512: None,
+
+                bug_tracking_url: None,
+
+                code_view_url: None,
+
+                vcs_url,
+
+                copyright: None,
+
+                holder: None,
+
+                declared_license_expression,
+
+                declared_license_expression_spdx,
+
+                license_detections,
+
+                other_license_expression: None,
+
+                other_license_expression_spdx: None,
+
+                other_license_detections: Vec::new(),
+
+                extracted_license_statement,
+
+                notice_text: None,
+
+                source_packages: Vec::new(),
+
+                is_private,
+
+                is_virtual: false,
+
+                extra_data: None,
+
+                repository_homepage_url: None,
+
+                repository_download_url: None,
+
+                api_data_url: None,
+
+                purl: None,
+            },
         }]
     }
 
@@ -415,8 +453,11 @@ fn extract_dependencies(
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(BowerJsonParser::PACKAGE_TYPE),
-        primary_language: Some("JavaScript".to_string()),
         datasource_id: Some(DatasourceId::BowerJson),
+        core: PackageCore {
+            primary_language: Some("JavaScript".to_string()),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }

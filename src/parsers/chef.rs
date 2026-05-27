@@ -34,7 +34,7 @@ use packageurl::PackageUrl;
 use regex::Regex;
 use serde_json::Value;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
+use crate::models::{DatasourceId, Dependency, PackageCore, PackageData, PackageType, Party};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -223,6 +223,9 @@ fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
         package_type: Some(ChefMetadataJsonParser::PACKAGE_TYPE),
         datasource_id: Some(datasource_id),
+        core: PackageCore {
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
@@ -494,18 +497,31 @@ fn build_package(fields: ChefPackageFields) -> PackageData {
         datasource_id: Some(datasource_id),
         name,
         version,
-        description,
-        extracted_license_statement,
-        parties,
-        code_view_url,
-        bug_tracking_url,
         dependencies,
-        download_url,
-        repository_download_url,
-        repository_homepage_url,
-        api_data_url,
-        purl,
-        primary_language: Some(truncate_field("Ruby".to_string())),
+        core: PackageCore {
+            description,
+
+            extracted_license_statement,
+
+            parties,
+
+            code_view_url,
+
+            bug_tracking_url,
+
+            download_url,
+
+            repository_download_url,
+
+            repository_homepage_url,
+
+            api_data_url,
+
+            purl,
+
+            primary_language: Some(truncate_field("Ruby".to_string())),
+            ..PackageCore::default()
+        },
         ..Default::default()
     }
 }
