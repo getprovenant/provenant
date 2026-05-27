@@ -193,11 +193,18 @@ impl AsyncJobController {
 
     #[cfg(test)]
     pub(super) fn insert_job(&self, job_id: String, record: AsyncJobRecord) {
-        self.inner
+        let mut inner = self
+            .inner
             .lock()
-            .expect("serve async job lock should not be poisoned")
-            .jobs
-            .insert(job_id, record);
+            .expect("serve async job lock should not be poisoned");
+        let is_terminal = matches!(
+            record.state,
+            AsyncJobState::Succeeded | AsyncJobState::Failed
+        );
+        if is_terminal {
+            inner.completed.push_back(job_id.clone());
+        }
+        inner.jobs.insert(job_id, record);
     }
 
     fn max_non_terminal_jobs(&self) -> usize {
