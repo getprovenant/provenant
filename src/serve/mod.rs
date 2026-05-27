@@ -342,17 +342,13 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
                 tool_version: BUILD_VERSION.to_string(),
             },
         ),
-        (m, "/v1/scans") if *m == Method::Post => {
-            handle_sync_scan_request(request).unwrap_or_else(|e| e)
-        }
+        (m, "/v1/scans") if *m == Method::Post => handle_sync_scan_request(request),
         (_, "/v1/scans") => HttpResponse::error(
             StatusCode::from(405),
             "method_not_allowed",
             "use POST /v1/scans for synchronous scan execution".to_string(),
         ),
-        (m, "/v1/scans:async") if *m == Method::Post => {
-            handle_async_scan_request(request, state).unwrap_or_else(|e| e)
-        }
+        (m, "/v1/scans:async") if *m == Method::Post => handle_async_scan_request(request, state),
         (_, "/v1/scans:async") => HttpResponse::error(
             StatusCode::from(405),
             "method_not_allowed",
@@ -365,8 +361,6 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
     }
 }
 
-type HandlerResult = Result<HttpResponse, HttpResponse>;
-
 impl From<ServeError> for HttpResponse {
     fn from(error: ServeError) -> HttpResponse {
         HttpResponse::error(
@@ -377,34 +371,41 @@ impl From<ServeError> for HttpResponse {
     }
 }
 
-fn handle_sync_scan_request(request: &ParsedRequest) -> HandlerResult {
-    let sync_request = decode_scan_request_from_http(request, "POST /v1/scans")?;
-    let execution = SyncScanExecution::new(sync_request)
-        .map_err(|e| HttpResponse::from(ServeError::from(e)))?;
+fn handle_sync_scan_request(request: &ParsedRequest) -> HttpResponse {
+    let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans") {
+        Ok(req) => req,
+        Err(resp) => return resp,
+    };
+    let execution = match SyncScanExecution::new(sync_request) {
+        Ok(e) => e,
+        Err(e) => return HttpResponse::from(ServeError::from(e)),
+    };
     match execution.execute() {
-        Ok(body) => Ok(HttpResponse {
+        Ok(body) => HttpResponse {
             status: StatusCode::from(200),
             body,
-        }),
-        Err(error) => Err(ServeError::from(error).into()),
+        },
+        Err(error) => HttpResponse::from(ServeError::from(error)),
     }
 }
 
-fn handle_async_scan_request(request: &ParsedRequest, state: &ServeState) -> HandlerResult {
-    let sync_request = decode_scan_request_from_http(request, "POST /v1/scans:async")?;
-    let (response, dispatches) =
-        state
-            .jobs
-            .submit(sync_request)
-            .map_err(|AsyncSubmitError::QueueFull| {
-                HttpResponse::error(
-                    StatusCode::from(503),
-                    "server_busy",
-                    "async job queue is full; try again later".to_string(),
-                )
-            })?;
+fn handle_async_scan_request(request: &ParsedRequest, state: &ServeState) -> HttpResponse {
+    let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans:async") {
+        Ok(req) => req,
+        Err(resp) => return resp,
+    };
+    let (response, dispatches) = match state.jobs.submit(sync_request) {
+        Ok(result) => result,
+        Err(AsyncSubmitError::QueueFull) => {
+            return HttpResponse::error(
+                StatusCode::from(503),
+                "server_busy",
+                "async job queue is full; try again later".to_string(),
+            );
+        }
+    };
     spawn_dispatches(state.jobs.clone(), dispatches);
-    Ok(HttpResponse::json(StatusCode::from(202), &response))
+    HttpResponse::json(StatusCode::from(202), &response)
 }
 
 fn handle_job_status_request(job_id: &str, state: &ServeState) -> HttpResponse {
@@ -708,8 +709,7 @@ mod tests {
 
     #[test]
     fn sync_scan_requires_json_content_type() {
-        let response = handle_sync_scan_request(&test_request(Method::Post, "/v1/scans"))
-            .unwrap_or_else(|e| e);
+        let response = handle_sync_scan_request(&test_request(Method::Post, "/v1/scans"));
         assert_status(&response, 415);
         assert!(response.body.contains("unsupported_media_type"));
     }
