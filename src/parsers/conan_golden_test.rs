@@ -12,6 +12,7 @@ mod golden_tests {
     use crate::parsers::conan::{ConanFilePyParser, ConanLockParser, ConanfileTxtParser};
     use crate::parsers::conan_data::ConanDataParser;
     use crate::parsers::golden_test_utils::compare_package_data_parser_only;
+    use provenant::output_schema::OutputPackageData;
 
     fn sort_packages_by_version(packages: &mut [PackageData]) {
         packages.sort_by(|left, right| left.version.cmp(&right.version));
@@ -115,14 +116,19 @@ mod golden_tests {
 
         let expected_content =
             std::fs::read_to_string(expected_file).expect("expected Conan golden should exist");
-        let mut expected_packages: Vec<PackageData> =
+        let mut expected_value: Value =
             serde_json::from_str(&expected_content).expect("expected Conan golden should parse");
-        sort_packages_by_version(&mut expected_packages);
+        if let Some(arr) = expected_value.as_array_mut() {
+            arr.sort_by(|a, b| {
+                let av = a.get("version").and_then(Value::as_str).unwrap_or("");
+                let bv = b.get("version").and_then(Value::as_str).unwrap_or("");
+                av.cmp(bv)
+            });
+        }
 
+        let output: Vec<OutputPackageData> = actual_packages.iter().map(|pd| pd.into()).collect();
         let actual_value =
-            serde_json::to_value(actual_packages).expect("actual Conan packages should serialize");
-        let expected_value = serde_json::to_value(expected_packages)
-            .expect("expected Conan packages should serialize");
+            serde_json::to_value(&output).expect("actual Conan packages should serialize");
 
         if let Err(error) = compare_values(&actual_value, &expected_value, "packages") {
             panic!(
