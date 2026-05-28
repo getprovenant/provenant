@@ -648,6 +648,11 @@ impl FromStr for DatasourceId {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "nuget_nupsec" => return Ok(DatasourceId::NugetNuspec),
+            "rpm_spefile" => return Ok(DatasourceId::RpmSpecfile),
+            _ => {}
+        }
         use strum::IntoEnumIterator;
         Self::iter()
             .find(|variant| variant.as_str() == s)
@@ -742,5 +747,17 @@ mod tests {
 
         let rpm_json = serde_json::to_string(&DatasourceId::RpmSpecfile).unwrap();
         assert_eq!(rpm_json, r#""RpmSpecfile""#);
+    }
+
+    #[test]
+    fn test_legacy_typo_aliases() {
+        assert_eq!(
+            DatasourceId::from_str("nuget_nupsec").unwrap(),
+            DatasourceId::NugetNuspec
+        );
+        assert_eq!(
+            DatasourceId::from_str("rpm_spefile").unwrap(),
+            DatasourceId::RpmSpecfile
+        );
     }
 }

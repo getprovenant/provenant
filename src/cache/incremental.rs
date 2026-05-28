@@ -14,7 +14,7 @@ use super::locking::with_exclusive_cache_lock;
 use crate::models::{FileInfo, Sha256Digest};
 use crate::utils::hash::calculate_sha256;
 
-const INCREMENTAL_MANIFEST_VERSION: u32 = 3;
+const INCREMENTAL_MANIFEST_VERSION: u32 = 4;
 const MANIFEST_FILE_NAME: &str = "manifest.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::models::MatchScore;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -13,7 +12,7 @@ pub struct OutputMatch {
     pub end_line: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub matcher: Option<String>,
-    pub score: MatchScore,
+    pub score: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub matched_length: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -40,7 +39,7 @@ impl From<&crate::models::Match> for OutputMatch {
             start_line: value.start_line.get() as u64,
             end_line: value.end_line.get() as u64,
             matcher: Some(value.matcher.to_string()),
-            score: value.score,
+            score: value.score.value(),
             matched_length: value.matched_length,
             match_coverage: value.match_coverage,
             rule_relevance: value.rule_relevance,
@@ -73,7 +72,7 @@ impl TryFrom<&OutputMatch> for crate::models::Match {
                 .as_deref()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(crate::license_detection::MatcherKind::Unknown),
-            score: value.score,
+            score: crate::models::MatchScore::from_percentage(value.score),
             matched_length: value.matched_length,
             match_coverage: value.match_coverage,
             rule_relevance: value.rule_relevance,

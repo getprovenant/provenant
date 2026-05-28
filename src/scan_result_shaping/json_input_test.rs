@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::models::MatchScore;
 use crate::output_schema::{OutputMatch, OutputTopLevelLicenseDetection};
 use crate::scan_result_shaping::test_fixtures::json_file;
 use serde_json::json;
@@ -193,7 +192,7 @@ fn normalize_loaded_json_scan_applies_strip_root_per_loaded_input() {
                 start_line: 1,
                 end_line: 1,
                 matcher: None,
-                score: MatchScore::MAX,
+                score: 100.0,
                 matched_length: None,
                 match_coverage: None,
                 rule_relevance: None,
@@ -256,7 +255,7 @@ fn normalize_loaded_json_scan_trims_full_root_display_without_absolutizing() {
                 start_line: 1,
                 end_line: 1,
                 matcher: None,
-                score: MatchScore::MAX,
+                score: 100.0,
                 matched_length: None,
                 match_coverage: None,
                 rule_relevance: None,
