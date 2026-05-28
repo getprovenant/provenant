@@ -14,8 +14,8 @@ use super::locking::with_exclusive_cache_lock;
 use crate::models::{FileInfo, Sha256Digest};
 use crate::utils::hash::calculate_sha256;
 
-const INCREMENTAL_MANIFEST_VERSION: u32 = 4;
-const MANIFEST_FILE_NAME: &str = "manifest.json";
+const INCREMENTAL_MANIFEST_VERSION: u32 = 5;
+const MANIFEST_FILE_NAME: &str = "manifest.postcard";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileStateFingerprint {
@@ -101,7 +101,7 @@ pub fn load_incremental_manifest(
         Err(err) => return Err(err),
     };
 
-    let manifest: IncrementalManifest = match serde_json::from_slice(&bytes) {
+    let manifest: IncrementalManifest = match postcard::from_bytes(&bytes) {
         Ok(manifest) => manifest,
         Err(_) => return Ok(None),
     };
@@ -118,7 +118,7 @@ pub fn write_incremental_manifest(
     manifest_path: &Path,
     manifest: &IncrementalManifest,
 ) -> io::Result<()> {
-    let bytes = serde_json::to_vec_pretty(manifest)
+    let bytes = postcard::to_allocvec(manifest)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
 
     with_exclusive_cache_lock(cache_root, || write_bytes_atomically(manifest_path, &bytes))

@@ -69,10 +69,10 @@ impl FileInfoSpillStore {
         let path = self
             .temp_dir
             .path()
-            .join(format!("batch-{:06}.json.zst", self.batch_index));
+            .join(format!("batch-{:06}.postcard.zst", self.batch_index));
         self.batch_index += 1;
 
-        let payload = serde_json::to_vec(&files).expect("encode spilled file batch");
+        let payload = postcard::to_allocvec(&files).expect("encode spilled file batch");
         let file = File::create(path).expect("create spill batch file");
         let mut encoder = zstd::Encoder::new(file, 3).expect("create spill encoder");
         encoder
@@ -96,7 +96,7 @@ impl FileInfoSpillStore {
             let mut payload = Vec::new();
             decoder.read_to_end(&mut payload).expect("read spill batch");
             let mut batch: Vec<FileInfo> =
-                serde_json::from_slice(&payload).expect("decode spilled file batch");
+                postcard::from_bytes(&payload).expect("decode spilled file batch");
             files.append(&mut batch);
         }
         files
