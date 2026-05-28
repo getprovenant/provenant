@@ -374,7 +374,9 @@ fn prepare_license_detection_text(
         text_content
     };
     let text_content = augment_license_detection_text(path, &text_content);
-    cap_non_source_json_license_text(path, classification, text_content.as_ref()).into_owned()
+    let text_content =
+        cap_non_source_json_license_text(path, classification, text_content.as_ref()).into_owned();
+    cap_non_source_text_dump_license_text(path, classification, text_content.as_ref()).into_owned()
 }
 
 fn absolute_filesystem_path(path: &Path) -> PathBuf {
@@ -550,6 +552,27 @@ fn cap_non_source_json_license_text<'a>(
     )
 }
 
+fn cap_non_source_text_dump_license_text<'a>(
+    path: &Path,
+    classification: &FileInfoClassification,
+    text: &'a str,
+) -> Cow<'a, str> {
+    if classification.is_source
+        || classification.is_binary
+        || !classification.is_text
+        || is_json_like_text(classification, path)
+        || text.len() <= LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES
+        || !looks_like_textual_metadata_dump(path, text)
+        || has_probable_license_notice_prefix(text)
+    {
+        return Cow::Borrowed(text);
+    }
+
+    Cow::Owned(
+        truncate_at_char_boundary(text, LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES).to_string(),
+    )
+}
+
 fn has_line_rich_json_prefix(text: &str) -> bool {
     truncate_at_char_boundary(text, LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES)
         .bytes()
@@ -559,12 +582,52 @@ fn has_line_rich_json_prefix(text: &str) -> bool {
         >= LARGE_NON_SOURCE_JSON_MIN_PREFIX_LINES_TO_KEEP
 }
 
+fn has_line_rich_text_prefix(text: &str) -> bool {
+    has_line_rich_json_prefix(text)
+}
+
 fn looks_like_generated_scan_result_json(text: &str) -> bool {
     let prefix = truncate_at_char_boundary(text, LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
     prefix.contains("\"headers\"")
         && prefix.contains("\"tool_name\"")
         && (prefix.contains("Generated with ScanCode")
             || prefix.contains("Generated with ScanCode.io"))
+}
+
+fn looks_like_textual_metadata_dump(path: &Path, text: &str) -> bool {
+    if !has_line_rich_text_prefix(text) {
+        return false;
+    }
+
+    let extension_is_ildump = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("ildump"));
+    let prefix = truncate_at_char_boundary(text, LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    let ildump_signal_count = [
+        prefix.contains(".assembly extern"),
+        prefix.contains("PublicKeyToken="),
+        prefix.contains(".class public auto ansi"),
+        prefix.contains("windowsruntime"),
+        prefix.contains("runtime managed internalcall"),
+    ]
+    .into_iter()
+    .filter(|present| *present)
+    .count();
+
+    (extension_is_ildump && ildump_signal_count >= 1) || ildump_signal_count >= 2
+}
+
+fn has_probable_license_notice_prefix(text: &str) -> bool {
+    let prefix = truncate_at_char_boundary(text, LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    let lower = prefix.to_ascii_lowercase();
+    lower.contains("copyright")
+        || lower.contains("(c)")
+        || lower.contains("license")
+        || lower.contains("licensed under")
+        || lower.contains("permission is hereby granted")
+        || lower.contains("redistribution and use")
+        || lower.contains("all rights reserved")
 }
 
 fn is_json_like_text(classification: &FileInfoClassification, path: &Path) -> bool {
