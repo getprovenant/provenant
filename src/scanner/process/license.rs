@@ -832,7 +832,7 @@ fn refresh_public_detection_after_context_prune(
                 .collect::<Vec<_>>(),
         )
         .unwrap_or_default();
-    detection.identifier = None;
+    detection.identifier = String::new();
     if include_diagnostics
         && !detection
             .detection_log
@@ -879,10 +879,11 @@ fn is_unknown_reference_like_public_match(detection_match: &Match) -> bool {
     detection_match.license_expression == "unknown-license-reference"
         || detection_match.license_expression_spdx
             == "LicenseRef-scancode-unknown-license-reference"
-        || detection_match
-            .rule_identifier
-            .as_deref()
-            .is_some_and(|rule_identifier| rule_identifier.to_ascii_lowercase().contains("unknown"))
+        || (!detection_match.rule_identifier.is_empty()
+            && detection_match
+                .rule_identifier
+                .to_ascii_lowercase()
+                .contains("unknown"))
 }
 
 fn is_markdown_license_table_row(line_number: usize, source_lines: &[&str]) -> bool {
