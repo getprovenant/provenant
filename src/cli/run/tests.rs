@@ -1193,7 +1193,9 @@ fn build_collection_exclude_patterns_skips_explicit_in_tree_cache_dir() {
     fs::create_dir_all(explicit_cache_dir.join("incremental")).unwrap();
     fs::write(scan_root.join("docs").join("README.md"), "hello").unwrap();
     fs::write(
-        explicit_cache_dir.join("incremental").join("manifest.json"),
+        explicit_cache_dir
+            .join("incremental")
+            .join("manifest.postcard"),
         "cached",
     )
     .unwrap();

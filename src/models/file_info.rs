@@ -512,7 +512,7 @@ pub struct PackageData {
     pub is_private: bool,
     #[serde(default)]
     pub is_virtual: bool,
-    #[serde(default)]
+    #[serde(default, with = "super::json_value_map")]
     pub extra_data: Option<HashMap<String, serde_json::Value>>,
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
@@ -623,7 +623,7 @@ pub struct Dependency {
     pub is_pinned: Option<bool>,
     pub is_direct: Option<bool>,
     pub resolved_package: Option<Box<ResolvedPackage>>,
-    #[serde(default)]
+    #[serde(default, with = "super::json_value_map")]
     pub extra_data: Option<HashMap<String, serde_json::Value>>,
 }
 
@@ -673,7 +673,7 @@ pub struct ResolvedPackage {
     pub is_private: bool,
     #[serde(default)]
     pub is_virtual: bool,
-    #[serde(default)]
+    #[serde(default, with = "super::json_value_map")]
     pub extra_data: Option<HashMap<String, serde_json::Value>>,
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
@@ -852,6 +852,7 @@ pub struct FileReference {
     pub md5: Option<Md5Digest>,
     pub sha256: Option<Sha256Digest>,
     pub sha512: Option<Sha512Digest>,
+    #[serde(with = "super::json_value_map")]
     pub extra_data: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
@@ -922,7 +923,7 @@ pub struct Package {
     pub is_private: bool,
     #[serde(default)]
     pub is_virtual: bool,
-    #[serde(default)]
+    #[serde(default, with = "super::json_value_map")]
     pub extra_data: Option<HashMap<String, serde_json::Value>>,
     pub repository_homepage_url: Option<String>,
     pub repository_download_url: Option<String>,
@@ -1390,7 +1391,7 @@ pub struct TopLevelDependency {
     pub is_pinned: Option<bool>,
     pub is_direct: Option<bool>,
     pub resolved_package: Option<Box<ResolvedPackage>>,
-    #[serde(default)]
+    #[serde(default, with = "super::json_value_map")]
     pub extra_data: Option<HashMap<String, serde_json::Value>>,
     /// Unique identifier for this dependency instance (PURL with UUID qualifier).
     pub dependency_uid: DependencyUid,

@@ -6,6 +6,7 @@ mod dependency_uid;
 mod diagnostic;
 mod digest;
 pub(crate) mod file_info;
+mod json_value_map;
 mod line_number;
 mod match_score;
 mod output;
