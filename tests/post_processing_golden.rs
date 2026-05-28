@@ -13,6 +13,7 @@ mod tests {
     use tempfile::tempdir;
 
     use provenant::models::FileType;
+    use provenant::output_schema::OutputFileType;
     use provenant::post_processing::golden_helpers::{
         FixtureOutputOptions, assert_classify_fixture_matches_expected,
         assert_facet_fixture_matches_expected, assert_file_info_fixture_matches_expected,
@@ -194,7 +195,7 @@ mod tests {
                 .into_iter()
                 .map(|file| serde_json::json!({
                     "path": file.path,
-                    "type": file.file_type,
+                    "type": OutputFileType::from(&file.file_type),
                     "is_generated": file.is_generated,
                     "scan_errors": file.scan_diagnostics.iter().map(|d| d.message.clone()).collect::<Vec<_>>(),                }))
                 .collect::<Vec<_>>()
@@ -274,7 +275,7 @@ Copyright - split out libs\0\xff",
                 .filter(|file| file.file_type == FileType::File)
                 .map(|file| json!({
                     "path": file.path,
-                    "type": file.file_type,
+                    "type": OutputFileType::from(&file.file_type),
                     "authors": sorted(file.authors.into_iter().map(|author| author.author).collect::<Vec<_>>()),
                     "emails": sorted(file.emails.into_iter().map(|email| email.email).collect::<Vec<_>>()),
                     "urls": sorted(file.urls.into_iter().map(|url| url.url).collect::<Vec<_>>()),
