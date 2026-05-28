@@ -3,8 +3,10 @@
 
 use super::{
     LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES, cap_non_source_json_license_text,
-    has_line_rich_json_prefix, maybe_record_processing_timeout, merge_parse_results, process_file,
+    cap_non_source_text_dump_license_text, has_line_rich_json_prefix,
+    maybe_record_processing_timeout, merge_parse_results, process_file,
 };
+use crate::license_detection::LicenseDetectionEngine;
 use crate::models::DatasourceId;
 use crate::models::{DiagnosticSeverity, PackageData, PackageType, ScanDiagnostic};
 use crate::parsers::ParsePackagesResult;
@@ -13,8 +15,13 @@ use crate::scanner::{LicenseScanOptions, TextDetectionOptions};
 use crate::utils::file::FileInfoClassification;
 use std::fs;
 use std::path::Path;
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 use tempfile::tempdir;
+
+static TEST_LICENSE_ENGINE: LazyLock<Arc<LicenseDetectionEngine>> = LazyLock::new(|| {
+    Arc::new(LicenseDetectionEngine::from_embedded().expect("embedded engine should load"))
+});
 
 #[test]
 fn test_process_file_suppresses_non_actionable_pdf_extraction_failure() {
@@ -230,6 +237,110 @@ fn test_cap_non_source_json_license_text_truncates_generated_scan_result_json() 
 }
 
 #[test]
+fn test_cap_non_source_text_dump_license_text_truncates_large_ildump() {
+    let classification = FileInfoClassification {
+        mime_type: "text/plain".to_string(),
+        file_type: "UTF-8 Unicode text".to_string(),
+        programming_language: None,
+        is_binary: false,
+        is_text: true,
+        is_archive: false,
+        is_media: false,
+        is_source: false,
+        is_script: false,
+    };
+    let line = ".assembly extern mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\n.class public auto ansi import windowsruntime Foo\n";
+    let large_dump = line.repeat(2_000);
+
+    let capped = cap_non_source_text_dump_license_text(
+        Path::new("Windows.ildump"),
+        &classification,
+        &large_dump,
+    );
+
+    assert!(large_dump.len() > LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    assert!(capped.len() <= LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    assert!(capped.len() < large_dump.len());
+}
+
+#[test]
+fn test_cap_non_source_text_dump_license_text_truncates_dump_like_text_without_ildump_extension() {
+    let classification = FileInfoClassification {
+        mime_type: "text/plain".to_string(),
+        file_type: "UTF-8 Unicode text".to_string(),
+        programming_language: None,
+        is_binary: false,
+        is_text: true,
+        is_archive: false,
+        is_media: false,
+        is_source: false,
+        is_script: false,
+    };
+    let line = ".assembly extern mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\n.class public auto ansi import windowsruntime Foo\n";
+    let large_dump = line.repeat(2_000);
+
+    let capped = cap_non_source_text_dump_license_text(
+        Path::new("Windows.txt"),
+        &classification,
+        &large_dump,
+    );
+
+    assert!(large_dump.len() > LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    assert!(capped.len() <= LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    assert!(capped.len() < large_dump.len());
+}
+
+#[test]
+fn test_cap_non_source_text_dump_license_text_keeps_license_rich_text() {
+    let classification = FileInfoClassification {
+        mime_type: "text/plain".to_string(),
+        file_type: "UTF-8 Unicode text".to_string(),
+        programming_language: None,
+        is_binary: false,
+        is_text: true,
+        is_archive: false,
+        is_media: false,
+        is_source: false,
+        is_script: false,
+    };
+    let line = "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction.\n";
+    let large_notice = line.repeat(2_000);
+
+    let capped = cap_non_source_text_dump_license_text(
+        Path::new("Windows.ildump"),
+        &classification,
+        &large_notice,
+    );
+
+    assert!(large_notice.len() > LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    assert_eq!(capped.as_ref(), large_notice);
+}
+
+#[test]
+fn test_cap_non_source_text_dump_license_text_keeps_generic_large_plain_text() {
+    let classification = FileInfoClassification {
+        mime_type: "text/plain".to_string(),
+        file_type: "UTF-8 Unicode text".to_string(),
+        programming_language: None,
+        is_binary: false,
+        is_text: true,
+        is_archive: false,
+        is_media: false,
+        is_source: false,
+        is_script: false,
+    };
+    let line =
+        "This is ordinary large plain text without metadata dump markers or license notices.\n";
+    let large_text = line.repeat(4_000);
+
+    let capped =
+        cap_non_source_text_dump_license_text(Path::new("large.txt"), &classification, &large_text);
+
+    assert!(large_text.len() > LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
+    assert_eq!(capped.as_ref(), large_text);
+}
+
+#[test]
 fn test_has_line_rich_json_prefix_detects_multiline_json() {
     let entries = (0..512)
         .map(|index| format!("  {{\"id\":{index}}}"))
@@ -343,5 +454,52 @@ fn test_process_file_detects_versioned_project_banner_on_minified_js() {
             .any(|h| h.holder.contains("jquery.org/license")),
         "holders: {:?}",
         file_info.holders
+    );
+}
+
+#[test]
+fn test_process_file_scans_large_sourcemap_with_timeout_budget() {
+    let dir = tempdir().expect("tempdir");
+    let path = dir.path().join("scalajs-runtime-sourcemap.js.map");
+    let mit_notice = "Permission is hereby granted, free of charge, to any person obtaining a copy\\nof this software and associated documentation files (the \"Software\"), to deal\\nin the Software without restriction, including without limitation the rights\\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\\ncopies of the Software, and to permit persons to whom the Software is\\nfurnished to do so, subject to the following conditions:\\n\\nThe above copyright notice and this permission notice shall be included in all\\ncopies or substantial portions of the Software.\\n\\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\\nSOFTWARE.";
+    let content = format!(
+        "{{\"version\":3,\"file\":\"scalajs-runtime.js\",\"mappings\":\"{}\",\"sourcesContent\":[\"{}\"]}}",
+        "AACA;".repeat(50_000),
+        mit_notice,
+    );
+    fs::write(&path, content).expect("write sourcemap fixture");
+    let metadata = fs::metadata(&path).expect("metadata");
+    let progress = ScanProgress::new(ProgressMode::Quiet);
+    let text_options = TextDetectionOptions {
+        detect_copyrights: false,
+        timeout_seconds: 1.0,
+        ..TextDetectionOptions::default()
+    };
+
+    let file_info = process_file(
+        &path,
+        &metadata,
+        &progress,
+        Some(TEST_LICENSE_ENGINE.clone()),
+        LicenseScanOptions::default(),
+        &text_options,
+    );
+
+    assert!(
+        file_info.scan_errors.is_empty(),
+        "errors: {:?}",
+        file_info.scan_errors
+    );
+    assert!(
+        file_info
+            .license_detections
+            .iter()
+            .any(|d| d.license_expression.contains("mit")),
+        "license detections: {:?}",
+        file_info
+            .license_detections
+            .iter()
+            .map(|d| d.license_expression.as_str())
+            .collect::<Vec<_>>()
     );
 }

@@ -447,6 +447,18 @@ where
             continue;
         }
 
+        if is_large_sourcemap_wrapper_metadata_line(line) {
+            if in_copyright > 0 {
+                in_copyright -= 1;
+                if in_copyright == 0 && !candidates.is_empty() {
+                    groups.push(std::mem::take(&mut candidates));
+                    previous_chars = None;
+                    prev_was_single_line_markup_comment = false;
+                }
+            }
+            continue;
+        }
+
         if lower_trim.starts_with("format-specification:") || lower_trim.starts_with("files:") {
             debian_like = true;
         }
@@ -860,6 +872,25 @@ fn is_obvious_code_line(line: &str) -> bool {
     matches!(stripped, "{" | "}" | ";")
 }
 
+fn is_large_sourcemap_wrapper_metadata_line(line: &str) -> bool {
+    if line.len() <= MAX_LINE_LENGTH {
+        return false;
+    }
+
+    let trimmed = line.trim_start();
+    const PREFIXES: &[&str] = &[
+        "\"mappings\":",
+        "\"sources\":[",
+        "\"sources\": [",
+        "\"names\":[",
+        "\"names\": [",
+        "\"sourcesContent\":[",
+        "\"sourcesContent\": [",
+    ];
+
+    PREFIXES.iter().any(|prefix| trimmed.starts_with(prefix))
+}
+
 fn is_standalone_comment_line(line: &str) -> bool {
     let t = line.trim();
     if t.is_empty() {
@@ -1225,6 +1256,30 @@ mod tests {
             groups[0][0].1,
             "(c) Example Corp. and affiliates. Confidential and proprietary."
         );
+    }
+
+    #[test]
+    fn test_collect_skips_large_sourcemap_wrapper_metadata_lines() {
+        let lines = vec![
+            (1, "var testSourceMap = {".to_string()),
+            (2, format!("\"mappings\":\"{}\"", "AACA;".repeat(5_000))),
+            (
+                3,
+                format!(
+                    "\"sources\":[{}]",
+                    "\"file:///tmp/Foo.scala\",".repeat(1_000)
+                ),
+            ),
+            (
+                4,
+                format!("\"names\":[{}]", "\"java.lang.Object\",".repeat(1_000)),
+            ),
+            (5, "};".to_string()),
+        ];
+
+        let groups = collect_candidate_lines(lines);
+
+        assert!(groups.is_empty(), "groups: {groups:?}");
     }
 
     #[test]
