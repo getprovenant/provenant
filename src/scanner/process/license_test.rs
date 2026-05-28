@@ -164,12 +164,12 @@ fn make_public_match(
         from_file: Some("README.md".to_string()),
         start_line: LineNumber::new(start_line).unwrap(),
         end_line: LineNumber::new(end_line).unwrap(),
-        matcher: Some("2-aho".to_string()),
+        matcher: MatcherKind::Aho,
         score: MatchScore::MAX,
         matched_length: Some(matched_length),
         match_coverage: Some(100.0),
         rule_relevance: Some(100),
-        rule_identifier: Some(rule_identifier.to_string()),
+        rule_identifier: rule_identifier.to_string(),
         rule_url: None,
         matched_text: None,
         referenced_filenames: None,
@@ -187,7 +187,7 @@ fn make_public_detection_with_matches(
         license_expression_spdx: expr_spdx.to_string(),
         matches,
         detection_log: Vec::new(),
-        identifier: None,
+        identifier: String::new(),
     }
 }
 
@@ -707,8 +707,8 @@ fn test_prune_contextual_short_reference_matches_keeps_dual_license_choice_but_d
     assert_eq!(detections[0].license_expression_spdx, "Apache-2.0 OR MIT");
     assert_eq!(detections[0].matches.len(), 1);
     assert_eq!(
-        detections[0].matches[0].rule_identifier.as_deref(),
-        Some("apache-2.0_or_mit_13.RULE")
+        detections[0].matches[0].rule_identifier.as_str(),
+        "apache-2.0_or_mit_13.RULE"
     );
 }
 
@@ -744,8 +744,8 @@ fn test_prune_contextual_short_reference_matches_drops_unlike_parenthetical_comp
     assert_eq!(detections[0].license_expression_spdx, "Apache-2.0 OR MIT");
     assert_eq!(detections[0].matches.len(), 1);
     assert_eq!(
-        detections[0].matches[0].rule_identifier.as_deref(),
-        Some("apache-2.0_or_mit_44.RULE")
+        detections[0].matches[0].rule_identifier.as_str(),
+        "apache-2.0_or_mit_44.RULE"
     );
     assert!(clues.is_empty());
 }
