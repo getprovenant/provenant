@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::models::PackageData;
+use crate::output_schema::OutputPackageData;
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
@@ -18,7 +19,8 @@ pub fn compare_package_data_parser_only(
 
     let expected_json = unwrap_expected_parser_package(&expected_value)?;
 
-    let actual_json = serde_json::to_value(actual)
+    let output: OutputPackageData = actual.into();
+    let actual_json = serde_json::to_value(&output)
         .map_err(|e| format!("Failed to serialize actual PackageData: {}", e))?;
 
     compare_json_values_parser_only(&actual_json, expected_json, "")
@@ -36,7 +38,8 @@ pub fn compare_package_data_collection_parser_only(
 
     let expected_json = unwrap_expected_parser_package_collection(&expected_value)?;
 
-    let actual_json = serde_json::to_value(actual)
+    let output: Vec<OutputPackageData> = actual.iter().map(|pd| pd.into()).collect();
+    let actual_json = serde_json::to_value(&output)
         .map_err(|e| format!("Failed to serialize actual PackageData collection: {}", e))?;
 
     compare_json_values_parser_only(&actual_json, expected_json, "")

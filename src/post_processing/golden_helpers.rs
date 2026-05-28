@@ -19,6 +19,7 @@ use crate::assembly;
 use crate::cache::{DEFAULT_CACHE_DIR_NAME, build_collection_exclude_patterns};
 use crate::license_detection::LicenseDetectionEngine;
 use crate::models::FileInfo;
+use crate::output_schema::OutputFileInfo;
 use crate::progress::{ProgressMode, ScanProgress};
 use crate::scan_result_shaping::normalize_paths;
 use crate::scanner::{LicenseScanOptions, TextDetectionOptions, collect_paths, process_collected};
@@ -1150,7 +1151,8 @@ pub fn assert_classify_fixture_matches_expected(
     let assembly_result = assembly::assemble(&mut files);
     classify_key_files(&mut files, &assembly_result.packages);
 
-    let actual = project_classify_fields(&json!({ "files": files }));
+    let output_files: Vec<OutputFileInfo> = files.iter().map(OutputFileInfo::from).collect();
+    let actual = project_classify_fields(&json!({ "files": output_files }));
     let expected: Value = serde_json::from_str(
         &fs::read_to_string(expected_file).expect("expected classify fixture should be readable"),
     )
@@ -1227,7 +1229,8 @@ pub fn assert_file_info_fixture_matches_expected(
     let assembly_result = assembly::assemble(&mut files);
     classify_key_files(&mut files, &assembly_result.packages);
 
-    let actual = project_file_info_fields(&json!({ "files": files }));
+    let output_files: Vec<OutputFileInfo> = files.iter().map(OutputFileInfo::from).collect();
+    let actual = project_file_info_fields(&json!({ "files": output_files }));
     let expected: Value = serde_json::from_str(
         &fs::read_to_string(expected_file).expect("expected file-info fixture should be readable"),
     )
