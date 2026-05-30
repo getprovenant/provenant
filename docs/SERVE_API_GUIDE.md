@@ -256,7 +256,7 @@ The request body currently supports scan options that map onto the shared Proven
 - `detect_generated`
 - `include` / `exclude`
 - `strip_root` / `full_root`
-- `license_text`, `license_text_diagnostics`, `license_diagnostics`, `unknown_licenses`, `license_score`
+- `license_text`, `license_text_diagnostics`, `license_diagnostics`, `unknown_licenses`, `no_sequence_matching`, `license_score`
 - `only_findings`, `mark_source`
 - `classify`, `summary`, `license_clarity_score`, `license_references`
 - `tallies`, `tallies_key_files`, `tallies_with_details`, `facets`, `tallies_by_facet`

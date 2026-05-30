@@ -12,13 +12,27 @@ pub struct ProcessResult {
     pub excluded_count: usize,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct LicenseScanOptions {
     pub include_text: bool,
     pub include_text_diagnostics: bool,
     pub include_diagnostics: bool,
     pub unknown_licenses: bool,
+    pub enable_sequence_matching: bool,
     pub min_score: u8,
+}
+
+impl Default for LicenseScanOptions {
+    fn default() -> Self {
+        Self {
+            include_text: false,
+            include_text_diagnostics: false,
+            include_diagnostics: false,
+            unknown_licenses: false,
+            enable_sequence_matching: true,
+            min_score: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +95,7 @@ pub fn scan_options_fingerprint(
     };
 
     format!(
-        "tool_version={};info={};packages={};app_packages={};system_packages={};compiled_packages={};copyrights={};generated={};emails={};urls={};max_emails={};max_urls={};timeout={:.6};license_enabled={};rules_count={};first_rule_id={};last_rule_id={};license_text={};license_text_diagnostics={};license_diagnostics={};unknown_licenses={};license_score={}",
+        "tool_version={};info={};packages={};app_packages={};system_packages={};compiled_packages={};copyrights={};generated={};emails={};urls={};max_emails={};max_urls={};timeout={:.6};license_enabled={};rules_count={};first_rule_id={};last_rule_id={};license_text={};license_text_diagnostics={};license_diagnostics={};unknown_licenses={};sequence_matching={};license_score={}",
         crate::version::BUILD_VERSION,
         text_options.collect_info,
         text_options.detect_packages,
@@ -103,6 +117,7 @@ pub fn scan_options_fingerprint(
         license_options.include_text_diagnostics,
         license_options.include_diagnostics,
         license_options.unknown_licenses,
+        license_options.enable_sequence_matching,
         license_options.min_score,
     )
 }
@@ -126,7 +141,7 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::cache::build_collection_exclude_patterns;
-    use crate::license_detection::LicenseDetectionEngine;
+    use crate::license_detection::{LicenseDetectionEngine, MatcherKind};
     use crate::models::{DatasourceId, FileType, PackageType as FilePackageType};
     use crate::progress::{ProgressMode, ScanProgress};
 
@@ -290,6 +305,99 @@ mod tests {
                 entry.file_type == FileType::File && entry.path == file_path.to_string_lossy()
             })
             .expect("scanned file entry")
+    }
+
+    fn scan_single_file_with_license_engine_and_options(
+        file_name: &str,
+        content: &str,
+        options: &TextDetectionOptions,
+        license_options: LicenseScanOptions,
+    ) -> crate::models::FileInfo {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let file_path = temp_dir.path().join(file_name);
+        fs::write(&file_path, content).expect("write test file");
+
+        let progress = Arc::new(ScanProgress::new(ProgressMode::Quiet));
+        let collected = collect_paths(temp_dir.path(), 0, &[]);
+        let engine =
+            Arc::new(LicenseDetectionEngine::from_embedded().expect("initialize license engine"));
+        let result =
+            process_collected(&collected, progress, Some(engine), license_options, options);
+
+        result
+            .files
+            .into_iter()
+            .find(|entry| {
+                entry.file_type == FileType::File && entry.path == file_path.to_string_lossy()
+            })
+            .expect("scanned file entry")
+    }
+
+    #[test]
+    fn scanner_can_disable_sequence_matching_for_partial_license_hits() {
+        let partial_mit = r#"Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software."#;
+
+        let with_sequence = scan_single_file_with_license_engine_and_options(
+            "partial-license.txt",
+            partial_mit,
+            &TextDetectionOptions::default(),
+            LicenseScanOptions::default(),
+        );
+        let without_sequence = scan_single_file_with_license_engine_and_options(
+            "partial-license.txt",
+            partial_mit,
+            &TextDetectionOptions::default(),
+            LicenseScanOptions {
+                enable_sequence_matching: false,
+                ..LicenseScanOptions::default()
+            },
+        );
+
+        assert!(
+            !with_sequence.license_detections.is_empty(),
+            "partial MIT snippet should be detected with sequence matching enabled"
+        );
+        assert!(
+            without_sequence
+                .license_detections
+                .iter()
+                .all(|detection| detection
+                    .matches
+                    .iter()
+                    .all(|m| m.matcher != MatcherKind::Seq)),
+            "sequence matching disabled should remove all seq detections; detections={:?} clues={:?}",
+            without_sequence.license_detections,
+            without_sequence.license_clues,
+        );
+    }
+
+    #[test]
+    fn scanner_does_not_emit_cc_pdm_false_positive_clue_for_issue4859_snippet() {
+        let text =
+            std::fs::read_to_string("testdata/license-detection-regressions/issue4859_exact.html")
+                .expect("issue4859 fixture should be readable");
+
+        let scanned = scan_single_file_with_license_engine_and_options(
+            "issue4859_exact.html",
+            &text,
+            &TextDetectionOptions::default(),
+            LicenseScanOptions::default(),
+        );
+
+        assert!(
+            scanned.license_detections.is_empty(),
+            "issue4859 snippet should not produce a concrete detection: {:?}",
+            scanned.license_detections
+        );
+        assert!(
+            scanned.license_clues.is_empty(),
+            "issue4859 snippet should not surface a low-quality cc-pdm clue: {:?}",
+            scanned.license_clues
+        );
     }
 
     #[test]

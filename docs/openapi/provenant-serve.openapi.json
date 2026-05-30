@@ -500,6 +500,7 @@
               "license_text_diagnostics": false,
               "license_diagnostics": false,
               "unknown_licenses": false,
+              "no_sequence_matching": false,
               "license_score": 0,
               "only_findings": false,
               "mark_source": false,
@@ -674,6 +675,10 @@
                 "default": false
               },
               "unknown_licenses": {
+                "type": "boolean",
+                "default": false
+              },
+              "no_sequence_matching": {
                 "type": "boolean",
                 "default": false
               },
@@ -984,6 +989,10 @@
             "default": false
           },
           "unknown_licenses": {
+            "type": "boolean",
+            "default": false
+          },
+          "no_sequence_matching": {
             "type": "boolean",
             "default": false
           },

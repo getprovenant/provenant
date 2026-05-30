@@ -53,6 +53,7 @@ impl From<ServeScanOptions> for ScanOptions {
             license_text_diagnostics: options.license_text_diagnostics,
             license_diagnostics: options.license_diagnostics,
             unknown_licenses: options.unknown_licenses,
+            no_sequence_matching: options.no_sequence_matching,
             license_score: options.license_score,
             only_findings: options.only_findings,
             mark_source: options.mark_source,

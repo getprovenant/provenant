@@ -879,6 +879,7 @@ fn test_convert_detection_to_model_includes_diagnostics_when_enabled() {
             include_text_diagnostics: true,
             include_diagnostics: true,
             unknown_licenses: false,
+            enable_sequence_matching: true,
             min_score: 0,
         },
         text,

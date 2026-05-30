@@ -57,6 +57,7 @@ impl ScanPlan {
                 include_text_diagnostics: request.license_text_diagnostics,
                 include_diagnostics: request.license_diagnostics,
                 unknown_licenses: request.unknown_licenses,
+                enable_sequence_matching: !request.no_sequence_matching,
                 min_score: request.license_score,
             },
         }
@@ -180,6 +181,26 @@ mod tests {
             cli.scan_args().expect("scan args should be present"),
         );
         assert_eq!(configured_scan_names(&request), "licenses, packages");
+    }
+
+    #[test]
+    fn scan_plan_propagates_no_sequence_matching_into_license_options() {
+        let cli = crate::cli::Cli::try_parse_from([
+            "provenant",
+            "--json-pp",
+            "scan.json",
+            "--license",
+            "--no-sequence-matching",
+            "sample-dir",
+        ])
+        .unwrap();
+
+        let request = crate::app::request::ScanRequest::from(
+            cli.scan_args().expect("scan args should be present"),
+        );
+        let plan = ScanPlan::from_request(&request);
+
+        assert!(!plan.license_options.enable_sequence_matching);
     }
 
     #[test]

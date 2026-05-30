@@ -55,6 +55,7 @@ pub(crate) struct ScanRequest {
     pub(crate) license_text_diagnostics: bool,
     pub(crate) license_diagnostics: bool,
     pub(crate) unknown_licenses: bool,
+    pub(crate) no_sequence_matching: bool,
     pub(crate) license_score: u8,
     pub(crate) license_url_template: String,
     pub(crate) filter_clues: bool,

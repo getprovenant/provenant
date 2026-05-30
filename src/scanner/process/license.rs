@@ -5,6 +5,7 @@ use crate::license_detection::LicenseDetection as InternalLicenseDetection;
 use crate::license_detection::LicenseDetectionEngine;
 use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::PositionSet;
+use crate::license_detection::detection::attach_source_path_to_detections;
 use crate::license_detection::expression::parse_expression;
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::models::LicenseMatch as InternalLicenseMatch;
@@ -57,22 +58,28 @@ pub(super) fn extract_license_information(
 
     if deadline.is_some() {
         let detection_result = if license_options.min_score == 0 {
-            engine.detect_with_kind_and_source_with_deadline(
+            engine.detect_with_kind_and_source_with_deadline_and_options(
                 &text_content,
                 license_options.unknown_licenses,
                 from_binary_strings,
                 &path.to_string_lossy(),
+                license_options.enable_sequence_matching,
                 deadline,
             )
         } else {
-            engine.detect_with_kind_and_source_with_score_and_deadline(
-                &text_content,
-                license_options.unknown_licenses,
-                from_binary_strings,
-                &path.to_string_lossy(),
-                f32::from(license_options.min_score),
-                deadline,
-            )
+            engine
+                .detect_with_kind_with_score_and_deadline_with_options(
+                    &text_content,
+                    license_options.unknown_licenses,
+                    from_binary_strings,
+                    license_options.enable_sequence_matching,
+                    f32::from(license_options.min_score),
+                    deadline,
+                )
+                .map(|mut detections| {
+                    attach_source_path_to_detections(&mut detections, &path.to_string_lossy());
+                    detections
+                })
         };
 
         match detection_result {
@@ -104,18 +111,20 @@ pub(super) fn extract_license_information(
         }
     } else {
         let detection_result = if license_options.min_score == 0 {
-            engine.detect_with_kind_and_source(
+            engine.detect_with_kind_and_source_with_options(
                 &text_content,
                 license_options.unknown_licenses,
                 from_binary_strings,
                 &path.to_string_lossy(),
+                license_options.enable_sequence_matching,
             )
         } else {
-            engine.detect_with_kind_and_source_with_score(
+            engine.detect_with_kind_and_source_with_score_options(
                 &text_content,
                 license_options.unknown_licenses,
                 from_binary_strings,
                 &path.to_string_lossy(),
+                license_options.enable_sequence_matching,
                 f32::from(license_options.min_score),
             )
         };

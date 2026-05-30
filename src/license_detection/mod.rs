@@ -411,8 +411,13 @@ fn collect_whole_query_exact_followup_matches(
     query: &mut Query<'_>,
     matched_qspans: &mut Vec<models::PositionSpan>,
     whole_run: &query::QueryRun<'_>,
+    enable_sequence_matching: bool,
     deadline: Option<Instant>,
 ) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
+    if !enable_sequence_matching {
+        return Ok(Vec::new());
+    }
+
     let mut seq_all_matches = Vec::new();
 
     if whole_run.is_matchable(false, matched_qspans) {
@@ -736,10 +741,11 @@ impl LicenseDetectionEngine {
         unknown_licenses: bool,
         binary_derived: bool,
     ) -> Result<Vec<LicenseDetection>> {
-        self.detect_with_kind_with_score_and_deadline(
+        self.detect_with_kind_with_score_and_deadline_with_options(
             text,
             unknown_licenses,
             binary_derived,
+            true,
             0.0,
             None,
         )
@@ -753,21 +759,23 @@ impl LicenseDetectionEngine {
         binary_derived: bool,
         min_score: f32,
     ) -> Result<Vec<LicenseDetection>> {
-        self.detect_with_kind_with_score_and_deadline(
+        self.detect_with_kind_with_score_and_deadline_with_options(
             text,
             unknown_licenses,
             binary_derived,
+            true,
             min_score,
             None,
         )
         .map_err(Into::into)
     }
 
-    pub(crate) fn detect_with_kind_with_score_and_deadline(
+    pub(crate) fn detect_with_kind_with_score_and_deadline_with_options(
         &self,
         text: &str,
         unknown_licenses: bool,
         binary_derived: bool,
+        enable_sequence_matching: bool,
         min_score: f32,
         deadline: Option<Instant>,
     ) -> Result<Vec<LicenseDetection>, LicenseDetectionError> {
@@ -883,18 +891,21 @@ impl LicenseDetectionEngine {
                 &mut query,
                 &mut matched_qspans,
                 &whole_query_run,
+                enable_sequence_matching,
                 deadline,
             )?;
             all_matches.extend(whole_query_followup);
 
-            let merged_seq = collect_regular_seq_matches(
-                &self.index,
-                &query,
-                &matched_qspans,
-                &candidate_contained_matches,
-                deadline,
-            )?;
-            all_matches.extend(merged_seq);
+            if enable_sequence_matching {
+                let merged_seq = collect_regular_seq_matches(
+                    &self.index,
+                    &query,
+                    &matched_qspans,
+                    &candidate_contained_matches,
+                    deadline,
+                )?;
+                all_matches.extend(merged_seq);
+            }
         }
 
         // Step 1: Initial refine WITHOUT false positive filtering
@@ -963,28 +974,31 @@ impl LicenseDetectionEngine {
         binary_derived: bool,
         source_path: &str,
     ) -> Result<Vec<LicenseDetection>> {
-        self.detect_with_kind_and_source_with_deadline(
+        self.detect_with_kind_and_source_with_deadline_and_options(
             text,
             unknown_licenses,
             binary_derived,
             source_path,
+            true,
             None,
         )
         .map_err(Into::into)
     }
 
-    pub(crate) fn detect_with_kind_and_source_with_deadline(
+    pub(crate) fn detect_with_kind_and_source_with_deadline_and_options(
         &self,
         text: &str,
         unknown_licenses: bool,
         binary_derived: bool,
         source_path: &str,
+        enable_sequence_matching: bool,
         deadline: Option<Instant>,
     ) -> Result<Vec<LicenseDetection>, LicenseDetectionError> {
-        let mut detections = self.detect_with_kind_with_score_and_deadline(
+        let mut detections = self.detect_with_kind_with_score_and_deadline_with_options(
             text,
             unknown_licenses,
             binary_derived,
+            enable_sequence_matching,
             0.0,
             deadline,
         )?;
@@ -1000,27 +1014,50 @@ impl LicenseDetectionEngine {
         source_path: &str,
         min_score: f32,
     ) -> Result<Vec<LicenseDetection>> {
-        let mut detections =
-            self.detect_with_kind_with_score(text, unknown_licenses, binary_derived, min_score)?;
-        attach_source_path_to_detections(&mut detections, source_path);
-        Ok(detections)
+        self.detect_with_kind_and_source_with_score_options(
+            text,
+            unknown_licenses,
+            binary_derived,
+            source_path,
+            true,
+            min_score,
+        )
     }
 
-    pub(crate) fn detect_with_kind_and_source_with_score_and_deadline(
+    pub fn detect_with_kind_and_source_with_options(
         &self,
         text: &str,
         unknown_licenses: bool,
         binary_derived: bool,
         source_path: &str,
-        min_score: f32,
-        deadline: Option<Instant>,
-    ) -> Result<Vec<LicenseDetection>, LicenseDetectionError> {
-        let mut detections = self.detect_with_kind_with_score_and_deadline(
+        enable_sequence_matching: bool,
+    ) -> Result<Vec<LicenseDetection>> {
+        self.detect_with_kind_and_source_with_score_options(
             text,
             unknown_licenses,
             binary_derived,
+            source_path,
+            enable_sequence_matching,
+            0.0,
+        )
+    }
+
+    pub fn detect_with_kind_and_source_with_score_options(
+        &self,
+        text: &str,
+        unknown_licenses: bool,
+        binary_derived: bool,
+        source_path: &str,
+        enable_sequence_matching: bool,
+        min_score: f32,
+    ) -> Result<Vec<LicenseDetection>> {
+        let mut detections = self.detect_with_kind_with_score_and_deadline_with_options(
+            text,
+            unknown_licenses,
+            binary_derived,
+            enable_sequence_matching,
             min_score,
-            deadline,
+            None,
         )?;
         attach_source_path_to_detections(&mut detections, source_path);
         Ok(detections)
@@ -1099,6 +1136,7 @@ impl LicenseDetectionEngine {
                 &mut query,
                 &mut matched_qspans,
                 &whole_query_run,
+                true,
                 None,
             )?;
             all_matches.extend(whole_query_followup);
