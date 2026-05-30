@@ -151,6 +151,9 @@ pub struct FileInfo {
     pub is_key_file: bool,
     #[builder(default)]
     #[serde(default)]
+    pub is_referenced: bool,
+    #[builder(default)]
+    #[serde(default)]
     pub is_community: bool,
     #[builder(default)]
     #[serde(default)]
@@ -199,6 +202,7 @@ impl FileInfoBuilder {
         file_info.files_count = self.files_count.flatten();
         file_info.dirs_count = self.dirs_count.flatten();
         file_info.size_count = self.size_count.flatten();
+        file_info.is_referenced = self.is_referenced.unwrap_or_default();
         Ok(file_info)
     }
 }
@@ -310,6 +314,7 @@ impl FileInfo {
             is_readme: false,
             is_top_level: false,
             is_key_file: false,
+            is_referenced: false,
             is_community: false,
             facets: vec![],
             tallies: None,

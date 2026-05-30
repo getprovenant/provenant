@@ -85,6 +85,8 @@ pub struct OutputFileInfo {
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_key_file: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    pub is_referenced: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub is_community: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub facets: Vec<String>,
@@ -253,6 +255,9 @@ impl Serialize for OutputFileInfo {
         if self.is_key_file {
             insert_json(&mut map, "is_key_file", self.is_key_file)?;
         }
+        if self.is_referenced {
+            insert_json(&mut map, "is_referenced", self.is_referenced)?;
+        }
         if self.is_community {
             insert_json(&mut map, "is_community", self.is_community)?;
         }
@@ -345,6 +350,7 @@ impl OutputFileInfo {
             is_readme: value.is_readme,
             is_top_level: value.is_top_level,
             is_key_file: value.is_key_file,
+            is_referenced: value.is_referenced,
             is_community: value.is_community,
             facets: value.facets.clone(),
             tallies: value.tallies.as_ref().map(OutputTallies::from),
@@ -466,6 +472,7 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
             is_readme: value.is_readme,
             is_top_level: value.is_top_level,
             is_key_file: value.is_key_file,
+            is_referenced: value.is_referenced,
             is_community: value.is_community,
             facets: value.facets.clone(),
             tallies: value
@@ -482,6 +489,7 @@ mod tests {
     use super::OutputFileInfo;
     use crate::output_schema::OutputFileType;
     use crate::output_schema::license_detection::OutputLicenseDetection;
+    use serde_json::json;
 
     fn base_output_file_info() -> OutputFileInfo {
         OutputFileInfo {
@@ -528,6 +536,7 @@ mod tests {
             is_readme: false,
             is_top_level: false,
             is_key_file: false,
+            is_referenced: false,
             is_community: false,
             facets: Vec::new(),
             tallies: None,
@@ -567,5 +576,35 @@ mod tests {
         file_info.license_expression = Some("MIT\" or malformed".to_string());
 
         assert_eq!(file_info.detected_license_expression_spdx(), None);
+    }
+
+    #[test]
+    fn serialize_includes_is_referenced_only_when_true() {
+        let mut file_info = base_output_file_info();
+        let without_flag = serde_json::to_value(&file_info).expect("file should serialize");
+        assert_eq!(
+            without_flag,
+            json!({
+                "path": "mod.rs",
+                "type": "file",
+                "name": "mod.rs",
+                "base_name": "mod",
+                "extension": ".rs",
+                "size": 0,
+                "package_data": [],
+                "detected_license_expression_spdx": null,
+                "license_detections": [],
+                "copyrights": [],
+                "holders": [],
+                "authors": [],
+                "urls": [],
+                "for_packages": [],
+                "scan_errors": []
+            })
+        );
+
+        file_info.is_referenced = true;
+        let with_flag = serde_json::to_value(&file_info).expect("file should serialize");
+        assert_eq!(with_flag["is_referenced"], json!(true));
     }
 }

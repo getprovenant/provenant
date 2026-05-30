@@ -471,6 +471,7 @@ fn directory_output_json_file(path: &str) -> OutputFileInfo {
         is_readme: false,
         is_top_level: false,
         is_key_file: false,
+        is_referenced: false,
         is_community: false,
         facets: Vec::new(),
         tallies: None,

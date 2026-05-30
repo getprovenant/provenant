@@ -113,6 +113,7 @@ pub(super) fn process_directory(
         is_readme: false,
         is_top_level: false,
         is_key_file: false,
+        is_referenced: false,
         is_community: false,
         is_generated: None,
         facets: vec![],
