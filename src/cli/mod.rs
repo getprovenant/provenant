@@ -417,6 +417,9 @@ pub struct ScanArgs {
     #[arg(long = "unknown-licenses", requires = "license")]
     pub unknown_licenses: bool,
 
+    #[arg(long = "no-sequence-matching", requires = "license")]
+    pub no_sequence_matching: bool,
+
     #[arg(
         long = "license-score",
         default_value_t = 0,
@@ -847,6 +850,11 @@ impl ScanArgs {
         );
         push_non_default_f64_option(&mut flags, "--timeout", self.timeout, 120.0);
         push_bool_option(&mut flags, "--unknown-licenses", self.unknown_licenses);
+        push_bool_option(
+            &mut flags,
+            "--no-sequence-matching",
+            self.no_sequence_matching,
+        );
         push_bool_option(&mut flags, "--url", self.url);
         push_bool_option(&mut flags, "--verbose", self.verbose);
         push_string_option(&mut flags, "--yaml", self.output_yaml.as_ref());
@@ -906,6 +914,7 @@ impl From<&ScanArgs> for ScanRequest {
             license_text_diagnostics: cli.license_text_diagnostics,
             license_diagnostics: cli.license_diagnostics,
             unknown_licenses: cli.unknown_licenses,
+            no_sequence_matching: cli.no_sequence_matching,
             license_score: cli.license_score,
             license_url_template: cli.license_url_template.clone(),
             filter_clues: cli.filter_clues,
@@ -1880,6 +1889,21 @@ mod tests {
         assert!(parsed.unknown_licenses);
         assert_eq!(parsed.license_score, 0);
         assert_eq!(parsed.license_url_template, DEFAULT_LICENSEDB_URL_TEMPLATE);
+    }
+
+    #[test]
+    fn test_parses_no_sequence_matching_flag() {
+        let parsed = Cli::try_parse_from([
+            "provenant",
+            "--json-pp",
+            "scan.json",
+            "--license",
+            "--no-sequence-matching",
+            "samples",
+        ])
+        .expect("cli parse should succeed");
+
+        assert!(parsed.no_sequence_matching);
     }
 
     #[test]

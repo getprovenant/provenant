@@ -563,6 +563,7 @@ These are worth learning early because they change what the output means:
 - `--license-text-diagnostics` requires `--license-text`
 - `--license-diagnostics` requires `--license`
 - `--license-references` requires `--license`
+- `--no-sequence-matching` requires `--license`
 - `--license-clarity-score` requires `--classify`
 - `--mark-source` requires `--info`
 - `--custom-output <FILE>` requires `--custom-template <FILE>`

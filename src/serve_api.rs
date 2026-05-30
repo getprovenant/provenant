@@ -131,6 +131,7 @@ pub struct ServeScanOptions {
     pub license_text_diagnostics: bool,
     pub license_diagnostics: bool,
     pub unknown_licenses: bool,
+    pub no_sequence_matching: bool,
     pub license_score: u8,
     pub only_findings: bool,
     pub mark_source: bool,
