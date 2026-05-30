@@ -89,6 +89,9 @@ jobs:
       - name: Check serve OpenAPI document
         run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-serve-openapi -- --check
 
+      - name: Check output field reference document
+        run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-output-field-reference -- --check
+
       - name: Check packaged crate size
         run: ./scripts/check_crate_size.sh
 

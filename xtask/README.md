@@ -14,18 +14,19 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 
 ## Command Index
 
-| Command                      | Purpose                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `benchmark-target`           | Measure Provenant against an explicit local or remote benchmark target.                                                                     |
-| `compare-outputs`            | Compare Provenant and ScanCode raw outputs, either by running both scanners on one target or by comparing two existing JSON files directly. |
-| `update-parser-golden`       | Regenerate parser `.expected.json` fixtures from current Rust parser output.                                                                |
-| `update-copyright-golden`    | Maintain copyright golden YAML fixtures with parity-gated or Rust-owned update modes.                                                       |
-| `update-license-golden`      | Maintain license golden YAML fixtures with parity-gated or Rust-owned update modes.                                                         |
-| `validate-urls`              | Validate URLs in production docs and Rust docstrings.                                                                                       |
-| `generate-serve-openapi`     | Regenerate the checked-in OpenAPI document for `provenant serve`.                                                                           |
-| `generate-supported-formats` | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
-| `generate-benchmark-chart`   | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
-| `generate-index-artifact`    | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
+| Command                           | Purpose                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `benchmark-target`                | Measure Provenant against an explicit local or remote benchmark target.                                                                     |
+| `compare-outputs`                 | Compare Provenant and ScanCode raw outputs, either by running both scanners on one target or by comparing two existing JSON files directly. |
+| `update-parser-golden`            | Regenerate parser `.expected.json` fixtures from current Rust parser output.                                                                |
+| `update-copyright-golden`         | Maintain copyright golden YAML fixtures with parity-gated or Rust-owned update modes.                                                       |
+| `update-license-golden`           | Maintain license golden YAML fixtures with parity-gated or Rust-owned update modes.                                                         |
+| `validate-urls`                   | Validate URLs in production docs and Rust docstrings.                                                                                       |
+| `generate-output-field-reference` | Regenerate `docs/OUTPUT_FIELD_REFERENCE.md` from output-schema documentation metadata.                                                      |
+| `generate-serve-openapi`          | Regenerate the checked-in OpenAPI document for `provenant serve`.                                                                           |
+| `generate-supported-formats`      | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
+| `generate-benchmark-chart`        | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
+| `generate-index-artifact`         | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
 
 ## `benchmark-target`
 
@@ -353,6 +354,17 @@ Examples:
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin generate-supported-formats
 cargo run --manifest-path xtask/Cargo.toml --bin generate-supported-formats -- --check
+```
+
+## `generate-output-field-reference`
+
+`generate-output-field-reference` regenerates the checked-in public output field reference from semantic metadata stored under `src/output_schema/`.
+
+Examples:
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml --bin generate-output-field-reference
+cargo run --manifest-path xtask/Cargo.toml --bin generate-output-field-reference -- --check
 ```
 
 ## `generate-serve-openapi`
