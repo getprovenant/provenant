@@ -173,6 +173,7 @@ Implemented output formats include:
 - **[CLI Guide](docs/CLI_GUIDE.md)** - Common workflows and important flag combinations
 - **[Evaluating Provenant with ScanCode workflows](docs/EVALUATING_WITH_SCANCODE_WORKFLOWS.md)** - Compatibility notes and workflow differences for ScanCode users evaluating Provenant
 - **[Architecture](docs/ARCHITECTURE.md)** - System design, processing pipeline, and design decisions
+- **[Output Field Reference](docs/OUTPUT_FIELD_REFERENCE.md)** - Generated reference for public output records, fields, and presence rules
 - **[Supported Formats](docs/SUPPORTED_FORMATS.md)** - Generated support matrix for package ecosystems and package-adjacent detection surfaces
 - **[How to Add a Parser](docs/HOW_TO_ADD_A_PARSER.md)** - Step-by-step guide for adding new parsers
 - **[Testing Strategy](docs/TESTING_STRATEGY.md)** - Testing approach and guidelines

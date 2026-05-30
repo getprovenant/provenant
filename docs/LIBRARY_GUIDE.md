@@ -89,6 +89,8 @@ Two defaults are especially worth knowing:
 
 If you want to serialize the workflow result using Provenant's output writers, convert the internal `Output` model to the public output schema first:
 
+For explanations of public output fields and presence rules on that schema, see the [Output Field Reference](OUTPUT_FIELD_REFERENCE.md).
+
 ```rust
 use provenant::output_schema;
 use provenant::{OutputFormat, OutputWriteConfig, write_output_file};

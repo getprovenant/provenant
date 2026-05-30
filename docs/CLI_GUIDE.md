@@ -123,6 +123,8 @@ provenant scan --json-pp - --license /path/to/project
 
 That is useful when you want to inspect a quick result in the terminal or pipe it to another command.
 
+When you need to interpret JSON output fields and presence rules, see the [Output Field Reference](OUTPUT_FIELD_REFERENCE.md).
+
 ## Common Workflows
 
 The examples below are organized by the question a user is trying to answer.

@@ -10,6 +10,7 @@ This index helps you find the right documentation for your needs.
 - **[CLI_GUIDE.md](CLI_GUIDE.md)** - Command-line workflows and important flag combinations
 - **[EVALUATING_WITH_SCANCODE_WORKFLOWS.md](EVALUATING_WITH_SCANCODE_WORKFLOWS.md)** - Compatibility notes and workflow differences for ScanCode users evaluating Provenant
 - **[BENCHMARKS.md](BENCHMARKS.md)** - Maintained package-detection compare-run record, timing methodology, and Provenant-vs-ScanCode outcomes
+- **[OUTPUT_FIELD_REFERENCE.md](OUTPUT_FIELD_REFERENCE.md)** - Generated reference for public output records, fields, and presence rules
 - **[SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md)** - Generated support matrix for package and package-adjacent detection surfaces
 - **[NOTICE](../NOTICE)** - Upstream attribution and licensing details for included ScanCode-derived materials
 - **[ACKNOWLEDGEMENTS.md](../ACKNOWLEDGEMENTS.md)** - Project support and acknowledgements, including employer and infrastructure support
@@ -47,6 +48,7 @@ docs/
 ├── BENCHMARKS.md                      # Evergreen: Benchmark methodology and recorded compare runs
 ├── CLI_GUIDE.md                       # Evergreen: User-facing CLI workflows
 ├── LIBRARY_GUIDE.md                   # Evergreen: User-facing Rust embedding guide
+├── OUTPUT_FIELD_REFERENCE.md          # Generated: Public output field reference
 ├── SERVE_API_GUIDE.md                 # Evergreen: User-facing HTTP API guide
 ├── ARCHITECTURE.md                    # Evergreen: System design
 ├── LICENSE_DETECTION_ARCHITECTURE.md  # Evergreen: License-detection subsystem
@@ -82,6 +84,9 @@ docs/
 
 **...see what formats are supported**
 → [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md)
+
+**...look up an output field**
+→ [OUTPUT_FIELD_REFERENCE.md](OUTPUT_FIELD_REFERENCE.md)
 
 **...figure out which document owns a topic**
 → [README.md](../README.md), [CLI_GUIDE.md](CLI_GUIDE.md), [LIBRARY_GUIDE.md](LIBRARY_GUIDE.md), [SERVE_API_GUIDE.md](SERVE_API_GUIDE.md), [ARCHITECTURE.md](ARCHITECTURE.md), [LICENSE_DETECTION_ARCHITECTURE.md](LICENSE_DETECTION_ARCHITECTURE.md), [HOW_TO_ADD_A_PARSER.md](HOW_TO_ADD_A_PARSER.md), and [TESTING_STRATEGY.md](TESTING_STRATEGY.md) for workflow ownership
@@ -132,6 +137,7 @@ docs/
 - **SERVE_API_GUIDE.md** - Updated as the current HTTP API surface evolves
 - **EVALUATING_WITH_SCANCODE_WORKFLOWS.md** - Updated as the ScanCode workflow evaluation surface evolves
 - **BENCHMARKS.md** - Updated as maintained benchmark examples and methodology evolve
+- **OUTPUT_FIELD_REFERENCE.md** - Auto-generated and CI-checked for drift
 - **LICENSE_DETECTION_ARCHITECTURE.md** - Updated as the license-detection subsystem evolves
 - **RELEASING.md** - Updated as the release workflow changes
 - **HOW_TO_ADD_A_PARSER.md** - Updated as parser patterns change
@@ -147,6 +153,7 @@ docs/
 - **Current user-facing HTTP API guidance** lives in `README.md` and `SERVE_API_GUIDE.md`.
 - **Current architecture and maintainer contracts** live in evergreen docs such as `ARCHITECTURE.md`, `LICENSE_DETECTION_ARCHITECTURE.md`, `HOW_TO_ADD_A_PARSER.md`, and `TESTING_STRATEGY.md`.
 - **Generated support coverage** lives in `SUPPORTED_FORMATS.md`.
+- **Generated output-field semantics** live in `OUTPUT_FIELD_REFERENCE.md`.
 - **Design decisions and rationale** live in `adr/`.
 - **Current verification records and maintainer workflows** live in evergreen docs such as `BENCHMARKS.md`, `TESTING_STRATEGY.md`, and `xtask/README.md`.
 - **Future package-detection work** lives in the GitHub issue tracker under the `package-parsing` label.
@@ -158,10 +165,11 @@ When adding documentation:
 1. **Evergreen docs** go in `docs/` root or subdirectories (`adr/`, `improvements/`)
 2. **ADRs** document accepted design decisions - create new ADRs for substantive decision changes, but allow narrowly scoped maintenance notes or link fixes that prevent stale guidance
 3. **Intentional differences and improvements** get documented in `improvements/` with examples
-4. **Auto-generated docs** (like `SUPPORTED_FORMATS.md`) should not be edited manually
+4. **Auto-generated docs** (like `SUPPORTED_FORMATS.md` and `OUTPUT_FIELD_REFERENCE.md`) should not be edited manually
 
 ## Maintenance
 
 - **SUPPORTED_FORMATS.md**: Regenerate with `cargo run --manifest-path xtask/Cargo.toml --bin generate-supported-formats` and keep it passing `-- --check` in CI
+- **OUTPUT_FIELD_REFERENCE.md**: Regenerate with `cargo run --manifest-path xtask/Cargo.toml --bin generate-output-field-reference` and keep it passing `-- --check` in CI
 - **ADRs**: Add new ADRs for significant design decisions
 - **Improvements**: Document intentional differences and improvements as they're implemented
