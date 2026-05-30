@@ -192,10 +192,11 @@ fn test_engine_detect_with_deadline_times_out_when_already_expired() {
     let engine = LicenseDetectionEngine::from_test_index(create_test_index_default());
 
     let error = engine
-        .detect_with_kind_with_score_and_deadline(
+        .detect_with_kind_with_score_and_deadline_with_options(
             "Permission is hereby granted, free of charge, to any person obtaining a copy",
             false,
             false,
+            true,
             0.0,
             Some(Instant::now() - Duration::from_millis(1)),
         )
@@ -659,6 +660,221 @@ fn test_engine_does_not_detect_graphics_pipeline_library_as_gpl() {
                 d.matches
                     .iter()
                     .map(|m| m.rule_identifier.as_str())
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_engine_detects_busybox_who_header_as_gpl_2_or_later_without_gpl_1_noise() {
+    let engine = get_engine();
+
+    let text = std::fs::read_to_string("testdata/license-detection-regressions/issue4884_who.c")
+        .expect("issue4884 fixture should be readable");
+
+    let detections = engine
+        .detect_with_kind(&text, false, false)
+        .expect("Detection should succeed");
+
+    let expressions: Vec<&str> = detections
+        .iter()
+        .filter_map(|d| d.license_expression.as_deref())
+        .collect();
+
+    assert!(
+        expressions.contains(&"gpl-2.0-plus"),
+        "expected GPL-2.0-or-later detection, got: {:?}",
+        expressions
+    );
+    assert!(
+        expressions
+            .iter()
+            .all(|expr| !expr.contains("gpl-1.0-plus")),
+        "should not keep GPL-1.0 noise for BusyBox who.c header: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (m.license_expression.as_str(), m.rule_identifier.as_str()))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        expressions.iter().all(|expr| !expr.contains("lgpl-3.0")),
+        "should not keep LGPL-3.0 noise for BusyBox who.c header: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (m.license_expression.as_str(), m.rule_identifier.as_str()))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_engine_does_not_keep_copying_referenced_rule_without_copying_filename_evidence() {
+    let engine = get_engine();
+
+    let text = std::fs::read_to_string(
+        "testdata/license-detection-regressions/issue4949_xz_wrapper_extended.c",
+    )
+    .expect("issue4949 fixture should be readable");
+
+    let raw_matches = engine
+        .detect_matches_with_kind(&text, false, false)
+        .expect("Raw detection should succeed");
+    let detections = engine
+        .detect_with_kind(&text, false, false)
+        .expect("Detection should succeed");
+
+    assert!(
+        detections
+            .iter()
+            .any(|d| d.license_expression.as_deref() == Some("gpl-2.0-plus")),
+        "expected GPL-2.0-or-later detection, got detections: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (
+                        m.license_expression.as_str(),
+                        m.rule_identifier.as_str(),
+                        m.referenced_filenames.clone()
+                    ))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        raw_matches.iter().all(|m| {
+            !m.referenced_filenames
+                .as_ref()
+                .is_some_and(|names| names.iter().any(|n| n.eq_ignore_ascii_case("copying")))
+        }),
+        "COPYING-referencing GPL-2.0-or-later rules should not survive without COPYING filename evidence: {:?}",
+        raw_matches
+            .iter()
+            .map(|m| (
+                m.license_expression.as_str(),
+                m.rule_identifier.as_str(),
+                m.referenced_filenames.clone()
+            ))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_engine_detects_squashfs_notice_as_gpl_2_or_later_only() {
+    let engine = get_engine();
+
+    let text = r#"printf(\"This program is free software; you can redistribute it and/or\n\");
+printf(\"modify it under the terms of the GNU General Public License\n\");
+printf(\"as published by the Free Software Foundation; either version \" );
+printf(\"2,\n\");
+printf(\"or (at your option) any later version.\n\n\");
+printf(\"This program is distributed in the hope that it will be \" );
+printf(\"useful,\n\");
+printf(\"but WITHOUT ANY WARRANTY; without even the implied warranty of\n\");
+printf(\"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\");
+printf(\"GNU General Public License for more details.\n\");"#;
+
+    let detections = engine
+        .detect_with_kind(text, false, false)
+        .expect("Detection should succeed");
+
+    let expressions: Vec<&str> = detections
+        .iter()
+        .filter_map(|d| d.license_expression.as_deref())
+        .collect();
+
+    assert_eq!(
+        expressions,
+        vec!["gpl-2.0-plus"],
+        "expected only GPL-2.0-or-later for squashfs notice, got: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (m.license_expression.as_str(), m.rule_identifier.as_str()))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_engine_detects_busybox_smemcap_as_gpl_2_or_later() {
+    let engine = get_engine();
+
+    let text = r#"This software may be used and distributed according to the terms of
+the GNU General Public License version 2 or later, incorporated
+herein by reference."#;
+
+    let detections = engine
+        .detect_with_kind(text, false, false)
+        .expect("Detection should succeed");
+
+    assert!(
+        detections
+            .iter()
+            .any(|d| d.license_expression.as_deref() == Some("gpl-2.0-plus")),
+        "expected GPL-2.0-or-later detection, got: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (m.license_expression.as_str(), m.rule_identifier.as_str()))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_engine_detects_gimp_pyconsole_header_as_lgpl_2_1_only() {
+    let engine = get_engine();
+
+    let text = r#"#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU Lesser General Public version 2.1 as
+#   published by the Free Software Foundation.
+#
+#   See COPYING.lib file that comes with this distribution for full text
+#   of the license."#;
+
+    let detections = engine
+        .detect_with_kind(text, false, false)
+        .expect("Detection should succeed");
+
+    let expressions: Vec<&str> = detections
+        .iter()
+        .filter_map(|d| d.license_expression.as_deref())
+        .collect();
+
+    assert_eq!(
+        expressions,
+        vec!["lgpl-2.1"],
+        "expected only LGPL-2.1-only for pyconsole header, got: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (m.license_expression.as_str(), m.rule_identifier.as_str()))
                     .collect::<Vec<_>>()
             ))
             .collect::<Vec<_>>()
@@ -1340,6 +1556,50 @@ copies of the Software."#;
     assert!(
         filtered.is_empty(),
         "High minimum score should filter it out"
+    );
+}
+
+#[test]
+fn test_detect_with_kind_can_disable_sequence_matching() {
+    let engine = get_engine();
+
+    let partial_mit = r#"Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software."#;
+
+    let detections = engine
+        .detect_with_kind_with_score_and_deadline_with_options(
+            partial_mit,
+            false,
+            false,
+            false,
+            0.0,
+            None,
+        )
+        .expect("Detection should succeed");
+
+    assert!(
+        detections.iter().all(|detection| detection
+            .matches
+            .iter()
+            .all(|m| m.matcher != MatcherKind::Seq)),
+        "sequence matching disabled should yield no seq matches, got: {:?}",
+        detections
+            .iter()
+            .map(|d| (
+                d.license_expression.as_deref().unwrap_or("none"),
+                d.matches
+                    .iter()
+                    .map(|m| (
+                        m.license_expression.as_str(),
+                        m.rule_identifier.as_str(),
+                        m.matcher
+                    ))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>()
     );
 }
 

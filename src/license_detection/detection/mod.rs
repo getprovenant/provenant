@@ -448,6 +448,17 @@ pub(crate) fn select_matches_for_expression(
         }
     }
 
+    if has_strong_gpl2plus_local_reference(&filtered) {
+        let without_weak_gpl_family_fragments: Vec<_> = filtered
+            .iter()
+            .filter(|match_item| !is_weak_gpl_family_fragment(match_item))
+            .cloned()
+            .collect();
+        if !without_weak_gpl_family_fragments.is_empty() {
+            filtered = without_weak_gpl_family_fragments;
+        }
+    }
+
     if filtered.is_empty() {
         matches.to_vec()
     } else {
@@ -468,6 +479,27 @@ fn is_imperfect_local_file_reference_match(
     match_item: &crate::license_detection::models::LicenseMatch,
 ) -> bool {
     is_local_file_reference_match(match_item) && match_item.coverage() < 100.0
+}
+
+fn has_strong_gpl2plus_local_reference(
+    matches: &[crate::license_detection::models::LicenseMatch],
+) -> bool {
+    matches.iter().any(|match_item| {
+        is_local_file_reference_match(match_item)
+            && match_item.coverage() == 100.0
+            && match_item.license_expression == "gpl-2.0-plus"
+    })
+}
+
+fn is_weak_gpl_family_fragment(
+    match_item: &crate::license_detection::models::LicenseMatch,
+) -> bool {
+    !is_local_file_reference_match(match_item)
+        && matches!(
+            match_item.license_expression.as_str(),
+            "gpl-1.0-plus" | "gpl-2.0" | "gpl-3.0" | "lgpl-3.0"
+        )
+        && (match_item.coverage() < 100.0 || match_item.license_expression == "gpl-1.0-plus")
 }
 
 fn is_unknown_reference_follow_log(log_category: &str) -> bool {
@@ -613,6 +645,7 @@ pub fn post_process_detections(
 ) -> Vec<LicenseDetection> {
     let filtered = filter_detections_by_score(detections, min_score);
     let promoted = promote_non_clue_no_expression_detections(filtered);
+    let suppressed = suppress_weaker_gpl_family_detections(promoted);
     // NOTE: We do NOT call remove_duplicate_detections here.
     //
     // Python's get_unique_detections() groups detections by identifier and creates
@@ -628,11 +661,43 @@ pub fn post_process_detections(
     //
     // TODO: Implement UniqueDetection with file_regions aggregation for output
     // formatting when we add full ScanCode output compatibility.
-    let preferred = apply_detection_preferences(promoted);
+    let preferred = apply_detection_preferences(suppressed);
     let ranked = rank_detections(preferred);
     let mut sorted = sort_detections_by_line(ranked);
     attach_aggregated_file_regions(&mut sorted);
     sorted
+}
+
+fn suppress_weaker_gpl_family_detections(
+    detections: Vec<LicenseDetection>,
+) -> Vec<LicenseDetection> {
+    let has_strong_gpl2plus_reference = detections
+        .iter()
+        .filter(|detection| detection.license_expression.as_deref() == Some("gpl-2.0-plus"))
+        .any(|detection| {
+            detection.matches.iter().any(|match_item| {
+                is_local_file_reference_match(match_item)
+                    && match_item.coverage() == 100.0
+                    && match_item.license_expression == "gpl-2.0-plus"
+            })
+        });
+
+    if !has_strong_gpl2plus_reference {
+        return detections;
+    }
+
+    detections
+        .into_iter()
+        .filter(|detection| {
+            let Some(expr) = detection.license_expression.as_deref() else {
+                return true;
+            };
+            if !matches!(expr, "gpl-1.0-plus" | "gpl-2.0" | "gpl-3.0" | "lgpl-3.0") {
+                return true;
+            }
+            false
+        })
+        .collect()
 }
 
 fn promote_non_clue_no_expression_detections(
@@ -898,6 +963,63 @@ mod tests {
         );
 
         assert_eq!(selected, vec![referenced_license]);
+    }
+
+    #[test]
+    fn select_matches_for_expression_drops_weak_gpl_fragment_when_strong_gpl2plus_reference_exists()
+    {
+        let mut weak_fragment = create_test_match(8, 10, "3-seq", "gpl_147.RULE");
+        weak_fragment.license_expression = "gpl-1.0-plus".to_string();
+        weak_fragment.license_expression_spdx = Some("GPL-1.0-or-later".to_string());
+        weak_fragment.match_coverage = 65.38;
+        weak_fragment.score = MatchScore::from_percentage(65.38);
+
+        let mut strong_reference = create_test_match(15, 15, "2-aho", "gpl-2.0-plus_544.RULE");
+        strong_reference.license_expression = "gpl-2.0-plus".to_string();
+        strong_reference.license_expression_spdx = Some("GPL-2.0-or-later".to_string());
+        strong_reference.referenced_filenames = Some(vec!["LICENSE".to_string()]);
+        strong_reference.match_coverage = 100.0;
+        strong_reference.score = MatchScore::MAX;
+
+        let selected =
+            select_matches_for_expression(&[weak_fragment, strong_reference.clone()], "", false);
+
+        assert_eq!(selected, vec![strong_reference]);
+    }
+
+    #[test]
+    fn select_matches_for_expression_keeps_weak_gpl_fragment_without_strong_gpl2plus_reference() {
+        let mut weak_fragment = create_test_match(8, 10, "3-seq", "gpl_147.RULE");
+        weak_fragment.license_expression = "gpl-1.0-plus".to_string();
+        weak_fragment.license_expression_spdx = Some("GPL-1.0-or-later".to_string());
+        weak_fragment.match_coverage = 65.38;
+        weak_fragment.score = MatchScore::from_percentage(65.38);
+
+        let selected = select_matches_for_expression(&[weak_fragment.clone()], "", false);
+
+        assert_eq!(selected, vec![weak_fragment]);
+    }
+
+    #[test]
+    fn select_matches_for_expression_drops_full_coverage_gpl1plus_fragment_when_strong_gpl2plus_reference_exists()
+     {
+        let mut full_fragment = create_test_match(8, 9, "2-aho", "gpl-1.0-plus_572.RULE");
+        full_fragment.license_expression = "gpl-1.0-plus".to_string();
+        full_fragment.license_expression_spdx = Some("GPL-1.0-or-later".to_string());
+        full_fragment.match_coverage = 100.0;
+        full_fragment.score = MatchScore::MAX;
+
+        let mut strong_reference = create_test_match(15, 15, "2-aho", "gpl-2.0-plus_544.RULE");
+        strong_reference.license_expression = "gpl-2.0-plus".to_string();
+        strong_reference.license_expression_spdx = Some("GPL-2.0-or-later".to_string());
+        strong_reference.referenced_filenames = Some(vec!["LICENSE".to_string()]);
+        strong_reference.match_coverage = 100.0;
+        strong_reference.score = MatchScore::MAX;
+
+        let selected =
+            select_matches_for_expression(&[full_fragment, strong_reference.clone()], "", false);
+
+        assert_eq!(selected, vec![strong_reference]);
     }
 
     #[test]
@@ -1216,6 +1338,51 @@ MySQL FLOSS License Exception body starts here.
         detection.identifier = Some(compute_detection_identifier(&detection));
         let filtered = filter_detections_by_score(vec![detection], 0.0);
         assert_eq!(filtered.len(), 1);
+    }
+
+    #[test]
+    fn post_process_detections_drops_standalone_gpl1_when_same_file_has_strong_gpl2plus_reference()
+    {
+        let mut weak_match = create_test_match(8, 10, "3-seq", "gpl_147.RULE");
+        weak_match.license_expression = "gpl-1.0-plus".to_string();
+        weak_match.license_expression_spdx = Some("GPL-1.0-or-later".to_string());
+        weak_match.from_file = Some("busybox/coreutils/who.c".to_string());
+        weak_match.match_coverage = 65.38;
+        weak_match.score = MatchScore::from_percentage(65.38);
+
+        let weak_detection = LicenseDetection {
+            license_expression: Some("gpl-1.0-plus".to_string()),
+            license_expression_spdx: Some("GPL-1.0-or-later".to_string()),
+            matches: vec![weak_match],
+            detection_log: vec![],
+            identifier: Some("weak-gpl1".to_string()),
+            file_regions: Vec::new(),
+        };
+
+        let mut strong_match = create_test_match(15, 15, "2-aho", "gpl-2.0-plus_544.RULE");
+        strong_match.license_expression = "gpl-2.0-plus".to_string();
+        strong_match.license_expression_spdx = Some("GPL-2.0-or-later".to_string());
+        strong_match.from_file = Some("busybox/coreutils/who.c".to_string());
+        strong_match.referenced_filenames = Some(vec!["LICENSE".to_string()]);
+        strong_match.match_coverage = 100.0;
+        strong_match.score = MatchScore::MAX;
+
+        let strong_detection = LicenseDetection {
+            license_expression: Some("gpl-2.0-plus".to_string()),
+            license_expression_spdx: Some("GPL-2.0-or-later".to_string()),
+            matches: vec![strong_match],
+            detection_log: vec![],
+            identifier: Some("strong-gpl2plus".to_string()),
+            file_regions: Vec::new(),
+        };
+
+        let processed = post_process_detections(vec![weak_detection, strong_detection], 0.0);
+        let expressions: Vec<_> = processed
+            .iter()
+            .filter_map(|detection| detection.license_expression.as_deref())
+            .collect();
+
+        assert_eq!(expressions, vec!["gpl-2.0-plus"]);
     }
 
     #[test]
