@@ -178,6 +178,7 @@ EOF
 ```
 
 The response body is the same ScanCode-compatible JSON shape Provenant already exposes through its existing output schema.
+For explanations of public output fields and presence rules on that shared output, see the [Output Field Reference](OUTPUT_FIELD_REFERENCE.md).
 
 ## Run an asynchronous scan
 
