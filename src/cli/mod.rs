@@ -417,6 +417,7 @@ pub struct ScanArgs {
     #[arg(long = "unknown-licenses", requires = "license")]
     pub unknown_licenses: bool,
 
+    /// Disable approximate sequence matching during `--license` detection.
     #[arg(long = "no-sequence-matching", requires = "license")]
     pub no_sequence_matching: bool,
 
