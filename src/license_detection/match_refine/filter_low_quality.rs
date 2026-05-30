@@ -10,6 +10,7 @@ use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::models::{LicenseMatch, MatcherKind};
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::Query;
+use std::path::Path;
 
 const INHERIT_LICENSE_FROM_PACKAGE_REFERENCE: &str = "INHERIT_LICENSE_FROM_PACKAGE";
 
@@ -186,14 +187,46 @@ pub(crate) fn filter_matches_missing_required_phrases(
                 kept.push(m.clone());
                 continue;
             }
+
+            let all_references_are_simple_bare_names =
+                concrete_referenced_filenames.iter().all(|filename| {
+                    !filename.contains('/')
+                        && !filename.contains('\\')
+                        && !Path::new(filename)
+                            .file_name()
+                            .and_then(|name| name.to_str())
+                            .is_some_and(|basename| basename.contains('.'))
+                });
+
+            if m.matcher == MatcherKind::Seq
+                && !all_references_are_simple_bare_names
+                && m.coverage() >= 50.0
+            {
+                kept.push(m.clone());
+                continue;
+            }
+
             let matched_text = match &m.matched_text {
                 Some(text) => text.clone(),
                 None => query.matched_text(m.start_line.get(), m.end_line.get()),
             };
-            let matched_text_lower = matched_text.to_ascii_lowercase();
-            let has_referenced_filename = concrete_referenced_filenames
-                .iter()
-                .any(|filename| matched_text_lower.contains(&filename.to_ascii_lowercase()));
+            let has_referenced_filename = concrete_referenced_filenames.iter().any(|filename| {
+                if matched_text.contains(filename.as_str()) {
+                    return true;
+                }
+
+                let path = Path::new(filename);
+                let is_path_like = filename.contains('/') || filename.contains('\\');
+                let Some(basename) = path.file_name().and_then(|name| name.to_str()) else {
+                    return false;
+                };
+
+                is_path_like
+                    && basename.contains('.')
+                    && matched_text
+                        .to_ascii_lowercase()
+                        .contains(&basename.to_ascii_lowercase())
+            });
             if !has_referenced_filename {
                 discarded.push(m.clone());
                 continue;
@@ -1427,6 +1460,116 @@ mod tests {
         let query = Query::from_extracted_text("inherit from package", &index, false).unwrap();
 
         let m = create_test_match("#0", 1, 1, MatchScore::MAX, 100.0, 100);
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert_eq!(kept.len(), 1);
+        assert!(discarded.is_empty());
+    }
+
+    #[test]
+    fn test_filter_matches_missing_required_phrases_matches_referenced_filename_by_basename() {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        index.rules_by_rid.push(Rule {
+            identifier: "test".to_string(),
+            license_expression: "unknown-license-reference".to_string(),
+            text: "licenses/LICENSE.txt".to_string(),
+            tokens: vec![],
+            rule_kind: crate::license_detection::models::RuleKind::Reference,
+            is_false_positive: false,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 90,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            referenced_filenames: Some(vec!["licenses/LICENSE.txt".to_string()]),
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 3,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 1,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: vec![],
+            required_phrase_spans: vec![],
+            stopwords_by_pos: std::collections::HashMap::new(),
+        });
+
+        let query =
+            Query::from_extracted_text("licenses/jquery.LICENSE.txt", &index, false).unwrap();
+
+        let m = create_test_match("#0", 1, 1, MatchScore::MAX, 100.0, 90);
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert_eq!(kept.len(), 1);
+        assert!(discarded.is_empty());
+    }
+
+    #[test]
+    fn test_filter_matches_missing_required_phrases_keeps_seq_match_without_literal_reference_filename()
+     {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        index.rules_by_rid.push(Rule {
+            identifier: "test".to_string(),
+            license_expression: "uoi-ncsa".to_string(),
+            text: "This file is distributed under the niversity of Illinois Open Source License. See LICENSE.TXT for details.".to_string(),
+            tokens: vec![],
+            rule_kind: crate::license_detection::models::RuleKind::Notice,
+            is_false_positive: false,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            referenced_filenames: Some(vec!["LICENSE.TXT".to_string()]),
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 10,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 1,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: vec![],
+            required_phrase_spans: vec![],
+            stopwords_by_pos: std::collections::HashMap::new(),
+        });
+
+        let query = Query::from_extracted_text(
+            "This file is distributed under the CA Trusted Open Source License(CATOSL). For the exact terms of the license go to http://ca.com/opensource/catosl",
+            &index,
+            false,
+        )
+        .unwrap();
+
+        let mut m = create_test_match("#0", 1, 2, MatchScore::MAX, 58.82, 100);
+        m.matcher = MatcherKind::Seq;
         let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
 
         assert_eq!(kept.len(), 1);
