@@ -679,6 +679,7 @@
                 "default": false
               },
               "no_sequence_matching": {
+                "description": "Disable approximate sequence matching when license detection is enabled.",
                 "type": "boolean",
                 "default": false
               },
@@ -993,6 +994,7 @@
             "default": false
           },
           "no_sequence_matching": {
+            "description": "Disable approximate sequence matching when license detection is enabled.",
             "type": "boolean",
             "default": false
           },
