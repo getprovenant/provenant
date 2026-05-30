@@ -261,6 +261,8 @@ The request body currently supports scan options that map onto the shared Proven
 - `classify`, `summary`, `license_clarity_score`, `license_references`
 - `tallies`, `tallies_key_files`, `tallies_with_details`, `facets`, `tallies_by_facet`
 
+`no_sequence_matching` only matters when `detect_license` is enabled. It disables the approximate sequence matcher so you can compare results with and without that matcher or suppress noisy partial license hits.
+
 The first practical default is usually a local-path equivalent of CLI `-clupe`:
 
 ```json
