@@ -57,7 +57,9 @@ path = "src/bin/generate_legalese_artifact/main.rs"
 anyhow = { workspace = true }
 clap = { workspace = true }
 postcard = { workspace = true }
-provenant = { path = "..", package = "provenant-cli", features = ["golden-tests"] }
+provenant = { path = "..", package = "provenant-cli", features = [
+    "golden-tests",
+] }
 rayon = { workspace = true }
 regex = { workspace = true }
 rkyv = { workspace = true }
