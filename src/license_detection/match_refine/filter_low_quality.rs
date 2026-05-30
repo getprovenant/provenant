@@ -11,6 +11,8 @@ use crate::license_detection::models::{LicenseMatch, MatcherKind};
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::Query;
 
+const INHERIT_LICENSE_FROM_PACKAGE_REFERENCE: &str = "INHERIT_LICENSE_FROM_PACKAGE";
+
 /// Filter spurious matches with low density.
 ///
 /// Spurious matches are matches with low density (where the matched tokens
@@ -172,6 +174,31 @@ pub(crate) fn filter_matches_missing_required_phrases(
 
         let is_continuous = rule.is_continuous || rule.is_required_phrase;
         let ikey_spans = &rule.required_phrase_spans;
+
+        if let Some(referenced_filenames) = &rule.referenced_filenames {
+            let concrete_referenced_filenames: Vec<_> = referenced_filenames
+                .iter()
+                .filter(|filename| {
+                    !filename.eq_ignore_ascii_case(INHERIT_LICENSE_FROM_PACKAGE_REFERENCE)
+                })
+                .collect();
+            if concrete_referenced_filenames.is_empty() {
+                kept.push(m.clone());
+                continue;
+            }
+            let matched_text = match &m.matched_text {
+                Some(text) => text.clone(),
+                None => query.matched_text(m.start_line.get(), m.end_line.get()),
+            };
+            let matched_text_lower = matched_text.to_ascii_lowercase();
+            let has_referenced_filename = concrete_referenced_filenames
+                .iter()
+                .any(|filename| matched_text_lower.contains(&filename.to_ascii_lowercase()));
+            if !has_referenced_filename {
+                discarded.push(m.clone());
+                continue;
+            }
+        }
 
         if ikey_spans.is_empty() && !is_continuous {
             kept.push(m.clone());
@@ -1241,5 +1268,168 @@ mod tests {
         .unwrap();
         let filtered = filter_filename_like_single_word_reference_matches(&index, &[m], &query);
         assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_filter_matches_missing_required_phrases_drops_missing_referenced_filename() {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        index.rules_by_rid.push(Rule {
+            identifier: "test".to_string(),
+            license_expression: "gpl-2.0-plus".to_string(),
+            text: "see the file COPYING".to_string(),
+            tokens: vec![],
+            rule_kind: crate::license_detection::models::RuleKind::Notice,
+            is_false_positive: false,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            referenced_filenames: Some(vec!["COPYING".to_string()]),
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 5,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 1,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: vec![],
+            required_phrase_spans: vec![],
+            stopwords_by_pos: std::collections::HashMap::new(),
+        });
+
+        let query = Query::from_extracted_text(
+            "This program is free software under the GNU General Public License.",
+            &index,
+            false,
+        )
+        .unwrap();
+
+        let m = create_test_match("#0", 1, 1, MatchScore::MAX, 100.0, 100);
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert!(kept.is_empty());
+        assert_eq!(discarded.len(), 1);
+    }
+
+    #[test]
+    fn test_filter_matches_missing_required_phrases_keeps_present_referenced_filename() {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        index.rules_by_rid.push(Rule {
+            identifier: "test".to_string(),
+            license_expression: "gpl-2.0-plus".to_string(),
+            text: "see the file COPYING".to_string(),
+            tokens: vec![],
+            rule_kind: crate::license_detection::models::RuleKind::Notice,
+            is_false_positive: false,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            referenced_filenames: Some(vec!["COPYING".to_string()]),
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 5,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 1,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: vec![],
+            required_phrase_spans: vec![],
+            stopwords_by_pos: std::collections::HashMap::new(),
+        });
+
+        let query = Query::from_extracted_text(
+            "This program is free software. See the file COPYING for details.",
+            &index,
+            false,
+        )
+        .unwrap();
+
+        let m = create_test_match("#0", 1, 1, MatchScore::MAX, 100.0, 100);
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert_eq!(kept.len(), 1);
+        assert!(discarded.is_empty());
+    }
+
+    #[test]
+    fn test_filter_matches_missing_required_phrases_ignores_package_inherit_sentinel() {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        index.rules_by_rid.push(Rule {
+            identifier: "test".to_string(),
+            license_expression: "free-unknown".to_string(),
+            text: "inherit license".to_string(),
+            tokens: vec![],
+            rule_kind: crate::license_detection::models::RuleKind::Reference,
+            is_false_positive: false,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            referenced_filenames: Some(vec![INHERIT_LICENSE_FROM_PACKAGE_REFERENCE.to_string()]),
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 5,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 1,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: vec![],
+            required_phrase_spans: vec![],
+            stopwords_by_pos: std::collections::HashMap::new(),
+        });
+
+        let query = Query::from_extracted_text("inherit from package", &index, false).unwrap();
+
+        let m = create_test_match("#0", 1, 1, MatchScore::MAX, 100.0, 100);
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert_eq!(kept.len(), 1);
+        assert!(discarded.is_empty());
     }
 }
