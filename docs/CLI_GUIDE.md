@@ -189,6 +189,8 @@ provenant scan --json-pp licenses.json --license --license-text --license-text-d
 
 Add `--license-references` when you want top-level unique license and rule reference blocks, and add `--unknown-licenses` when you want unmatched license-like text surfaced for review.
 
+Add `--no-sequence-matching` when you want to disable Provenant's approximate sequence matcher and keep license detection on the non-sequence paths only. This is mainly useful when you are triaging noisy partial matches or comparing results with and without the approximate matcher enabled.
+
 If you are troubleshooting PDF extraction specifically, Provenant suppresses noisy `pdf_oxide`
 dependency logs by default so normal scan output stays readable. To inspect the raw PDF parser
 logs for a debugging run, rerun with `RUST_LOG=pdf_oxide=warn` (or `=error` if you only want
@@ -563,7 +565,7 @@ These are worth learning early because they change what the output means:
 - `--license-text-diagnostics` requires `--license-text`
 - `--license-diagnostics` requires `--license`
 - `--license-references` requires `--license`
-- `--no-sequence-matching` requires `--license`
+- `--no-sequence-matching` requires `--license` and disables the approximate sequence matcher
 - `--license-clarity-score` requires `--classify`
 - `--mark-source` requires `--info`
 - `--custom-output <FILE>` requires `--custom-template <FILE>`
