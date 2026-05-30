@@ -69,6 +69,10 @@ pre-commit:
         - src/parsers/*_golden_test.rs
       run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-supported-formats && git add docs/SUPPORTED_FORMATS.md
 
+    generate-output-field-reference:
+      glob: src/output_schema/*.rs
+      run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-output-field-reference && git add docs/OUTPUT_FIELD_REFERENCE.md
+
     markdown-lint:
       glob: "**/*.md"
       run: npm exec -- markdownlint-cli2 --fix --no-globs {staged_files}
