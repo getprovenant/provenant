@@ -726,6 +726,9 @@ impl Serialize for PublicFileInfo<'_> {
         if file.is_key_file {
             map.serialize_entry("is_key_file", &file.is_key_file)?;
         }
+        if file.is_referenced {
+            map.serialize_entry("is_referenced", &file.is_referenced)?;
+        }
         if file.is_community {
             map.serialize_entry("is_community", &file.is_community)?;
         }

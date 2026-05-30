@@ -66,8 +66,67 @@ pub(crate) fn apply_package_reference_following(files: &mut [FileInfo], packages
             modified = true;
         }
 
+        let referenced_paths = collect_referenced_file_paths(files);
+        for file in files.iter_mut() {
+            let next_is_referenced = referenced_paths.contains(&file.path);
+            if file.is_referenced != next_is_referenced {
+                file.is_referenced = next_is_referenced;
+                modified = true;
+            }
+        }
+
         if !modified {
             break;
+        }
+    }
+}
+
+fn collect_referenced_file_paths(files: &[FileInfo]) -> HashSet<String> {
+    let mut referenced_paths = HashSet::new();
+
+    for file in files {
+        let current_path = file.path.as_str();
+
+        for detection in &file.license_detections {
+            collect_referenced_file_paths_from_detection(
+                detection,
+                current_path,
+                &mut referenced_paths,
+            );
+        }
+
+        for package_data in &file.package_data {
+            for detection in &package_data.license_detections {
+                collect_referenced_file_paths_from_detection(
+                    detection,
+                    current_path,
+                    &mut referenced_paths,
+                );
+            }
+            for detection in &package_data.other_license_detections {
+                collect_referenced_file_paths_from_detection(
+                    detection,
+                    current_path,
+                    &mut referenced_paths,
+                );
+            }
+        }
+    }
+
+    referenced_paths
+}
+
+fn collect_referenced_file_paths_from_detection(
+    detection: &LicenseDetection,
+    current_path: &str,
+    referenced_paths: &mut HashSet<String>,
+) {
+    for match_item in &detection.matches {
+        let Some(from_file) = match_item.from_file.as_deref() else {
+            continue;
+        };
+        if !paths_refer_to_same_file(from_file, current_path) {
+            referenced_paths.insert(from_file.to_string());
         }
     }
 }

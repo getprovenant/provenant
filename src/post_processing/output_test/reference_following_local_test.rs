@@ -65,7 +65,19 @@ fn apply_local_file_reference_following_resolves_root_license_file() {
         .iter()
         .find(|file| file.path == "project/src/notice.js")
         .expect("notice file should exist");
+    let license = files
+        .iter()
+        .find(|file| file.path == "project/LICENSE")
+        .expect("license file should exist");
     assert_eq!(notice.detected_license_expression.as_deref(), Some("mit"));
+    assert!(
+        license.is_referenced,
+        "followed LICENSE should be marked referenced"
+    );
+    assert!(
+        !notice.is_referenced,
+        "source file should not be marked referenced"
+    );
     assert_eq!(
         notice.license_detections[0].detection_log,
         vec!["unknown-reference-to-local-file"]
@@ -999,7 +1011,19 @@ fn apply_local_file_reference_following_resolves_files_beside_manifest() {
         .iter()
         .find(|file| file.path == "project/demo/__init__.py")
         .expect("source file should exist");
+    let license = files
+        .iter()
+        .find(|file| file.path == "project/demo.dist-info/LICENSE")
+        .expect("license file should exist");
     assert_eq!(source.detected_license_expression.as_deref(), Some("mit"));
+    assert!(
+        license.is_referenced,
+        "followed sidecar license should be marked referenced"
+    );
+    assert!(
+        !source.is_referenced,
+        "source file should not be marked referenced"
+    );
     assert_eq!(
         source.license_detections[0].matches[1].from_file.as_deref(),
         Some("project/demo.dist-info/LICENSE")
