@@ -1,8 +1,0 @@
----
-is_false_positive: yes
-notes: Versionless GNU GPL boilerplate is too weak to assert GPL-1.0-or-later as a hard detection.
----
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the {{GNU General Public License}} as published by
-the Free Software Foundation.
