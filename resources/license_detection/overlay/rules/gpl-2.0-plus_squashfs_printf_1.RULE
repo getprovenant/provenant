@@ -1,0 +1,18 @@
+---
+license_expression: gpl-2.0-plus
+is_license_notice: yes
+relevance: 100
+notes: Squashfs GPL-2.0-or-later notice split across printf string literals.
+---
+
+printf This program is free software you can redistribute it and or
+printf modify it under the terms of the GNU General Public License
+printf as published by the Free Software Foundation either version
+printf 2
+printf or at your option any later version
+
+printf This program is distributed in the hope that it will be
+printf useful
+printf but WITHOUT ANY WARRANTY without even the implied warranty of
+printf MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE See the
+printf GNU General Public License for more details
