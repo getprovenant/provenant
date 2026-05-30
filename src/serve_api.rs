@@ -131,6 +131,7 @@ pub struct ServeScanOptions {
     pub license_text_diagnostics: bool,
     pub license_diagnostics: bool,
     pub unknown_licenses: bool,
+    /// Disable approximate sequence matching when license detection is enabled.
     pub no_sequence_matching: bool,
     pub license_score: u8,
     pub only_findings: bool,
