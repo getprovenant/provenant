@@ -1,0 +1,9 @@
+---
+is_false_positive: yes
+notes: Weak GPL plus url notice is too generic to force GPL-1.0-or-later when stronger versioned notices are present.
+ignorable_urls:
+    - http://www.gnu.org/licenses/gpl.html
+---
+
+This is free software.  You may redistribute copies of it under the terms of
+the {{GNU General Public License}} <http://www.gnu.org/licenses/gpl.html>.
