@@ -145,7 +145,7 @@ object = { version = "0.39.1", default-features = false, features = [
 ] }
 os_info = "3.14.0"
 packageurl = "0.6.0"
-pdf_oxide = "0.3.54"
+pdf_oxide = "0.3.56"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
 quick-xml = "0.40.1"
