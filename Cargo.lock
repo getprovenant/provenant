@@ -2936,9 +2936,9 @@ dependencies = [
 
 [[package]]
 name = "pdf_oxide"
-version = "0.3.55"
+version = "0.3.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5945029a68efc99773074ef9d5c8a211a3e515d5bee46feba2f4df31776e1c5c"
+checksum = "971e7e9cd5dafa2242fb48e9cea232a4c1f00d9310a87d18c27cb44786a3cd08"
 dependencies = [
  "aes",
  "base64",
@@ -2976,6 +2976,7 @@ dependencies = [
  "ttf-parser",
  "unicode-bidi",
  "unicode-linebreak",
+ "unicode-normalization",
  "uuid",
  "weezl 0.2.1",
 ]

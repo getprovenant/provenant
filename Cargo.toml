@@ -134,7 +134,7 @@ indicatif-log-bridge = "0.2.3"
 json5 = "1.3.1"
 kamadak-exif = "0.6.1"
 liblzma = "0.4.6"
-log = "0.4.30"
+log = "0.4.29"
 md-5 = "0.11.0"
 mime_guess = "2.0.5"
 object = { version = "0.39.1", default-features = false, features = [
@@ -145,7 +145,7 @@ object = { version = "0.39.1", default-features = false, features = [
 ] }
 os_info = "3.14.0"
 packageurl = "0.6.0"
-pdf_oxide = "0.3.54"
+pdf_oxide = "0.3.56"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
 quick-xml = "0.40.1"
