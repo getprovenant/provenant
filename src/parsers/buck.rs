@@ -27,7 +27,6 @@ use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use starlark_syntax::syntax::ast;
-use starlark_syntax::syntax::module::AstModuleFields;
 use starlark_syntax::syntax::{AstModule, Dialect};
 
 use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType, Sha1Digest};

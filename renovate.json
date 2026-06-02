@@ -93,13 +93,6 @@
       "groupName": "Rust workspace dependencies"
     },
     {
-      "description": "Temporary hold: block starlark_syntax 0.14.x while it carries the pagable/rusqlite/libsqlite3-sys conflict",
-      "matchManagers": ["cargo"],
-      "matchPackageNames": ["starlark_syntax"],
-      "allowedVersions": "!/^0\\.14\\./",
-      "automerge": false
-    },
-    {
       "description": "Group Rust dev dependencies",
       "matchManagers": ["cargo"],
       "matchDepTypes": ["dev-dependencies"],

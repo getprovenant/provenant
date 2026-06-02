@@ -177,7 +177,7 @@ serde_json = { workspace = true }
 sha1 = "0.11.0"
 sha2 = { workspace = true }
 smallvec = "1.15.1"
-starlark_syntax = "0.13.0"
+starlark_syntax = "0.14.2"
 strum = { version = "0.28.0", features = ["derive"] }
 tar = "0.4.45"
 tempfile = { workspace = true }

@@ -29,7 +29,6 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 use starlark_syntax::syntax::ast;
-use starlark_syntax::syntax::module::AstModuleFields;
 use starlark_syntax::syntax::{AstModule, Dialect};
 
 use super::PackageParser;
