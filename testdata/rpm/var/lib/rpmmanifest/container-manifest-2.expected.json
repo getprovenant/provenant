@@ -7,10 +7,17 @@
     "qualifiers": {
       "arch": "x86_64"
     },
-    "parties": [],
+    "parties": [
+      {
+        "type": "organization",
+        "role": "owner",
+        "name": "Microsoft"
+      }
+    ],
     "extra_data": {
       "filename": "bash-5.0.17-1.cm2.x86_64.rpm"
     },
-    "datasource_id": "rpm_mariner_manifest"
+    "datasource_id": "rpm_mariner_manifest",
+    "purl": "pkg:rpm/mariner/bash@5.0.17?arch=x86_64"
   }
 ]

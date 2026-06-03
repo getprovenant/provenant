@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::models::{DatasourceId, FileInfo, Package, TopLevelDependency};
+use crate::models::{DatasourceId, FileInfo, Package, PackageData, TopLevelDependency};
 use packageurl::PackageUrl;
 use strum::EnumIter;
 
@@ -60,6 +60,10 @@ const DB_PATH_CONFIGS: &[DbPathConfig] = &[
         path_suffix: "var/lib/rpm/rpmdb.sqlite",
     },
     DbPathConfig {
+        datasource_ids: &[DatasourceId::RpmMarinerManifest],
+        path_suffix: "var/lib/rpmmanifest/container-manifest-2",
+    },
+    DbPathConfig {
         datasource_ids: &[DatasourceId::DebianInstalledStatusDb],
         path_suffix: "var/lib/dpkg/status",
     },
@@ -73,6 +77,7 @@ const RPM_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::RpmInstalledDatabaseBdb,
     DatasourceId::RpmInstalledDatabaseNdb,
     DatasourceId::RpmInstalledDatabaseSqlite,
+    DatasourceId::RpmMarinerManifest,
 ];
 const RPM_YUMDB_PATH_SUFFIX: &str = "var/lib/yum/yumdb/";
 const CONDA_META_PATH_SEGMENT: &str = "conda-meta/";
@@ -87,12 +92,15 @@ const DEBIAN_INSTALLED_SUPPLEMENTAL_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::DebianInstalledFilesList,
     DatasourceId::DebianInstalledMd5Sums,
 ];
+const RPM_INSTALLED_SUPPLEMENTAL_DATASOURCE_IDS: &[DatasourceId] =
+    &[DatasourceId::RpmPackageLicenses];
 
 const INSTALLED_DB_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::AlpineInstalledDb,
     DatasourceId::RpmInstalledDatabaseBdb,
     DatasourceId::RpmInstalledDatabaseNdb,
     DatasourceId::RpmInstalledDatabaseSqlite,
+    DatasourceId::RpmMarinerManifest,
     DatasourceId::DebianInstalledStatusDb,
     DatasourceId::DebianDistrolessInstalledDb,
 ];
@@ -361,6 +369,10 @@ fn resolve_installed_db_file_references(
             &mut file_references,
             collect_debian_installed_file_references(files, package),
         );
+    }
+
+    if is_rpm_package(package) {
+        merge_rpm_installed_supplemental_package_data(files, package, dependencies, &root);
     }
 
     let mut missing_refs = Vec::new();
@@ -868,6 +880,89 @@ fn collect_debian_installed_file_references(
     refs
 }
 
+fn merge_rpm_installed_supplemental_package_data(
+    files: &mut [FileInfo],
+    package: &mut Package,
+    dependencies: &mut [TopLevelDependency],
+    root: &str,
+) {
+    let mut supplemental_package_data: Vec<(usize, PackageData, String)> = Vec::new();
+    for (file_idx, file) in files.iter().enumerate() {
+        for pkg_data in &file.package_data {
+            let Some(dsid) = pkg_data.datasource_id else {
+                continue;
+            };
+            if !RPM_INSTALLED_SUPPLEMENTAL_DATASOURCE_IDS.contains(&dsid) {
+                continue;
+            }
+            if !rpm_installed_license_file_in_root(&file.path, root) {
+                continue;
+            }
+            if pkg_data.name != package.name {
+                continue;
+            }
+            if !rpm_installed_namespace_matches(&pkg_data.namespace, &package.namespace) {
+                continue;
+            }
+
+            supplemental_package_data.push((file_idx, pkg_data.clone(), file.path.clone()));
+        }
+    }
+
+    for (file_idx, pkg_data, datafile_path) in supplemental_package_data {
+        let old_package_uid = package.package_uid.clone();
+        package.update(&pkg_data, datafile_path);
+        if package.package_uid != old_package_uid {
+            replace_package_uid(files, dependencies, &old_package_uid, &package.package_uid);
+        }
+
+        if !files[file_idx].for_packages.contains(&package.package_uid) {
+            files[file_idx]
+                .for_packages
+                .push(package.package_uid.clone());
+        }
+    }
+}
+
+fn rpm_installed_license_file_in_root(path: &str, root: &str) -> bool {
+    let expected_prefix = format!("{}usr/share/licenses/", root);
+    path.starts_with(&expected_prefix)
+}
+
+fn rpm_installed_namespace_matches(
+    supplemental_namespace: &Option<String>,
+    package_namespace: &Option<String>,
+) -> bool {
+    match (
+        supplemental_namespace.as_deref(),
+        package_namespace.as_deref(),
+    ) {
+        (Some(left), Some(right)) => left == right,
+        _ => true,
+    }
+}
+
+fn replace_package_uid(
+    files: &mut [FileInfo],
+    dependencies: &mut [TopLevelDependency],
+    old_package_uid: &crate::models::PackageUid,
+    new_package_uid: &crate::models::PackageUid,
+) {
+    for file in files.iter_mut() {
+        for package_uid in &mut file.for_packages {
+            if package_uid == old_package_uid {
+                *package_uid = new_package_uid.clone();
+            }
+        }
+    }
+
+    for dep in dependencies.iter_mut() {
+        if dep.for_package_uid.as_ref() == Some(old_package_uid) {
+            dep.for_package_uid = Some(new_package_uid.clone());
+        }
+    }
+}
+
 fn find_attached_manifest_file_references<'a>(
     files: &'a [FileInfo],
     package: &Package,
@@ -1009,6 +1104,10 @@ fn apply_rpm_namespace(
     dependencies: &mut [TopLevelDependency],
     namespace: &str,
 ) {
+    if package.namespace.is_some() {
+        return;
+    }
+
     let old_package_uid = package.package_uid.clone();
 
     package.namespace = Some(namespace.to_string());
@@ -1020,19 +1119,9 @@ fn apply_rpm_namespace(
         package.package_uid = old_package_uid.replace_base(&updated_purl);
     }
 
-    for file in files.iter_mut() {
-        for package_uid in &mut file.for_packages {
-            if *package_uid == old_package_uid {
-                *package_uid = package.package_uid.clone();
-            }
-        }
-    }
+    replace_package_uid(files, dependencies, &old_package_uid, &package.package_uid);
 
     for dep in dependencies.iter_mut() {
-        if dep.for_package_uid.as_ref() == Some(&old_package_uid) {
-            dep.for_package_uid = Some(package.package_uid.clone());
-        }
-
         if dep.for_package_uid.as_ref() == Some(&package.package_uid) {
             dep.namespace = Some(namespace.to_string());
 

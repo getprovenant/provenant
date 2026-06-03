@@ -729,12 +729,6 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["opam", "*.opam"],
         mode: AssemblyMode::SiblingMerge,
     },
-    // RPM Mariner manifest
-    AssemblerConfig {
-        datasource_ids: &[DatasourceId::RpmMarinerManifest],
-        sibling_file_patterns: &["*.rpm.manifest"],
-        mode: AssemblyMode::SiblingMerge,
-    },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::RpmYumdb],
         sibling_file_patterns: &["**/var/lib/yum/yumdb/*/*/from_repo"],
@@ -800,8 +794,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             DatasourceId::RpmInstalledDatabaseBdb,
             DatasourceId::RpmInstalledDatabaseNdb,
             DatasourceId::RpmInstalledDatabaseSqlite,
+            DatasourceId::RpmMarinerManifest,
         ],
-        sibling_file_patterns: &["Packages", "Packages.db", "rpmdb.sqlite"],
+        sibling_file_patterns: &[
+            "Packages",
+            "Packages.db",
+            "rpmdb.sqlite",
+            "container-manifest-2",
+        ],
         mode: AssemblyMode::OnePerPackageData,
     },
     AssemblerConfig {

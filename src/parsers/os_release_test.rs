@@ -57,6 +57,10 @@ BUG_REPORT_URL="https://bugs.debian.org/"
         assert_eq!(result.namespace, Some("debian".to_string()));
         assert_eq!(result.name, Some("debian".to_string()));
         assert_eq!(result.version, Some("11".to_string()));
+        assert_eq!(
+            result.purl,
+            Some("pkg:linux-distro/debian/debian@11".to_string())
+        );
         assert_eq!(result.datasource_id, Some(DatasourceId::EtcOsRelease));
 
         assert_eq!(
@@ -111,6 +115,26 @@ PRETTY_NAME="Fedora Linux 37 (Workstation Edition)"
         assert_eq!(result.namespace, Some("fedora".to_string()));
         assert_eq!(result.name, Some("fedora".to_string()));
         assert_eq!(result.version, Some("37".to_string()));
+    }
+
+    #[test]
+    fn test_parse_azure_linux_purl() {
+        let content = r#"
+NAME="Azure Linux"
+VERSION_ID="3.0"
+PRETTY_NAME="Azure Linux 3.0"
+ID=azurelinux
+"#;
+
+        let result = super::super::os_release::parse_os_release(content);
+
+        assert_eq!(result.namespace, Some("azurelinux".to_string()));
+        assert_eq!(result.name, Some("azurelinux".to_string()));
+        assert_eq!(result.version, Some("3.0".to_string()));
+        assert_eq!(
+            result.purl,
+            Some("pkg:linux-distro/azurelinux/azurelinux@3.0".to_string())
+        );
     }
 
     #[test]
