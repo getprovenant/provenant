@@ -88,6 +88,7 @@ pub(super) static AUTHORS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^with the mode of \d{3,4}$",
         r"(?i)^kernel afs\.\s+skip afs metadata and acls$",
         r"(?i)^with a (?:fsf|dco)$",
+        r"(?i)^optional\s+spec$",
         r"(?i)^gives unlimited$",
         r"(?i)^word assigns past and future changes\b",
         r"(?i)^maintainers\s*<[^>]+>\s+from\s+https?://\S+$",

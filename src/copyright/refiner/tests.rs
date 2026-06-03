@@ -1600,6 +1600,13 @@ fn test_refine_copyright_drops_prose_fragments_from_license_boilerplate() {
         None
     );
     assert_eq!(refine_copyright("copyright in its"), None);
+    assert_eq!(refine_copyright("copyright purposes"), None);
+    assert_eq!(
+        refine_copyright(
+            "copyright purposes. The master list of authors is in the main Go distribution, visible at http://tip.golang.org/AUTHORS"
+        ),
+        None
+    );
 }
 
 #[test]
@@ -2208,6 +2215,7 @@ fn test_refine_author_drops_code_call_and_graphql_fragments() {
         None
     );
     assert_eq!(refine_author("UserWithType ...UserAvailability"), None);
+    assert_eq!(refine_author("optional Spec"), None);
 }
 
 #[test]
