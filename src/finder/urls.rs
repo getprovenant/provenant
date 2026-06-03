@@ -112,6 +112,26 @@ fn add_fake_scheme(url: &str) -> String {
     }
 }
 
+fn is_bare_ftp_method_reference(candidate: &str) -> bool {
+    let candidate = candidate
+        .to_ascii_lowercase()
+        .trim_end_matches(|c: char| [',', '.', ':', ';', '!', '?'].contains(&c))
+        .to_string();
+    if !candidate.starts_with("ftp.") {
+        return false;
+    }
+
+    if !candidate.contains('/') && candidate.matches('.').count() == 1 {
+        return true;
+    }
+
+    let Some(paren_index) = candidate.find('(') else {
+        return false;
+    };
+
+    !candidate[..paren_index].contains('/')
+}
+
 fn remove_user_password(url: &str) -> Option<String> {
     if !is_filterable(url) {
         return Some(url.to_string());
@@ -167,6 +187,10 @@ pub fn find_urls(text: &str, config: &DetectionConfig) -> Vec<UrlDetection> {
                 }
 
                 let mut candidate = matched.as_str().to_string();
+
+                if is_bare_ftp_method_reference(&candidate) {
+                    continue;
+                }
 
                 candidate = verbatim_crlf_url_cleaner(&candidate);
                 candidate = end_of_url_cleaner(&candidate);
