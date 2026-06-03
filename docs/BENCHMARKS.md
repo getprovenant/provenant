@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 202 of 202 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 203 of 203 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1278,6 +1278,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-05 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `19.47s`; ScanCode `23.84s`
 - Equal top-level Alpine package count with Alpine-native installed-db dependency requirements and virtual providers preserved, plus cleaner BusyBox/OpenSSL binary-text normalization and richer `os-release` package identity
+
+##### [Azure Linux distroless/minimal 3.0 linux/amd64 @ sha256:0c64ab9](https://mcr.microsoft.com/product/azurelinux/distroless/minimal/about) — **8.62× faster**
+
+- Files: 1,844
+- Run context: 2026-06-03 · rootfs-74993 · macOS 26.5.0 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.26s`; ScanCode `62.57s`
+- Matched Azure Linux and Mariner RPM manifest package coverage (`5` vs `5`) from `var/lib/rpmmanifest/container-manifest-2`, with RPM package-license sidecar metadata merged from `/usr/share/licenses/*` and direct Linux distro PURL identity on `usr/lib/os-release`
 
 ##### [lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11](https://hub.docker.com/r/lambci/lambda) — **18.40× faster**
 

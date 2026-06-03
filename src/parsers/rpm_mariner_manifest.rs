@@ -19,7 +19,8 @@
 //! - One package per line
 //! - Spec: https://github.com/microsoft/marinara/
 
-use crate::models::{DatasourceId, PackageType};
+use crate::models::{DatasourceId, PackageType, Party, PartyType};
+use packageurl::PackageUrl;
 use std::path::Path;
 
 use crate::parser_warn as warn;
@@ -38,6 +39,18 @@ fn default_package_data() -> PackageData {
         datasource_id: Some(DatasourceId::RpmMarinerManifest),
         ..Default::default()
     }
+}
+
+fn build_mariner_purl(name: &str, version: Option<&str>, arch: Option<&str>) -> Option<String> {
+    let mut purl = PackageUrl::new(PACKAGE_TYPE.as_str(), name).ok()?;
+    purl.with_namespace("mariner").ok()?;
+    if let Some(version) = version {
+        purl.with_version(version).ok()?;
+    }
+    if let Some(arch) = arch {
+        purl.add_qualifier("arch", arch).ok()?;
+    }
+    Some(truncate_field(purl.to_string()))
 }
 
 /// Parser for RPM Mariner container manifest files
@@ -101,16 +114,44 @@ pub(crate) fn parse_rpm_mariner_manifest(content: &str) -> Vec<PackageData> {
 
         let name = truncate_field(parts[0].to_string());
         let version = truncate_field(parts[1].to_string());
+        let party = truncate_field(parts[4].to_string());
         let arch = truncate_field(parts[7].to_string());
         let filename = truncate_field(parts[9].to_string());
 
-        let qualifiers = if arch.is_empty() {
+        let name_opt = if name.is_empty() { None } else { Some(name) };
+        let version_opt = if version.is_empty() {
             None
         } else {
+            Some(version)
+        };
+        let arch_opt = if arch.is_empty() { None } else { Some(arch) };
+
+        let qualifiers = if let Some(arch) = &arch_opt {
             let mut quals = std::collections::HashMap::new();
             quals.insert("arch".to_string(), arch.clone());
             Some(quals)
+        } else {
+            None
         };
+
+        let parties = if party.is_empty() {
+            Vec::new()
+        } else {
+            vec![Party {
+                r#type: Some(PartyType::Organization),
+                role: Some("owner".to_string()),
+                name: Some(party),
+                email: None,
+                url: None,
+                organization: None,
+                organization_url: None,
+                timezone: None,
+            }]
+        };
+
+        let purl = name_opt
+            .as_deref()
+            .and_then(|name| build_mariner_purl(name, version_opt.as_deref(), arch_opt.as_deref()));
 
         let extra_data = if filename.is_empty() {
             None
@@ -126,15 +167,13 @@ pub(crate) fn parse_rpm_mariner_manifest(content: &str) -> Vec<PackageData> {
         packages.push(PackageData {
             package_type: Some(PACKAGE_TYPE),
             namespace: Some(truncate_field("mariner".to_string())),
-            name: if name.is_empty() { None } else { Some(name) },
-            version: if version.is_empty() {
-                None
-            } else {
-                Some(version)
-            },
+            name: name_opt,
+            version: version_opt,
             qualifiers,
+            parties,
             datasource_id: Some(DatasourceId::RpmMarinerManifest),
             extra_data,
+            purl,
             ..Default::default()
         });
     }

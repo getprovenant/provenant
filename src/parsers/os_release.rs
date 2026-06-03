@@ -27,6 +27,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
+use packageurl::PackageUrl;
 
 use crate::models::PackageData;
 
@@ -93,6 +94,7 @@ pub(crate) fn parse_os_release(content: &str) -> PackageData {
     let homepage_url = fields.get("HOME_URL").cloned().map(truncate_field);
     let bug_tracking_url = fields.get("BUG_REPORT_URL").cloned().map(truncate_field);
     let code_view_url = fields.get("SUPPORT_URL").cloned().map(truncate_field);
+    let purl = build_purl(namespace, name, version_id.as_deref());
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
@@ -103,8 +105,17 @@ pub(crate) fn parse_os_release(content: &str) -> PackageData {
         bug_tracking_url,
         code_view_url,
         datasource_id: Some(DatasourceId::EtcOsRelease),
+        purl,
         ..Default::default()
     }
+}
+
+fn build_purl(namespace: &str, name: &str, version: Option<&str>) -> Option<String> {
+    let mut purl = PackageUrl::new(PACKAGE_TYPE.as_str(), name).ok()?;
+    purl.with_namespace(namespace).ok()?;
+    let version = version?;
+    purl.with_version(version).ok()?;
+    Some(truncate_field(purl.to_string()))
 }
 
 fn determine_namespace_and_name<'a>(

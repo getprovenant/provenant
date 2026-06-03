@@ -404,6 +404,9 @@ ScanCode: 563.43s</title></rect>
     <rect x="607.89" y="346.71" width="8" height="8" fill="#d97706" rx="1.5"><title>ValveSoftware/eigen @ e9c4315
 Files: 1784
 ScanCode: 384.96s</title></rect>
+    <rect x="610.17" y="432.56" width="8" height="8" fill="#d97706" rx="1.5"><title>Azure Linux distroless/minimal 3.0 linux/amd64 @ sha256:0c64ab9
+Files: 1844
+ScanCode: 62.57s</title></rect>
     <rect x="613.31" y="384.18" width="8" height="8" fill="#d97706" rx="1.5"><title>rrousselGit/riverpod @ cac77b1
 Files: 1930
 ScanCode: 174.19s</title></rect>
@@ -1012,6 +1015,9 @@ Provenant: 27.87s</title></circle>
     <circle cx="611.89" cy="491.89" r="4.5" fill="#2563eb"><title>ValveSoftware/eigen @ e9c4315
 Files: 1784
 Provenant: 19.40s</title></circle>
+    <circle cx="614.17" cy="538.33" r="4.5" fill="#2563eb"><title>Azure Linux distroless/minimal 3.0 linux/amd64 @ sha256:0c64ab9
+Files: 1844
+Provenant: 7.26s</title></circle>
     <circle cx="617.31" cy="514.08" r="4.5" fill="#2563eb"><title>rrousselGit/riverpod @ cac77b1
 Files: 1930
 Provenant: 12.13s</title></circle>

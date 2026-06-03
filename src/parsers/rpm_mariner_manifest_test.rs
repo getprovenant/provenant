@@ -7,6 +7,7 @@ mod tests {
     use super::super::rpm_mariner_manifest::*;
     use crate::models::DatasourceId;
     use crate::models::PackageType;
+    use crate::models::PartyType;
     use std::path::PathBuf;
 
     #[test]
@@ -43,6 +44,14 @@ mod tests {
         let quals = pkg1.qualifiers.as_ref().unwrap();
         assert_eq!(quals.get("arch"), Some(&"x86_64".to_string()));
         assert_eq!(pkg1.datasource_id, Some(DatasourceId::RpmMarinerManifest));
+        assert_eq!(
+            pkg1.purl.as_deref(),
+            Some("pkg:rpm/mariner/bash@5.0.17?arch=x86_64")
+        );
+        assert_eq!(pkg1.parties.len(), 1);
+        assert_eq!(pkg1.parties[0].r#type, Some(PartyType::Organization));
+        assert_eq!(pkg1.parties[0].role.as_deref(), Some("owner"));
+        assert_eq!(pkg1.parties[0].name.as_deref(), Some("Microsoft"));
 
         // Check extra_data contains filename
         assert!(pkg1.extra_data.is_some());
