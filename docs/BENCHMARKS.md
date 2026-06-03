@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 200 of 200 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 201 of 201 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1271,6 +1271,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-05 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `19.47s`; ScanCode `23.84s`
 - Equal top-level Alpine package count with Alpine-native installed-db dependency requirements and virtual providers preserved, plus cleaner BusyBox/OpenSSL binary-text normalization and richer `os-release` package identity
+
+##### [lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11](https://hub.docker.com/r/lambci/lambda) — **18.40× faster**
+
+- Files: 4,085
+- Run context: 2026-06-03 · lambci-lambda-provided-al2-amd64-rootfs-50088 · macOS 26.5.0 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `17.19s`; ScanCode `316.25s`
+- Broader Amazon Linux 2 RPM rootfs inventory (`45` vs `0` packages, `590` vs `0` dependencies) from the real Berkeley rpmdb, with YumDB sidecar provenance merged onto matching installed RPM packages under `extra_data.yumdb` for repository, checksum, origin, and install-reason metadata while ScanCode reports one rpmdb assembly error and leaves top-level package/dependency output empty
 
 ##### [debian:bookworm-slim @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **7.47× faster**
 

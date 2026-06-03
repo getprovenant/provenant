@@ -24,7 +24,8 @@ fn default_package_data() -> PackageData {
 
 fn parse_yumdb_dir_name(dir_name: &str) -> Option<(String, String, String)> {
     let (_, package_part) = dir_name.split_once('-')?;
-    let (name_version_release, arch) = package_part.rsplit_once('.')?;
+
+    let (name_version_release, arch) = split_yumdb_arch(package_part)?;
 
     let mut parts = name_version_release.rsplitn(3, '-');
     let release = parts.next()?;
@@ -36,6 +37,21 @@ fn parse_yumdb_dir_name(dir_name: &str) -> Option<(String, String, String)> {
         truncate_field(format!("{}-{}", version, release)),
         truncate_field(arch.to_string()),
     ))
+}
+
+fn split_yumdb_arch(package_part: &str) -> Option<(&str, &str)> {
+    if let Some((name_version_release, arch)) = package_part.rsplit_once('-')
+        && is_plausible_rpm_arch(arch)
+    {
+        return Some((name_version_release, arch));
+    }
+
+    package_part.rsplit_once('.')
+}
+
+fn is_plausible_rpm_arch(arch: &str) -> bool {
+    arch.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && arch.chars().any(|c| c.is_ascii_alphabetic())
 }
 
 fn build_yumdb_purl(name: &str, version: &str, arch: &str) -> Option<String> {
@@ -150,6 +166,14 @@ mod tests {
         let parsed = parse_yumdb_dir_name("abc123-bash-5.0-1.el8.x86_64").unwrap();
         assert_eq!(parsed.0, "bash");
         assert_eq!(parsed.1, "5.0-1.el8");
+        assert_eq!(parsed.2, "x86_64");
+
+        let parsed = parse_yumdb_dir_name(
+            "f5d239a7a36834cca0361050b89f9dcf6675df03-bash-4.2.46-34.amzn2-x86_64",
+        )
+        .unwrap();
+        assert_eq!(parsed.0, "bash");
+        assert_eq!(parsed.1, "4.2.46-34.amzn2");
         assert_eq!(parsed.2, "x86_64");
     }
 

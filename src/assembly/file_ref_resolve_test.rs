@@ -853,6 +853,22 @@ fn test_resolve_rpm_namespace() {
 }
 
 #[test]
+fn test_rpm_yumdb_versions_match_ignores_rpmdb_epoch() {
+    assert!(rpm_yumdb_versions_match(
+        &Some("1:6.0.0-15.amzn2.0.2".to_string()),
+        &Some("6.0.0-15.amzn2.0.2".to_string()),
+    ));
+    assert!(rpm_yumdb_versions_match(
+        &Some("6.0.0-15.amzn2.0.2".to_string()),
+        &Some("6.0.0-15.amzn2.0.2".to_string()),
+    ));
+    assert!(!rpm_yumdb_versions_match(
+        &Some("2:6.0.0-15.amzn2.0.2".to_string()),
+        &Some("6.0.0-15.amzn2.0.3".to_string()),
+    ));
+}
+
+#[test]
 fn test_merge_rpm_yumdb_metadata() {
     let mut files = vec![
         FileInfo {
