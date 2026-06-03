@@ -657,7 +657,7 @@ pub fn merge_rpm_yumdb_metadata(files: &mut [FileInfo], packages: &mut Vec<Packa
 
             (target_root == yumdb_root
                 && package.name == yumdb_package.name
-                && package.version == yumdb_package.version
+                && rpm_yumdb_versions_match(&package.version, &yumdb_package.version)
                 && target_arch == yumdb_arch)
                 .then_some(idx)
         }) else {
@@ -704,6 +704,22 @@ pub fn merge_rpm_yumdb_metadata(files: &mut [FileInfo], packages: &mut Vec<Packa
     removal_indices.dedup();
     for idx in removal_indices.into_iter().rev() {
         packages.remove(idx);
+    }
+}
+
+fn rpm_yumdb_versions_match(
+    rpmdb_version: &Option<String>,
+    yumdb_version: &Option<String>,
+) -> bool {
+    match (rpmdb_version.as_deref(), yumdb_version.as_deref()) {
+        (Some(rpmdb), Some(yumdb)) => {
+            rpmdb == yumdb
+                || rpmdb
+                    .split_once(':')
+                    .is_some_and(|(_, version)| version == yumdb)
+        }
+        (None, None) => true,
+        _ => false,
     }
 }
 
