@@ -39,6 +39,8 @@ pub(in super::super) fn refine_author_with_optional_handle_suffix(
 ) -> Option<String> {
     static TRAILING_HANDLE_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"\s*\(@[A-Za-z0-9_.-]+\)\s*$").unwrap());
+    static TRAILING_BARE_HANDLE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?x)^(?P<base>.+?)\s+@[A-Za-z0-9_.-]+\s*$").unwrap());
     static TRAILING_COMMA_HANDLE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
             r"(?x)
@@ -59,6 +61,17 @@ pub(in super::super) fn refine_author_with_optional_handle_suffix(
     let without_handle = TRAILING_HANDLE_RE.replace(trimmed, "").trim().to_string();
     if without_handle != trimmed {
         return refine_author(&without_handle);
+    }
+
+    if let Some(captures) = TRAILING_BARE_HANDLE_RE.captures(trimmed) {
+        let base = captures
+            .name("base")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        if !base.is_empty() {
+            return refine_author(base);
+        }
     }
 
     if let Some(captures) = TRAILING_COMMA_HANDLE_RE.captures(trimmed) {

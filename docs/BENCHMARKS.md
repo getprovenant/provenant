@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 204 of 204 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 207 of 207 recorded runs, with a **12.3× median speedup** and **11.5× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -416,6 +416,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `12.57s`; ScanCode `146.24s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and cleaner package-author normalization in `package.json`
 
+##### [triggerdotdev/trigger.dev @ d1f4302](https://github.com/triggerdotdev/trigger.dev/tree/d1f430247e8a70a28e6c71a19fee5d0a7b5eccbf) — **28.86× faster**
+
+- Files: 4,169
+- Run context: 2026-06-03 · trigger.dev-89435 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `11.71s`; ScanCode `337.98s`
+- Broader pnpm/npm workspace and Helm coverage (`45` vs `39` packages, `6971` vs `6689` dependencies) from the root `pnpm-lock.yaml`, nested fixture lockfiles, workspace member manifests, `.gitmodules`, and `hosting/k8s/helm/Chart.yaml`, while private pnpm workspace root cleanup intentionally avoids a redundant root package row and remaining Yarn patch protocol deltas are representation differences rather than missing dependency evidence
+
 ##### [vercel/next.js @ 8e5a36f](https://github.com/vercel/next.js/tree/8e5a36f6347528d8968da97262f372f908897bac) — **20.68× faster**
 
 - Files: 28,044
@@ -707,6 +714,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `26.21s`; ScanCode `266.07s`
 - Broader package and dependency extraction (`3` vs `2` packages, `1943` vs `1917` dependencies) from `flake.nix`, `flake.lock`, `Dockerfile`, and `uv.lock`, plus a correct root Go module identity on `go.mod` where ScanCode emits the malformed `pkg:golang/%28` package row
 
+##### [goharbor/harbor @ eb944bb](https://github.com/goharbor/harbor/tree/eb944bb199211d6ac76fb207cd2ef1bf33ec0030) — **14.31× faster**
+
+- Files: 3,233
+- Run context: 2026-06-03 · harbor-57111 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `22.87s`; ScanCode `327.33s`
+- Broader package and dependency extraction (`5` vs `2` packages, `2972` vs `2407` dependencies) from committed Pipfile/Pipfile.lock, npm-family, Docker, and Go manifests, with local Go `replace` paths kept out of invalid PURLs, templated Conda YAML skipped instead of degraded into false metadata, and URL differences limited to normalization/truncation/canonicalization after review
+
 ##### [grpc/grpc @ f87c29f](https://github.com/grpc/grpc/tree/f87c29f069971d1356e5784005af499db52e7f31) — **14.43× faster**
 
 - Files: 10,361
@@ -720,6 +734,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `27.87s`; ScanCode `563.43s`
 - Broader Debian source-package and dependency extraction (`23` vs `19` packages, `18` vs `0` dependencies) from the root multi-binary `debian/control` file plus committed `.dsc` fixtures, with explicit package visibility for `dpkg-dev`, `libdpkg-dev`, and `libdpkg-perl` and one extra top-level Autotools package on `configure.ac`
+
+##### [kubernetes/autoscaler @ 9045d28](https://github.com/kubernetes/autoscaler/tree/9045d287a3458d6ea7440c3dcf921806bc994224) — **20.46× faster**
+
+- Files: 5,929
+- Run context: 2026-06-03 · autoscaler-75016 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `36.39s`; ScanCode `744.62s`
+- Broader Go and Helm package visibility (`11` vs `8` packages, `3127` vs `2892` dependencies), including 165 dependencies from `addon-resizer/Godeps/Godeps.json` where ScanCode reports none, direct chart packages for `cluster-autoscaler` and `vertical-pod-autoscaler`, cleaner rejection of ScanCode malformed Go-version package rows such as `pkg:golang/v2.4.0`, and generic author cleanup for Markdown `Authors:` lines with trailing bare handles
 
 ##### [kubernetes/kubernetes @ d3b9c54](https://github.com/kubernetes/kubernetes/tree/d3b9c54bd952117924fb0790f6989c0d30715b19) — **16.19× faster**
 

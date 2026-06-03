@@ -106,6 +106,7 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^whoever named in\b",
         r"(?i)^as specified below\b",
         r"(?i)^as required\b",
+        r"(?i)^purposes(?:\.\s+the\s+master\s+list\s+of\s+authors\b.*)?$",
         r"(?i)^\((?:r|c|tm)\)\s*,\s*(?:&\s*\d{2,4}\s*,\s*){5,}.*$",
         r"(?i)^not used to limit\b",
         r"(?i)^the coordinator$",

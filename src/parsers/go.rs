@@ -377,7 +377,12 @@ fn parse_replace_line(line: &str) -> Option<Dependency> {
     let new_module = new_parts[0];
     let new_version = new_parts.get(1).map(|s| truncate_field(s.to_string()));
 
-    let purl = create_golang_purl(new_module, new_version.as_deref());
+    let is_local_path = is_local_go_replace_path(new_module);
+    let purl = if is_local_path {
+        None
+    } else {
+        create_golang_purl(new_module, new_version.as_deref())
+    };
 
     let mut extra = std::collections::HashMap::new();
     extra.insert(
@@ -398,6 +403,12 @@ fn parse_replace_line(line: &str) -> Option<Dependency> {
         extra.insert(
             "replace_old_version".to_string(),
             serde_json::Value::String(truncate_field(ov.to_string())),
+        );
+    }
+    if is_local_path {
+        extra.insert(
+            "replace_local_path".to_string(),
+            serde_json::Value::Bool(true),
         );
     }
 
@@ -937,10 +948,7 @@ fn parse_workspace_replace_line(line: &str) -> Option<Dependency> {
     let old_version = old_parts.get(1).map(|s| s.as_str());
     let new_module = new_parts[0].as_str();
     let new_version = new_parts.get(1).map(|s| truncate_field(s.clone()));
-    let is_local_path = new_module.starts_with("./")
-        || new_module.starts_with("../")
-        || new_module.starts_with('/')
-        || new_module.starts_with('~');
+    let is_local_path = is_local_go_replace_path(new_module);
 
     let purl = if is_local_path {
         None
@@ -987,6 +995,13 @@ fn parse_workspace_replace_line(line: &str) -> Option<Dependency> {
         resolved_package: None,
         extra_data: Some(extra),
     })
+}
+
+fn is_local_go_replace_path(module: &str) -> bool {
+    module.starts_with("./")
+        || module.starts_with("../")
+        || module.starts_with('/')
+        || module.starts_with('~')
 }
 
 fn extract_single_go_token(value: &str) -> Option<String> {

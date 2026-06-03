@@ -473,6 +473,9 @@ ScanCode: 332.23s</title></rect>
     <rect x="645.65" y="387.44" width="8" height="8" fill="#d97706" rx="1.5"><title>laravel/framework @ a3960e8
 Files: 3086
 ScanCode: 162.58s</title></rect>
+    <rect x="648.86" y="354.37" width="8" height="8" fill="#d97706" rx="1.5"><title>goharbor/harbor @ eb944bb
+Files: 3233
+ScanCode: 327.33s</title></rect>
     <rect x="649.58" y="327.73" width="8" height="8" fill="#d97706" rx="1.5"><title>debian:bookworm-slim @ sha256:f065376
 Files: 3267
 ScanCode: 575.28s</title></rect>
@@ -500,6 +503,9 @@ ScanCode: 429.19s</title></rect>
     <rect x="664.98" y="356.00" width="8" height="8" fill="#d97706" rx="1.5"><title>lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11
 Files: 4085
 ScanCode: 316.25s</title></rect>
+    <rect x="666.38" y="352.86" width="8" height="8" fill="#d97706" rx="1.5"><title>triggerdotdev/trigger.dev @ d1f4302
+Files: 4169
+ScanCode: 337.98s</title></rect>
     <rect x="667.96" y="325.26" width="8" height="8" fill="#d97706" rx="1.5"><title>curl/curl @ 2bb5c9b
 Files: 4266
 ScanCode: 606.05s</title></rect>
@@ -527,6 +533,9 @@ ScanCode: 479.56s</title></rect>
     <rect x="687.04" y="292.14" width="8" height="8" fill="#d97706" rx="1.5"><title>python/cpython @ 7a468a1
 Files: 5627
 ScanCode: 1221.65s</title></rect>
+    <rect x="690.65" y="315.53" width="8" height="8" fill="#d97706" rx="1.5"><title>kubernetes/autoscaler @ 9045d28
+Files: 5929
+ScanCode: 744.62s</title></rect>
     <rect x="692.31" y="293.00" width="8" height="8" fill="#d97706" rx="1.5"><title>openssl/openssl @ 7fb28b9
 Files: 6074
 ScanCode: 1199.73s</title></rect>
@@ -1087,6 +1096,9 @@ Provenant: 23.57s</title></circle>
     <circle cx="649.65" cy="485.60" r="4.5" fill="#2563eb"><title>laravel/framework @ a3960e8
 Files: 3086
 Provenant: 22.16s</title></circle>
+    <circle cx="652.86" cy="484.11" r="4.5" fill="#2563eb"><title>goharbor/harbor @ eb944bb
+Files: 3233
+Provenant: 22.87s</title></circle>
     <circle cx="653.58" cy="426.73" r="4.5" fill="#2563eb"><title>debian:bookworm-slim @ sha256:f065376
 Files: 3267
 Provenant: 77.04s</title></circle>
@@ -1114,6 +1126,9 @@ Provenant: 21.96s</title></circle>
     <circle cx="668.98" cy="497.60" r="4.5" fill="#2563eb"><title>lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11
 Files: 4085
 Provenant: 17.19s</title></circle>
+    <circle cx="670.38" cy="515.74" r="4.5" fill="#2563eb"><title>triggerdotdev/trigger.dev @ d1f4302
+Files: 4169
+Provenant: 11.71s</title></circle>
     <circle cx="671.96" cy="456.82" r="4.5" fill="#2563eb"><title>curl/curl @ 2bb5c9b
 Files: 4266
 Provenant: 40.75s</title></circle>
@@ -1141,6 +1156,9 @@ Provenant: 52.75s</title></circle>
     <circle cx="691.04" cy="475.47" r="4.5" fill="#2563eb"><title>python/cpython @ 7a468a1
 Files: 5627
 Provenant: 27.46s</title></circle>
+    <circle cx="694.65" cy="462.17" r="4.5" fill="#2563eb"><title>kubernetes/autoscaler @ 9045d28
+Files: 5929
+Provenant: 36.39s</title></circle>
     <circle cx="696.31" cy="439.39" r="4.5" fill="#2563eb"><title>openssl/openssl @ 7fb28b9
 Files: 6074
 Provenant: 58.93s</title></circle>
