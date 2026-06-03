@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 201 of 201 recorded runs, with a **12.1× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 202 of 202 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -206,6 +206,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-05-05 · pyodide-13754 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `10.77s`; ScanCode `135.33s`
 - Broader dependency extraction (`796` vs `718`) and slightly broader package visibility (`53` vs `52`) from `environment.yml`, `.gitmodules`, and committed wheel artifacts, with extension-qualified wheel PURLs, richer patch-header author recovery, and the fuller `Pyodide contributors and Mozilla` documentation notice
+
+##### [python/cpython @ 7a468a1](https://github.com/python/cpython/tree/7a468a101268d2b13105f94ae027df8b502d0c87) — **44.49× faster**
+
+- Files: 5,627
+- Run context: 2026-06-03 · cpython-8615 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `27.46s`; ScanCode `1221.65s`
+- Direct PEP 751 `Doc/pylock.toml` package visibility with 29 pinned PyPI documentation dependencies where ScanCode leaves the lockfile dependency-blind, plus cleaner FTP documentation URL extraction that keeps real FTP hosts while rejecting `ftp.*` method and member references
 
 ##### [python-poetry/poetry @ bfce511](https://github.com/python-poetry/poetry/tree/bfce5118814fa95445e823cb07a59bd77ffe1474) — **4.20× faster**
 
