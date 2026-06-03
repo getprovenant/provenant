@@ -314,6 +314,19 @@ fn test_extract_author_colon_inline_roster_with_handles() {
 }
 
 #[test]
+fn test_author_colon_markdown_block_strips_trailing_bare_handle() {
+    let input = "Authors:\nEvan Sheng (evan.sheng@airbnb.com) @evansheng\n\n";
+    let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);
+
+    assert!(
+        authors
+            .iter()
+            .any(|author| author.author == "Evan Sheng (evan.sheng@airbnb.com)"),
+        "authors: {authors:?}"
+    );
+}
+
+#[test]
 fn test_extract_markdown_heading_original_author_with_handle() {
     let input = "### Original author: Thomas Breloff (@tbreloff)\n";
     let (_copyrights, _holders, authors) = super::super::detect_copyrights_from_text(input);

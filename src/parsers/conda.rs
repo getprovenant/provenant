@@ -626,6 +626,10 @@ impl PackageParser for CondaEnvironmentYmlParser {
             }
         };
 
+        if looks_like_template_yaml(&contents) {
+            return Vec::new();
+        }
+
         let yaml: Value = match yaml_serde::from_str(&contents) {
             Ok(y) => y,
             Err(e) => {
@@ -687,6 +691,13 @@ fn looks_like_conda_environment_yaml(yaml: &Value) -> bool {
         .is_some_and(|value| !value.trim().is_empty());
 
     has_dependencies || has_channels || has_prefix
+}
+
+fn looks_like_template_yaml(contents: &str) -> bool {
+    contents.lines().take(MAX_ITERATION_COUNT).any(|line| {
+        let trimmed = line.trim_start();
+        trimmed.starts_with("{{") || trimmed.starts_with("{%-") || trimmed.starts_with("{%")
+    })
 }
 
 /// Extract Jinja2-style variables from a Conda meta.yaml

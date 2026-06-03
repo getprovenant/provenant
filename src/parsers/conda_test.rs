@@ -390,6 +390,28 @@ spec:
         assert!(CondaEnvironmentYmlParser::extract_packages(&env_path).is_empty());
     }
 
+    #[test]
+    fn test_helm_template_environment_yaml_returns_no_packages() {
+        let temp_dir = TempDir::new().unwrap();
+        let env_path = temp_dir.path().join("jobservice-cm-env.yaml");
+        fs::write(
+            &env_path,
+            r#"
+{{- if .Values.jobservice.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "harbor.jobservice" . }}
+data:
+  CORE_URL: {{ template "harbor.coreURL" . }}
+{{- end }}
+"#,
+        )
+        .unwrap();
+
+        assert!(CondaEnvironmentYmlParser::extract_packages(&env_path).is_empty());
+    }
+
     // ==================== extract_first_package() Tests ====================
 
     #[test]

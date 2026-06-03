@@ -192,6 +192,17 @@ fn test_refine_holder_drops_document_form_reference_noise() {
     assert_eq!(refine_holder("Office FL-108"), None);
 }
 
+#[test]
+fn test_refine_holder_drops_go_authors_boilerplate_fragments() {
+    assert_eq!(refine_holder("purposes"), None);
+    assert_eq!(
+        refine_holder(
+            "purposes. The master list of authors in the main Go distribution, visible at"
+        ),
+        None
+    );
+}
+
 // ── strip_some_punct ─────────────────────────────────────────────
 
 #[test]
@@ -1121,6 +1132,13 @@ fn test_refine_holder_junk_template_placeholders() {
     assert_eq!(refine_holder("pkg.author"), None);
     assert_eq!(refine_holder("format YYYY-MM-DD, -04"), None);
     assert_eq!(refine_holder("< pkg.author >"), None);
+}
+
+#[test]
+fn test_refine_holder_junk_header_comment_and_regex_fragments() {
+    assert_eq!(refine_holder("header"), None);
+    assert_eq!(refine_holder("comment"), None);
+    assert_eq!(refine_holder("(c 0-9 4 The Harbor Authors$"), None);
 }
 
 #[test]

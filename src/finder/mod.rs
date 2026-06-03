@@ -393,4 +393,57 @@ mod tests {
 
         assert!(urls.is_empty(), "urls: {urls:#?}");
     }
+
+    #[test]
+    fn test_find_urls_keeps_embedded_https_after_alphanumeric_prefix() {
+        let text = "issuer: tenant123https://sso.andrea.muellerpublic.de/auth/realms/harbor";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        let values: Vec<_> = urls.into_iter().map(|url| url.url).collect();
+        assert_eq!(
+            values,
+            vec!["https://sso.andrea.muellerpublic.de/auth/realms/harbor".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_find_urls_keeps_registry_host_templates() {
+        let text =
+            "https://registry.%s.aliyuncs.com/ https://api.ecr.%s.amazonaws.com/ https://%s/";
+        let config = DetectionConfig::default();
+        let urls = find_urls(text, &config);
+
+        let values: Vec<_> = urls.into_iter().map(|url| url.url).collect();
+        assert_eq!(
+            values,
+            vec![
+                "https://registry.%s.aliyuncs.com/".to_string(),
+                "https://api.ecr.%s.amazonaws.com/".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_find_urls_prefers_document_links_over_images_at_cap() {
+        let text = concat!(
+            "https://goharbor.io/logo.png\n",
+            "https://goharbor.io/banner.svg\n",
+            "https://goharbor.io/adopters\n",
+        );
+        let config = DetectionConfig {
+            max_urls: 2,
+            ..Default::default()
+        };
+        let urls = find_urls(text, &config);
+
+        let values: Vec<_> = urls.into_iter().map(|url| url.url).collect();
+        assert_eq!(
+            values,
+            vec![
+                "https://goharbor.io/adopters".to_string(),
+                "https://goharbor.io/logo.png".to_string(),
+            ]
+        );
+    }
 }

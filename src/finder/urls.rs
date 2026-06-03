@@ -144,7 +144,7 @@ fn remove_user_password(url: &str) -> Option<String> {
         return Some(parsed.to_string());
     }
 
-    strip_manual_userinfo(url)
+    strip_manual_userinfo(url).or_else(|| Some(url.to_string()))
 }
 
 fn strip_manual_userinfo(url: &str) -> Option<String> {
@@ -167,7 +167,52 @@ fn canonical_url(url: &str) -> Option<String> {
     if !is_filterable(url) {
         return Some(url.to_string());
     }
-    Some(Url::parse(url).ok()?.to_string())
+    Url::parse(url)
+        .ok()
+        .map(|parsed| parsed.to_string())
+        .or_else(|| canonical_template_host_url(url))
+}
+
+fn canonical_template_host_url(url: &str) -> Option<String> {
+    let scheme_end = url.find("://")?;
+    let scheme = &url[..scheme_end];
+    if !matches!(scheme, "http" | "https") {
+        return None;
+    }
+
+    let after_scheme = &url[scheme_end + 3..];
+    let authority_end = after_scheme
+        .find(['/', '?', '#'])
+        .unwrap_or(after_scheme.len());
+    let authority = &after_scheme[..authority_end];
+    let host = authority
+        .rsplit_once('@')
+        .map_or(authority, |(_, host)| host);
+    if !host.contains("%s") || !looks_like_template_host(host) {
+        return None;
+    }
+
+    let mut canonical = url.to_string();
+    if authority_end == after_scheme.len() {
+        canonical.push('/');
+    }
+    Some(canonical)
+}
+
+fn looks_like_template_host(host: &str) -> bool {
+    let labels: Vec<&str> = host.split('.').collect();
+    if labels.len() < 3 || labels[labels.len() - 2..].contains(&"%s") {
+        return false;
+    }
+    if !labels
+        .iter()
+        .any(|label| *label != "%s" && !label.is_empty())
+    {
+        return false;
+    }
+
+    let concrete = host.replace("%s", "template");
+    is_good_url_host_domain(&format!("http://{concrete}"))
 }
 
 pub fn find_urls(text: &str, config: &DetectionConfig) -> Vec<UrlDetection> {
@@ -181,7 +226,10 @@ pub fn find_urls(text: &str, config: &DetectionConfig) -> Vec<UrlDetection> {
             for matched in URLS_REGEX.find_iter(segment) {
                 if matched.start() > 0 {
                     let prev_byte = segment.as_bytes()[matched.start() - 1];
-                    if prev_byte.is_ascii_alphanumeric() {
+                    if prev_byte.is_ascii_alphanumeric()
+                        && !matched.as_str().starts_with("http://")
+                        && !matched.as_str().starts_with("https://")
+                    {
                         continue;
                     }
                 }
@@ -213,7 +261,11 @@ pub fn find_urls(text: &str, config: &DetectionConfig) -> Vec<UrlDetection> {
                     continue;
                 };
 
-                if is_filterable(&candidate) && !is_good_url_host_domain(&candidate) {
+                if is_filterable(&candidate)
+                    && !is_good_url_host_domain(&candidate)
+                    && !canonical_template_host_url(&candidate)
+                        .is_some_and(|url| looks_like_template_url_host_domain(&url))
+                {
                     continue;
                 }
                 if !classify_url(&candidate.to_ascii_lowercase()) {
@@ -240,8 +292,36 @@ pub fn find_urls(text: &str, config: &DetectionConfig) -> Vec<UrlDetection> {
     };
 
     if config.max_urls > 0 && detections.len() > config.max_urls {
+        detections.sort_by_key(|detection| is_low_priority_url(&detection.url));
         detections.truncate(config.max_urls);
     }
 
     detections
+}
+
+fn is_low_priority_url(url: &str) -> bool {
+    let Ok(parsed) = Url::parse(url) else {
+        return false;
+    };
+    let path = parsed.path().to_ascii_lowercase();
+    [
+        ".apng", ".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".svg", ".webp",
+    ]
+    .iter()
+    .any(|suffix| path.ends_with(suffix))
+}
+
+fn looks_like_template_url_host_domain(url: &str) -> bool {
+    let Some(scheme_end) = url.find("://") else {
+        return false;
+    };
+    let after_scheme = &url[scheme_end + 3..];
+    let authority_end = after_scheme
+        .find(['/', '?', '#'])
+        .unwrap_or(after_scheme.len());
+    let authority = &after_scheme[..authority_end];
+    let host = authority
+        .rsplit_once('@')
+        .map_or(authority, |(_, host)| host);
+    looks_like_template_host(host)
 }

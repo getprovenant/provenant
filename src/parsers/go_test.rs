@@ -538,6 +538,11 @@ replace github.com/old/pkg => ../local/path
             extra.get("replace_new").and_then(|v| v.as_str()),
             Some("../local/path")
         );
+        assert_eq!(dep.purl, None, "local path should not produce a Go PURL");
+        assert_eq!(
+            extra.get("replace_local_path").and_then(|v| v.as_bool()),
+            Some(true)
+        );
         // Local path replacements have no version
         assert_eq!(dep.extracted_requirement, None);
         assert!(

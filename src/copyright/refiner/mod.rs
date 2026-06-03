@@ -305,6 +305,8 @@ static HOLDERS_JUNK: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         "if",
         "grant",
         "notice",
+        "header",
+        "comment",
         "do the following",
         "does",
         "has",
@@ -665,7 +667,9 @@ fn contains_regex_or_template_marker(s: &str) -> bool {
         || trimmed.contains("{{")
         || trimmed.contains("}}")
         || trimmed.contains("${")
+        || trimmed.contains("0-9")
         || trimmed.contains("^ ")
+        || trimmed.ends_with('$')
         || trimmed.contains(" d+")
         || trimmed.contains(" ?")
 }
