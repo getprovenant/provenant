@@ -191,6 +191,7 @@ pub(super) static COPYRIGHTS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new
         r"(?i)^copyright and other proprietary\b",
         r"(?i)^copyright in the\b",
         r"(?i)^copyright in and\b",
+        r"(?i)^copyright\s+purposes(?:\.|\b).*$",
         r"(?i)^copyright the software\b",
         r"(?i)^copyright info for\b",
         r"(?i)^copyright grant\b",

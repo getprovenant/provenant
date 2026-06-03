@@ -1395,17 +1395,20 @@ pub fn refine_copyright(s: &str) -> Option<String> {
 }
 
 fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
+    let lower = s.trim().to_ascii_lowercase();
     matches!(
-        s.trim().to_ascii_lowercase().as_str(),
+        lower.as_str(),
         "copyright exclude"
             | "copyright doctrines of fair use, fair dealing, or other equivalents"
             | "copyright doctrines of fair use, fair dealing, or other equivalents."
             | "copyright licenses specified in the"
             | "copyright in its"
+            | "copyright purposes"
             | "copyright sections were added"
             | "copyright c- core core"
             | "copyright applying to the plugin. if"
-    ) || is_placeholder_or_code_junk_copyright(s, &s.trim().to_ascii_lowercase())
+    ) || lower.starts_with("copyright purposes.")
+        || is_placeholder_or_code_junk_copyright(s, &lower)
 }
 
 fn strip_known_copyright_wrappers(s: &str) -> String {
