@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 203 of 203 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 204 of 204 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -601,6 +601,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-05-07 · asio-38900 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `18.97s`; ScanCode `333.52s`
 - More correct root Autotools package identity on `configure.ac` instead of ScanCode's generic input placeholder, plus cleaner holder normalization on `include/asio.hpp` and the Oliver Kowalke C++ notice set; the remaining ScanCode edge is limited to two multiline continuation headers and a small Perl author/copyright-email-tail set
+
+##### [chuckha/crispy-tribble @ 20479cf](https://github.com/chuckha/crispy-tribble/tree/20479cfe45a694ee4fababd635f1bd8ebcb44ed3) — **13.28× faster**
+
+- Files: 471
+- Run context: 2026-06-03 · crispy-tribble-96153 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.32s`; ScanCode `123.76s`
+- Broader Go module graph dependency visibility (`117` vs `61` dependencies) from committed `go.mod.graph` while preserving matched package coverage (`10` vs `10`) across `go.mod`, `go.sum`, and vendored manifests, plus cleaner rejection of Go AUTHORS boilerplate and code-comment author/copyright fragments
 
 ##### [chromium/chromium @ 2befda7](https://github.com/chromium/chromium/tree/2befda78fcc7fa5649540420eedcdd87a2583fe0) — **23.90× faster**
 

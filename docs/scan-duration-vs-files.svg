@@ -266,6 +266,9 @@ ScanCode: 135.43s</title></rect>
     <rect x="514.79" y="385.13" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/dplyr @ 2f9f49e
 Files: 462
 ScanCode: 170.71s</title></rect>
+    <rect x="516.12" y="400.33" width="8" height="8" fill="#d97706" rx="1.5"><title>chuckha/crispy-tribble @ 20479cf
+Files: 471
+ScanCode: 123.76s</title></rect>
     <rect x="516.85" y="391.50" width="8" height="8" fill="#d97706" rx="1.5"><title>phoenixframework/phoenix @ e7b8081
 Files: 476
 ScanCode: 149.17s</title></rect>
@@ -877,6 +880,9 @@ Provenant: 10.70s</title></circle>
     <circle cx="518.79" cy="507.78" r="4.5" fill="#2563eb"><title>tidyverse/dplyr @ 2f9f49e
 Files: 462
 Provenant: 13.86s</title></circle>
+    <circle cx="520.12" cy="526.53" r="4.5" fill="#2563eb"><title>chuckha/crispy-tribble @ 20479cf
+Files: 471
+Provenant: 9.32s</title></circle>
     <circle cx="520.85" cy="511.54" r="4.5" fill="#2563eb"><title>phoenixframework/phoenix @ e7b8081
 Files: 476
 Provenant: 12.80s</title></circle>
