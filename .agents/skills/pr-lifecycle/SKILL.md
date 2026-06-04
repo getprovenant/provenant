@@ -31,6 +31,8 @@ gh pr create --base main --head <branch> --title "<conventional title>" --body "
 
 ## 2. Wait for Signals
 
+Opening a PR does **not** obligate you to block on CI or review — it is fine to open one and move on rather than sit through a ~12-minute CI run. What matters is that a PR is not "done" at opened: **any time you return to a PR — later this turn or in a future session — resume the loop from Step 3 against the current head**, fetching fresh CI and review signals and addressing them. Treat an opened-but-unreviewed PR as unfinished work to come back to, not a finished task.
+
 - CI: `gh pr checks <num> --watch` (or `gh run watch`). Map any failure to the `ci-failure-triage` skill.
 - Review: Greptile posts a summary as an issue comment plus inline review comments; humans may comment too.
 
@@ -65,6 +67,7 @@ git push --force-with-lease origin <branch>
 ```
 
 - Re-run the narrowest validation that proves the fix (focused `cargo build`/`clippy`/targeted tests, or docs/lint checks per `CONTRIBUTING.md`) before pushing.
+- **Out-of-scope findings.** If a finding is valid but outside this PR's scope — an enhancement, an unrelated refactor, or work that belongs to another ecosystem/module per `AGENTS.md` scope discipline — do **not** silently expand the PR. Reply on the thread acknowledging it and say where it will live: a follow-up issue/PR, or an explicit "out of scope, declining" with the reason. Then open the follow-up if warranted. Decide explicitly rather than defaulting to fix-in-place; a finding being correct is not by itself a reason to widen this PR.
 
 ## 5. Reply and Resolve Threads
 
