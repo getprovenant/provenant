@@ -5,7 +5,7 @@
   "description": "Documentation tooling for Provenant",
   "scripts": {
     "prepare": "lefthook install",
-    "setup": "npm install && cargo install --locked cargo-sort cargo-machete cargo-deny && ./setup.sh",
+    "setup": "npm install && cargo install --locked cargo-sort cargo-machete cargo-deny cargo-llvm-cov && ./setup.sh",
     "hooks:install": "lefthook install",
     "hooks:run": "lefthook run pre-commit --all-files",
     "skills:sync": "./scripts/sync_agent_skills.sh",
@@ -21,7 +21,9 @@
     "validate:urls": "cargo run --quiet --manifest-path xtask/Cargo.toml --bin validate-urls -- --root .",
     "lint:docs": "npm run lint:md && npm run format:check",
     "fix:docs": "npm run lint:md:fix && npm run format",
-    "check:docs": "npm run lint:docs"
+    "check:docs": "npm run lint:docs",
+    "coverage": "cargo llvm-cov --lib",
+    "coverage:html": "cargo llvm-cov --lib --open"
   },
   "engines": {
     "node": ">=24.0.0"
