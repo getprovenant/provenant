@@ -60,4 +60,60 @@ mod tests {
             assert_eq!(dep.is_runtime, Some(false));
         }
     }
+
+    #[test]
+    fn test_pipfile_lock_surfaces_pinned_hashes_as_hash_options() {
+        use serde_json::json;
+        use std::fs;
+        use tempfile::tempdir;
+
+        let content = r#"{
+    "_meta": {"hash": {"sha256": "test-hash"}, "pipfile-spec": 6},
+    "default": {
+        "requests": {
+            "hashes": ["sha256:abc123", "sha256:def456"],
+            "version": "==2.28.0"
+        },
+        "no-hash-pkg": {
+            "version": "==1.0.0"
+        }
+    }
+}"#;
+
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("Pipfile.lock");
+        fs::write(&file_path, content).unwrap();
+
+        let package_data = PipfileLockParser::extract_first_package(&file_path);
+
+        let requests = package_data
+            .dependencies
+            .iter()
+            .find(|dep| dep.purl.as_deref() == Some("pkg:pypi/requests@2.28.0"))
+            .expect("requests dependency");
+        let hash_options = requests
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("hash_options"))
+            .expect("hash_options present");
+        assert_eq!(
+            hash_options,
+            &json!(["sha256:abc123", "sha256:def456"]),
+            "pinned artifact hashes should be surfaced as hash_options"
+        );
+
+        // A dependency without pinned hashes carries no hash_options noise.
+        let no_hash = package_data
+            .dependencies
+            .iter()
+            .find(|dep| dep.purl.as_deref() == Some("pkg:pypi/no-hash-pkg@1.0.0"))
+            .expect("no-hash-pkg dependency");
+        assert!(
+            no_hash
+                .extra_data
+                .as_ref()
+                .is_none_or(|extra| !extra.contains_key("hash_options")),
+            "dependencies without pinned hashes should not get hash_options"
+        );
+    }
 }
