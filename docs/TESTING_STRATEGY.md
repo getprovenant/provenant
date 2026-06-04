@@ -435,6 +435,27 @@ Before marking a parser complete, verify:
 
 ---
 
+## Code coverage (local signal)
+
+Coverage is a **local signal for finding untested areas, not a target to maximize
+and not a CI gate** — it serves the "confidence, not coverage" goal below rather
+than replacing it. We deliberately do not track coverage in CI; chasing a number
+on every PR adds noise without changing the philosophy.
+
+When an engineer or agent wants to close a gap, run it locally:
+
+- `npm run coverage` prints a per-file summary so you can spot thinly-tested modules.
+- `npm run coverage:html` opens an annotated line-by-line report.
+- Both require `cargo-llvm-cov` (installed by `npm run setup`); scope to a module
+  with a test-name filter after `--`, e.g. `cargo llvm-cov --lib -- copyright::refiner`.
+- The `code-coverage` agent skill documents this workflow for automated use.
+
+Scope caveat: `--lib` measures unit tests only. Integration and golden suites
+exercise far more code than they credit, so read the report as a **lower bound**
+that points at genuinely untested paths, not a verdict on overall test quality.
+
+---
+
 ## Summary
 
 **Testing is about confidence, not coverage.**
