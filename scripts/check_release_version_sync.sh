@@ -8,18 +8,42 @@ ROOT_MANIFEST="Cargo.toml"
 XTASK_LOCKFILE_CANDIDATE="xtask/Cargo.lock"
 WORKSPACE_LOCKFILE="Cargo.lock"
 CITATION_FILE="CITATION.cff"
-UPDATE_LOCKFILE="${1:-}"
+RUST_TOOLCHAIN_FILE="rust-toolchain.toml"
 
-python3 - "$ROOT_MANIFEST" "$XTASK_LOCKFILE_CANDIDATE" "$WORKSPACE_LOCKFILE" "$CITATION_FILE" "$UPDATE_LOCKFILE" <<'PY'
+# The no-argument invocation behaves as a read-only check. `--update-lockfile`
+# is passed by the cargo-release pre-release-hook and additionally rewrites the
+# lockfile and the synced `rust-version`.
+update_lockfile="false"
+for arg in "$@"; do
+    case "$arg" in
+        --update-lockfile) update_lockfile="true" ;;
+        *)
+            echo "Unknown argument: $arg" >&2
+            echo "Usage: $0 [--update-lockfile]" >&2
+            exit 2
+            ;;
+    esac
+done
+
+python3 - \
+    "$ROOT_MANIFEST" \
+    "$XTASK_LOCKFILE_CANDIDATE" \
+    "$WORKSPACE_LOCKFILE" \
+    "$CITATION_FILE" \
+    "$RUST_TOOLCHAIN_FILE" \
+    "$update_lockfile" <<'PY'
 import pathlib
 import re
 import sys
 
-root_manifest = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+root_manifest_path = pathlib.Path(sys.argv[1])
 lockfile_candidate_path = pathlib.Path(sys.argv[2])
 workspace_lockfile_path = pathlib.Path(sys.argv[3])
 citation_file_path = pathlib.Path(sys.argv[4])
-update_lockfile = sys.argv[5] == "--update-lockfile"
+rust_toolchain_path = pathlib.Path(sys.argv[5])
+update_lockfile = sys.argv[6] == "true"
+
+root_manifest = root_manifest_path.read_text(encoding="utf-8")
 
 
 def replace_root_package_version(lockfile_contents: str, root_version: str) -> str:
@@ -52,6 +76,25 @@ def replace_root_package_version(lockfile_contents: str, root_version: str) -> s
 
     return "".join(updated_blocks)
 
+
+def toolchain_msrv(toolchain_contents: str) -> str:
+    channel_match = re.search(
+        r'^channel\s*=\s*"([^"]+)"$', toolchain_contents, re.MULTILINE
+    )
+    if channel_match is None:
+        raise SystemExit("Could not determine channel from rust-toolchain.toml")
+
+    channel = channel_match.group(1)
+    version_match = re.match(r"^(\d+)\.(\d+)(?:\.\d+)?$", channel)
+    if version_match is None:
+        raise SystemExit(
+            f"rust-toolchain.toml channel '{channel}' is not a pinned x.y[.z] version; "
+            "rust-version sync only supports a pinned numeric channel."
+        )
+
+    return f"{version_match.group(1)}.{version_match.group(2)}"
+
+
 if lockfile_candidate_path.exists():
     lockfile_path = lockfile_candidate_path
     lockfile_label = str(lockfile_candidate_path)
@@ -65,12 +108,44 @@ else:
 
 lockfile_contents = lockfile_path.read_text(encoding="utf-8")
 citation_file = citation_file_path.read_text(encoding="utf-8")
+toolchain_contents = rust_toolchain_path.read_text(encoding="utf-8")
 
 root_version_match = re.search(r'^version = "([^"]+)"$', root_manifest, re.MULTILINE)
 if root_version_match is None:
     raise SystemExit("Could not determine root crate version from Cargo.toml")
 
 root_version = root_version_match.group(1)
+
+# Keep Cargo.toml `rust-version` derived from the pinned toolchain so
+# rust-toolchain.toml stays the single human-edited source of truth.
+expected_msrv = toolchain_msrv(toolchain_contents)
+
+rust_version_match = re.search(
+    r'^rust-version = "([^"]+)"$', root_manifest, re.MULTILINE
+)
+if rust_version_match is None:
+    raise SystemExit(
+        "Could not determine rust-version from Cargo.toml; expected a "
+        '`rust-version = "x.y"` line in [package].'
+    )
+
+current_msrv = rust_version_match.group(1)
+
+if update_lockfile and current_msrv != expected_msrv:
+    root_manifest = (
+        root_manifest[: rust_version_match.start(1)]
+        + expected_msrv
+        + root_manifest[rust_version_match.end(1) :]
+    )
+    root_manifest_path.write_text(root_manifest, encoding="utf-8")
+    current_msrv = expected_msrv
+
+if current_msrv != expected_msrv:
+    raise SystemExit(
+        "Cargo.toml rust-version is out of sync with rust-toolchain.toml: "
+        f"rust-version is {current_msrv}, toolchain channel implies {expected_msrv}.\n"
+        "Refresh it with: ./scripts/check_release_version_sync.sh --update-lockfile"
+    )
 
 if update_lockfile:
     updated_lockfile_contents = replace_root_package_version(lockfile_contents, root_version)
