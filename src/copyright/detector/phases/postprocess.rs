@@ -9,6 +9,7 @@ use std::sync::LazyLock;
 
 use super::super::seen_text::SeenTextSets;
 
+// Copyright postprocess phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_initial_detection_repairs(
     content: &str,
@@ -80,6 +81,7 @@ fn run_initial_detection_repairs(
     seen.dedup_new_holders(holders, h_before);
 }
 
+// Copyright postprocess phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_author_extraction_and_repairs(
     content: &str,
@@ -307,6 +309,7 @@ fn run_author_extraction_and_repairs(
     seen.rebuild_authors_from(authors);
 }
 
+// Copyright postprocess phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_mid_pipeline_repairs(
     content: &str,
@@ -400,6 +403,7 @@ fn run_mid_pipeline_repairs(
     seen.rebuild_holders_from(holders);
 }
 
+// Copyright postprocess phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_late_pattern_extractions(
     content: &str,
@@ -458,7 +462,6 @@ fn run_late_pattern_extractions(
     );
 }
 
-#[allow(clippy::too_many_arguments)]
 fn drop_placeholder_and_code_junk_by_raw_line(
     raw_lines: &[&str],
     copyrights: &mut Vec<CopyrightDetection>,
@@ -691,6 +694,7 @@ fn run_final_variant_and_cleanup_repairs(
     drop_placeholder_and_code_junk_by_raw_line(raw_lines, copyrights, holders);
 }
 
+// Copyright postprocess phase entry point; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 pub(in super::super) fn run_phase_postprocess(
     content: &str,

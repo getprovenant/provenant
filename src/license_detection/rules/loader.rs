@@ -73,6 +73,7 @@ impl ParseNumber for yaml_serde::Number {
     }
 }
 
+// Serde deserialization target: mirrors the full .LICENSE frontmatter; not every field is read.
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct LicenseFrontmatter {
@@ -227,6 +228,7 @@ fn parse_file_content(content: &str, path: &Path) -> Result<ParsedRuleFile> {
     })
 }
 
+// Serde deserialization target: mirrors the full .RULE frontmatter; not every field is read.
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct RuleFrontmatter {

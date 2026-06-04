@@ -208,8 +208,9 @@ impl FileInfoBuilder {
 }
 
 impl FileInfo {
-    #[allow(clippy::too_many_arguments)]
     /// Construct a [`FileInfo`] from fully resolved scanner fields.
+    // Arguments mirror the resolved scanner fields that make up a [`FileInfo`].
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,
         base_name: String,

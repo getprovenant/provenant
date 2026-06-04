@@ -48,6 +48,7 @@ struct MatchSearchContext<'a> {
 /// # Returns
 ///
 /// Tuple of (query_start, rule_start, match_length)
+// Index-based loop indexes parallel query/rule sequences in lockstep; an iterator rewrite would obscure the diagonal walk.
 #[allow(clippy::needless_range_loop)]
 fn find_longest_match_impl(
     context: &MatchSearchContext<'_>,

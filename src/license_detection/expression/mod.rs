@@ -23,6 +23,7 @@ pub use simplify::{
 };
 
 /// Error type for license expression parsing.
+// Variant names share the "Expression"/"Token" domain vocabulary; renaming for the lint would reduce clarity.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
@@ -73,7 +74,6 @@ pub enum LicenseExpression {
 
 impl LicenseExpression {
     /// Extract all license keys from the expression.
-    #[allow(dead_code)]
     pub fn license_keys(&self) -> Vec<String> {
         let mut keys = Vec::new();
         self.collect_keys(&mut keys);
@@ -82,7 +82,6 @@ impl LicenseExpression {
         keys
     }
 
-    #[allow(dead_code)]
     fn collect_keys(&self, keys: &mut Vec<String>) {
         match self {
             Self::License(key) => keys.push(key.clone()),

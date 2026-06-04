@@ -6,6 +6,7 @@ use crate::copyright::types::{CopyrightDetection, HolderDetection};
 
 use super::super::seen_text::SeenTextSets;
 
+// Copyright primary-extraction phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_pre_pattern_repairs(
     content: &str,
@@ -186,6 +187,7 @@ fn run_pre_pattern_repairs(
     seen.dedup_new_copyrights(copyrights, c_before);
 }
 
+// Copyright primary-extraction phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_group_based_extractions(
     content: &str,
@@ -397,6 +399,7 @@ fn run_group_based_extractions(
     holders.extend(new_h);
 }
 
+// Copyright primary-extraction phase fn; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 fn run_content_and_markup_extractions(
     content: &str,
@@ -605,6 +608,7 @@ fn run_content_and_markup_extractions(
     holders.extend(new_h);
 }
 
+// Copyright primary-extraction phase entry point; the long argument list threads the shared detection-pipeline state.
 #[allow(clippy::too_many_arguments)]
 pub(in super::super) fn run_phase_primary_extractions(
     content: &str,

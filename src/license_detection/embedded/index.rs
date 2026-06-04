@@ -5,6 +5,7 @@ use super::schema::{EmbeddedArtifactMetadata, EmbeddedLoaderSnapshot, SCHEMA_VER
 use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::index::build_index_from_loaded;
 
+// Loader handle: fields are consumed by maintainer/index-build paths, not every routine-scan path.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct LoadedEmbeddedLicenseIndex {
@@ -43,6 +44,7 @@ pub fn load_loader_snapshot_from_bytes(
     Ok(snapshot)
 }
 
+// Used by maintainer/index-build entry points; not every binary links this path.
 #[allow(dead_code)]
 pub fn load_embedded_license_index_from_bytes(
     bytes: &[u8],
