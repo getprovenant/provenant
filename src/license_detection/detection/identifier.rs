@@ -192,8 +192,6 @@ mod tests {
             rule_length: 100,
             rule_start_token: 0,
             coordinates: MatchCoordinates::query_region(PositionSpan::range(1, 11)),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 

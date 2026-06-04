@@ -122,8 +122,6 @@ mod tests {
                 PositionSpan::range(0, 100),
                 PositionSpan::range(0, 50),
             ),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 
@@ -537,8 +535,6 @@ mod tests {
             is_from_license: false,
             rule_start_token: 0,
             coordinates: MatchCoordinates::query_region(PositionSpan::empty()),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         };
 
         assert!(match_result.from_file.is_none());
@@ -691,8 +687,6 @@ mod tests {
                 PositionSpan::range(0, 100),
                 PositionSpan::range(0, 50),
             ),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         };
 
         assert_eq!(

@@ -708,8 +708,6 @@ mod tests {
                 start_line,
                 end_line + 1,
             )),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 
@@ -750,8 +748,6 @@ mod tests {
                 start_token,
                 end_token,
             )),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 

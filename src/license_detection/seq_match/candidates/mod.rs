@@ -102,16 +102,6 @@ impl CandidateMetrics {
         u128::from(matched) * 10 >= u128::from(union) * u128::from(threshold_tenths)
     }
 
-    pub(super) fn containment_f32(&self) -> f32 {
-        self.matched_length as f32 / self.rule_len as f32
-    }
-
-    pub(super) fn amplified_resemblance_f32(&self) -> f32 {
-        let union_len = self.union_len() as f32;
-        let resemblance = self.matched_length as f32 / union_len;
-        resemblance * resemblance
-    }
-
     fn rounded_containment_tenths(&self) -> u32 {
         quantize_ratio_tenths(self.matched_length as u64, self.rule_len as u64)
     }

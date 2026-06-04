@@ -84,8 +84,6 @@ pub(crate) fn populate_detection_from_group(
 
     detection.matches = group.matches.clone();
 
-    let _score = compute_detection_score(&detection.matches);
-
     if should_compute_public_expression(log_category)
         && let Ok(expr) = determine_license_expression(&matches_for_expression, source_text)
     {
@@ -720,8 +718,6 @@ mod tests {
                 start_line,
                 end_line + 1,
             )),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 

@@ -199,8 +199,6 @@ pub(crate) fn aho_match_with_extra_matchables(
             is_from_license: rule.is_from_license,
             rule_start_token: 0,
             coordinates: MatchCoordinates::rule_aligned(qspan, ispan, hispan),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         };
 
         matches.push(license_match);
