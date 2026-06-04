@@ -13,6 +13,13 @@ use serde::Deserialize;
 
 const COPYRIGHT_LINE: &str = "SPDX-FileCopyrightText: Provenant contributors";
 const LICENSE_LINE: &str = "SPDX-License-Identifier: Apache-2.0";
+/// Upstream attribution carried by files derived from ScanCode Toolkit, in
+/// addition to the Provenant copyright line.
+const UPSTREAM_COPYRIGHT_LINE: &str = "SPDX-FileCopyrightText: nexB Inc. and others";
+/// "Stating changes" notice (Apache-2.0 section 4(b)) for derived files. The
+/// set of derived files is enumerated in `.license-headers.toml`; this line
+/// stays uniform across them so the header remains idempotent.
+const DERIVED_NOTE: &str = "Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.";
 const SCOPE_CONFIG_PATH: &str = ".license-headers.toml";
 
 #[derive(Parser, Debug)]
@@ -35,6 +42,10 @@ struct ScopePatterns {
     include: Vec<String>,
     #[serde(default)]
     exclude: Vec<String>,
+    /// In-scope paths whose Rust source is derived from ScanCode Toolkit and
+    /// must carry upstream nexB attribution alongside the Provenant header.
+    #[serde(default)]
+    derived: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -47,11 +58,15 @@ struct ScopeConfigFile {
 struct CompiledScopePatterns {
     include: Vec<Pattern>,
     exclude: Vec<Pattern>,
+    derived: Vec<Pattern>,
 }
 
 #[derive(Debug)]
 struct ScopeConfig {
     patterns: CompiledScopePatterns,
+    /// Raw `derived` glob strings, kept alongside the compiled patterns so
+    /// validation errors can name the offending entry.
+    derived_raw: Vec<String>,
 }
 
 impl ScopeConfig {
@@ -64,6 +79,8 @@ impl ScopeConfig {
 
         let include = compile_patterns(&config_path, "include", parsed.license_headers.include)?;
         let exclude = compile_patterns(&config_path, "exclude", parsed.license_headers.exclude)?;
+        let derived_raw = parsed.license_headers.derived.clone();
+        let derived = compile_patterns(&config_path, "derived", parsed.license_headers.derived)?;
 
         anyhow::ensure!(
             !include.is_empty(),
@@ -72,7 +89,12 @@ impl ScopeConfig {
         );
 
         Ok(Self {
-            patterns: CompiledScopePatterns { include, exclude },
+            patterns: CompiledScopePatterns {
+                include,
+                exclude,
+                derived,
+            },
+            derived_raw,
         })
     }
 
@@ -87,6 +109,35 @@ impl ScopeConfig {
                 .exclude
                 .iter()
                 .any(|pattern| pattern.matches_path(path))
+    }
+
+    fn is_derived(&self, relative_path: &str) -> bool {
+        let path = Path::new(relative_path);
+        self.patterns
+            .derived
+            .iter()
+            .any(|pattern| pattern.matches_path(path))
+    }
+
+    /// Returns the `derived` entries that match no in-scope tracked file.
+    ///
+    /// A typo or stale path in the `derived` list would otherwise be silent: the
+    /// real file would receive the two-line non-derived header and `--check`
+    /// would still pass, dropping its required upstream attribution. Validating
+    /// against the actual in-scope file set (rather than just include/exclude)
+    /// catches typos, since a misspelled path still matches `src/**/*.rs`.
+    fn unmatched_derived(&self, in_scope_paths: &[String]) -> Vec<String> {
+        self.patterns
+            .derived
+            .iter()
+            .zip(&self.derived_raw)
+            .filter(|(pattern, _)| {
+                !in_scope_paths
+                    .iter()
+                    .any(|relative| pattern.matches_path(Path::new(relative)))
+            })
+            .map(|(_, raw)| raw.clone())
+            .collect()
     }
 }
 
@@ -123,8 +174,25 @@ fn main() -> Result<()> {
 
     let repo_root = find_repo_root()?;
     let scope = ScopeConfig::load(&repo_root)?;
+
+    // Validate the `derived` list against the actual in-scope tree (regardless
+    // of which paths this invocation processes) so a typo or stale entry fails
+    // loudly instead of silently dropping a file's upstream attribution.
+    let all_candidates = collect_all_candidates(&repo_root, &scope)?;
+    let in_scope_paths = all_candidates
+        .iter()
+        .map(|path| rel_path(&repo_root, path))
+        .collect::<Result<Vec<_>>>()?;
+    let unmatched = scope.unmatched_derived(&in_scope_paths);
+    anyhow::ensure!(
+        unmatched.is_empty(),
+        "{SCOPE_CONFIG_PATH} `derived` lists path(s) that match no in-scope tracked file \
+         (typo or stale entry?): {}",
+        unmatched.join(", ")
+    );
+
     let candidates = if args.paths.is_empty() {
-        collect_all_candidates(&repo_root, &scope)?
+        all_candidates
     } else {
         collect_requested_candidates(&repo_root, &scope, &args.paths)?
     };
@@ -134,7 +202,8 @@ fn main() -> Result<()> {
         for path in candidates {
             let original = fs::read_to_string(&path)
                 .with_context(|| format!("failed to read {}", path.display()))?;
-            let rewritten = rewrite_with_header(&path, &original)?;
+            let derived = scope.is_derived(&rel_path(&repo_root, &path)?);
+            let rewritten = rewrite_with_header(&path, &original, derived)?;
             if rewritten != original {
                 fs::write(&path, rewritten)
                     .with_context(|| format!("failed to write {}", path.display()))?;
@@ -157,7 +226,8 @@ fn main() -> Result<()> {
     for path in candidates {
         let original = fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
-        let rewritten = rewrite_with_header(&path, &original)?;
+        let derived = scope.is_derived(&rel_path(&repo_root, &path)?);
+        let rewritten = rewrite_with_header(&path, &original, derived)?;
         if rewritten != original {
             missing.push(rel_path(&repo_root, &path)?);
         }
@@ -291,17 +361,24 @@ fn comment_prefix(path: &Path) -> Option<&'static str> {
     }
 }
 
-fn expected_header(prefix: &str) -> [String; 2] {
-    [
-        format!("{prefix} {COPYRIGHT_LINE}"),
-        format!("{prefix} {LICENSE_LINE}"),
-    ]
+fn expected_header(prefix: &str, derived: bool) -> Vec<String> {
+    let mut header = Vec::new();
+    if derived {
+        header.push(format!("{prefix} {UPSTREAM_COPYRIGHT_LINE}"));
+    }
+    header.push(format!("{prefix} {COPYRIGHT_LINE}"));
+    header.push(format!("{prefix} {LICENSE_LINE}"));
+    if derived {
+        header.push(format!("{prefix} {DERIVED_NOTE}"));
+    }
+    header
 }
 
-fn rewrite_with_header(path: &Path, original: &str) -> Result<String> {
+fn rewrite_with_header(path: &Path, original: &str, derived: bool) -> Result<String> {
     let prefix = comment_prefix(path)
         .with_context(|| format!("no comment prefix configured for {}", path.display()))?;
-    let expected = expected_header(prefix);
+    let expected = expected_header(prefix, derived);
+    let derived_note = format!("{prefix} {DERIVED_NOTE}");
     let mut lines: Vec<&str> = original.lines().collect();
 
     let mut output = Vec::new();
@@ -319,6 +396,15 @@ fn rewrite_with_header(path: &Path, original: &str) -> Result<String> {
         index += 1;
     }
 
+    // Consume any existing derived-note line so the header stays idempotent
+    // whether or not the file was previously classified as derived.
+    while lines
+        .get(index)
+        .is_some_and(|line| line.trim() == derived_note.trim())
+    {
+        index += 1;
+    }
+
     while lines.get(index).is_some_and(|line| line.trim().is_empty()) {
         index += 1;
     }
@@ -330,4 +416,84 @@ fn rewrite_with_header(path: &Path, original: &str) -> Result<String> {
     }
 
     Ok(output.join("\n") + "\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rewrite(body: &str, derived: bool) -> String {
+        rewrite_with_header(Path::new("x.rs"), body, derived).expect("rewrite")
+    }
+
+    #[test]
+    fn non_derived_gets_provenant_header_only() {
+        assert_eq!(
+            rewrite("mod a;\n", false),
+            "// SPDX-FileCopyrightText: Provenant contributors\n\
+             // SPDX-License-Identifier: Apache-2.0\n\
+             \n\
+             mod a;\n"
+        );
+    }
+
+    #[test]
+    fn derived_gets_upstream_attribution_and_change_note() {
+        assert_eq!(
+            rewrite("mod a;\n", true),
+            "// SPDX-FileCopyrightText: nexB Inc. and others\n\
+             // SPDX-FileCopyrightText: Provenant contributors\n\
+             // SPDX-License-Identifier: Apache-2.0\n\
+             // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.\n\
+             \n\
+             mod a;\n"
+        );
+    }
+
+    #[test]
+    fn derived_header_is_idempotent() {
+        let once = rewrite("mod a;\n", true);
+        let twice = rewrite_with_header(Path::new("x.rs"), &once, true).expect("rewrite");
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn reclassifying_back_to_non_derived_strips_upstream_lines() {
+        let derived = rewrite("mod a;\n", true);
+        let reverted = rewrite_with_header(Path::new("x.rs"), &derived, false).expect("rewrite");
+        assert_eq!(reverted, rewrite("mod a;\n", false));
+    }
+
+    fn scope_with_derived(derived: &[&str]) -> ScopeConfig {
+        ScopeConfig {
+            patterns: CompiledScopePatterns {
+                include: vec![Pattern::new("src/**/*.rs").unwrap()],
+                exclude: vec![],
+                derived: derived.iter().map(|d| Pattern::new(d).unwrap()).collect(),
+            },
+            derived_raw: derived.iter().map(|d| (*d).to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn unmatched_derived_flags_typos_and_stale_entries() {
+        let scope = scope_with_derived(&["src/finder/emails.rs", "src/finder/emals.rs"]);
+        let in_scope = vec!["src/finder/emails.rs".to_string()];
+        // The typo still matches the `src/**/*.rs` include glob, so only
+        // validating against real tracked files catches it.
+        assert_eq!(
+            scope.unmatched_derived(&in_scope),
+            vec!["src/finder/emals.rs".to_string()]
+        );
+    }
+
+    #[test]
+    fn unmatched_derived_empty_when_all_present() {
+        let scope = scope_with_derived(&["src/finder/emails.rs"]);
+        let in_scope = vec![
+            "src/finder/emails.rs".to_string(),
+            "src/finder/urls.rs".to_string(),
+        ];
+        assert!(scope.unmatched_derived(&in_scope).is_empty());
+    }
 }

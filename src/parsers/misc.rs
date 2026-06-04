@@ -1,5 +1,7 @@
+// SPDX-FileCopyrightText: nexB Inc. and others
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 //! File type recognizers for various package archives and binary formats.
 //!

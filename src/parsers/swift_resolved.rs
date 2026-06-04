@@ -1,5 +1,7 @@
+// SPDX-FileCopyrightText: nexB Inc. and others
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 //! Parser for Swift Package.resolved lockfiles (v1, v2, v3).
 //!

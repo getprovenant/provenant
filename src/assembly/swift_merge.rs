@@ -1,5 +1,7 @@
+// SPDX-FileCopyrightText: nexB Inc. and others
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

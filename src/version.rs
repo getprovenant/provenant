@@ -8,7 +8,7 @@ pub const BUILD_VERSION: &str = match option_env!("PROVENANT_BUILD_VERSION") {
     None => env!("CARGO_PKG_VERSION"),
 };
 
-const ATTRIBUTION_NOTICE: &str = "Independent project; not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc. License detection uses data from ScanCode Toolkit (CC-BY-4.0). See NOTICE file or the show-attribution command.";
+const ATTRIBUTION_NOTICE: &str = "Not affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or nexB Inc. Provenant builds on ScanCode Toolkit: it reuses ScanCode license data (CC-BY-4.0) and includes code derived from ScanCode (Apache-2.0). See NOTICE file or the show-attribution command.";
 
 pub fn build_long_version() -> &'static str {
     static LONG_VERSION: OnceLock<String> = OnceLock::new();
@@ -21,10 +21,11 @@ pub fn build_long_version() -> &'static str {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_long_version_mentions_independence_and_attribution() {
+    fn test_long_version_mentions_affiliation_and_attribution() {
         let version = super::build_long_version();
 
-        assert!(version.contains("Independent project"));
-        assert!(version.contains("ScanCode Toolkit (CC-BY-4.0)"));
+        assert!(version.contains("Not affiliated with"));
+        assert!(version.contains("code derived from ScanCode"));
+        assert!(version.contains("ScanCode license data (CC-BY-4.0)"));
     }
 }

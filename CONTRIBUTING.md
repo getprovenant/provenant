@@ -102,6 +102,23 @@ misleading or risky, including `reference/**`, `testdata/**`,
 The scope lives in `.license-headers.toml` using explicit `include` and
 `exclude` lists so the checker and hooks share one source of truth.
 
+### Files derived from ScanCode
+
+Source files whose Rust code is derived from the ScanCode Toolkit (ported and
+modified) carry **dual attribution**: an upstream `nexB Inc. and others` copyright
+line and a "Derived from ScanCode Toolkit" change notice, in addition to the
+`Provenant contributors` line (Apache-2.0 section 4). These files are enumerated
+in the `derived` list in `.license-headers.toml`, which is the authoritative
+record and is enforced by the header check.
+
+If you add a new file that ports or adapts ScanCode code, or convert existing
+code into such a port, add its path to the `derived` list and run `--fix` to
+apply the four-line header. Removing a path and rerunning `--fix` reverts it to
+the two-line header. See
+[`tools/license-headers/README.md`](tools/license-headers/README.md) for the
+exact header format and the root [`NOTICE`](NOTICE) for the project-level
+attribution.
+
 To backfill or repair headers manually, run:
 
 ```sh

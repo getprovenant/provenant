@@ -13,7 +13,7 @@ Provenant is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit,
 
 Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than ScanCode while also offering broader package and dependency metadata extraction, documented parser and detection improvements that reduce noisy results, and practical workflows such as incremental rescans, selected-file scans, and long-lived HTTP service use.
 
-Provenant reimplements the scanning engine in Rust and builds on the upstream [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit) license and rule data.
+Provenant reimplements the scanning engine in Rust, building on the upstream [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit): it reuses ScanCode's license and rule data and includes engine code derived from ScanCode, with attribution preserved in the [`NOTICE`](NOTICE) file and in derived source files.
 
 > [!IMPORTANT]
 > **Project status:** production-usable, compatibility-focused, and steadily improving.
