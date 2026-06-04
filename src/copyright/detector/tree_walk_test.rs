@@ -8,6 +8,7 @@ use super::super::token_utils::{
     collect_all_leaves, collect_holder_filtered_leaves, normalized_tokens_to_string,
     signal_lines_before_copy_line, strip_all_rights_reserved,
 };
+use super::copyright::absorb::{collect_trailing_orphan_tokens, should_start_absorbing};
 use super::*;
 use crate::copyright::candidates::collect_candidate_lines;
 use crate::copyright::detector::{NON_HOLDER_LABELS, NON_HOLDER_POS_TAGS};
