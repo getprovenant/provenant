@@ -106,11 +106,6 @@ impl JsonScanInput {
             .iter()
             .flat_map(|header| header.errors.iter().cloned())
             .collect();
-        let _discarded_warning_count: usize = self
-            .headers
-            .iter()
-            .map(|header| header.warnings.len())
-            .sum();
         let mut files = self
             .files
             .iter()

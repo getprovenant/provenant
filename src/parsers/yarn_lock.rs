@@ -131,7 +131,6 @@ fn parse_yarn_v2(
             None => continue,
         };
 
-        let _version = extract_yaml_string(details_map, "version").unwrap_or_default();
         let resolution = extract_yaml_string(details_map, "resolution").unwrap_or_default();
 
         let (namespace_opt, name, resolved_version) = parse_yarn_v2_resolution(&resolution);

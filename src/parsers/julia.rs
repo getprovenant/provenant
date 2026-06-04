@@ -79,11 +79,6 @@ impl PackageParser for JuliaProjectTomlParser {
             .and_then(|v| v.as_str())
             .map(|s| truncate_field(s.to_string()));
 
-        let _uuid = toml_content
-            .get(FIELD_UUID)
-            .and_then(|v| v.as_str())
-            .map(String::from);
-
         let version = toml_content
             .get(FIELD_VERSION)
             .and_then(|v| v.as_str())

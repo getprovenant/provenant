@@ -12,7 +12,7 @@
 //! # Key Features
 //! - Dependency extraction from default and develop sections
 //! - Direct dependency tracking (top-level locks are direct)
-//! - Exact version resolution with hash verification
+//! - Exact version resolution with pinned artifact hashes surfaced as dependency `hash_options`
 //! - Package URL (purl) generation for PyPI packages
 //! - Markers and extras dependency handling
 //!
@@ -168,8 +168,6 @@ fn build_lockfile_dependency(
     let version = strip_pipfile_lock_version(&requirement);
     let purl = create_pypi_purl(&normalized_name, version.as_deref());
 
-    let _hashes = extract_lockfile_hashes(value);
-
     Some(Dependency {
         purl,
         extracted_requirement: Some(truncate_field(requirement)),
@@ -179,8 +177,43 @@ fn build_lockfile_dependency(
         is_pinned: Some(true),
         is_direct: Some(true),
         resolved_package: None,
-        extra_data: None,
+        extra_data: build_lockfile_dependency_extra_data(value),
     })
+}
+
+/// Surface the per-package pinned artifact hashes (the `hashes` array in each
+/// Pipfile.lock entry) as `hash_options`, mirroring the requirements.txt parser.
+///
+/// These are the expected hashes of the upstream wheels/sdists this lock pins,
+/// which is distinct from the scanned lockfile's own content hash. Returns
+/// `None` when no hashes are present so dependencies without pins stay clean.
+fn build_lockfile_dependency_extra_data(value: &JsonValue) -> Option<HashMap<String, JsonValue>> {
+    let hashes = extract_lockfile_hashes(value);
+    if hashes.is_empty() {
+        return None;
+    }
+    let mut extra_data = HashMap::new();
+    extra_data.insert(
+        "hash_options".to_string(),
+        JsonValue::Array(hashes.into_iter().map(JsonValue::String).collect()),
+    );
+    Some(extra_data)
+}
+
+/// Collect the raw pinned hash strings (e.g. `"sha256:..."`) from a Pipfile.lock
+/// entry's `hashes` array, preserving the algorithm prefix as requirements.txt does.
+fn extract_lockfile_hashes(value: &JsonValue) -> Vec<String> {
+    value
+        .get(FIELD_HASHES)
+        .and_then(|hashes_value| hashes_value.as_array())
+        .map(|hash_values| {
+            hash_values
+                .iter()
+                .filter_map(|hash_value| hash_value.as_str())
+                .map(|hash| truncate_field(hash.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn extract_lockfile_requirement(value: &JsonValue) -> Option<String> {
@@ -192,25 +225,6 @@ fn extract_lockfile_requirement(value: &JsonValue) -> Option<String> {
             .map(|version| truncate_field(version.to_string())),
         _ => None,
     }
-}
-
-fn extract_lockfile_hashes(value: &JsonValue) -> Vec<String> {
-    let mut hashes = Vec::new();
-    let hash_values = value
-        .get(FIELD_HASHES)
-        .and_then(|hashes_value| hashes_value.as_array());
-
-    if let Some(hash_values) = hash_values {
-        for hash_value in hash_values {
-            if let Some(hash) = hash_value.as_str()
-                && let Some(stripped) = hash.strip_prefix("sha256:")
-            {
-                hashes.push(truncate_field(stripped.to_string()));
-            }
-        }
-    }
-
-    hashes
 }
 
 fn strip_pipfile_lock_version(requirement: &str) -> Option<String> {
