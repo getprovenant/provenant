@@ -2,6 +2,9 @@
 name = "provenant-cli"
 version = "0.1.8"
 edition = "2024"
+# Auto-synced from rust-toolchain.toml (major.minor of the pinned channel) by
+# scripts/check_release_version_sync.sh. Do not edit by hand.
+rust-version = "1.95"
 autobins = false
 repository = "https://github.com/mstykow/provenant"
 homepage = "https://github.com/mstykow/provenant"
