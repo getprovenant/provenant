@@ -8,6 +8,8 @@
     "setup": "npm install && cargo install --locked cargo-sort cargo-machete cargo-deny && ./setup.sh",
     "hooks:install": "lefthook install",
     "hooks:run": "lefthook run pre-commit --all-files",
+    "skills:sync": "./scripts/sync_agent_skills.sh",
+    "skills:check": "./scripts/sync_agent_skills.sh --check",
     "headers:fix": "cargo run --quiet --locked --manifest-path tools/license-headers/Cargo.toml -- --fix",
     "headers:check": "cargo run --quiet --locked --manifest-path tools/license-headers/Cargo.toml -- --check",
     "format": "git ls-files -z -- '*.yml' '*.yaml' '*.json' '*.md' | xargs -0 npx prettier --write",
