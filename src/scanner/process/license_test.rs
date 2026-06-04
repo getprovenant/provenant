@@ -74,7 +74,6 @@ fn make_detection(rule_url: &str) -> InternalLicenseDetection {
         matches: vec![make_internal_match(rule_url)],
         detection_log: vec![],
         identifier: Some("mit-test".to_string()),
-        file_regions: Vec::new(),
     }
 }
 
@@ -378,7 +377,6 @@ fn test_convert_detection_to_model_promotes_exact_reference_url_clue() {
         matches: vec![weaker_match, stronger_match],
         detection_log: vec![],
         identifier: None,
-        file_regions: Vec::new(),
     };
 
     let (converted, clues) = convert_detection_to_model(
@@ -445,7 +443,6 @@ fn test_promote_legal_notice_low_quality_detections_promotes_apache_notice_fragm
         matches: vec![make_internal_notice_match("cve-tou", "cve-tou", 39, 42)],
         detection_log: Vec::new(),
         identifier: None,
-        file_regions: Vec::new(),
     };
     let low_quality = InternalLicenseDetection {
         license_expression: None,
@@ -453,7 +450,6 @@ fn test_promote_legal_notice_low_quality_detections_promotes_apache_notice_fragm
         matches: vec![make_internal_notice_match("apache-2.0", "Apache-2.0", 7, 8)],
         detection_log: vec!["low-quality-match-fragments".to_string()],
         identifier: None,
-        file_regions: Vec::new(),
     };
     let mut detections = vec![concrete, low_quality];
 
@@ -482,7 +478,6 @@ fn test_promote_legal_notice_low_quality_detections_ignores_non_legal_path() {
         matches: vec![make_internal_notice_match("cve-tou", "cve-tou", 39, 42)],
         detection_log: Vec::new(),
         identifier: None,
-        file_regions: Vec::new(),
     };
     let low_quality = InternalLicenseDetection {
         license_expression: None,
@@ -490,7 +485,6 @@ fn test_promote_legal_notice_low_quality_detections_ignores_non_legal_path() {
         matches: vec![make_internal_notice_match("apache-2.0", "Apache-2.0", 7, 8)],
         detection_log: vec!["low-quality-match-fragments".to_string()],
         identifier: None,
-        file_regions: Vec::new(),
     };
     let mut detections = vec![concrete, low_quality];
 
@@ -507,7 +501,6 @@ fn test_promote_legal_notice_low_quality_detections_ignores_true_clue_rules() {
         matches: vec![make_internal_notice_match("cve-tou", "cve-tou", 39, 42)],
         detection_log: Vec::new(),
         identifier: None,
-        file_regions: Vec::new(),
     };
     let mut clue_match = make_internal_notice_match("apache-2.0", "Apache-2.0", 7, 8);
     clue_match.rule_kind = RuleKind::Clue;
@@ -517,7 +510,6 @@ fn test_promote_legal_notice_low_quality_detections_ignores_true_clue_rules() {
         matches: vec![clue_match],
         detection_log: vec!["low-quality-match-fragments".to_string()],
         identifier: None,
-        file_regions: Vec::new(),
     };
     let mut detections = vec![concrete, low_quality];
 

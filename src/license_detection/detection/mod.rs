@@ -12,11 +12,10 @@ pub mod identifier;
 mod types;
 
 pub use grouping::{group_matches_by_region, sort_matches_by_line};
-pub(crate) use types::{DetectionGroup, FileRegion, LicenseDetection, UniqueDetection};
+pub(crate) use types::{DetectionGroup, LicenseDetection};
 
-use crate::license_detection::models::LicenseMatch;
 use crate::license_detection::spdx_mapping::SpdxMapping;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::license_detection::expression::licensing_contains;
 use crate::license_detection::expression::parse_expression;
@@ -84,7 +83,6 @@ pub(crate) fn populate_detection_from_group(
     let matches_for_expression = select_matches_for_expression(&group.matches, log_category, false);
 
     detection.matches = group.matches.clone();
-    detection.file_regions = collect_file_regions_from_matches(&detection.matches);
 
     let _score = compute_detection_score(&detection.matches);
 
@@ -178,7 +176,6 @@ fn create_detection_from_group(group: &DetectionGroup) -> LicenseDetection {
         matches: Vec::new(),
         detection_log: Vec::new(),
         identifier: None,
-        file_regions: Vec::new(),
     };
 
     if group.matches.is_empty() {
@@ -197,7 +194,6 @@ pub(crate) fn empty_detection() -> LicenseDetection {
         matches: Vec::new(),
         detection_log: Vec::new(),
         identifier: None,
-        file_regions: Vec::new(),
     }
 }
 
@@ -317,84 +313,6 @@ pub(crate) fn attach_source_path_to_detections(
             if match_item.from_file.is_none() {
                 match_item.from_file = Some(source_path.to_string());
             }
-        }
-        detection.file_regions = collect_file_regions_from_matches(&detection.matches);
-    }
-}
-
-type SeenRegionKey = (String, usize, usize);
-type UniqueDetectionEntry = (UniqueDetection, HashSet<SeenRegionKey>);
-
-pub(crate) fn get_unique_detections(detections: &[LicenseDetection]) -> Vec<UniqueDetection> {
-    let mut detections_by_identifier: BTreeMap<String, UniqueDetectionEntry> = BTreeMap::new();
-
-    for detection in detections {
-        let Some(identifier) = detection.identifier.as_ref() else {
-            continue;
-        };
-
-        let (entry, seen_regions) = detections_by_identifier
-            .entry(identifier.clone())
-            .or_insert_with(|| {
-                (
-                    UniqueDetection {
-                        identifier: identifier.clone(),
-                        file_regions: Vec::new(),
-                    },
-                    HashSet::new(),
-                )
-            });
-
-        for region in &detection.file_regions {
-            let key = (
-                region.path.clone(),
-                region.start_line.get(),
-                region.end_line.get(),
-            );
-            if seen_regions.insert(key) {
-                entry.file_regions.push(region.clone());
-            }
-        }
-    }
-
-    detections_by_identifier
-        .into_values()
-        .map(|(unique_detection, _)| unique_detection)
-        .collect()
-}
-
-fn collect_file_regions_from_matches(matches: &[LicenseMatch]) -> Vec<FileRegion> {
-    let Some(first_path) = matches
-        .iter()
-        .find_map(|match_item| match_item.from_file.clone())
-    else {
-        return Vec::new();
-    };
-
-    let start_line = matches.iter().map(|match_item| match_item.start_line).min();
-    let end_line = matches.iter().map(|match_item| match_item.end_line).max();
-
-    match (start_line, end_line) {
-        (Some(start_line), Some(end_line)) => vec![FileRegion {
-            path: first_path,
-            start_line,
-            end_line,
-        }],
-        _ => Vec::new(),
-    }
-}
-
-fn attach_aggregated_file_regions(detections: &mut [LicenseDetection]) {
-    let unique_regions: HashMap<_, _> = get_unique_detections(detections)
-        .into_iter()
-        .map(|unique| (unique.identifier, unique.file_regions))
-        .collect();
-
-    for detection in detections {
-        if let Some(identifier) = detection.identifier.as_ref()
-            && let Some(file_regions) = unique_regions.get(identifier)
-        {
-            detection.file_regions = file_regions.clone();
         }
     }
 }
@@ -646,26 +564,26 @@ pub fn post_process_detections(
     let filtered = filter_detections_by_score(detections, min_score);
     let promoted = promote_non_clue_no_expression_detections(filtered);
     let suppressed = suppress_weaker_gpl_family_detections(promoted);
-    // NOTE: We do NOT call remove_duplicate_detections here.
+    // NOTE: We intentionally do NOT call remove_duplicate_detections here.
     //
-    // Python's get_unique_detections() groups detections by identifier and creates
-    // UniqueDetection objects with aggregated file_regions, but it does NOT remove
-    // detections. The Python test infrastructure uses idx.match() which returns
-    // raw matches without any deduplication.
+    // ScanCode's get_unique_detections() groups detections by identifier into
+    // UniqueDetection objects for the codebase-level `license_detections` summary,
+    // but it never removes the underlying per-location detections. Deduplicating
+    // here would incorrectly merge detections that share an identifier at different
+    // locations (e.g. two bsd-new blocks in different parts of one file), because the
+    // identifier is derived from license_expression + rule_identifier + score +
+    // matched_text_tokens and is identical for the same license text wherever it
+    // appears.
     //
-    // Calling remove_duplicate_detections would incorrectly merge detections that
-    // have the same license expression at different locations (e.g., two bsd-new
-    // licenses in different parts of a file). The identifier is computed from
-    // license_expression + rule_identifier + score + matched_text_tokens, which
-    // would be identical for same-license texts at different locations.
-    //
-    // TODO(#926): Implement UniqueDetection with file_regions aggregation for output
-    // formatting when we add full ScanCode output compatibility.
+    // The UniqueDetection-style aggregation ScanCode exposes in output lives in
+    // post_processing::reference_following::collect_top_level_license_detections,
+    // which derives detection_count from the distinct file regions. ScanCode does not
+    // serialize file_regions in its JSON (they are filtered out of both
+    // LicenseDetection.to_dict and UniqueDetection.to_dict), so there is no
+    // output-schema work to do here.
     let preferred = apply_detection_preferences(suppressed);
     let ranked = rank_detections(preferred);
-    let mut sorted = sort_detections_by_line(ranked);
-    attach_aggregated_file_regions(&mut sorted);
-    sorted
+    sort_detections_by_line(ranked)
 }
 
 fn suppress_weaker_gpl_family_detections(
@@ -1182,7 +1100,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group(&mut detection, &group, None);
         assert_eq!(detection.matches.len(), 1);
@@ -1202,7 +1119,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group(&mut detection, &group, None);
         assert!(detection.matches.is_empty());
@@ -1223,7 +1139,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group(&mut detection, &group, None);
         assert!(
@@ -1246,7 +1161,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
 
         populate_detection_from_group(&mut detection, &group, None);
@@ -1273,7 +1187,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
 
         populate_detection_from_group(&mut detection, &group, None);
@@ -1302,7 +1215,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group_with_spdx(&mut detection, &group, &spdx_mapping, None);
         assert!(detection.license_expression_spdx.is_some());
@@ -1319,7 +1231,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group_with_spdx(&mut detection, &group, &spdx_mapping, None);
         assert!(detection.matches.is_empty());
@@ -1333,7 +1244,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec!["perfect-detection".to_string()],
             identifier: None,
-            file_regions: Vec::new(),
         };
         detection.identifier = Some(compute_detection_identifier(&detection));
         let filtered = filter_detections_by_score(vec![detection], 0.0);
@@ -1356,7 +1266,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![weak_match],
             detection_log: vec![],
             identifier: Some("weak-gpl1".to_string()),
-            file_regions: Vec::new(),
         };
 
         let mut strong_match = create_test_match(15, 15, "2-aho", "gpl-2.0-plus_544.RULE");
@@ -1373,7 +1282,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![strong_match],
             detection_log: vec![],
             identifier: Some("strong-gpl2plus".to_string()),
-            file_regions: Vec::new(),
         };
 
         let processed = post_process_detections(vec![weak_detection, strong_detection], 0.0);
@@ -1393,7 +1301,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec!["perfect-detection".to_string()],
             identifier: None,
-            file_regions: Vec::new(),
         };
         d1.identifier = Some(compute_detection_identifier(&d1));
 
@@ -1407,7 +1314,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         d2.identifier = Some(compute_detection_identifier(&d2));
 
@@ -1427,7 +1333,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         detection.identifier = Some(compute_detection_identifier(&detection));
         let filtered = filter_detections_by_score(vec![detection], 50.0);
@@ -1448,7 +1353,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec![],
             identifier: Some("mit-abc123".to_string()),
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("apache-2.0".to_string()),
@@ -1456,7 +1360,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(20, 30)],
             detection_log: vec![],
             identifier: Some("apache-abc123".to_string()),
-            file_regions: Vec::new(),
         };
         let result = remove_duplicate_detections(vec![d1, d2]);
         assert_eq!(result.len(), 2);
@@ -1470,7 +1373,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec![],
             identifier: Some("mit-abc123".to_string()),
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("mit".to_string()),
@@ -1478,7 +1380,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(20, 30)],
             detection_log: vec![],
             identifier: Some("mit-def456".to_string()),
-            file_regions: Vec::new(),
         };
         let result = remove_duplicate_detections(vec![d1, d2]);
         assert_eq!(
@@ -1502,7 +1403,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         let mut d2 = LicenseDetection {
             license_expression: Some("apache-2.0".to_string()),
@@ -1514,7 +1414,6 @@ MySQL FLOSS License Exception body starts here.
             }],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         d1.identifier = Some(compute_detection_identifier(&d1));
         d2.identifier = Some(compute_detection_identifier(&d2));
@@ -1533,7 +1432,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m1],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         let mut m2 = create_test_match(20, 30, "1-hash", "apache.LICENSE");
         m2.score = MatchScore::from_percentage(90.0);
@@ -1544,7 +1442,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m2],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         d1.identifier = Some(compute_detection_identifier(&d1));
         d2.identifier = Some(compute_detection_identifier(&d2));
@@ -1571,7 +1468,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m.clone()],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("mit".to_string()),
@@ -1579,7 +1475,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         let id1 = compute_detection_identifier(&d1);
         let id2 = compute_detection_identifier(&d2);
@@ -1596,7 +1491,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m1],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("apache-2.0".to_string()),
@@ -1604,7 +1498,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m2],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         let id1 = compute_detection_identifier(&d1);
         let id2 = compute_detection_identifier(&d2);
@@ -1622,7 +1515,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec![],
             identifier: Some("mit-abc123".to_string()),
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("mit".to_string()),
@@ -1630,7 +1522,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(20, 30)],
             detection_log: vec![],
             identifier: Some("mit-def456".to_string()),
-            file_regions: Vec::new(),
         };
         let result = apply_detection_preferences(vec![d1, d2]);
         assert_eq!(
@@ -1648,7 +1539,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec![],
             identifier: Some("mit-abc123".to_string()),
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("apache-2.0".to_string()),
@@ -1656,7 +1546,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(20, 30)],
             detection_log: vec![],
             identifier: Some("apache-abc123".to_string()),
-            file_regions: Vec::new(),
         };
         let result = apply_detection_preferences(vec![d1, d2]);
         assert_eq!(result.len(), 2);
@@ -1677,7 +1566,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m],
             detection_log: vec!["perfect-detection".to_string()],
             identifier: None,
-            file_regions: Vec::new(),
         };
         d.identifier = Some(compute_detection_identifier(&d));
         let result = post_process_detections(vec![d], 0.0);
@@ -1696,7 +1584,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![m],
             detection_log: vec![],
             identifier: None,
-            file_regions: Vec::new(),
         };
         d.identifier = Some(compute_detection_identifier(&d));
         let result = post_process_detections(vec![d], 50.0);
@@ -1727,7 +1614,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![proper_match],
             detection_log: vec![],
             identifier: Some("bsd_new-proper".to_string()),
-            file_regions: Vec::new(),
         };
         let low_quality = LicenseDetection {
             license_expression: None,
@@ -1735,7 +1621,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![low_quality_match],
             detection_log: vec![DETECTION_LOG_LOW_QUALITY_MATCH_FRAGMENTS.to_string()],
             identifier: None,
-            file_regions: Vec::new(),
         };
 
         let result = post_process_detections(vec![proper, low_quality], 0.0);
@@ -1771,7 +1656,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![proper_match],
             detection_log: vec![],
             identifier: Some("mit-proper".to_string()),
-            file_regions: Vec::new(),
         };
         let clue = LicenseDetection {
             license_expression: None,
@@ -1779,7 +1663,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![clue_match],
             detection_log: vec![DETECTION_LOG_LICENSE_CLUES.to_string()],
             identifier: None,
-            file_regions: Vec::new(),
         };
 
         let result = post_process_detections(vec![proper, clue], 0.0);
@@ -1809,7 +1692,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(20, 30)],
             detection_log: vec![],
             identifier: Some("mit-1".to_string()),
-            file_regions: Vec::new(),
         };
         let d2 = LicenseDetection {
             license_expression: Some("apache-2.0".to_string()),
@@ -1817,7 +1699,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![create_perfect_match(1, 10)],
             detection_log: vec![],
             identifier: Some("apache-1".to_string()),
-            file_regions: Vec::new(),
         };
         let sorted = sort_detections_by_line(vec![d1, d2]);
         assert_eq!(sorted[0].matches[0].start_line, LineNumber::ONE);
@@ -1874,7 +1755,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group_with_spdx(&mut detection, &group, &spdx_mapping, None);
         assert!(detection.license_expression_spdx.is_some());
@@ -1896,7 +1776,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group_with_spdx(&mut detection, &group, &spdx_mapping, None);
         assert!(detection.license_expression.is_some());
@@ -1921,7 +1800,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
 
         populate_detection_from_group_with_spdx(&mut detection, &group, &spdx_mapping, None);
@@ -1946,7 +1824,6 @@ MySQL FLOSS License Exception body starts here.
             matches: Vec::new(),
             detection_log: Vec::new(),
             identifier: None,
-            file_regions: Vec::new(),
         };
         populate_detection_from_group_with_spdx(&mut detection, &group, &spdx_mapping, None);
         assert!(detection.license_expression.is_some());
@@ -1978,7 +1855,7 @@ MySQL FLOSS License Exception body starts here.
     }
 
     #[test]
-    fn test_attach_source_path_to_detections_populates_file_regions() {
+    fn test_attach_source_path_to_detections_sets_from_file() {
         let mut match_item = create_perfect_match(4, 8);
         match_item.from_file = None;
         let mut detections = vec![LicenseDetection {
@@ -1987,7 +1864,6 @@ MySQL FLOSS License Exception body starts here.
             matches: vec![match_item],
             detection_log: vec![],
             identifier: Some("mit-1".to_string()),
-            file_regions: Vec::new(),
         }];
 
         attach_source_path_to_detections(&mut detections, "src/lib.rs");
@@ -1996,144 +1872,5 @@ MySQL FLOSS License Exception body starts here.
             detections[0].matches[0].from_file.as_deref(),
             Some("src/lib.rs")
         );
-        assert_eq!(detections[0].file_regions.len(), 1);
-        assert_eq!(detections[0].file_regions[0].path, "src/lib.rs");
-        assert_eq!(
-            detections[0].file_regions[0].start_line,
-            LineNumber::new(4).expect("valid")
-        );
-        assert_eq!(
-            detections[0].file_regions[0].end_line,
-            LineNumber::new(8).expect("valid")
-        );
-    }
-
-    #[test]
-    fn test_attach_source_path_to_detections_uses_single_detection_region_span() {
-        let mut first = create_perfect_match(4, 8);
-        first.from_file = None;
-        let mut second = create_perfect_match(20, 25);
-        second.from_file = None;
-        let mut detections = vec![LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![first, second],
-            detection_log: vec![],
-            identifier: Some("mit-1".to_string()),
-            file_regions: Vec::new(),
-        }];
-
-        attach_source_path_to_detections(&mut detections, "src/lib.rs");
-
-        assert_eq!(detections[0].file_regions.len(), 1);
-        assert_eq!(detections[0].file_regions[0].path, "src/lib.rs");
-        assert_eq!(
-            detections[0].file_regions[0].start_line,
-            LineNumber::new(4).expect("valid")
-        );
-        assert_eq!(
-            detections[0].file_regions[0].end_line,
-            LineNumber::new(25).expect("valid")
-        );
-    }
-
-    #[test]
-    fn test_get_unique_detections_aggregates_distinct_regions() {
-        let first = LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![create_perfect_match(1, 10)],
-            detection_log: vec![],
-            identifier: Some("mit-shared".to_string()),
-            file_regions: vec![FileRegion {
-                path: "src/one.rs".to_string(),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::new(10).expect("valid"),
-            }],
-        };
-        let second = LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![create_perfect_match(20, 30)],
-            detection_log: vec![],
-            identifier: Some("mit-shared".to_string()),
-            file_regions: vec![FileRegion {
-                path: "src/two.rs".to_string(),
-                start_line: LineNumber::new(20).expect("valid"),
-                end_line: LineNumber::new(30).expect("valid"),
-            }],
-        };
-        let third = LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![create_perfect_match(20, 30)],
-            detection_log: vec![],
-            identifier: Some("mit-shared".to_string()),
-            file_regions: vec![FileRegion {
-                path: "src/two.rs".to_string(),
-                start_line: LineNumber::new(20).expect("valid"),
-                end_line: LineNumber::new(30).expect("valid"),
-            }],
-        };
-
-        let unique = get_unique_detections(&[first, second, third]);
-
-        assert_eq!(unique.len(), 1);
-        assert_eq!(unique[0].identifier, "mit-shared");
-        assert_eq!(unique[0].file_regions.len(), 2);
-    }
-
-    #[test]
-    fn test_get_unique_detections_skips_detections_without_identifier() {
-        let detection = LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![create_perfect_match(1, 10)],
-            detection_log: vec![],
-            identifier: None,
-            file_regions: vec![FileRegion {
-                path: "src/one.rs".to_string(),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::new(10).expect("valid"),
-            }],
-        };
-
-        let unique = get_unique_detections(&[detection]);
-
-        assert!(unique.is_empty());
-    }
-
-    #[test]
-    fn test_post_process_detections_attaches_aggregated_file_regions() {
-        let first = LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![create_perfect_match(1, 10)],
-            detection_log: vec![],
-            identifier: Some("mit-shared".to_string()),
-            file_regions: vec![FileRegion {
-                path: "src/one.rs".to_string(),
-                start_line: LineNumber::ONE,
-                end_line: LineNumber::new(10).expect("valid"),
-            }],
-        };
-        let second = LicenseDetection {
-            license_expression: Some("mit".to_string()),
-            license_expression_spdx: Some("MIT".to_string()),
-            matches: vec![create_perfect_match(20, 30)],
-            detection_log: vec![],
-            identifier: Some("mit-shared".to_string()),
-            file_regions: vec![FileRegion {
-                path: "src/two.rs".to_string(),
-                start_line: LineNumber::new(20).expect("valid"),
-                end_line: LineNumber::new(30).expect("valid"),
-            }],
-        };
-
-        let processed = post_process_detections(vec![first, second], 0.0);
-
-        assert_eq!(processed.len(), 2);
-        assert_eq!(processed[0].file_regions.len(), 2);
-        assert_eq!(processed[1].file_regions.len(), 2);
     }
 }

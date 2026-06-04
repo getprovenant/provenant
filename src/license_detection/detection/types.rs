@@ -4,20 +4,6 @@
 //! Core detection data structures.
 
 use crate::license_detection::models::LicenseMatch;
-use crate::models::LineNumber;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct FileRegion {
-    pub(crate) path: String,
-    pub(crate) start_line: LineNumber,
-    pub(crate) end_line: LineNumber,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct UniqueDetection {
-    pub(crate) identifier: String,
-    pub(crate) file_regions: Vec<FileRegion>,
-}
 
 pub struct DetectionGroup {
     /// The matches in this group
@@ -50,8 +36,6 @@ pub struct LicenseDetection {
     /// An identifier unique for a license detection, containing the license
     /// expression and a UUID crafted from the match contents.
     pub identifier: Option<String>,
-
-    pub(crate) file_regions: Vec<FileRegion>,
 }
 
 #[cfg(test)]
