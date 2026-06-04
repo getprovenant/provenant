@@ -1,5 +1,7 @@
+// SPDX-FileCopyrightText: nexB Inc. and others
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 use super::binary_text::{
     extract_named_author_from_binary_line, has_binary_name_like_shape, has_excessive_at_noise,

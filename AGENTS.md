@@ -106,6 +106,7 @@ For parity-sensitive parser work, use the compare and benchmark workflows in [`x
 - Follow [`.github/pull_request_template.md`](.github/pull_request_template.md) for agent-authored PRs and omit sections that do not apply.
 - When creating PRs with `gh`, do not combine `--template` with `--body` or `--body-file`; if you script the PR body, render the template structure manually.
 - License-header scope and repair/check commands are owned by [`CONTRIBUTING.md`](CONTRIBUTING.md), [`tools/license-headers/README.md`](tools/license-headers/README.md), and [`.license-headers.toml`](.license-headers.toml).
+- Files whose Rust code is derived from the ScanCode Toolkit (ported/adapted, not just behavior-compatible) must carry dual `nexB Inc. and others` + `Provenant contributors` headers with a "Derived from ScanCode Toolkit" change notice. The authoritative list is the `derived` key in [`.license-headers.toml`](.license-headers.toml). When you add or convert a file that ports ScanCode code, add its path to that list and run the header `--fix`; the header check enforces it.
 
 ## Documentation Ownership Notes
 

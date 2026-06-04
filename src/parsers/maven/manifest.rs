@@ -1,5 +1,7 @@
+// SPDX-FileCopyrightText: nexB Inc. and others
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 use super::coordinates::{build_maven_purl, infer_meta_inf_maven_coordinates};
 use super::default_package_data;

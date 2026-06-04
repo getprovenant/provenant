@@ -12,6 +12,13 @@ that is present in this repository, including the `reference/scancode-toolkit`
 submodule, and for any ScanCode-derived data files included in a given
 Provenant distribution.
 
+Portions of Provenant's engine code are derived from the ScanCode Toolkit
+(Apache-2.0) and were ported to Rust and modified. Source files containing such
+derived code carry upstream nexB attribution in their SPDX headers alongside the
+Provenant copyright and a notice that the file was changed. The set of derived
+files is enumerated in the `derived` list of `.license-headers.toml` and is
+enforced by the license-header check.
+
 Provenant project code is licensed under the Apache License, Version 2.0.
 See `LICENSE` for the license text.
 

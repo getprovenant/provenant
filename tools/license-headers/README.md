@@ -30,3 +30,22 @@ cargo run --quiet --locked --manifest-path tools/license-headers/Cargo.toml -- -
 ```
 
 The checked file scope lives in [`../../.license-headers.toml`](../../.license-headers.toml).
+
+## Derived-file attribution
+
+Files whose Rust source is derived from the ScanCode Toolkit (Apache-2.0) must
+carry upstream attribution in addition to the Provenant header. List those paths
+under the `derived` key in [`../../.license-headers.toml`](../../.license-headers.toml);
+`--check`/`--fix` then enforce a four-line header on them:
+
+```rust
+// SPDX-FileCopyrightText: nexB Inc. and others
+// SPDX-FileCopyrightText: Provenant contributors
+// SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
+```
+
+Non-derived files keep the two-line Provenant header. Adding or removing a path
+from `derived` and rerunning `--fix` migrates its header in either direction. The
+`derived` list is the authoritative record of which files carry upstream
+attribution; see also the root `NOTICE`.
