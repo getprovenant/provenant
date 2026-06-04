@@ -6,8 +6,7 @@ use std::path::Path;
 
 use super::font_policy::{is_font_asset_path, is_font_license_file_name};
 use crate::license_detection::detection::{
-    FileRegion as InternalFileRegion, determine_license_expression, determine_spdx_expression,
-    select_matches_for_expression,
+    determine_license_expression, determine_spdx_expression, select_matches_for_expression,
 };
 use crate::license_detection::expression::parse_expression;
 use crate::license_detection::models::RuleId;
@@ -879,7 +878,7 @@ fn apply_resolved_reference_targets(
         detection.license_expression.as_str(),
         "unknown-license-reference" | "free-unknown"
     );
-    let mut internal_detection = public_detection_to_internal(detection, current_path);
+    let mut internal_detection = public_detection_to_internal(detection);
     let mut source_matches = Vec::new();
     if strip_source_matches_for_expression {
         source_matches = internal_detection.matches.clone();
@@ -887,7 +886,7 @@ fn apply_resolved_reference_targets(
     }
     for target in &referenced_targets {
         for referenced_detection in &target.detections {
-            let mut internal = public_detection_to_internal(referenced_detection, &target.path);
+            let mut internal = public_detection_to_internal(referenced_detection);
             for match_item in &mut internal.matches {
                 if target.preserve_match_from_file {
                     match_item
@@ -1382,27 +1381,12 @@ pub(super) fn use_referenced_license_expression(
 
 fn public_detection_to_internal(
     detection: &LicenseDetection,
-    owning_path: &str,
 ) -> crate::license_detection::LicenseDetection {
     let matches: Vec<_> = detection
         .matches
         .iter()
         .map(public_match_to_internal)
         .collect();
-    let file_regions = if matches.is_empty() {
-        Vec::new()
-    } else {
-        let start_line = matches.iter().map(|match_item| match_item.start_line).min();
-        let end_line = matches.iter().map(|match_item| match_item.end_line).max();
-        match (start_line, end_line) {
-            (Some(start_line), Some(end_line)) => vec![InternalFileRegion {
-                path: owning_path.to_string(),
-                start_line,
-                end_line,
-            }],
-            _ => Vec::new(),
-        }
-    };
     crate::license_detection::LicenseDetection {
         license_expression: (!detection.license_expression.is_empty())
             .then(|| detection.license_expression.clone()),
@@ -1411,7 +1395,6 @@ fn public_detection_to_internal(
         matches: matches.clone(),
         detection_log: detection.detection_log.clone(),
         identifier: (!detection.identifier.is_empty()).then(|| detection.identifier.clone()),
-        file_regions,
     }
 }
 

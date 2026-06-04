@@ -1085,7 +1085,6 @@ fn test_classify_detection_valid_perfect() {
         matches: vec![m],
         detection_log: vec!["perfect-detection".to_string()],
         identifier: None,
-        file_regions: Vec::new(),
     };
     assert!(classify_detection(&detection, 0.0));
 }
@@ -1110,7 +1109,6 @@ fn test_classify_detection_invalid_low_score() {
         matches: vec![m],
         detection_log: vec![],
         identifier: None,
-        file_regions: Vec::new(),
     };
     assert!(!classify_detection(&detection, 50.0));
 }
@@ -1135,7 +1133,6 @@ fn test_classify_detection_invalid_false_positive() {
         matches: vec![m],
         detection_log: vec![],
         identifier: None,
-        file_regions: Vec::new(),
     };
     assert!(!classify_detection(&detection, 0.0));
 }
@@ -1162,7 +1159,6 @@ fn test_classify_detection_keeps_true_license_clue_even_if_false_positive_heuris
         matches: vec![m],
         detection_log: vec![DETECTION_LOG_LICENSE_CLUES.to_string()],
         identifier: None,
-        file_regions: Vec::new(),
     };
 
     assert!(classify_detection(&detection, 0.0));
@@ -1176,7 +1172,6 @@ fn test_classify_detection_invalid_empty() {
         matches: vec![],
         detection_log: vec![],
         identifier: None,
-        file_regions: Vec::new(),
     };
     assert!(!classify_detection(&detection, 0.0));
 }
@@ -1201,7 +1196,6 @@ fn test_classify_detection_score_threshold() {
         matches: vec![m],
         detection_log: vec![],
         identifier: None,
-        file_regions: Vec::new(),
     };
     assert!(classify_detection(&detection, 45.0));
     assert!(!classify_detection(&detection, 50.0));
@@ -1227,7 +1221,6 @@ fn test_classify_detection_perfect_matches() {
         matches: vec![m],
         detection_log: vec!["perfect-detection".to_string()],
         identifier: None,
-        file_regions: Vec::new(),
     };
     assert!(classify_detection(&detection, 0.0));
 }
