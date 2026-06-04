@@ -31,10 +31,10 @@ gh pr create --base main --head <branch> --title "<conventional title>" --body "
 
 ## 2. Wait for Signals
 
-Opening a PR does **not** obligate you to block on CI or review — it is fine to open one and move on rather than sit through a ~12-minute CI run. What matters is that a PR is not "done" at opened: **any time you return to a PR — later this turn or in a future session — resume the loop from Step 3 against the current head**, fetching fresh CI and review signals and addressing them. Treat an opened-but-unreviewed PR as unfinished work to come back to, not a finished task.
+Opening a PR does **not** obligate you to block on CI or review — it is fine to open one and move on rather than sit through a full multi-minute CI run. What matters is that a PR is not "done" at opened: **any time you return to a PR — later this turn or in a future session — resume the loop from Step 3 against the current head**, fetching fresh CI and review signals and addressing them. Treat an opened-but-unreviewed PR as unfinished work to come back to, not a finished task.
 
 - CI: `gh pr checks <num> --watch` (or `gh run watch`). Map any failure to the `ci-failure-triage` skill.
-- Review: Greptile posts a summary as an issue comment plus inline review comments; humans may comment too.
+- Review: Greptile posts a summary as an issue comment plus inline review comments; humans may comment too. If Greptile posts nothing (no summary, check, or comment) once CI has run, it likely missed the webhook — post a PR comment `@greptileai review` to (re)trigger it; it acknowledges the command with a 👀 reaction and reviews the current head.
 
 ## 3. Fetch Comments
 
