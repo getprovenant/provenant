@@ -10,6 +10,19 @@ are documented in [`../xtask/README.md`](../xtask/README.md).
 The standalone SPDX header checker lives in
 [`../tools/license-headers/README.md`](../tools/license-headers/README.md).
 
+## `sync_agent_skills.sh`
+
+Sync the canonical `.agents/skills/` tree to `.claude/skills/` for Claude Code,
+which does not currently document `.agents/skills/` discovery and has unreliable
+symlink discovery reports. Use `--check` to verify the mirror without changing it.
+
+Examples:
+
+```bash
+./scripts/sync_agent_skills.sh
+./scripts/sync_agent_skills.sh --check
+```
+
 ## `cargo_sort_manifests.sh`
 
 Sort Cargo manifest sections with `cargo-sort`.

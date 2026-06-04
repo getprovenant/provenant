@@ -13,6 +13,13 @@ pre-commit:
     license-headers:
       run: cargo run --quiet --locked --manifest-path tools/license-headers/Cargo.toml -- --check {staged_files}
 
+    agent-skills-sync:
+      glob:
+        - ".agents/skills/**"
+        - ".claude/skills/**"
+        - "scripts/sync_agent_skills.sh"
+      run: npm run skills:check
+
     cargo-sort:
       glob:
         - Cargo.toml
