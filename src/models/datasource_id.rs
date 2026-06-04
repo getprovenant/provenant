@@ -650,11 +650,6 @@ impl FromStr for DatasourceId {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "nuget_nupsec" => return Ok(DatasourceId::NugetNuspec),
-            "rpm_spefile" => return Ok(DatasourceId::RpmSpecfile),
-            _ => {}
-        }
         use strum::IntoEnumIterator;
         Self::iter()
             .find(|variant| variant.as_str() == s)
@@ -752,14 +747,19 @@ mod tests {
     }
 
     #[test]
-    fn test_legacy_typo_aliases() {
+    fn test_from_str_uses_canonical_ids_and_rejects_legacy_typos() {
         assert_eq!(
-            DatasourceId::from_str("nuget_nupsec").unwrap(),
+            DatasourceId::from_str("nuget_nuspec").unwrap(),
             DatasourceId::NugetNuspec
         );
         assert_eq!(
-            DatasourceId::from_str("rpm_spefile").unwrap(),
+            DatasourceId::from_str("rpm_specfile").unwrap(),
             DatasourceId::RpmSpecfile
         );
+        // ScanCode's upstream `nuget_nupsec` / `rpm_spefile` typos are
+        // intentionally not accepted: Provenant emits and parses only the
+        // corrected ids, so the legacy aliases were dead no-ops.
+        assert!(DatasourceId::from_str("nuget_nupsec").is_err());
+        assert!(DatasourceId::from_str("rpm_spefile").is_err());
     }
 }
