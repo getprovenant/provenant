@@ -422,8 +422,6 @@ mod tests {
             is_from_license: false,
             rule_start_token: 0,
             coordinates: MatchCoordinates::rule_aligned(qspan, ispan, hispan),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 
@@ -462,8 +460,6 @@ mod tests {
                 PositionSpan::empty(),
                 PositionSpan::empty(),
             ),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 
@@ -500,8 +496,6 @@ mod tests {
                 start_token,
                 end_token,
             )),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 

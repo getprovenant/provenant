@@ -204,8 +204,6 @@ mod tests {
             is_from_license: false,
             rule_start_token: 0,
             coordinates: MatchCoordinates::query_region(PositionSpan::range(0, matched_length)),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 

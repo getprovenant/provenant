@@ -62,8 +62,6 @@ fn make_internal_match(rule_url: &str) -> LicenseMatch {
         is_from_license: true,
         rule_start_token: 0,
         coordinates: MatchCoordinates::query_region(PositionSpan::empty()),
-        candidate_resemblance: 0.0,
-        candidate_containment: 0.0,
     }
 }
 
@@ -113,8 +111,6 @@ fn make_internal_notice_match(
         is_from_license: false,
         rule_start_token: 0,
         coordinates: MatchCoordinates::query_region(PositionSpan::empty()),
-        candidate_resemblance: 0.0,
-        candidate_containment: 0.0,
     }
 }
 

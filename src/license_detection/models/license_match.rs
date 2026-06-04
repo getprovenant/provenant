@@ -234,16 +234,6 @@ pub struct LicenseMatch {
 
     /// Coordinate data distinguishing rule-aligned from query-region matches.
     pub coordinates: MatchCoordinates,
-
-    /// Candidate resemblance score from set similarity.
-    /// Used for cross-license tie-breaking when matches overlap.
-    /// Higher resemblance means better candidate quality.
-    pub candidate_resemblance: f32,
-
-    /// Candidate containment score from set similarity.
-    /// Used for cross-license tie-breaking when matches overlap.
-    /// Higher containment means more of the rule is matched.
-    pub candidate_containment: f32,
 }
 
 #[derive(Serialize)]
@@ -275,8 +265,6 @@ struct SerializableLicenseMatch<'a> {
     is_from_license: bool,
     hilen: usize,
     rule_start_token: usize,
-    candidate_resemblance: f32,
-    candidate_containment: f32,
 }
 
 impl Serialize for LicenseMatch {
@@ -311,8 +299,6 @@ impl Serialize for LicenseMatch {
             is_from_license: self.is_from_license,
             hilen: self.hilen(),
             rule_start_token: self.rule_start_token,
-            candidate_resemblance: self.candidate_resemblance,
-            candidate_containment: self.candidate_containment,
         }
         .serialize(serializer)
     }
@@ -343,8 +329,6 @@ impl Default for LicenseMatch {
             is_from_license: false,
             rule_start_token: 0,
             coordinates: MatchCoordinates::default(),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 }

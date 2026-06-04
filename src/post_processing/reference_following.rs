@@ -1447,8 +1447,6 @@ fn public_match_to_internal(
         coordinates: crate::license_detection::models::MatchCoordinates::query_region(
             crate::license_detection::models::PositionSpan::empty(),
         ),
-        candidate_resemblance: 0.0,
-        candidate_containment: 0.0,
     }
 }
 

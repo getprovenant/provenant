@@ -367,8 +367,6 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
                         is_from_license: candidate.rule.is_from_license,
                         rule_start_token: ipos,
                         coordinates: MatchCoordinates::rule_aligned(qspan, ispan, hispan),
-                        candidate_resemblance: candidate.metrics.amplified_resemblance_f32(),
-                        candidate_containment: candidate.metrics.containment_f32(),
                     };
 
                     matches.push(license_match);

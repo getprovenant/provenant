@@ -290,8 +290,6 @@ fn create_unknown_match_from_qspan(query: &Query, qspan: &PositionSet) -> Option
         is_from_license: false,
         rule_start_token: 0,
         coordinates: MatchCoordinates::query_region(qspan_span),
-        candidate_resemblance: 0.0,
-        candidate_containment: 0.0,
     }
     .into()
 }
@@ -835,8 +833,6 @@ mod tests {
             coordinates: MatchCoordinates::query_region(PositionSpan::from_positions(vec![
                 0, 1, 2, 7, 8, 9,
             ])),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }];
 
         let covered = compute_covered_positions(&query, &known_matches);
@@ -882,8 +878,6 @@ mod tests {
             is_from_license: false,
             rule_start_token: 0,
             coordinates: MatchCoordinates::query_region(PositionSpan::range(5, 10)),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }];
 
         let covered = compute_covered_positions(&query, &known_matches);
@@ -932,8 +926,6 @@ mod tests {
             coordinates: MatchCoordinates::query_region(PositionSpan::from_positions(vec![
                 0, 1, 2, 3, 11, 12, 13, 14,
             ])),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }];
 
         let covered = compute_covered_positions(&query, &known_matches);
@@ -1013,8 +1005,6 @@ mod tests {
             is_from_license: false,
             rule_start_token: 0,
             coordinates: MatchCoordinates::query_region(PositionSpan::range(0, 5)),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }];
 
         let matches = unknown_match(&index, &query, &known_matches);

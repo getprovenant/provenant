@@ -391,8 +391,6 @@ pub fn spdx_lid_match(index: &LicenseIndex, query: &Query) -> Vec<LicenseMatch> 
                 is_from_license: false,
                 rule_start_token: 0,
                 coordinates: MatchCoordinates::query_region(qspan),
-                candidate_resemblance: 0.0,
-                candidate_containment: 0.0,
             };
 
             matches.push(license_match);

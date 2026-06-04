@@ -30,8 +30,6 @@ fn create_test_match(coverage: f32, rule_identifier: &str) -> LicenseMatch {
         rule_length: 100,
         rule_start_token: 0,
         coordinates: MatchCoordinates::query_region(PositionSpan::range(1, 11)),
-        candidate_resemblance: 0.0,
-        candidate_containment: 0.0,
     }
 }
 
@@ -76,8 +74,6 @@ fn create_test_match_full(
             start_line.get(),
             end_line.get() + 1,
         )),
-        candidate_resemblance: 0.0,
-        candidate_containment: 0.0,
     }
 }
 

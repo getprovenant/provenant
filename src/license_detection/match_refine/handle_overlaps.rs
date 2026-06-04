@@ -241,13 +241,6 @@ pub fn filter_overlapping_matches(
                 break;
             }
 
-            // Note: We do NOT use candidate_resemblance for tie-breaking here.
-            // candidate_resemblance is a GLOBAL measure based on multiset intersection
-            // over the entire query and rule, not the actual matched region.
-            // Using it for LOCAL overlap decisions produces wrong results.
-            // See: CC-BY-SA-2.0 vs CC-BY-NC-SA-2.0 where NC-SA has higher
-            // candidate_resemblance but lower actual coverage.
-
             // When overlap is >= 90%, prefer higher coverage when lengths are equal.
             // This ensures that for matches with identical qspan, the one with better
             // coverage is kept. See: gfdl-1.1 vs gfdl-1.1-plus where both match the
@@ -553,8 +546,6 @@ mod tests {
                 start_line,
                 end_line + 1,
             )),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 
@@ -596,8 +587,6 @@ mod tests {
                 PositionSpan::range(0, matched_length),
                 PositionSpan::range(0, matched_length / 2),
             ),
-            candidate_resemblance: 0.0,
-            candidate_containment: 0.0,
         }
     }
 
