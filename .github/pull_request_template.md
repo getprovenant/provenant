@@ -14,6 +14,12 @@
 - Included:
 - Explicit exclusions:
 
+## How to verify
+
+<!-- Reviewer-facing test plan: how to exercise this change BEYOND what CI already runs (commands to run, what to observe, edge cases to poke). Do NOT restate CI-covered checks (build, clippy, fmt, unit/golden/integration suites) — CI is the source of truth for those. If CI fully covers it with nothing extra to try, say so in one line. -->
+
+-
+
 ## Intentional differences from Python
 
 -
