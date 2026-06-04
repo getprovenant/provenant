@@ -574,7 +574,6 @@ pub fn combine_expressions_and_preserving_structure(
 ///
 /// This function parses each expression string, combines them with `OR`, and
 /// optionally deduplicates license keys.
-#[allow(dead_code)]
 pub fn combine_expressions_or(expressions: &[&str], unique: bool) -> Result<String, ParseError> {
     combine_expressions_with(
         expressions,

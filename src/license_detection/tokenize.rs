@@ -488,7 +488,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(non_snake_case)]
     fn test_query_tokenizer_brace_case() {
         let result = tokenize("{{}some }}Text with   spAces! + _ -");
         assert_eq!(result, vec!["some", "text", "with", "spaces"]);

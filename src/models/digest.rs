@@ -15,10 +15,10 @@ macro_rules! define_digest {
         pub struct $name([u8; $byte_len]);
 
         impl $name {
+            // Macro-generated for every digest type; only some types use EMPTY, so allow per-type dead_code.
             #[allow(dead_code)]
             pub const EMPTY: Self = Self([0u8; $byte_len]);
 
-            #[allow(dead_code)]
             pub const fn from_bytes(bytes: [u8; $byte_len]) -> Self {
                 Self(bytes)
             }
@@ -31,6 +31,7 @@ macro_rules! define_digest {
                 Ok(Self(array))
             }
 
+            // Macro-generated accessor; not every digest type reads its raw bytes, so allow per-type dead_code.
             #[allow(dead_code)]
             pub fn as_bytes(&self) -> &[u8; $byte_len] {
                 &self.0

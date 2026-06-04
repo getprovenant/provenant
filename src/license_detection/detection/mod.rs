@@ -659,7 +659,7 @@ pub fn post_process_detections(
     // license_expression + rule_identifier + score + matched_text_tokens, which
     // would be identical for same-license texts at different locations.
     //
-    // TODO: Implement UniqueDetection with file_regions aggregation for output
+    // TODO(#926): Implement UniqueDetection with file_regions aggregation for output
     // formatting when we add full ScanCode output compatibility.
     let preferred = apply_detection_preferences(suppressed);
     let ranked = rank_detections(preferred);

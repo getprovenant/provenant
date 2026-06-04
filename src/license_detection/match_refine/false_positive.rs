@@ -156,6 +156,7 @@ mod tests {
     use crate::models::LineNumber;
     use crate::models::MatchScore;
 
+    // Test helper that sets every match field explicitly; the long argument list is intentional.
     #[allow(clippy::too_many_arguments)]
     fn create_test_match_with_flags(
         rule_identifier: &str,

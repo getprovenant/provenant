@@ -753,6 +753,7 @@ fn non_version_download_url(version: &str, resolved: Option<&str>) -> Option<Str
         })
 }
 
+// Parameters map directly to the npm lockfile dependency fields this builder assembles.
 #[allow(clippy::too_many_arguments)]
 fn build_npm_dependency(
     package_name: &str,
