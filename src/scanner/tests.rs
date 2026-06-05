@@ -9,8 +9,11 @@ use object::pe;
 use tempfile::TempDir;
 
 use crate::cache::build_collection_exclude_patterns;
+use crate::license_detection::test_utils::create_test_index_default;
 use crate::license_detection::{LicenseDetectionEngine, MatcherKind};
-use crate::models::{DatasourceId, FileType, PackageType as FilePackageType};
+use crate::models::{
+    DatasourceId, FileType, LicenseIndexProvenance, PackageType as FilePackageType,
+};
 use crate::progress::{ProgressMode, ScanProgress};
 
 use super::{
@@ -76,6 +79,47 @@ fn test_scan_options_fingerprint_changes_with_license_score() {
     );
 
     assert_ne!(default_fingerprint, filtered_fingerprint);
+}
+
+#[test]
+fn test_scan_options_fingerprint_changes_with_license_dataset_fingerprint() {
+    let text_options = TextDetectionOptions::default();
+    let first_engine = test_license_engine_with_dataset_fingerprint("dataset-fingerprint-one");
+    let second_engine = test_license_engine_with_dataset_fingerprint("dataset-fingerprint-two");
+
+    let first_fingerprint = scan_options_fingerprint(
+        &text_options,
+        LicenseScanOptions::default(),
+        Some(&first_engine),
+    );
+    let second_fingerprint = scan_options_fingerprint(
+        &text_options,
+        LicenseScanOptions::default(),
+        Some(&second_engine),
+    );
+
+    assert_ne!(first_fingerprint, second_fingerprint);
+    assert!(first_fingerprint.contains("license_dataset_fingerprint=dataset-fingerprint-one"));
+    assert!(second_fingerprint.contains("license_dataset_fingerprint=dataset-fingerprint-two"));
+}
+
+fn test_license_engine_with_dataset_fingerprint(
+    dataset_fingerprint: &str,
+) -> LicenseDetectionEngine {
+    LicenseDetectionEngine::from_test_index_with_provenance(
+        create_test_index_default(),
+        LicenseIndexProvenance {
+            source: "test-license-index".to_string(),
+            dataset_fingerprint: dataset_fingerprint.to_string(),
+            ignored_rules: vec![],
+            ignored_licenses: vec![],
+            ignored_rules_due_to_licenses: vec![],
+            added_rules: vec![],
+            replaced_rules: vec![],
+            added_licenses: vec![],
+            replaced_licenses: vec![],
+        },
+    )
 }
 
 fn scan_single_file(
