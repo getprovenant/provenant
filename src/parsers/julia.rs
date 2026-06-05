@@ -358,9 +358,17 @@ fn extract_project_dependencies(toml_content: &Value) -> Vec<Dependency> {
 fn extract_manifest_packages(toml_content: &Value) -> Vec<PackageData> {
     let mut packages = Vec::new();
 
+    // Manifest.toml format 2.0 (Julia 1.7+) nests packages under a [deps] table; format
+    // 1.0 (Julia 1.0-1.6) lists them as root-level [[PackageName]] array-of-tables. Prefer
+    // the [deps] table when present, otherwise fall back to the root table. Non-package
+    // metadata keys (manifest_format, julia_version, project_hash, ...) are scalars, so the
+    // as_array() check below skips them.
     let deps_table = match toml_content.get(FIELD_DEPS).and_then(|v| v.as_table()) {
         Some(table) => table,
-        None => return packages,
+        None => match toml_content.as_table() {
+            Some(table) => table,
+            None => return packages,
+        },
     };
 
     for (dep_name, dep_value) in deps_table.iter().take(MAX_ITERATION_COUNT) {

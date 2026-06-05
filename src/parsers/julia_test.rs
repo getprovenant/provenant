@@ -144,3 +144,60 @@ author = ["Tom Breloff (@tbreloff)"]
 
     fs::remove_dir_all(&temp_dir).expect("remove temp test dir");
 }
+
+// Manifest.toml format 1.0 (Julia 1.0-1.6) lists packages as root-level [[PackageName]]
+// array-of-tables rather than nesting them under a [deps] table (format 2.0, Julia 1.7+).
+#[test]
+fn test_manifest_toml_format_1_root_level_packages() {
+    let temp_dir = std::env::temp_dir().join(format!(
+        "provenant-julia-manifest-v1-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time before unix epoch")
+            .as_nanos()
+    ));
+    fs::create_dir_all(&temp_dir).expect("create temp test dir");
+
+    let test_file = temp_dir.join("Manifest.toml");
+    fs::write(
+        &test_file,
+        r#"# This file is machine-generated - editing it directly is not advised
+julia_version = "1.6.7"
+manifest_format = "1.0"
+
+[[JSON]]
+deps = ["Dates", "Mmap", "Parsers", "Unicode"]
+git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3609a8aaa8c3a"
+uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+version = "0.21.4"
+
+[[HTTP]]
+deps = ["Base64", "Dates", "Sockets"]
+git-tree-sha1 = "60ed5f1643927479f845b0135bb369b031b541fa"
+uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+version = "0.9.17"
+"#,
+    )
+    .expect("write temp Manifest.toml");
+
+    let packages = JuliaManifestTomlParser::extract_packages(&test_file);
+
+    assert_eq!(packages.len(), 2);
+    assert!(
+        packages
+            .iter()
+            .all(|p| p.datasource_id == Some(DatasourceId::JuliaManifestToml))
+    );
+    let json = packages
+        .iter()
+        .find(|p| p.name.as_deref() == Some("JSON"))
+        .expect("JSON package");
+    assert_eq!(json.version.as_deref(), Some("0.21.4"));
+    assert!(
+        packages
+            .iter()
+            .any(|p| p.name.as_deref() == Some("HTTP") && p.version.as_deref() == Some("0.9.17"))
+    );
+
+    fs::remove_dir_all(&temp_dir).expect("remove temp test dir");
+}
