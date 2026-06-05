@@ -6,6 +6,8 @@ mod job_controller;
 
 use std::io::Read;
 use std::net::{IpAddr, SocketAddr};
+use std::sync::mpsc::{Receiver, SyncSender, TrySendError, sync_channel};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use anyhow::{Result, anyhow};
@@ -26,6 +28,8 @@ use crate::version::BUILD_VERSION;
 use crate::workflow::WorkflowError;
 
 const MAX_REQUEST_BODY_BYTES: usize = 24 * 1024 * 1024;
+const DEFAULT_SYNC_SCAN_WORKERS: usize = 1;
+const DEFAULT_SYNC_SCAN_QUEUE_CAPACITY: usize = 4;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum ServeError {
@@ -109,11 +113,55 @@ fn bind_allows_privileged_inputs_by_default(bind: &str) -> bool {
     host.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ServeState {
     spdx_license_list_version: String,
     jobs: AsyncJobController,
     ingest_policy: IngestPolicy,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RequestWorkerConfig {
+    general_workers: usize,
+    sync_scan_workers: usize,
+    general_queue_capacity: usize,
+    sync_scan_queue_capacity: usize,
+}
+
+impl RequestWorkerConfig {
+    fn for_parallelism(available_parallelism: usize) -> Self {
+        let general_workers = available_parallelism.clamp(2, 4);
+        Self {
+            general_workers,
+            sync_scan_workers: DEFAULT_SYNC_SCAN_WORKERS,
+            general_queue_capacity: general_workers * 16,
+            sync_scan_queue_capacity: DEFAULT_SYNC_SCAN_QUEUE_CAPACITY,
+        }
+    }
+}
+
+impl Default for RequestWorkerConfig {
+    fn default() -> Self {
+        let cpus = thread::available_parallelism().map_or(1, |count| count.get());
+        Self::for_parallelism(cpus)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RequestLane {
+    General,
+    SyncScan,
+}
+
+struct RequestDispatcher {
+    general: RequestQueue,
+    sync_scan: RequestQueue,
+}
+
+struct RequestQueue {
+    label: &'static str,
+    busy_message: &'static str,
+    sender: SyncSender<tiny_http::Request>,
 }
 
 struct ParsedRequest {
@@ -194,12 +242,120 @@ pub(crate) fn run(args: &ServeArgs) -> Result<()> {
 }
 
 fn serve_forever(server: Server, state: ServeState) -> Result<()> {
+    let dispatcher = RequestDispatcher::start(state, RequestWorkerConfig::default());
     for request in server.incoming_requests() {
-        if let Err(error) = handle_request(request, &state) {
-            eprintln!("serve request handling error: {error}");
+        if let Err(error) = dispatcher.dispatch(request) {
+            eprintln!("serve request dispatch error: {error}");
         }
     }
 
+    Ok(())
+}
+
+impl RequestDispatcher {
+    fn start(state: ServeState, config: RequestWorkerConfig) -> Self {
+        let state = Arc::new(state);
+        Self {
+            general: RequestQueue::start(
+                "general",
+                "request queue is full; try again later",
+                config.general_workers,
+                config.general_queue_capacity,
+                Arc::clone(&state),
+            ),
+            sync_scan: RequestQueue::start(
+                "sync-scan",
+                "synchronous scan queue is full; try again later",
+                config.sync_scan_workers,
+                config.sync_scan_queue_capacity,
+                state,
+            ),
+        }
+    }
+
+    fn dispatch(&self, request: tiny_http::Request) -> Result<()> {
+        match request_lane(request.method(), request.url()) {
+            RequestLane::General => self.general.try_dispatch(request),
+            RequestLane::SyncScan => self.sync_scan.try_dispatch(request),
+        }
+    }
+}
+
+impl RequestQueue {
+    fn start(
+        label: &'static str,
+        busy_message: &'static str,
+        worker_count: usize,
+        queue_capacity: usize,
+        state: Arc<ServeState>,
+    ) -> Self {
+        let (sender, receiver) = sync_channel(queue_capacity.max(1));
+        let receiver = Arc::new(Mutex::new(receiver));
+        for index in 0..worker_count.max(1) {
+            let worker_receiver = Arc::clone(&receiver);
+            let worker_state = Arc::clone(&state);
+            thread::spawn(move || {
+                request_worker_loop(label, index, worker_receiver, worker_state);
+            });
+        }
+
+        Self {
+            label,
+            busy_message,
+            sender,
+        }
+    }
+
+    fn try_dispatch(&self, request: tiny_http::Request) -> Result<()> {
+        match self.sender.try_send(request) {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(request)) => respond_server_busy(request, self.busy_message),
+            Err(TrySendError::Disconnected(request)) => {
+                respond_server_busy(request, self.busy_message)?;
+                Err(anyhow!("serve {} request workers stopped", self.label))
+            }
+        }
+    }
+}
+
+fn request_worker_loop(
+    label: &'static str,
+    index: usize,
+    receiver: Arc<Mutex<Receiver<tiny_http::Request>>>,
+    state: Arc<ServeState>,
+) {
+    loop {
+        let request = {
+            let receiver = receiver
+                .lock()
+                .expect("serve request queue lock should not be poisoned");
+            receiver.recv()
+        };
+
+        match request {
+            Ok(request) => {
+                if let Err(error) = handle_request(request, &state) {
+                    eprintln!("serve {label} worker {index} request handling error: {error}");
+                }
+            }
+            Err(_) => break,
+        }
+    }
+}
+
+// Synchronous scans can run for a long time, so keep them out of the
+// general request lane used by health, job polling, and async submission.
+fn request_lane(method: &Method, url: &str) -> RequestLane {
+    if *method == Method::Post && url == "/v1/scans" {
+        RequestLane::SyncScan
+    } else {
+        RequestLane::General
+    }
+}
+
+fn respond_server_busy(request: tiny_http::Request, message: &'static str) -> Result<()> {
+    let response = HttpResponse::error(StatusCode::from(503), "server_busy", message.to_string());
+    request.respond(response.into_tiny_response())?;
     Ok(())
 }
 
@@ -542,6 +698,48 @@ mod tests {
 
     fn assert_status(response: &HttpResponse, expected: u16) {
         assert_eq!(response.status.0, expected);
+    }
+
+    #[test]
+    fn request_lane_routes_only_sync_scan_posts_to_sync_pool() {
+        assert_eq!(
+            request_lane(&Method::Post, "/v1/scans"),
+            RequestLane::SyncScan
+        );
+        assert_eq!(
+            request_lane(&Method::Post, "/v1/scans?foo=bar"),
+            RequestLane::General
+        );
+        assert_eq!(
+            request_lane(&Method::Get, "/v1/scans"),
+            RequestLane::General
+        );
+        assert_eq!(
+            request_lane(&Method::Post, "/v1/scans:async"),
+            RequestLane::General
+        );
+        assert_eq!(request_lane(&Method::Get, "/readyz"), RequestLane::General);
+        assert_eq!(
+            request_lane(&Method::Get, "/v1/jobs/job-1"),
+            RequestLane::General
+        );
+        assert_eq!(
+            request_lane(&Method::Get, "/v1/jobs/job-1/result"),
+            RequestLane::General
+        );
+    }
+
+    #[test]
+    fn request_worker_config_keeps_general_capacity_separate_from_sync_scans() {
+        let single_cpu = RequestWorkerConfig::for_parallelism(1);
+        assert_eq!(single_cpu.sync_scan_workers, 1);
+        assert!(single_cpu.general_workers >= 2);
+        assert!(single_cpu.general_queue_capacity >= single_cpu.general_workers);
+        assert!(single_cpu.sync_scan_queue_capacity >= single_cpu.sync_scan_workers);
+
+        let many_cpus = RequestWorkerConfig::for_parallelism(64);
+        assert_eq!(many_cpus.sync_scan_workers, 1);
+        assert_eq!(many_cpus.general_workers, 4);
     }
 
     fn ready_state() -> ServeState {
