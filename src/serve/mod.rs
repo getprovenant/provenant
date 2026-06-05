@@ -5,6 +5,7 @@ mod ingest;
 mod job_controller;
 
 use std::io::Read;
+use std::net::{IpAddr, SocketAddr};
 use std::thread;
 
 use anyhow::{Result, anyhow};
@@ -14,7 +15,9 @@ use tiny_http::{Header, Method, Response, Server, StatusCode};
 
 use crate::cli::ServeArgs;
 use crate::license_detection::LicenseDetectionEngine;
-use crate::serve::ingest::{IngestError, ScanError, SyncScanExecution};
+use crate::serve::ingest::{
+    IngestError, IngestPolicy, ScanError, SyncScanExecution, validate_input_policy,
+};
 use crate::serve::job_controller::{
     AsyncJobController, AsyncSubmitError, DispatchedAsyncJob, JobOutcome, JobResult,
 };
@@ -65,6 +68,7 @@ impl ServeError {
 #[derive(Debug, Clone)]
 pub(crate) struct ServeConfig {
     bind: String,
+    ingest_policy: IngestPolicy,
 }
 
 impl TryFrom<&ServeArgs> for ServeConfig {
@@ -75,16 +79,41 @@ impl TryFrom<&ServeArgs> for ServeConfig {
             return Err(anyhow!("--bind must not be empty"));
         }
 
+        let loopback_bind = bind_allows_privileged_inputs_by_default(&args.bind);
+        let ingest_policy = if loopback_bind || args.allow_privileged_inputs {
+            IngestPolicy::allow_privileged_inputs()
+        } else {
+            IngestPolicy::upload_only()
+        };
+
         Ok(Self {
             bind: args.bind.clone(),
+            ingest_policy,
         })
     }
+}
+
+fn bind_allows_privileged_inputs_by_default(bind: &str) -> bool {
+    if let Ok(addr) = bind.parse::<SocketAddr>() {
+        return addr.ip().is_loopback();
+    }
+
+    let Some((host, _port)) = bind.rsplit_once(':') else {
+        return false;
+    };
+    let host = host.trim().trim_start_matches('[').trim_end_matches(']');
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+
+    host.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
 }
 
 #[derive(Debug)]
 struct ServeState {
     spdx_license_list_version: String,
     jobs: AsyncJobController,
+    ingest_policy: IngestPolicy,
 }
 
 struct ParsedRequest {
@@ -150,10 +179,16 @@ pub(crate) fn run(args: &ServeArgs) -> Result<()> {
         "Starting provenant serve on http://{} (api {API_VERSION})",
         local_addr
     );
+    if !config.ingest_policy.privileged_inputs_allowed() {
+        eprintln!(
+            "Privileged serve inputs (paths, url, repository) are disabled for this non-loopback bind; use --allow-privileged-inputs only for trusted deployments."
+        );
+    }
 
     let state = ServeState {
         spdx_license_list_version,
         jobs: AsyncJobController::new(),
+        ingest_policy: config.ingest_policy,
     };
     serve_forever(server, state)
 }
@@ -285,7 +320,7 @@ fn response_for_request(request: &ParsedRequest, state: &ServeState) -> HttpResp
                 tool_version: BUILD_VERSION.to_string(),
             },
         ),
-        (m, "/v1/scans") if *m == Method::Post => handle_sync_scan_request(request),
+        (m, "/v1/scans") if *m == Method::Post => handle_sync_scan_request(request, state),
         (_, "/v1/scans") => HttpResponse::error(
             StatusCode::from(405),
             "method_not_allowed",
@@ -314,12 +349,12 @@ impl From<ServeError> for HttpResponse {
     }
 }
 
-fn handle_sync_scan_request(request: &ParsedRequest) -> HttpResponse {
+fn handle_sync_scan_request(request: &ParsedRequest, state: &ServeState) -> HttpResponse {
     let sync_request = match decode_scan_request_from_http(request, "POST /v1/scans") {
         Ok(req) => req,
         Err(resp) => return resp,
     };
-    let execution = match SyncScanExecution::new(sync_request) {
+    let execution = match SyncScanExecution::new(sync_request, state.ingest_policy) {
         Ok(e) => e,
         Err(e) => return HttpResponse::from(ServeError::from(e)),
     };
@@ -337,6 +372,9 @@ fn handle_async_scan_request(request: &ParsedRequest, state: &ServeState) -> Htt
         Ok(req) => req,
         Err(resp) => return resp,
     };
+    if let Err(error) = validate_input_policy(&sync_request.input, state.ingest_policy) {
+        return HttpResponse::from(ServeError::from(error));
+    }
     let (response, dispatches) = match state.jobs.submit(sync_request) {
         Ok(result) => result,
         Err(AsyncSubmitError::QueueFull) => {
@@ -347,7 +385,7 @@ fn handle_async_scan_request(request: &ParsedRequest, state: &ServeState) -> Htt
             );
         }
     };
-    spawn_dispatches(state.jobs.clone(), dispatches);
+    spawn_dispatches(state.jobs.clone(), dispatches, state.ingest_policy);
     HttpResponse::json(StatusCode::from(202), &response)
 }
 
@@ -432,11 +470,15 @@ fn decode_scan_request_from_http(
     })
 }
 
-fn spawn_dispatches(controller: AsyncJobController, dispatches: Vec<DispatchedAsyncJob>) {
+fn spawn_dispatches(
+    controller: AsyncJobController,
+    dispatches: Vec<DispatchedAsyncJob>,
+    ingest_policy: IngestPolicy,
+) {
     for dispatched in dispatches {
         let controller = controller.clone();
         thread::spawn(move || {
-            let result = SyncScanExecution::new(dispatched.request)
+            let result = SyncScanExecution::new(dispatched.request, ingest_policy)
                 .map_err(ServeError::from)
                 .and_then(|e| {
                     e.run_async(dispatched.allocated_processors)
@@ -461,7 +503,7 @@ fn spawn_dispatches(controller: AsyncJobController, dispatches: Vec<DispatchedAs
                 dispatched.allocated_processors,
                 outcome,
             );
-            spawn_dispatches(controller, follow_up_dispatches);
+            spawn_dispatches(controller, follow_up_dispatches, ingest_policy);
         });
     }
 }
@@ -506,6 +548,7 @@ mod tests {
         ServeState {
             spdx_license_list_version: "3.28".to_string(),
             jobs: AsyncJobController::with_limits(2, 2, 8),
+            ingest_policy: IngestPolicy::allow_privileged_inputs(),
         }
     }
 
@@ -522,10 +565,55 @@ mod tests {
     fn serve_config_requires_non_empty_bind() {
         let args = ServeArgs {
             bind: String::new(),
+            allow_privileged_inputs: false,
         };
 
         let error = ServeConfig::try_from(&args).expect_err("empty bind should fail");
         assert!(error.to_string().contains("--bind must not be empty"));
+    }
+
+    #[test]
+    fn serve_config_allows_privileged_inputs_for_loopback_bind() {
+        let args = ServeArgs {
+            bind: "127.0.0.1:8080".to_string(),
+            allow_privileged_inputs: false,
+        };
+
+        let config = ServeConfig::try_from(&args).expect("loopback bind should configure");
+        assert!(config.ingest_policy.privileged_inputs_allowed());
+    }
+
+    #[test]
+    fn serve_config_allows_privileged_inputs_for_localhost_hostname() {
+        let args = ServeArgs {
+            bind: "localhost:8080".to_string(),
+            allow_privileged_inputs: false,
+        };
+
+        let config = ServeConfig::try_from(&args).expect("localhost bind should configure");
+        assert!(config.ingest_policy.privileged_inputs_allowed());
+    }
+
+    #[test]
+    fn serve_config_restricts_privileged_inputs_for_non_loopback_bind() {
+        let args = ServeArgs {
+            bind: "0.0.0.0:8080".to_string(),
+            allow_privileged_inputs: false,
+        };
+
+        let config = ServeConfig::try_from(&args).expect("non-loopback bind should configure");
+        assert!(!config.ingest_policy.privileged_inputs_allowed());
+    }
+
+    #[test]
+    fn serve_config_explicitly_allows_privileged_inputs_for_non_loopback_bind() {
+        let args = ServeArgs {
+            bind: "0.0.0.0:8080".to_string(),
+            allow_privileged_inputs: true,
+        };
+
+        let config = ServeConfig::try_from(&args).expect("non-loopback bind should configure");
+        assert!(config.ingest_policy.privileged_inputs_allowed());
     }
 
     #[test]
@@ -604,7 +692,8 @@ mod tests {
 
     #[test]
     fn sync_scan_requires_json_content_type() {
-        let response = handle_sync_scan_request(&test_request(Method::Post, "/v1/scans"));
+        let state = ready_state();
+        let response = handle_sync_scan_request(&test_request(Method::Post, "/v1/scans"), &state);
         assert_status(&response, 415);
         assert!(response.body.contains("unsupported_media_type"));
     }

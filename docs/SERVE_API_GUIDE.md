@@ -16,6 +16,16 @@ For command-line scanning workflows, start with the [CLI Guide](CLI_GUIDE.md). F
 provenant serve --bind 127.0.0.1:8080
 ```
 
+By default, `provenant serve` is intended for same-host use and binds to loopback. On loopback binds, all input modes listed below are enabled.
+
+When the service is bound beyond localhost, requests may come from other machines. In that mode, local-path, remote-URL, and repository inputs are disabled unless the operator explicitly starts the service with `--allow-privileged-inputs`. Upload input remains available because the caller supplies the content to scan instead of asking the service host to read local paths, fetch URLs, or run `git fetch`.
+
+Use `--allow-privileged-inputs` only for trusted deployments with their own network access controls:
+
+```sh
+provenant serve --bind 0.0.0.0:8080 --allow-privileged-inputs
+```
+
 The current service surface includes:
 
 - `GET /livez`
@@ -74,7 +84,7 @@ That means the service can:
 - download a bounded remote HTTP(S) artifact or text resource into temporary local staging before scanning it
 - accept a bounded JSON upload payload and materialize it locally before scanning it
 
-Local-path input is best suited to same-host or operator-controlled deployments where the service already has filesystem access to the scan target.
+Local-path, repository, and remote URL inputs are privileged input modes: they use the service host's filesystem, network, or `git` client on behalf of the caller. They are best suited to same-host or operator-controlled deployments where callers are already trusted to make those host-side accesses.
 
 ### Local-path input
 

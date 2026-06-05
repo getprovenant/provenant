@@ -300,6 +300,14 @@ pub fn openapi_document() -> Value {
                                 }
                             }
                         },
+                        "422": {
+                            "description": "Request is well-formed but cannot be executed.",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ServeErrorResponse"}
+                                }
+                            }
+                        },
                         "503": {
                             "description": "Service has no remaining async admission capacity.",
                             "content": {
