@@ -453,7 +453,14 @@ impl PackageParser for ConanLockParser {
 
 fn parse_conan_reference(ref_str: &str) -> Option<Dependency> {
     let (name, version_spec) = if let Some((n, v)) = ref_str.split_once('/') {
-        (n.trim(), Some(truncate_field(v.trim().to_string())))
+        // conan 2.x references carry a recipe revision (`#...`) and a lockfile
+        // timestamp (`%...`) after the version; strip both so the version/requirement
+        // is the bare version (or version range).
+        let version = v.trim().split(['#', '%']).next().unwrap_or("").trim();
+        (
+            n.trim(),
+            (!version.is_empty()).then(|| truncate_field(version.to_string())),
+        )
     } else {
         (ref_str.trim(), None)
     };
@@ -534,6 +541,7 @@ fn parse_conanfile_txt(contents: &str) -> Vec<Dependency> {
 fn parse_conan_lock(json: &Value) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
+    // conan 1.x lockfiles (format 0.4): graph_lock.nodes[].ref
     if let Some(graph_lock) = json.get("graph_lock")
         && let Some(nodes) = graph_lock.get("nodes").and_then(|n| n.as_object())
     {
@@ -541,9 +549,36 @@ fn parse_conan_lock(json: &Value) -> Vec<Dependency> {
             if let Some(ref_str) = node_data.get("ref").and_then(|r| r.as_str())
                 && !ref_str.is_empty()
                 && ref_str != "conanfile"
-                && let Some(dep) = parse_conan_reference(ref_str)
+                && let Some(mut dep) = parse_conan_reference(ref_str)
             {
+                // The graph lock captures the full resolved graph without marking
+                // direct vs transitive, so leave is_direct unset (same as the v0.5 path).
+                dep.is_direct = None;
                 dependencies.push(dep);
+            }
+        }
+    }
+
+    // conan 2.x lockfiles (format 0.5+): top-level requires / build_requires /
+    // python_requires arrays of "name/version#revision%timestamp" strings. The lockfile
+    // captures the full resolved graph without marking direct vs transitive, so leave
+    // is_direct unset rather than guessing.
+    for (key, is_runtime, scope) in [
+        ("requires", true, "install"),
+        ("build_requires", false, "build"),
+        ("python_requires", false, "python_requires"),
+    ] {
+        if let Some(refs) = json.get(key).and_then(|v| v.as_array()) {
+            for entry in refs.iter().take(MAX_ITERATION_COUNT) {
+                if let Some(ref_str) = entry.as_str()
+                    && !ref_str.is_empty()
+                    && let Some(mut dep) = parse_conan_reference(ref_str)
+                {
+                    dep.is_runtime = Some(is_runtime);
+                    dep.scope = Some(scope.to_string());
+                    dep.is_direct = None;
+                    dependencies.push(dep);
+                }
             }
         }
     }
