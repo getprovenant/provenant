@@ -76,7 +76,30 @@ fn test_parses_serve_subcommand() {
         .expect("serve subcommand should parse");
 
     match parsed.command {
-        Command::Serve(args) => assert_eq!(args.bind, "127.0.0.1:9090"),
+        Command::Serve(args) => {
+            assert_eq!(args.bind, "127.0.0.1:9090");
+            assert!(!args.allow_privileged_inputs);
+        }
+        other => panic!("expected serve subcommand, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_parses_serve_privileged_inputs_flag() {
+    let parsed = Cli::try_parse_from([
+        "provenant",
+        "serve",
+        "--bind",
+        "0.0.0.0:9090",
+        "--allow-privileged-inputs",
+    ])
+    .expect("serve subcommand should parse privileged input flag");
+
+    match parsed.command {
+        Command::Serve(args) => {
+            assert_eq!(args.bind, "0.0.0.0:9090");
+            assert!(args.allow_privileged_inputs);
+        }
         other => panic!("expected serve subcommand, got {other:?}"),
     }
 }

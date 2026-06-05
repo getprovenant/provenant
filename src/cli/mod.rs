@@ -200,6 +200,10 @@ pub struct ServeArgs {
     /// Bind the service shell to HOST:PORT.
     #[arg(long = "bind", value_name = "ADDR", default_value = "127.0.0.1:8080")]
     pub bind: String,
+
+    /// Allow paths, URL, and repository inputs when bound beyond localhost.
+    #[arg(long = "allow-privileged-inputs")]
+    pub allow_privileged_inputs: bool,
 }
 
 #[derive(Args, Debug, Clone)]
