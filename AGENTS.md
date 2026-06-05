@@ -26,11 +26,11 @@ Before making non-trivial changes, read the document that owns the surface you a
 
 ## Project Context
 
-Provenant is a Rust implementation for ScanCode-aligned workflows. The goal is strong compatibility users can trust, while using Rust to improve correctness, safety, performance, and maintainability.
+Provenant's primary goal is to produce the best practical scan result for users: accurate, explainable, bounded, and maintainable. ScanCode compatibility is an important compatibility lane and regression signal, not the end goal. Preserve parity where users depend on it, but do not treat ScanCode output or implementation choices as automatically correct when Provenant can provide a better-supported result.
 
 Routine scans use the embedded license index. The `reference/scancode-toolkit/` submodule is mainly needed for parity research, embedded-license-data maintenance, and maintainer workflows that depend on upstream material.
 
-Use the Python ScanCode codebase as a behavioral specification, not as an implementation template. Preserve behavior and edge cases, but write the Rust implementation idiomatically.
+Use the Python ScanCode codebase as a behavioral reference, not an implementation template or an unquestioned source of truth. When comparing with ScanCode code or scan output, first identify the user-facing contract it demonstrates, then ask whether Provenant can solve the case more accurately, clearly, or safely before adopting the same behavior.
 
 When an upstream test fixture is needed for Provenant tests, copy it into Provenant-owned `testdata/` and reference that local copy. Do **not** make tests or golden fixtures depend directly on paths under `reference/scancode-toolkit/`.
 
@@ -38,6 +38,7 @@ When an upstream test fixture is needed for Provenant tests, copy it into Proven
 
 - Keep parsing static and bounded. Do not execute package-manager code, project code, or shell commands to recover metadata.
 - Preserve behavior and parity where users depend on it. If Provenant intentionally diverges, preserve and test the explicit Provenant contract and any documented compatibility lane.
+- Treat ScanCode deltas as evidence to investigate, not automatic Provenant bugs. When a difference improves correctness, precision, safety, explainability, or boundedness, keep the Provenant behavior and document or test the contract as appropriate.
 - Keep package extraction separate from broader detection work. Parsers may normalize trustworthy declared package-license metadata, but file-content license and copyright detection belong to the detection pipeline.
 - Parsers are file-local extractors. Cross-file ownership, topology-aware workspace handling, and file-reference resolution belong in assembly unless an existing documented scanner-owned exception says otherwise.
 - Prefer honest unknowns over guessed compatibility defaults. If a datasource does not prove dependency intent such as `is_runtime`, `is_optional`, `is_direct`, or `is_pinned`, leave it unset.
