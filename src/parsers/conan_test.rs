@@ -213,6 +213,69 @@ fn test_conan_lock_basic() {
     assert_eq!(result.package_type, Some(PackageType::Conan));
     assert_eq!(result.primary_language, Some("C++".to_string()));
     assert_eq!(result.datasource_id, Some(DatasourceId::ConanLock));
+
+    // conan 2.x (format 0.5) fixture: runtime `requires` + build-time `build_requires`,
+    // with the recipe revision (`#...`) and lockfile timestamp (`%...`) stripped.
+    assert_eq!(result.dependencies.len(), 3);
+    let openssl = result
+        .dependencies
+        .iter()
+        .find(|d| d.purl.as_deref() == Some("pkg:conan/openssl@3.2.0"))
+        .expect("openssl runtime dependency");
+    assert_eq!(openssl.extracted_requirement.as_deref(), Some("3.2.0"));
+    assert_eq!(openssl.is_runtime, Some(true));
+    assert_eq!(openssl.scope.as_deref(), Some("install"));
+    assert_eq!(openssl.is_pinned, Some(true));
+
+    let cmake = result
+        .dependencies
+        .iter()
+        .find(|d| d.purl.as_deref() == Some("pkg:conan/cmake@3.28.1"))
+        .expect("cmake build dependency");
+    assert_eq!(cmake.is_runtime, Some(false));
+    assert_eq!(cmake.scope.as_deref(), Some("build"));
+}
+
+// conan 1.x lockfiles (format 0.4) use a `graph_lock.nodes[].ref` structure with the
+// recipe revision after `#`.
+#[test]
+fn test_conan_lock_v04_graph_lock() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let lock_path = temp_dir.path().join("conan.lock");
+    std::fs::write(
+        &lock_path,
+        r#"{
+  "version": "0.4",
+  "graph_lock": {
+    "nodes": {
+      "0": { "ref": "conanfile" },
+      "1": { "ref": "openssl/3.2.0#a1b2c3" },
+      "2": { "ref": "zlib/1.3.1#d4e5f6" }
+    }
+  }
+}"#,
+    )
+    .unwrap();
+
+    let result = ConanLockParser::extract_first_package(&lock_path);
+
+    assert_eq!(result.datasource_id, Some(DatasourceId::ConanLock));
+    assert_eq!(result.dependencies.len(), 2);
+    let purls: Vec<&str> = result
+        .dependencies
+        .iter()
+        .filter_map(|d| d.purl.as_deref())
+        .collect();
+    assert!(purls.contains(&"pkg:conan/openssl@3.2.0"));
+    assert!(purls.contains(&"pkg:conan/zlib@1.3.1"));
+    // The `conanfile` root node is skipped, and the recipe revision is stripped.
+    assert!(result.dependencies.iter().all(|d| {
+        d.extracted_requirement
+            .as_deref()
+            .is_some_and(|r| !r.contains('#'))
+    }));
+    // The lockfile captures the full resolved graph; directness is unknown.
+    assert!(result.dependencies.iter().all(|d| d.is_direct.is_none()));
 }
 
 #[test]

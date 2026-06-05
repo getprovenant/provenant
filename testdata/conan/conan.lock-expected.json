@@ -1,8 +1,30 @@
 [
   {
-    "datasource_id": "conan_lock",
     "type": "conan",
     "primary_language": "C++",
-    "parties": []
+    "datasource_id": "conan_lock",
+    "dependencies": [
+      {
+        "purl": "pkg:conan/openssl@3.2.0",
+        "extracted_requirement": "3.2.0",
+        "scope": "install",
+        "is_runtime": true,
+        "is_pinned": true
+      },
+      {
+        "purl": "pkg:conan/zlib@1.3.1",
+        "extracted_requirement": "1.3.1",
+        "scope": "install",
+        "is_runtime": true,
+        "is_pinned": true
+      },
+      {
+        "purl": "pkg:conan/cmake@3.28.1",
+        "extracted_requirement": "3.28.1",
+        "scope": "build",
+        "is_runtime": false,
+        "is_pinned": true
+      }
+    ]
   }
 ]
