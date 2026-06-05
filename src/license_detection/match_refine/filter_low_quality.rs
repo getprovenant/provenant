@@ -178,6 +178,14 @@ pub(crate) fn filter_matches_missing_required_phrases(
         let is_continuous = rule.is_continuous || rule.is_required_phrase;
         let ikey_spans = &rule.required_phrase_spans;
 
+        // The referenced-filename heuristic may only *discard* a match here; a
+        // satisfied (or bypassed) referenced-filename constraint must fall through to
+        // the required-phrase check below. Otherwise a rule that carries both a
+        // referenced filename and required key phrases would be kept on the strength of
+        // the filename alone, skipping required-phrase validation. ScanCode keeps these
+        // concerns independent (referenced filenames are not consulted in
+        // filter_matches_missing_required_phrases), so a match missing a required key
+        // phrase is discarded regardless of its referenced filename.
         if let Some(referenced_filenames) = &rule.referenced_filenames {
             let concrete_referenced_filenames: Vec<_> = referenced_filenames
                 .iter()
@@ -185,53 +193,54 @@ pub(crate) fn filter_matches_missing_required_phrases(
                     !filename.eq_ignore_ascii_case(INHERIT_LICENSE_FROM_PACKAGE_REFERENCE)
                 })
                 .collect();
-            if concrete_referenced_filenames.is_empty() {
-                kept.push(m.clone());
-                continue;
-            }
 
-            let all_references_are_simple_bare_names =
-                concrete_referenced_filenames.iter().all(|filename| {
-                    !filename.contains('/')
-                        && !filename.contains('\\')
-                        && !Path::new(filename)
-                            .file_name()
-                            .and_then(|name| name.to_str())
-                            .is_some_and(|basename| basename.contains('.'))
-                });
+            if !concrete_referenced_filenames.is_empty() {
+                let all_references_are_simple_bare_names =
+                    concrete_referenced_filenames.iter().all(|filename| {
+                        !filename.contains('/')
+                            && !filename.contains('\\')
+                            && !Path::new(filename)
+                                .file_name()
+                                .and_then(|name| name.to_str())
+                                .is_some_and(|basename| basename.contains('.'))
+                    });
 
-            if m.matcher == MatcherKind::Seq
-                && !all_references_are_simple_bare_names
-                && m.coverage() >= 50.0
-            {
-                kept.push(m.clone());
-                continue;
-            }
+                // Sequence matches against path-like referenced filenames are fuzzy and
+                // are not expected to quote the filename literally, so they skip the
+                // referenced-filename presence check (but not the required-phrase check).
+                let skip_referenced_filename_check = m.matcher == MatcherKind::Seq
+                    && !all_references_are_simple_bare_names
+                    && m.coverage() >= 50.0;
 
-            let matched_text = match &m.matched_text {
-                Some(text) => text.clone(),
-                None => query.matched_text(m.start_line.get(), m.end_line.get()),
-            };
-            let has_referenced_filename = concrete_referenced_filenames.iter().any(|filename| {
-                if matched_text.contains(filename.as_str()) {
-                    return true;
+                if !skip_referenced_filename_check {
+                    let matched_text = match &m.matched_text {
+                        Some(text) => text.clone(),
+                        None => query.matched_text(m.start_line.get(), m.end_line.get()),
+                    };
+                    let has_referenced_filename =
+                        concrete_referenced_filenames.iter().any(|filename| {
+                            if matched_text.contains(filename.as_str()) {
+                                return true;
+                            }
+
+                            let path = Path::new(filename);
+                            let is_path_like = filename.contains('/') || filename.contains('\\');
+                            let Some(basename) = path.file_name().and_then(|name| name.to_str())
+                            else {
+                                return false;
+                            };
+
+                            is_path_like
+                                && basename.contains('.')
+                                && matched_text
+                                    .to_ascii_lowercase()
+                                    .contains(&basename.to_ascii_lowercase())
+                        });
+                    if !has_referenced_filename {
+                        discarded.push(m.clone());
+                        continue;
+                    }
                 }
-
-                let path = Path::new(filename);
-                let is_path_like = filename.contains('/') || filename.contains('\\');
-                let Some(basename) = path.file_name().and_then(|name| name.to_str()) else {
-                    return false;
-                };
-
-                is_path_like
-                    && basename.contains('.')
-                    && matched_text
-                        .to_ascii_lowercase()
-                        .contains(&basename.to_ascii_lowercase())
-            });
-            if !has_referenced_filename {
-                discarded.push(m.clone());
-                continue;
             }
         }
 
@@ -1571,6 +1580,126 @@ mod tests {
         let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
 
         assert_eq!(kept.len(), 1);
+        assert!(discarded.is_empty());
+    }
+
+    /// Build a rule that carries BOTH a path-like referenced filename and required
+    /// key phrases, like `cc0-1.0_161.RULE` (a CC0 dedication whose Debian tail adds a
+    /// second required phrase and a `/usr/share/common-licenses/CC0-1.0` reference).
+    fn rule_with_referenced_filename_and_required_phrases(
+        required_phrase_spans: Vec<std::ops::Range<usize>>,
+    ) -> Rule {
+        Rule {
+            identifier: "cc0-1.0_161".to_string(),
+            license_expression: "cc0-1.0".to_string(),
+            text: "to the extent possible under law".to_string(),
+            tokens: vec![],
+            rule_kind: crate::license_detection::models::RuleKind::Notice,
+            is_false_positive: false,
+            is_required_phrase: false,
+            is_from_license: false,
+            relevance: 100,
+            minimum_coverage: None,
+            has_stored_minimum_coverage: false,
+            is_continuous: false,
+            referenced_filenames: Some(vec!["/usr/share/common-licenses/CC0-1.0".to_string()]),
+            ignorable_urls: None,
+            ignorable_emails: None,
+            ignorable_copyrights: None,
+            ignorable_holders: None,
+            ignorable_authors: None,
+            language: None,
+            notes: None,
+            length_unique: 13,
+            high_length_unique: 0,
+            high_length: 0,
+            min_matched_length: 1,
+            min_high_matched_length: 0,
+            min_matched_length_unique: 0,
+            min_high_matched_length_unique: 0,
+            is_small: false,
+            is_tiny: false,
+            starts_with_license: false,
+            ends_with_license: false,
+            is_deprecated: false,
+            spdx_license_key: None,
+            other_spdx_license_keys: vec![],
+            required_phrase_spans,
+            stopwords_by_pos: std::collections::HashMap::new(),
+        }
+    }
+
+    /// A sequence match against a path-like referenced filename skips the
+    /// referenced-filename presence check, but it must NOT skip required-phrase
+    /// validation: a match missing a required key phrase is still discarded. This is
+    /// the `cc0-1.0_161` vs `cc0-1.0_27` case where keeping the longer partial CC0
+    /// match would let an adjacent resolved license reference drop the real CC0.
+    #[test]
+    fn test_seq_referenced_filename_match_missing_required_phrase_is_discarded() {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        // First required phrase (0..3) is in the matched ispan; the second (10..13)
+        // lives in the unmatched Debian tail, so the match is missing a required phrase.
+        index
+            .rules_by_rid
+            .push(rule_with_referenced_filename_and_required_phrases(vec![
+                0..3,
+                10..13,
+            ]));
+
+        let query =
+            Query::from_extracted_text("to the extent possible under law", &index, false).unwrap();
+
+        let mut m = create_test_match("#0", 1, 9, MatchScore::MAX, 74.0, 100);
+        m.matcher = MatcherKind::Seq;
+        m.coordinates = MatchCoordinates::rule_aligned(
+            PositionSpan::range(0, 9),
+            PositionSpan::range(0, 9),
+            PositionSpan::empty(),
+        );
+
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert!(
+            kept.is_empty(),
+            "match missing a required phrase must be discarded"
+        );
+        assert_eq!(discarded.len(), 1);
+    }
+
+    /// Companion to the above: when the matched ispan covers all required key phrases,
+    /// the same seq/referenced-filename match is kept.
+    #[test]
+    fn test_seq_referenced_filename_match_with_all_required_phrases_is_kept() {
+        let mut index = LicenseIndex::with_legalese_count(10);
+        index
+            .rules_by_rid
+            .push(rule_with_referenced_filename_and_required_phrases(vec![
+                0..3,
+                10..13,
+            ]));
+
+        let query = Query::from_extracted_text(
+            "to the extent possible under law dedicated rights public domain worldwide warranty notice",
+            &index,
+            false,
+        )
+        .unwrap();
+
+        let mut m = create_test_match("#0", 1, 13, MatchScore::MAX, 100.0, 100);
+        m.matcher = MatcherKind::Seq;
+        m.coordinates = MatchCoordinates::rule_aligned(
+            PositionSpan::range(0, 13),
+            PositionSpan::range(0, 13),
+            PositionSpan::empty(),
+        );
+
+        let (kept, discarded) = filter_matches_missing_required_phrases(&index, &[m], &query);
+
+        assert_eq!(
+            kept.len(),
+            1,
+            "match covering all required phrases must be kept"
+        );
         assert!(discarded.is_empty());
     }
 }
