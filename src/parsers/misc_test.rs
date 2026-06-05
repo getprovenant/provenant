@@ -629,3 +629,64 @@ fn test_minimal_package_data_structure() {
     assert_eq!(pkg.dependencies.len(), 0);
     assert_eq!(pkg.parties.len(), 0);
 }
+
+// ============================================================================
+// Scanner-dispatch contract
+// ============================================================================
+
+// The per-recognizer tests above exercise each recognizer in isolation, but not that
+// it is registered and reachable through the scanner's `try_parse_file` dispatch. A
+// registration regression (a recognizer dropped from the dispatch list, or shadowed by
+// an earlier parser claiming the same path) would pass the unit tests yet break real
+// scans. This walks every extension/path-based recognizer surface end-to-end and
+// asserts the dispatched datasource id.
+//
+// Magic-byte recognizers (squashfs, NSIS, InstallShield) are excluded because their
+// dispatch depends on real binary signatures rather than the path alone.
+#[test]
+fn test_recognizer_surfaces_dispatch_through_try_parse_file() {
+    let temp = TempDir::new().expect("temp dir");
+    // Distinct parent dirs keep the lowercase `meta-inf` patterns from colliding with
+    // the uppercase `META-INF` ones on case-insensitive filesystems.
+    let cases: &[(&str, DatasourceId)] = &[
+        ("ear/app.ear", DatasourceId::JavaEarArchive),
+        (
+            "ear/META-INF/application.xml",
+            DatasourceId::JavaEarApplicationXml,
+        ),
+        ("war/app.war", DatasourceId::JavaWarArchive),
+        ("war/WEB-INF/web.xml", DatasourceId::JavaWarWebXml),
+        ("axis2/mod.mar", DatasourceId::Axis2Mar),
+        ("axis2/meta-inf/module.xml", DatasourceId::Axis2ModuleXml),
+        ("jboss/svc.sar", DatasourceId::JbossSar),
+        (
+            "jboss/meta-inf/jboss-service.xml",
+            DatasourceId::JbossServiceXml,
+        ),
+        ("android/lib.aar", DatasourceId::AndroidAarLibrary),
+        ("mozilla/ext.xpi", DatasourceId::MozillaXpi),
+        ("chrome/ext.crx", DatasourceId::ChromeCrx),
+        ("ios/app.ipa", DatasourceId::IosIpa),
+        ("cab/pkg.cab", DatasourceId::MicrosoftCabinet),
+        ("shar/pkg.shar", DatasourceId::SharShellArchive),
+        ("dmg/disk.dmg", DatasourceId::AppleDmg),
+        ("iso/disk.iso", DatasourceId::IsoDiskImage),
+        ("jar/lib.jar", DatasourceId::JavaJar),
+        ("ivy/ivy.xml", DatasourceId::AntIvyXml),
+        ("meteor/package.js", DatasourceId::MeteorPackage),
+    ];
+
+    for (rel, expected) in cases {
+        let path = temp.path().join(rel);
+        fs::create_dir_all(path.parent().unwrap()).expect("create parent dirs");
+        fs::write(&path, b"recognizer dispatch fixture").expect("write fixture");
+
+        let result = try_parse_file(&path)
+            .unwrap_or_else(|| panic!("try_parse_file returned None for {rel}"));
+        assert_eq!(
+            result.packages.first().and_then(|p| p.datasource_id),
+            Some(*expected),
+            "scanner dispatch for {rel} should yield {expected:?}"
+        );
+    }
+}
