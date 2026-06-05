@@ -470,6 +470,38 @@ pub(super) fn extract_from_pip_inspect(path: &Path) -> Vec<PackageData> {
         main_pkg.dependencies = dependencies;
         main_pkg.dependencies.extend(unresolved_dependencies);
         vec![main_pkg]
+    } else if !dependencies.is_empty() {
+        // No requested package carried a `direct_url`, which is the common case for a
+        // `pip inspect` run over a PyPI-installed environment (a `direct_url` is only
+        // present for local-path, VCS, or URL installs). Emit the resolved installed
+        // packages as dependencies on a lockfile-style deplock package, matching
+        // ScanCode, instead of discarding them with an empty default package.
+        let mut extra_data = HashMap::new();
+        if let Some(pv) = &pip_version {
+            extra_data.insert(
+                "pip_version".to_string(),
+                serde_json::Value::String(pv.clone()),
+            );
+        }
+        if let Some(iv) = &inspect_version {
+            extra_data.insert(
+                "inspect_version".to_string(),
+                serde_json::Value::String(iv.clone()),
+            );
+        }
+
+        vec![PackageData {
+            package_type: Some(PythonParser::PACKAGE_TYPE),
+            primary_language: Some("Python".to_string()),
+            dependencies,
+            extra_data: if extra_data.is_empty() {
+                None
+            } else {
+                Some(extra_data)
+            },
+            datasource_id: Some(DatasourceId::PypiInspectDeplock),
+            ..Default::default()
+        }]
     } else {
         default_package_data(path)
     }
