@@ -75,27 +75,32 @@ pub fn scan_options_fingerprint(
     license_options: LicenseScanOptions,
     license_engine: Option<&LicenseDetectionEngine>,
 ) -> String {
-    let (license_enabled, rules_count, first_rule_id, last_rule_id) = match license_engine {
-        Some(engine) => {
-            let rules = &engine.index().rules_by_rid;
-            (
-                true,
-                rules.len(),
-                rules
-                    .first()
-                    .map(|rule| rule.identifier.as_str())
-                    .unwrap_or(""),
-                rules
-                    .last()
-                    .map(|rule| rule.identifier.as_str())
-                    .unwrap_or(""),
-            )
-        }
-        None => (false, 0, "", ""),
-    };
+    let (license_enabled, dataset_fingerprint, rules_count, first_rule_id, last_rule_id) =
+        match license_engine {
+            Some(engine) => {
+                let rules = &engine.index().rules_by_rid;
+                (
+                    true,
+                    engine
+                        .license_index_provenance()
+                        .map(|provenance| provenance.dataset_fingerprint.as_str())
+                        .unwrap_or(""),
+                    rules.len(),
+                    rules
+                        .first()
+                        .map(|rule| rule.identifier.as_str())
+                        .unwrap_or(""),
+                    rules
+                        .last()
+                        .map(|rule| rule.identifier.as_str())
+                        .unwrap_or(""),
+                )
+            }
+            None => (false, "", 0, "", ""),
+        };
 
     format!(
-        "tool_version={};info={};packages={};app_packages={};system_packages={};compiled_packages={};copyrights={};generated={};emails={};urls={};max_emails={};max_urls={};timeout={:.6};license_enabled={};rules_count={};first_rule_id={};last_rule_id={};license_text={};license_text_diagnostics={};license_diagnostics={};unknown_licenses={};sequence_matching={};license_score={}",
+        "tool_version={};info={};packages={};app_packages={};system_packages={};compiled_packages={};copyrights={};generated={};emails={};urls={};max_emails={};max_urls={};timeout={:.6};license_enabled={};license_dataset_fingerprint={};rules_count={};first_rule_id={};last_rule_id={};license_text={};license_text_diagnostics={};license_diagnostics={};unknown_licenses={};sequence_matching={};license_score={}",
         crate::version::BUILD_VERSION,
         text_options.collect_info,
         text_options.detect_packages,
@@ -110,6 +115,7 @@ pub fn scan_options_fingerprint(
         text_options.max_urls,
         text_options.timeout_seconds,
         license_enabled,
+        dataset_fingerprint,
         rules_count,
         first_rule_id,
         last_rule_id,
