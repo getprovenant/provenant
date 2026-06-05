@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 207 of 207 recorded runs, with a **12.3× median speedup** and **11.5× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.1×** on 10k+ file targets.
+> Provenant is faster on 209 of 209 recorded runs, with a **12.3× median speedup** and **11.6× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1061,12 +1061,26 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `38.15s`; ScanCode `379.55s`
 - Broader .NET/NuGet package and dependency extraction (`105` vs `3` packages, `145` vs `33` dependencies) from many `*.csproj` files plus `Directory.Packages.props` and `Directory.Build.props` across samples, tooling, and test projects, with zero scan errors where ScanCode trips on `TwitterColorEmoji-SVGinOT.ttf`
 
+##### [bitwarden/server @ 051d0ef](https://github.com/bitwarden/server/tree/051d0ef35aefb91cf98d6180cdee4e6078894718) — **40.54× faster**
+
+- Files: 6,658
+- Run context: 2026-06-05 · server-53357 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `14.83s`; ScanCode `601.20s`
+- Far broader .NET/NuGet package and dependency extraction (`61` vs `4` packages, `9962` vs `933` dependencies) because 58 committed `packages.lock.json` lockfiles contribute fully resolved transitive NuGet graphs alongside 57 `*.csproj` and `Directory.Build.props` manifests plus sibling npm, Cargo, and Docker surfaces, with direct `AGPL-3.0-or-later` identity on the `bitwarden-server.slnx` solution and source-faithful copyright recovery that keeps `Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>` intact while rejecting Handlebars `CurrentYear` template placeholders, `(c)`-in-code fragments, and `package.json` field-jammed author noise
+
 ##### [dotnet/extensions @ 7171956](https://github.com/dotnet/extensions/tree/7171956b4fbafdd5e44ca8ca1ceed72c0d6bbb66) — **19.08× faster**
 
 - Files: 3,643
 - Run context: 2026-04-30 · extensions-9749 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `27.54s`; ScanCode `525.35s`
 - Broader .NET/NuGet package and dependency extraction (`162` vs `2` packages, `1161` vs `690` dependencies) across many `*.csproj` files, `Directory.Packages.props`, `Directory.Build.props`, and imported `eng/packages/*.props` / `Tests.props` / `Tools.props` central-version surfaces, with root and nested central package manifests carrying resolved package-version dependency metadata instead of empty imported-props placeholders
+
+##### [dotnet/fsharp @ f7be8d0](https://github.com/dotnet/fsharp/tree/f7be8d05a7e22ba1209e62363ee639d100df2488) — **26.48× faster**
+
+- Files: 10,138
+- Run context: 2026-06-05 · fsharp-59756 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `29.07s`; ScanCode `769.93s`
+- Broader .NET/NuGet package and dependency extraction (`111` vs `0` packages, `186` vs `0` dependencies) across `*.fsproj`, the `FSharp.ProjectSystem.PropertyPages.vbproj`, shipping `*.nuspec`, `*.csproj`, and `Directory.Build.props` surfaces that ScanCode leaves unassembled, plus matched dual `CC0-1.0 AND MIT` detection on the TaskBuilder-derived files where a public-domain dedication abuts the project-license reference, and cleaner rejection of F# quotation `(c)` code-fragment copyrights and holders, filename- and prose-shaped author noise, a placeholder email, and a malformed concatenated URL
 
 ##### [dotnet/runtime @ d1163e5](https://github.com/dotnet/runtime/tree/d1163e5a8f3f3aaa374993e8b5805911689aba28) — **31.49× faster**
 
