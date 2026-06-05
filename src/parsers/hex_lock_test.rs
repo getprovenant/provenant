@@ -145,3 +145,62 @@ fn test_hex_mix_lock_malformed_returns_default() {
     assert_eq!(package_data.datasource_id, Some(DatasourceId::HexMixLock));
     assert!(package_data.dependencies.is_empty());
 }
+
+// Pre-2018 mix.lock entries use shorter hex tuples: 7 elements (no outer_checksum) or
+// 6 elements (no repo and no outer_checksum). They must still be extracted.
+#[test]
+fn test_hex_mix_lock_legacy_short_tuples() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let path = temp_dir.path().join("mix.lock");
+    std::fs::write(
+        &path,
+        concat!(
+            "%{\n",
+            // 7-tuple: repo present, no outer_checksum
+            "  \"plug\" => {:hex, :plug, \"1.5.0\", \"aaa111\", [:mix], [], \"hexpm\"},\n",
+            // 6-tuple: no repo, no outer_checksum
+            "  \"cowboy\" => {:hex, :cowboy, \"2.0.0\", \"bbb222\", [:rebar3], []}\n",
+            "}\n"
+        ),
+    )
+    .unwrap();
+
+    let package_data = HexLockParser::extract_first_package(&path);
+    assert_eq!(package_data.package_type, Some(PackageType::Hex));
+    assert_eq!(package_data.datasource_id, Some(DatasourceId::HexMixLock));
+    assert_eq!(package_data.dependencies.len(), 2);
+    let purls: Vec<&str> = package_data
+        .dependencies
+        .iter()
+        .filter_map(|dep| dep.purl.as_deref())
+        .collect();
+    assert!(purls.contains(&"pkg:hex/plug@1.5.0"));
+    assert!(purls.contains(&"pkg:hex/cowboy@2.0.0"));
+
+    // The 6-element cowboy tuple omits the repo field, so the parser must default it to
+    // "hexpm" rather than leaving it unset.
+    let cowboy_extra = package_data
+        .dependencies
+        .iter()
+        .find(|dep| dep.purl.as_deref() == Some("pkg:hex/cowboy@2.0.0"))
+        .and_then(|dep| dep.resolved_package.as_ref())
+        .and_then(|resolved| resolved.extra_data.as_ref())
+        .expect("cowboy resolved package extra_data");
+    assert_eq!(cowboy_extra.get("repo"), Some(&serde_json::json!("hexpm")));
+
+    // Neither legacy tuple carries an outer checksum (7th/8th element absent), so the key
+    // must not be present in extra_data.
+    for purl in ["pkg:hex/plug@1.5.0", "pkg:hex/cowboy@2.0.0"] {
+        let extra = package_data
+            .dependencies
+            .iter()
+            .find(|dep| dep.purl.as_deref() == Some(purl))
+            .and_then(|dep| dep.resolved_package.as_ref())
+            .and_then(|resolved| resolved.extra_data.as_ref())
+            .unwrap_or_else(|| panic!("{purl} resolved package extra_data"));
+        assert!(
+            !extra.contains_key("outer_checksum"),
+            "{purl} should not record an outer_checksum for a legacy short tuple"
+        );
+    }
+}
