@@ -10,6 +10,7 @@ use crate::parsers::with_parser_scan_root;
 use crate::progress::ScanProgress;
 use crate::scanner::collect::CollectedPaths;
 use crate::scanner::{LicenseScanOptions, ProcessResult, TextDetectionOptions};
+use anyhow::Result;
 use rayon::prelude::*;
 use std::sync::Arc;
 
@@ -101,15 +102,15 @@ pub fn process_collected_with_memory_limit(
     license_options: LicenseScanOptions,
     text_options: &TextDetectionOptions,
     max_in_memory: MemoryMode,
-) -> ProcessResult {
+) -> Result<ProcessResult> {
     let Some((memory_limit, chunk_size)) = memory_limit_settings(max_in_memory) else {
-        return process_collected(
+        return Ok(process_collected(
             collected,
             progress,
             license_engine,
             license_options,
             text_options,
-        );
+        ));
     };
 
     let mut retained_files = Vec::new();
@@ -139,7 +140,7 @@ pub fn process_collected_with_memory_limit(
             &mut retained_files,
             &mut spill_store,
             memory_limit,
-        );
+        )?;
     }
 
     for (path, metadata) in &collected.directories {
@@ -154,17 +155,17 @@ pub fn process_collected_with_memory_limit(
             &mut retained_files,
             &mut spill_store,
             memory_limit,
-        );
+        )?;
     }
 
     if let Some(spill_store) = spill_store {
-        retained_files.extend(spill_store.load_all());
+        retained_files.extend(spill_store.load_all()?);
     }
 
-    ProcessResult {
+    Ok(ProcessResult {
         files: retained_files,
         excluded_count: collected.excluded_count,
-    }
+    })
 }
 
 pub fn process_collected_with_memory_limit_sequential(
@@ -174,15 +175,15 @@ pub fn process_collected_with_memory_limit_sequential(
     license_options: LicenseScanOptions,
     text_options: &TextDetectionOptions,
     max_in_memory: MemoryMode,
-) -> ProcessResult {
+) -> Result<ProcessResult> {
     let Some((memory_limit, chunk_size)) = memory_limit_settings(max_in_memory) else {
-        return process_collected_sequential(
+        return Ok(process_collected_sequential(
             collected,
             progress,
             license_engine,
             license_options,
             text_options,
-        );
+        ));
     };
 
     let mut retained_files = Vec::new();
@@ -210,7 +211,7 @@ pub fn process_collected_with_memory_limit_sequential(
             &mut retained_files,
             &mut spill_store,
             memory_limit,
-        );
+        )?;
     }
 
     for (path, metadata) in &collected.directories {
@@ -225,17 +226,17 @@ pub fn process_collected_with_memory_limit_sequential(
             &mut retained_files,
             &mut spill_store,
             memory_limit,
-        );
+        )?;
     }
 
     if let Some(spill_store) = spill_store {
-        retained_files.extend(spill_store.load_all());
+        retained_files.extend(spill_store.load_all()?);
     }
 
-    ProcessResult {
+    Ok(ProcessResult {
         files: retained_files,
         excluded_count: collected.excluded_count,
-    }
+    })
 }
 
 fn memory_limit_settings(max_in_memory: MemoryMode) -> Option<(usize, usize)> {

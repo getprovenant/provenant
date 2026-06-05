@@ -2212,7 +2212,8 @@ fn process_collected_with_memory_limit_preserves_results_when_spilling() {
             timeout_seconds: 120.0,
         },
         MemoryMode::Limit(1),
-    );
+    )
+    .expect("memory-limited scan should succeed");
 
     assert_eq!(result.files.len(), 3);
 }
@@ -2243,7 +2244,8 @@ fn process_collected_with_negative_one_uses_disk_only_mode() {
             timeout_seconds: 120.0,
         },
         MemoryMode::StreamUnlimited,
-    );
+    )
+    .expect("disk-only scan should succeed");
 
     assert_eq!(result.files.len(), 2);
 }

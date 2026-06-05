@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::models::FileInfo;
+use anyhow::{Context, Result};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use tempfile::TempDir;
@@ -28,28 +29,38 @@ pub(super) fn retain_or_spill_chunk(
     retained_files: &mut Vec<FileInfo>,
     spill_store: &mut Option<FileInfoSpillStore>,
     memory_limit: usize,
-) {
+) -> Result<()> {
     if memory_limit == 0 {
-        spill_store
-            .get_or_insert_with(FileInfoSpillStore::new)
-            .spill(chunk);
-        return;
+        spill_store_mut(spill_store)?.spill(chunk)?;
+        return Ok(());
     }
 
     let remaining_capacity = memory_limit.saturating_sub(retained_files.len());
     if remaining_capacity >= chunk.len() && spill_store.is_none() {
         retained_files.extend(chunk);
-        return;
+        return Ok(());
     }
 
     let mut chunk_iter = chunk.into_iter();
     retained_files.extend(chunk_iter.by_ref().take(remaining_capacity));
     let overflow: Vec<FileInfo> = chunk_iter.collect();
     if !overflow.is_empty() {
-        spill_store
-            .get_or_insert_with(FileInfoSpillStore::new)
-            .spill(overflow);
+        spill_store_mut(spill_store)?.spill(overflow)?;
     }
+
+    Ok(())
+}
+
+fn spill_store_mut(
+    spill_store: &mut Option<FileInfoSpillStore>,
+) -> Result<&mut FileInfoSpillStore> {
+    if spill_store.is_none() {
+        *spill_store = Some(FileInfoSpillStore::new()?);
+    }
+
+    Ok(spill_store
+        .as_mut()
+        .expect("spill store is always initialized after creation"))
 }
 
 pub(super) struct FileInfoSpillStore {
@@ -58,48 +69,66 @@ pub(super) struct FileInfoSpillStore {
 }
 
 impl FileInfoSpillStore {
-    fn new() -> Self {
-        Self {
-            temp_dir: TempDir::new().expect("create spill dir"),
+    fn new() -> Result<Self> {
+        Ok(Self {
+            temp_dir: TempDir::new().context("create scanner spill directory")?,
             batch_index: 0,
-        }
+        })
     }
 
-    fn spill(&mut self, files: Vec<FileInfo>) {
+    fn spill(&mut self, files: Vec<FileInfo>) -> Result<()> {
         let path = self
             .temp_dir
             .path()
             .join(format!("batch-{:06}.postcard.zst", self.batch_index));
         self.batch_index += 1;
 
-        let payload = postcard::to_allocvec(&files).expect("encode spilled file batch");
-        let file = File::create(path).expect("create spill batch file");
-        let mut encoder = zstd::Encoder::new(file, 3).expect("create spill encoder");
+        let payload = postcard::to_allocvec(&files).context("encode scanner spill batch")?;
+        let file = File::create(&path)
+            .with_context(|| format!("create scanner spill batch file {}", path.display()))?;
+        let mut encoder = zstd::Encoder::new(file, 3)
+            .with_context(|| format!("create scanner spill encoder for {}", path.display()))?;
         encoder
             .write_all(&payload)
-            .expect("write spilled file batch");
-        encoder.finish().expect("finish spill encoder");
+            .with_context(|| format!("write scanner spill batch {}", path.display()))?;
+        encoder
+            .finish()
+            .with_context(|| format!("finish scanner spill encoder for {}", path.display()))?;
+
+        Ok(())
     }
 
-    pub(super) fn load_all(self) -> Vec<FileInfo> {
-        let mut paths: Vec<_> = fs::read_dir(self.temp_dir.path())
-            .expect("read spill dir")
-            .filter_map(Result::ok)
-            .map(|entry| entry.path())
-            .collect();
+    pub(super) fn load_all(self) -> Result<Vec<FileInfo>> {
+        let spill_dir = self.temp_dir.path();
+        let mut paths = Vec::new();
+        for entry in fs::read_dir(spill_dir)
+            .with_context(|| format!("read scanner spill directory {}", spill_dir.display()))?
+        {
+            let entry = entry.with_context(|| {
+                format!(
+                    "read scanner spill directory entry from {}",
+                    spill_dir.display()
+                )
+            })?;
+            paths.push(entry.path());
+        }
         paths.sort();
 
         let mut files = Vec::new();
         for path in paths {
-            let file = File::open(path).expect("open spill batch");
-            let mut decoder = zstd::Decoder::new(file).expect("create spill decoder");
+            let file = File::open(&path)
+                .with_context(|| format!("open scanner spill batch {}", path.display()))?;
+            let mut decoder = zstd::Decoder::new(file)
+                .with_context(|| format!("create scanner spill decoder for {}", path.display()))?;
             let mut payload = Vec::new();
-            decoder.read_to_end(&mut payload).expect("read spill batch");
-            let mut batch: Vec<FileInfo> =
-                postcard::from_bytes(&payload).expect("decode spilled file batch");
+            decoder
+                .read_to_end(&mut payload)
+                .with_context(|| format!("read scanner spill batch {}", path.display()))?;
+            let mut batch: Vec<FileInfo> = postcard::from_bytes(&payload)
+                .with_context(|| format!("decode scanner spill batch {}", path.display()))?;
             files.append(&mut batch);
         }
-        files
+        Ok(files)
     }
 }
 
@@ -109,8 +138,8 @@ mod tests {
     use crate::models::{DiagnosticSeverity, FileType, ScanDiagnostic};
 
     #[test]
-    fn spilled_files_preserve_scan_diagnostic_severity() {
-        let mut store = FileInfoSpillStore::new();
+    fn spilled_files_preserve_scan_diagnostic_severity() -> Result<()> {
+        let mut store = FileInfoSpillStore::new()?;
         let file = FileInfo::new(
             "custom.txt".to_string(),
             "custom".to_string(),
@@ -138,8 +167,8 @@ mod tests {
             vec![ScanDiagnostic::warning("custom recoverable warning")],
         );
 
-        store.spill(vec![file]);
-        let loaded = store.load_all();
+        store.spill(vec![file])?;
+        let loaded = store.load_all()?;
 
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].scan_diagnostics.len(), 1);
@@ -147,5 +176,21 @@ mod tests {
             loaded[0].scan_diagnostics[0].severity,
             DiagnosticSeverity::Warning
         );
+        Ok(())
+    }
+
+    #[test]
+    fn corrupt_spill_batch_returns_error() -> Result<()> {
+        let mut store = FileInfoSpillStore::new()?;
+        let path = store.temp_dir.path().join("batch-000000.postcard.zst");
+        fs::write(&path, b"not zstd")?;
+        store.batch_index = 1;
+
+        let error = store
+            .load_all()
+            .expect_err("corrupt spill batch should return an error");
+
+        assert!(error.to_string().contains("scanner spill"));
+        Ok(())
     }
 }

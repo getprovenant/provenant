@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 
@@ -586,14 +586,15 @@ fn load_native_scan_session(
     progress.start_scan(collected.file_count());
     let mut result = match process_mode {
         ProcessMode::Parallel(thread_count) => run_with_thread_pool(thread_count, || {
-            Ok(process_collected_with_memory_limit(
+            process_collected_with_memory_limit(
                 &collected,
                 Arc::clone(progress),
                 license_engine.clone(),
                 license_options,
                 &text_options,
                 request.max_in_memory,
-            ))
+            )
+            .context("scan processing failed while spilling file results")
         })?,
         ProcessMode::SequentialWithTimeouts | ProcessMode::SequentialWithoutTimeouts => {
             process_collected_with_memory_limit_sequential(
@@ -604,6 +605,7 @@ fn load_native_scan_session(
                 &text_options,
                 request.max_in_memory,
             )
+            .context("scan processing failed while spilling file results")?
         }
     };
 
