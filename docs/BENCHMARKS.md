@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 215 of 215 recorded runs, with a **12.1× median speedup** and **11.5× geometric-mean speedup** overall; the median gap grows from **7.0×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 216 of 216 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.0×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -314,6 +314,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `23.76s`; ScanCode `761.82s`
 - Direct Helm package visibility on `deploy/helm/baserow/Chart.yaml` and `Chart.lock` (`2` file-level Helm surfaces vs `0`), with declared plus locked dependency extraction (`12` vs `0` on each chart file) covering sibling `baserow-common` aliases and the pinned Bitnami/Caddy chart inputs that ScanCode leaves at zero
+
+##### [catppuccin/gitea @ 6a78970](https://github.com/catppuccin/gitea/tree/6a789704686ec13178a13cd84bf1e30db191a437) — **6.76× faster**
+
+- Files: 23
+- Run context: 2026-06-06 · gitea-24220 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.02s`; ScanCode `40.69s`
+- Deno v4 lockfile dependency extraction (`37` vs `0` from `deno.lock`'s resolved `npm` and `jsr` graphs) where ScanCode is lockfile-blind, plus `deno.json` import-map package visibility and cleaner rejection of a bare-URL holder mistaken from README prose; the deno.lock parser now covers lockfile formats v1–v5 rather than v5 alone
 
 ##### [denoland/fresh @ 49c4be1](https://github.com/denoland/fresh/tree/49c4be1ac60603174bad1c6e3c13bd88602c51bb) — **11.69× faster**
 
