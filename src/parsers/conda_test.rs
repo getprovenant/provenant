@@ -986,4 +986,105 @@ about:
             Some(1)
         );
     }
+
+    // rattler-build treats schema_version as optional (default 1), so recipe.yaml files
+    // commonly omit it. The recipe must still be recognized and parsed.
+    #[test]
+    fn test_extract_recipe_yaml_without_schema_version() {
+        let temp_dir = TempDir::new().unwrap();
+        let recipe_dir = temp_dir.path().join("recipe");
+        fs::create_dir_all(&recipe_dir).unwrap();
+        let recipe_path = recipe_dir.join("recipe.yaml");
+        fs::write(
+            &recipe_path,
+            r#"
+context:
+  version: "3.0.2"
+
+package:
+  name: pandas
+  version: ${{ version }}
+
+requirements:
+  run:
+    - python
+    - numpy >=1.26.0
+"#,
+        )
+        .unwrap();
+
+        let package_data = CondaMetaYamlParser::extract_first_package(&recipe_path);
+
+        assert_eq!(package_data.package_type, Some(PackageType::Conda));
+        assert_eq!(package_data.name.as_deref(), Some("pandas"));
+        assert_eq!(package_data.version.as_deref(), Some("3.0.2"));
+        let dependency_purls: Vec<&str> = package_data
+            .dependencies
+            .iter()
+            .filter_map(|dep| dep.purl.as_deref())
+            .collect();
+        assert!(dependency_purls.contains(&"pkg:conda/numpy"));
+    }
+
+    // An explicit, unrecognized schema_version is still rejected (no recipe extraction).
+    #[test]
+    fn test_recipe_yaml_explicit_unknown_schema_version_is_not_recognized() {
+        let temp_dir = TempDir::new().unwrap();
+        let recipe_dir = temp_dir.path().join("recipe");
+        fs::create_dir_all(&recipe_dir).unwrap();
+        let recipe_path = recipe_dir.join("recipe.yaml");
+        fs::write(
+            &recipe_path,
+            r#"
+schema_version: 2
+
+package:
+  name: pandas
+  version: "3.0.2"
+"#,
+        )
+        .unwrap();
+
+        let packages = CondaMetaYamlParser::extract_packages(&recipe_path);
+        assert!(packages.is_empty());
+    }
+
+    // rattler-build recipes commonly template the package name with a filter, e.g.
+    // `name: ${{ name|lower }}`. The filter must be applied so the name resolves to a real
+    // identity instead of leaking the literal `${{ name|lower }}` expression into the PURL.
+    #[test]
+    fn test_extract_recipe_yaml_resolves_lower_filter_in_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let recipe_dir = temp_dir.path().join("recipe");
+        fs::create_dir_all(&recipe_dir).unwrap();
+        let recipe_path = recipe_dir.join("recipe.yaml");
+        fs::write(
+            &recipe_path,
+            r#"
+schema_version: 1
+
+context:
+  name: Tardigrade_Tools
+  version: 0.0.0
+
+package:
+  name: ${{ name|lower }}
+  version: ${{ version }}
+
+requirements:
+  host:
+    - cmake
+"#,
+        )
+        .unwrap();
+
+        let package_data = CondaMetaYamlParser::extract_first_package(&recipe_path);
+
+        assert_eq!(package_data.name.as_deref(), Some("tardigrade_tools"));
+        assert_eq!(package_data.version.as_deref(), Some("0.0.0"));
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:conda/tardigrade_tools@0.0.0")
+        );
+    }
 }
