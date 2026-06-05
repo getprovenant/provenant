@@ -5,6 +5,7 @@ use std::path::Path;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
+use crate::utils::text::strip_utf8_bom_str;
 
 use super::super::PackageParser;
 use super::super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
@@ -40,19 +41,22 @@ impl PackageParser for ProjectJsonParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
-        let content = match read_file_to_string(path, None) {
+        let raw = match read_file_to_string(path, None) {
             Ok(c) => c,
             Err(e) => {
                 warn!("Failed to read project.json at {:?}: {}", path, e);
                 return vec![default_package_data(Some(DatasourceId::NugetProjectJson))];
             }
         };
+        // Visual Studio writes project.json with a UTF-8 BOM, which serde_json
+        // rejects ("expected value at line 1 column 1"); strip it before parsing.
+        let content = strip_utf8_bom_str(&raw);
 
-        if !looks_like_probable_nuget_project_json_text(&content) {
+        if !looks_like_probable_nuget_project_json_text(content) {
             return Vec::new();
         }
 
-        let parsed: serde_json::Value = match serde_json::from_str(&content) {
+        let parsed: serde_json::Value = match serde_json::from_str(content) {
             Ok(value) => value,
             Err(e) => {
                 warn!("Failed to parse project.json at {:?}: {}", path, e);
@@ -90,7 +94,7 @@ impl PackageParser for ProjectLockJsonParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
-        let content = match read_file_to_string(path, None) {
+        let raw = match read_file_to_string(path, None) {
             Ok(c) => c,
             Err(e) => {
                 warn!("Failed to read project.lock.json at {:?}: {}", path, e);
@@ -99,8 +103,11 @@ impl PackageParser for ProjectLockJsonParser {
                 ))];
             }
         };
+        // Strip a leading UTF-8 BOM (written by Visual Studio tooling) so serde_json
+        // does not fail on the first byte.
+        let content = strip_utf8_bom_str(&raw);
 
-        let parsed: serde_json::Value = match serde_json::from_str(&content) {
+        let parsed: serde_json::Value = match serde_json::from_str(content) {
             Ok(value) => value,
             Err(e) => {
                 warn!("Failed to parse project.lock.json at {:?}: {}", path, e);

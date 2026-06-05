@@ -625,6 +625,56 @@ mod tests {
         );
     }
 
+    // Visual Studio writes project.json (and project.lock.json) with a leading UTF-8
+    // BOM. serde_json rejects the BOM, so without stripping it the parser fails with
+    // "expected value at line 1 column 1" and extracts nothing.
+    #[test]
+    fn test_project_json_parses_with_utf8_bom() {
+        let json = "\u{feff}{\n  \"name\": \"Bom.Project\",\n  \"version\": \"1.0.0\",\n  \"dependencies\": { \"Newtonsoft.Json\": \"13.0.1\" }\n}";
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(json.as_bytes()).unwrap();
+
+        let package_data = ProjectJsonParser::extract_first_package(temp_file.path());
+
+        assert_eq!(
+            package_data.datasource_id,
+            Some(DatasourceId::NugetProjectJson)
+        );
+        assert_eq!(package_data.name.as_deref(), Some("Bom.Project"));
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:nuget/Newtonsoft.Json")
+        );
+    }
+
+    #[test]
+    fn test_project_lock_json_parses_with_utf8_bom() {
+        let json = "\u{feff}{\n  \"locked\": false,\n  \"version\": 2,\n  \"projectFileDependencyGroups\": { \"\": [ \"Newtonsoft.Json >= 13.0.1\" ] },\n  \"libraries\": { \"Newtonsoft.Json/13.0.1\": { \"type\": \"package\" } }\n}";
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(json.as_bytes()).unwrap();
+
+        let package_data = ProjectLockJsonParser::extract_first_package(temp_file.path());
+
+        assert_eq!(
+            package_data.datasource_id,
+            Some(DatasourceId::NugetProjectLockJson)
+        );
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:nuget/Newtonsoft.Json")
+        );
+        assert_eq!(
+            package_data.dependencies[0]
+                .extracted_requirement
+                .as_deref(),
+            Some(">= 13.0.1")
+        );
+    }
+
     #[test]
     fn test_project_json_ignores_non_nuget_gitlab_style_metadata() {
         let json = r#"{
