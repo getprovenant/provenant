@@ -68,11 +68,56 @@ impl PackageParser for DenoLockParser {
 
 fn parse_deno_lock(json: &Value) -> PackageData {
     let lock_version = json.get(FIELD_VERSION).and_then(Value::as_str);
-    if lock_version != Some("5") {
-        warn!("Unsupported deno.lock version {:?}", lock_version);
-        return default_package_data();
+
+    // deno.lock has gone through several incompatible layouts; dispatch on the declared
+    // version so older lockfiles still in the wild are not silently dropped:
+    //   * v1 (Deno 1.0-1.17): remote ESM URL imports only, no registry dependencies.
+    //   * v2/v3 (Deno 1.18-1.40): npm dependencies nested under npm.{specifiers,packages};
+    //     no jsr or workspace sections.
+    //   * v4 (Deno 1.45+) and v5 (current): flat top-level specifiers/npm/jsr/workspace.
+    // Unknown/newer versions fall back to the latest (flat) layout rather than dropping.
+    let (mut dependencies, workspace_direct) = match lock_version {
+        Some("1") => (Vec::new(), Vec::new()),
+        Some("2") | Some("3") => (extract_nested_npm_dependencies(json), Vec::new()),
+        Some("4") | Some("5") => extract_flat_dependencies(json),
+        other => {
+            warn!(
+                "Unrecognized deno.lock version {:?}; parsing with the latest known layout",
+                other
+            );
+            extract_flat_dependencies(json)
+        }
+    };
+    dependencies.extend(extract_redirect_dependencies(json));
+
+    let mut extra_data = HashMap::new();
+    if let Some(version) = lock_version {
+        extra_data.insert(
+            FIELD_VERSION.to_string(),
+            Value::String(version.to_string()),
+        );
+    }
+    if !workspace_direct.is_empty() {
+        extra_data.insert(
+            "workspace_dependencies".to_string(),
+            Value::Array(workspace_direct.into_iter().map(Value::String).collect()),
+        );
     }
 
+    PackageData {
+        package_type: Some(DenoLockParser::PACKAGE_TYPE),
+        primary_language: Some("TypeScript".to_string()),
+        dependencies,
+        extra_data: (!extra_data.is_empty()).then_some(extra_data),
+        datasource_id: Some(DatasourceId::DenoLock),
+        ..Default::default()
+    }
+}
+
+/// Flat top-level layout used by deno.lock v4 and v5: `specifiers`, `npm`, `jsr`, and
+/// `workspace` sections. Returns the resolved dependencies plus the workspace's direct
+/// specifier list (recorded in extra_data by the caller).
+fn extract_flat_dependencies(json: &Value) -> (Vec<Dependency>, Vec<String>) {
     let specifiers = json
         .get(FIELD_SPECIFIERS)
         .and_then(Value::as_object)
@@ -127,6 +172,59 @@ fn parse_deno_lock(json: &Value) -> PackageData {
         }
     }
 
+    (dependencies, workspace_direct)
+}
+
+/// Nested layout used by deno.lock v2 and v3: npm dependencies live under `npm.packages`
+/// (the resolved graph), with `npm.specifiers` mapping requested ranges to resolved
+/// `name@version` keys. There are no jsr or workspace sections in these versions.
+fn extract_nested_npm_dependencies(json: &Value) -> Vec<Dependency> {
+    let Some(npm) = json.get(FIELD_NPM) else {
+        return Vec::new();
+    };
+    let Some(packages) = npm.get("packages") else {
+        return Vec::new();
+    };
+    let Some(packages_map) = packages.as_object() else {
+        return Vec::new();
+    };
+
+    // `npm.specifiers` maps each requested specifier (e.g. "chalk@5") to its resolved
+    // `name@version` key (e.g. "chalk@5.3.0"). Invert it so resolved packages referenced
+    // by a top-level specifier can be marked direct and keep their requested range; the
+    // remaining npm.packages entries are transitive.
+    let requested_by_resolved: HashMap<String, String> = npm
+        .get("specifiers")
+        .and_then(Value::as_object)
+        .map(|specifiers| {
+            specifiers
+                .iter()
+                .filter_map(|(specifier, resolved)| {
+                    resolved.as_str().map(|resolved| {
+                        (
+                            resolved.trim_start_matches("npm:").to_string(),
+                            specifier.clone(),
+                        )
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut dependencies = Vec::new();
+    for key in packages_map.keys().take(MAX_ITERATION_COUNT) {
+        let requested = requested_by_resolved.get(key).map(String::as_str);
+        if let Some(dep) = build_npm_dependency(key, requested.is_some(), packages, requested) {
+            dependencies.push(dep);
+        }
+    }
+    dependencies
+}
+
+/// Module redirects, shared across all lockfile versions: each redirect target is a
+/// remote module whose integrity hash lives in the `remote` section.
+fn extract_redirect_dependencies(json: &Value) -> Vec<Dependency> {
+    let mut dependencies = Vec::new();
     if let Some(redirects) = json.get(FIELD_REDIRECTS).and_then(Value::as_object) {
         for (source, target) in redirects.iter().take(MAX_ITERATION_COUNT) {
             let Some(target_url) = target.as_str() else {
@@ -181,30 +279,7 @@ fn parse_deno_lock(json: &Value) -> PackageData {
             });
         }
     }
-
-    let mut extra_data = HashMap::new();
-    extra_data.insert(FIELD_VERSION.to_string(), Value::String("5".to_string()));
-    if !workspace_direct.is_empty() {
-        extra_data.insert(
-            "workspace_dependencies".to_string(),
-            Value::Array(
-                workspace_direct
-                    .iter()
-                    .cloned()
-                    .map(Value::String)
-                    .collect(),
-            ),
-        );
-    }
-
-    PackageData {
-        package_type: Some(DenoLockParser::PACKAGE_TYPE),
-        primary_language: Some("TypeScript".to_string()),
-        dependencies,
-        extra_data: Some(extra_data),
-        datasource_id: Some(DatasourceId::DenoLock),
-        ..Default::default()
-    }
+    dependencies
 }
 
 fn extract_workspace_dependencies(json: &Value) -> Vec<String> {
@@ -277,6 +352,27 @@ fn build_jsr_dependency(
     })
 }
 
+/// A package's nested `dependencies` field is shaped differently across lockfile
+/// versions: v4/v5 `npm[key].dependencies` is an array of resolved `name@version`
+/// keys (`["ansi-styles@6.2.1"]`), while v2/v3 `npm.packages[key].dependencies` is an
+/// object mapping bare names to those resolved keys (`{"ansi-styles":"ansi-styles@6.2.1"}`).
+/// Both encode the same resolved keys, so collect them uniformly from either shape.
+fn npm_dependency_keys(value: Option<&Value>) -> Vec<String> {
+    match value {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect(),
+        Some(Value::Object(map)) => map
+            .values()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
 fn build_npm_dependency(
     resolved_key: &str,
     is_direct: bool,
@@ -320,19 +416,15 @@ fn build_npm_dependency(
             md5: None,
             is_virtual: true,
             extra_data: None,
-            dependencies: npm_object
-                .get(FIELD_DEPENDENCIES)
-                .and_then(Value::as_array)
+            dependencies: npm_dependency_keys(npm_object.get(FIELD_DEPENDENCIES))
                 .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
                 .take(MAX_ITERATION_COUNT)
                 .filter_map(|value| {
-                    let (namespace, name, version) = parse_npm_key(value)?;
+                    let (namespace, name, version) = parse_npm_key(&value)?;
                     Some(Dependency {
                         purl: create_npm_purl(namespace.as_deref(), &name, Some(version))
                             .map(truncate_field),
-                        extracted_requirement: Some(truncate_field(value.to_string())),
+                        extracted_requirement: Some(truncate_field(value.clone())),
                         scope: Some("dependencies".to_string()),
                         is_runtime: Some(true),
                         is_optional: Some(false),
