@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 209 of 209 recorded runs, with a **12.3× median speedup** and **11.6× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 211 of 211 recorded runs, with a **12.3× median speedup** and **11.6× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -42,6 +42,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
   - [Package archives](#package-archives)
   - [Mobile app artifacts](#mobile-app-artifacts)
   - [Release binaries and extracted app snapshots](#release-binaries-and-extracted-app-snapshots)
+  - [Generated dependency lock manifests](#generated-dependency-lock-manifests)
 
 <!-- benchmark-quick-index:end -->
 
@@ -1545,6 +1546,22 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-24 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `62.51s`; ScanCode `627.66s`
 - Equivalent package visibility on the outer offline-scan snapshot (`0` vs `0` packages), with far cleaner rejection of random CAB-byte email noise (`0` vs `9`) while scanning the signed index-plus-CAB bundle
+
+#### Generated dependency lock manifests
+
+##### [Flask 3.1.0 pip-inspect.deplock @ sha256:fd65296](https://pypi.org/project/flask/3.1.0/) — **6.87× faster**
+
+- Files: 1
+- Run context: 2026-06-05 · pip-target-45841 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · generated via `pip inspect` (pip 26.1.1) over a venv with `flask==3.1.0`
+- Timing: Provenant `6.35s`; ScanCode `43.65s`
+- Matched pip-inspect deplock dependency extraction (`8` vs `8` resolved dependencies) across the installed set, with PURL-identified `flask` and its transitive `werkzeug`, `jinja2`, `click`, `itsdangerous`, `markupsafe`, and `blinker` pins on a lockfile-style deplock package, structured author capture in the resolved package metadata, and cleaner `BSD-3-Clause` classification where ScanCode appends an unknown-license reference
+
+##### [swift-dependencies 1.9.4 swift-show-dependencies.deplock @ sha256:bed4a47](https://github.com/pointfreeco/swift-dependencies/tree/1.9.4) — **6.78× faster**
+
+- Files: 1
+- Run context: 2026-06-05 · swift-target-52067 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · generated via `swift package show-dependencies --format json` (Swift 6.3.2) on `swift-dependencies@1.9.4`
+- Timing: Provenant `6.08s`; ScanCode `41.20s`
+- Matched swift-show-dependencies deplock dependency extraction (`17` vs `17` resolved dependencies) across the full transitive graph spanning `combine-schedulers`, `swift-clocks`, `swift-concurrency-extras`, `swift-syntax`, and sibling Point-Free packages, with no detected output differences
 
 ## Benchmark conventions
 
