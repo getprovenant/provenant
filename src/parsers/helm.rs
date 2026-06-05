@@ -43,7 +43,25 @@ impl PackageParser for HelmChartYamlParser {
             }
         };
 
-        vec![parse_chart_yaml(&yaml_content)]
+        let mut package = parse_chart_yaml(&yaml_content);
+
+        // Helm 2 charts (apiVersion v1) declare dependencies in a sibling requirements.yaml
+        // rather than inline in Chart.yaml. When such a chart carries no dependencies, merge
+        // them from a neighbouring requirements.yaml (same `dependencies:` schema). Gate this
+        // on apiVersion v1 so a Helm 3 (v2) chart that legitimately has zero inline
+        // dependencies but shares a directory with an unrelated requirements.yaml (e.g. a
+        // monorepo with an Ansible/Python project alongside the chart) does not inherit them.
+        if extract_string_field(&yaml_content, "apiVersion").as_deref() == Some("v1")
+            && package.dependencies.is_empty()
+            && let Some(requirements_path) =
+                path.parent().map(|parent| parent.join("requirements.yaml"))
+            && requirements_path.is_file()
+            && let Ok(requirements_content) = read_yaml_file(&requirements_path)
+        {
+            package.dependencies = extract_chart_yaml_dependencies(&requirements_content);
+        }
+
+        vec![package]
     }
 }
 
