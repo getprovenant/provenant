@@ -2460,6 +2460,58 @@ Test package description.
         );
     }
 
+    // Real `pip inspect` output over a PyPI-installed environment has no `direct_url`
+    // on any package (that field is only set for local-path, VCS, or URL installs), so
+    // there is no requested+direct_url root package. The installed packages must still
+    // be emitted as resolved dependencies on a lockfile-style deplock package rather
+    // than discarded.
+    #[test]
+    fn test_pip_inspect_no_direct_url_emits_resolved_dependencies() {
+        let content = r#"{
+  "version": "1",
+  "pip_version": "26.1.1",
+  "installed": [
+    {"metadata": {"name": "flask", "version": "3.1.0"}, "requested": true},
+    {"metadata": {"name": "werkzeug", "version": "3.1.8"}, "requested": false},
+    {"metadata": {"name": "jinja2", "version": "3.1.6"}, "requested": false}
+  ]
+}"#;
+        let (_temp_dir, file_path) = create_temp_file(content, "pip-inspect.deplock");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(package_data.package_type, Some(PackageType::Pypi));
+        assert_eq!(
+            package_data.datasource_id,
+            Some(DatasourceId::PypiInspectDeplock)
+        );
+        // Lockfile-style: no root identity, but every installed package is a dependency.
+        assert!(package_data.name.is_none());
+        assert_eq!(package_data.dependencies.len(), 3);
+
+        let dep_purls: Vec<&str> = package_data
+            .dependencies
+            .iter()
+            .filter_map(|d| d.purl.as_deref())
+            .collect();
+        assert!(dep_purls.contains(&"pkg:pypi/flask@3.1.0"));
+        assert!(dep_purls.contains(&"pkg:pypi/werkzeug@3.1.8"));
+        assert!(dep_purls.contains(&"pkg:pypi/jinja2@3.1.6"));
+
+        // The requested package is marked direct; transitive ones are not.
+        let flask = package_data
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:pypi/flask@3.1.0"))
+            .expect("flask dependency present");
+        assert_eq!(flask.is_direct, Some(true));
+        let werkzeug = package_data
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:pypi/werkzeug@3.1.8"))
+            .expect("werkzeug dependency present");
+        assert_eq!(werkzeug.is_direct, Some(false));
+    }
+
     #[test]
     fn test_pyproject_optional_dependencies_scopes() {
         let content = r#"
