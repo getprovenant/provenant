@@ -342,9 +342,15 @@ impl PackageParser for CondaMetaYamlParser {
 }
 
 fn looks_like_conda_recipe_yaml(yaml: &Value) -> bool {
-    yaml.get("schema_version")
-        .and_then(|value| value.as_u64())
-        .is_some_and(|value| value == 1)
+    // rattler-build treats schema_version as optional, defaulting to 1, so many real
+    // recipe.yaml files omit it. Accept an absent schema_version (default 1) and reject
+    // only an explicit version this parser does not understand.
+    let schema_version_ok = match yaml.get("schema_version").and_then(|value| value.as_u64()) {
+        Some(version) => version == 1,
+        None => true,
+    };
+
+    schema_version_ok
         && (yaml
             .get("package")
             .and_then(|value| value.as_mapping())
@@ -500,15 +506,28 @@ fn recipe_yaml_value_to_string(value: &Value, context: &HashMap<String, String>)
 }
 
 fn resolve_recipe_yaml_expressions(value: &str, context: &HashMap<String, String>) -> String {
-    let Some(re) = Regex::new(r#"\$\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}"#).ok() else {
+    // rattler-build recipe.yaml uses `${{ var }}` substitution from the `context:` block,
+    // optionally with a minijinja filter such as `${{ name|lower }}`. Capture the variable
+    // and an optional single filter so templated package names resolve to real identities
+    // instead of leaking the literal expression into PURLs.
+    let Some(re) = Regex::new(
+        r#"\$\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:\|\s*([A-Za-z_][A-Za-z0-9_]*)\s*)?\}\}"#,
+    )
+    .ok() else {
         return truncate_field(value.to_string());
     };
 
     let resolved = re.replace_all(value, |caps: &regex::Captures| {
-        context
-            .get(&caps[1])
-            .cloned()
-            .unwrap_or_else(|| caps[0].to_string())
+        let Some(substituted) = context.get(&caps[1]) else {
+            // Unknown variable: leave the original expression untouched.
+            return caps[0].to_string();
+        };
+        match caps.get(2).map(|filter| filter.as_str()) {
+            Some("lower") => substituted.to_lowercase(),
+            Some("upper") => substituted.to_uppercase(),
+            // Unknown/no filter: use the substituted value as-is.
+            _ => substituted.clone(),
+        }
     });
     truncate_field(resolved.into_owned())
 }
