@@ -120,7 +120,12 @@ fn build_dependency_from_lock_entry(
         _ => return Ok(None),
     };
 
-    if tuple.len() < 8 {
+    // hex dependency tuples have grown over time; accept all historical shapes rather than
+    // dropping older lockfiles:
+    //   6 elements (legacy): {:hex, name, version, inner_checksum, managers, deps}
+    //   7 elements: + repo
+    //   8 elements (modern, Hex >= 0.20 / Elixir >= 1.7): + outer_checksum
+    if tuple.len() < 6 {
         return Ok(None);
     }
 
@@ -134,8 +139,16 @@ fn build_dependency_from_lock_entry(
     let inner_checksum = truncate_field(term_to_string(&tuple[3])?);
     let managers = term_to_atom_list(&tuple[4])?;
     let nested_dependencies = term_to_dependency_tuples(&tuple[5])?;
-    let repo = truncate_field(term_to_string(&tuple[6])?);
-    let outer_checksum = truncate_field(term_to_string(&tuple[7])?);
+    // repo (element 7) was added later; default to the public "hexpm" repository when absent.
+    let repo = match tuple.get(6) {
+        Some(term) => truncate_field(term_to_string(term)?),
+        None => "hexpm".to_string(),
+    };
+    // outer_checksum (element 8) is only present in modern lockfiles.
+    let outer_checksum = match tuple.get(7) {
+        Some(term) => Some(truncate_field(term_to_string(term)?)),
+        None => None,
+    };
 
     let purl = build_hex_purl(&package_name, Some(&version), Some(&repo));
     let resolved_package = ResolvedPackage {
@@ -146,25 +159,30 @@ fn build_dependency_from_lock_entry(
         sha512: None,
         md5: None,
         is_virtual: true,
-        extra_data: Some(HashMap::from([
-            (
-                "repo".to_string(),
-                JsonValue::String(truncate_field(repo.clone())),
-            ),
-            (
-                "outer_checksum".to_string(),
-                JsonValue::String(truncate_field(outer_checksum.clone())),
-            ),
-            (
-                "managers".to_string(),
-                JsonValue::Array(
-                    managers
-                        .into_iter()
-                        .map(|m| JsonValue::String(truncate_field(m)))
-                        .collect(),
+        extra_data: Some({
+            let mut extra = HashMap::from([
+                (
+                    "repo".to_string(),
+                    JsonValue::String(truncate_field(repo.clone())),
                 ),
-            ),
-        ])),
+                (
+                    "managers".to_string(),
+                    JsonValue::Array(
+                        managers
+                            .into_iter()
+                            .map(|m| JsonValue::String(truncate_field(m)))
+                            .collect(),
+                    ),
+                ),
+            ]);
+            if let Some(ref outer) = outer_checksum {
+                extra.insert(
+                    "outer_checksum".to_string(),
+                    JsonValue::String(truncate_field(outer.clone())),
+                );
+            }
+            extra
+        }),
         dependencies: nested_dependencies
             .into_iter()
             .map(build_nested_dependency)
