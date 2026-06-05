@@ -77,6 +77,9 @@ ScanCode: 73.02s</title></rect>
     <rect x="92.00" y="424.52" width="8" height="8" fill="#d97706" rx="1.5"><title>Firefox langpack en-GB 141.0.2 .xpi
 Files: 1
 ScanCode: 74.17s</title></rect>
+    <rect x="92.00" y="449.57" width="8" height="8" fill="#d97706" rx="1.5"><title>Flask 3.1.0 pip-inspect.deplock @ sha256:fd65296
+Files: 1
+ScanCode: 43.65s</title></rect>
     <rect x="92.00" y="427.27" width="8" height="8" fill="#d97706" rx="1.5"><title>Humanizer.Core 3.0.10 .nupkg @ sha256:99f9521
 Files: 1
 ScanCode: 69.97s</title></rect>
@@ -104,6 +107,9 @@ ScanCode: 73.62s</title></rect>
     <rect x="92.00" y="428.71" width="8" height="8" fill="#d97706" rx="1.5"><title>sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba
 Files: 1
 ScanCode: 67.87s</title></rect>
+    <rect x="92.00" y="452.30" width="8" height="8" fill="#d97706" rx="1.5"><title>swift-dependencies 1.9.4 swift-show-dependencies.deplock @ sha256:bed4a47
+Files: 1
+ScanCode: 41.20s</title></rect>
     <rect x="139.76" y="510.78" width="8" height="8" fill="#d97706" rx="1.5"><title>itchyny/gojq v0.12.19 darwin arm64 release snapshot @ sha256:40208d4
 Files: 2
 ScanCode: 11.95s</title></rect>
@@ -706,6 +712,9 @@ Provenant: 10.11s</title></circle>
     <circle cx="96.00" cy="521.94" r="4.5" fill="#2563eb"><title>Firefox langpack en-GB 141.0.2 .xpi
 Files: 1
 Provenant: 10.27s</title></circle>
+    <circle cx="96.00" cy="544.66" r="4.5" fill="#2563eb"><title>Flask 3.1.0 pip-inspect.deplock @ sha256:fd65296
+Files: 1
+Provenant: 6.35s</title></circle>
     <circle cx="96.00" cy="524.83" r="4.5" fill="#2563eb"><title>Humanizer.Core 3.0.10 .nupkg @ sha256:99f9521
 Files: 1
 Provenant: 9.66s</title></circle>
@@ -733,6 +742,9 @@ Provenant: 19.82s</title></circle>
     <circle cx="96.00" cy="525.97" r="4.5" fill="#2563eb"><title>sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba
 Files: 1
 Provenant: 9.43s</title></circle>
+    <circle cx="96.00" cy="546.71" r="4.5" fill="#2563eb"><title>swift-dependencies 1.9.4 swift-show-dependencies.deplock @ sha256:bed4a47
+Files: 1
+Provenant: 6.08s</title></circle>
     <circle cx="143.76" cy="521.12" r="4.5" fill="#2563eb"><title>itchyny/gojq v0.12.19 darwin arm64 release snapshot @ sha256:40208d4
 Files: 2
 Provenant: 10.45s</title></circle>
