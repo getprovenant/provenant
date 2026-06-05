@@ -414,4 +414,115 @@ dependencies:
         assert_eq!(wildcard.purl.as_deref(), Some("pkg:helm/wildcard"));
         assert_eq!(wildcard.is_pinned, Some(false));
     }
+
+    // Helm 2 charts (apiVersion v1) declare dependencies in a sibling requirements.yaml,
+    // not inline in Chart.yaml. The Chart.yaml package should pick them up.
+    #[test]
+    fn test_chart_yaml_v1_merges_sibling_requirements_yaml_dependencies() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        fs::write(
+            temp_dir.path().join("Chart.yaml"),
+            r#"apiVersion: v1
+name: legacy-chart
+version: 1.2.3
+description: A Helm 2 chart
+"#,
+        )
+        .expect("write Chart.yaml");
+        fs::write(
+            temp_dir.path().join("requirements.yaml"),
+            r#"dependencies:
+  - name: mariadb
+    version: 7.3.14
+    repository: https://kubernetes-charts.storage.googleapis.com/
+  - name: redis
+    version: 10.5.7
+    repository: https://kubernetes-charts.storage.googleapis.com/
+"#,
+        )
+        .expect("write requirements.yaml");
+
+        let package =
+            HelmChartYamlParser::extract_first_package(&temp_dir.path().join("Chart.yaml"));
+
+        assert_eq!(package.name.as_deref(), Some("legacy-chart"));
+        assert_eq!(package.datasource_id, Some(DatasourceId::HelmChartYaml));
+        assert_eq!(package.dependencies.len(), 2);
+        assert!(
+            package
+                .dependencies
+                .iter()
+                .any(|dep| dep.purl.as_deref() == Some("pkg:helm/mariadb@7.3.14"))
+        );
+        assert!(
+            package
+                .dependencies
+                .iter()
+                .any(|dep| dep.purl.as_deref() == Some("pkg:helm/redis@10.5.7"))
+        );
+    }
+
+    // A v2 Chart.yaml with inline dependencies must not be overridden by a sibling
+    // requirements.yaml (inline dependencies win).
+    #[test]
+    fn test_chart_yaml_v2_inline_dependencies_take_precedence() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        fs::write(
+            temp_dir.path().join("Chart.yaml"),
+            r#"apiVersion: v2
+name: modern-chart
+version: 2.0.0
+dependencies:
+  - name: postgresql
+    version: 12.1.0
+    repository: oci://registry-1.docker.io/bitnamicharts
+"#,
+        )
+        .expect("write Chart.yaml");
+        fs::write(
+            temp_dir.path().join("requirements.yaml"),
+            "dependencies:\n  - name: should-be-ignored\n    version: 0.0.0\n",
+        )
+        .expect("write requirements.yaml");
+
+        let package =
+            HelmChartYamlParser::extract_first_package(&temp_dir.path().join("Chart.yaml"));
+
+        assert_eq!(package.dependencies.len(), 1);
+        assert_eq!(
+            package.dependencies[0].purl.as_deref(),
+            Some("pkg:helm/postgresql@12.1.0")
+        );
+    }
+
+    // A v2 (Helm 3) Chart.yaml that legitimately has zero dependencies must NOT inherit a
+    // co-located requirements.yaml: in a monorepo the neighbouring requirements.yaml may
+    // belong to an unrelated project (e.g. Ansible Galaxy / Python) rather than the chart.
+    // The sibling-merge is a Helm 2 (apiVersion v1) concern only.
+    #[test]
+    fn test_chart_yaml_v2_empty_deps_ignores_sibling_requirements_yaml() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        fs::write(
+            temp_dir.path().join("Chart.yaml"),
+            r#"apiVersion: v2
+name: modern-chart
+version: 2.0.0
+"#,
+        )
+        .expect("write Chart.yaml");
+        fs::write(
+            temp_dir.path().join("requirements.yaml"),
+            "dependencies:\n  - name: unrelated-ansible-role\n    version: 1.0.0\n",
+        )
+        .expect("write requirements.yaml");
+
+        let package =
+            HelmChartYamlParser::extract_first_package(&temp_dir.path().join("Chart.yaml"));
+
+        assert_eq!(package.name.as_deref(), Some("modern-chart"));
+        assert!(
+            package.dependencies.is_empty(),
+            "v2 chart must not inherit an unrelated sibling requirements.yaml"
+        );
+    }
 }
