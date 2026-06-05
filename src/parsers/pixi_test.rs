@@ -493,8 +493,86 @@ sha256 = "pypi-v4-hash"
         );
     }
 
+    // pixi.lock format 5 shares the `kind`-tagged package layout of format 4.
     #[test]
-    fn test_extract_from_pixi_lock_unsupported_version_returns_default_lock_package() {
+    fn test_extract_from_pixi_lock_v5() {
+        let content = r#"
+version = 5
+
+[environments.default]
+channels = [{ url = "https://conda.anaconda.org/conda-forge/" }]
+
+[environments.default.packages]
+win-64 = [
+  { conda = "https://conda.anaconda.org/conda-forge/win-64/python-3.12.3-h2628c8c_0_cpython.conda" },
+  { pypi = "./foo" },
+]
+
+[[packages]]
+kind = "conda"
+name = "python"
+version = "3.12.3"
+url = "https://conda.anaconda.org/conda-forge/win-64/python-3.12.3-h2628c8c_0_cpython.conda"
+sha256 = "conda-v5-hash"
+
+[[packages]]
+kind = "pypi"
+name = "foo"
+version = "0.1.0"
+path = "./foo"
+editable = true
+sha256 = "pypi-v5-hash"
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("pixi.lock", content);
+        let package_data = PixiLockParser::extract_first_package(&path);
+
+        assert_eq!(package_data.dependencies.len(), 2);
+        assert!(
+            package_data
+                .dependencies
+                .iter()
+                .any(|dep| dep.purl.as_deref() == Some("pkg:conda/python@3.12.3"))
+        );
+        assert!(
+            package_data
+                .dependencies
+                .iter()
+                .any(|dep| dep.purl.as_deref() == Some("pkg:pypi/foo@0.1.0"))
+        );
+    }
+
+    // An unrecognized/newer pixi.lock version must not silently drop everything; it falls
+    // back to the latest known (v6) layout.
+    #[test]
+    fn test_extract_from_pixi_lock_future_version_falls_back_to_v6() {
+        let content = r#"
+version = 99
+
+[environments.default]
+channels = [{ url = "https://conda.anaconda.org/conda-forge/" }]
+
+[environments.default.packages]
+linux-64 = [
+  { conda = "https://conda.anaconda.org/conda-forge/linux-64/python-3.12.7-h2628c8c_0_cpython.conda" },
+]
+
+[[packages]]
+conda = "https://conda.anaconda.org/conda-forge/linux-64/python-3.12.7-h2628c8c_0_cpython.conda"
+version = "3.12.7"
+sha256 = "conda-hash"
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("pixi.lock", content);
+        let package_data = PixiLockParser::extract_first_package(&path);
+
+        assert_eq!(package_data.package_type, Some(PackageType::Pixi));
+        assert_eq!(package_data.datasource_id, Some(DatasourceId::PixiLock));
+        assert_eq!(package_data.dependencies.len(), 1);
+    }
+
+    #[test]
+    fn test_extract_from_pixi_lock_missing_packages_returns_default_lock_package() {
         let content = r#"
 version = 99
 
