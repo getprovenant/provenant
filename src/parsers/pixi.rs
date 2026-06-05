@@ -188,10 +188,20 @@ fn parse_pixi_lock(lock_content: &JsonValue, primary_language: &str) -> PackageD
     }
     package.extra_data = (!extra_data.is_empty()).then_some(extra_data);
 
+    // pixi.lock formats 4 and 5 share the `kind`-tagged package layout; format 6 switched
+    // to `conda:`/`pypi:` discriminated entries. Unknown/newer versions evolve from the v6
+    // layout, so fall back to the v6 extractor rather than dropping all dependencies.
     match lock_version {
+        Some(4) | Some(5) => package.dependencies = extract_v4_lock_dependencies(lock_content),
         Some(6) => package.dependencies = extract_v6_lock_dependencies(lock_content),
-        Some(4) => package.dependencies = extract_v4_lock_dependencies(lock_content),
-        Some(_) | None => {}
+        Some(other) => {
+            warn!("Unrecognized pixi.lock version {other}; parsing with the v6 layout");
+            package.dependencies = extract_v6_lock_dependencies(lock_content);
+        }
+        None => {
+            warn!("pixi.lock is missing a version field; parsing with the v6 layout");
+            package.dependencies = extract_v6_lock_dependencies(lock_content);
+        }
     }
 
     package
