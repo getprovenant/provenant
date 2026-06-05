@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 212 of 212 recorded runs, with a **12.2× median speedup** and **11.5× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 215 of 215 recorded runs, with a **12.1× median speedup** and **11.5× geometric-mean speedup** overall; the median gap grows from **7.0×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -44,6 +44,8 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
   - [Release binaries and extracted app snapshots](#release-binaries-and-extracted-app-snapshots)
   - [Generated dependency lock manifests](#generated-dependency-lock-manifests)
   - [Legacy NuGet manifest sets](#legacy-nuget-manifest-sets)
+  - [Conan lockfiles](#conan-lockfiles)
+  - [Debian source packages](#debian-source-packages)
 
 <!-- benchmark-quick-index:end -->
 
@@ -1572,6 +1574,31 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-05 · t3-nuget-legacy-76176 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · curated set of the 11 `project.json` + 11 `project.lock.json` files from `Apress/pro-html5-w-visual-studio-2015@3599d94`
 - Timing: Provenant `6.63s`; ScanCode `57.29s`
 - Full legacy .NET dependency extraction (`206` vs `0` dependencies across `22` vs `0` file-level package records) from DNX-era `project.json` manifests and resolved `project.lock.json` lockfiles that ScanCode leaves package-blind, including the BOM-prefixed `project.json` files that Visual Studio writes, with zero scan errors
+
+#### Conan lockfiles
+
+##### [XRPLF/rippled conan.lock (v0.5) @ sha256:abec9c8](https://github.com/XRPLF/rippled/tree/949887feb9f32b49829e9c29712697f567b23916) — **6.63× faster**
+
+- Files: 1
+- Run context: 2026-06-05 · t5cl-v05-34415 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · `conan.lock` from `XRPLF/rippled@949887f`
+- Timing: Provenant `5.98s`; ScanCode `39.67s`
+- Full resolved Conan 2.x lockfile extraction (`35` vs `0` dependencies) from the format-0.5 `requires`, `build_requires`, and `python_requires` arrays that ScanCode leaves lockfile-blind, with build-time entries scoped `build` (non-runtime) and recipe-revision (`#...`) and lockfile-timestamp (`%...`) suffixes stripped to clean pinned versions; verified end-to-end on the full rippled repository (`35` vs `0` on `conan.lock`)
+
+##### [jjbel/samarium conan.lock (v0.4) @ sha256:35e2ed9](https://github.com/jjbel/samarium/tree/67b3c4e98224f37fb49a43e7fc1459b47004cb47) — **6.72× faster**
+
+- Files: 1
+- Run context: 2026-06-05 · t5cl-v04-37097 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · `conan.lock` from `jjbel/samarium@67b3c4e`
+- Timing: Provenant `5.96s`; ScanCode `40.03s`
+- Resolved Conan 1.x lockfile extraction (`15` vs `0` dependencies) from the legacy `graph_lock.nodes` graph (`fmt`, `range-v3`, `stb`, `tl-expected`, and siblings) that ScanCode leaves lockfile-blind, with recipe revisions stripped to clean versions; verified end-to-end on the full samarium repository (`15` vs `0` on `conan.lock`)
+
+#### Debian source packages
+
+##### [htop 3.5.1 Debian source package @ sha256:bd7b02b](https://deb.debian.org/debian/pool/main/h/htop/) — **6.63× faster**
+
+- Files: 3
+- Run context: 2026-06-05 · target-23421 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · `htop_3.5.1-3.dsc` + `htop_3.5.1.orig.tar.gz` + `htop_3.5.1-3.debian.tar.xz` from the Debian archive
+- Timing: Provenant `6.08s`; ScanCode `40.34s`
+- Full Debian source-package recognition across `.dsc`, `.orig.tar.gz`, and `.debian.tar.xz` (`3` vs `1` recognized source surfaces, each carrying the `htop` name and version) where ScanCode recognizes only the `.dsc`, plus clean structured maintainer and uploader parties where ScanCode collapses the entire control header into a single malformed author string
 
 ## Benchmark conventions
 
