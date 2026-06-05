@@ -4,6 +4,7 @@
 use glob::Pattern;
 use std::collections::HashSet;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::utils::file::is_path_excluded;
@@ -30,6 +31,15 @@ struct CollectionAccumulator {
     excluded_count: usize,
     total_file_bytes: u64,
     collection_errors: Vec<(PathBuf, String)>,
+}
+
+enum TraversalMetadata {
+    File(fs::Metadata),
+    Directory {
+        metadata: fs::Metadata,
+        can_recurse: bool,
+    },
+    Other,
 }
 
 impl CollectedPaths {
@@ -71,8 +81,8 @@ pub fn collect_paths<P: AsRef<Path>>(
         };
     }
 
-    let metadata = match fs::metadata(root) {
-        Ok(metadata) => metadata,
+    let traversal_metadata = match classify_for_traversal(root, true) {
+        Ok(traversal_metadata) => traversal_metadata,
         Err(error) => {
             return CollectedPaths {
                 files: Vec::new(),
@@ -84,17 +94,33 @@ pub fn collect_paths<P: AsRef<Path>>(
         }
     };
 
-    if metadata.is_file() {
-        return CollectedPaths {
+    match traversal_metadata {
+        TraversalMetadata::File(metadata) => CollectedPaths {
             total_file_bytes: metadata.len(),
             files: vec![(root.to_path_buf(), metadata)],
             directories: Vec::new(),
             excluded_count: 0,
             collection_errors: Vec::new(),
-        };
+        },
+        TraversalMetadata::Directory {
+            metadata,
+            can_recurse,
+        } if can_recurse => collect_all_paths(root, &metadata, depth_limit, exclude_patterns),
+        TraversalMetadata::Directory { metadata, .. } => CollectedPaths {
+            files: Vec::new(),
+            directories: vec![(root.to_path_buf(), metadata)],
+            excluded_count: 0,
+            total_file_bytes: 0,
+            collection_errors: Vec::new(),
+        },
+        TraversalMetadata::Other => CollectedPaths {
+            files: Vec::new(),
+            directories: Vec::new(),
+            excluded_count: 0,
+            total_file_bytes: 0,
+            collection_errors: Vec::new(),
+        },
     }
-
-    collect_all_paths(root, &metadata, depth_limit, exclude_patterns)
 }
 
 pub fn collect_selected_paths(
@@ -115,8 +141,18 @@ pub fn collect_selected_paths(
         };
     }
 
-    let root_metadata = match fs::metadata(root) {
-        Ok(metadata) => metadata,
+    let root_metadata = match classify_for_traversal(root, true) {
+        Ok(TraversalMetadata::Directory { metadata, .. }) => metadata,
+        Ok(TraversalMetadata::File(metadata)) => metadata,
+        Ok(TraversalMetadata::Other) => {
+            return CollectedPaths {
+                files: Vec::new(),
+                directories: Vec::new(),
+                excluded_count: 0,
+                total_file_bytes: 0,
+                collection_errors: Vec::new(),
+            };
+        }
         Err(error) => {
             return CollectedPaths {
                 files: Vec::new(),
@@ -150,8 +186,8 @@ pub fn collect_selected_paths(
             continue;
         }
 
-        let metadata = match fs::metadata(&absolute) {
-            Ok(metadata) => metadata,
+        let traversal_metadata = match classify_for_traversal(&absolute, false) {
+            Ok(traversal_metadata) => traversal_metadata,
             Err(error) => {
                 accumulator
                     .collection_errors
@@ -162,26 +198,27 @@ pub fn collect_selected_paths(
 
         add_ancestor_directories(root, &absolute, &mut accumulator);
 
-        if metadata.is_file() {
-            insert_file(&mut accumulator, absolute, metadata);
-            continue;
-        }
-
-        if !metadata.is_dir() {
-            continue;
-        }
-
-        let subtree_depth_limit = depth_limit.map(|limit| limit.saturating_sub(relative_depth));
-        let collected = if frontier.recurse {
-            collect_all_paths(&absolute, &metadata, subtree_depth_limit, exclude_patterns)
-        } else {
-            CollectedPaths {
+        let collected = match traversal_metadata {
+            TraversalMetadata::File(metadata) => {
+                insert_file(&mut accumulator, absolute, metadata);
+                continue;
+            }
+            TraversalMetadata::Directory {
+                metadata,
+                can_recurse,
+            } if frontier.recurse && can_recurse => {
+                let subtree_depth_limit =
+                    depth_limit.map(|limit| limit.saturating_sub(relative_depth));
+                collect_all_paths(&absolute, &metadata, subtree_depth_limit, exclude_patterns)
+            }
+            TraversalMetadata::Directory { metadata, .. } => CollectedPaths {
                 files: Vec::new(),
                 directories: vec![(absolute, metadata)],
                 excluded_count: 0,
                 total_file_bytes: 0,
                 collection_errors: Vec::new(),
-            }
+            },
+            TraversalMetadata::Other => continue,
         };
         merge_collected(&mut accumulator, collected);
     }
@@ -226,14 +263,17 @@ fn collect_all_paths(
                 continue;
             }
 
-            match entry.metadata() {
-                Ok(metadata) if metadata.is_file() => {
+            match classify_for_traversal(&path, false) {
+                Ok(TraversalMetadata::File(metadata)) => {
                     total_file_bytes += metadata.len();
                     files.push((path, metadata));
                 }
-                Ok(metadata) if metadata.is_dir() => {
+                Ok(TraversalMetadata::Directory {
+                    metadata,
+                    can_recurse,
+                }) => {
                     directories.push((path.clone(), metadata));
-                    let should_recurse = current_depth.is_none_or(|d| d > 0);
+                    let should_recurse = can_recurse && current_depth.is_none_or(|d| d > 0);
                     if should_recurse {
                         let next_depth = current_depth.map(|d| d - 1);
                         pending_dirs.push((path, next_depth));
@@ -250,6 +290,35 @@ fn collect_all_paths(
         excluded_count,
         total_file_bytes,
         collection_errors,
+    }
+}
+
+fn classify_for_traversal(
+    path: &Path,
+    recurse_into_symlinked_directories: bool,
+) -> io::Result<TraversalMetadata> {
+    let link_metadata = fs::symlink_metadata(path)?;
+    if link_metadata.file_type().is_symlink() {
+        let target_metadata = fs::metadata(path)?;
+        return Ok(classify_resolved_metadata(
+            target_metadata,
+            recurse_into_symlinked_directories,
+        ));
+    }
+
+    Ok(classify_resolved_metadata(link_metadata, true))
+}
+
+fn classify_resolved_metadata(metadata: fs::Metadata, can_recurse: bool) -> TraversalMetadata {
+    if metadata.is_file() {
+        TraversalMetadata::File(metadata)
+    } else if metadata.is_dir() {
+        TraversalMetadata::Directory {
+            metadata,
+            can_recurse,
+        }
+    } else {
+        TraversalMetadata::Other
     }
 }
 
@@ -303,8 +372,11 @@ fn add_ancestor_directories(root: &Path, path: &Path, accumulator: &mut Collecti
             break;
         }
         if accumulator.dir_seen.insert(dir.to_path_buf()) {
-            match fs::metadata(dir) {
-                Ok(metadata) => accumulator.directories.push((dir.to_path_buf(), metadata)),
+            match classify_for_traversal(dir, false) {
+                Ok(TraversalMetadata::Directory { metadata, .. }) => {
+                    accumulator.directories.push((dir.to_path_buf(), metadata))
+                }
+                Ok(_) => {}
                 Err(error) => accumulator
                     .collection_errors
                     .push((dir.to_path_buf(), error.to_string())),
@@ -339,8 +411,9 @@ fn merge_collected(accumulator: &mut CollectionAccumulator, collected: Collected
 
 #[cfg(test)]
 mod tests {
-    use super::collect_paths;
+    use super::{CollectionFrontier, collect_paths, collect_selected_paths};
     use std::fs;
+    use std::path::PathBuf;
 
     #[test]
     fn file_scan_root_uses_parent_directory() {
@@ -352,5 +425,124 @@ mod tests {
         assert_eq!(collected.file_count(), 1);
         assert_eq!(collected.directory_count(), 0);
         assert_eq!(collected.scan_root(), Some(temp_dir.path()));
+    }
+
+    #[test]
+    fn collect_paths_recurses_regular_directories() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let nested = temp_dir.path().join("src/bin");
+        fs::create_dir_all(&nested).expect("create nested directory");
+        fs::write(nested.join("main.rs"), "fn main() {}\n").expect("write nested file");
+
+        let collected = collect_paths(temp_dir.path(), 0, &[]);
+
+        assert!(
+            collected
+                .files
+                .iter()
+                .any(|(path, _)| path == &temp_dir.path().join("src/bin/main.rs"))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_paths_does_not_recurse_into_symlinked_directory_cycle() {
+        use std::os::unix::fs::symlink;
+
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let root = temp_dir.path();
+        let real = root.join("real");
+        fs::create_dir_all(&real).expect("create real directory");
+        fs::write(real.join("file.txt"), "content\n").expect("write file");
+        symlink(root, real.join("back")).expect("create symlink cycle");
+
+        let collected = collect_paths(root, 0, &[]);
+
+        assert!(collected.collection_errors.is_empty());
+        assert_eq!(collected.file_count(), 1);
+        assert!(
+            collected
+                .files
+                .iter()
+                .all(|(path, _)| !path.starts_with(real.join("back")))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_paths_recurses_explicit_symlinked_scan_root() {
+        use std::os::unix::fs::symlink;
+
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let target = temp_dir.path().join("target");
+        fs::create_dir_all(&target).expect("create target directory");
+        fs::write(target.join("inside.txt"), "content\n").expect("write file");
+        let root_link = temp_dir.path().join("root-link");
+        symlink(&target, &root_link).expect("create root symlink");
+
+        let collected = collect_paths(&root_link, 0, &[]);
+
+        assert!(collected.collection_errors.is_empty());
+        assert!(
+            collected
+                .files
+                .iter()
+                .any(|(path, _)| path == &root_link.join("inside.txt"))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_paths_keeps_symlinked_regular_files_scannable() {
+        use std::os::unix::fs::symlink;
+
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let root = temp_dir.path();
+        let target = root.join("target.txt");
+        fs::write(&target, "content\n").expect("write target file");
+        let link = root.join("link.txt");
+        symlink(&target, &link).expect("create file symlink");
+
+        let collected = collect_paths(root, 0, &[]);
+
+        assert!(collected.collection_errors.is_empty());
+        assert!(
+            collected
+                .files
+                .iter()
+                .any(|(path, _)| path == &root.join("link.txt"))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_selected_paths_does_not_recurse_into_symlinked_directory() {
+        use std::os::unix::fs::symlink;
+
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let root = temp_dir.path();
+        let target = root.join("target");
+        fs::create_dir_all(&target).expect("create target directory");
+        fs::write(target.join("inside.txt"), "content\n").expect("write file");
+        symlink(&target, root.join("link")).expect("create directory symlink");
+
+        let collected = collect_selected_paths(
+            root,
+            &[CollectionFrontier {
+                path: PathBuf::from("link"),
+                recurse: true,
+            }],
+            0,
+            &[],
+        );
+
+        assert!(collected.collection_errors.is_empty());
+        assert!(collected.files.is_empty());
+        assert!(
+            collected
+                .directories
+                .iter()
+                .any(|(path, _)| path == &root.join("link"))
+        );
     }
 }
