@@ -173,6 +173,9 @@ ScanCode: 17.97s</title></rect>
     <rect x="349.56" y="424.02" width="8" height="8" fill="#d97706" rx="1.5"><title>marshallpierce/rust-base64 @ 13f4fe8
 Files: 42
 ScanCode: 74.96s</title></rect>
+    <rect x="361.57" y="369.83" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaAcademy/DataScience @ 201f2e6
+Files: 50
+ScanCode: 235.99s</title></rect>
     <rect x="362.93" y="430.28" width="8" height="8" fill="#d97706" rx="1.5"><title>conda-forge/pandas-feedstock @ 4063b72
 Files: 51
 ScanCode: 65.66s</title></rect>
@@ -823,6 +826,9 @@ Provenant: 10.50s</title></circle>
     <circle cx="353.56" cy="522.96" r="4.5" fill="#2563eb"><title>marshallpierce/rust-base64 @ 13f4fe8
 Files: 42
 Provenant: 10.05s</title></circle>
+    <circle cx="365.57" cy="475.40" r="4.5" fill="#2563eb"><title>JuliaAcademy/DataScience @ 201f2e6
+Files: 50
+Provenant: 27.50s</title></circle>
     <circle cx="366.93" cy="530.00" r="4.5" fill="#2563eb"><title>conda-forge/pandas-feedstock @ 4063b72
 Files: 51
 Provenant: 8.66s</title></circle>
