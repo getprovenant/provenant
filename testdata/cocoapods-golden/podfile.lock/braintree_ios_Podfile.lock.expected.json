@@ -86,7 +86,7 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/Default@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#Default",
               "extracted_requirement": "= 9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -97,15 +97,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/OHHTTPStubs/Core@9.0.0",
+        "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#Core",
         "extracted_requirement": "9.0.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "OHHTTPStubs",
-          "name": "Core",
+          "namespace": "",
+          "name": "OHHTTPStubs",
+          "subpath": "Core",
           "version": "9.0.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -114,42 +115,43 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/OHHTTPStubs/Default@9.0.0",
+        "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#Default",
         "extracted_requirement": "9.0.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "OHHTTPStubs",
-          "name": "Default",
+          "namespace": "",
+          "name": "OHHTTPStubs",
+          "subpath": "Default",
           "version": "9.0.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/Core@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#Core",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/JSON@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#JSON",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/NSURLSession@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#NSURLSession",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/OHPathHelpers@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#OHPathHelpers",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -160,21 +162,22 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/OHHTTPStubs/JSON@9.0.0",
+        "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#JSON",
         "extracted_requirement": "9.0.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "OHHTTPStubs",
-          "name": "JSON",
+          "namespace": "",
+          "name": "OHHTTPStubs",
+          "subpath": "JSON",
           "version": "9.0.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/Core@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#Core",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -185,21 +188,22 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/OHHTTPStubs/NSURLSession@9.0.0",
+        "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#NSURLSession",
         "extracted_requirement": "9.0.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "OHHTTPStubs",
-          "name": "NSURLSession",
+          "namespace": "",
+          "name": "OHHTTPStubs",
+          "subpath": "NSURLSession",
           "version": "9.0.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/OHHTTPStubs/Core@9.0.0",
+              "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#Core",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -210,15 +214,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/OHHTTPStubs/OHPathHelpers@9.0.0",
+        "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#OHPathHelpers",
         "extracted_requirement": "9.0.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "OHHTTPStubs",
-          "name": "OHPathHelpers",
+          "namespace": "",
+          "name": "OHHTTPStubs",
+          "subpath": "OHPathHelpers",
           "version": "9.0.0",
           "primary_language": "Objective-C",
           "is_virtual": true,

@@ -853,7 +853,7 @@
       "datasource_id": "cocoapods_podfile_lock"
     },
     {
-      "purl": "pkg:cocoapods/SwiftFormat/CLI@0.44.17",
+      "purl": "pkg:cocoapods/SwiftFormat@0.44.17#CLI",
       "extracted_requirement": "0.44.17",
       "scope": "requires",
       "is_runtime": false,
@@ -862,8 +862,9 @@
       "is_direct": true,
       "resolved_package": {
         "type": "cocoapods",
-        "namespace": "SwiftFormat",
-        "name": "CLI",
+        "namespace": "",
+        "name": "SwiftFormat",
+        "subpath": "CLI",
         "version": "0.44.17",
         "qualifiers": {},
         "subpath": null,
@@ -904,7 +905,7 @@
         "datasource_id": "cocoapods_podfile_lock"
       },
       "extra_data": {},
-      "dependency_uid": "pkg:cocoapods/SwiftFormat/CLI@0.44.17?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "dependency_uid": "pkg:cocoapods/SwiftFormat@0.44.17#CLI?uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:cocoapods/CoreMLPredictionsPlugin@%24AMPLIFY_VERSION?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "many-podspecs/Podfile.lock",
       "datasource_id": "cocoapods_podfile_lock"
@@ -1963,7 +1964,7 @@
               "extra_data": {}
             },
             {
-              "purl": "pkg:cocoapods/SwiftFormat/CLI@0.44.17",
+              "purl": "pkg:cocoapods/SwiftFormat@0.44.17#CLI",
               "extracted_requirement": "0.44.17",
               "scope": "requires",
               "is_runtime": false,
@@ -1972,8 +1973,9 @@
               "is_direct": true,
               "resolved_package": {
                 "type": "cocoapods",
-                "namespace": "SwiftFormat",
-                "name": "CLI",
+                "namespace": "",
+                "name": "SwiftFormat",
+                "subpath": "CLI",
                 "version": "0.44.17",
                 "qualifiers": {},
                 "subpath": null,

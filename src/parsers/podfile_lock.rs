@@ -272,6 +272,7 @@ fn build_pod_dependency(
 ) -> Dependency {
     let (namespace, name, version, requirement) = parse_dep_requirements(main_pod);
     let base_purl = make_base_purl_from_parts(namespace.as_deref(), &name);
+    let (base_pod, subspec) = pod_base_and_subspec(namespace.as_deref(), &name);
 
     let is_direct = dep_data.direct_dependency_purls.contains(&base_purl);
 
@@ -312,10 +313,11 @@ fn build_pod_dependency(
         api_data_url: None,
         datasource_id: Some(DatasourceId::CocoapodsPodfileLock),
         purl: None,
+        subpath: subspec.map(str::to_string),
         ..ResolvedPackage::new(
             PodfileLockParser::PACKAGE_TYPE,
-            namespace.clone().unwrap_or_default(),
-            name.clone(),
+            String::new(),
+            base_pod.to_string(),
             version.clone().unwrap_or_default(),
         )
     };
@@ -420,20 +422,61 @@ fn make_base_purl_from_parts(namespace: Option<&str>, name: &str) -> String {
     }
 }
 
+/// Split a parsed pod entry into its base pod and optional subspec.
+///
+/// `parse_dep_requirements` returns the base pod in `namespace` and the subspec
+/// in `name` when an entry like `GoogleUtilities/NSData+zlib` is split on `/`.
+fn pod_base_and_subspec<'a>(
+    namespace: Option<&'a str>,
+    name: &'a str,
+) -> (&'a str, Option<&'a str>) {
+    match namespace {
+        Some(ns) if !ns.is_empty() => (ns, Some(name)),
+        _ => (name, None),
+    }
+}
+
+/// Build a cocoapods PURL from a (possibly subspec-qualified) pod name.
+///
+/// CocoaPods prohibits a namespace; a subspec (`Pod/Subspec`) belongs in the
+/// subpath, e.g. `pkg:cocoapods/GoogleUtilities@7.5.2#NSData+zlib`.
+pub(crate) fn build_cocoapods_purl(name: &str, version: Option<&str>) -> Option<String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+    let (base, subspec) = match name.split_once('/') {
+        Some((base, subspec)) => (base.trim(), Some(subspec.trim())),
+        None => (name, None),
+    };
+
+    // Build the base pod + version through the crate so the name and version are
+    // validated and percent-encoded.
+    let mut purl = packageurl::PackageUrl::new("cocoapods", base).ok()?;
+    if let Some(version) = version.filter(|v| !v.is_empty()) {
+        purl.with_version(version).ok()?;
+    }
+    let base_purl = purl.to_string();
+
+    // The subspec goes in the subpath. It is appended literally rather than via
+    // `with_subpath` because CocoaPods subspec names conventionally contain `+`
+    // (e.g. `NSData+zlib`), which the crate would percent-encode to `%2B`.
+    Some(match subspec {
+        Some(sp) => format!("{base_purl}#{sp}"),
+        None => base_purl,
+    })
+}
+
 fn create_cocoapods_purl(
     namespace: Option<&str>,
     name: &str,
     version: Option<&str>,
 ) -> Option<String> {
-    let ns_part = match namespace {
-        Some(ns) if !ns.is_empty() => format!("{}/", ns),
-        _ => String::new(),
+    let full_name = match namespace {
+        Some(ns) if !ns.is_empty() => format!("{}/{}", ns, name),
+        _ => name.to_string(),
     };
-    let version_part = match version {
-        Some(v) if !v.is_empty() => format!("@{}", v),
-        _ => String::new(),
-    };
-    Some(format!("pkg:cocoapods/{}{}{}", ns_part, name, version_part))
+    build_cocoapods_purl(&full_name, version)
 }
 
 fn process_external_source(mapping: &yaml_serde::Mapping) -> String {

@@ -30,8 +30,8 @@ use std::path::Path;
 use std::sync::LazyLock;
 
 use crate::parser_warn as warn;
+use crate::parsers::podfile_lock::build_cocoapods_purl;
 use md5::{Digest, Md5};
-use packageurl::PackageUrl;
 use regex::Regex;
 
 use super::metadata::ParserMetadata;
@@ -166,21 +166,10 @@ impl PackageParser for PodspecParser {
             }),
             _ => None,
         };
-        let purl = if let Some(name_str) = &name {
-            let purl_result = PackageUrl::new(Self::PACKAGE_TYPE.as_str(), name_str)
-                .or_else(|_| PackageUrl::new("generic", name_str));
-            match purl_result {
-                Ok(mut purl) => {
-                    if let Some(version_str) = &version {
-                        let _ = purl.with_version(version_str);
-                    }
-                    Some(truncate_field(purl.to_string()))
-                }
-                Err(_) => None,
-            }
-        } else {
-            None
-        };
+        let purl = name
+            .as_deref()
+            .and_then(|name_str| build_cocoapods_purl(name_str, version.as_deref()))
+            .map(truncate_field);
 
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
@@ -617,7 +606,7 @@ fn create_dependency(name: &str, version_req: Option<String>, method: &str) -> O
         return None;
     }
 
-    let purl = PackageUrl::new("cocoapods", name).ok()?;
+    let purl = build_cocoapods_purl(name, None)?;
 
     // Determine if version is pinned (exact version)
     let is_pinned = version_req
@@ -628,7 +617,7 @@ fn create_dependency(name: &str, version_req: Option<String>, method: &str) -> O
     let is_development = method.contains("add_development_dependency");
 
     Some(Dependency {
-        purl: Some(truncate_field(purl.to_string())),
+        purl: Some(truncate_field(purl)),
         extracted_requirement: version_req.map(truncate_field),
         scope: Some(
             if is_development {

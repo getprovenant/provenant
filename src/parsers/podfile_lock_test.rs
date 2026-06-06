@@ -79,19 +79,20 @@ mod tests {
         let nested = &resolved.dependencies[0];
         assert_eq!(
             nested.purl.as_deref(),
-            Some("pkg:cocoapods/OHHTTPStubs/Default@9.0.0")
+            Some("pkg:cocoapods/OHHTTPStubs@9.0.0#Default")
         );
         assert_eq!(nested.extracted_requirement.as_deref(), Some("= 9.0.0"));
 
         let ohhttpstubs_core = &pkg.dependencies[4];
         assert_eq!(
             ohhttpstubs_core.purl.as_deref(),
-            Some("pkg:cocoapods/OHHTTPStubs/Core@9.0.0")
+            Some("pkg:cocoapods/OHHTTPStubs@9.0.0#Core")
         );
         assert_eq!(ohhttpstubs_core.is_direct, Some(false));
         let resolved = ohhttpstubs_core.resolved_package.as_ref().unwrap();
-        assert_eq!(resolved.namespace, "OHHTTPStubs");
-        assert_eq!(resolved.name, "Core");
+        assert!(resolved.namespace.is_empty());
+        assert_eq!(resolved.name, "OHHTTPStubs");
+        assert_eq!(resolved.subpath.as_deref(), Some("Core"));
 
         let ohhttpstubs_default = &pkg.dependencies[5];
         let resolved = ohhttpstubs_default.resolved_package.as_ref().unwrap();
