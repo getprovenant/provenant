@@ -54,14 +54,14 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/AFNetworking/NSURLConnection@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#NSURLConnection",
               "extracted_requirement": "~> 2.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/AFNetworking/NSURLSession@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#NSURLSession",
               "extracted_requirement": "~> 2.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -72,35 +72,36 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AFNetworking/NSURLConnection@2.7.0",
+        "purl": "pkg:cocoapods/AFNetworking@2.7.0#NSURLConnection",
         "extracted_requirement": "2.7.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AFNetworking",
-          "name": "NSURLConnection",
+          "namespace": "",
+          "name": "AFNetworking",
+          "subpath": "NSURLConnection",
           "version": "2.7.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/AFNetworking/Reachability@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#Reachability",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/AFNetworking/Security@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#Security",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/AFNetworking/Serialization@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#Serialization",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -111,35 +112,36 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AFNetworking/NSURLSession@2.7.0",
+        "purl": "pkg:cocoapods/AFNetworking@2.7.0#NSURLSession",
         "extracted_requirement": "2.7.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AFNetworking",
-          "name": "NSURLSession",
+          "namespace": "",
+          "name": "AFNetworking",
+          "subpath": "NSURLSession",
           "version": "2.7.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/AFNetworking/Reachability@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#Reachability",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/AFNetworking/Security@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#Security",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/AFNetworking/Serialization@2.7.0",
+              "purl": "pkg:cocoapods/AFNetworking@2.7.0#Serialization",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
@@ -150,15 +152,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AFNetworking/Reachability@2.7.0",
+        "purl": "pkg:cocoapods/AFNetworking@2.7.0#Reachability",
         "extracted_requirement": "2.7.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AFNetworking",
-          "name": "Reachability",
+          "namespace": "",
+          "name": "AFNetworking",
+          "subpath": "Reachability",
           "version": "2.7.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -167,15 +170,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AFNetworking/Security@2.7.0",
+        "purl": "pkg:cocoapods/AFNetworking@2.7.0#Security",
         "extracted_requirement": "2.7.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AFNetworking",
-          "name": "Security",
+          "namespace": "",
+          "name": "AFNetworking",
+          "subpath": "Security",
           "version": "2.7.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -184,15 +188,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AFNetworking/Serialization@2.7.0",
+        "purl": "pkg:cocoapods/AFNetworking@2.7.0#Serialization",
         "extracted_requirement": "2.7.0",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AFNetworking",
-          "name": "Serialization",
+          "namespace": "",
+          "name": "AFNetworking",
+          "subpath": "Serialization",
           "version": "2.7.0",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -238,14 +243,14 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/AppAuth/Core@1.7.3",
+              "purl": "pkg:cocoapods/AppAuth@1.7.3#Core",
               "extracted_requirement": "= 1.7.3",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/AppAuth/ExternalUserAgent@1.7.3",
+              "purl": "pkg:cocoapods/AppAuth@1.7.3#ExternalUserAgent",
               "extracted_requirement": "= 1.7.3",
               "scope": "dependencies",
               "is_pinned": true,
@@ -256,15 +261,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AppAuth/Core@1.7.3",
+        "purl": "pkg:cocoapods/AppAuth@1.7.3#Core",
         "extracted_requirement": "1.7.3",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AppAuth",
-          "name": "Core",
+          "namespace": "",
+          "name": "AppAuth",
+          "subpath": "Core",
           "version": "1.7.3",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -273,21 +279,22 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AppAuth/ExternalUserAgent@1.7.3",
+        "purl": "pkg:cocoapods/AppAuth@1.7.3#ExternalUserAgent",
         "extracted_requirement": "1.7.3",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AppAuth",
-          "name": "ExternalUserAgent",
+          "namespace": "",
+          "name": "AppAuth",
+          "subpath": "ExternalUserAgent",
           "version": "1.7.3",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/AppAuth/Core@1.7.3",
+              "purl": "pkg:cocoapods/AppAuth@1.7.3#Core",
               "extracted_requirement": "1.7.3",
               "scope": "dependencies",
               "is_pinned": true,
@@ -315,7 +322,7 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/UI@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#UI",
               "extracted_requirement": "= 4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
@@ -326,21 +333,22 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/Appboy-iOS-SDK/ContentCards@4.4.4",
+        "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#ContentCards",
         "extracted_requirement": "4.4.4",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "Appboy-iOS-SDK",
-          "name": "ContentCards",
+          "namespace": "",
+          "name": "Appboy-iOS-SDK",
+          "subpath": "ContentCards",
           "version": "4.4.4",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/Core@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#Core",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
@@ -351,15 +359,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/Appboy-iOS-SDK/Core@4.4.4",
+        "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#Core",
         "extracted_requirement": "4.4.4",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "Appboy-iOS-SDK",
-          "name": "Core",
+          "namespace": "",
+          "name": "Appboy-iOS-SDK",
+          "subpath": "Core",
           "version": "4.4.4",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -368,21 +377,22 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/Appboy-iOS-SDK/InAppMessage@4.4.4",
+        "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#InAppMessage",
         "extracted_requirement": "4.4.4",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "Appboy-iOS-SDK",
-          "name": "InAppMessage",
+          "namespace": "",
+          "name": "Appboy-iOS-SDK",
+          "subpath": "InAppMessage",
           "version": "4.4.4",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/Core@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#Core",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
@@ -393,21 +403,22 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/Appboy-iOS-SDK/NewsFeed@4.4.4",
+        "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#NewsFeed",
         "extracted_requirement": "4.4.4",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "Appboy-iOS-SDK",
-          "name": "NewsFeed",
+          "namespace": "",
+          "name": "Appboy-iOS-SDK",
+          "subpath": "NewsFeed",
           "version": "4.4.4",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/Core@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#Core",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
@@ -418,42 +429,43 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/Appboy-iOS-SDK/UI@4.4.4",
+        "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#UI",
         "extracted_requirement": "4.4.4",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "Appboy-iOS-SDK",
-          "name": "UI",
+          "namespace": "",
+          "name": "Appboy-iOS-SDK",
+          "subpath": "UI",
           "version": "4.4.4",
           "primary_language": "Objective-C",
           "is_virtual": true,
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/ContentCards@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#ContentCards",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/Core@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#Core",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/InAppMessage@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#InAppMessage",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
               "is_direct": true
             },
             {
-              "purl": "pkg:cocoapods/Appboy-iOS-SDK/NewsFeed@4.4.4",
+              "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#NewsFeed",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
@@ -492,15 +504,16 @@
         }
       },
       {
-        "purl": "pkg:cocoapods/AppCenter/Core@5.0.3",
+        "purl": "pkg:cocoapods/AppCenter@5.0.3#Core",
         "extracted_requirement": "5.0.3",
         "scope": "dependencies",
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
           "type": "cocoapods",
-          "namespace": "AppCenter",
-          "name": "Core",
+          "namespace": "",
+          "name": "AppCenter",
+          "subpath": "Core",
           "version": "5.0.3",
           "primary_language": "Objective-C",
           "is_virtual": true,
@@ -526,7 +539,7 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:cocoapods/AppCenter/Core@5.0.3",
+              "purl": "pkg:cocoapods/AppCenter@5.0.3#Core",
               "extracted_requirement": "= 5.0.3",
               "scope": "dependencies",
               "is_pinned": true,

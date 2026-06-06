@@ -29,8 +29,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
+use crate::parsers::podfile_lock::build_cocoapods_purl;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
-use packageurl::PackageUrl;
 use serde_json::Value;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
@@ -215,19 +215,9 @@ impl PackageParser for PodspecJsonParser {
             None
         };
 
-        let purl = if let Some(name_str) = &name {
-            let purl = PackageUrl::new(Self::PACKAGE_TYPE.as_str(), name_str)
-                .or_else(|_| PackageUrl::new("generic", name_str))
-                .ok();
-            purl.map(|mut p| {
-                if let Some(version_str) = &version {
-                    let _ = p.with_version(version_str);
-                }
-                p.to_string()
-            })
-        } else {
-            None
-        };
+        let purl = name
+            .as_deref()
+            .and_then(|name_str| build_cocoapods_purl(name_str, version.as_deref()));
 
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
@@ -466,7 +456,7 @@ fn extract_dependencies(json: &Value) -> Vec<Dependency> {
                 .map(|s| truncate_field(s.trim().to_string()))
                 .filter(|s| !s.is_empty());
 
-            let purl = Some(truncate_field(format!("pkg:cocoapods/{}", name_str)));
+            let purl = build_cocoapods_purl(name_str, None).map(truncate_field);
 
             dependencies.push(Dependency {
                 purl,

@@ -96,28 +96,28 @@
         "is_optional": false
       },
       {
-        "purl": "pkg:cocoapods/GoogleUtilities/AppDelegateSwizzler",
+        "purl": "pkg:cocoapods/GoogleUtilities#AppDelegateSwizzler",
         "extracted_requirement": "~> 7.4",
         "scope": "runtime",
         "is_runtime": true,
         "is_optional": false
       },
       {
-        "purl": "pkg:cocoapods/GoogleUtilities/MethodSwizzler",
+        "purl": "pkg:cocoapods/GoogleUtilities#MethodSwizzler",
         "extracted_requirement": "~> 7.4",
         "scope": "runtime",
         "is_runtime": true,
         "is_optional": false
       },
       {
-        "purl": "pkg:cocoapods/GoogleUtilities/NSData+zlib",
+        "purl": "pkg:cocoapods/GoogleUtilities#NSData+zlib",
         "extracted_requirement": "~> 7.4",
         "scope": "runtime",
         "is_runtime": true,
         "is_optional": false
       },
       {
-        "purl": "pkg:cocoapods/GoogleUtilities/Network",
+        "purl": "pkg:cocoapods/GoogleUtilities#Network",
         "extracted_requirement": "~> 7.4",
         "scope": "runtime",
         "is_runtime": true,
