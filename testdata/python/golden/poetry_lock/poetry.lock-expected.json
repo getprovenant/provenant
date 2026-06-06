@@ -98,7 +98,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/coverage%5btoml%5d",
+              "purl": "pkg:pypi/coverage%5Btoml%5D",
               "extracted_requirement": ">=5.0.2",
               "scope": "dev",
               "is_runtime": null,
@@ -219,7 +219,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/zope.interface",
+              "purl": "pkg:pypi/zope-interface",
               "extracted_requirement": null,
               "scope": "dev",
               "is_runtime": null,
@@ -263,7 +263,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/zope.interface",
+              "purl": "pkg:pypi/zope-interface",
               "extracted_requirement": null,
               "scope": "docs",
               "is_runtime": null,
@@ -285,7 +285,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/coverage%5btoml%5d",
+              "purl": "pkg:pypi/coverage%5Btoml%5D",
               "extracted_requirement": ">=5.0.2",
               "scope": "tests",
               "is_runtime": null,
@@ -362,7 +362,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/zope.interface",
+              "purl": "pkg:pypi/zope-interface",
               "extracted_requirement": null,
               "scope": "tests",
               "is_runtime": null,
@@ -384,7 +384,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/coverage%5btoml%5d",
+              "purl": "pkg:pypi/coverage%5Btoml%5D",
               "extracted_requirement": ">=5.0.2",
               "scope": "tests-no-zope",
               "is_runtime": null,
@@ -764,7 +764,7 @@
               "extra_data": null
             },
             {
-              "purl": "pkg:pypi/zest.releaser%5brecommended%5d",
+              "purl": "pkg:pypi/zest-releaser%5Brecommended%5D",
               "extracted_requirement": null,
               "scope": "dev",
               "is_runtime": null,

@@ -115,7 +115,7 @@ impl From<&crate::models::Package> for OutputPackage {
             repository_homepage_url: value.repository_homepage_url.clone(),
             repository_download_url: value.repository_download_url.clone(),
             api_data_url: value.api_data_url.clone(),
-            purl: value.purl.clone(),
+            purl: value.purl.as_deref().map(crate::models::normalize_purl),
             package_uid: value.package_uid.to_string(),
             datafile_paths: value.datafile_paths.clone(),
             datasource_ids: value

@@ -30,7 +30,7 @@ pub struct OutputTopLevelDependency {
 impl From<&crate::models::TopLevelDependency> for OutputTopLevelDependency {
     fn from(value: &crate::models::TopLevelDependency) -> Self {
         Self {
-            purl: value.purl.clone(),
+            purl: value.purl.as_deref().map(crate::models::normalize_purl),
             extracted_requirement: value.extracted_requirement.clone(),
             scope: value.scope.clone(),
             is_runtime: value.is_runtime,

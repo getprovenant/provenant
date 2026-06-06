@@ -1133,6 +1133,10 @@ impl Package {
         let Some(next_purl) = self.build_current_purl() else {
             return;
         };
+        // Canonicalize via the central per-type normalizer so the identity and
+        // its derived `package_uid` (the dedup key) are spec-compliant
+        // regardless of which parser produced the PURL.
+        let next_purl = crate::models::normalize_purl(&next_purl);
 
         if self.purl.as_deref() != Some(next_purl.as_str()) || self.package_uid.is_empty() {
             self.package_uid = PackageUid::new(&next_purl);

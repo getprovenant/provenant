@@ -51,7 +51,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:golang/github.com/sirupsen/logrus",
+        "purl": "pkg:golang/github.com/Sirupsen/logrus",
         "extracted_requirement": "5568a01db73b24230945a9ccd6813fac482e226f",
         "scope": "Deps",
         "is_runtime": true,

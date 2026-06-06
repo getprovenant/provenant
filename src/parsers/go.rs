@@ -488,16 +488,6 @@ pub(crate) fn create_golang_purl(module_path: &str, version: Option<&str>) -> Op
         }
     };
 
-    if let Some(ns) = &namespace
-        && let Err(e) = purl.with_namespace(ns)
-    {
-        warn!(
-            "Failed to set namespace '{}' for golang module '{}': {}",
-            ns, module_path, e
-        );
-        return None;
-    }
-
     if let Some(v) = version
         && let Err(e) = purl.with_version(v)
     {
@@ -508,7 +498,16 @@ pub(crate) fn create_golang_purl(module_path: &str, version: Option<&str>) -> Op
         return None;
     }
 
-    Some(purl.to_string())
+    // Splice the namespace in manually instead of via `with_namespace`, which
+    // force-lowercases the whole golang namespace; `normalize_purl` then applies
+    // the host-only lowercasing the spec direction (purl-spec#308) calls for.
+    let built = purl.to_string();
+    let built = match &namespace {
+        Some(ns) => built.replacen("pkg:golang/", &format!("pkg:golang/{ns}/"), 1),
+        None => built,
+    };
+
+    Some(crate::models::normalize_purl(&built))
 }
 
 /// Returns a default empty PackageData for Go modules.

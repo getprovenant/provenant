@@ -75,7 +75,7 @@ For parser work, Layer 3 scanner/assembly contract tests are the default expecta
 
 - Avoid `.unwrap()` in library code unless a panic is genuinely intended.
 - Do not use `#[allow(dead_code)]` or clippy suppressions as a shortcut. Suppressions should be rare, permanent, and justified in comments.
-- Use comments to explain non-obvious intent or tradeoffs, not to restate the code.
+- Use comments to explain non-obvious intent or tradeoffs, not to restate the code. Keep them sparse and short; do not add unnecessary or verbose comments, and never narrate what the code plainly already says.
 - Use `Path` and `PathBuf` for filesystem paths instead of string concatenation, and watch for `\n` vs `\r\n` sensitivity in tests.
 - When touching scanner concurrency or shared-state code, preserve thread safety and parallel-processing assumptions.
 
