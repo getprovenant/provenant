@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 218 of 218 recorded runs, with a **12.0× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 219 of 219 recorded runs, with a **12.0× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -231,6 +231,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-09 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `23.57s`; ScanCode `332.23s`
 - Far broader Python/Conda/Pixi package and dependency extraction (`4` vs `1` packages, `1469` vs `78` dependencies) from `pixi.lock`'s large resolved Conda graph, `environment.yml`, `pixi.toml`, and the aggregated `requirements/*.txt` tree that ScanCode leaves at zero, with cleaner `pyproject.toml` requirement shaping for exact pins and environment markers
+
+##### [UCBoulder/tardigrade_micromorphic_tools @ d03a8ca](https://github.com/UCBoulder/tardigrade_micromorphic_tools/tree/d03a8cae9e0983040487d2ecf32da98d9b297b92) — **7.70× faster**
+
+- Files: 47
+- Run context: 2026-06-06 · tardigrade_micromorphic_tools-24660 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.06s`; ScanCode `46.66s`
+- Broader Conda dependency extraction (`17` vs `0` dependencies on `recipe/recipe.yaml`) by parsing the rattler-build `recipe.yaml` that ScanCode reads only as `recipe/meta.yaml`, with `${{ name|lower }}` context templating resolved into a real `pkg:conda/tardigrade_micromorphic_tools@0.0.0` identity and identical top-level license detection across the C++ source tree
 
 #### R / CRAN
 
