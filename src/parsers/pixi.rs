@@ -352,8 +352,26 @@ fn build_conda_dependency(
         .as_deref()
         .filter(|_| pinned)
         .map(|value| value.trim_start_matches('='));
-    let purl =
-        build_conda_purl("conda", None, name, exact_version, None, None, None).map(truncate_field);
+    let dep_table = match value {
+        TomlValue::Table(table) => Some(table),
+        _ => None,
+    };
+    let table_field = |key: &str| {
+        dep_table
+            .and_then(|table| table.get(key))
+            .and_then(toml_value_to_string)
+            .map(truncate_field)
+    };
+    let channel = table_field("channel");
+    let build = table_field("build");
+    let purl = build_conda_purl(
+        "conda",
+        channel.as_deref(),
+        name,
+        exact_version,
+        build.as_deref(),
+    )
+    .map(truncate_field);
 
     let mut extra_data = HashMap::new();
     if let TomlValue::Table(dep_table) = value {
@@ -658,7 +676,7 @@ fn build_v6_lock_dependency(
             );
         }
         return Some(Dependency {
-            purl: build_conda_purl("conda", None, &name, version.as_deref(), None, None, None)
+            purl: build_conda_purl("conda", None, &name, version.as_deref(), None)
                 .map(truncate_field),
             extracted_requirement: version,
             scope: None,
@@ -721,8 +739,14 @@ fn build_v4_lock_dependency(table: &JsonMap<String, JsonValue>) -> Option<Depend
             "pypi" => {
                 build_pypi_purl(&normalize_pypi_name(&name), version.as_deref()).map(truncate_field)
             }
-            "conda" => build_conda_purl("conda", None, &name, version.as_deref(), None, None, None)
-                .map(truncate_field),
+            "conda" => {
+                let build = table
+                    .get("build")
+                    .and_then(json_value_to_string)
+                    .map(truncate_field);
+                build_conda_purl("conda", None, &name, version.as_deref(), build.as_deref())
+                    .map(truncate_field)
+            }
             _ => None,
         },
         extracted_requirement: version,

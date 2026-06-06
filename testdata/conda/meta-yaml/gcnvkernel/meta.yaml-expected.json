@@ -86,7 +86,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/numpy",
+        "purl": "pkg:conda/numpy?channel=conda-forge",
         "extracted_requirement": "=1.26.2",
         "scope": "run",
         "is_runtime": true,
@@ -97,7 +97,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pymc",
+        "purl": "pkg:conda/pymc?channel=conda-forge",
         "extracted_requirement": "=5.10.1",
         "scope": "run",
         "is_runtime": true,
@@ -108,7 +108,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytensor",
+        "purl": "pkg:conda/pytensor?channel=conda-forge",
         "extracted_requirement": "=2.18.3",
         "scope": "run",
         "is_runtime": true,
@@ -119,7 +119,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/scipy",
+        "purl": "pkg:conda/scipy?channel=conda-forge",
         "extracted_requirement": "=1.11.4",
         "scope": "run",
         "is_runtime": true,
@@ -130,7 +130,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/h5py",
+        "purl": "pkg:conda/h5py?channel=conda-forge",
         "extracted_requirement": "=3.10.0",
         "scope": "run",
         "is_runtime": true,
@@ -141,7 +141,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytorch",
+        "purl": "pkg:conda/pytorch?channel=conda-forge",
         "extracted_requirement": "=2.1.0=*mkl*100",
         "scope": "run",
         "is_runtime": true,
@@ -152,7 +152,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytorch-lightning",
+        "purl": "pkg:conda/pytorch-lightning?channel=conda-forge",
         "extracted_requirement": "=2.4.0",
         "scope": "run",
         "is_runtime": true,
@@ -163,7 +163,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/scikit-learn",
+        "purl": "pkg:conda/scikit-learn?channel=conda-forge",
         "extracted_requirement": "=1.3.2",
         "scope": "run",
         "is_runtime": true,
@@ -174,7 +174,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/matplotlib",
+        "purl": "pkg:conda/matplotlib?channel=conda-forge",
         "extracted_requirement": "=3.8.2",
         "scope": "run",
         "is_runtime": true,
@@ -185,7 +185,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pandas",
+        "purl": "pkg:conda/pandas?channel=conda-forge",
         "extracted_requirement": "=2.1.3",
         "scope": "run",
         "is_runtime": true,
@@ -196,7 +196,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/tqdm",
+        "purl": "pkg:conda/tqdm?channel=conda-forge",
         "extracted_requirement": "=4.66.1",
         "scope": "run",
         "is_runtime": true,
@@ -207,7 +207,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/dill",
+        "purl": "pkg:conda/dill?channel=conda-forge",
         "extracted_requirement": "=0.3.7",
         "scope": "run",
         "is_runtime": true,
@@ -218,7 +218,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/biopython",
+        "purl": "pkg:conda/biopython?channel=conda-forge",
         "extracted_requirement": "=1.84",
         "scope": "run",
         "is_runtime": true,
@@ -328,7 +328,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/bioconda/pysam",
+        "purl": "pkg:conda/pysam?channel=bioconda",
         "extracted_requirement": "=0.22.0",
         "scope": "run",
         "is_runtime": true,
@@ -339,7 +339,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pyvcf",
+        "purl": "pkg:conda/pyvcf?channel=conda-forge",
         "extracted_requirement": "=0.6.8",
         "scope": "run",
         "is_runtime": true,

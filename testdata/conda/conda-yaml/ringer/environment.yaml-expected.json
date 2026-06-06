@@ -40,7 +40,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:conda/pytorch/pytorch@1.12",
+        "purl": "pkg:conda/pytorch@1.12?channel=pytorch",
         "extracted_requirement": "=1.12",
         "scope": "dependencies",
         "is_runtime": true,
@@ -51,7 +51,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/huggingface/transformers@4.11.3",
+        "purl": "pkg:conda/transformers@4.11.3?channel=huggingface",
         "extracted_requirement": "=4.11.3",
         "scope": "dependencies",
         "is_runtime": true,
@@ -62,7 +62,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytorch-lightning@1.6.4",
+        "purl": "pkg:conda/pytorch-lightning@1.6.4?channel=conda-forge",
         "extracted_requirement": "=1.6.4",
         "scope": "dependencies",
         "is_runtime": true,
@@ -73,7 +73,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/numpy",
+        "purl": "pkg:conda/numpy?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -84,7 +84,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/scipy",
+        "purl": "pkg:conda/scipy?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -95,7 +95,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pandas",
+        "purl": "pkg:conda/pandas?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -106,7 +106,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/matplotlib",
+        "purl": "pkg:conda/matplotlib?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -117,7 +117,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/seaborn",
+        "purl": "pkg:conda/seaborn?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -128,7 +128,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/astropy",
+        "purl": "pkg:conda/astropy?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -139,7 +139,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/rdkit",
+        "purl": "pkg:conda/rdkit?channel=conda-forge",
         "extracted_requirement": ">=2022.09.5",
         "scope": "dependencies",
         "is_runtime": true,
@@ -150,7 +150,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pre-commit",
+        "purl": "pkg:conda/pre-commit?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -161,7 +161,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytest",
+        "purl": "pkg:conda/pytest?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -172,7 +172,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/rich",
+        "purl": "pkg:conda/rich?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -183,7 +183,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/shellingham",
+        "purl": "pkg:conda/shellingham?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -194,7 +194,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/typer",
+        "purl": "pkg:conda/typer?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
@@ -205,7 +205,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/wandb",
+        "purl": "pkg:conda/wandb?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "dependencies",
         "is_runtime": true,
