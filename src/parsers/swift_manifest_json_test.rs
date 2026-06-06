@@ -44,7 +44,8 @@ mod tests {
             data.datasource_id,
             Some(DatasourceId::SwiftPackageManifestJson)
         );
-        assert_eq!(data.purl, Some("pkg:swift/MapboxMaps".to_string()));
+        // swift requires a namespace; the manifest root has no source URL, so no PURL.
+        assert_eq!(data.purl, None);
 
         let extra = data.extra_data.as_ref().expect("extra_data should exist");
         assert!(extra.contains_key("platforms"));
@@ -103,7 +104,7 @@ mod tests {
 
         assert_eq!(data.package_type, Some(PackageType::Swift));
         assert_eq!(data.name, Some("VercelUI".to_string()));
-        assert_eq!(data.purl, Some("pkg:swift/VercelUI".to_string()));
+        assert_eq!(data.purl, None);
 
         assert_eq!(data.dependencies.len(), 1);
         let dep = &data.dependencies[0];
@@ -283,10 +284,8 @@ mod tests {
 
         let data = SwiftManifestJsonParser::extract_first_package(&path);
         assert_eq!(data.dependencies.len(), 2);
-        assert_eq!(
-            data.dependencies[0].purl.as_deref(),
-            Some("pkg:swift/local-pkg")
-        );
+        // file-system dependency has no source host, so no spec-valid PURL.
+        assert_eq!(data.dependencies[0].purl, None);
         assert_eq!(data.dependencies[0].is_runtime, None);
         assert_eq!(
             data.dependencies[0]
@@ -332,10 +331,8 @@ mod tests {
         let data = SwiftManifestJsonParser::extract_first_package(&path);
         assert_eq!(data.dependencies.len(), 1);
         let dep = &data.dependencies[0];
-        assert_eq!(
-            dep.purl.as_deref(),
-            Some("pkg:swift/local-dependency@2.0.0")
-        );
+        // No remote URL means no namespace, so the PURL is omitted.
+        assert_eq!(dep.purl, None);
         assert_eq!(dep.is_pinned, Some(true));
     }
 

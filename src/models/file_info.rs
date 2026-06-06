@@ -1195,6 +1195,17 @@ impl Package {
                 _ => package_type.as_str(),
             };
 
+            let has_namespace = self
+                .namespace
+                .as_deref()
+                .is_some_and(|value| !value.trim().is_empty());
+
+            // swift requires a namespace (VCS host + owner); without one, omit
+            // the identity rather than reconstruct a spec-invalid, name-only PURL.
+            if purl_type == "swift" && !has_namespace {
+                return None;
+            }
+
             let mut purl = PackageUrl::new(purl_type, name).ok()?;
 
             if let Some(namespace) = self

@@ -39,10 +39,10 @@
       "repository_homepage_url": null,
       "repository_download_url": null,
       "api_data_url": null,
-      "package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_paths": ["swift-show-dependencies.deplock"],
       "datasource_ids": ["swift_package_show_dependencies"],
-      "purl": "pkg:swift/VercelUI"
+      "purl": null
     }
   ],
   "dependencies": [
@@ -111,7 +111,7 @@
       },
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/swift-cloud/Vercel@1.15.2?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "swift-show-dependencies.deplock",
       "datasource_id": "swift_package_show_dependencies"
     },
@@ -180,7 +180,7 @@
       },
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/vapor/vapor@4.79.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "swift-show-dependencies.deplock",
       "datasource_id": "swift_package_show_dependencies"
     },
@@ -260,7 +260,7 @@
       },
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/swift-server/async-http-client@1.19.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "swift-show-dependencies.deplock",
       "datasource_id": "swift_package_show_dependencies"
     },
@@ -329,7 +329,7 @@
       },
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/apple/swift-nio@2.58.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "swift-show-dependencies.deplock",
       "datasource_id": "swift_package_show_dependencies"
     },
@@ -386,7 +386,7 @@
       },
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/apple/swift-atomics@1.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "swift-show-dependencies.deplock",
       "datasource_id": "swift_package_show_dependencies"
     },
@@ -443,7 +443,7 @@
       },
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/apple/swift-atomics@1.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "swift-show-dependencies.deplock",
       "datasource_id": "swift_package_show_dependencies"
     }
@@ -873,10 +873,12 @@
           "repository_download_url": null,
           "api_data_url": null,
           "datasource_id": "swift_package_show_dependencies",
-          "purl": "pkg:swift/VercelUI"
+          "purl": null
         }
       ],
-      "for_packages": ["pkg:swift/VercelUI?uuid=fixed-uid-done-for-testing-5642512d1758"],
+      "for_packages": [
+        "generated-package:swift_package_show_dependencies/VercelUI@unknown?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ],
       "scan_errors": []
     }
   ]

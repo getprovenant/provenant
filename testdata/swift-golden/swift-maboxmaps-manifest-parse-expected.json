@@ -106,6 +106,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "swift_package_manifest_json",
-    "purl": "pkg:swift/MapboxMaps"
+    "purl": null
   }
 ]
