@@ -139,7 +139,7 @@ index-url = "https://pypi.org/simple"
         let numpy = package_data
             .dependencies
             .iter()
-            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/numpy@2.1.0"))
+            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/numpy@2.1.0?channel=conda-forge"))
             .expect("numpy dependency missing");
         assert_eq!(numpy.is_pinned, Some(true));
 

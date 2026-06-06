@@ -38,7 +38,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:conda/numpy@2.1.0",
+        "purl": "pkg:conda/numpy@2.1.0?channel=conda-forge",
         "extracted_requirement": "2.1.0",
         "scope": null,
         "is_runtime": true,

@@ -41,7 +41,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:conda/auto-mech/autoio-base",
+        "purl": "pkg:conda/autoio-base?channel=auto-mech",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -52,7 +52,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/numpy@1.15.4",
+        "purl": "pkg:conda/numpy@1.15.4?channel=conda-forge",
         "extracted_requirement": "=1.15.4",
         "scope": "run",
         "is_runtime": true,
@@ -63,7 +63,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/scipy@1.5.0",
+        "purl": "pkg:conda/scipy@1.5.0?channel=conda-forge",
         "extracted_requirement": "=1.5.0",
         "scope": "run",
         "is_runtime": true,
@@ -74,7 +74,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pyyaml",
+        "purl": "pkg:conda/pyyaml?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -85,7 +85,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/mako",
+        "purl": "pkg:conda/mako?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -96,7 +96,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytest",
+        "purl": "pkg:conda/pytest?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -107,7 +107,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pytest-cov",
+        "purl": "pkg:conda/pytest-cov?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -118,7 +118,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/future",
+        "purl": "pkg:conda/future?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -129,7 +129,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/flake8",
+        "purl": "pkg:conda/flake8?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,
@@ -140,7 +140,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/pylint",
+        "purl": "pkg:conda/pylint?channel=conda-forge",
         "extracted_requirement": "",
         "scope": "run",
         "is_runtime": true,

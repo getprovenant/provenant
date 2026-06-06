@@ -161,15 +161,7 @@ pub(crate) fn parse_conda_meta_json_with_path(content: &str, _path: Option<&Path
     };
 
     let purl = metadata.name.as_deref().and_then(|name| {
-        super::conda::build_purl(
-            "conda",
-            None,
-            name,
-            metadata.version.as_deref(),
-            None,
-            None,
-            None,
-        )
+        super::conda::build_purl("conda", None, name, metadata.version.as_deref(), None)
     });
 
     let file_references = build_conda_file_references(

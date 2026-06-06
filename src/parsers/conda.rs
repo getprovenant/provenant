@@ -33,6 +33,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use packageurl::PackageUrl;
+
 use crate::parser_warn as warn;
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 use regex::Regex;
@@ -67,42 +69,39 @@ fn is_conda_recipe_yaml_path(path: &Path) -> bool {
         .is_some_and(|name| name == "recipe")
 }
 
-/// Build a PURL (Package URL) for Conda or PyPI packages
+/// Build a PURL (Package URL) for Conda or PyPI packages.
+///
+/// The conda purl-spec prohibits a namespace: the channel is a `?channel=`
+/// qualifier (not a namespace segment) and the build string is a `?build=`
+/// qualifier. `channel`/`build` are ignored for non-conda types.
 pub(crate) fn build_purl(
     package_type: &str,
-    namespace: Option<&str>,
+    channel: Option<&str>,
     name: &str,
     version: Option<&str>,
-    _qualifiers: Option<&str>,
-    _subpath: Option<&str>,
-    _extras: Option<&str>,
+    build: Option<&str>,
 ) -> Option<String> {
-    let purl = match package_type {
-        "conda" => {
-            if let Some(ns) = namespace {
-                match version {
-                    Some(v) => format!("pkg:conda/{}/{}@{}", ns, name, v),
-                    None => format!("pkg:conda/{}/{}", ns, name),
-                }
-            } else {
-                match version {
-                    Some(v) => format!("pkg:conda/{}@{}", name, v),
-                    None => format!("pkg:conda/{}", name),
-                }
-            }
+    let mut purl = PackageUrl::new(package_type, name).ok()?;
+
+    if let Some(version) = version.filter(|v| !v.is_empty()) {
+        purl.with_version(version).ok()?;
+    }
+
+    if package_type == "conda" {
+        if let Some(channel) = channel.filter(|c| !c.is_empty()) {
+            purl.add_qualifier("channel", channel).ok()?;
         }
-        "pypi" => match version {
-            Some(v) => format!("pkg:pypi/{}@{}", name, v),
-            None => format!("pkg:pypi/{}", name),
-        },
-        _ => format!("pkg:{}/{}", package_type, name),
-    };
-    Some(purl)
+        if let Some(build) = build.filter(|b| !b.is_empty()) {
+            purl.add_qualifier("build", build).ok()?;
+        }
+    }
+
+    Some(purl.to_string())
 }
 
 fn build_conda_package_purl(name: Option<&str>, version: Option<&str>) -> Option<String> {
     let name = name?;
-    build_purl("conda", None, name, version, None, None, None)
+    build_purl("conda", None, name, version, None)
 }
 
 fn yaml_value_to_string(value: &Value) -> Option<String> {
@@ -869,15 +868,7 @@ pub fn parse_conda_requirement(req: &str, scope: &str) -> Option<Dependency> {
     };
 
     // Build PURL
-    let purl = build_purl(
-        "conda",
-        namespace,
-        name,
-        version.as_deref(),
-        None,
-        None,
-        None,
-    );
+    let purl = build_purl("conda", namespace, name, version.as_deref(), None);
 
     // Determine is_runtime and is_optional based on scope
     let (is_runtime, is_optional) = match scope {
@@ -1015,9 +1006,7 @@ fn create_conda_dependency(
         namespace,
         name,
         version.as_deref(),
-        None,
-        None,
-        None,
+        build_string.as_deref(),
     );
     let mut extra_data = HashMap::new();
     if let Some(namespace) = namespace {
@@ -1105,7 +1094,7 @@ fn create_pip_dependency(
     });
 
     let is_pinned = specs.as_ref().map(|s| s.contains("==")).unwrap_or(false);
-    let purl = build_purl("pypi", None, &name, version.as_deref(), None, None, None);
+    let purl = build_purl("pypi", None, &name, version.as_deref(), None);
 
     Some(Dependency {
         purl,

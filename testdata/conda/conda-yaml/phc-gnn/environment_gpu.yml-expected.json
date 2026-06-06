@@ -40,7 +40,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:conda/anaconda/python-dateutil@2.8.1",
+        "purl": "pkg:conda/python-dateutil@2.8.1?channel=anaconda",
         "extracted_requirement": "=2.8.1",
         "scope": "dependencies",
         "is_runtime": true,
@@ -117,7 +117,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/numpy@1.19.2",
+        "purl": "pkg:conda/numpy@1.19.2?channel=conda-forge",
         "extracted_requirement": "=1.19.2",
         "scope": "dependencies",
         "is_runtime": true,
@@ -128,7 +128,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/scipy@1.5.2",
+        "purl": "pkg:conda/scipy@1.5.2?channel=anaconda",
         "extracted_requirement": "=1.5.2",
         "scope": "dependencies",
         "is_runtime": true,
@@ -139,7 +139,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/matplotlib@3.3.2",
+        "purl": "pkg:conda/matplotlib@3.3.2?channel=conda-forge",
         "extracted_requirement": "=3.3.2",
         "scope": "dependencies",
         "is_runtime": true,
@@ -150,7 +150,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/networkx@2.5",
+        "purl": "pkg:conda/networkx@2.5?channel=anaconda",
         "extracted_requirement": "=2.5",
         "scope": "dependencies",
         "is_runtime": true,
@@ -161,7 +161,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/scikit-learn@0.23.2",
+        "purl": "pkg:conda/scikit-learn@0.23.2?channel=anaconda",
         "extracted_requirement": "=0.23.2",
         "scope": "dependencies",
         "is_runtime": true,
@@ -172,7 +172,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/notebook@6.1.4",
+        "purl": "pkg:conda/notebook@6.1.4?channel=anaconda",
         "extracted_requirement": "=6.1.4",
         "scope": "dependencies",
         "is_runtime": true,
@@ -183,7 +183,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/jupyter_client@6.1.7",
+        "purl": "pkg:conda/jupyter_client@6.1.7?channel=anaconda",
         "extracted_requirement": "=6.1.7",
         "scope": "dependencies",
         "is_runtime": true,
@@ -194,7 +194,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/jupyter_core@4.6.3",
+        "purl": "pkg:conda/jupyter_core@4.6.3?channel=anaconda",
         "extracted_requirement": "=4.6.3",
         "scope": "dependencies",
         "is_runtime": true,
@@ -205,7 +205,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/anaconda/h5py@2.10.0",
+        "purl": "pkg:conda/h5py@2.10.0?channel=anaconda",
         "extracted_requirement": "=2.10.0",
         "scope": "dependencies",
         "is_runtime": true,
@@ -216,7 +216,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/tqdm@4.50.0",
+        "purl": "pkg:conda/tqdm@4.50.0?channel=conda-forge",
         "extracted_requirement": "=4.50.0",
         "scope": "dependencies",
         "is_runtime": true,
@@ -227,7 +227,7 @@
         "extra_data": {}
       },
       {
-        "purl": "pkg:conda/conda-forge/tensorboard@2.4.0",
+        "purl": "pkg:conda/tensorboard@2.4.0?channel=conda-forge",
         "extracted_requirement": "=2.4.0",
         "scope": "dependencies",
         "is_runtime": true,

@@ -228,7 +228,7 @@ package:
         let dep = dep.unwrap();
         assert_eq!(
             dep.purl,
-            Some("pkg:conda/conda-forge/numpy@1.15.4".to_string())
+            Some("pkg:conda/numpy@1.15.4?channel=conda-forge".to_string())
         );
         assert_eq!(dep.is_pinned, Some(true));
     }
@@ -280,7 +280,7 @@ dependencies:
         let numpy = package_data
             .dependencies
             .iter()
-            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/conda-forge/numpy"))
+            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/numpy?channel=conda-forge"))
             .expect("conda numpy dependency missing");
         assert_eq!(numpy.scope.as_deref(), Some("dependencies"));
 
@@ -321,7 +321,7 @@ dependencies:
         let bzip2 = package_data
             .dependencies
             .iter()
-            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/bzip2@1.0.8"))
+            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/bzip2@1.0.8?build=h4bc722e_7"))
             .expect("conda bzip2 dependency missing");
         assert_eq!(
             bzip2.extracted_requirement.as_deref(),
@@ -339,7 +339,10 @@ dependencies:
         let openssl = package_data
             .dependencies
             .iter()
-            .find(|dep| dep.purl.as_deref() == Some("pkg:conda/defaults/openssl@3.4.0"))
+            .find(|dep| {
+                dep.purl.as_deref()
+                    == Some("pkg:conda/openssl@3.4.0?build=h7b32b05_1&channel=defaults")
+            })
             .expect("conda openssl dependency missing");
         assert_eq!(
             openssl.extracted_requirement.as_deref(),
@@ -592,22 +595,20 @@ data:
         // Total conda: 8 (3 namespaced + 5 conda-forge) + pypi: 1 (ray) = 9 total
 
         // Check pytorch with namespace
-        let pytorch = deps.iter().find(|d| {
-            d.purl
-                .as_deref()
-                .is_some_and(|p| p.contains("pytorch/pytorch"))
-        });
+        let pytorch = deps
+            .iter()
+            .find(|d| d.purl.as_deref().is_some_and(|p| p.contains("/pytorch@")));
         assert!(pytorch.is_some());
         let pytorch = pytorch.unwrap();
         assert_eq!(
             pytorch.purl,
-            Some("pkg:conda/pytorch/pytorch@1.12".to_string())
+            Some("pkg:conda/pytorch@1.12?channel=pytorch".to_string())
         );
         assert_eq!(pytorch.extracted_requirement, Some("=1.12".to_string()));
         assert_eq!(pytorch.is_pinned, Some(true));
         assert_eq!(pytorch.is_runtime, Some(true));
 
-        // Check transformers with namespace
+        // Check transformers with channel
         let transformers = deps.iter().find(|d| {
             d.purl
                 .as_deref()
@@ -617,16 +618,19 @@ data:
         let transformers = transformers.unwrap();
         assert_eq!(
             transformers.purl,
-            Some("pkg:conda/huggingface/transformers@4.11.3".to_string())
+            Some("pkg:conda/transformers@4.11.3?channel=huggingface".to_string())
         );
 
-        // Check numpy (conda-forge namespace packages)
+        // Check numpy (conda-forge channel packages)
         let numpy = deps
             .iter()
             .find(|d| d.purl.as_deref().is_some_and(|p| p.contains("numpy")));
         assert!(numpy.is_some());
         let numpy = numpy.unwrap();
-        assert_eq!(numpy.purl, Some("pkg:conda/conda-forge/numpy".to_string()));
+        assert_eq!(
+            numpy.purl,
+            Some("pkg:conda/numpy?channel=conda-forge".to_string())
+        );
 
         // Check ray (pip dependency)
         let ray = deps
@@ -664,7 +668,10 @@ data:
 
         assert!(dep.is_some());
         let dep = dep.unwrap();
-        assert_eq!(dep.purl, Some("pkg:conda/pytorch/pytorch@1.12".to_string()));
+        assert_eq!(
+            dep.purl,
+            Some("pkg:conda/pytorch@1.12?channel=pytorch".to_string())
+        );
         assert_eq!(dep.scope, Some("run".to_string()));
         assert_eq!(dep.is_pinned, Some(true));
         assert_eq!(
