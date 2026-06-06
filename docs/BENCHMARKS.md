@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 217 of 217 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.0×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 218 of 218 recorded runs, with a **12.0× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -731,6 +731,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-03 · harbor-57111 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `22.87s`; ScanCode `327.33s`
 - Broader package and dependency extraction (`5` vs `2` packages, `2972` vs `2407` dependencies) from committed Pipfile/Pipfile.lock, npm-family, Docker, and Go manifests, with local Go `replace` paths kept out of invalid PURLs, templated Conda YAML skipped instead of degraded into false metadata, and URL differences limited to normalization/truncation/canonicalization after review
+
+##### [goharbor/harbor-helm @ 7233a81](https://github.com/goharbor/harbor-helm/tree/7233a81d24c891abc3fd83285ea8b91e2ab5522f) — **7.57× faster**
+
+- Files: 96
+- Run context: 2026-06-06 · harbor-helm-71676 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.36s`; ScanCode `48.15s`
+- Direct Helm chart package visibility (`1` vs `0` packages, `pkg:helm/harbor@1.4.0-dev` from the apiVersion-v1 `Chart.yaml`) plus a Dockerfile image package from `test/e2e/Dockerfile`, with identical top-level license detection and matching Go module coverage from the bundled `test/go.mod` / `test/go.sum` terratest harness
 
 ##### [grpc/grpc @ f87c29f](https://github.com/grpc/grpc/tree/f87c29f069971d1356e5784005af499db52e7f31) — **14.43× faster**
 
