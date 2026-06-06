@@ -100,7 +100,10 @@ fn parse_swift_manifest(manifest: &Value) -> PackageData {
         );
     }
 
-    let purl = create_package_url(&name, &None).map(truncate_field);
+    // swift requires a namespace (VCS host + owner); a Package.swift manifest
+    // does not declare its own source URL, so the root package's PURL is omitted
+    // rather than emitted namespace-less and spec-invalid.
+    let purl: Option<String> = None;
 
     PackageData {
         package_type: Some(SwiftManifestJsonParser::PACKAGE_TYPE),
@@ -182,9 +185,8 @@ fn parse_manifest_dependency(dependency: &Value) -> Option<Dependency> {
         dep_name = truncate_field(dep_name);
         let (version, is_pinned, requirement_kind) = extract_version_requirement(source);
         let version = version.map(truncate_field);
-        let purl = truncate_field(create_dependency_purl(
-            &namespace, &dep_name, &version, is_pinned,
-        ));
+        let purl =
+            create_dependency_purl(&namespace, &dep_name, &version, is_pinned).map(truncate_field);
         let mut extra_data = HashMap::from([
             (
                 "dependency_kind".to_string(),
@@ -210,7 +212,7 @@ fn parse_manifest_dependency(dependency: &Value) -> Option<Dependency> {
         }
 
         return Some(Dependency {
-            purl: Some(purl),
+            purl,
             extracted_requirement: version,
             scope: Some("dependencies".to_string()),
             is_runtime: None,
@@ -235,7 +237,7 @@ fn parse_manifest_dependency(dependency: &Value) -> Option<Dependency> {
         }
 
         let dep_name = truncate_field(identity.to_string());
-        let purl = truncate_field(create_dependency_purl(&None, &dep_name, &None, false));
+        let purl = create_dependency_purl(&None, &dep_name, &None, false).map(truncate_field);
         let mut extra_data = HashMap::from([(
             "dependency_kind".to_string(),
             serde_json::Value::String("fileSystem".to_string()),
@@ -248,7 +250,7 @@ fn parse_manifest_dependency(dependency: &Value) -> Option<Dependency> {
         }
 
         return Some(Dependency {
-            purl: Some(purl),
+            purl,
             extracted_requirement: None,
             scope: Some("dependencies".to_string()),
             is_runtime: None,
@@ -365,31 +367,13 @@ fn create_dependency_purl(
     name: &str,
     version: &Option<String>,
     is_pinned: bool,
-) -> String {
-    let mut purl = match PackageUrl::new(SwiftManifestJsonParser::PACKAGE_TYPE.as_str(), name) {
-        Ok(p) => p,
-        Err(e) => {
-            warn!(
-                "Failed to create PackageUrl for swift dependency '{}': {}",
-                name, e
-            );
-            return match (namespace, is_pinned.then_some(version.as_deref()).flatten()) {
-                (Some(ns), Some(v)) => format!("pkg:swift/{}/{}@{}", ns, name, v),
-                (Some(ns), None) => format!("pkg:swift/{}/{}", ns, name),
-                (None, Some(v)) => format!("pkg:swift/{}@{}", name, v),
-                (None, None) => format!("pkg:swift/{}", name),
-            };
-        }
-    };
-
-    if let Some(ns) = namespace
-        && let Err(e) = purl.with_namespace(ns)
-    {
-        warn!(
-            "Failed to set namespace '{}' for swift dependency '{}': {}",
-            ns, name, e
-        );
-    }
+) -> Option<String> {
+    // swift requires a namespace (VCS host + owner). File-system/path deps and
+    // any source without a resolvable host have none, so omit the PURL rather
+    // than emit a namespace-less, spec-invalid one.
+    let namespace = namespace.as_deref()?;
+    let mut purl = PackageUrl::new(SwiftManifestJsonParser::PACKAGE_TYPE.as_str(), name).ok()?;
+    purl.with_namespace(namespace).ok()?;
 
     if is_pinned
         && let Some(v) = version
@@ -401,35 +385,7 @@ fn create_dependency_purl(
         );
     }
 
-    purl.to_string()
-}
-
-fn create_package_url(name: &Option<String>, version: &Option<String>) -> Option<String> {
-    name.as_ref().and_then(|name| {
-        let mut package_url =
-            match PackageUrl::new(SwiftManifestJsonParser::PACKAGE_TYPE.as_str(), name) {
-                Ok(p) => p,
-                Err(e) => {
-                    warn!(
-                        "Failed to create PackageUrl for swift package '{}': {}",
-                        name, e
-                    );
-                    return None;
-                }
-            };
-
-        if let Some(v) = version
-            && let Err(e) = package_url.with_version(v)
-        {
-            warn!(
-                "Failed to set version '{}' for swift package '{}': {}",
-                v, name, e
-            );
-            return None;
-        }
-
-        Some(package_url.to_string())
-    })
+    Some(purl.to_string())
 }
 
 fn default_package_data(path: &Path) -> PackageData {

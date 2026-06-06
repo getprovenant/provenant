@@ -57,10 +57,10 @@
       "repository_homepage_url": null,
       "repository_download_url": null,
       "api_data_url": null,
-      "package_uid": "pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "package_uid": "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_paths": ["Package.swift.json"],
       "datasource_ids": ["swift_package_manifest_json"],
-      "purl": "pkg:swift/MapboxMaps"
+      "purl": null
     }
   ],
   "dependencies": [
@@ -75,7 +75,7 @@
       "resolved_package": {},
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/mapbox/turf-swift?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "Package.swift.json",
       "datasource_id": "swift_package_manifest_json"
     },
@@ -90,7 +90,7 @@
       "resolved_package": {},
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/mapbox/mapbox-core-maps-ios@11.4.0-rc.2?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "Package.swift.json",
       "datasource_id": "swift_package_manifest_json"
     },
@@ -105,7 +105,7 @@
       "resolved_package": {},
       "extra_data": {},
       "dependency_uid": "pkg:swift/github.com/mapbox/mapbox-common-ios@24.4.0-rc.2?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "Package.swift.json",
       "datasource_id": "swift_package_manifest_json"
     }
@@ -209,24 +209,30 @@
           "repository_download_url": null,
           "api_data_url": null,
           "datasource_id": "swift_package_manifest_json",
-          "purl": "pkg:swift/MapboxMaps"
+          "purl": null
         }
       ],
-      "for_packages": ["pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758"],
+      "for_packages": [
+        "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ],
       "scan_errors": []
     },
     {
       "path": "src",
       "type": "directory",
       "package_data": [],
-      "for_packages": ["pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758"],
+      "for_packages": [
+        "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ],
       "scan_errors": []
     },
     {
       "path": "src/mapbox.swift",
       "type": "file",
       "package_data": [],
-      "for_packages": ["pkg:swift/MapboxMaps?uuid=fixed-uid-done-for-testing-5642512d1758"],
+      "for_packages": [
+        "generated-package:swift_package_manifest_json/MapboxMaps@unknown?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ],
       "scan_errors": []
     }
   ]

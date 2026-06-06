@@ -419,6 +419,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "swift_package_show_dependencies",
-    "purl": "pkg:swift/VercelUI"
+    "purl": null
   }
 ]

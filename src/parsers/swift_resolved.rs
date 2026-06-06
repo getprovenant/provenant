@@ -293,10 +293,11 @@ fn get_namespace_and_name(url: &str) -> Option<(String, String)> {
 }
 
 fn build_purl(name: &str, namespace: Option<&str>, version: Option<&str>) -> Option<String> {
+    // swift requires a namespace (VCS host + owner). Without it we cannot emit a
+    // spec-valid PURL, so omit it entirely rather than a name-only best-effort.
+    let namespace = namespace?;
     let mut purl = PackageUrl::new("swift", name).ok()?;
-    if let Some(ns) = namespace {
-        purl.with_namespace(ns).ok()?;
-    }
+    purl.with_namespace(namespace).ok()?;
     if let Some(v) = version {
         purl.with_version(v).ok()?;
     }
@@ -368,8 +369,9 @@ mod tests {
     }
 
     #[test]
-    fn test_build_purl_without_namespace() {
+    fn test_build_purl_without_namespace_is_omitted() {
+        // swift requires a namespace; without one the PURL is omitted.
         let purl = build_purl("MyPackage", None, Some("1.0.0"));
-        assert_eq!(purl.as_deref(), Some("pkg:swift/MyPackage@1.0.0"));
+        assert_eq!(purl, None);
     }
 }

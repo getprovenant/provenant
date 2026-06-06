@@ -109,8 +109,12 @@ pub(crate) fn parse_swift_show_dependencies(content: &str) -> PackageData {
 
     let dependencies = flatten_dependencies(&data.dependencies);
     let version = normalize_version(data.version);
-    let homepage_url = normalize_remote_url(data.url);
-    let purl = create_root_purl(data.name.as_deref(), version.as_deref());
+    let homepage_url = normalize_remote_url(data.url.clone());
+    let purl = create_root_purl(
+        data.name.as_deref(),
+        data.url.as_deref(),
+        version.as_deref(),
+    );
 
     PackageData {
         package_type: Some(PACKAGE_TYPE),
@@ -188,7 +192,7 @@ fn build_dependency(
 
     let name = truncate_field(dep.name.as_ref()?.clone());
     let version = normalize_version(dep.version.clone());
-    let purl = create_dependency_purl(dep, &name, version.as_deref());
+    let purl = create_dependency_purl(dep, version.as_deref());
     let nested_dependencies = dep
         .dependencies
         .iter()
@@ -199,7 +203,7 @@ fn build_dependency(
     guard.ascend();
 
     Some(Dependency {
-        purl: Some(truncate_field(purl.clone())),
+        purl: purl.map(truncate_field),
         extracted_requirement: version.clone().map(truncate_field),
         scope: Some("dependencies".to_string()),
         is_runtime: None,
@@ -232,37 +236,34 @@ fn build_dependency(
     })
 }
 
-fn create_dependency_purl(
-    dep: &SwiftDependency,
-    fallback_name: &str,
-    version: Option<&str>,
-) -> String {
-    if let Some(url) = dep.url.as_deref()
-        && let Some((namespace, name)) = parse_url_namespace_and_name(url)
-    {
-        let mut purl = format!("pkg:swift/{}/{}", namespace, name);
-        if let Some(version) = version {
-            purl.push('@');
-            purl.push_str(version);
-        }
-        return purl;
-    }
-
-    let mut purl = format!("pkg:swift/{}", fallback_name);
+/// swift requires a namespace (VCS host + owner). When the dependency has no
+/// source URL to derive one from, omit the PURL rather than emit a
+/// namespace-less, spec-invalid one.
+fn create_dependency_purl(dep: &SwiftDependency, version: Option<&str>) -> Option<String> {
+    let url = dep.url.as_deref()?;
+    let (namespace, name) = parse_url_namespace_and_name(url)?;
+    let mut purl = format!("pkg:swift/{}/{}", namespace, name);
     if let Some(version) = version {
         purl.push('@');
         purl.push_str(version);
     }
-    purl
+    Some(purl)
 }
 
-fn create_root_purl(name: Option<&str>, version: Option<&str>) -> Option<String> {
+/// As with dependencies, the root package needs a namespace derived from its
+/// source URL; without one the PURL is omitted.
+fn create_root_purl(
+    name: Option<&str>,
+    url: Option<&str>,
+    version: Option<&str>,
+) -> Option<String> {
     let name = name?.trim();
     if name.is_empty() {
         return None;
     }
+    let (namespace, _) = parse_url_namespace_and_name(url?)?;
 
-    let mut purl = format!("pkg:swift/{}", name);
+    let mut purl = format!("pkg:swift/{}/{}", namespace, name);
     if let Some(version) = version {
         purl.push('@');
         purl.push_str(version);
