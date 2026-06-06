@@ -20,14 +20,14 @@ use super::utils::{read_file_to_string, truncate_field};
 pub struct BitbakeRecipeParser;
 
 impl PackageParser for BitbakeRecipeParser {
-    const PACKAGE_TYPE: PackageType = PackageType::Bitbake;
+    const PACKAGE_TYPE: PackageType = PackageType::Yocto;
 
     fn metadata() -> Vec<ParserMetadata> {
         vec![
             ParserMetadata {
                 description: "Yocto BitBake recipe",
                 file_patterns: &["**/*.bb"],
-                package_type: "bitbake",
+                package_type: "yocto",
                 primary_language: "Shell",
                 documentation_url: Some(
                     "https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-metadata.html",
@@ -36,7 +36,7 @@ impl PackageParser for BitbakeRecipeParser {
             ParserMetadata {
                 description: "Yocto BitBake append file",
                 file_patterns: &["**/*.bbappend"],
-                package_type: "bitbake",
+                package_type: "yocto",
                 primary_language: "Shell",
                 documentation_url: Some(
                     "https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-metadata.html",
@@ -204,7 +204,7 @@ fn parse_recipe(content: &str, path: &Path, datasource_id: DatasourceId) -> Pack
 
 fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
-        package_type: Some(PackageType::Bitbake),
+        package_type: Some(PackageType::Yocto),
         datasource_id: Some(datasource_id),
         ..Default::default()
     }
@@ -855,7 +855,7 @@ fn normalize_bitbake_license(license: &str) -> String {
 }
 
 fn build_package_purl(name: &str, version: Option<&str>) -> Option<String> {
-    let mut purl = PackageUrl::new(PackageType::Bitbake.as_str(), name).ok()?;
+    let mut purl = PackageUrl::new(PackageType::Yocto.as_str(), name).ok()?;
     if let Some(v) = version {
         purl.with_version(v).ok()?;
     }
@@ -863,7 +863,7 @@ fn build_package_purl(name: &str, version: Option<&str>) -> Option<String> {
 }
 
 fn build_dependency_purl(name: &str) -> Option<String> {
-    PackageUrl::new(PackageType::Bitbake.as_str(), name)
+    PackageUrl::new(PackageType::Yocto.as_str(), name)
         .ok()
         .map(|purl| truncate_field(purl.to_string()))
 }

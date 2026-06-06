@@ -49,9 +49,9 @@ SRC_URI:append = " file://append.patch"
             .find(|package| package.name.as_deref() == Some("example"))
             .expect("bitbake package should be assembled");
 
-        assert_eq!(package.package_type, Some(PackageType::Bitbake));
+        assert_eq!(package.package_type, Some(PackageType::Yocto));
         assert_eq!(package.version.as_deref(), Some("1.2.3"));
-        assert_eq!(package.purl.as_deref(), Some("pkg:bitbake/example@1.2.3"));
+        assert_eq!(package.purl.as_deref(), Some("pkg:yocto/example@1.2.3"));
         assert!(
             package
                 .datafile_paths
@@ -75,10 +75,10 @@ SRC_URI:append = " file://append.patch"
                 .contains(&DatasourceId::BitbakeRecipeAppend)
         );
 
-        assert_dependency_present(&result.dependencies, "pkg:bitbake/zlib", "example_1.2.3.bb");
+        assert_dependency_present(&result.dependencies, "pkg:yocto/zlib", "example_1.2.3.bb");
         assert_dependency_present(
             &result.dependencies,
-            "pkg:bitbake/openssl",
+            "pkg:yocto/openssl",
             "example_1.2.3.bbappend",
         );
 

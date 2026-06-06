@@ -39,7 +39,6 @@ pub enum PackageType {
     Autotools,
     Axis2,
     Bazel,
-    Bitbake,
     Bower,
     Buck,
     Cab,
@@ -100,6 +99,7 @@ pub enum PackageType {
     War,
     Winexe,
     WindowsUpdate,
+    Yocto,
 }
 
 impl PackageType {
@@ -116,7 +116,6 @@ impl PackageType {
             Self::Autotools => "autotools",
             Self::Axis2 => "axis2",
             Self::Bazel => "bazel",
-            Self::Bitbake => "bitbake",
             Self::Bower => "bower",
             Self::Buck => "buck",
             Self::Cab => "cab",
@@ -177,6 +176,7 @@ impl PackageType {
             Self::War => "war",
             Self::Winexe => "winexe",
             Self::WindowsUpdate => "windows-update",
+            Self::Yocto => "yocto",
         }
     }
 }
@@ -206,7 +206,6 @@ impl FromStr for PackageType {
             "autotools" => Ok(Self::Autotools),
             "axis2" => Ok(Self::Axis2),
             "bazel" => Ok(Self::Bazel),
-            "bitbake" => Ok(Self::Bitbake),
             "bower" => Ok(Self::Bower),
             "buck" => Ok(Self::Buck),
             "cab" => Ok(Self::Cab),
@@ -267,6 +266,7 @@ impl FromStr for PackageType {
             "war" => Ok(Self::War),
             "winexe" => Ok(Self::Winexe),
             "windows-update" => Ok(Self::WindowsUpdate),
+            "yocto" => Ok(Self::Yocto),
             _ => Err(format!("unknown package type: {}", s)),
         }
     }
