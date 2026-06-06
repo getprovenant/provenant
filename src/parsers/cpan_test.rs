@@ -163,7 +163,7 @@ mod tests {
 
         let build_dep = build_deps
             .iter()
-            .find(|d| d.purl == Some("pkg:cpan/Module::Build".to_string()))
+            .find(|d| d.purl == Some("pkg:cpan/Module-Build".to_string()))
             .expect("Should have Module::Build dependency");
         assert_eq!(build_dep.is_runtime, Some(false));
 

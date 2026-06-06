@@ -42,21 +42,21 @@
         "is_optional": false
       },
       {
-        "purl": "pkg:cpan/namespace::autoclean",
+        "purl": "pkg:cpan/namespace-autoclean",
         "extracted_requirement": "0.09",
         "scope": "runtime",
         "is_runtime": true,
         "is_optional": false
       },
       {
-        "purl": "pkg:cpan/ExtUtils::MakeMaker",
+        "purl": "pkg:cpan/ExtUtils-MakeMaker",
         "extracted_requirement": "7.70",
         "scope": "configure",
         "is_runtime": false,
         "is_optional": false
       },
       {
-        "purl": "pkg:cpan/Test::More",
+        "purl": "pkg:cpan/Test-More",
         "extracted_requirement": "0.88",
         "scope": "test",
         "is_runtime": false,

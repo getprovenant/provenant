@@ -49,7 +49,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/HTTP::Tiny",
+        "purl": "pkg:cpan/HTTP-Tiny",
         "extracted_requirement": "0.070",
         "scope": "runtime",
         "is_runtime": true,
@@ -57,7 +57,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/JSON::PP",
+        "purl": "pkg:cpan/JSON-PP",
         "extracted_requirement": "4.04",
         "scope": "runtime",
         "is_runtime": true,
@@ -65,7 +65,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/ExtUtils::MakeMaker",
+        "purl": "pkg:cpan/ExtUtils-MakeMaker",
         "extracted_requirement": "7.24",
         "scope": "build",
         "is_runtime": false,
@@ -73,7 +73,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Module::Build",
+        "purl": "pkg:cpan/Module-Build",
         "extracted_requirement": "0.4224",
         "scope": "build",
         "is_runtime": false,
@@ -81,7 +81,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Test::More",
+        "purl": "pkg:cpan/Test-More",
         "extracted_requirement": "0.98",
         "scope": "test",
         "is_runtime": false,
@@ -89,7 +89,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Test::Exception",
+        "purl": "pkg:cpan/Test-Exception",
         "extracted_requirement": "0.43",
         "scope": "test",
         "is_runtime": false,
@@ -97,7 +97,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/ExtUtils::MakeMaker",
+        "purl": "pkg:cpan/ExtUtils-MakeMaker",
         "extracted_requirement": "0",
         "scope": "configure",
         "is_runtime": false,

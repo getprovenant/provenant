@@ -42,7 +42,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/DBD::SQLite",
+        "purl": "pkg:cpan/DBD-SQLite",
         "extracted_requirement": "1.66",
         "scope": "runtime",
         "is_runtime": true,
@@ -50,7 +50,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/ExtUtils::MakeMaker",
+        "purl": "pkg:cpan/ExtUtils-MakeMaker",
         "extracted_requirement": "6.64",
         "scope": "build",
         "is_runtime": false,
@@ -58,7 +58,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Test::Simple",
+        "purl": "pkg:cpan/Test-Simple",
         "extracted_requirement": "0.96",
         "scope": "build",
         "is_runtime": false,
@@ -66,7 +66,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Test::More",
+        "purl": "pkg:cpan/Test-More",
         "extracted_requirement": "0.88",
         "scope": "test",
         "is_runtime": false,
@@ -74,7 +74,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Test::Deep",
+        "purl": "pkg:cpan/Test-Deep",
         "extracted_requirement": "1.130",
         "scope": "test",
         "is_runtime": false,
@@ -82,7 +82,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/ExtUtils::MakeMaker",
+        "purl": "pkg:cpan/ExtUtils-MakeMaker",
         "extracted_requirement": "0",
         "scope": "configure",
         "is_runtime": false,
