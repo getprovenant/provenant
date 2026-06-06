@@ -32,7 +32,7 @@ mod tests {
             .find(|package| package.name.as_deref() == Some("mock_name"))
             .expect("dart package should be assembled");
 
-        assert_eq!(package.package_type, Some(PackageType::Dart));
+        assert_eq!(package.package_type, Some(PackageType::Pub));
         assert_eq!(package.version.as_deref(), Some("1.1.0"));
         assert_eq!(package.purl.as_deref(), Some("pkg:pub/mock_name@1.1.0"));
         assert_dependency_present(&result.dependencies, "pkg:pub/yaml", "pubspec.yaml");

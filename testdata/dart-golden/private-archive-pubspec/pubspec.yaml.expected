@@ -1,6 +1,6 @@
 [
   {
-    "type": "dart",
+    "type": "pub",
     "namespace": null,
     "name": "private_archive_pkg",
     "version": "0.1.0",

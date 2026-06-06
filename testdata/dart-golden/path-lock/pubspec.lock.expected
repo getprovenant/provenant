@@ -1,6 +1,6 @@
 [
   {
-    "type": "pubspec",
+    "type": "pub",
     "primary_language": "dart",
     "parties": [],
     "dependencies": [
@@ -22,7 +22,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "analyzer",
           "version": "1.7.1",
           "primary_language": "dart",
@@ -65,7 +65,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "args",
           "version": "2.1.1",
           "primary_language": "dart",
@@ -98,7 +98,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "http",
           "version": "0.13.3",
           "primary_language": "dart",
@@ -141,7 +141,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "path",
           "version": "0.0.0",
           "primary_language": "dart",

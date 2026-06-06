@@ -1,6 +1,6 @@
 [
   {
-    "type": "pubspec",
+    "type": "pub",
     "primary_language": "dart",
     "parties": [],
     "dependencies": [
@@ -31,7 +31,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "async",
           "version": "2.6.1",
           "primary_language": "dart",
@@ -64,7 +64,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "cupertino_icons",
           "version": "1.0.3",
           "primary_language": "dart",
@@ -97,7 +97,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "equatable",
           "version": "2.0.3",
           "primary_language": "dart",
@@ -130,7 +130,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "fake_async",
           "version": "1.2.0",
           "primary_language": "dart",
@@ -163,7 +163,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_auth",
           "version": "2.0.0",
           "primary_language": "dart",

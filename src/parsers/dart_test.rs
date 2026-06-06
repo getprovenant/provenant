@@ -57,7 +57,7 @@ dependency_overrides:
         let (_temp_dir, pubspec_path) = create_temp_file("pubspec.yaml", content);
         let package_data = PubspecYamlParser::extract_first_package(&pubspec_path);
 
-        assert_eq!(package_data.package_type, Some(PackageType::Dart));
+        assert_eq!(package_data.package_type, Some(PackageType::Pub));
         assert_eq!(package_data.name.as_deref(), Some("example"));
         assert_eq!(package_data.version.as_deref(), Some("1.2.3"));
         assert_eq!(package_data.description.as_deref(), Some("Example package"));
@@ -301,7 +301,7 @@ packages:
         let (_temp_dir, pubspec_path) = create_temp_file("pubspec.yaml", content);
         let package_data = PubspecYamlParser::extract_first_package(&pubspec_path);
 
-        assert_eq!(package_data.package_type, Some(PackageType::Dart));
+        assert_eq!(package_data.package_type, Some(PackageType::Pub));
         assert_eq!(
             package_data.datasource_id,
             Some(crate::models::DatasourceId::PubspecYaml)
@@ -334,7 +334,7 @@ issue_tracker: https://example.com/bugs
         let (_temp_dir, lock_path) = create_temp_file("pubspec.lock", content);
         let package_data = PubspecLockParser::extract_first_package(&lock_path);
 
-        assert_eq!(package_data.package_type, Some(PackageType::Pubspec));
+        assert_eq!(package_data.package_type, Some(PackageType::Pub));
         assert_eq!(
             package_data.datasource_id,
             Some(crate::models::DatasourceId::PubspecLock)
