@@ -42,7 +42,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:pubspec/http",
+        "purl": "pkg:pub/http",
         "extracted_requirement": "^1.0.0",
         "scope": "dependencies",
         "is_runtime": true,
@@ -57,6 +57,6 @@
     "repository_download_url": "https://pub.dartlang.org/packages/private_archive_pkg/versions/0.1.0.tar.gz",
     "api_data_url": "https://pub.dev/api/packages/private_archive_pkg/versions/0.1.0",
     "datasource_id": "pubspec_yaml",
-    "purl": "pkg:dart/private_archive_pkg@0.1.0"
+    "purl": "pkg:pub/private_archive_pkg@0.1.0"
   }
 ]

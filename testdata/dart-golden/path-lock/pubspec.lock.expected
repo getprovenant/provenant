@@ -5,7 +5,7 @@
     "parties": [],
     "dependencies": [
       {
-        "purl": "pkg:pubspec/dart",
+        "purl": "pkg:pub/dart",
         "extracted_requirement": ">=2.12.0 <3.0.0",
         "scope": "sdk",
         "is_runtime": true,
@@ -14,7 +14,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:pubspec/analyzer@1.7.1",
+        "purl": "pkg:pub/analyzer@1.7.1",
         "extracted_requirement": "1.7.1",
         "scope": "direct main",
         "is_runtime": true,
@@ -37,7 +37,7 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:pubspec/args@2.1.1",
+              "purl": "pkg:pub/args@2.1.1",
               "extracted_requirement": "2.1.1",
               "scope": "dependencies",
               "is_runtime": true,
@@ -57,7 +57,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/args@2.1.1",
+        "purl": "pkg:pub/args@2.1.1",
         "extracted_requirement": "2.1.1",
         "scope": "transitive",
         "is_runtime": true,
@@ -90,7 +90,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/http@0.13.3",
+        "purl": "pkg:pub/http@0.13.3",
         "extracted_requirement": "0.13.3",
         "scope": "direct dev",
         "is_runtime": false,
@@ -113,7 +113,7 @@
           },
           "dependencies": [
             {
-              "purl": "pkg:pubspec/path@1.8.0",
+              "purl": "pkg:pub/path@1.8.0",
               "extracted_requirement": "1.8.0",
               "scope": "dependencies",
               "is_runtime": true,
@@ -133,7 +133,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/path@0.0.0",
+        "purl": "pkg:pub/path@0.0.0",
         "extracted_requirement": "0.0.0",
         "scope": "transitive",
         "is_runtime": false,

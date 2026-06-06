@@ -73,7 +73,7 @@ dependency_overrides:
             package_data.vcs_url.as_deref(),
             Some("https://github.com/example/example")
         );
-        assert_eq!(package_data.purl.as_deref(), Some("pkg:dart/example@1.2.3"));
+        assert_eq!(package_data.purl.as_deref(), Some("pkg:pub/example@1.2.3"));
         assert_eq!(package_data.dependencies.len(), 3);
 
         let http_dep = find_dependency(&package_data.dependencies, "http")
@@ -158,7 +158,7 @@ dev_dependencies:
         assert_eq!(flutter_riverpod.is_direct, Some(true));
         assert_eq!(
             flutter_riverpod.purl.as_deref(),
-            Some("pkg:pubspec/flutter_riverpod")
+            Some("pkg:pub/flutter_riverpod")
         );
 
         let hooks_riverpod = find_dependency(&package_data.dependencies, "hooks_riverpod")
@@ -180,7 +180,7 @@ dev_dependencies:
         assert_eq!(riverpod_generator.is_direct, Some(true));
         assert_eq!(
             riverpod_generator.purl.as_deref(),
-            Some("pkg:pubspec/riverpod_generator")
+            Some("pkg:pub/riverpod_generator")
         );
     }
 

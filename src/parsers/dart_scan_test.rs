@@ -34,13 +34,9 @@ mod tests {
 
         assert_eq!(package.package_type, Some(PackageType::Dart));
         assert_eq!(package.version.as_deref(), Some("1.1.0"));
-        assert_eq!(package.purl.as_deref(), Some("pkg:dart/mock_name@1.1.0"));
-        assert_dependency_present(&result.dependencies, "pkg:pubspec/yaml", "pubspec.yaml");
-        assert_dependency_present(
-            &result.dependencies,
-            "pkg:pubspec/async@2.6.1",
-            "pubspec.lock",
-        );
+        assert_eq!(package.purl.as_deref(), Some("pkg:pub/mock_name@1.1.0"));
+        assert_dependency_present(&result.dependencies, "pkg:pub/yaml", "pubspec.yaml");
+        assert_dependency_present(&result.dependencies, "pkg:pub/async@2.6.1", "pubspec.lock");
         assert_file_links_to_package(
             &files,
             "/pubspec.yaml",
