@@ -26,7 +26,7 @@ fn test_extract_packages_basic() {
 
     assert_eq!(packages.len(), 1);
     let pkg = &packages[0];
-    assert_eq!(pkg.package_type, Some(PackageType::Bitbake));
+    assert_eq!(pkg.package_type, Some(PackageType::Yocto));
     assert_eq!(pkg.datasource_id, Some(DatasourceId::BitbakeRecipe));
     assert_eq!(pkg.name.as_deref(), Some("example"));
     assert_eq!(pkg.version.as_deref(), Some("1.2.3"));
@@ -46,7 +46,7 @@ fn test_extract_packages_basic() {
         pkg.download_url.as_deref(),
         Some("https://example.com/releases/example-${PV}.tar.gz")
     );
-    assert_eq!(pkg.purl.as_deref(), Some("pkg:bitbake/example@1.2.3"));
+    assert_eq!(pkg.purl.as_deref(), Some("pkg:yocto/example@1.2.3"));
     assert_eq!(pkg.extracted_license_statement.as_deref(), Some("MIT"));
 
     let extra = pkg.extra_data.as_ref().unwrap();
@@ -81,8 +81,8 @@ fn test_extract_packages_basic_file_references_and_dependencies() {
         .filter(|d| d.scope.as_deref() == Some("build"))
         .collect();
     assert_eq!(build_deps.len(), 2);
-    assert_eq!(build_deps[0].purl.as_deref(), Some("pkg:bitbake/zlib"));
-    assert_eq!(build_deps[1].purl.as_deref(), Some("pkg:bitbake/openssl"));
+    assert_eq!(build_deps[0].purl.as_deref(), Some("pkg:yocto/zlib"));
+    assert_eq!(build_deps[1].purl.as_deref(), Some("pkg:yocto/openssl"));
     assert_eq!(build_deps[0].is_runtime, Some(false));
     assert_eq!(build_deps[0].is_direct, Some(true));
 
@@ -92,7 +92,7 @@ fn test_extract_packages_basic_file_references_and_dependencies() {
         .filter(|d| d.scope.as_deref() == Some("runtime"))
         .collect();
     assert_eq!(runtime_deps.len(), 2);
-    assert_eq!(runtime_deps[0].purl.as_deref(), Some("pkg:bitbake/libz"));
+    assert_eq!(runtime_deps[0].purl.as_deref(), Some("pkg:yocto/libz"));
     assert_eq!(runtime_deps[0].is_runtime, Some(true));
 }
 
@@ -105,7 +105,7 @@ fn test_extract_packages_no_version_in_filename() {
     let pkg = &packages[0];
     assert_eq!(pkg.name.as_deref(), Some("simple"));
     assert_eq!(pkg.version, None);
-    assert_eq!(pkg.purl.as_deref(), Some("pkg:bitbake/simple"));
+    assert_eq!(pkg.purl.as_deref(), Some("pkg:yocto/simple"));
     assert_eq!(
         pkg.extracted_license_statement.as_deref(),
         Some("GPL-2.0-only")
@@ -196,10 +196,7 @@ fn test_extract_packages_supports_override_style_operators() {
         .iter()
         .filter_map(|dep| dep.purl.as_deref())
         .collect();
-    assert_eq!(
-        build_purls,
-        vec!["pkg:bitbake/libxml2", "pkg:bitbake/openssl"]
-    );
+    assert_eq!(build_purls, vec!["pkg:yocto/libxml2", "pkg:yocto/openssl"]);
 
     let runtime_deps: Vec<_> = pkg
         .dependencies
@@ -207,7 +204,7 @@ fn test_extract_packages_supports_override_style_operators() {
         .filter(|d| d.scope.as_deref() == Some("runtime"))
         .collect();
     assert_eq!(runtime_deps.len(), 1);
-    assert_eq!(runtime_deps[0].purl.as_deref(), Some("pkg:bitbake/libfoo"));
+    assert_eq!(runtime_deps[0].purl.as_deref(), Some("pkg:yocto/libfoo"));
 }
 
 #[test]
@@ -224,7 +221,7 @@ fn test_extract_packages_supports_legacy_rdepends_syntax() {
         .filter(|d| d.scope.as_deref() == Some("runtime"))
         .collect();
     assert_eq!(runtime_deps.len(), 2);
-    assert_eq!(runtime_deps[0].purl.as_deref(), Some("pkg:bitbake/libfoo"));
+    assert_eq!(runtime_deps[0].purl.as_deref(), Some("pkg:yocto/libfoo"));
 }
 
 #[test]
@@ -259,7 +256,7 @@ fn test_extract_packages_nonexistent_file() {
     let packages = BitbakeRecipeParser::extract_packages(path);
 
     assert_eq!(packages.len(), 1);
-    assert_eq!(packages[0].package_type, Some(PackageType::Bitbake));
+    assert_eq!(packages[0].package_type, Some(PackageType::Yocto));
     assert_eq!(packages[0].datasource_id, Some(DatasourceId::BitbakeRecipe));
 }
 
@@ -272,10 +269,7 @@ fn test_variable_references_in_deps_are_skipped() {
     let packages = BitbakeRecipeParser::extract_packages(&path);
     let pkg = &packages[0];
     assert_eq!(pkg.dependencies.len(), 1);
-    assert_eq!(
-        pkg.dependencies[0].purl.as_deref(),
-        Some("pkg:bitbake/zlib")
-    );
+    assert_eq!(pkg.dependencies[0].purl.as_deref(), Some("pkg:yocto/zlib"));
 }
 
 #[test]
@@ -434,7 +428,7 @@ fn test_dependency_parsing_skips_inline_python_expression_fragments() {
 
     assert_eq!(
         runtime_purls,
-        vec!["pkg:bitbake/ifuse", "pkg:bitbake/simple-mtpfs"]
+        vec!["pkg:yocto/ifuse", "pkg:yocto/simple-mtpfs"]
     );
 }
 

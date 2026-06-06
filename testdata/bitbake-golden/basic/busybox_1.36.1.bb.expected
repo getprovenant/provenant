@@ -1,6 +1,6 @@
 [
   {
-    "type": "bitbake",
+    "type": "yocto",
     "namespace": null,
     "name": "busybox",
     "version": "1.36.1",
@@ -97,7 +97,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:bitbake/virtual%2Flibc",
+        "purl": "pkg:yocto/virtual%2Flibc",
         "extracted_requirement": null,
         "scope": "build",
         "is_runtime": false,
@@ -108,7 +108,7 @@
         "extra_data": null
       },
       {
-        "purl": "pkg:bitbake/update-alternatives",
+        "purl": "pkg:yocto/update-alternatives",
         "extracted_requirement": null,
         "scope": "runtime",
         "is_runtime": true,
@@ -123,6 +123,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "bitbake_recipe",
-    "purl": "pkg:bitbake/busybox@1.36.1"
+    "purl": "pkg:yocto/busybox@1.36.1"
   }
 ]
