@@ -159,7 +159,7 @@ fn infer_vcs_url(metadata: &PackageMetadata, source_urls: &[String]) -> Option<S
 
 fn build_rpm_qualifiers(
     architecture: Option<&str>,
-    is_source: bool,
+    epoch: Option<&str>,
 ) -> Option<std::collections::HashMap<String, String>> {
     let mut qualifiers = std::collections::HashMap::new();
 
@@ -167,8 +167,8 @@ fn build_rpm_qualifiers(
         qualifiers.insert("arch".to_string(), arch.to_string());
     }
 
-    if is_source {
-        qualifiers.insert("source".to_string(), "true".to_string());
+    if let Some(epoch) = epoch.filter(|epoch| !epoch.is_empty()) {
+        qualifiers.insert("epoch".to_string(), epoch.to_string());
     }
 
     (!qualifiers.is_empty()).then_some(qualifiers)
@@ -223,6 +223,7 @@ struct ParsedRpmHeader<'a> {
 #[derive(Default)]
 struct SalvagedRpmFields {
     name: Option<String>,
+    epoch: Option<u32>,
     version: Option<String>,
     release: Option<String>,
     summary: Option<String>,
@@ -340,12 +341,25 @@ fn read_entry_first_string(header: &ParsedRpmHeader<'_>, tag: u32) -> Option<Str
     }
 }
 
+fn read_entry_first_u32(header: &ParsedRpmHeader<'_>, tag: u32) -> Option<u32> {
+    let entry = header.entries.iter().find(|entry| entry.tag == tag)?;
+    // RPM INT32 entries have data_type 4.
+    if entry.data_type != 4 {
+        return None;
+    }
+    let bytes = header
+        .store
+        .get(entry.offset..entry.offset.checked_add(4)?)?;
+    Some(u32::from_be_bytes(bytes.try_into().ok()?))
+}
+
 fn salvage_rpm_header_fields(path: &Path) -> Option<SalvagedRpmFields> {
     let bytes = read_rpm_header_bytes(path).ok()?;
     let header = parse_main_rpm_header(&bytes)?;
 
     Some(SalvagedRpmFields {
         name: read_entry_first_string(&header, IndexTag::RPMTAG_NAME as u32).map(truncate_field),
+        epoch: read_entry_first_u32(&header, IndexTag::RPMTAG_EPOCH as u32),
         version: read_entry_first_string(&header, IndexTag::RPMTAG_VERSION as u32)
             .map(truncate_field),
         release: read_entry_first_string(&header, IndexTag::RPMTAG_RELEASE as u32)
@@ -394,7 +408,13 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
     .map(truncate_field);
     let is_source =
         path.to_string_lossy().ends_with(".src.rpm") || path.to_string_lossy().ends_with(".srpm");
-    let qualifiers = build_rpm_qualifiers(fields.arch.as_deref(), is_source);
+    // The epoch is emitted as an `?epoch=` qualifier, consistent with the
+    // crate-parsed and database paths.
+    let epoch = fields
+        .epoch
+        .filter(|epoch| *epoch > 0)
+        .map(|e| e.to_string());
+    let qualifiers = build_rpm_qualifiers(fields.arch.as_deref(), epoch.as_deref());
 
     let mut parties = Vec::new();
     if let Some(vendor) = fields.vendor.clone() {
@@ -458,6 +478,11 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
             .unwrap_or_else(empty_declared_license_data);
 
     let mut extra_data = std::collections::HashMap::new();
+    // `source` is not a spec-defined rpm qualifier, so the source-vs-binary
+    // signal is preserved here rather than on the PURL.
+    if is_source {
+        extra_data.insert("is_source".to_string(), serde_json::Value::Bool(true));
+    }
     if let Some(distribution) = fields.distribution.clone() {
         extra_data.insert(
             "distribution".to_string(),
@@ -490,7 +515,7 @@ fn build_salvaged_rpm_package(path: &Path, fields: SalvagedRpmFields) -> Option<
             version.as_deref(),
             namespace.as_deref(),
             fields.arch.as_deref(),
-            is_source,
+            epoch.as_deref(),
         )
         .map(truncate_field),
         ..Default::default()
@@ -572,6 +597,13 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
         .ok()
         .map(|s| truncate_field(s.to_string()));
     let version = build_evr_version(metadata).map(truncate_field);
+    // The rpm epoch is emitted as an `?epoch=` qualifier, not folded into the
+    // version, matching the rpm database parser.
+    let epoch = metadata
+        .get_epoch()
+        .ok()
+        .filter(|epoch| *epoch > 0)
+        .map(|epoch| epoch.to_string());
     let description = metadata
         .get_description()
         .ok()
@@ -681,7 +713,7 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
 
     let dependencies = extract_rpm_dependencies(metadata, namespace.as_deref());
 
-    let qualifiers = build_rpm_qualifiers(architecture.as_deref(), is_source);
+    let qualifiers = build_rpm_qualifiers(architecture.as_deref(), epoch.as_deref());
 
     let mut keywords = Vec::new();
     if let Ok(group) = metadata.get_group()
@@ -691,6 +723,10 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
     }
 
     let mut extra_data = std::collections::HashMap::new();
+    // `source` is not a spec-defined rpm qualifier; preserve the signal here.
+    if is_source {
+        extra_data.insert("is_source".to_string(), serde_json::Value::Bool(true));
+    }
     if let Some(distribution) = distribution.clone() {
         extra_data.insert(
             "distribution".to_string(),
@@ -781,7 +817,7 @@ fn parse_rpm_package(metadata: &PackageMetadata, path: &Path) -> PackageData {
                 version.as_deref(),
                 namespace.as_deref(),
                 architecture.as_deref(),
-                is_source,
+                epoch.as_deref(),
             )
             .map(truncate_field)
         }),
@@ -881,7 +917,7 @@ fn extract_rpm_dependencies(
                 },
                 namespace,
                 None,
-                false,
+                None,
             )
             .map(truncate_field);
 
@@ -1003,7 +1039,7 @@ fn build_rpm_purl(
     version: Option<&str>,
     namespace: Option<&str>,
     architecture: Option<&str>,
-    is_source: bool,
+    epoch: Option<&str>,
 ) -> Option<String> {
     use packageurl::PackageUrl;
 
@@ -1021,8 +1057,9 @@ fn build_rpm_purl(
         purl.add_qualifier("arch", arch).ok()?;
     }
 
-    if is_source {
-        purl.add_qualifier("source", "true").ok()?;
+    // The rpm epoch is a qualifier, not part of the version.
+    if let Some(epoch) = epoch.filter(|epoch| !epoch.is_empty()) {
+        purl.add_qualifier("epoch", epoch).ok()?;
     }
 
     Some(purl.to_string())
@@ -1123,7 +1160,7 @@ mod tests {
             Some("4.4.19-1.el7"),
             Some("fedora"),
             Some("x86_64"),
-            false,
+            None,
         );
         assert!(purl.is_some());
         let purl_str = purl.unwrap();
@@ -1165,7 +1202,7 @@ mod tests {
 
     #[test]
     fn test_build_rpm_purl_no_namespace() {
-        let purl = build_rpm_purl("package", Some("1.0-1"), None, Some("x86_64"), false);
+        let purl = build_rpm_purl("package", Some("1.0-1"), None, Some("x86_64"), None);
         assert!(purl.is_some());
         let purl_str = purl.unwrap();
         assert!(purl_str.starts_with("pkg:rpm/package@"));
@@ -1245,15 +1282,17 @@ mod tests {
                 .iter()
                 .any(|party| party.role.as_deref() == Some("packager"))
         );
-        assert!(
-            pkg.qualifiers
+        assert_eq!(
+            pkg.extra_data
                 .as_ref()
-                .is_some_and(|q| q.get("source") == Some(&"true".to_string()))
+                .and_then(|e| e.get("is_source"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
         );
     }
 
     #[test]
-    fn test_source_rpm_sets_source_qualifier() {
+    fn test_source_rpm_sets_is_source_extra_data() {
         let test_file = PathBuf::from("testdata/rpm/setup-2.5.49-b1.src.rpm");
         if !test_file.exists() {
             return;
@@ -1261,15 +1300,19 @@ mod tests {
 
         let pkg = RpmParser::extract_first_package(&test_file);
 
-        assert!(
-            pkg.qualifiers
+        // `source` is not a spec rpm qualifier; the signal lives in extra_data
+        // and must not appear on the PURL.
+        assert_eq!(
+            pkg.extra_data
                 .as_ref()
-                .is_some_and(|q| q.get("source") == Some(&"true".to_string()))
+                .and_then(|e| e.get("is_source"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
         );
         assert!(
             pkg.purl
                 .as_ref()
-                .is_some_and(|purl| purl.contains("source=true"))
+                .is_some_and(|purl| !purl.contains("source=true"))
         );
     }
 
