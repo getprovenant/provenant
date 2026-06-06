@@ -238,7 +238,10 @@ fn parse_dependencies(sections: &HashMap<String, HashMap<String, String>>) -> Ve
         sorted_fields.sort_by_key(|(left_name, _)| *left_name);
 
         for (module_name, version_req) in sorted_fields.iter().take(MAX_ITERATION_COUNT) {
-            let purl = truncate_field(format!("pkg:cpan/{}", module_name));
+            let purl = truncate_field(format!(
+                "pkg:cpan/{}",
+                crate::parsers::cpan::cpan_distribution_name(module_name)
+            ));
             let extracted_requirement = if version_req.as_str() == "0" || version_req.is_empty() {
                 None
             } else {

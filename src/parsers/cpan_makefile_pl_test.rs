@@ -104,7 +104,7 @@ WriteMakefile(
         let file_spec_dep = pkg
             .dependencies
             .iter()
-            .find(|d| d.purl.as_deref() == Some("pkg:cpan/File::Spec"));
+            .find(|d| d.purl.as_deref() == Some("pkg:cpan/File-Spec"));
         assert!(file_spec_dep.is_some());
         let file_spec = file_spec_dep.unwrap();
         assert_eq!(file_spec.extracted_requirement.as_deref(), Some("3.40"));
@@ -115,7 +115,7 @@ WriteMakefile(
         let test_more_dep = pkg
             .dependencies
             .iter()
-            .find(|d| d.purl.as_deref() == Some("pkg:cpan/Test::More"));
+            .find(|d| d.purl.as_deref() == Some("pkg:cpan/Test-More"));
         assert!(test_more_dep.is_some());
         let test_more = test_more_dep.unwrap();
         assert_eq!(test_more.extracted_requirement.as_deref(), Some("0.88"));
@@ -423,7 +423,7 @@ WriteMakefile(
         let test_more = pkg
             .dependencies
             .iter()
-            .find(|d| d.purl.as_deref() == Some("pkg:cpan/Test::More"));
+            .find(|d| d.purl.as_deref() == Some("pkg:cpan/Test-More"));
         assert!(test_more.is_some());
         let test_more = test_more.unwrap();
         assert_eq!(test_more.scope.as_deref(), Some("test"));
@@ -448,7 +448,7 @@ WriteMakefile(
         assert_eq!(pkg.dependencies.len(), 1);
 
         let dep = &pkg.dependencies[0];
-        assert_eq!(dep.purl.as_deref(), Some("pkg:cpan/ExtUtils::MakeMaker"));
+        assert_eq!(dep.purl.as_deref(), Some("pkg:cpan/ExtUtils-MakeMaker"));
         assert_eq!(dep.scope.as_deref(), Some("configure"));
         assert_eq!(dep.is_runtime, Some(false));
         assert_eq!(dep.extracted_requirement.as_deref(), Some("6.64"));
@@ -568,7 +568,7 @@ WriteMakefile(
         assert_eq!(pkg.dependencies.len(), 2);
         assert_eq!(
             pkg.dependencies[0].purl.as_deref(),
-            Some("pkg:cpan/Test::More")
+            Some("pkg:cpan/Test-More")
         );
         assert_eq!(pkg.dependencies[1].purl.as_deref(), Some("pkg:cpan/YAML"));
     }

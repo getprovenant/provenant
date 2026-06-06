@@ -42,7 +42,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/File::Spec",
+        "purl": "pkg:cpan/File-Spec",
         "extracted_requirement": "3.40",
         "scope": "runtime",
         "is_runtime": true,
@@ -50,7 +50,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:cpan/Test::More",
+        "purl": "pkg:cpan/Test-More",
         "extracted_requirement": "0.88",
         "scope": "build",
         "is_runtime": false,

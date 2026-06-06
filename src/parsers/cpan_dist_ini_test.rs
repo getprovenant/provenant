@@ -108,7 +108,7 @@ Test::Exception = 0
 
         let test_dep = deps
             .iter()
-            .find(|d| d.purl.as_deref() == Some("pkg:cpan/Test::More"));
+            .find(|d| d.purl.as_deref() == Some("pkg:cpan/Test-More"));
         assert!(test_dep.is_some());
         let test = test_dep.unwrap();
         assert_eq!(test.extracted_requirement.as_deref(), Some("0.88"));
@@ -135,7 +135,7 @@ Moose = 2.2200
         let configure_dep = pkg
             .dependencies
             .iter()
-            .find(|dep| dep.purl.as_deref() == Some("pkg:cpan/ExtUtils::MakeMaker"))
+            .find(|dep| dep.purl.as_deref() == Some("pkg:cpan/ExtUtils-MakeMaker"))
             .expect("configure dependency missing");
         assert_eq!(configure_dep.scope.as_deref(), Some("configure"));
         assert_eq!(configure_dep.extracted_requirement.as_deref(), Some("7.70"));

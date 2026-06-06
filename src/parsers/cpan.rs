@@ -60,6 +60,18 @@ const FIELD_CONFIGURE_REQUIRES: &str = "configure_requires";
 ///
 /// Extracts complete metadata from META.json files including dependencies
 /// from all scopes (runtime, build, test, configure).
+/// Convert a Perl module name to its CPAN distribution-name form for the PURL.
+///
+/// The cpan purl-spec name is the distribution (e.g. `DBD-SQLite`), not the
+/// module (`DBD::SQLite`), so `::` separators become `-`. Note: for a module
+/// *dependency* the true distribution can differ from the dashed module name
+/// (it requires a registry lookup we can't do statically), so this is a
+/// best-effort approximation. The spec-required uppercase author namespace is
+/// not present in CPAN manifests and is therefore omitted.
+pub(crate) fn cpan_distribution_name(module: &str) -> String {
+    module.replace("::", "-")
+}
+
 pub struct CpanMetaJsonParser;
 
 impl PackageParser for CpanMetaJsonParser {
@@ -710,7 +722,9 @@ fn extract_dependency_group(
                 return None;
             }
 
-            let purl = PackageUrl::new("cpan", name).ok().map(|p| p.to_string());
+            let purl = PackageUrl::new("cpan", cpan_distribution_name(name))
+                .ok()
+                .map(|p| p.to_string());
             let purl = purl.map(truncate_field);
 
             let extracted_requirement = match version {
@@ -749,7 +763,9 @@ fn extract_yaml_dependency_group(
                 return None;
             }
 
-            let purl = PackageUrl::new("cpan", name).ok().map(|p| p.to_string());
+            let purl = PackageUrl::new("cpan", cpan_distribution_name(name))
+                .ok()
+                .map(|p| p.to_string());
             let purl = purl.map(truncate_field);
 
             let extracted_requirement = match value {

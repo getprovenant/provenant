@@ -165,7 +165,7 @@ pub(crate) fn parse_makefile_pl_with_base(content: &str, base_dir: Option<&Path>
 
     // Build PURL: convert Foo::Bar to Foo-Bar for CPAN naming convention
     let purl = name.as_ref().and_then(|n| {
-        let purl_name = n.replace("::", "-");
+        let purl_name = crate::parsers::cpan::cpan_distribution_name(n);
         PackageUrl::new("cpan", &purl_name).ok().map(|mut p| {
             if let Some(v) = &version {
                 let _ = p.with_version(v).ok();
@@ -560,9 +560,12 @@ fn extract_deps_from_hash(hash_content: &str, scope: &str, is_runtime: bool) -> 
             Some(v) => Some(truncate_field(v.to_string())),
         };
 
-        let purl = PackageUrl::new("cpan", module_name)
-            .ok()
-            .map(|p| p.to_string());
+        let purl = PackageUrl::new(
+            "cpan",
+            crate::parsers::cpan::cpan_distribution_name(module_name),
+        )
+        .ok()
+        .map(|p| p.to_string());
 
         deps.push(Dependency {
             purl,
