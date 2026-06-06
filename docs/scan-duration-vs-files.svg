@@ -197,6 +197,9 @@ ScanCode: 65.75s</title></rect>
     <rect x="403.59" y="423.65" width="8" height="8" fill="#d97706" rx="1.5"><title>sous-chefs/mysql @ 6b7110b
 Files: 92
 ScanCode: 75.55s</title></rect>
+    <rect x="406.52" y="444.93" width="8" height="8" fill="#d97706" rx="1.5"><title>goharbor/harbor-helm @ 7233a81
+Files: 96
+ScanCode: 48.15s</title></rect>
     <rect x="407.94" y="420.39" width="8" height="8" fill="#d97706" rx="1.5"><title>libwww-perl/libwww-perl @ 7420d1b
 Files: 98
 ScanCode: 80.95s</title></rect>
@@ -850,6 +853,9 @@ Provenant: 8.84s</title></circle>
     <circle cx="407.59" cy="515.70" r="4.5" fill="#2563eb"><title>sous-chefs/mysql @ 6b7110b
 Files: 92
 Provenant: 11.72s</title></circle>
+    <circle cx="410.52" cy="544.58" r="4.5" fill="#2563eb"><title>goharbor/harbor-helm @ 7233a81
+Files: 96
+Provenant: 6.36s</title></circle>
     <circle cx="411.94" cy="518.95" r="4.5" fill="#2563eb"><title>libwww-perl/libwww-perl @ 7420d1b
 Files: 98
 Provenant: 10.94s</title></circle>
