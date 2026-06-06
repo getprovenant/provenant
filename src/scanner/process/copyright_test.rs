@@ -861,3 +861,87 @@ fn test_extract_copyright_information_ignores_pnpm_changelog_markdown_link_on_la
 
     assert!(file.authors.is_empty(), "authors: {:?}", file.authors);
 }
+
+// A Jupyter notebook's code cell must not produce a copyright/holder false
+// positive from the JSON string-array punctuation around source lines.
+#[test]
+fn test_extract_copyright_information_ipynb_code_cell_no_false_positive() {
+    let notebook = r##"{
+      "cells": [
+        {"cell_type":"code","source":["@show typeof(C)\n","C[1:10,:]\n","# C.year #[!,:year]"],
+         "outputs":[]}
+      ],
+      "nbformat": 4
+    }"##;
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("01. Data.ipynb"),
+        notebook,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("01. Data.ipynb".to_string())
+        .base_name("01. Data".to_string())
+        .extension(".ipynb".to_string())
+        .path("01. Data.ipynb".to_string())
+        .file_type(FileType::File)
+        .size(notebook.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(
+        file.copyrights.is_empty(),
+        "code cell should not yield a copyright: {:?}",
+        file.copyrights
+    );
+    assert!(
+        file.holders.is_empty(),
+        "code cell should not yield a holder: {:?}",
+        file.holders
+    );
+}
+
+// A genuine copyright notice that lives inside a notebook cell's output text must
+// be recovered (the raw JSON wrapping previously hid it from detection).
+#[test]
+fn test_extract_copyright_information_ipynb_detects_notice_in_output() {
+    let notebook = r#"{
+      "cells": [
+        {"cell_type":"code","source":"solve()",
+         "outputs":[{"output_type":"stream","name":"stdout",
+           "text":["\t(c) Brendan O'Donoghue, Stanford University, 2012\n"]}]}
+      ],
+      "nbformat": 4
+    }"#;
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(
+        &mut builder,
+        Path::new("09. Optimization.ipynb"),
+        notebook,
+        120.0,
+        false,
+    );
+
+    let file = builder
+        .name("09. Optimization.ipynb".to_string())
+        .base_name("09. Optimization".to_string())
+        .extension(".ipynb".to_string())
+        .path("09. Optimization.ipynb".to_string())
+        .file_type(FileType::File)
+        .size(notebook.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(
+        file.copyrights
+            .iter()
+            .any(|c| c.copyright.contains("Brendan O'Donoghue")),
+        "notice in output should be detected: {:?}",
+        file.copyrights
+    );
+}

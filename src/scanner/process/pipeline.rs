@@ -366,7 +366,9 @@ fn prepare_license_detection_text(
     classification: &FileInfoClassification,
     text_content: String,
 ) -> String {
-    let text_content = if crate::utils::sourcemap::is_sourcemap(path) {
+    let text_content = if crate::utils::sourcemap::is_sourcemap(path)
+        || crate::utils::notebook::is_notebook(path)
+    {
         crate::utils::sourcemap::detection_text(path, &text_content).into_owned()
     } else if should_remove_verbatim_escape_sequences(path, classification.is_source) {
         remove_verbatim_escape_sequences(&text_content)
@@ -539,6 +541,7 @@ fn cap_non_source_json_license_text<'a>(
 ) -> Cow<'a, str> {
     if classification.is_source
         || crate::utils::sourcemap::is_sourcemap(path)
+        || crate::utils::notebook::is_notebook(path)
         || is_npm_lockfile(path)
         || !is_json_like_text(classification, path)
         || (has_line_rich_json_prefix(text) && !looks_like_generated_scan_result_json(text))
