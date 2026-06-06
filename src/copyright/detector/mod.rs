@@ -138,6 +138,76 @@ pub fn detect_copyrights_from_text(
     detect_copyrights_from_text_with_deadline(content, None)
 }
 
+/// A ruler / separator line made entirely of repeated punctuation (`----`,
+/// `====`, `****`) with no alphanumeric content.
+fn is_ruler_line(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.chars().count() >= 3
+        && !trimmed.chars().any(|c| c.is_alphanumeric())
+        && trimmed
+            .chars()
+            .filter(|c| matches!(c, '-' | '=' | '_' | '*' | '~' | '#' | '+'))
+            .count()
+            >= 3
+}
+
+/// Whether a group's lines, detected on their own, yield a copyright that names
+/// a holder. Runs the full detector on the reconstructed raw text rather than a
+/// single extraction pass, so the verdict matches what the main loop produces (a
+/// holder-less year-only result — as a junk line gives — returns false).
+fn segment_yields_copyright_with_holder(segment: &[(usize, String)], raw_lines: &[&str]) -> bool {
+    let text = segment
+        .iter()
+        .filter_map(|(ln, _)| raw_lines.get(*ln - 1).copied())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if text.trim().is_empty() {
+        return false;
+    }
+    let (copyrights, holders, _) = detect_copyrights_from_text(&text);
+    !copyrights.is_empty() && !holders.is_empty()
+}
+
+/// Split a candidate group at ruler lines, but only where the lines before a
+/// ruler already form a copyright with a holder. This stops a complete notice
+/// from bleeding across a divider into the following line, while leaving a junk
+/// line (which yields only a bare year when isolated) merged with its neighbours.
+fn split_groups_at_rulers(
+    groups: Vec<Vec<(usize, String)>>,
+    raw_lines: &[&str],
+) -> Vec<Vec<(usize, String)>> {
+    // The grouping look-ahead blanks a ruler's text but keeps its entry, so
+    // match it by raw line number rather than the (empty) group text.
+    let is_ruler_at = |ln: usize| {
+        raw_lines
+            .get(ln - 1)
+            .is_some_and(|line| is_ruler_line(line))
+    };
+    let mut out: Vec<Vec<(usize, String)>> = Vec::with_capacity(groups.len());
+    for group in groups {
+        // Cut at every qualifying ruler, not just the first: a group may hold
+        // more than one copyright/divider pair. A ruler whose preceding segment
+        // is not a copyright-with-holder is left in place (the segment keeps
+        // scanning), so junk lines stay merged with their neighbours.
+        let mut segment_start = 0;
+        for i in 0..group.len() {
+            if i > segment_start
+                && is_ruler_at(group[i].0)
+                && segment_yields_copyright_with_holder(&group[segment_start..i], raw_lines)
+            {
+                out.push(group[segment_start..i].to_vec());
+                segment_start = i + 1;
+            }
+        }
+        if segment_start == 0 {
+            out.push(group);
+        } else if segment_start < group.len() {
+            out.push(group[segment_start..].to_vec());
+        }
+    }
+    out
+}
+
 pub fn detect_copyrights_from_text_with_deadline(
     content: &str,
     max_runtime: Option<Duration>,
@@ -172,6 +242,7 @@ pub fn detect_copyrights_from_text_with_deadline(
 
     let groups =
         collect_candidate_lines(raw_lines.iter().enumerate().map(|(i, line)| (i + 1, *line)));
+    let groups = split_groups_at_rulers(groups, &raw_lines);
 
     let mut seen = seen_text::SeenTextSets::from_existing(&copyrights, &holders, &authors);
 

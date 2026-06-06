@@ -337,3 +337,51 @@ fn test_drop_code_and_cc0_prose_false_positive_copyrights() {
         "copyrights: {copyrights:?}"
     );
 }
+
+// A copyright followed by a ruler line and unrelated text must not bleed across
+// the divider into that text (issue #973).
+#[test]
+fn test_copyright_does_not_bleed_across_ruler_line() {
+    let input = "\t(c) Brendan O'Donoghue, Stanford University, 2012\n----------------------------------\nLin-sys: sparse-indirect, nnz in A = 24\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["(c) Brendan O'Donoghue, Stanford University, 2012"],
+        "copyright should stop at the ruler"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Brendan O'Donoghue, Stanford University"],
+        "holder should not absorb the line after the ruler"
+    );
+}
+
+// Two copyright/ruler pairs in one group: both notices stay clean, neither
+// bleeds across its divider (issue #973, multi-ruler case).
+#[test]
+fn test_copyright_does_not_bleed_across_multiple_rulers() {
+    let input = "\t(c) Alice Example, Example Inc, 2010\n----------------------------------\nnoise line one\n----------------------------------\n\t(c) Bob Sample, Sample Corp, 2020\n----------------------------------\nnoise line two\n";
+    let (copyrights, _h, _a) = detect_copyrights_from_text(input);
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "(c) Alice Example, Example Inc, 2010"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "(c) Bob Sample, Sample Corp, 2020"),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        copyrights.iter().all(|c| !c.copyright.contains("noise")),
+        "no copyright should absorb a post-ruler line: {copyrights:?}"
+    );
+}
