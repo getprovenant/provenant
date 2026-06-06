@@ -75,7 +75,10 @@ const FIELD_SHA256: &str = "sha256";
 pub struct PubspecYamlParser;
 
 impl PackageParser for PubspecYamlParser {
-    const PACKAGE_TYPE: PackageType = PackageType::Dart;
+    // `pkg:dart`/`pkg:pubspec` are not registered purl-spec types; the
+    // registered type for Dart/Flutter packages is `pub`, used for both the
+    // manifest and the lockfile. The file format is captured by `DatasourceId`.
+    const PACKAGE_TYPE: PackageType = PackageType::Pub;
 
     fn metadata() -> Vec<ParserMetadata> {
         vec![ParserMetadata {
@@ -116,7 +119,7 @@ impl PackageParser for PubspecYamlParser {
 pub struct PubspecLockParser;
 
 impl PackageParser for PubspecLockParser {
-    const PACKAGE_TYPE: PackageType = PackageType::Pubspec;
+    const PACKAGE_TYPE: PackageType = PackageType::Pub;
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let yaml_content = match read_yaml_file(path) {
@@ -586,17 +589,12 @@ fn is_pubspec_version_pinned(version: &str) -> bool {
         .all(|character| character.is_ascii_digit() || character == '.')
 }
 
-/// The registered PURL type for Dart/Flutter packages, decoupled from the
-/// internal `PackageType` label (which is `dart`/`pubspec`). `pkg:dart` and
-/// `pkg:pubspec` are not registered purl-spec types; `pub` is.
-const PUB_PURL_TYPE: &str = "pub";
-
 fn build_purl(name: &str, version: Option<&str>) -> Option<String> {
-    build_purl_with_type(PUB_PURL_TYPE, name, version)
+    build_purl_with_type(PackageType::Pub.as_str(), name, version)
 }
 
 fn build_dependency_purl(name: &str, version: Option<&str>) -> Option<String> {
-    build_purl_with_type(PUB_PURL_TYPE, name, version)
+    build_purl_with_type(PackageType::Pub.as_str(), name, version)
 }
 
 fn build_purl_with_type(package_type: &str, name: &str, version: Option<&str>) -> Option<String> {

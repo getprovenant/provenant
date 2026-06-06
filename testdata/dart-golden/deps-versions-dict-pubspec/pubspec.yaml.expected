@@ -1,6 +1,6 @@
 [
   {
-    "type": "dart",
+    "type": "pub",
     "name": "foobar",
     "version": "1.0.0+1",
     "primary_language": "dart",

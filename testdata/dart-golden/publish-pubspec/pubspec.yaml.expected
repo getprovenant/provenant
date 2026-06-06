@@ -1,6 +1,6 @@
 [
   {
-    "type": "dart",
+    "type": "pub",
     "name": "mock_name",
     "version": "1.1.0",
     "primary_language": "dart",

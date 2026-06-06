@@ -1,6 +1,6 @@
 [
   {
-    "type": "pubspec",
+    "type": "pub",
     "primary_language": "dart",
     "parties": [],
     "dependencies": [
@@ -31,7 +31,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "async",
           "version": "2.6.1",
           "primary_language": "dart",
@@ -64,7 +64,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "boolean_selector",
           "version": "2.1.0",
           "primary_language": "dart",
@@ -97,7 +97,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "characters",
           "version": "1.1.0",
           "primary_language": "dart",
@@ -130,7 +130,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "charcode",
           "version": "1.2.0",
           "primary_language": "dart",
@@ -163,7 +163,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "clock",
           "version": "1.1.0",
           "primary_language": "dart",
@@ -196,7 +196,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "collection",
           "version": "1.15.0",
           "primary_language": "dart",
@@ -229,7 +229,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "cupertino_icons",
           "version": "1.0.3",
           "primary_language": "dart",
@@ -262,7 +262,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "equatable",
           "version": "2.0.3",
           "primary_language": "dart",
@@ -295,7 +295,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "fake_async",
           "version": "1.2.0",
           "primary_language": "dart",
@@ -328,7 +328,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_auth",
           "version": "2.0.0",
           "primary_language": "dart",
@@ -361,7 +361,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_auth_platform_interface",
           "version": "5.0.0",
           "primary_language": "dart",
@@ -394,7 +394,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_auth_web",
           "version": "2.0.0",
           "primary_language": "dart",
@@ -427,7 +427,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_core",
           "version": "1.3.0",
           "primary_language": "dart",
@@ -460,7 +460,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_core_platform_interface",
           "version": "4.0.1",
           "primary_language": "dart",
@@ -493,7 +493,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "firebase_core_web",
           "version": "1.1.0",
           "primary_language": "dart",
@@ -526,7 +526,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "fl_chart",
           "version": "0.36.2",
           "primary_language": "dart",
@@ -559,7 +559,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "flutter",
           "version": "0.0.0",
           "primary_language": "dart",
@@ -586,7 +586,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "flutter_svg",
           "version": "0.22.0",
           "primary_language": "dart",
@@ -619,7 +619,7 @@
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "flutter_test",
           "version": "0.0.0",
           "primary_language": "dart",
@@ -646,7 +646,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "flutter_web_plugins",
           "version": "0.0.0",
           "primary_language": "dart",
@@ -673,7 +673,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "http_parser",
           "version": "4.0.0",
           "primary_language": "dart",
@@ -706,7 +706,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "intl",
           "version": "0.17.0",
           "primary_language": "dart",
@@ -739,7 +739,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "js",
           "version": "0.6.3",
           "primary_language": "dart",
@@ -772,7 +772,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "matcher",
           "version": "0.12.10",
           "primary_language": "dart",
@@ -805,7 +805,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "meta",
           "version": "1.3.0",
           "primary_language": "dart",
@@ -838,7 +838,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "path",
           "version": "1.8.0",
           "primary_language": "dart",
@@ -871,7 +871,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "path_drawing",
           "version": "0.5.1",
           "primary_language": "dart",
@@ -904,7 +904,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "path_parsing",
           "version": "0.2.1",
           "primary_language": "dart",
@@ -937,7 +937,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "pedantic",
           "version": "1.11.1",
           "primary_language": "dart",
@@ -970,7 +970,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "petitparser",
           "version": "4.1.0",
           "primary_language": "dart",
@@ -1003,7 +1003,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "plugin_platform_interface",
           "version": "2.0.1",
           "primary_language": "dart",
@@ -1036,7 +1036,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "sky_engine",
           "version": "0.0.99",
           "primary_language": "dart",
@@ -1063,7 +1063,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "source_span",
           "version": "1.8.1",
           "primary_language": "dart",
@@ -1096,7 +1096,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "stack_trace",
           "version": "1.10.0",
           "primary_language": "dart",
@@ -1129,7 +1129,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "stream_channel",
           "version": "2.1.0",
           "primary_language": "dart",
@@ -1162,7 +1162,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "string_scanner",
           "version": "1.1.0",
           "primary_language": "dart",
@@ -1195,7 +1195,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "term_glyph",
           "version": "1.2.0",
           "primary_language": "dart",
@@ -1228,7 +1228,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "test_api",
           "version": "0.3.0",
           "primary_language": "dart",
@@ -1261,7 +1261,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "typed_data",
           "version": "1.3.0",
           "primary_language": "dart",
@@ -1294,7 +1294,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "vector_math",
           "version": "2.1.0",
           "primary_language": "dart",
@@ -1327,7 +1327,7 @@
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
-          "type": "pubspec",
+          "type": "pub",
           "name": "xml",
           "version": "5.1.2",
           "primary_language": "dart",

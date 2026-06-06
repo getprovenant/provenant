@@ -1,6 +1,6 @@
 [
   {
-    "type": "dart",
+    "type": "pub",
     "name": "painter",
     "version": "2.0.0",
     "primary_language": "dart",

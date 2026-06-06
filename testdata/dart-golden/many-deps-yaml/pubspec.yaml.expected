@@ -1,6 +1,6 @@
 [
   {
-    "type": "dart",
+    "type": "pub",
     "name": "built_collection",
     "version": "5.1.0",
     "primary_language": "dart",
