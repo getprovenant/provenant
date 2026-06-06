@@ -107,7 +107,8 @@ impl PackageParser for JuliaProjectTomlParser {
 
         let dependencies = extract_project_dependencies(&toml_content);
 
-        let purl = create_package_url(&name, &version);
+        let uuid = toml_content.get(FIELD_UUID).and_then(|v| v.as_str());
+        let purl = create_package_url(&name, &version, uuid);
 
         let repository_url = toml_content
             .get(FIELD_REPOSITORY)
@@ -218,31 +219,47 @@ fn read_julia_toml(path: &Path) -> Result<Value, String> {
     toml::from_str(&content).map_err(|e| format!("Failed to parse TOML: {}", e))
 }
 
-fn create_package_url(name: &Option<String>, version: &Option<String>) -> Option<String> {
-    name.as_ref().and_then(|name| {
-        let mut package_url = match PackageUrl::new(PackageType::Julia.as_str(), name) {
-            Ok(p) => p,
-            Err(e) => {
-                warn!(
-                    "Failed to create PackageUrl for julia package '{}': {}",
-                    name, e
-                );
-                return None;
-            }
-        };
+fn create_package_url(
+    name: &Option<String>,
+    version: &Option<String>,
+    uuid: Option<&str>,
+) -> Option<String> {
+    let name = name.as_ref()?;
+    // The julia purl-spec marks `uuid` as a required qualifier (the registry
+    // identity). Without it the PURL is spec-invalid, so omit it entirely
+    // rather than emit one missing the uuid.
+    let uuid = uuid?;
 
-        if let Some(v) = version
-            && let Err(e) = package_url.with_version(v)
-        {
+    let mut package_url = match PackageUrl::new(PackageType::Julia.as_str(), name) {
+        Ok(p) => p,
+        Err(e) => {
             warn!(
-                "Failed to set version '{}' for julia package '{}': {}",
-                v, name, e
+                "Failed to create PackageUrl for julia package '{}': {}",
+                name, e
             );
             return None;
         }
+    };
 
-        Some(truncate_field(package_url.to_string()))
-    })
+    if let Some(v) = version
+        && let Err(e) = package_url.with_version(v)
+    {
+        warn!(
+            "Failed to set version '{}' for julia package '{}': {}",
+            v, name, e
+        );
+        return None;
+    }
+
+    if let Err(e) = package_url.add_qualifier("uuid", uuid) {
+        warn!(
+            "Failed to set uuid '{}' for julia package '{}': {}",
+            uuid, name, e
+        );
+        return None;
+    }
+
+    Some(truncate_field(package_url.to_string()))
 }
 
 fn extract_parties(toml_content: &Value) -> Vec<Party> {
@@ -319,15 +336,8 @@ fn extract_project_dependencies(toml_content: &Value) -> Vec<Dependency> {
             .as_deref()
             .is_some_and(is_julia_version_pinned);
 
-        let purl = match PackageUrl::new(PackageType::Julia.as_str(), dep_name) {
-            Ok(p) => truncate_field(p.to_string()),
-            Err(e) => {
-                warn!(
-                    "Failed to create PackageUrl for julia dependency '{}': {}",
-                    dep_name, e
-                );
-                continue;
-            }
+        let Some(purl) = create_package_url(&Some(dep_name.clone()), &None, uuid.as_deref()) else {
+            continue;
         };
 
         let mut extra_data_map = std::collections::HashMap::new();
@@ -390,7 +400,7 @@ fn extract_manifest_packages(toml_content: &Value) -> Vec<PackageData> {
                 .and_then(|v| v.as_str())
                 .map(|s| truncate_field(s.to_string()));
 
-            let purl = create_package_url(&name, &version);
+            let purl = create_package_url(&name, &version, uuid.as_deref());
 
             let tree_hash = dep_entry
                 .get("git-tree-sha1")

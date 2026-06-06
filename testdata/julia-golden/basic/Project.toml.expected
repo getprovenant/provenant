@@ -100,7 +100,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:julia/HTTP",
+        "purl": "pkg:julia/HTTP?uuid=cd3eb016-35fb-5094-929b-558a96fad6f3",
         "extracted_requirement": "^1.0",
         "scope": "dependencies",
         "is_runtime": true,
@@ -113,7 +113,7 @@
         }
       },
       {
-        "purl": "pkg:julia/JSON",
+        "purl": "pkg:julia/JSON?uuid=682c06a0-de6a-54ab-a142-c8b1cf79cde6",
         "extracted_requirement": "1.0.0",
         "scope": "dependencies",
         "is_runtime": true,
@@ -130,6 +130,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "julia_project_toml",
-    "purl": "pkg:julia/MyPackage@1.0.0"
+    "purl": "pkg:julia/MyPackage@1.0.0?uuid=12345678-1234-1234-1234-123456789abc"
   }
 ]
