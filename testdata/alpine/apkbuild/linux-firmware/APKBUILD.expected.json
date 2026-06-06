@@ -1,6 +1,6 @@
 [
   {
-    "type": "alpine",
+    "type": "apk",
     "name": "linux-firmware",
     "version": "20201218-r0",
     "description": "firmware files for linux",
@@ -31,7 +31,7 @@
     "extracted_license_statement": "custom:multiple",
     "dependencies": [
       {
-        "purl": "pkg:alpine/libarchive-tools",
+        "purl": "pkg:apk/alpine/libarchive-tools",
         "extracted_requirement": "libarchive-tools",
         "scope": "makedepends",
         "is_runtime": false,
@@ -71,6 +71,6 @@
       ]
     },
     "datasource_id": "alpine_apkbuild",
-    "purl": "pkg:alpine/linux-firmware@20201218-r0"
+    "purl": "pkg:apk/alpine/linux-firmware@20201218-r0"
   }
 ]

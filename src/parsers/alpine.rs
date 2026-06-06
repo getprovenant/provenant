@@ -49,7 +49,10 @@ use super::license_normalization::{
     empty_declared_license_data, normalize_declared_license_key,
 };
 
-const PACKAGE_TYPE: PackageType = PackageType::Alpine;
+const PACKAGE_TYPE: PackageType = PackageType::Apk;
+
+/// Required vendor namespace for the `apk` purl-spec type.
+const ALPINE_VENDOR_NAMESPACE: &str = "alpine";
 
 fn default_package_data(datasource_id: DatasourceId) -> PackageData {
     PackageData {
@@ -93,7 +96,7 @@ impl PackageParser for AlpineApkbuildParser {
         vec![ParserMetadata {
             description: "Alpine Linux APKBUILD recipe",
             file_patterns: &["**/APKBUILD"],
-            package_type: "alpine",
+            package_type: "apk",
             primary_language: "Shell",
             documentation_url: Some(
                 "https://github.com/alpinelinux/abuild/blob/master/APKBUILD.5.scd",
@@ -226,7 +229,7 @@ fn parse_alpine_package_paragraph(
         build_alpine_license_data(extracted_license_statement.as_deref());
 
     let source_packages = if let Some(origin) = get_first(headers, "o") {
-        vec![format!("pkg:alpine/{}", origin)]
+        vec![format!("pkg:apk/alpine/{}", origin)]
     } else {
         Vec::new()
     };
@@ -251,7 +254,7 @@ fn parse_alpine_package_paragraph(
             }
 
             dependencies.push(Dependency {
-                purl: Some(format!("pkg:alpine/{}", dep_str)),
+                purl: Some(format!("pkg:apk/alpine/{}", dep_str)),
                 extracted_requirement: None,
                 scope: Some("install".to_string()),
                 is_runtime: Some(true),
@@ -1099,7 +1102,10 @@ fn build_alpine_purl(
 ) -> Option<String> {
     use packageurl::PackageUrl;
 
+    // The registered purl-spec type is `apk` (the package format) with `alpine`
+    // as the required vendor namespace.
     let mut purl = PackageUrl::new(PACKAGE_TYPE.as_str(), name).ok()?;
+    purl.with_namespace(ALPINE_VENDOR_NAMESPACE).ok()?;
 
     if let Some(ver) = version {
         purl.with_version(ver).ok()?;
@@ -1122,7 +1128,7 @@ impl PackageParser for AlpineApkParser {
         vec![ParserMetadata {
             description: "Alpine Linux package (installed db and .apk archive)",
             file_patterns: &["**/lib/apk/db/installed", "**/*.apk"],
-            package_type: "alpine",
+            package_type: "apk",
             primary_language: "",
             documentation_url: Some(
                 "https://github.com/alpinelinux/apk-tools/blob/master/doc/apk-v2.5.scd",
@@ -1337,7 +1343,7 @@ fn parse_pkginfo(content: &str) -> PackageData {
             }
             let dep_name = dep_str.split_whitespace().next().unwrap_or(dep_str);
             dependencies.push(Dependency {
-                purl: Some(format!("pkg:alpine/{}", dep_name)),
+                purl: Some(format!("pkg:apk/alpine/{}", dep_name)),
                 extracted_requirement: Some(dep_str.to_string()),
                 scope: Some("runtime".to_string()),
                 is_runtime: Some(true),
@@ -1485,11 +1491,11 @@ D:scanelf so:libc.musl-x86_64.so.1
         let purl = build_alpine_purl("busybox", Some("1.31.1-r9"), Some("x86_64"));
         assert_eq!(
             purl,
-            Some("pkg:alpine/busybox@1.31.1-r9?arch=x86_64".to_string())
+            Some("pkg:apk/alpine/busybox@1.31.1-r9?arch=x86_64".to_string())
         );
 
         let purl_no_arch = build_alpine_purl("package", Some("1.0"), None);
-        assert_eq!(purl_no_arch, Some("pkg:alpine/package@1.0".to_string()));
+        assert_eq!(purl_no_arch, Some("pkg:apk/alpine/package@1.0".to_string()));
     }
 
     #[test]
@@ -1604,7 +1610,7 @@ A:x86_64
         let pkg = AlpineInstalledParser::extract_first_package(&path);
         assert_eq!(pkg.name, Some("busybox-ifupdown".to_string()));
         assert_eq!(pkg.source_packages.len(), 1);
-        assert_eq!(pkg.source_packages[0], "pkg:alpine/busybox");
+        assert_eq!(pkg.source_packages[0], "pkg:apk/alpine/busybox");
     }
 
     #[test]
@@ -1754,7 +1760,7 @@ p:so:libtest.so.1
             .iter()
             .find(|dep| dep.scope.as_deref() == Some("depends_dev"))
             .expect("depends_dev dependency missing");
-        assert_eq!(depends_dev.purl.as_deref(), Some("pkg:alpine/icu"));
+        assert_eq!(depends_dev.purl.as_deref(), Some("pkg:apk/alpine/icu"));
         assert_eq!(depends_dev.is_runtime, Some(false));
         assert_eq!(depends_dev.is_optional, Some(true));
 
@@ -1764,8 +1770,8 @@ p:so:libtest.so.1
             .filter(|dep| dep.scope.as_deref() == Some("checkdepends"))
             .filter_map(|dep| dep.purl.as_deref())
             .collect();
-        assert!(check_dep_names.contains(&"pkg:alpine/diffutils"));
-        assert!(check_dep_names.contains(&"pkg:alpine/python3"));
+        assert!(check_dep_names.contains(&"pkg:apk/alpine/diffutils"));
+        assert!(check_dep_names.contains(&"pkg:apk/alpine/python3"));
         let extra = pkg.extra_data.as_ref().unwrap();
         assert!(extra.contains_key("sources"));
         assert!(extra.contains_key("checksums"));
@@ -1855,7 +1861,7 @@ makedepends="$makedepends_build ${_target/./_} openjdk$_jdkbuild-jdk bash %22 aa
             .filter_map(|dep| dep.purl.as_deref())
             .collect();
 
-        assert_eq!(dependency_purls, vec!["pkg:alpine/bash"]);
+        assert_eq!(dependency_purls, vec!["pkg:apk/alpine/bash"]);
     }
 
     #[test]
@@ -1879,9 +1885,9 @@ checkdepends="bash"
         assert_eq!(
             dependency_purls,
             vec![
-                "pkg:alpine/less",
-                "pkg:alpine/e2fsprogs-dev",
-                "pkg:alpine/bash",
+                "pkg:apk/alpine/less",
+                "pkg:apk/alpine/e2fsprogs-dev",
+                "pkg:apk/alpine/bash",
             ]
         );
     }
@@ -2011,10 +2017,10 @@ done
         assert_eq!(
             dependency_purls,
             vec![
-                "pkg:alpine/xz-dev",
-                "pkg:alpine/perl",
-                "pkg:alpine/coreutils",
-                "pkg:alpine/bash",
+                "pkg:apk/alpine/xz-dev",
+                "pkg:apk/alpine/perl",
+                "pkg:apk/alpine/coreutils",
+                "pkg:apk/alpine/bash",
             ]
         );
     }

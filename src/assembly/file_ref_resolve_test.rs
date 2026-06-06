@@ -456,7 +456,7 @@ fn test_resolve_basic_alpine() {
     ];
 
     let mut packages = vec![Package {
-        package_type: Some(PackageType::Alpine),
+        package_type: Some(PackageType::Apk),
         namespace: None,
         name: Some("musl".to_string()),
         version: Some("1.2.3".to_string()),
@@ -594,7 +594,7 @@ fn test_resolve_missing_refs() {
     }];
 
     let mut packages = vec![Package {
-        package_type: Some(PackageType::Alpine),
+        package_type: Some(PackageType::Apk),
         namespace: None,
         name: Some("test".to_string()),
         version: Some("1.0".to_string()),
@@ -1225,7 +1225,7 @@ fn test_strip_leading_slash() {
     ];
 
     let mut packages = vec![Package {
-        package_type: Some(PackageType::Alpine),
+        package_type: Some(PackageType::Apk),
         namespace: None,
         name: Some("test".to_string()),
         version: Some("1.0".to_string()),

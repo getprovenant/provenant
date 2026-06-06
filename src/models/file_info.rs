@@ -1367,7 +1367,7 @@ mod tests {
     #[test]
     fn package_from_package_data_preserves_existing_purl_qualifiers() {
         let package_data = PackageData {
-            package_type: Some(PackageType::Alpine),
+            package_type: Some(PackageType::Apk),
             namespace: Some("alpine".to_string()),
             name: Some("busybox".to_string()),
             version: Some("1.35.0-r17".to_string()),

@@ -1,6 +1,6 @@
 [
   {
-    "type": "alpine",
+    "type": "apk",
     "namespace": "alpine",
     "name": "test-package",
     "version": "1.0-r0",
@@ -35,7 +35,7 @@
     },
     "dependencies": [
       {
-        "purl": "pkg:alpine/musl>=1.2.0",
+        "purl": "pkg:apk/alpine/musl>=1.2.0",
         "extracted_requirement": "musl>=1.2.0",
         "scope": "runtime",
         "is_runtime": true,
@@ -44,6 +44,6 @@
       }
     ],
     "datasource_id": "alpine_apk_archive",
-    "purl": "pkg:alpine/test-package@1.0-r0?arch=x86_64"
+    "purl": "pkg:apk/alpine/test-package@1.0-r0?arch=x86_64"
   }
 ]
