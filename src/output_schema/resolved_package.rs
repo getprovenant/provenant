@@ -130,7 +130,7 @@ impl From<&crate::models::ResolvedPackage> for OutputResolvedPackage {
             repository_download_url: value.repository_download_url.clone(),
             api_data_url: value.api_data_url.clone(),
             datasource_id: value.datasource_id.map(OutputDatasourceId::from),
-            purl: value.purl.clone(),
+            purl: value.purl.as_deref().map(crate::models::normalize_purl),
         }
     }
 }

@@ -24,7 +24,7 @@ pub struct OutputDependency {
 impl From<&crate::models::Dependency> for OutputDependency {
     fn from(value: &crate::models::Dependency) -> Self {
         Self {
-            purl: value.purl.clone(),
+            purl: value.purl.as_deref().map(crate::models::normalize_purl),
             extracted_requirement: value.extracted_requirement.clone(),
             scope: value.scope.clone(),
             is_runtime: value.is_runtime,

@@ -12,6 +12,7 @@ mod match_score;
 mod output;
 mod package_type;
 mod package_uid;
+mod purl;
 
 pub use datasource_id::DatasourceId;
 pub use dependency_uid::DependencyUid;
@@ -29,6 +30,7 @@ pub use line_number::LineNumber;
 pub use match_score::MatchScore;
 pub use package_type::PackageType;
 pub use package_uid::PackageUid;
+pub use purl::normalize_purl;
 
 pub use output::{
     ExtraData, FacetTallies, HEADER_NOTICE, Header, LicenseClarityScore, LicenseIndexProvenance,
