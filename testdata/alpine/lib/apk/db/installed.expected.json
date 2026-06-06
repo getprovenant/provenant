@@ -1,6 +1,6 @@
 [
   {
-    "type": "alpine",
+    "type": "apk",
     "namespace": "alpine",
     "name": "alpine-baselayout-data",
     "version": "3.2.0-r22",
@@ -30,7 +30,7 @@
       }
     ],
     "extracted_license_statement": "GPL-2.0-only",
-    "source_packages": ["pkg:alpine/alpine-baselayout"],
+    "source_packages": ["pkg:apk/alpine/alpine-baselayout"],
     "file_references": [
       {
         "path": "etc/fstab",
@@ -103,6 +103,6 @@
       "checksum": "Q1v4QhLje3kWlC8DJj+ZfJTjlJRSU="
     },
     "datasource_id": "alpine_installed_db",
-    "purl": "pkg:alpine/alpine-baselayout-data@3.2.0-r22?arch=x86_64"
+    "purl": "pkg:apk/alpine/alpine-baselayout-data@3.2.0-r22?arch=x86_64"
   }
 ]

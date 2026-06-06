@@ -1,6 +1,6 @@
 [
   {
-    "type": "alpine",
+    "type": "apk",
     "name": "icu",
     "version": "67.1-r2",
     "description": "International Components for Unicode library",
@@ -31,7 +31,7 @@
     "extracted_license_statement": "MIT ICU Unicode-TOU",
     "dependencies": [
       {
-        "purl": "pkg:alpine/icu",
+        "purl": "pkg:apk/alpine/icu",
         "extracted_requirement": "icu=67.1-r2",
         "scope": "depends_dev",
         "is_runtime": false,
@@ -40,7 +40,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:alpine/diffutils",
+        "purl": "pkg:apk/alpine/diffutils",
         "extracted_requirement": "diffutils",
         "scope": "checkdepends",
         "is_runtime": false,
@@ -49,7 +49,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:alpine/python3",
+        "purl": "pkg:apk/alpine/python3",
         "extracted_requirement": "python3",
         "scope": "checkdepends",
         "is_runtime": false,
@@ -67,6 +67,6 @@
       ]
     },
     "datasource_id": "alpine_apkbuild",
-    "purl": "pkg:alpine/icu@67.1-r2"
+    "purl": "pkg:apk/alpine/icu@67.1-r2"
   }
 ]

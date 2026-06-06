@@ -3,40 +3,40 @@
     {
       "datafile_path": "lib/apk/db/installed",
       "datasource_id": "alpine_installed_db",
-      "dependency_uid": "pkg:alpine/musl?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "for_package_uid": "pkg:alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
+      "dependency_uid": "pkg:apk/alpine/musl?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:apk/alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
       "is_direct": true,
       "is_optional": false,
       "is_pinned": false,
       "is_runtime": true,
-      "purl": "pkg:alpine/musl",
+      "purl": "pkg:apk/alpine/musl",
       "scope": "install"
     }
   ],
   "files_with_packages": [
     {
       "for_packages": [
-        "pkg:alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:apk/alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "path": "etc/securetty"
     },
     {
       "for_packages": [
-        "pkg:alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
-        "pkg:alpine/musl@1.2.3-r0?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:apk/alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
+        "pkg:apk/alpine/musl@1.2.3-r0?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "path": "lib/apk/db/installed"
     },
     {
       "for_packages": [
-        "pkg:alpine/musl@1.2.3-r0?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:apk/alpine/musl@1.2.3-r0?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "path": "usr/lib/libc.so"
     }
   ],
   "packages": [
     {
-      "type": "alpine",
+      "type": "apk",
       "namespace": "alpine",
       "name": "busybox",
       "version": "1.35.0-r17",
@@ -76,7 +76,7 @@
         }
       ],
       "extracted_license_statement": "GPL-2.0-only",
-      "source_packages": ["pkg:alpine/busybox"],
+      "source_packages": ["pkg:apk/alpine/busybox"],
       "extra_data": {
         "build_timestamp": "1655134784",
         "installed_size": "942080",
@@ -88,13 +88,13 @@
         "checksum": "Q1def456=",
         "compressed_size": "492528"
       },
-      "purl": "pkg:alpine/busybox@1.35.0-r17?arch=x86_64",
-      "package_uid": "pkg:alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
+      "purl": "pkg:apk/alpine/busybox@1.35.0-r17?arch=x86_64",
+      "package_uid": "pkg:apk/alpine/busybox@1.35.0-r17?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_paths": ["lib/apk/db/installed"],
       "datasource_ids": ["alpine_installed_db"]
     },
     {
-      "type": "alpine",
+      "type": "apk",
       "namespace": "alpine",
       "name": "musl",
       "version": "1.2.3-r0",
@@ -134,7 +134,7 @@
         }
       ],
       "extracted_license_statement": "MIT",
-      "source_packages": ["pkg:alpine/musl"],
+      "source_packages": ["pkg:apk/alpine/musl"],
       "extra_data": {
         "installed_size": "622592",
         "build_timestamp": "1649396308",
@@ -146,8 +146,8 @@
           }
         ]
       },
-      "purl": "pkg:alpine/musl@1.2.3-r0?arch=x86_64",
-      "package_uid": "pkg:alpine/musl@1.2.3-r0?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
+      "purl": "pkg:apk/alpine/musl@1.2.3-r0?arch=x86_64",
+      "package_uid": "pkg:apk/alpine/musl@1.2.3-r0?arch=x86_64&uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_paths": ["lib/apk/db/installed"],
       "datasource_ids": ["alpine_installed_db"]
     }

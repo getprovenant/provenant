@@ -33,7 +33,7 @@ use std::str::FromStr;
 pub enum PackageType {
     About,
     Alpm,
-    Alpine,
+    Apk,
     Android,
     AndroidLib,
     Autotools,
@@ -110,7 +110,7 @@ impl PackageType {
         match self {
             Self::About => "about",
             Self::Alpm => "alpm",
-            Self::Alpine => "alpine",
+            Self::Apk => "apk",
             Self::Android => "android",
             Self::AndroidLib => "android_lib",
             Self::Autotools => "autotools",
@@ -200,7 +200,7 @@ impl FromStr for PackageType {
         match s {
             "about" => Ok(Self::About),
             "alpm" => Ok(Self::Alpm),
-            "alpine" => Ok(Self::Alpine),
+            "apk" => Ok(Self::Apk),
             "android" => Ok(Self::Android),
             "android_lib" => Ok(Self::AndroidLib),
             "autotools" => Ok(Self::Autotools),
