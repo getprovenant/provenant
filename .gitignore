@@ -60,3 +60,6 @@ testdata/**/*.sqlite-wal
 # Keep this after the testdata re-include so fixture-local caches stay ignored too.
 .provenant-cache/
 .provenant-cache/**
+
+# Background agent worktrees
+.claude/worktrees/

@@ -10,7 +10,7 @@
     "download_url": "https://pub.dartlang.org/packages/built_collection/versions/5.1.0.tar.gz",
     "dependencies": [
       {
-        "purl": "pkg:pubspec/pedantic",
+        "purl": "pkg:pub/pedantic",
         "extracted_requirement": "^1.4.0",
         "scope": "dev_dependencies",
         "is_runtime": false,
@@ -19,7 +19,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:pubspec/test",
+        "purl": "pkg:pub/test",
         "extracted_requirement": "^1.16.0-nullsafety",
         "scope": "dev_dependencies",
         "is_runtime": false,
@@ -28,7 +28,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:pubspec/sdk",
+        "purl": "pkg:pub/sdk",
         "extracted_requirement": ">=2.12.0-0 <3.0.0",
         "scope": "environment",
         "is_runtime": true,
@@ -41,6 +41,6 @@
     "repository_download_url": "https://pub.dartlang.org/packages/built_collection/versions/5.1.0.tar.gz",
     "api_data_url": "https://pub.dev/api/packages/built_collection/versions/5.1.0",
     "datasource_id": "pubspec_yaml",
-    "purl": "pkg:dart/built_collection@5.1.0"
+    "purl": "pkg:pub/built_collection@5.1.0"
   }
 ]

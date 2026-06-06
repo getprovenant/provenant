@@ -5,7 +5,7 @@
     "parties": [],
     "dependencies": [
       {
-        "purl": "pkg:pubspec/dart",
+        "purl": "pkg:pub/dart",
         "extracted_requirement": ">=2.12.0 <3.0.0",
         "scope": "sdk",
         "is_runtime": true,
@@ -14,7 +14,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:pubspec/flutter",
+        "purl": "pkg:pub/flutter",
         "extracted_requirement": ">=1.24.0-7.0",
         "scope": "sdk",
         "is_runtime": true,
@@ -23,7 +23,7 @@
         "is_direct": true
       },
       {
-        "purl": "pkg:pubspec/async@2.6.1",
+        "purl": "pkg:pub/async@2.6.1",
         "extracted_requirement": "2.6.1",
         "scope": "transitive",
         "is_runtime": true,
@@ -56,7 +56,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/cupertino_icons@1.0.3",
+        "purl": "pkg:pub/cupertino_icons@1.0.3",
         "extracted_requirement": "1.0.3",
         "scope": "direct main",
         "is_runtime": true,
@@ -89,7 +89,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/equatable@2.0.3",
+        "purl": "pkg:pub/equatable@2.0.3",
         "extracted_requirement": "2.0.3",
         "scope": "transitive",
         "is_runtime": true,
@@ -122,7 +122,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/fake_async@1.2.0",
+        "purl": "pkg:pub/fake_async@1.2.0",
         "extracted_requirement": "1.2.0",
         "scope": "transitive",
         "is_runtime": true,
@@ -155,7 +155,7 @@
         }
       },
       {
-        "purl": "pkg:pubspec/firebase_auth@2.0.0",
+        "purl": "pkg:pub/firebase_auth@2.0.0",
         "extracted_requirement": "2.0.0",
         "scope": "direct main",
         "is_runtime": true,

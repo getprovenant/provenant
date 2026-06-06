@@ -586,12 +586,17 @@ fn is_pubspec_version_pinned(version: &str) -> bool {
         .all(|character| character.is_ascii_digit() || character == '.')
 }
 
+/// The registered PURL type for Dart/Flutter packages, decoupled from the
+/// internal `PackageType` label (which is `dart`/`pubspec`). `pkg:dart` and
+/// `pkg:pubspec` are not registered purl-spec types; `pub` is.
+const PUB_PURL_TYPE: &str = "pub";
+
 fn build_purl(name: &str, version: Option<&str>) -> Option<String> {
-    build_purl_with_type(PubspecYamlParser::PACKAGE_TYPE.as_str(), name, version)
+    build_purl_with_type(PUB_PURL_TYPE, name, version)
 }
 
 fn build_dependency_purl(name: &str, version: Option<&str>) -> Option<String> {
-    build_purl_with_type("pubspec", name, version)
+    build_purl_with_type(PUB_PURL_TYPE, name, version)
 }
 
 fn build_purl_with_type(package_type: &str, name: &str, version: Option<&str>) -> Option<String> {
