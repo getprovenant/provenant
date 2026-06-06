@@ -5,8 +5,7 @@
     "name": "setup",
     "version": "2.5.49-b1",
     "qualifiers": {
-      "arch": "noarch",
-      "source": "true"
+      "arch": "noarch"
     },
     "subpath": null,
     "primary_language": null,
@@ -119,6 +118,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "rpm_archive",
-    "purl": "pkg:rpm/setup@2.5.49-b1?arch=noarch&source=true"
+    "purl": "pkg:rpm/setup@2.5.49-b1?arch=noarch"
   }
 ]

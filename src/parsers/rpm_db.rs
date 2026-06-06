@@ -303,25 +303,19 @@ fn truncate_optional_string(value: Option<String>) -> Option<String> {
         .and_then(|v| normalize_optional_string(Some(v)))
 }
 
-fn build_evr_version(epoch: u32, version: &str, release: &str) -> Option<String> {
+fn build_version_release(version: &str, release: &str) -> Option<String> {
     if version.is_empty() {
         return None;
     }
 
-    let mut evr = String::new();
-
-    if epoch > 0 {
-        evr.push_str(&format!("{}:", epoch));
-    }
-
-    evr.push_str(version);
+    let mut vr = String::from(version);
 
     if !release.is_empty() {
-        evr.push('-');
-        evr.push_str(release);
+        vr.push('-');
+        vr.push_str(release);
     }
 
-    Some(evr)
+    Some(vr)
 }
 
 fn build_file_references(
@@ -384,11 +378,14 @@ fn build_package_data(pkg: RpmQueryPackage, datasource_id: DatasourceId) -> Pack
     let name = normalize_optional_string(pkg.name).map(truncate_field);
     let version_raw = normalize_optional_string(pkg.version).map(truncate_field);
     let release = normalize_optional_string(pkg.release).map(truncate_field);
-    let version = build_evr_version(
-        parse_epoch(pkg.epoch),
+    let version = build_version_release(
         version_raw.as_deref().unwrap_or_default(),
         release.as_deref().unwrap_or_default(),
     );
+    // The rpm epoch is emitted as an `?epoch=` qualifier rather than folded
+    // into the version (e.g. `2:1.0-1`).
+    let epoch_value = parse_epoch(pkg.epoch);
+    let epoch = (epoch_value > 0).then(|| epoch_value.to_string());
 
     let vendor = normalize_optional_string(pkg.vendor)
         .map(truncate_field)
@@ -446,6 +443,7 @@ fn build_package_data(pkg: RpmQueryPackage, datasource_id: DatasourceId) -> Pack
         namespace.as_deref(),
         version.as_deref(),
         architecture.as_deref(),
+        epoch.as_deref(),
     );
 
     PackageData {
@@ -454,11 +452,16 @@ fn build_package_data(pkg: RpmQueryPackage, datasource_id: DatasourceId) -> Pack
         namespace,
         name,
         version,
-        qualifiers: architecture.as_ref().map(|arch| {
+        qualifiers: {
             let mut q = std::collections::HashMap::new();
-            q.insert("arch".to_string(), arch.clone());
-            q
-        }),
+            if let Some(arch) = &architecture {
+                q.insert("arch".to_string(), arch.clone());
+            }
+            if let Some(epoch) = &epoch {
+                q.insert("epoch".to_string(), epoch.clone());
+            }
+            (!q.is_empty()).then_some(q)
+        },
         subpath: None,
         primary_language: None,
         description: None,
@@ -526,6 +529,7 @@ fn build_package_purl(
     namespace: Option<&str>,
     version: Option<&str>,
     arch: Option<&str>,
+    epoch: Option<&str>,
 ) -> Option<String> {
     let name = name?;
     let mut purl = packageurl::PackageUrl::new(PACKAGE_TYPE.as_str(), name).ok()?;
@@ -540,6 +544,11 @@ fn build_package_purl(
 
     if let Some(arch) = arch {
         purl.add_qualifier("arch", arch).ok()?;
+    }
+
+    // The rpm epoch is a qualifier, not part of the version.
+    if let Some(epoch) = epoch {
+        purl.add_qualifier("epoch", epoch).ok()?;
     }
 
     Some(purl.to_string())
@@ -651,29 +660,25 @@ mod tests {
     }
 
     #[test]
-    fn test_build_evr_version_full() {
+    fn test_build_version_release_full() {
+        // Epoch is no longer folded into the version; it is an `?epoch=` qualifier.
         assert_eq!(
-            build_evr_version(2, "1.0.0", "1.el7"),
-            Some("2:1.0.0-1.el7".to_string())
-        );
-    }
-
-    #[test]
-    fn test_build_evr_version_no_epoch() {
-        assert_eq!(
-            build_evr_version(0, "1.0.0", "1.el7"),
+            build_version_release("1.0.0", "1.el7"),
             Some("1.0.0-1.el7".to_string())
         );
     }
 
     #[test]
-    fn test_build_evr_version_no_release() {
-        assert_eq!(build_evr_version(0, "1.0.0", ""), Some("1.0.0".to_string()));
+    fn test_build_version_release_no_release() {
+        assert_eq!(
+            build_version_release("1.0.0", ""),
+            Some("1.0.0".to_string())
+        );
     }
 
     #[test]
-    fn test_build_evr_version_empty() {
-        assert_eq!(build_evr_version(0, "", ""), None);
+    fn test_build_version_release_empty() {
+        assert_eq!(build_version_release("", ""), None);
     }
 
     #[cfg(feature = "rpm-sqlite")]
