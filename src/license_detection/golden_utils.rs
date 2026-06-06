@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 
 use crate::license_detection::{LicenseDetectionEngine, LicenseMatch};
 use crate::utils::file::{ExtractedTextKind, classify_file_info, extract_text_for_detection};
+use crate::utils::notebook::{extract_notebook_content, is_notebook};
 use crate::utils::sourcemap::{extract_sourcemap_content, is_sourcemap};
 use crate::utils::text::{
     remove_verbatim_escape_sequences, should_remove_verbatim_escape_sequences,
@@ -26,6 +27,11 @@ pub fn read_golden_input_content(test_file: &Path) -> Result<Option<(String, Ext
     if is_sourcemap(test_file) {
         Ok(Some((
             extract_sourcemap_content(&text).unwrap_or(text),
+            text_kind,
+        )))
+    } else if is_notebook(test_file) {
+        Ok(Some((
+            extract_notebook_content(&text).unwrap_or(text),
             text_kind,
         )))
     } else if should_remove_verbatim_escape_sequences(test_file, classification.is_source) {

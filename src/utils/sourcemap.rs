@@ -50,14 +50,24 @@ pub fn extract_sourcemap_content(json_text: &str) -> Option<String> {
 }
 
 /// Return the text scanners should inspect for this file.
+///
+/// Source maps and Jupyter notebooks embed the human-authored text inside a JSON
+/// wrapper; for those we hand scanners the extracted text instead of the raw JSON
+/// so detection sees what a reader would. All other files pass through unchanged.
 pub fn detection_text<'a>(path: &Path, text: &'a str) -> Cow<'a, str> {
-    if !is_sourcemap(path) {
-        return Cow::Borrowed(text);
+    if is_sourcemap(path) {
+        return extract_sourcemap_content(text)
+            .map(Cow::Owned)
+            .unwrap_or(Cow::Borrowed(text));
     }
 
-    extract_sourcemap_content(text)
-        .map(Cow::Owned)
-        .unwrap_or_else(|| Cow::Borrowed(text))
+    if crate::utils::notebook::is_notebook(path) {
+        return crate::utils::notebook::extract_notebook_content(text)
+            .map(Cow::Owned)
+            .unwrap_or(Cow::Borrowed(text));
+    }
+
+    Cow::Borrowed(text)
 }
 
 /// Replace verbatim escaped CR/LF characters with actual newlines.

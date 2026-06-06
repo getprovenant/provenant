@@ -7,6 +7,7 @@ pub mod generated;
 pub mod hash;
 pub mod language;
 pub mod magic;
+pub mod notebook;
 pub mod path;
 pub mod sourcemap;
 pub mod spdx;
