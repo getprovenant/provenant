@@ -53,7 +53,7 @@
   ],
   "dependencies": [
     {
-      "purl": "pkg:conda/numpy@2.1.0",
+      "purl": "pkg:conda/numpy@2.1.0?channel=conda-forge",
       "extracted_requirement": "2.1.0",
       "scope": null,
       "is_runtime": true,
@@ -63,7 +63,7 @@
       "extra_data": {
         "channel": "conda-forge"
       },
-      "dependency_uid": "pkg:conda/numpy@2.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "dependency_uid": "pkg:conda/numpy@2.1.0?channel=conda-forge&uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.toml",
       "datasource_id": "pixi_toml"
