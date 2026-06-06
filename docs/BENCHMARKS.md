@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 216 of 216 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.0×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 217 of 217 recorded runs, with a **12.1× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.0×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1229,6 +1229,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `22.78s`; ScanCode `332.82s`
 - Broader mixed Hackage and Nix package extraction (`5` vs `0` packages, `197` vs `0` dependencies) from sibling `pandoc*.cabal` manifests, `stack.yaml`, and `flake.nix` / `flake.lock`, with explicit package identities across `pandoc`, `pandoc-cli`, `pandoc-lua-engine`, and `pandoc-server`
+
+##### [JuliaAcademy/DataScience @ 201f2e6](https://github.com/JuliaAcademy/DataScience/tree/201f2e66cf2067dacee2df02b546f75d77ed22e7) — **8.58× faster**
+
+- Files: 50
+- Run context: 2026-06-06 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `27.50s`; ScanCode `235.99s`
+- Direct Julia package visibility and broader dependency extraction (`1` vs `0` packages, `53` vs `0` dependencies) from the root legacy v1.0-format `Manifest.toml` and its `Project.toml`, with zero scan errors where ScanCode times out after 120s on `05. Clustering.ipynb` and no spurious low-confidence `GPL-3.0-only` detection bleeding from the binary `data/face_recog_qr.mat` blob
 
 ##### [JuliaLang/julia @ afc71c2](https://github.com/JuliaLang/julia/tree/afc71c255e327d8a64b69061c15994e80740974d) — **21.75× faster**
 
