@@ -160,7 +160,7 @@ reqwest = { version = "0.13.3", default-features = false, features = [
     "rustls",
 ] }
 rkyv = { workspace = true, features = ["smallvec-1"] }
-rpm = { version = "0.23.5", default-features = false, features = [
+rpm = { version = "0.25.0", default-features = false, features = [
     "payload",
     "gzip-compression",
     "xz-compression",
