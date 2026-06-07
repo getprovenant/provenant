@@ -231,11 +231,11 @@ fn extract_frontmatter(content: &str) -> Option<&str> {
     None
 }
 
-/// Hugging Face model-card frontmatter keys, taken from the documented model-card
-/// metadata spec. Presence of any one of these in a `README.md` frontmatter block
-/// signals a Hugging Face model/dataset card rather than generic front matter
-/// (e.g. a static-site post, which uses keys like `layout`/`permalink`).
-const MODEL_CARD_KEYS: &[&str] = &[
+/// Hugging Face model-card frontmatter keys that are distinctive to the
+/// documented model-card metadata spec. These keys do not appear in ordinary
+/// static-site / docs front matter, so any one of them is a sufficient signal
+/// that a `README.md` is a Hugging Face model/dataset card.
+const STRONG_MODEL_CARD_KEYS: &[&str] = &[
     "library_name",
     "pipeline_tag",
     "base_model",
@@ -244,21 +244,44 @@ const MODEL_CARD_KEYS: &[&str] = &[
     "license_name",
     "license_link",
     "model_name",
+    "widget",
+    "co2_eq_emissions",
+];
+
+/// Model-card keys that also occur in generic front matter (Jekyll/Hugo posts,
+/// docs pages). Each alone is too weak to claim a Hugging Face card, but the
+/// combination of several is characteristic of one, so two or more are required.
+const WEAK_MODEL_CARD_KEYS: &[&str] = &[
     "license",
     "tags",
     "language",
     "metrics",
-    "widget",
     "inference",
-    "co2_eq_emissions",
     "thumbnail",
 ];
 
+/// Decide whether a `README.md` frontmatter mapping is a Hugging Face model
+/// card. A single strong key is decisive; otherwise at least two weak keys must
+/// be present together so an arbitrary post carrying just `license` or just
+/// `tags` is not over-claimed, while a minimal real card
+/// (e.g. `license` + `tags`) is still recognized.
 fn looks_like_model_card(yaml: &yaml_serde::Value) -> bool {
     if yaml.as_mapping().is_none() {
         return false;
     }
-    MODEL_CARD_KEYS.iter().any(|key| yaml.get(*key).is_some())
+
+    if STRONG_MODEL_CARD_KEYS
+        .iter()
+        .any(|key| yaml.get(*key).is_some())
+    {
+        return true;
+    }
+
+    let weak_hits = WEAK_MODEL_CARD_KEYS
+        .iter()
+        .filter(|key| yaml.get(**key).is_some())
+        .count();
+    weak_hits >= 2
 }
 
 /// Transformers `config.json` signal keys. Newer configs carry `model_type` /

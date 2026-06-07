@@ -39,11 +39,11 @@ frontmatter.
 
 Following Provenant's honest-unknown guidance, the parser emits a
 `pkg:huggingface/<namespace>/<name>` PURL **only** when one of those fields has the
-unambiguous `<namespace>/<name>` shape. When identity cannot be proven, the parser
-omits the PURL (no top-level package is assembled) but still reports the provable
-facts: declared license, `base_model`/`datasets` dependencies, keywords/tags, and
-architecture metadata in `extra_data`. The `@<revision>` qualifier is always
-omitted because no tracked file proves it.
+unambiguous `<namespace>/<name>` shape. When identity cannot be proven, the PURL is
+omitted but the model is still assembled into a package (see Assembly) reporting the
+provable facts: declared license, `base_model`/`datasets` dependencies,
+keywords/tags, and architecture metadata in `extra_data`. The `@<revision>`
+qualifier is always omitted because no tracked file proves it.
 
 ### Declared license and dependencies
 
@@ -56,43 +56,87 @@ omitted because no tracked file proves it.
 
 ### Assembly
 
-Each recognized file with a derivable identity produces its own package
-(`OnePerPackageData`). The files are intentionally **not** sibling-merged into one
-logical model package: `config.json` and `README.md` are common filenames, and
-cross-file merging would be unsafe without proving the files describe the same
-model. Cross-file model-package assembly is a deferred follow-up.
+The model-card `README.md`, Transformers `config.json`, and Diffusers
+`model_index.json` in one repository directory describe a single logical model,
+so a dedicated directory merger (`src/assembly/huggingface_merge.rs`) combines
+them into **one** package. License, tags, language, architecture metadata, and
+`base_model`/`dataset` dependencies are unified onto that package, and both
+datafiles are attributed to it.
+
+Merging is safe because only `PackageData` the Hugging Face parsers actually
+claim participates — a generic `README.md`/`config.json` that the parsers
+decline (because it lacks the required model-card / config signals) never
+triggers a merge. When more than one source proves an identity, the merger
+anchors on the `config.json`/`model_index.json` `_name_or_path` (the more
+reliable repository-id hint) over the model-card `model_name`.
+
+When **no** source proves an identity, the files still merge into one
+identity-less package (`purl` omitted) so the model's provable facts are
+reported together rather than lost — the honest no-guess outcome.
 
 ## Real-repository verification
 
-Verified against public Hugging Face repositories (LFS weights skipped):
+Verified by scanning cloned public Hugging Face repositories with
+`provenant scan <dir> --package` (LFS weights skipped, `.git` present):
 
 - `prajjwal1/bert-tiny` — legacy `config.json` (only architecture
-  hyperparameters, no `model_type`) and a model card whose `license` is a
-  single-element list. Both files are now recognized; the card yields
-  `license = MIT` and tag keywords. Neither file carries `_name_or_path`, so no
-  identity PURL is emitted — the honest, no-guess outcome.
-- `hf-internal-testing/tiny-random-bert` — modern `config.json` with
-  `model_type` and `transformers_version` captured in `extra_data`; still no
-  `_name_or_path`, so no identity PURL.
-- A synthetic `config.json` with `_name_or_path: "google-bert/bert-base-uncased"`
-  produces a top-level `pkg:huggingface/google-bert/bert-base-uncased` package.
+  hyperparameters, no `model_type`/`_name_or_path`) and a model card whose
+  `license` is a single-element list (`language`, `license`, `tags`). The two
+  files **merge into one package** (its `datasource_ids` list both
+  `huggingface_config_json` and `huggingface_model_card`, with both datafiles
+  attributed) reporting `license = MIT`, the tag keywords, and `language`. Its
+  `purl` is `None`: neither file carries `_name_or_path`, and the true id
+  `prajjwal1/bert-tiny` in `.git/config` is intentionally not read (see Inherent
+  limitations). The honest, no-guess outcome.
+- `hf-internal-testing/tiny-random-bert` and
+  `hf-internal-testing/tiny-stable-diffusion-torch` — confirmed that uploaded
+  repositories typically strip `_name_or_path`, so identity PURLs are rare in
+  practice while license/tag/architecture facts are still recovered.
+- A synthetic repository with `config.json` carrying
+  `_name_or_path: "acme-ai/sentiment-demo"` plus a model card — scanning the
+  directory produces exactly **one** `pkg:huggingface/acme-ai/sentiment-demo`
+  package with the card's `MIT` license, the config's
+  `model_type`/`architectures`/`transformers_version` in `extra_data`, and the
+  `base_model`/`dataset` dependencies hoisted to the top level. This exercises
+  the identity + cross-file merge path end to end and is locked by the Layer-3
+  scanner/assembly test.
 
-These confirm the dominant real-world case: most uploaded repositories strip
-`_name_or_path`, so identity PURLs are rare in practice while license/tag/
-architecture facts are still recovered.
+### Model-card detection heuristic
 
-## Known limitations and deferrals
+A `README.md` is claimed as a model card only when its YAML frontmatter carries
+either:
 
-- **Identity coverage is intentionally narrow.** Without a checked-in
-  `_name_or_path`/`model_name`, no PURL is emitted. Recovering identity from the
-  git remote belongs in assembly/scanner topology, not a file-local parser, and
-  is deferred.
-- **No cross-file model assembly.** The README, `config.json`, and
-  `model_index.json` of one repository are not merged into a single logical
-  package yet.
-- **Model-card detection is heuristic.** A `README.md` with frontmatter carrying
-  a Hugging Face model-card key (e.g. `license`, `tags`, `base_model`) is treated
-  as a model card. This can over-claim a non-Hugging-Face README that happens to
-  use those frontmatter keys, but the result is bounded: file-level package
-  metadata only, never a guessed top-level identity, and file-content license and
-  copyright detection still run normally.
+- one **strong**, Hugging Face-distinctive key (`library_name`, `pipeline_tag`,
+  `base_model`, `datasets`, `model-index`, `license_name`, `license_link`,
+  `model_name`, `widget`, `co2_eq_emissions`), or
+- at least **two weak** keys that also appear in generic front matter
+  (`license`, `tags`, `language`, `metrics`, `inference`, `thumbnail`).
+
+A single weak key alone (e.g. only `license`, or only `tags`) is not enough, so
+an ordinary docs/blog post is not over-claimed, while a minimal real card
+(e.g. `license` + `tags`) is still recognized.
+
+## Inherent limitations
+
+These are not deferrals; they are facts that cannot be statically proven from a
+checked-out repository, so the parser does not guess them.
+
+- **`@<revision>` is never emitted, and git-remote identity is out of scope.**
+  The purl-spec revision is the git commit hash, and the canonical repository id
+  lives in the git remote URL. Both live under `.git/` (remote URL in
+  `.git/config`; commit in `.git/HEAD` + `packed-refs`), which Provenant
+  **excludes from scanning by repo-wide policy** (`.git`, `.hg`, `.svn` are
+  default collection excludes, alongside `.gitignore`). VCS internal state is
+  deliberately not treated as package content anywhere in the scanner, so the
+  Hugging Face assembler does not reach into `.git` to recover identity. A bare
+  checkout that ships neither a checked-in identity field
+  (`_name_or_path`/`model_name`) nor in-scope identity metadata therefore yields
+  a package without a PURL — the honest unknown. (Should this policy ever change,
+  the natural home for git-derived identity is the assembler, which is already
+  the topology-aware, cross-file layer; it is intentionally not a file-local
+  parser concern.)
+- **`_name_or_path` is a hint, not a guarantee.** When present with a
+  `<namespace>/<name>` shape it is used as the identity, because it is the only
+  in-scope checked-in identity signal. It records the weights' origin, which is
+  usually but not always the repository's own id; Provenant prefers it over no
+  identity rather than guessing from the directory name.
