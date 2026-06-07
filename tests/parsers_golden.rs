@@ -68,6 +68,7 @@ mod parsers {
         npm_lock,
         npm_workspace,
         nuget,
+        oci,
         opam,
         os_release,
         pip_inspect_deplock,

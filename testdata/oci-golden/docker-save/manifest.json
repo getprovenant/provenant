@@ -1,0 +1,9 @@
+[
+  {
+    "Config": "blobs/sha256/aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+    "RepoTags": ["registry.example.com:5000/team/app:2.1.0"],
+    "Layers": [
+      "blobs/sha256/1111111111111111111111111111111111111111111111111111111111111111"
+    ]
+  }
+]
