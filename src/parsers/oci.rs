@@ -273,6 +273,7 @@ fn package_from_docker_save_entry(entry: DockerSaveManifestEntry) -> Option<Pack
         .map(|tag| tag.trim());
 
     let (name, tag) = image_name_and_tag(ref_name);
+    let name = name?;
 
     let mut qualifiers: HashMap<String, String> = HashMap::new();
     if let Some(tag) = tag {
@@ -285,7 +286,7 @@ fn package_from_docker_save_entry(entry: DockerSaveManifestEntry) -> Option<Pack
     }
 
     Some(build_package(
-        name,
+        Some(name),
         digest,
         qualifiers,
         extra_data,
