@@ -3,9 +3,10 @@
     "type": "oci",
     "namespace": null,
     "name": "nginx",
-    "version": "sha256:9b1c7c0e4f4a3a1d2b5e6f7081923a4b5c6d7e8f90a1b2c3d4e5f60718293a4b",
+    "version": "sha256:abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcab",
     "qualifiers": {
       "arch": "amd64",
+      "repository_url": "docker.io/library/nginx",
       "tag": "1.27"
     },
     "subpath": null,
@@ -47,6 +48,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "oci_image_index",
-    "purl": "pkg:oci/nginx@sha256:9b1c7c0e4f4a3a1d2b5e6f7081923a4b5c6d7e8f90a1b2c3d4e5f60718293a4b?arch=amd64&tag=1.27"
+    "purl": "pkg:oci/nginx@sha256:abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcab?arch=amd64&repository_url=docker.io/library/nginx&tag=1.27"
   }
 ]

@@ -1,0 +1,1 @@
+{"architecture":"amd64","os":"linux","config":{"Cmd":["nginx","-g","daemon off;"]},"rootfs":{"type":"layers","diff_ids":["sha256:2222222222222222222222222222222222222222222222222222222222222222"]}}
