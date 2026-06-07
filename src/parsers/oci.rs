@@ -191,6 +191,7 @@ fn package_from_descriptor(descriptor: OciDescriptor) -> Option<PackageData> {
     // ref.name often carries only the tag.
     let identity_ref = containerd_name.or(ref_name);
     let (name, mut tag) = image_name_and_tag(identity_ref);
+    let name = name?;
     // If identity came from containerd (full ref) but lacked a tag, fall back to
     // the bare ref.name annotation as the tag.
     if tag.is_none()
@@ -231,7 +232,7 @@ fn package_from_descriptor(descriptor: OciDescriptor) -> Option<PackageData> {
     }
 
     Some(build_package(
-        name,
+        Some(name),
         digest.to_string(),
         qualifiers,
         extra_data,
