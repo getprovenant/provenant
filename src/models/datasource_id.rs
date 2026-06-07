@@ -157,6 +157,10 @@ pub enum DatasourceId {
     // ── Docker ──
     Dockerfile,
 
+    // ── OCI image ──
+    OciImageIndex,
+    OciImageManifest,
+
     // ── Erlang / OTP ──
     ErlangOtpAppSrc,
     RebarConfig,
@@ -454,6 +458,8 @@ impl DatasourceId {
             Self::DenoJson => "deno_json",
             Self::DenoLock => "deno_lock",
             Self::Dockerfile => "dockerfile",
+            Self::OciImageIndex => "oci_image_index",
+            Self::OciImageManifest => "oci_image_manifest",
             Self::ErlangOtpAppSrc => "erlang_otp_app_src",
             Self::RebarConfig => "rebar_config",
             Self::RebarLock => "rebar_lock",

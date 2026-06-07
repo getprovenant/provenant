@@ -901,6 +901,8 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::GoBinary,
     DatasourceId::WindowsExecutable,
     DatasourceId::Dockerfile,
+    DatasourceId::OciImageIndex,
+    DatasourceId::OciImageManifest,
     DatasourceId::ErlangOtpAppSrc,
     DatasourceId::HexMixLock,
     DatasourceId::JavaEarApplicationXml,

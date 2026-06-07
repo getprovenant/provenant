@@ -213,6 +213,11 @@ mod npm_workspace;
 #[cfg(test)]
 mod npm_workspace_test;
 mod nuget;
+mod oci;
+#[cfg(test)]
+mod oci_scan_test;
+#[cfg(test)]
+mod oci_test;
 mod opam;
 #[cfg(test)]
 mod opam_scan_test;
@@ -663,6 +668,7 @@ pub use self::nuget::{
     NupkgParser, NuspecParser, PackageReferenceProjectParser, PackagesConfigParser,
     PackagesLockParser, ProjectJsonParser, ProjectLockJsonParser,
 };
+pub use self::oci::OciImageLayoutParser;
 pub use self::opam::OpamParser;
 pub use self::os_release::OsReleaseParser;
 pub use self::pip_inspect_deplock::PipInspectDeplockParser;
@@ -960,6 +966,7 @@ register_package_handlers! {
         NupkgParser,
         NuspecParser,
         PackageReferenceProjectParser,
+        OciImageLayoutParser,
         OpamParser,
         OsReleaseParser,
         PackagesConfigParser,

@@ -91,6 +91,8 @@ mod nix_golden_test;
 mod npm_golden_test;
 #[path = "nuget/nuget_golden_test.rs"]
 mod nuget_golden_test;
+#[path = "oci_golden_test.rs"]
+mod oci_golden_test;
 #[path = "opam_golden_test.rs"]
 mod opam_golden_test;
 #[path = "os_release_golden_test.rs"]
