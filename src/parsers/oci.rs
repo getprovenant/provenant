@@ -388,7 +388,7 @@ fn build_oci_purl(
     keys.sort();
     for key in keys {
         if let Some(value) = qualifiers.get(key) {
-            purl.add_qualifier(key.as_str(), value.as_str()).ok()?;
+            let _ = purl.add_qualifier(key.as_str(), value.as_str());
         }
     }
 
