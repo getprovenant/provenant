@@ -142,4 +142,152 @@ LABEL org.opencontainers.image.title="Jitsi Broadcasting Infrastructure (jibri)"
         assert_eq!(package.datasource_id, Some(DatasourceId::Dockerfile));
         assert!(package.extra_data.is_none());
     }
+
+    fn purls(content: &str) -> Vec<String> {
+        parse_dockerfile(content)
+            .dependencies
+            .iter()
+            .filter_map(|dep| dep.purl.clone())
+            .collect()
+    }
+
+    #[test]
+    fn test_from_tag_emits_docker_purl() {
+        assert_eq!(
+            purls("FROM python:3.12-slim\n"),
+            vec!["pkg:docker/python@3.12-slim".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_from_registry_namespace_and_digest() {
+        assert_eq!(
+            purls("FROM ghcr.io/org/img@sha256:abc123\n"),
+            vec!["pkg:docker/org/img@sha256:abc123?repository_url=ghcr.io".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_from_registry_with_tag() {
+        assert_eq!(
+            purls("FROM quay.io/pulp/pulp-base:latest\n"),
+            vec!["pkg:docker/pulp/pulp-base@latest?repository_url=quay.io".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_from_docker_io_library_namespace() {
+        assert_eq!(
+            purls("FROM docker.io/library/debian:bookworm-slim\n"),
+            vec!["pkg:docker/library/debian@bookworm-slim?repository_url=docker.io".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_from_registry_with_port() {
+        assert_eq!(
+            purls("FROM registry.local:5000/team/app:1.0\n"),
+            vec!["pkg:docker/team/app@1.0?repository_url=registry.local:5000".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_from_without_tag_has_no_version() {
+        assert_eq!(
+            purls("FROM ubuntu\n"),
+            vec!["pkg:docker/ubuntu".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_is_pinned_only_for_digest_refs() {
+        // A `@sha256:…` digest is an immutable pin.
+        let digest = parse_dockerfile("FROM ghcr.io/org/img@sha256:abc123\n");
+        assert_eq!(digest.dependencies[0].is_pinned, Some(true));
+        // A tag is mutable, so not pinned.
+        let tag = parse_dockerfile("FROM python:3.12-slim\n");
+        assert_eq!(tag.dependencies[0].is_pinned, Some(false));
+        // No tag is also not pinned.
+        let untagged = parse_dockerfile("FROM ubuntu\n");
+        assert_eq!(untagged.dependencies[0].is_pinned, Some(false));
+    }
+
+    #[test]
+    fn test_scratch_emits_no_purl() {
+        assert!(purls("FROM scratch\nRUN echo hi\n").is_empty());
+    }
+
+    #[test]
+    fn test_arg_templated_image_is_skipped() {
+        assert!(purls("ARG BASE=python:3.12\nFROM ${BASE}\n").is_empty());
+        assert!(purls("FROM $BASE\n").is_empty());
+    }
+
+    #[test]
+    fn test_platform_flag_is_ignored() {
+        assert_eq!(
+            purls("FROM --platform=linux/amd64 alpine:3.20\n"),
+            vec!["pkg:docker/alpine@3.20".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_multistage_skips_internal_stage_reference() {
+        let content = "\
+FROM golang:1.22 AS build
+RUN go build
+FROM build
+COPY --from=build /app /app
+";
+        assert_eq!(purls(content), vec!["pkg:docker/golang@1.22".to_string()]);
+    }
+
+    #[test]
+    fn test_multistage_external_bases_both_emitted() {
+        let content = "\
+FROM node:20 AS frontend
+FROM nginx:1.27-alpine
+";
+        assert_eq!(
+            purls(content),
+            vec![
+                "pkg:docker/node@20".to_string(),
+                "pkg:docker/nginx@1.27-alpine".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_duplicate_base_images_are_deduplicated() {
+        let content = "FROM alpine:3.20\nFROM alpine:3.20\n";
+        assert_eq!(purls(content), vec!["pkg:docker/alpine@3.20".to_string()]);
+    }
+
+    #[test]
+    fn test_stage_name_matching_is_case_insensitive() {
+        let content = "FROM golang:1.22 AS Build\nFROM build\n";
+        assert_eq!(purls(content), vec!["pkg:docker/golang@1.22".to_string()]);
+    }
+
+    #[test]
+    fn test_base_image_dependency_is_direct() {
+        let package = parse_dockerfile("FROM python:3.12-slim\n");
+        assert_eq!(package.dependencies.len(), 1);
+        assert_eq!(package.dependencies[0].is_direct, Some(true));
+        assert_eq!(package.dependencies[0].extracted_requirement, None);
+    }
+
+    #[test]
+    fn test_stage_alias_same_as_image_name_emits_purl() {
+        // `FROM node AS node` -- the alias exactly equals the untagged image name.
+        // The image is external, so a PURL must be emitted. A previous bug inserted
+        // the alias before the internal-reference check, silently dropping this case.
+        assert_eq!(
+            purls(
+                "FROM node AS node
+"
+            ),
+            vec!["pkg:docker/node".to_string()]
+        );
+    }
 }

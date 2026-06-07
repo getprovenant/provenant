@@ -59,7 +59,19 @@
         "org.opencontainers.image.version": "stable-8960-1"
       }
     },
-    "dependencies": [],
+    "dependencies": [
+      {
+        "purl": "pkg:docker/library/debian@bookworm-slim?repository_url=docker.io",
+        "extracted_requirement": null,
+        "scope": null,
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      }
+    ],
     "repository_homepage_url": null,
     "repository_download_url": null,
     "api_data_url": null,
