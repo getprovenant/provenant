@@ -164,6 +164,9 @@ ScanCode: 57.29s</title></rect>
     <rect x="308.06" y="452.89" width="8" height="8" fill="#d97706" rx="1.5"><title>catppuccin/gitea @ 6a78970
 Files: 23
 ScanCode: 40.69s</title></rect>
+    <rect x="326.37" y="428.10" width="8" height="8" fill="#d97706" rx="1.5"><title>sentence-transformers/all-MiniLM-L6-v2 @ 1110a24
+Files: 30
+ScanCode: 68.76s</title></rect>
     <rect x="328.63" y="424.63" width="8" height="8" fill="#d97706" rx="1.5"><title>e-ale/meta-pocketbeagle @ 7cb4956
 Files: 31
 ScanCode: 73.99s</title></rect>
@@ -826,6 +829,9 @@ Provenant: 6.63s</title></circle>
     <circle cx="312.06" cy="547.18" r="4.5" fill="#2563eb"><title>catppuccin/gitea @ 6a78970
 Files: 23
 Provenant: 6.02s</title></circle>
+    <circle cx="330.37" cy="539.72" r="4.5" fill="#2563eb"><title>sentence-transformers/all-MiniLM-L6-v2 @ 1110a24
+Files: 30
+Provenant: 7.05s</title></circle>
     <circle cx="332.63" cy="518.44" r="4.5" fill="#2563eb"><title>e-ale/meta-pocketbeagle @ 7cb4956
 Files: 31
 Provenant: 11.06s</title></circle>
