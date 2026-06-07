@@ -1,6 +1,6 @@
 [
   {
-    "package_type": "Oci",
+    "type": "oci",
     "namespace": null,
     "name": "app",
     "version": "sha256:aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
@@ -44,7 +44,7 @@
     "repository_homepage_url": null,
     "repository_download_url": null,
     "api_data_url": null,
-    "datasource_id": "OciImageManifest",
+    "datasource_id": "oci_image_manifest",
     "purl": "pkg:oci/app@sha256:aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899?tag=2.1.0"
   }
 ]
