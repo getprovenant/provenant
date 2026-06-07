@@ -22,6 +22,7 @@ pub(super) enum SpecialDirectoryMergerKind {
     Bazel,
     DebianSource,
     Hackage,
+    Huggingface,
     WindowsUpdate,
 }
 
@@ -50,6 +51,7 @@ pub(super) fn special_directory_merger_for(
         DatasourceId::BazelBuild => Some(SpecialDirectoryMergerKind::Bazel),
         DatasourceId::DebianControlInSource => Some(SpecialDirectoryMergerKind::DebianSource),
         DatasourceId::HackageCabal => Some(SpecialDirectoryMergerKind::Hackage),
+        DatasourceId::HuggingfaceModelCard => Some(SpecialDirectoryMergerKind::Huggingface),
         DatasourceId::MicrosoftUpdateManifestMum => Some(SpecialDirectoryMergerKind::WindowsUpdate),
         DatasourceId::SwiftPackageManifestJson => Some(SpecialDirectoryMergerKind::Skip),
         _ => None,
@@ -201,6 +203,9 @@ impl SpecialDirectoryMergerKind {
                 debian_source_merge::assemble_debian_source_packages(config, files, file_indices)
             }
             Self::Hackage => hackage_merge::assemble_hackage_packages(files, file_indices),
+            Self::Huggingface => {
+                super::huggingface_merge::assemble_huggingface_packages(files, file_indices)
+            }
             Self::WindowsUpdate => super::windows_update_merge::assemble_windows_update_packages(
                 config,
                 files,
@@ -625,11 +630,12 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["*.module"],
         mode: AssemblyMode::OnePerPackageData,
     },
-    // Hugging Face model/dataset metadata. Each file with a derivable
-    // `pkg:huggingface/<ns>/<name>` identity becomes its own package; the files
-    // are intentionally not sibling-merged because config.json and README.md are
-    // common filenames and cross-file merging would be unsafe. Cross-file model-
-    // package assembly is a deferred follow-up.
+    // Hugging Face model/dataset metadata. The model-card README.md, Transformers
+    // config.json, and Diffusers model_index.json in one repository directory
+    // describe a single logical model, so they are merged into one package by a
+    // dedicated directory merger (see huggingface_merge). Only files the Hugging
+    // Face parsers actually claim (carrying a huggingface datasource id)
+    // participate, so a generic README.md/config.json never triggers a merge.
     AssemblerConfig {
         datasource_ids: &[
             DatasourceId::HuggingfaceModelCard,
@@ -637,7 +643,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             DatasourceId::HuggingfaceModelIndexJson,
         ],
         sibling_file_patterns: &["README.md", "config.json", "model_index.json"],
-        mode: AssemblyMode::OnePerPackageData,
+        mode: AssemblyMode::SiblingMerge,
     },
     // CPAN/Perl ecosystem
     AssemblerConfig {

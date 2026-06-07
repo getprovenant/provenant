@@ -105,6 +105,49 @@ mod tests {
     }
 
     #[test]
+    fn model_card_single_weak_key_is_not_claimed() {
+        // A generic post with only `tags` (a key shared with Jekyll/Hugo front
+        // matter) is too weak a signal to claim as a Hugging Face card.
+        let (_tmp, path) = write_temp(
+            "README.md",
+            "---\ntitle: My Post\ntags:\n  - hiking\n  - travel\n---\n\nBody.\n",
+        );
+        assert!(HuggingfaceModelCardParser::extract_packages(&path).is_empty());
+
+        // Likewise `license` alone (common in docs front matter).
+        let (_tmp2, path2) = write_temp(
+            "README.md",
+            "---\ntitle: Docs\nlicense: mit\n---\n\nBody.\n",
+        );
+        assert!(HuggingfaceModelCardParser::extract_packages(&path2).is_empty());
+    }
+
+    #[test]
+    fn model_card_two_weak_keys_is_claimed() {
+        // A minimal real card (license + tags, no strong key) is still
+        // recognized so we do not false-negative on sparse cards.
+        let (_tmp, path) = write_temp(
+            "README.md",
+            "---\nlicense: mit\ntags:\n  - text-classification\n---\n\nBody.\n",
+        );
+        let package = HuggingfaceModelCardParser::extract_first_package(&path);
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+    }
+
+    #[test]
+    fn model_card_single_strong_key_is_claimed() {
+        // A strong, Hugging Face-distinctive key alone is decisive.
+        let (_tmp, path) = write_temp(
+            "README.md",
+            "---\nlibrary_name: transformers\n---\n\nBody.\n",
+        );
+        assert_eq!(HuggingfaceModelCardParser::extract_packages(&path).len(), 1);
+    }
+
+    #[test]
     fn model_card_without_frontmatter_is_ignored() {
         let (_tmp, path) = write_temp("README.md", "# Just a heading\n\nNo frontmatter here.\n");
         assert!(HuggingfaceModelCardParser::extract_packages(&path).is_empty());
