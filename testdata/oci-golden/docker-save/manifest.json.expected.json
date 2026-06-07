@@ -5,6 +5,7 @@
     "name": "app",
     "version": "sha256:aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
     "qualifiers": {
+      "repository_url": "registry.example.com:5000/team/app",
       "tag": "2.1.0"
     },
     "subpath": null,
@@ -45,6 +46,6 @@
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "oci_image_manifest",
-    "purl": "pkg:oci/app@sha256:aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899?tag=2.1.0"
+    "purl": "pkg:oci/app@sha256:aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899?repository_url=registry.example.com:5000/team/app&tag=2.1.0"
   }
 ]
