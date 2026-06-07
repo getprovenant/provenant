@@ -1,0 +1,105 @@
+[
+  {
+    "type": "huggingface",
+    "namespace": "acme-ai",
+    "name": "tiny-llama-demo",
+    "version": null,
+    "qualifiers": {},
+    "subpath": null,
+    "primary_language": "Python",
+    "description": null,
+    "release_date": null,
+    "parties": [],
+    "keywords": ["text-generation", "llama"],
+    "homepage_url": null,
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
+    "code_view_url": null,
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": "apache-2.0",
+    "declared_license_expression_spdx": "Apache-2.0",
+    "license_detections": [
+      {
+        "license_expression": "apache-2.0",
+        "license_expression_spdx": "Apache-2.0",
+        "matches": [
+          {
+            "license_expression": "apache-2.0",
+            "license_expression_spdx": "Apache-2.0",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+            "matched_text": "apache-2.0"
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": "apache-2.0",
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {
+      "language": ["en"]
+    },
+    "dependencies": [
+      {
+        "purl": "pkg:huggingface/meta-llama/Llama-2-7b-hf",
+        "extracted_requirement": "meta-llama/Llama-2-7b-hf",
+        "scope": "base_model",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:huggingface/wikitext",
+        "extracted_requirement": "wikitext",
+        "scope": "dataset",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:huggingface/acme-ai/demo-corpus",
+        "extracted_requirement": "acme-ai/demo-corpus",
+        "scope": "dataset",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      }
+    ],
+    "repository_homepage_url": null,
+    "repository_download_url": null,
+    "api_data_url": null,
+    "datasource_id": "huggingface_model_card",
+    "purl": "pkg:huggingface/acme-ai/tiny-llama-demo"
+  }
+]

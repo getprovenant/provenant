@@ -1,0 +1,7 @@
+{
+  "_class_name": "StableDiffusionPipeline",
+  "_diffusers_version": "0.27.0",
+  "_name_or_path": "acme-ai/tiny-diffusion-demo",
+  "scheduler": ["diffusers", "PNDMScheduler"],
+  "unet": ["diffusers", "UNet2DConditionModel"]
+}

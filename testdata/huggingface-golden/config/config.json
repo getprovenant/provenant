@@ -1,0 +1,10 @@
+{
+  "_name_or_path": "acme-ai/tiny-llama-demo",
+  "architectures": ["LlamaForCausalLM"],
+  "model_type": "llama",
+  "hidden_size": 128,
+  "num_attention_heads": 4,
+  "num_hidden_layers": 2,
+  "vocab_size": 32000,
+  "transformers_version": "4.40.0"
+}

@@ -179,6 +179,11 @@ mod helm_test;
 mod hex_lock;
 #[cfg(test)]
 mod hex_lock_test;
+mod huggingface;
+#[cfg(test)]
+mod huggingface_scan_test;
+#[cfg(test)]
+mod huggingface_test;
 mod julia;
 #[cfg(test)]
 mod julia_test;
@@ -642,6 +647,9 @@ pub use self::hackage::{HackageCabalParser, HackageCabalProjectParser, HackageSt
 pub use self::haxe::HaxeParser;
 pub use self::helm::{HelmChartLockParser, HelmChartYamlParser};
 pub use self::hex_lock::HexLockParser;
+pub use self::huggingface::{
+    HuggingfaceConfigParser, HuggingfaceModelCardParser, HuggingfaceModelIndexParser,
+};
 pub use self::julia::{JuliaManifestTomlParser, JuliaProjectTomlParser};
 pub use self::maven::MavenParser;
 pub use self::meson::MesonParser;
@@ -943,6 +951,9 @@ register_package_handlers! {
         HelmChartLockParser,
         HaxeParser,
         HexLockParser,
+        HuggingfaceModelCardParser,
+        HuggingfaceConfigParser,
+        HuggingfaceModelIndexParser,
         JuliaManifestTomlParser,
         JuliaProjectTomlParser,
         MavenParser,

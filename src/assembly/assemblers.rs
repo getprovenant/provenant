@@ -625,6 +625,20 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["*.module"],
         mode: AssemblyMode::OnePerPackageData,
     },
+    // Hugging Face model/dataset metadata. Each file with a derivable
+    // `pkg:huggingface/<ns>/<name>` identity becomes its own package; the files
+    // are intentionally not sibling-merged because config.json and README.md are
+    // common filenames and cross-file merging would be unsafe. Cross-file model-
+    // package assembly is a deferred follow-up.
+    AssemblerConfig {
+        datasource_ids: &[
+            DatasourceId::HuggingfaceModelCard,
+            DatasourceId::HuggingfaceConfigJson,
+            DatasourceId::HuggingfaceModelIndexJson,
+        ],
+        sibling_file_patterns: &["README.md", "config.json", "model_index.json"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // CPAN/Perl ecosystem
     AssemblerConfig {
         datasource_ids: &[
