@@ -193,6 +193,11 @@ pub enum DatasourceId {
     // ── Hex/Elixir ──
     HexMixLock,
 
+    // ── Hugging Face ──
+    HuggingfaceModelCard,
+    HuggingfaceConfigJson,
+    HuggingfaceModelIndexJson,
+
     // ── Julia ──
     JuliaProjectToml,
     JuliaManifestToml,
@@ -489,6 +494,11 @@ impl DatasourceId {
 
             // Hex/Elixir
             Self::HexMixLock => "hex_mix_lock",
+
+            // Hugging Face
+            Self::HuggingfaceModelCard => "huggingface_model_card",
+            Self::HuggingfaceConfigJson => "huggingface_config_json",
+            Self::HuggingfaceModelIndexJson => "huggingface_model_index_json",
 
             // Julia
             Self::JuliaProjectToml => "julia_project_toml",
