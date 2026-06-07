@@ -317,6 +317,12 @@ fn resolve_identity(descriptor: &OciDescriptor, inherited: &Identity) -> Identit
 
 /// An OCI image index is identified by its media type, or by a schema version
 /// of 2 paired with at least one manifest descriptor.
+///
+/// `index.json` is a very common filename, so the schema-version fallback (used
+/// when no recognized `mediaType` is present) additionally requires that at
+/// least one descriptor carries a non-empty `digest`. Every real OCI/Docker
+/// descriptor has one, so this rejects unrelated `{ "schemaVersion": 2, ... }`
+/// JSON that happens to expose a `manifests` array without descriptor digests.
 fn is_oci_image_index(index: &OciImageIndex) -> bool {
     let media_type = index.media_type.as_deref();
     if media_type == Some(OCI_INDEX_MEDIA_TYPE)
@@ -325,7 +331,13 @@ fn is_oci_image_index(index: &OciImageIndex) -> bool {
         return true;
     }
 
-    index.schema_version == Some(2) && !index.manifests.is_empty()
+    index.schema_version == Some(2)
+        && index.manifests.iter().any(|descriptor| {
+            descriptor
+                .digest
+                .as_deref()
+                .is_some_and(|d| !d.trim().is_empty())
+        })
 }
 
 fn package_from_descriptor(

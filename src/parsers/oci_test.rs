@@ -587,3 +587,56 @@ fn malformed_digest_never_escapes_blobs_dir() {
         Some(&serde_json::json!("descriptor"))
     );
 }
+
+#[test]
+fn schema_version_fallback_requires_descriptor_digest() {
+    // `index.json` is a very common filename. A non-OCI JSON object that merely
+    // has `schemaVersion: 2` and a `manifests` array of descriptors WITHOUT any
+    // `digest` must be rejected: no recognized OCI/Docker mediaType means the
+    // schema-version fallback applies, and that fallback now requires at least
+    // one descriptor digest.
+    let no_digest = r#"{
+        "schemaVersion": 2,
+        "manifests": [
+            {
+                "platform": {"architecture": "amd64", "os": "linux"}
+            }
+        ]
+    }"#;
+    assert!(
+        parse_oci_content(no_digest, None).is_empty(),
+        "object without descriptor digests must yield no packages"
+    );
+
+    // An empty-string digest is also not a real descriptor digest.
+    let blank_digest = r#"{
+        "schemaVersion": 2,
+        "manifests": [
+            {"digest": "   ", "platform": {"architecture": "amd64", "os": "linux"}}
+        ]
+    }"#;
+    assert!(
+        parse_oci_content(blank_digest, None).is_empty(),
+        "object with blank descriptor digest must yield no packages"
+    );
+
+    // A real index (no recognized mediaType) carrying a descriptor digest is
+    // still accepted via the same fallback.
+    let with_digest = r#"{
+        "schemaVersion": 2,
+        "manifests": [
+            {
+                "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+                "platform": {"architecture": "amd64", "os": "linux"},
+                "annotations": {"org.opencontainers.image.ref.name": "docker.io/library/nginx:1.27"}
+            }
+        ]
+    }"#;
+    let packages = parse_oci_content(with_digest, None);
+    assert_eq!(packages.len(), 1);
+    assert_eq!(packages[0].name.as_deref(), Some("nginx"));
+    assert_eq!(
+        packages[0].version.as_deref(),
+        Some("sha256:3333333333333333333333333333333333333333333333333333333333333333")
+    );
+}
