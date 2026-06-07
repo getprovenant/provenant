@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **12.0× median speedup** and **11.4× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 221 of 221 recorded runs, with a **11.9× median speedup** and **11.3× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -28,6 +28,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
   - [Chef](#chef)
   - [Python / Conda / Pixi](#python--conda--pixi)
   - [R / CRAN](#r--cran)
+  - [Hugging Face / AI model repositories](#hugging-face--ai-model-repositories)
   - [Hex / Elixir / Erlang / OTP](#hex--elixir--erlang--otp)
   - [JavaScript / TypeScript / web stacks](#javascript--typescript--web-stacks)
   - [JVM / Java / Scala / Clojure](#jvm--java--scala--clojure)
@@ -262,7 +263,14 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `14.46s`; ScanCode `178.35s`
 - Direct CRAN package visibility on the root `DESCRIPTION` plus declared dependency extraction (`41` vs `0`) across `Imports`, `Suggests`, and `Enhances`, with correct hyphenated CRAN version constraints such as `sf (>= 0.7-3)` and cleaner Rd or roxygen URL recovery
 
-#### Hex / Elixir / Erlang / OTP
+#### Hugging Face / AI model repositories
+
+##### [sentence-transformers/all-MiniLM-L6-v2 @ 1110a24](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/tree/1110a243fdf4706b3f48f1d95db1a4f5529b4d41) — **9.75× faster**
+
+- Files: 30
+- Run context: 2026-06-07 · all-MiniLM-L6-v2-35718 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.05s`; ScanCode `68.76s`
+- Direct Hugging Face model package identity (`1` vs `0` packages, `22` vs `0` dependencies) that ScanCode cannot model at all because it ships no HF parser: Provenant assembles the repository's `config.json` and model-card `README.md` into one `pkg:huggingface/nreimers/MiniLM-L6-H384-uncased` package, anchoring identity on the config's `_name_or_path`, normalizing the card's `apache-2.0` declared license, and hoisting the `base_model` and `datasets` frontmatter into `base_model`- and `dataset`-scoped `pkg:huggingface/...` dependencies, with identical top-level license detection across the repository tree
 
 ##### [bitwalker/distillery @ 3ab4d61](https://github.com/bitwalker/distillery/tree/3ab4d6146c7bc18139ed75d330e4fbb0fceb7591) — **8.76× faster**
 
