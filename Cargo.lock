@@ -3990,9 +3990,9 @@ dependencies = [
 
 [[package]]
 name = "rpm"
-version = "0.23.5"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1c8e1e837dd547798d3a82dd335caa39ea8aae4609743c9c905e177a53c16c7"
+checksum = "3a5c5d43b95d73d6f0a1b8fbeab72a7ebebf618cdc99f2b9a28f269ee343766e"
 dependencies = [
  "base64",
  "bitflags 2.11.1",
@@ -4010,6 +4010,7 @@ dependencies = [
  "num",
  "num-derive",
  "num-traits",
+ "rpm-version",
  "sha1 0.10.6",
  "sha2 0.10.9",
  "sha3",
@@ -4017,6 +4018,12 @@ dependencies = [
  "zeroize",
  "zstd",
 ]
+
+[[package]]
+name = "rpm-version"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56568fb1bf1d2c0a640aac216b3d84d65e210ca1997df922bf124f2bfaf9efd9"
 
 [[package]]
 name = "rsqlite-vfs"
