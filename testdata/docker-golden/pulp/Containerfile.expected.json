@@ -43,7 +43,19 @@
         "org.opencontainers.image.version": "latest"
       }
     },
-    "dependencies": [],
+    "dependencies": [
+      {
+        "purl": "pkg:docker/pulp/pulp-base@latest?repository_url=quay.io",
+        "extracted_requirement": null,
+        "scope": null,
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      }
+    ],
     "repository_homepage_url": null,
     "repository_download_url": null,
     "api_data_url": null,

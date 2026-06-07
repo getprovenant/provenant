@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 
 use crate::parser_warn as warn;
+use packageurl::PackageUrl;
 use serde_json::json;
 
-use crate::models::{DatasourceId, PackageData, PackageType};
+use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -83,6 +85,8 @@ pub(crate) fn parse_dockerfile(content: &str) -> PackageData {
     let (declared_license_expression, declared_license_expression_spdx, license_detections) =
         normalize_spdx_declared_license(extracted_license_statement.as_deref());
 
+    let dependencies = extract_base_image_dependencies(content);
+
     PackageData {
         package_type: Some(PACKAGE_TYPE),
         primary_language: Some("Dockerfile".to_string()),
@@ -107,7 +111,171 @@ pub(crate) fn parse_dockerfile(content: &str) -> PackageData {
         license_detections,
         extracted_license_statement: extracted_license_statement.map(truncate_field),
         extra_data,
+        dependencies,
         ..Default::default()
+    }
+}
+
+/// Parses `FROM` directives and emits each external base image as a `pkg:docker`
+/// dependency. Internal multi-stage references, `scratch`, and `ARG`-templated
+/// images are intentionally skipped.
+fn extract_base_image_dependencies(content: &str) -> Vec<Dependency> {
+    let mut stage_names: HashSet<String> = HashSet::new();
+    let mut dependencies = Vec::new();
+    let mut seen_purls: HashSet<String> = HashSet::new();
+
+    for instruction in logical_lines(content) {
+        let trimmed = instruction.trim_start();
+        if !starts_with_instruction(trimmed, "FROM") {
+            continue;
+        }
+
+        let Some((image, stage)) = parse_from_arguments(&trimmed[4..]) else {
+            continue;
+        };
+
+        // Skip references to an earlier build stage rather than an external image.
+        // The containment check must run before inserting the current alias so that
+        // `FROM image AS image` (alias equals the untagged image name) is not
+        // misclassified as an internal stage reference.
+        let is_internal = stage_names.contains(&image.to_ascii_lowercase());
+        if let Some(stage) = stage {
+            stage_names.insert(stage.to_ascii_lowercase());
+        }
+        if is_internal {
+            continue;
+        }
+
+        // `scratch` is the empty base, not a pullable image.
+        if image.eq_ignore_ascii_case("scratch") {
+            continue;
+        }
+
+        // Honest unknown: an unresolved build-arg template (`${BASE}` / `$BASE`).
+        if image.contains('$') {
+            continue;
+        }
+
+        let Some(purl) = build_docker_purl(image) else {
+            continue;
+        };
+
+        if seen_purls.insert(purl.clone()) {
+            // Only a `@sha256:…` digest is an immutable pin; a tag (or no tag)
+            // is mutable, so it is not considered pinned.
+            let is_pinned = image.contains('@');
+            dependencies.push(Dependency {
+                purl: Some(truncate_field(purl)),
+                extracted_requirement: None,
+                scope: None,
+                is_runtime: None,
+                is_optional: None,
+                is_pinned: Some(is_pinned),
+                is_direct: Some(true),
+                resolved_package: None,
+                extra_data: None,
+            });
+        }
+    }
+
+    dependencies
+}
+
+/// Extracts the image reference and optional `AS <stage>` name from a `FROM`
+/// directive body. Returns `None` when no image token is present. Leading
+/// `--platform=...` flags are ignored.
+fn parse_from_arguments(rest: &str) -> Option<(&str, Option<&str>)> {
+    let mut tokens = rest.split_whitespace().filter(|token| {
+        // Drop build flags such as `--platform=linux/amd64`.
+        !token.starts_with("--")
+    });
+
+    let image = tokens.next()?;
+
+    let mut stage = None;
+    if tokens
+        .next()
+        .is_some_and(|token| token.eq_ignore_ascii_case("AS"))
+    {
+        stage = tokens.next();
+    }
+
+    Some((image, stage))
+}
+
+/// Builds a `pkg:docker` PURL from a Docker image reference of the form
+/// `[registry/]repository[:tag|@digest]`. The registry, when present, is
+/// emitted as a `repository_url` qualifier; otherwise it is omitted.
+fn build_docker_purl(image: &str) -> Option<String> {
+    let (path, version) = split_image_version(image);
+    if path.is_empty() {
+        return None;
+    }
+
+    let (registry, repository) = split_registry(path);
+    let (namespace, name) = split_repository(repository)?;
+
+    let mut purl = PackageUrl::new("docker", name).ok()?;
+
+    if let Some(namespace) = namespace {
+        purl.with_namespace(namespace).ok()?;
+    }
+
+    if let Some(version) = version {
+        purl.with_version(version).ok()?;
+    }
+
+    if let Some(registry) = registry {
+        purl.add_qualifier("repository_url", registry).ok()?;
+    }
+
+    Some(purl.to_string())
+}
+
+/// Splits an image reference into its `[registry/]repository` path and the
+/// optional tag-or-digest version. A `@` digest takes precedence; otherwise a
+/// `:` after the final path segment is treated as a tag.
+fn split_image_version(image: &str) -> (&str, Option<&str>) {
+    if let Some((path, digest)) = image.split_once('@') {
+        return (path, (!digest.is_empty()).then_some(digest));
+    }
+
+    // A colon only marks a tag when it appears in the final path segment;
+    // a colon in an earlier segment denotes a registry port.
+    if let Some(colon) = image.rfind(':')
+        && !image[colon + 1..].contains('/')
+    {
+        let tag = &image[colon + 1..];
+        return (&image[..colon], (!tag.is_empty()).then_some(tag));
+    }
+
+    (image, None)
+}
+
+/// Separates a leading registry host from the repository path. The first
+/// segment is a registry when it contains a `.` or `:` (port) or equals
+/// `localhost`, matching Docker reference resolution.
+fn split_registry(path: &str) -> (Option<&str>, &str) {
+    if let Some((first, rest)) = path.split_once('/')
+        && (first.contains('.') || first.contains(':') || first == "localhost")
+    {
+        return (Some(first), rest);
+    }
+
+    (None, path)
+}
+
+/// Splits a repository path into an optional namespace and a name. The final
+/// path segment is the name; any preceding segments form the namespace.
+fn split_repository(repository: &str) -> Option<(Option<&str>, &str)> {
+    if repository.is_empty() {
+        return None;
+    }
+
+    match repository.rsplit_once('/') {
+        Some((namespace, name)) if !name.is_empty() => Some((Some(namespace), name)),
+        Some(_) => None,
+        None => Some((None, repository)),
     }
 }
 
