@@ -38,6 +38,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
   - [Ruby / PHP / Perl](#ruby--php--perl)
   - [Julia / Nix / Haskell / other ecosystems](#julia--nix--haskell--other-ecosystems)
 - **Artifact/rootfs-backed targets**
+  - [Container image layouts](#container-image-layouts)
   - [Linux rootfs images](#linux-rootfs-images)
   - [Installed package database snapshots](#installed-package-database-snapshots)
   - [Package archives](#package-archives)
@@ -1358,6 +1359,15 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Broader multi-package Hackage extraction (`16` vs `0` packages, `391` vs `0` dependencies) from the repo's many sibling `yesod-*/*.cabal` manifests, with explicit package identities across the Yesod family where ScanCode stays manifest-blind
 
 ### Artifact/rootfs-backed targets
+
+#### Container image layouts
+
+##### [hello-world multi-arch OCI image layout @ sha256:ec15384](https://hub.docker.com/layers/library/hello-world/latest/images/sha256-ec153840d1e635ac434fab5e377081f17e0e15afab27beb3f726c3265039cfff) — **6.47× faster**
+
+- Files: 73
+- Run context: 2026-06-07 · hw-oci-38382 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.90s`; ScanCode `44.65s`
+- Provenant resolves the OCI image-layout `index.json` into one `pkg:oci/hello-world@sha256:<config-digest>` identity per platform (`12` vs `0` packages), following the nested image index to recover each platform's image-config digest and emitting `arch`, `tag`, and `repository_url` qualifiers, where ScanCode has no OCI image-layout parser and emits no package for the layout, with identical license, copyright, URL, and email detection across the layout's blob and metadata files so the package identity is the only dimension that differs; reproduce the target with `skopeo copy --all docker://hello-world@sha256:ec153840d1e635ac434fab5e377081f17e0e15afab27beb3f726c3265039cfff oci:hw-oci:docker.io/library/hello-world:1.0`
 
 #### Linux rootfs images
 

@@ -188,6 +188,9 @@ ScanCode: 65.66s</title></rect>
     <rect x="365.59" y="422.87" width="8" height="8" fill="#d97706" rx="1.5"><title>docker-library/python @ ced4ac7
 Files: 53
 ScanCode: 76.81s</title></rect>
+    <rect x="387.65" y="448.50" width="8" height="8" fill="#d97706" rx="1.5"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
+Files: 73
+ScanCode: 44.65s</title></rect>
     <rect x="389.51" y="323.61" width="8" height="8" fill="#d97706" rx="1.5"><title>WSUS wsusscn2 extracted snapshot
 Files: 75
 ScanCode: 627.66s</title></rect>
@@ -853,6 +856,9 @@ Provenant: 8.66s</title></circle>
     <circle cx="369.59" cy="514.74" r="4.5" fill="#2563eb"><title>docker-library/python @ ced4ac7
 Files: 53
 Provenant: 11.96s</title></circle>
+    <circle cx="391.65" cy="540.73" r="4.5" fill="#2563eb"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
+Files: 73
+Provenant: 6.90s</title></circle>
     <circle cx="393.51" cy="436.60" r="4.5" fill="#2563eb"><title>WSUS wsusscn2 extracted snapshot
 Files: 75
 Provenant: 62.51s</title></circle>
