@@ -61,6 +61,14 @@ pre-commit:
         - release.sh
       run: ./scripts/check_release_version_sync.sh
 
+    check-notice-attribution-sync:
+      glob:
+        - NOTICE
+        - scripts/notice_retained_segments.txt
+        - scripts/check_notice_attribution_sync.sh
+        - reference/scancode-toolkit
+      run: ./scripts/check_notice_attribution_sync.sh
+
     dependency-policy:
       glob:
         - Cargo.toml

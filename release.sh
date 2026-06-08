@@ -90,6 +90,8 @@ fi
 
 echo "🔎 Verifying ScanCode output format version sync..."
 ./scripts/check_scancode_output_format_sync.sh
+echo "🔎 Verifying NOTICE attribution sync (retained upstream notices verbatim)..."
+./scripts/check_notice_attribution_sync.sh --require-submodule
 echo "🔧 Regenerating embedded license index artifact..."
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact
 

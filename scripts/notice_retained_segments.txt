@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Canonical list of upstream ScanCode Toolkit NOTICE segments that Provenant
+# retains and reproduces verbatim (Apache-2.0 section 4(d) / CC-BY-4.0
+# attribution). Each segment between an @@BEGIN@@ / @@END@@ marker pair must
+# appear, verbatim (trailing whitespace ignored), in BOTH:
+#   - the pinned submodule NOTICE: reference/scancode-toolkit/NOTICE
+#   - the repository-root NOTICE
+# This is enforced by scripts/check_notice_attribution_sync.sh.
+#
+# Do NOT hand-edit a segment to "fix" wording. The segments are an exact copy
+# of upstream. If a bump of the reference/scancode-toolkit submodule changes a
+# retained notice, update these segments AND the root NOTICE together to match
+# the new upstream text. If upstream ADDS a new notice that pertains to the
+# code or data Provenant distributes, add a new segment here and reproduce it
+# in the root NOTICE (this is a human judgment, not auto-detected).
+#
+# Lines outside the @@BEGIN@@ / @@END@@ markers (such as this header) are
+# ignored by the check.
+
+@@BEGIN@@
+Copyright (c) nexB Inc. and others. All rights reserved.
+ScanCode is a trademark of nexB Inc.
+
+SPDX-License-Identifier: Apache-2.0 AND CC-BY-4.0
+
+ScanCode software is licensed under the Apache License version 2.0.
+ScanCode data is licensed under CC-BY-4.0.
+
+See https://www.apache.org/licenses/LICENSE-2.0 for the Apache-2.0 license text.
+See https://creativecommons.org/licenses/by/4.0/legalcode for the CC-BY-4.0 license text.
+
+See https://github.com/nexB/scancode-toolkit for support or download.
+See https://aboutcode.org for more information about nexB OSS projects
+@@END@@
+
+@@BEGIN@@
+ScanCode includes datasets (e.g. for license detection) that are licensed under
+CC-BY-4.0
+
+The preferred attribution for use of ScanCode data is::
+
+    Copyright (c) nexB Inc. and others. All rights reserved.
+    ScanCode is a trademark of nexB Inc.
+    SPDX-License-Identifier: CC-BY-4.0
+    See https://creativecommons.org/licenses/by/4.0/legalcode for the license text.
+    See https://github.com/nexB/scancode-toolkit for support or download.
+    See https://aboutcode.org for more information about nexB OSS projects.
+@@END@@

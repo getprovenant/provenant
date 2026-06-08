@@ -43,6 +43,9 @@ jobs:
       - name: Verify ScanCode output format version sync
         uses: ./.github/actions/verify-scancode-output-format-version
 
+      - name: Verify NOTICE attribution sync
+        uses: ./.github/actions/verify-notice-attribution-sync
+
   rust-quality:
     name: Code Quality
     runs-on: ubuntu-latest
