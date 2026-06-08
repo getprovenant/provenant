@@ -19,6 +19,20 @@ Provenant copyright and a notice that the file was changed. The set of derived
 files is enumerated in the `derived` list of `.license-headers.toml` and is
 enforced by the license-header check.
 
+Provenant also ships a license-detection dataset derived from ScanCode Toolkit
+data (CC-BY-4.0). This dataset has been modified from upstream: certain rules
+are excluded and others are reclassified or tightened, and a small number of
+license/rule entries are added, as defined by
+`resources/license_detection/index_build_policy.toml` and the overlays under
+`resources/license_detection/overlay/`. Each scan also reports the applied
+modifications in its license-index provenance output.
+
+Provenant does not redistribute the third-party software packages that the
+upstream ScanCode Toolkit bundles; the `reference/scancode-toolkit` submodule is
+a development-time reference and is excluded from Provenant distributions.
+Accordingly, upstream's "Third-party software licenses" notice is omitted as not
+pertaining to this work.
+
 Provenant project code is licensed under the Apache License, Version 2.0.
 See `LICENSE` for the license text.
 
