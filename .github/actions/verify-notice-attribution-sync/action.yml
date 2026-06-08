@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+
+name: Verify NOTICE attribution sync
+description: Verify that retained upstream ScanCode NOTICE segments are reproduced verbatim in the root NOTICE
+runs:
+  using: composite
+  steps:
+    - name: Verify NOTICE attribution sync
+      shell: bash
+      run: ./scripts/check_notice_attribution_sync.sh --require-submodule

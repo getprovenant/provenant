@@ -33,6 +33,12 @@ a development-time reference and is excluded from Provenant distributions.
 Accordingly, upstream's "Third-party software licenses" notice is omitted as not
 pertaining to this work.
 
+The upstream attribution notices reproduced below are copied verbatim from the
+pinned `reference/scancode-toolkit/NOTICE`, and an automated check
+(`scripts/check_notice_attribution_sync.sh`) keeps them in sync. The upstream
+project is now hosted at https://github.com/aboutcode-org/scancode-toolkit; the
+github.com/nexB URLs preserved verbatim in the notices below redirect there.
+
 Provenant project code is licensed under the Apache License, Version 2.0.
 See `LICENSE` for the license text.
 
@@ -51,21 +57,21 @@ ScanCode data is licensed under CC-BY-4.0.
 See https://www.apache.org/licenses/LICENSE-2.0 for the Apache-2.0 license text.
 See https://creativecommons.org/licenses/by/4.0/legalcode for the CC-BY-4.0 license text.
 
-See https://github.com/aboutcode-org/scancode-toolkit for support or download.
+See https://github.com/nexB/scancode-toolkit for support or download.
 See https://aboutcode.org for more information about nexB OSS projects
 
 
 ScanCode data attribution
 =========================
 
-ScanCode includes datasets (for example, license-detection data) that are licensed under
-CC-BY-4.0.
+ScanCode includes datasets (e.g. for license detection) that are licensed under
+CC-BY-4.0
 
-The preferred attribution for use of ScanCode data is:
+The preferred attribution for use of ScanCode data is::
 
     Copyright (c) nexB Inc. and others. All rights reserved.
     ScanCode is a trademark of nexB Inc.
     SPDX-License-Identifier: CC-BY-4.0
     See https://creativecommons.org/licenses/by/4.0/legalcode for the license text.
-    See https://github.com/aboutcode-org/scancode-toolkit for support or download.
+    See https://github.com/nexB/scancode-toolkit for support or download.
     See https://aboutcode.org for more information about nexB OSS projects.

@@ -115,3 +115,27 @@ Example:
 ```bash
 ./scripts/check_scancode_output_format_sync.sh
 ```
+
+## `check_notice_attribution_sync.sh`
+
+Verify that the upstream ScanCode Toolkit attribution notices Provenant retains
+(Apache-2.0 section 4(d) / CC-BY-4.0) are reproduced verbatim in both the pinned
+`reference/scancode-toolkit/NOTICE` and the repository-root `NOTICE`. The
+canonical retained segments live in
+[`notice_retained_segments.txt`](notice_retained_segments.txt); the check is
+anchored on those segments only, so notices we intentionally omit (such as
+upstream's "Third-party software licenses" section) do not affect it.
+
+Pass `--require-submodule` to fail (instead of soft-skip) when the submodule
+NOTICE is missing; CI and `release.sh` use this so a submodule bump that changes
+a retained notice is caught before a release is tagged. If upstream _adds_ a new
+notice that pertains to the code or data Provenant distributes, add a matching
+segment and reproduce it in `NOTICE` — that case is a human judgment, not
+auto-detected.
+
+Example:
+
+```bash
+./scripts/check_notice_attribution_sync.sh
+./scripts/check_notice_attribution_sync.sh --require-submodule
+```
