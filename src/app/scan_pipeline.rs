@@ -43,8 +43,9 @@ use crate::scan_result_shaping::{
     prepare_filter_clue_rule_lookup, trim_preloaded_assembly_to_files,
 };
 use crate::scanner::{
-    ProcessResult, collect_paths, collect_selected_paths, process_collected_with_memory_limit,
-    process_collected_with_memory_limit_sequential, scan_options_fingerprint,
+    CollectionLimits, ProcessResult, collect_paths_with_limits, collect_selected_paths_with_limits,
+    process_collected_with_memory_limit, process_collected_with_memory_limit_sequential,
+    scan_options_fingerprint,
 };
 use crate::utils::hash::calculate_sha256;
 
@@ -475,6 +476,24 @@ pub(crate) fn compile_regex_patterns(option_name: &str, patterns: &[String]) -> 
         .collect()
 }
 
+/// Translates the request-level [`ScanBounds`](crate::app::request::ScanBounds)
+/// into collector limits, anchoring the wall-clock deadline at collection start
+/// and the symlink guard at the scan root.
+fn build_collection_limits(request: &ScanRequest, scan_root: &Path) -> CollectionLimits {
+    let bounds = &request.scan_bounds;
+    CollectionLimits {
+        max_file_count: bounds.max_files,
+        max_total_bytes: bounds.max_total_bytes,
+        deadline: bounds
+            .deadline_seconds
+            .filter(|seconds| seconds.is_finite() && *seconds > 0.0)
+            .map(|seconds| Instant::now() + std::time::Duration::from_secs_f64(seconds)),
+        symlink_root_guard: bounds
+            .restrict_out_of_tree_symlinks
+            .then(|| scan_root.to_path_buf()),
+    }
+}
+
 fn load_native_scan_session(
     request: &ScanRequest,
     scan_plan: &ScanPlan,
@@ -497,14 +516,21 @@ fn load_native_scan_session(
     let collection_exclude_patterns =
         build_collection_exclude_patterns(Path::new(&scan_path), cache_config.root_dir());
 
+    let collection_limits = build_collection_limits(request, Path::new(&scan_path));
     let mut collected = if request.paths_files.is_empty() {
-        collect_paths(&scan_path, request.max_depth, &collection_exclude_patterns)
+        collect_paths_with_limits(
+            &scan_path,
+            request.max_depth,
+            &collection_exclude_patterns,
+            &collection_limits,
+        )
     } else {
-        collect_selected_paths(
+        collect_selected_paths_with_limits(
             Path::new(&scan_path),
             &collection_frontier,
             request.max_depth,
             &collection_exclude_patterns,
+            &collection_limits,
         )
     };
     let user_excluded_count = apply_user_path_filters_to_collected(

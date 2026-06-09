@@ -80,4 +80,19 @@ pub(crate) struct ScanRequest {
     pub(crate) max_email: usize,
     pub(crate) url: bool,
     pub(crate) max_url: usize,
+    /// Bounds applied to untrusted input trees (set by `provenant serve`).
+    /// Trusted CLI and library scans leave these unset for unchanged behavior.
+    pub(crate) scan_bounds: ScanBounds,
+}
+
+/// Optional collector ceilings for untrusted scans.
+///
+/// Defaults are fully permissive so trusted CLI and library scans behave
+/// exactly as before; `provenant serve` opts into finite values.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct ScanBounds {
+    pub(crate) max_files: Option<usize>,
+    pub(crate) max_total_bytes: Option<u64>,
+    pub(crate) deadline_seconds: Option<f64>,
+    pub(crate) restrict_out_of_tree_symlinks: bool,
 }

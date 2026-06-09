@@ -76,6 +76,15 @@ type Result<T> = std::result::Result<T, IngestError>;
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_REDIRECTS: usize = 5;
+
+// Overall per-scan ceilings for the untrusted serve lane. These are
+// intentionally generous so realistic projects scan unchanged, while still
+// bounding hostile inputs (e.g. a repository of millions of tiny files) that
+// would otherwise run effectively unbounded on the single sync-scan worker.
+const SERVE_MAX_SCAN_FILES: usize = 500_000;
+const SERVE_MAX_SCAN_TOTAL_BYTES: u64 = 4 * 1024 * 1024 * 1024;
+const SERVE_SCAN_DEADLINE_SECONDS: f64 = 300.0;
+
 const MAX_REMOTE_INPUT_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_UPLOADED_INPUT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRY_BYTES: u64 = 50 * 1024 * 1024;
@@ -805,6 +814,13 @@ impl SyncScanExecution {
             options.full_root = false;
         }
 
+        // Every serve request handles untrusted input, so bound the walk and
+        // refuse to dereference symlinks that escape the scan root.
+        options.max_files = Some(SERVE_MAX_SCAN_FILES);
+        options.max_total_bytes = Some(SERVE_MAX_SCAN_TOTAL_BYTES);
+        options.scan_deadline_seconds = Some(SERVE_SCAN_DEADLINE_SECONDS);
+        options.restrict_out_of_tree_symlinks = true;
+
         Ok(Self {
             paths,
             options,
@@ -866,6 +882,77 @@ mod tests {
             error
                 .to_string()
                 .contains("input.paths must contain at least one path")
+        );
+    }
+
+    #[test]
+    fn sync_scan_execution_applies_untrusted_scan_bounds() {
+        use crate::serve_api::{ServeScanInput, ServeScanOptions, ServeScanRequest};
+
+        let temp_dir = TempDir::new().expect("temp dir");
+        fs::write(temp_dir.path().join("file.txt"), "content\n").expect("write file");
+
+        let execution = SyncScanExecution::new(
+            ServeScanRequest {
+                input: ServeScanInput::Paths {
+                    paths: vec![temp_dir.path().to_string_lossy().to_string()],
+                },
+                options: ServeScanOptions::default(),
+            },
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect("scan execution should build");
+
+        assert_eq!(execution.options.max_files, Some(SERVE_MAX_SCAN_FILES));
+        assert_eq!(
+            execution.options.max_total_bytes,
+            Some(SERVE_MAX_SCAN_TOTAL_BYTES)
+        );
+        assert_eq!(
+            execution.options.scan_deadline_seconds,
+            Some(SERVE_SCAN_DEADLINE_SECONDS)
+        );
+        assert!(execution.options.restrict_out_of_tree_symlinks);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn serve_scan_does_not_emit_out_of_tree_symlink_target() {
+        use crate::serve_api::{ServeScanInput, ServeScanOptions, ServeScanRequest};
+        use std::os::unix::fs::symlink;
+
+        let outside_dir = TempDir::new().expect("outside temp dir");
+        let secret = outside_dir.path().join("secret.txt");
+        fs::write(&secret, "SERVE_SECRET_MARKER\n").expect("write out-of-tree secret");
+
+        let scan_dir = TempDir::new().expect("scan temp dir");
+        fs::write(scan_dir.path().join("inside.txt"), "ordinary\n").expect("write inside file");
+        symlink(&secret, scan_dir.path().join("creds")).expect("create escaping symlink");
+
+        let execution = SyncScanExecution::new(
+            ServeScanRequest {
+                input: ServeScanInput::Paths {
+                    paths: vec![scan_dir.path().to_string_lossy().to_string()],
+                },
+                options: ServeScanOptions {
+                    collect_info: true,
+                    ..ServeScanOptions::default()
+                },
+            },
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect("scan execution should build");
+
+        let body = execution.execute().expect("serve scan should succeed");
+
+        // The escaping symlink and the out-of-tree target name must not surface.
+        assert!(
+            !body.contains("creds"),
+            "escaping symlink should not be scanned"
+        );
+        assert!(
+            body.contains("inside.txt"),
+            "in-tree file should be scanned"
         );
     }
 

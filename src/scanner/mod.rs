@@ -129,7 +129,8 @@ pub fn scan_options_fingerprint(
 }
 
 pub use self::collect::{
-    CollectedPaths, CollectionFrontier, collect_paths, collect_selected_paths,
+    CollectedPaths, CollectionFrontier, CollectionLimits, collect_paths, collect_paths_with_limits,
+    collect_selected_paths, collect_selected_paths_with_limits,
 };
 #[allow(unused_imports)]
 pub use self::process::{
