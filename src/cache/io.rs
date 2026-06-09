@@ -7,6 +7,27 @@ use std::path::{Path, PathBuf};
 
 use uuid::Uuid;
 
+/// Create `path` and any missing parents, restricting each newly created
+/// directory to the owner (`0700`) on Unix.
+///
+/// Cache entries can contain license/copyright text and file paths from private
+/// repositories, so the cache tree must not be group/world-readable on a
+/// permissive-umask multi-user host. On non-Unix platforms this falls back to
+/// the standard `create_dir_all` behavior.
+pub fn create_dir_all_private(path: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::fs::DirBuilder;
+        use std::os::unix::fs::DirBuilderExt;
+
+        DirBuilder::new().recursive(true).mode(0o700).create(path)
+    }
+    #[cfg(not(unix))]
+    {
+        fs::create_dir_all(path)
+    }
+}
+
 pub fn write_bytes_atomically(path: &Path, payload: &[u8]) -> io::Result<()> {
     let parent = path.parent().ok_or_else(|| {
         io::Error::new(
@@ -15,7 +36,7 @@ pub fn write_bytes_atomically(path: &Path, payload: &[u8]) -> io::Result<()> {
         )
     })?;
 
-    fs::create_dir_all(parent)?;
+    create_dir_all_private(parent)?;
 
     let temp_path = temp_atomic_path(path);
     let result =
@@ -29,10 +50,16 @@ pub fn write_bytes_atomically(path: &Path, payload: &[u8]) -> io::Result<()> {
 }
 
 fn write_bytes_to_temp(temp_path: &Path, payload: &[u8]) -> io::Result<()> {
-    let mut temp_file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(temp_path)?;
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    // Restrict cache files to the owner (`0600`) on Unix; they can hold
+    // license/copyright text and file paths from private repositories.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut temp_file = options.open(temp_path)?;
     temp_file.write_all(payload)?;
     temp_file.sync_all()?;
     Ok(())
@@ -77,5 +104,29 @@ mod tests {
         write_bytes_atomically(&path, b"hello world").expect("write bytes atomically");
 
         assert_eq!(fs::read(&path).expect("read bytes"), b"hello world");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_write_bytes_atomically_restricts_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = temp_dir.path().join("nested").join("cache");
+        let path = dir.join("entry.bin");
+
+        write_bytes_atomically(&path, b"secret").expect("write bytes atomically");
+
+        let file_mode = fs::metadata(&path)
+            .expect("file metadata")
+            .permissions()
+            .mode();
+        assert_eq!(file_mode & 0o777, 0o600, "cache file must be owner-only");
+
+        let dir_mode = fs::metadata(&dir)
+            .expect("dir metadata")
+            .permissions()
+            .mode();
+        assert_eq!(dir_mode & 0o777, 0o700, "created dir must be owner-only");
     }
 }

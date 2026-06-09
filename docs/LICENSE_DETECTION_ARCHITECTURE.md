@@ -38,11 +38,13 @@ The license detection system is a multi-phase, multi-strategy detection engine t
 
 Provenant caches the built `LicenseIndex` as an rkyv-serialized file to avoid rebuilding it on every run. The cache reduces license engine startup from ~12s (cold) to ~0.8s (warm, release build).
 
-- **Format**: Fingerprinted rkyv files under the shared cache root, for example `license-index/embedded/<fingerprint>.rkyv` or `license-index/custom/<fingerprint>.rkyv`, each with a 32-byte SHA-256 fingerprint prefix
+- **Format**: Fingerprinted rkyv files under the shared cache root, for example `license-index/embedded/<fingerprint>.rkyv` or `license-index/custom/<fingerprint>.rkyv`. Each file is laid out as `[32-byte rules fingerprint][32-byte SHA-256 payload digest][rkyv payload]`
 - **Default location**: Under the shared cache root selected by `--cache-dir`, `PROVENANT_CACHE`, or the platform-native default
 - **Opt-out**: `--no-license-index-cache` skips both persistent reads and persistent writes for that run
 - **Invalidation**: Automatic when the source rules change (fingerprint mismatch) or when `--reindex` is passed
 - **Fingerprinting**: Embedded rules use SHA-256 of the raw artifact bytes; custom license datasets use SHA-256 of the sorted loaded rules and licenses
+- **Integrity**: On load, the SHA-256 payload digest is verified before any deserialization. A mismatch (tamper, truncation, or an older layout that lacks the digest) is treated as a cache miss and the index is rebuilt. The embedded automaton is decoded with the validating (checked) deserializer on this cache-load path, so malformed cache bytes are rejected rather than reaching the `unsafe` unchecked decoder; the trusted embedded artifact is rebuilt via the index builder and never goes through this path
+- **Permissions**: On Unix the cache directory tree is created `0700` and cache files `0600`, since entries can contain license/copyright text and file paths from private repositories. The cache directory must **not** be placed on a shared or world-writable path; a writable cache root would let another user supply crafted cache files
 
 ### Current Public Output Surface
 

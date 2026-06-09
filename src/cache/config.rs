@@ -97,7 +97,9 @@ impl CacheConfig {
 
     pub fn ensure_dirs(&self) -> io::Result<()> {
         if self.incremental_enabled() {
-            fs::create_dir_all(self.incremental_dir())?;
+            // Incremental state can contain file paths from private repositories,
+            // so keep the cache tree owner-only on Unix.
+            super::create_dir_all_private(&self.incremental_dir())?;
         }
         Ok(())
     }

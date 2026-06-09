@@ -37,13 +37,25 @@ impl<S: Fallible + rkyv::ser::Writer + rkyv::ser::Allocator + ?Sized> SerializeW
 impl<D: Fallible + ?Sized> DeserializeWith<<Vec<u8> as Archive>::Archived, Automaton, D> for AsBytes
 where
     <Vec<u8> as Archive>::Archived: Deserialize<Vec<u8>, D>,
+    D::Error: rancor::Source,
 {
     fn deserialize_with(
         field: &<Vec<u8> as Archive>::Archived,
         deserializer: &mut D,
     ) -> Result<Automaton, D::Error> {
+        // This adapter only runs when an on-disk cache file is rkyv-deserialized;
+        // the trusted embedded artifact is rebuilt via the index builder rather
+        // than deserialized. The automaton bytes may therefore be untrusted, so
+        // use the validating daachorse deserializer instead of the unchecked one.
         let bytes: Vec<u8> = field.deserialize(deserializer)?;
-        Ok(Automaton::deserialize_unchecked(&bytes))
+        Automaton::deserialize(&bytes).map_err(|e| {
+            // `DaachorseError` does not implement `std::error::Error`, so wrap its
+            // message in an `io::Error` to satisfy `rancor::Source::new`.
+            rancor::Source::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("invalid serialized automaton: {e}"),
+            ))
+        })
     }
 }
 
@@ -109,10 +121,24 @@ impl Automaton {
         FindOverlappingIter::new(&self.inner, haystack)
     }
 
-    /// Deserialize an automaton from bytes.
+    /// Deserialize an automaton from bytes, validating the structure.
+    ///
+    /// Use this for any bytes that are not produced in-process during the same
+    /// run (for example, bytes loaded from an on-disk cache file), since the
+    /// validation rejects malformed input instead of triggering undefined
+    /// behavior.
+    pub fn deserialize(bytes: &[u8]) -> Result<Self, daachorse::errors::DaachorseError> {
+        let (ac, _) = DoubleArrayAhoCorasick::deserialize(bytes)?;
+        Ok(Self { inner: ac })
+    }
+
+    /// Deserialize an automaton from bytes without validation.
     ///
     /// # Safety
-    /// The bytes must be valid serialized data from the underlying daachorse automaton.
+    /// The bytes must be valid serialized data from the underlying daachorse
+    /// automaton. Only use this for trusted, in-process bytes (for example,
+    /// round-tripping through [`Automaton::serialize_bytes`] during `Clone`);
+    /// for cache-sourced bytes use [`Automaton::deserialize`] instead.
     pub fn deserialize_unchecked(bytes: &[u8]) -> Self {
         let (ac, _) = unsafe { DoubleArrayAhoCorasick::deserialize_unchecked(bytes) };
         Self { inner: ac }
