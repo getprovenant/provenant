@@ -1,49 +1,35 @@
 Provenant Notices
-=====================
+=================
 
 Copyright (c) 2026 Provenant contributors.
 
-Provenant is a Rust implementation for ScanCode-compatible workflows.
-It is not affiliated with, endorsed by, or sponsored by ScanCode Toolkit,
-AboutCode, or nexB Inc.
+Provenant is a Rust implementation for ScanCode-compatible workflows. It is not
+affiliated with, endorsed by, or sponsored by ScanCode Toolkit, AboutCode, or
+nexB Inc.
 
-This file preserves attribution notices for upstream ScanCode Toolkit material
-that is present in this repository, including the `reference/scancode-toolkit`
-submodule, and for any ScanCode-derived data files included in a given
-Provenant distribution.
+Portions of Provenant are derived from the ScanCode Toolkit:
 
-Portions of Provenant's engine code are derived from the ScanCode Toolkit
-(Apache-2.0) and were ported to Rust and modified. Source files containing such
-derived code carry upstream nexB attribution in their SPDX headers alongside the
-Provenant copyright and a notice that the file was changed. The set of derived
-files is enumerated in the `derived` list of `.license-headers.toml` and is
-enforced by the license-header check.
+  - Engine code (Apache-2.0) ported to Rust and modified. Derived source files
+    carry upstream nexB attribution alongside the Provenant copyright and a
+    change notice.
+  - A license-detection dataset (CC-BY-4.0), modified from upstream: rules
+    excluded, reclassified, or tightened, and some entries added. Each scan
+    reports the exact modifications in its license-index provenance output.
 
-Provenant also ships a license-detection dataset derived from ScanCode Toolkit
-data (CC-BY-4.0). This dataset has been modified from upstream: certain rules
-are excluded and others are reclassified or tightened, and a small number of
-license/rule entries are added, as defined by
-`resources/license_detection/index_build_policy.toml` and the overlays under
-`resources/license_detection/overlay/`. Each scan also reports the applied
-modifications in its license-index provenance output.
+Provenant does not redistribute the third-party packages that ScanCode bundles,
+so upstream's "Third-party software licenses" notice does not pertain to this
+work and is omitted.
 
-Provenant does not redistribute the third-party software packages that the
-upstream ScanCode Toolkit bundles; the `reference/scancode-toolkit` submodule is
-a development-time reference and is excluded from Provenant distributions.
-Accordingly, upstream's "Third-party software licenses" notice is omitted as not
-pertaining to this work.
+The upstream notices reproduced below are copied verbatim from ScanCode's
+NOTICE. The project is now hosted at
+https://github.com/aboutcode-org/scancode-toolkit; the github.com/nexB URLs
+below redirect there.
 
-The upstream attribution notices reproduced below are copied verbatim from the
-pinned `reference/scancode-toolkit/NOTICE`, and an automated check
-(`scripts/check_notice_attribution_sync.sh`) keeps them in sync. The upstream
-project is now hosted at https://github.com/aboutcode-org/scancode-toolkit; the
-github.com/nexB URLs preserved verbatim in the notices below redirect there.
-
-Provenant project code is licensed under the Apache License, Version 2.0.
-See `LICENSE` for the license text.
+Provenant project code is licensed under the Apache License, Version 2.0; see
+`LICENSE`.
 
 
-Applicable upstream ScanCode Toolkit notices
+Applicable Upstream ScanCode Toolkit Notices
 ============================================
 
 Copyright (c) nexB Inc. and others. All rights reserved.
@@ -61,7 +47,7 @@ See https://github.com/nexB/scancode-toolkit for support or download.
 See https://aboutcode.org for more information about nexB OSS projects
 
 
-ScanCode data attribution
+ScanCode Data Attribution
 =========================
 
 ScanCode includes datasets (e.g. for license detection) that are licensed under
