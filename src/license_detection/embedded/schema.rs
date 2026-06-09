@@ -16,6 +16,13 @@ pub struct EmbeddedArtifactMetadata {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddedLoaderSnapshot {
+    // WARNING: `schema_version` and `metadata` MUST stay the first two fields,
+    // in this order. The warm-startup fast path in
+    // `embedded::index::load_embedded_artifact_metadata_from_bytes` postcard-
+    // decodes only this `{schema_version, metadata}` prefix (via
+    // `EmbeddedArtifactMetadataPrefix`) without reading `rules`/`licenses`.
+    // Inserting or reordering a field before/between these two silently breaks
+    // that prefix decode.
     pub schema_version: u32,
     pub metadata: EmbeddedArtifactMetadata,
     pub rules: Vec<LoadedRule>,

@@ -590,10 +590,10 @@ impl LicenseDetectionEngine {
         let provenance = Some(artifact_metadata.license_index_provenance.clone());
 
         if !cache_config.reindex {
+            let start = Instant::now();
             if let Some(cached) =
                 load_cached_index(cache_config, LicenseCacheNamespace::Embedded, &fingerprint)?
             {
-                let start = Instant::now();
                 eprintln!(
                     "License index loaded from rkyv cache in {:.2}s",
                     start.elapsed().as_secs_f64()
