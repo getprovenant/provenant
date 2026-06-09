@@ -84,7 +84,14 @@ impl TryFrom<&ServeArgs> for ServeConfig {
         }
 
         let loopback_bind = bind_allows_privileged_inputs_by_default(&args.bind);
-        let ingest_policy = if loopback_bind || args.allow_privileged_inputs {
+        // An explicit --allow-privileged-inputs means the operator trusts these
+        // inputs, including local/private fetch targets. A loopback bind only
+        // enables privileged input *types*; it keeps SSRF protection on so a
+        // default localhost server cannot be tricked into reaching internal or
+        // cloud-metadata addresses.
+        let ingest_policy = if args.allow_privileged_inputs {
+            IngestPolicy::trust_local_targets()
+        } else if loopback_bind {
             IngestPolicy::allow_privileged_inputs()
         } else {
             IngestPolicy::upload_only()

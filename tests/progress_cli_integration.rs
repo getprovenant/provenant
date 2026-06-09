@@ -840,7 +840,12 @@ fn serve_shell_scans_repository_input() {
     let (_repo_temp, repo_url, repo_sha) = create_repository_fixture();
     let port = reserve_local_port();
     let mut child = provenant_command()
-        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .args([
+            "serve",
+            "--bind",
+            &format!("127.0.0.1:{port}"),
+            "--allow-privileged-inputs",
+        ])
         .stderr(Stdio::piped())
         .spawn()
         .expect("failed to spawn provenant serve");
@@ -891,7 +896,12 @@ fn serve_shell_scans_remote_url_archive_input() {
     let (fixture_port, fixture_handle) = spawn_static_http_server(zip_bytes, "application/zip");
     let port = reserve_local_port();
     let mut child = provenant_command()
-        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .args([
+            "serve",
+            "--bind",
+            &format!("127.0.0.1:{port}"),
+            "--allow-privileged-inputs",
+        ])
         .stderr(Stdio::piped())
         .spawn()
         .expect("failed to spawn provenant serve");
@@ -999,7 +1009,12 @@ fn serve_shell_runs_async_url_scan_and_returns_result() {
     let (fixture_port, fixture_handle) = spawn_static_http_server(zip_bytes, "application/zip");
     let port = reserve_local_port();
     let mut child = provenant_command()
-        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .args([
+            "serve",
+            "--bind",
+            &format!("127.0.0.1:{port}"),
+            "--allow-privileged-inputs",
+        ])
         .stderr(Stdio::piped())
         .spawn()
         .expect("failed to spawn provenant serve");
@@ -1158,6 +1173,52 @@ fn serve_shell_rejects_non_http_url_input() {
     assert_eq!(response_status(&response), 422);
     let response_json = response_json_body(&response);
     assert_eq!(response_json["status"], "invalid_scan_request");
+
+    child.kill().expect("serve child should terminate");
+    child.wait().expect("serve child wait should succeed");
+}
+
+#[test]
+fn serve_shell_default_rejects_loopback_url_target() {
+    // Default loopback bind (no --allow-privileged-inputs) permits the `url`
+    // input type but must keep SSRF protection on: a loopback target is rejected
+    // so a localhost-bound server cannot be tricked into reaching internal
+    // services or cloud metadata.
+    let port = reserve_local_port();
+    let mut child = provenant_command()
+        .args(["serve", "--bind", &format!("127.0.0.1:{port}")])
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn provenant serve");
+
+    let _ = wait_for_http_status(port, "/readyz", 200);
+
+    let request_body = serde_json::json!({
+        "input": {
+            "type": "url",
+            "url": "http://127.0.0.1:9/archive.zip",
+        }
+    })
+    .to_string();
+
+    let response = raw_http_request(
+        port,
+        "POST",
+        "/v1/scans",
+        Some(&request_body),
+        Some("application/json"),
+    )
+    .expect("loopback URL scan request should return an error response");
+
+    assert_eq!(response_status(&response), 422);
+    let response_json = response_json_body(&response);
+    assert_eq!(response_json["status"], "invalid_scan_request");
+    assert!(
+        response_json["message"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("non-public address")
+    );
 
     child.kill().expect("serve child should terminate");
     child.wait().expect("serve child wait should succeed");
