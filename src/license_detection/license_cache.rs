@@ -6,7 +6,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use rancor::{Panic, ResultExt};
 use sha2::{Digest, Sha256};
 
 use crate::cache::{CacheConfig, write_bytes_atomically};
@@ -15,6 +14,17 @@ use crate::license_detection::models::{LoadedLicense, LoadedRule};
 
 const CACHE_ROOT_DIR_NAME: &str = "license-index";
 const CACHE_FILE_EXTENSION: &str = "rkyv";
+
+/// On-disk cache layout: `[32-byte rules fingerprint][32-byte payload digest][rkyv payload]`.
+///
+/// The fingerprint identifies which rules/licenses the payload was built from
+/// (a derivable constant, used to select and validate the cache file). The
+/// payload digest is a SHA-256 over the rkyv payload bytes and is the actual
+/// integrity check: it is verified before any deserialization so tampered or
+/// truncated payloads are rejected before reaching the rkyv/automaton decoders.
+const FINGERPRINT_LEN: usize = 32;
+const PAYLOAD_DIGEST_LEN: usize = 32;
+const HEADER_LEN: usize = FINGERPRINT_LEN + PAYLOAD_DIGEST_LEN;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LicenseCacheNamespace {
@@ -133,24 +143,41 @@ pub fn load_cached_index(
         Err(_) => return Ok(None),
     };
 
-    if bytes.len() < 32 {
+    // A header is required for the fingerprint + payload digest. Files shorter
+    // than the header (including the old fingerprint-only layout) are treated as
+    // a miss so they are transparently rebuilt rather than erroring.
+    if bytes.len() < HEADER_LEN {
         return Ok(None);
     }
 
-    let stored_fingerprint: [u8; 32] = bytes[..32].try_into().unwrap();
-    if stored_fingerprint != *fingerprint {
+    let stored_fingerprint = &bytes[..FINGERPRINT_LEN];
+    if stored_fingerprint != fingerprint.as_slice() {
         return Ok(None);
     }
 
-    let archived =
-        match rkyv::access::<rkyv::Archived<LicenseIndex>, rkyv::rancor::Error>(&bytes[32..]) {
-            Ok(archived) => archived,
-            Err(_) => return Ok(None),
-        };
+    let stored_digest = &bytes[FINGERPRINT_LEN..HEADER_LEN];
+    let payload = &bytes[HEADER_LEN..];
 
-    let cached: LicenseIndex = rkyv::deserialize::<LicenseIndex, Panic>(archived).always_ok();
+    // Integrity check over the actual payload bytes, performed before any
+    // deserialization. A mismatch (tamper, truncation, partial write, or a
+    // stale layout) is treated as a miss so the index is rebuilt safely.
+    let computed_digest: [u8; PAYLOAD_DIGEST_LEN] = Sha256::digest(payload).into();
+    if stored_digest != computed_digest.as_slice() {
+        return Ok(None);
+    }
 
-    Ok(Some(cached))
+    let archived = match rkyv::access::<rkyv::Archived<LicenseIndex>, rkyv::rancor::Error>(payload)
+    {
+        Ok(archived) => archived,
+        Err(_) => return Ok(None),
+    };
+
+    // Use the fallible strategy so a payload whose automaton bytes fail the
+    // checked daachorse deserializer surfaces as a miss instead of a panic.
+    match rkyv::deserialize::<LicenseIndex, rkyv::rancor::Error>(archived) {
+        Ok(cached) => Ok(Some(cached)),
+        Err(_) => Ok(None),
+    }
 }
 
 pub fn save_cached_index(
@@ -166,18 +193,25 @@ pub fn save_cached_index(
     let rkyv_bytes = rkyv::to_bytes::<rkyv::rancor::Error>(cached)
         .map_err(|e| anyhow::anyhow!("Failed to serialize license index cache: {}", e))?;
 
-    let mut payload = Vec::with_capacity(fingerprint.len() + rkyv_bytes.len());
-    payload.extend_from_slice(fingerprint);
-    payload.extend_from_slice(&rkyv_bytes);
+    // Layout: [fingerprint][SHA-256(payload)][payload]. The digest is verified
+    // on load before any deserialization (see `load_cached_index`).
+    let payload_digest: [u8; PAYLOAD_DIGEST_LEN] = Sha256::digest(&rkyv_bytes).into();
+
+    let mut file_bytes = Vec::with_capacity(HEADER_LEN + rkyv_bytes.len());
+    file_bytes.extend_from_slice(fingerprint);
+    file_bytes.extend_from_slice(&payload_digest);
+    file_bytes.extend_from_slice(&rkyv_bytes);
 
     let namespace_dir = config.namespace_dir(namespace);
     let cache_path = config.cache_file_path(namespace, fingerprint);
 
     crate::cache::locking::with_exclusive_cache_lock(&config.root_dir, || {
-        fs::create_dir_all(&namespace_dir)
+        // Cache entries can hold license/copyright text and file paths from
+        // private repositories, so restrict the directory tree to the owner.
+        crate::cache::create_dir_all_private(&namespace_dir)
             .with_context(|| "Failed to create license index cache directory")?;
         prune_namespace_dir(&namespace_dir, &cache_path)?;
-        write_bytes_atomically(&cache_path, &payload)
+        write_bytes_atomically(&cache_path, &file_bytes)
             .with_context(|| "Failed to persist license index cache file")
     })?;
 
@@ -297,6 +331,114 @@ mod tests {
             entries[0],
             config.cache_file_path(LicenseCacheNamespace::Embedded, &fingerprint)
         );
+    }
+
+    #[test]
+    fn test_save_then_load_round_trip() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config = LicenseCacheConfig::new(temp_dir.path().to_path_buf(), false, true);
+        let fingerprint = [0x33; 32];
+
+        save_cached_index(
+            &config,
+            LicenseCacheNamespace::Embedded,
+            &sample_cached_index(),
+            &fingerprint,
+        )
+        .expect("save cache");
+
+        let loaded = load_cached_index(&config, LicenseCacheNamespace::Embedded, &fingerprint)
+            .expect("load cache")
+            .expect("cache hit");
+        assert_eq!(loaded.spdx_license_list_version.as_deref(), Some("test"));
+    }
+
+    #[test]
+    fn test_tampered_payload_is_rejected_before_deserialization() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config = LicenseCacheConfig::new(temp_dir.path().to_path_buf(), false, true);
+        let fingerprint = [0x44; 32];
+
+        save_cached_index(
+            &config,
+            LicenseCacheNamespace::Embedded,
+            &sample_cached_index(),
+            &fingerprint,
+        )
+        .expect("save cache");
+
+        let cache_path = config.cache_file_path(LicenseCacheNamespace::Embedded, &fingerprint);
+        let mut bytes = fs::read(&cache_path).expect("read cache file");
+        // Flip a payload byte (past the fingerprint + digest header) so the
+        // stored digest no longer matches; the load must treat this as a miss
+        // rather than feeding the tampered bytes into any deserializer.
+        let last = bytes.len() - 1;
+        bytes[last] ^= 0xFF;
+        fs::write(&cache_path, &bytes).expect("rewrite tampered cache file");
+
+        let loaded = load_cached_index(&config, LicenseCacheNamespace::Embedded, &fingerprint)
+            .expect("load should not error on tamper");
+        assert!(
+            loaded.is_none(),
+            "tampered payload must be rejected as a cache miss"
+        );
+    }
+
+    #[test]
+    fn test_legacy_fingerprint_only_layout_is_treated_as_miss() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config = LicenseCacheConfig::new(temp_dir.path().to_path_buf(), false, true);
+        let fingerprint = [0x55; 32];
+
+        // Simulate an old cache file written before the payload-digest header:
+        // [fingerprint][rkyv payload] with no digest. It must be a miss, not an
+        // error, so it is rebuilt transparently.
+        let rkyv_bytes =
+            rkyv::to_bytes::<rkyv::rancor::Error>(&sample_cached_index()).expect("serialize index");
+        let mut legacy = Vec::new();
+        legacy.extend_from_slice(&fingerprint);
+        legacy.extend_from_slice(&rkyv_bytes);
+
+        let namespace_dir = config.namespace_dir(LicenseCacheNamespace::Embedded);
+        fs::create_dir_all(&namespace_dir).expect("create namespace dir");
+        let cache_path = config.cache_file_path(LicenseCacheNamespace::Embedded, &fingerprint);
+        fs::write(&cache_path, &legacy).expect("write legacy cache file");
+
+        let loaded = load_cached_index(&config, LicenseCacheNamespace::Embedded, &fingerprint)
+            .expect("load should not error on legacy layout");
+        assert!(loaded.is_none(), "legacy layout must be treated as a miss");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_saved_cache_file_and_dirs_use_restrictive_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config = LicenseCacheConfig::new(temp_dir.path().to_path_buf(), false, true);
+        let fingerprint = [0x66; 32];
+
+        save_cached_index(
+            &config,
+            LicenseCacheNamespace::Embedded,
+            &sample_cached_index(),
+            &fingerprint,
+        )
+        .expect("save cache");
+
+        let cache_path = config.cache_file_path(LicenseCacheNamespace::Embedded, &fingerprint);
+        let file_mode = fs::metadata(&cache_path)
+            .expect("file metadata")
+            .permissions()
+            .mode();
+        assert_eq!(file_mode & 0o777, 0o600, "cache file must be owner-only");
+
+        let namespace_dir = config.namespace_dir(LicenseCacheNamespace::Embedded);
+        let dir_mode = fs::metadata(&namespace_dir)
+            .expect("dir metadata")
+            .permissions()
+            .mode();
+        assert_eq!(dir_mode & 0o777, 0o700, "cache dir must be owner-only");
     }
 
     #[test]

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fs::{self, OpenOptions};
+use std::fs::OpenOptions;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -18,7 +18,7 @@ where
     E: From<io::Error>,
     F: FnOnce() -> Result<T, E>,
 {
-    fs::create_dir_all(cache_root).map_err(E::from)?;
+    super::create_dir_all_private(cache_root).map_err(E::from)?;
 
     let lock_file = OpenOptions::new()
         .read(true)
