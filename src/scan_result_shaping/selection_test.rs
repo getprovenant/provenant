@@ -58,6 +58,7 @@ fn apply_user_path_filters_to_collected_filters_files_without_pruning_directorie
         excluded_count: 0,
         total_file_bytes: 0,
         collection_errors: Vec::new(),
+        limit_reached: false,
     };
 
     let removed = apply_user_path_filters_to_collected(
@@ -105,6 +106,7 @@ fn apply_user_path_filters_to_collected_keeps_single_file_root_input() {
         excluded_count: 0,
         total_file_bytes: 0,
         collection_errors: Vec::new(),
+        limit_reached: false,
     };
 
     let removed = apply_user_path_filters_to_collected(

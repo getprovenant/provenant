@@ -88,6 +88,18 @@ pub struct ScanOptions {
     pub strip_root: bool,
     pub full_root: bool,
     pub header_options: JsonMap<String, JsonValue>,
+    /// Maximum number of files to collect before the walk stops, if any.
+    ///
+    /// Untrusted callers (such as `provenant serve`) set finite ceilings to
+    /// bound denial-of-service exposure; trusted scans leave these unset.
+    pub max_files: Option<usize>,
+    /// Maximum cumulative size of collected files in bytes, if any.
+    pub max_total_bytes: Option<u64>,
+    /// Overall wall-clock budget for the collection pass in seconds, if any.
+    pub scan_deadline_seconds: Option<f64>,
+    /// When `true`, file symlinks whose target escapes the scan root are skipped
+    /// instead of being dereferenced and scanned.
+    pub restrict_out_of_tree_symlinks: bool,
 }
 
 impl Default for ScanOptions {
@@ -144,6 +156,10 @@ impl Default for ScanOptions {
             strip_root: false,
             full_root: false,
             header_options: JsonMap::new(),
+            max_files: None,
+            max_total_bytes: None,
+            scan_deadline_seconds: None,
+            restrict_out_of_tree_symlinks: false,
         }
     }
 }
@@ -297,6 +313,12 @@ fn request_for_native_paths(input_paths: Vec<String>, options: &ScanOptions) -> 
         max_email: options.max_emails,
         url: options.detect_urls,
         max_url: options.max_urls,
+        scan_bounds: crate::app::request::ScanBounds {
+            max_files: options.max_files,
+            max_total_bytes: options.max_total_bytes,
+            deadline_seconds: options.scan_deadline_seconds,
+            restrict_out_of_tree_symlinks: options.restrict_out_of_tree_symlinks,
+        },
     }
 }
 

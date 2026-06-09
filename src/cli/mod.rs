@@ -946,6 +946,7 @@ impl From<&ScanArgs> for ScanRequest {
             max_email: cli.max_email,
             url: cli.url,
             max_url: cli.max_url,
+            scan_bounds: crate::app::request::ScanBounds::default(),
         }
     }
 }
