@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::models::PackageType;
-    use crate::parsers::{CargoParser, PackageParser};
+    use crate::models::{DatasourceId, DiagnosticSeverity, PackageType};
+    use crate::parsers::{CargoParser, PackageParser, capture_parser_diagnostics};
     use std::fs;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -314,7 +314,7 @@ mockito = "0.31.0"
     }
 
     #[test]
-    fn test_invalid_cargo_toml_returns_no_packages() {
+    fn test_malformed_cargo_toml_yields_datasource_preserving_fallback() {
         let content = r#"
 [package]
 name = "manifest-invalid-test-fixture"
@@ -327,7 +327,47 @@ key = invalid-value
         let (_temp_file, cargo_path) = create_temp_cargo_toml(content);
         let packages = CargoParser::extract_packages(&cargo_path);
 
-        assert!(packages.is_empty());
+        // A malformed manifest must remain distinguishable from "no manifest":
+        // it yields a single datasource-preserving fallback identity row.
+        assert_eq!(packages.len(), 1);
+        let package = &packages[0];
+        assert_eq!(package.package_type, Some(PackageType::Cargo));
+        assert_eq!(package.datasource_id, Some(DatasourceId::CargoToml));
+        assert_eq!(package.name, None);
+        assert_eq!(package.version, None);
+        assert!(package.dependencies.is_empty());
+    }
+
+    #[test]
+    fn test_malformed_cargo_toml_records_warning_diagnostic() {
+        let content = "this is not valid TOML";
+        let (_temp_file, cargo_path) = create_temp_cargo_toml(content);
+
+        let result = capture_parser_diagnostics(
+            || CargoParser::extract_packages(&cargo_path),
+            "CargoParser",
+            &cargo_path,
+            None,
+        );
+
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(
+            result.packages[0].datasource_id,
+            Some(DatasourceId::CargoToml)
+        );
+        assert!(
+            result
+                .scan_diagnostics
+                .iter()
+                .any(
+                    |diagnostic| diagnostic.severity == DiagnosticSeverity::Warning
+                        && diagnostic
+                            .message
+                            .contains("Failed to read or parse Cargo.toml")
+                ),
+            "expected a warning diagnostic for the malformed manifest, got: {:?}",
+            result.scan_diagnostics
+        );
     }
 
     #[test]

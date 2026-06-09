@@ -71,7 +71,10 @@ impl PackageParser for CargoParser {
     fn extract_packages(path: &Path) -> Vec<PackageData> {
         let toml_content = match read_cargo_toml(path) {
             Ok(content) => content,
-            Err(_) => return Vec::new(),
+            Err(e) => {
+                warn!("Failed to read or parse Cargo.toml at {:?}: {}", path, e);
+                return vec![default_package_data()];
+            }
         };
 
         let package = toml_content.get(FIELD_PACKAGE).and_then(|v| v.as_table());
@@ -219,6 +222,17 @@ impl PackageParser for CargoParser {
             primary_language: "Rust",
             documentation_url: Some("https://doc.rust-lang.org/cargo/reference/manifest.html"),
         }]
+    }
+}
+
+/// Datasource-preserving fallback row for a Cargo.toml that cannot be read or
+/// parsed, so a malformed manifest stays distinguishable from "no manifest".
+fn default_package_data() -> PackageData {
+    PackageData {
+        package_type: Some(CargoParser::PACKAGE_TYPE),
+        primary_language: Some("Rust".to_string()),
+        datasource_id: Some(DatasourceId::CargoToml),
+        ..Default::default()
     }
 }
 
