@@ -62,6 +62,33 @@
       }
     ],
     "datasource_id": "vcpkg_json",
-    "purl": "pkg:generic/vcpkg/sample-project@1.0.0"
+    "purl": "pkg:generic/vcpkg/sample-project@1.0.0",
+    "declared_license_expression": "mit",
+    "declared_license_expression_spdx": "MIT",
+    "license_detections": [
+      {
+        "license_expression": "mit",
+        "license_expression_spdx": "MIT",
+        "matches": [
+          {
+            "license_expression": "mit",
+            "license_expression_spdx": "MIT",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "parser-declared-license",
+            "rule_url": null,
+            "matched_text": "MIT"
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "holder": null
   }
 ]

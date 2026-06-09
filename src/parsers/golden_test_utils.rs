@@ -7,6 +7,21 @@ use serde_json::Value;
 use std::fs;
 use std::path::Path;
 
+/// Fields the central post-extraction step (`populate_declared_license_and_holder`)
+/// can newly populate. When the `PROVENANT_UPDATE_PARSER_GOLDEN` maintenance
+/// switch is set, the golden comparators surgically refresh only these fields in
+/// place so unrelated golden structure stays byte-stable.
+const POST_EXTRACTION_GOLDEN_FIELDS: &[&str] = &[
+    "declared_license_expression",
+    "declared_license_expression_spdx",
+    "license_detections",
+    "holder",
+];
+
+fn golden_update_enabled() -> bool {
+    std::env::var_os("PROVENANT_UPDATE_PARSER_GOLDEN").is_some()
+}
+
 pub fn compare_package_data_parser_only(
     actual: &PackageData,
     expected_path: &Path,
@@ -14,15 +29,20 @@ pub fn compare_package_data_parser_only(
     let expected_content = fs::read_to_string(expected_path)
         .map_err(|e| format!("Failed to read expected file: {}", e))?;
 
-    let expected_value: Value = serde_json::from_str(&expected_content)
+    let mut expected_value: Value = serde_json::from_str(&expected_content)
         .map_err(|e| format!("Failed to parse expected JSON: {}", e))?;
-
-    let expected_json = unwrap_expected_parser_package(&expected_value)?;
 
     let output: OutputPackageData = actual.into();
     let actual_json = serde_json::to_value(&output)
         .map_err(|e| format!("Failed to serialize actual PackageData: {}", e))?;
 
+    if golden_update_enabled() {
+        let actual_objects = [&actual_json];
+        refresh_post_extraction_fields(&mut expected_value, &actual_objects);
+        return write_golden(expected_path, &expected_value);
+    }
+
+    let expected_json = unwrap_expected_parser_package(&expected_value)?;
     compare_json_values_parser_only(&actual_json, expected_json, "")
 }
 
@@ -33,16 +53,99 @@ pub fn compare_package_data_collection_parser_only(
     let expected_content = fs::read_to_string(expected_path)
         .map_err(|e| format!("Failed to read expected file: {}", e))?;
 
-    let expected_value: Value = serde_json::from_str(&expected_content)
+    let mut expected_value: Value = serde_json::from_str(&expected_content)
         .map_err(|e| format!("Failed to parse expected JSON: {}", e))?;
-
-    let expected_json = unwrap_expected_parser_package_collection(&expected_value)?;
 
     let output: Vec<OutputPackageData> = actual.iter().map(|pd| pd.into()).collect();
     let actual_json = serde_json::to_value(&output)
         .map_err(|e| format!("Failed to serialize actual PackageData collection: {}", e))?;
 
+    if golden_update_enabled() {
+        let actual_objects: Vec<&Value> = actual_json.as_array().into_iter().flatten().collect();
+        refresh_post_extraction_fields(&mut expected_value, &actual_objects);
+        return write_golden(expected_path, &expected_value);
+    }
+
+    let expected_json = unwrap_expected_parser_package_collection(&expected_value)?;
     compare_json_values_parser_only(&actual_json, expected_json, "")
+}
+
+fn write_golden(expected_path: &Path, value: &Value) -> Result<(), String> {
+    let mut serialized = serde_json::to_string_pretty(value)
+        .map_err(|e| format!("Failed to serialize updated golden: {}", e))?;
+    serialized.push('\n');
+    fs::write(expected_path, serialized)
+        .map_err(|e| format!("Failed to write updated golden: {}", e))
+}
+
+/// Copies the post-extraction-owned fields from freshly produced package
+/// objects into the matching package objects of an existing expected document,
+/// preserving every other field and the document's overall shape.
+fn refresh_post_extraction_fields(expected: &mut Value, actual_objects: &[&Value]) {
+    for (target, source) in collect_expected_package_objects(expected)
+        .into_iter()
+        .zip(actual_objects.iter())
+    {
+        let Some(target_map) = target.as_object_mut() else {
+            continue;
+        };
+        for field in POST_EXTRACTION_GOLDEN_FIELDS {
+            match source.get(*field) {
+                Some(value) => {
+                    target_map.insert((*field).to_string(), value.clone());
+                }
+                None => {
+                    target_map.remove(*field);
+                }
+            }
+        }
+    }
+}
+
+enum ExpectedShape {
+    Array,
+    Packages,
+    Files,
+    SingleObject,
+    Unknown,
+}
+
+fn collect_expected_package_objects(expected: &mut Value) -> Vec<&mut Value> {
+    let shape = match expected {
+        Value::Array(_) => ExpectedShape::Array,
+        Value::Object(map) if map.get("packages").is_some_and(Value::is_array) => {
+            ExpectedShape::Packages
+        }
+        Value::Object(map) if map.get("files").is_some_and(Value::is_array) => ExpectedShape::Files,
+        Value::Object(_) => ExpectedShape::SingleObject,
+        _ => ExpectedShape::Unknown,
+    };
+
+    match shape {
+        ExpectedShape::Array => expected
+            .as_array_mut()
+            .map(|array| array.iter_mut().collect())
+            .unwrap_or_default(),
+        ExpectedShape::Packages => expected
+            .get_mut("packages")
+            .and_then(Value::as_array_mut)
+            .map(|packages| packages.iter_mut().collect())
+            .unwrap_or_default(),
+        ExpectedShape::Files => expected
+            .get_mut("files")
+            .and_then(Value::as_array_mut)
+            .map(|files| {
+                files
+                    .iter_mut()
+                    .filter_map(|file| file.get_mut("package_data"))
+                    .filter_map(Value::as_array_mut)
+                    .flat_map(|package_data| package_data.iter_mut())
+                    .collect()
+            })
+            .unwrap_or_default(),
+        ExpectedShape::SingleObject => vec![expected],
+        ExpectedShape::Unknown => Vec::new(),
+    }
 }
 
 fn unwrap_expected_parser_package(expected_value: &Value) -> Result<&Value, String> {

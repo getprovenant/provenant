@@ -84,6 +84,36 @@
     "repository_download_url": "https://repo1.maven.org/maven2/it/assist/jrecordbind/jrecordbind-java5/2.3.4/jrecordbind-java5-2.3.4.jar",
     "api_data_url": "https://repo1.maven.org/maven2/it/assist/jrecordbind/jrecordbind-java5/2.3.4/jrecordbind-java5-2.3.4.pom",
     "datasource_id": "maven_pom",
-    "purl": "pkg:maven/it.assist.jrecordbind/jrecordbind-java5@2.3.4"
+    "purl": "pkg:maven/it.assist.jrecordbind/jrecordbind-java5@2.3.4",
+    "declared_license_expression": "lgpl-2.0-plus AND lgpl-2.1-plus",
+    "declared_license_expression_spdx": "LGPL-2.0-or-later AND LGPL-2.1-or-later",
+    "license_detections": [
+      {
+        "license_expression": "lgpl-2.0-plus AND lgpl-2.1-plus",
+        "license_expression_spdx": "LGPL-2.0-or-later AND LGPL-2.1-or-later",
+        "matches": [
+          {
+            "license_expression": "lgpl-2.0-plus AND lgpl-2.1-plus",
+            "license_expression_spdx": "LGPL-2.0-or-later AND LGPL-2.1-or-later",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 6,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "lgpl_bare_single_word.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/lgpl_bare_single_word.RULE",
+            "matched_text": "- license:\n    name: LGPL\n    url: http://www.gnu.org/copyleft/lesser.html",
+            "referenced_filenames": [
+              "- license:\n    name: LGPL\n    url: http://www.gnu.org/copyleft/lesser.html"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "holder": null
   }
 ]

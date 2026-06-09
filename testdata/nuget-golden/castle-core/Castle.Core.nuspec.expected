@@ -37,10 +37,36 @@
     "code_view_url": null,
     "vcs_url": "git+https://github.com/castleproject/Core",
     "copyright": "Copyright (c) 2004-2017 Castle Project - http://www.castleproject.org/",
-    "holder": null,
-    "declared_license_expression": null,
-    "declared_license_expression_spdx": null,
-    "license_detections": [],
+    "holder": "Castle Project",
+    "declared_license_expression": "apache-2.0",
+    "declared_license_expression_spdx": "Apache-2.0",
+    "license_detections": [
+      {
+        "license_expression": "apache-2.0",
+        "license_expression_spdx": "Apache-2.0",
+        "matches": [
+          {
+            "license_expression": "apache-2.0",
+            "license_expression_spdx": "Apache-2.0",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "apache-2.0_20.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_20.RULE",
+            "matched_text": "http://www.apache.org/licenses/LICENSE-2.0.html",
+            "referenced_filenames": [
+              "http://www.apache.org/licenses/LICENSE-2.0.html"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
     "other_license_expression": null,
     "other_license_expression_spdx": null,
     "other_license_detections": [],

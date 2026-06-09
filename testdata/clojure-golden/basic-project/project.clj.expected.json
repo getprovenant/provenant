@@ -70,6 +70,36 @@
       }
     ],
     "datasource_id": "clojure_project_clj",
-    "purl": "pkg:maven/org.example/sample@1.0.0"
+    "purl": "pkg:maven/org.example/sample@1.0.0",
+    "declared_license_expression": "epl-1.0",
+    "declared_license_expression_spdx": "EPL-1.0",
+    "license_detections": [
+      {
+        "license_expression": "epl-1.0",
+        "license_expression_spdx": "EPL-1.0",
+        "matches": [
+          {
+            "license_expression": "epl-1.0",
+            "license_expression_spdx": "EPL-1.0",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 8,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "epl-1.0_30.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/epl-1.0_30.RULE",
+            "matched_text": "- license:\n    name: Eclipse Public License\n    url: https://www.eclipse.org/legal/epl-v10.html",
+            "referenced_filenames": [
+              "- license:\n    name: Eclipse Public License\n    url: https://www.eclipse.org/legal/epl-v10.html"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "holder": null
   }
 ]

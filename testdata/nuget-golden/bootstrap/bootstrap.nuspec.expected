@@ -37,10 +37,36 @@
     "code_view_url": null,
     "vcs_url": null,
     "copyright": "Copyright 2015",
-    "holder": null,
-    "declared_license_expression": null,
-    "declared_license_expression_spdx": null,
-    "license_detections": [],
+    "holder": "Copyright 2015",
+    "declared_license_expression": "mit",
+    "declared_license_expression_spdx": "MIT",
+    "license_detections": [
+      {
+        "license_expression": "mit",
+        "license_expression_spdx": "MIT",
+        "matches": [
+          {
+            "license_expression": "mit",
+            "license_expression_spdx": "MIT",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "mit_180.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_180.RULE",
+            "matched_text": "https://github.com/twbs/bootstrap/blob/master/LICENSE",
+            "referenced_filenames": [
+              "https://github.com/twbs/bootstrap/blob/master/LICENSE"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
     "other_license_expression": null,
     "other_license_expression_spdx": null,
     "other_license_detections": [],

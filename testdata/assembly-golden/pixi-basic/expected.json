@@ -2,28 +2,78 @@
   "packages": [
     {
       "type": "pixi",
+      "namespace": null,
       "name": "pixi-demo",
       "version": "1.2.3",
+      "qualifiers": {},
+      "subpath": null,
       "primary_language": "TOML",
       "description": "Example Pixi workspace",
+      "release_date": null,
       "parties": [
         {
+          "type": null,
           "role": "author",
           "name": "Jane Doe",
-          "email": "jane@example.com"
+          "email": "jane@example.com",
+          "url": null
         }
       ],
+      "keywords": [],
       "homepage_url": "https://example.com/pixi-demo",
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
       "vcs_url": "https://github.com/example/pixi-demo",
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "mit",
+      "declared_license_expression_spdx": "MIT",
+      "license_detections": [
+        {
+          "license_expression": "mit",
+          "license_expression_spdx": "MIT",
+          "matches": [
+            {
+              "license_expression": "mit",
+              "license_expression_spdx": "MIT",
+              "from_file": "pixi.toml",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 1,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "parser-declared-license",
+              "rule_url": null,
+              "matched_text": "MIT"
+            }
+          ],
+          "identifier": "mit-baa8883e-2a3e-91b8-cdd5-5b082d60e708"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
       "extracted_license_statement": "MIT",
+      "notice_text": null,
+      "source_packages": [],
+      "is_private": false,
+      "is_virtual": false,
       "extra_data": {
-        "lock_version": 6,
+        "channels": ["conda-forge"],
+        "platforms": ["linux-64"],
         "features": ["docs"],
         "environments": {
           "default": ["docs"]
         },
-        "channels": ["conda-forge"],
-        "platforms": ["linux-64"],
+        "lock_version": 6,
         "lock_environments": {
           "default": {
             "channels": [
@@ -45,6 +95,9 @@
           }
         }
       },
+      "repository_homepage_url": null,
+      "repository_download_url": null,
+      "api_data_url": null,
       "purl": "pkg:pixi/pixi-demo@1.2.3",
       "package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_paths": ["pixi.lock", "pixi.toml"],
@@ -60,13 +113,15 @@
       "is_optional": false,
       "is_pinned": true,
       "is_direct": true,
+      "resolved_package": null,
       "extra_data": {
         "channel": "conda-forge"
       },
       "dependency_uid": "pkg:conda/numpy@2.1.0?channel=conda-forge&uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.toml",
-      "datasource_id": "pixi_toml"
+      "datasource_id": "pixi_toml",
+      "namespace": null
     },
     {
       "purl": "pkg:conda/python",
@@ -76,10 +131,13 @@
       "is_optional": false,
       "is_pinned": false,
       "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
       "dependency_uid": "pkg:conda/python?uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.toml",
-      "datasource_id": "pixi_toml"
+      "datasource_id": "pixi_toml",
+      "namespace": null
     },
     {
       "purl": "pkg:conda/python@3.12.7",
@@ -88,8 +146,9 @@
       "is_runtime": null,
       "is_optional": null,
       "is_pinned": true,
+      "is_direct": null,
+      "resolved_package": null,
       "extra_data": {
-        "source": "https://conda.anaconda.org/conda-forge/linux-64/python-3.12.7-h2628c8c_0_cpython.conda",
         "sha256": "conda-hash",
         "lock_references": [
           {
@@ -104,12 +163,14 @@
             "indexes": ["https://pypi.org/simple"]
           }
         ],
+        "source": "https://conda.anaconda.org/conda-forge/linux-64/python-3.12.7-h2628c8c_0_cpython.conda",
         "depends": ["openssl >=3.0"]
       },
       "dependency_uid": "pkg:conda/python@3.12.7?uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.lock",
-      "datasource_id": "pixi_lock"
+      "datasource_id": "pixi_lock",
+      "namespace": null
     },
     {
       "purl": "pkg:conda/sphinx@8.2.3",
@@ -119,10 +180,13 @@
       "is_optional": true,
       "is_pinned": true,
       "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
       "dependency_uid": "pkg:conda/sphinx@8.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.toml",
-      "datasource_id": "pixi_toml"
+      "datasource_id": "pixi_toml",
+      "namespace": null
     },
     {
       "purl": "pkg:pypi/requests",
@@ -132,10 +196,13 @@
       "is_optional": false,
       "is_pinned": false,
       "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
       "dependency_uid": "pkg:pypi/requests?uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.toml",
-      "datasource_id": "pixi_toml"
+      "datasource_id": "pixi_toml",
+      "namespace": null
     },
     {
       "purl": "pkg:pypi/requests@2.32.5",
@@ -144,8 +211,12 @@
       "is_runtime": null,
       "is_optional": null,
       "is_pinned": true,
+      "is_direct": null,
+      "resolved_package": null,
       "extra_data": {
         "source": "https://files.pythonhosted.org/packages/example/requests-2.32.5-py3-none-any.whl",
+        "requires_dist": ["urllib3>=2"],
+        "requires_python": ">=3.9",
         "lock_references": [
           {
             "environment": "default",
@@ -159,14 +230,13 @@
             "indexes": ["https://pypi.org/simple"]
           }
         ],
-        "requires_dist": ["urllib3>=2"],
-        "sha256": "pypi-hash",
-        "requires_python": ">=3.9"
+        "sha256": "pypi-hash"
       },
       "dependency_uid": "pkg:pypi/requests@2.32.5?uuid=fixed-uid-done-for-testing-5642512d1758",
       "for_package_uid": "pkg:pixi/pixi-demo@1.2.3?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pixi.lock",
-      "datasource_id": "pixi_lock"
+      "datasource_id": "pixi_lock",
+      "namespace": null
     }
   ],
   "files_with_packages": [

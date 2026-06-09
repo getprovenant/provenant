@@ -81,33 +81,6 @@
       ]
     },
     {
-      "identifier": "mit-6914bd3d-93be-35a5-ddad-8a441ad0ed45",
-      "license_expression": "mit",
-      "license_expression_spdx": "MIT",
-      "detection_count": 1,
-      "detection_log": ["unknown-reference-to-local-file"],
-      "reference_matches": [
-        {
-          "from_file": "codebase/demo-1.0.dist-info/METADATA",
-          "license_expression": "unknown-license-reference",
-          "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
-          "rule_identifier": "parser-declared-license"
-        },
-        {
-          "from_file": "codebase/demo-1.0.dist-info/LICENSE",
-          "license_expression": "mit",
-          "license_expression_spdx": "MIT",
-          "rule_identifier": "mit_14.RULE"
-        },
-        {
-          "from_file": "codebase/demo-1.0.dist-info/LICENSE",
-          "license_expression": "mit",
-          "license_expression_spdx": "MIT",
-          "rule_identifier": "mit.LICENSE"
-        }
-      ]
-    },
-    {
       "identifier": "mit-79774d50-708a-392c-de7f-ef6d29bbf18c",
       "license_expression": "mit",
       "license_expression_spdx": "MIT",
@@ -137,6 +110,21 @@
           "license_expression": "mit",
           "license_expression_spdx": "MIT",
           "rule_identifier": "mit.LICENSE"
+        }
+      ]
+    },
+    {
+      "identifier": "mit-f3abb89a-6cce-020e-78d1-3622872e65c2",
+      "license_expression": "mit",
+      "license_expression_spdx": "MIT",
+      "detection_count": 1,
+      "detection_log": [],
+      "reference_matches": [
+        {
+          "from_file": "codebase/demo-1.0.dist-info/METADATA",
+          "license_expression": "mit",
+          "license_expression_spdx": "MIT",
+          "rule_identifier": "mit_30.RULE"
         }
       ]
     }
@@ -207,6 +195,15 @@
       "referenced_filenames": []
     },
     {
+      "identifier": "mit_30.RULE",
+      "license_expression": "mit",
+      "language": null,
+      "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_30.RULE",
+      "is_synthetic": false,
+      "length": 2,
+      "referenced_filenames": []
+    },
+    {
       "identifier": "mit_31.RULE",
       "license_expression": "mit",
       "language": null,
@@ -233,37 +230,22 @@
       "declared_license_expression": "mit",
       "declared_license_expression_spdx": "MIT",
       "other_license_expression": null,
+      "other_license_expression_spdx": null,
       "datafile_paths": ["codebase/demo-1.0.dist-info/METADATA"],
       "license_detections": [
         {
           "license_expression": "mit",
           "license_expression_spdx": "MIT",
-          "detection_log": ["unknown-reference-to-local-file"],
-          "identifier": "mit-6914bd3d-93be-35a5-ddad-8a441ad0ed45",
+          "detection_log": [],
+          "identifier": "mit-f3abb89a-6cce-020e-78d1-3622872e65c2",
           "matches": [
             {
               "from_file": "codebase/demo-1.0.dist-info/METADATA",
-              "matched_text": "license: MIT\n",
-              "license_expression": "unknown-license-reference",
-              "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
-              "rule_identifier": "parser-declared-license",
-              "referenced_filenames": ["LICENSE"]
-            },
-            {
-              "from_file": "codebase/demo-1.0.dist-info/LICENSE",
-              "matched_text": null,
+              "matched_text": "license: MIT",
               "license_expression": "mit",
               "license_expression_spdx": "MIT",
-              "rule_identifier": "mit_14.RULE",
-              "referenced_filenames": []
-            },
-            {
-              "from_file": "codebase/demo-1.0.dist-info/LICENSE",
-              "matched_text": null,
-              "license_expression": "mit",
-              "license_expression_spdx": "MIT",
-              "rule_identifier": "mit.LICENSE",
-              "referenced_filenames": []
+              "rule_identifier": "mit_30.RULE",
+              "referenced_filenames": ["license: MIT"]
             }
           ]
         }
@@ -366,36 +348,21 @@
           "declared_license_expression": "mit",
           "declared_license_expression_spdx": "MIT",
           "other_license_expression": null,
+          "other_license_expression_spdx": null,
           "license_detections": [
             {
               "license_expression": "mit",
               "license_expression_spdx": "MIT",
-              "detection_log": ["unknown-reference-to-local-file"],
-              "identifier": "mit-946d5424-f316-1245-80ab-ef6c198972d8",
+              "detection_log": [],
+              "identifier": "mit-f3abb89a-6cce-020e-78d1-3622872e65c2",
               "matches": [
                 {
                   "from_file": "codebase/demo-1.0.dist-info/METADATA",
-                  "matched_text": "license: MIT\n",
-                  "license_expression": "unknown-license-reference",
-                  "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
-                  "rule_identifier": "",
-                  "referenced_filenames": ["LICENSE"]
-                },
-                {
-                  "from_file": "codebase/demo-1.0.dist-info/LICENSE",
-                  "matched_text": null,
+                  "matched_text": "license: MIT",
                   "license_expression": "mit",
                   "license_expression_spdx": "MIT",
-                  "rule_identifier": "mit_14.RULE",
-                  "referenced_filenames": []
-                },
-                {
-                  "from_file": "codebase/demo-1.0.dist-info/LICENSE",
-                  "matched_text": null,
-                  "license_expression": "mit",
-                  "license_expression_spdx": "MIT",
-                  "rule_identifier": "mit.LICENSE",
-                  "referenced_filenames": []
+                  "rule_identifier": "mit_30.RULE",
+                  "referenced_filenames": ["license: MIT"]
                 }
               ]
             }

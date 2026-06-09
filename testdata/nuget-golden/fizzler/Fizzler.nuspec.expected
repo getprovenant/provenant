@@ -24,6 +24,7 @@
           {
             "license_expression": "unknown-license-reference",
             "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
+            "from_file": null,
             "start_line": 1,
             "end_line": 1,
             "matcher": "parser-declared-license",
@@ -31,13 +32,15 @@
             "matched_length": 1,
             "match_coverage": 100.0,
             "rule_relevance": 100,
+            "rule_identifier": "parser-declared-license",
             "rule_url": null,
             "matched_text": "COPYING.txt",
             "referenced_filenames": [
               "COPYING.txt"
             ]
           }
-        ]
+        ],
+        "identifier": null
       }
     ],
     "extracted_license_statement": "COPYING.txt",
@@ -78,6 +81,7 @@
     "repository_download_url": "https://www.nuget.org/api/v2/package/Fizzler/1.3.0",
     "api_data_url": "https://api.nuget.org/v3/registration3/fizzler/1.3.0.json",
     "datasource_id": "nuget_nuspec",
-    "purl": "pkg:nuget/Fizzler@1.3.0"
+    "purl": "pkg:nuget/Fizzler@1.3.0",
+    "holder": "Atif Aziz, Colin Ramsay\nNovell, Inc."
   }
 ]
