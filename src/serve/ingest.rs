@@ -3,6 +3,7 @@
 
 use std::fs::{self, File};
 use std::io::{Read, Write};
+use std::net::{IpAddr, ToSocketAddrs};
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
@@ -13,7 +14,7 @@ use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use liblzma::read::XzDecoder;
 use reqwest::blocking::Client;
-use reqwest::redirect::Policy;
+use reqwest::redirect::{Attempt, Policy};
 use tar::Archive;
 use tempfile::TempDir;
 use url::Url;
@@ -242,6 +243,16 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>,
         return Err(IngestError::validation("repository.ref must not be empty"));
     }
 
+    validate_repository_url(url)?;
+    // A `reference` beginning with `-` would be parsed by git as an option
+    // rather than a refspec; the `--` terminator below stops option parsing,
+    // but reject it outright so a leading-dash value can never reach git.
+    if reference.starts_with('-') {
+        return Err(IngestError::validation(
+            "repository.ref must not begin with '-'",
+        ));
+    }
+
     let staging_dir = TempDir::new().map_err(|e| {
         IngestError::internal_with_source(e, "failed to create repository staging directory")
     })?;
@@ -252,25 +263,66 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>,
         "failed to initialize repository staging checkout",
     )?;
     run_git(
-        Command::new("git")
-            .current_dir(&repo_dir)
-            .args(["remote", "add", "origin", url]),
+        hardened_git(&repo_dir)
+            .args(["remote", "add", "origin", "--"])
+            .arg(url),
         "failed to configure repository staging remote",
     )?;
     run_git(
-        Command::new("git")
-            .current_dir(&repo_dir)
-            .args(["fetch", "--depth", "1", "origin", reference]),
+        hardened_git(&repo_dir)
+            .args(["fetch", "--depth", "1", "origin", "--"])
+            .arg(reference),
         "failed to fetch repository ref for remote ingestion",
     )?;
     run_git(
-        Command::new("git")
-            .current_dir(&repo_dir)
-            .args(["checkout", "--detach", "FETCH_HEAD"]),
+        hardened_git(&repo_dir).args(["checkout", "--detach", "FETCH_HEAD"]),
         "failed to checkout fetched repository ref",
     )?;
 
     Ok((vec![repo_dir], Some(staging_dir)))
+}
+
+/// Build a `git` invocation in `repo_dir` with risky remote transports disabled.
+///
+/// Setting `GIT_PROTOCOL_FROM_USER=0` plus `protocol.ext.allow=never` blocks the
+/// `ext::` remote helper (arbitrary command execution) and `protocol.file.allow=user`
+/// keeps `file://` out of automatic/recursive contexts. This is the transport
+/// hardening that prevents an attacker-supplied `repository.url` from reaching a
+/// dangerous git transport.
+fn hardened_git(repo_dir: &Path) -> Command {
+    let mut command = Command::new("git");
+    command
+        .current_dir(repo_dir)
+        .env("GIT_PROTOCOL_FROM_USER", "0")
+        .args([
+            "-c",
+            "protocol.ext.allow=never",
+            "-c",
+            "protocol.file.allow=user",
+        ]);
+    command
+}
+
+/// Reject repository URLs that use a transport other than the safe network
+/// transports, and apply SSRF host validation where a host can be extracted.
+fn validate_repository_url(url: &str) -> Result<()> {
+    let parsed = Url::parse(url)
+        .map_err(|_| IngestError::validation("repository.url must be a valid URL"))?;
+
+    // scp-like syntax (`git@host:path`) parses with an unusual scheme; only
+    // accept the explicit, host-bearing transports git supports safely here.
+    if !matches!(parsed.scheme(), "https" | "git" | "ssh") {
+        return Err(IngestError::validation(
+            "repository.url must use https, git, or ssh",
+        ));
+    }
+
+    if let Some(host) = parsed.host_str() {
+        let port = parsed.port_or_known_default().unwrap_or(0);
+        validate_remote_host(host, port)?;
+    }
+
+    Ok(())
 }
 
 fn prepare_url_input(url: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
@@ -283,6 +335,10 @@ fn prepare_url_input(url: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     if !matches!(parsed_url.scheme(), "http" | "https") {
         return Err(IngestError::validation("url.url must use http or https"));
     }
+    let host = parsed_url
+        .host_str()
+        .ok_or_else(|| IngestError::validation("url.url must include a host"))?;
+    validate_remote_host(host, parsed_url.port_or_known_default().unwrap_or(0))?;
 
     let staging_dir = TempDir::new().map_err(|e| {
         IngestError::internal_with_source(e, "failed to create URL staging directory")
@@ -362,7 +418,7 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
     let client = Client::builder()
         .connect_timeout(CONNECT_TIMEOUT)
         .timeout(DOWNLOAD_TIMEOUT)
-        .redirect(Policy::limited(MAX_REDIRECTS))
+        .redirect(ssrf_safe_redirect_policy())
         .build()
         .map_err(|e| {
             IngestError::internal_with_source(e, "failed to build remote-ingestion HTTP client")
@@ -373,14 +429,12 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
         .header("User-Agent", "provenant-serve/remote-ingestion")
         .send()
         .map_err(|e| {
-            IngestError::upstream_with_source(e, format!("failed to fetch remote input from {url}"))
+            // Omit the upstream URL: it may name an internal host or path.
+            IngestError::upstream_with_source(e, "failed to fetch remote input")
         })?
         .error_for_status()
         .map_err(|e| {
-            IngestError::upstream_with_source(
-                e,
-                format!("remote input fetch returned an error status for {url}"),
-            )
+            IngestError::upstream_with_source(e, "remote input fetch returned an error status")
         })?;
 
     if response
@@ -402,9 +456,9 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
     let mut total_bytes = 0u64;
     let mut buffer = [0u8; 8192];
     loop {
-        let read_bytes = response.read(&mut buffer).map_err(|e| {
-            IngestError::upstream_with_source(e, format!("failed to read remote input from {url}"))
-        })?;
+        let read_bytes = response
+            .read(&mut buffer)
+            .map_err(|e| IngestError::upstream_with_source(e, "failed to read remote input"))?;
         if read_bytes == 0 {
             break;
         }
@@ -424,6 +478,99 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
     }
 
     Ok(output_path)
+}
+
+/// Redirect policy that re-validates the destination host on every hop so a
+/// public URL cannot redirect into an internal address (SSRF), while still
+/// bounding the redirect chain.
+fn ssrf_safe_redirect_policy() -> Policy {
+    Policy::custom(|attempt: Attempt| {
+        if attempt.previous().len() >= MAX_REDIRECTS {
+            return attempt.error(IngestError::validation("too many redirects"));
+        }
+        let next = attempt.url();
+        let Some(host) = next.host_str() else {
+            return attempt.error(IngestError::validation(
+                "redirect target must include a host",
+            ));
+        };
+        match validate_remote_host(host, next.port_or_known_default().unwrap_or(0)) {
+            Ok(()) => attempt.follow(),
+            Err(err) => attempt.error(err),
+        }
+    })
+}
+
+/// Reject hosts that resolve to private, loopback, link-local, unique-local, or
+/// otherwise non-public addresses to prevent SSRF against internal services and
+/// cloud metadata endpoints. A hostname may resolve to several addresses; every
+/// resolved address must be public.
+fn validate_remote_host(host: &str, port: u16) -> Result<()> {
+    // Literal IPs are validated directly; reqwest/git may still resolve a
+    // hostname to a different address later, but blocking known-bad literals and
+    // re-checking on redirect bounds the practical SSRF surface.
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        return reject_disallowed_ip(ip);
+    }
+
+    let addrs = (host, port)
+        .to_socket_addrs()
+        .map_err(|_| IngestError::validation("failed to resolve remote host for ingestion"))?;
+
+    let mut resolved_any = false;
+    for addr in addrs {
+        resolved_any = true;
+        reject_disallowed_ip(addr.ip())?;
+    }
+
+    if !resolved_any {
+        return Err(IngestError::validation(
+            "remote host did not resolve to any address",
+        ));
+    }
+
+    Ok(())
+}
+
+fn reject_disallowed_ip(ip: IpAddr) -> Result<()> {
+    if is_disallowed_ip(ip) {
+        return Err(IngestError::validation(
+            "remote host resolves to a non-public address",
+        ));
+    }
+    Ok(())
+}
+
+fn is_disallowed_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            v4.is_private()
+                || v4.is_loopback()
+                || v4.is_link_local()
+                || v4.is_unspecified()
+                || v4.is_broadcast()
+                || v4.is_documentation()
+                // Carrier-grade NAT 100.64.0.0/10.
+                || (v4.octets()[0] == 100 && (v4.octets()[1] & 0xc0) == 64)
+                // IPv4 reserved 240.0.0.0/4 and benchmarking 198.18.0.0/15.
+                || v4.octets()[0] >= 240
+                || (v4.octets()[0] == 198 && (v4.octets()[1] & 0xfe) == 18)
+        }
+        IpAddr::V6(v6) => {
+            if v6.is_loopback() || v6.is_unspecified() {
+                return true;
+            }
+            // IPv4-mapped/-compatible addresses must be checked as their IPv4 form.
+            if let Some(v4) = v6.to_ipv4() {
+                return is_disallowed_ip(IpAddr::V4(v4));
+            }
+            let segments = v6.segments();
+            // Unique-local fc00::/7.
+            (segments[0] & 0xfe00) == 0xfc00
+                // Link-local fe80::/10.
+                || (segments[0] & 0xffc0) == 0xfe80
+        }
+    }
 }
 
 fn derive_download_filename(url: &Url) -> String {
@@ -847,6 +994,92 @@ mod tests {
         let error =
             prepare_url_input("file:///tmp/input.txt").expect_err("non-http URL input should fail");
         assert!(error.to_string().contains("http or https"));
+    }
+
+    #[test]
+    fn url_input_rejects_loopback_host() {
+        let error = prepare_url_input("http://127.0.0.1/archive.zip")
+            .expect_err("loopback URL input should fail");
+        assert!(error.to_string().contains("non-public address"));
+    }
+
+    #[test]
+    fn url_input_rejects_imds_link_local_host() {
+        let error = prepare_url_input("http://169.254.169.254/latest/meta-data/")
+            .expect_err("link-local URL input should fail");
+        assert!(error.to_string().contains("non-public address"));
+    }
+
+    #[test]
+    fn url_input_rejects_private_host() {
+        let error = prepare_url_input("http://10.0.0.5/archive.zip")
+            .expect_err("private URL input should fail");
+        assert!(error.to_string().contains("non-public address"));
+    }
+
+    #[test]
+    fn repository_url_rejects_ext_transport() {
+        let error = validate_repository_url("ext::sh -c id")
+            .expect_err("ext:: transport should be rejected");
+        assert!(error.to_string().contains("https, git, or ssh"));
+    }
+
+    #[test]
+    fn repository_url_rejects_file_transport() {
+        let error = validate_repository_url("file:///etc/passwd")
+            .expect_err("file:// transport should be rejected");
+        assert!(error.to_string().contains("https, git, or ssh"));
+    }
+
+    #[test]
+    fn repository_url_rejects_loopback_host() {
+        let error = validate_repository_url("https://127.0.0.1/repo.git")
+            .expect_err("loopback repository host should be rejected");
+        assert!(error.to_string().contains("non-public address"));
+    }
+
+    #[test]
+    fn repository_url_allows_public_https() {
+        validate_repository_url("https://example.com/repo.git")
+            .expect("public https repository URL should be allowed");
+    }
+
+    #[test]
+    fn repository_input_rejects_dash_leading_reference() {
+        let error = prepare_repository_input("https://example.com/repo.git", "--upload-pack=evil")
+            .expect_err("dash-leading reference should be rejected");
+        assert!(error.to_string().contains("must not begin with '-'"));
+    }
+
+    #[test]
+    fn disallowed_ip_classification() {
+        let disallowed = [
+            "127.0.0.1",
+            "10.1.2.3",
+            "172.16.0.1",
+            "192.168.1.1",
+            "169.254.169.254",
+            "0.0.0.0",
+            "100.64.0.1",
+            "::1",
+            "fc00::1",
+            "fe80::1",
+            "::ffff:127.0.0.1",
+        ];
+        for ip in disallowed {
+            assert!(
+                is_disallowed_ip(ip.parse().expect("test IP should parse")),
+                "{ip} should be disallowed"
+            );
+        }
+
+        let allowed = ["8.8.8.8", "1.1.1.1", "93.184.216.34", "2606:2800:220:1::1"];
+        for ip in allowed {
+            assert!(
+                !is_disallowed_ip(ip.parse().expect("test IP should parse")),
+                "{ip} should be allowed"
+            );
+        }
     }
 
     #[test]
