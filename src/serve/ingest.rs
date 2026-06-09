@@ -91,24 +91,49 @@ const ARCHIVE_LIMITS: ArchiveExtractionLimits = ArchiveExtractionLimits {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct IngestPolicy {
     privileged_inputs: PrivilegedInputPolicy,
+    local_targets: LocalTargetPolicy,
 }
 
 impl IngestPolicy {
+    /// Allow privileged input types but keep SSRF protection on by default: a
+    /// loopback-bound server still refuses to fetch private/loopback/link-local
+    /// targets unless the operator explicitly opted in.
     pub(super) fn allow_privileged_inputs() -> Self {
         Self {
             privileged_inputs: PrivilegedInputPolicy::Allowed,
+            local_targets: LocalTargetPolicy::Blocked,
+        }
+    }
+
+    /// Operator explicitly trusts privileged inputs; also permit fetching
+    /// local/private targets (e.g. internal mirrors or test fixtures).
+    pub(super) fn trust_local_targets() -> Self {
+        Self {
+            privileged_inputs: PrivilegedInputPolicy::Allowed,
+            local_targets: LocalTargetPolicy::Allowed,
         }
     }
 
     pub(super) fn upload_only() -> Self {
         Self {
             privileged_inputs: PrivilegedInputPolicy::UploadOnly,
+            local_targets: LocalTargetPolicy::Blocked,
         }
     }
 
     pub(super) fn privileged_inputs_allowed(self) -> bool {
         self.privileged_inputs == PrivilegedInputPolicy::Allowed
     }
+
+    pub(super) fn local_targets_allowed(self) -> bool {
+        self.local_targets == LocalTargetPolicy::Allowed
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LocalTargetPolicy {
+    Allowed,
+    Blocked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,8 +213,10 @@ impl ServeScanInput {
         validate_input_policy(&self, policy)?;
         match self {
             Self::Paths { paths } => prepare_paths_input(paths),
-            Self::Repository { url, reference } => prepare_repository_input(&url, &reference),
-            Self::Url { url } => prepare_url_input(&url),
+            Self::Repository { url, reference } => {
+                prepare_repository_input(&url, &reference, policy)
+            }
+            Self::Url { url } => prepare_url_input(&url, policy),
             Self::Upload {
                 filename,
                 content_base64,
@@ -235,7 +262,11 @@ fn prepare_paths_input(paths: Vec<String>) -> Result<(Vec<PathBuf>, Option<TempD
     Ok((paths, None))
 }
 
-fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
+fn prepare_repository_input(
+    url: &str,
+    reference: &str,
+    policy: IngestPolicy,
+) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     if url.trim().is_empty() {
         return Err(IngestError::validation("repository.url must not be empty"));
     }
@@ -243,15 +274,17 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>,
         return Err(IngestError::validation("repository.ref must not be empty"));
     }
 
-    validate_repository_url(url)?;
     // A `reference` beginning with `-` would be parsed by git as an option
     // rather than a refspec; the `--` terminator below stops option parsing,
-    // but reject it outright so a leading-dash value can never reach git.
+    // but reject it outright so a leading-dash value can never reach git. This
+    // runs before URL validation so the fast string check does not depend on
+    // host resolution.
     if reference.starts_with('-') {
         return Err(IngestError::validation(
             "repository.ref must not begin with '-'",
         ));
     }
+    validate_repository_url(url, policy)?;
 
     let staging_dir = TempDir::new().map_err(|e| {
         IngestError::internal_with_source(e, "failed to create repository staging directory")
@@ -263,19 +296,19 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>,
         "failed to initialize repository staging checkout",
     )?;
     run_git(
-        hardened_git(&repo_dir)
+        hardened_git(&repo_dir, policy)
             .args(["remote", "add", "origin", "--"])
             .arg(url),
         "failed to configure repository staging remote",
     )?;
     run_git(
-        hardened_git(&repo_dir)
+        hardened_git(&repo_dir, policy)
             .args(["fetch", "--depth", "1", "origin", "--"])
             .arg(reference),
         "failed to fetch repository ref for remote ingestion",
     )?;
     run_git(
-        hardened_git(&repo_dir).args(["checkout", "--detach", "FETCH_HEAD"]),
+        hardened_git(&repo_dir, policy).args(["checkout", "--detach", "FETCH_HEAD"]),
         "failed to checkout fetched repository ref",
     )?;
 
@@ -284,34 +317,47 @@ fn prepare_repository_input(url: &str, reference: &str) -> Result<(Vec<PathBuf>,
 
 /// Build a `git` invocation in `repo_dir` with risky remote transports disabled.
 ///
-/// Setting `GIT_PROTOCOL_FROM_USER=0` plus `protocol.ext.allow=never` blocks the
-/// `ext::` remote helper (arbitrary command execution) and `protocol.file.allow=user`
-/// keeps `file://` out of automatic/recursive contexts. This is the transport
-/// hardening that prevents an attacker-supplied `repository.url` from reaching a
-/// dangerous git transport.
-fn hardened_git(repo_dir: &Path) -> Command {
+/// Uses a deny-by-default transport allowlist (`protocol.allow=never`) and then
+/// re-enables only the safe network transports. This blocks the `ext::` remote
+/// helper (arbitrary command execution) and any other transport not explicitly
+/// allowed. `http.followRedirects=false` stops git's own libcurl from following
+/// an HTTP redirect into an internal address, which would otherwise bypass our
+/// reqwest-side SSRF checks. `file://` is local-only and is enabled exclusively
+/// when the operator has explicitly trusted local targets.
+fn hardened_git(repo_dir: &Path, policy: IngestPolicy) -> Command {
     let mut command = Command::new("git");
-    command
-        .current_dir(repo_dir)
-        .env("GIT_PROTOCOL_FROM_USER", "0")
-        .args([
-            "-c",
-            "protocol.ext.allow=never",
-            "-c",
-            "protocol.file.allow=user",
-        ]);
+    command.current_dir(repo_dir).args([
+        "-c",
+        "protocol.allow=never",
+        "-c",
+        "protocol.https.allow=always",
+        "-c",
+        "protocol.git.allow=always",
+        "-c",
+        "protocol.ssh.allow=always",
+        "-c",
+        "http.followRedirects=false",
+    ]);
+    if policy.local_targets_allowed() {
+        command.args(["-c", "protocol.file.allow=always"]);
+    }
     command
 }
 
 /// Reject repository URLs that use a transport other than the safe network
 /// transports, and apply SSRF host validation where a host can be extracted.
-fn validate_repository_url(url: &str) -> Result<()> {
+fn validate_repository_url(url: &str, policy: IngestPolicy) -> Result<()> {
     let parsed = Url::parse(url)
         .map_err(|_| IngestError::validation("repository.url must be a valid URL"))?;
 
     // scp-like syntax (`git@host:path`) parses with an unusual scheme; only
     // accept the explicit, host-bearing transports git supports safely here.
-    if !matches!(parsed.scheme(), "https" | "git" | "ssh") {
+    // `file` is local-only and is permitted exclusively when the operator has
+    // explicitly trusted local targets (`--allow-privileged-inputs`), matching
+    // the transport allowlist applied in `hardened_git`.
+    let scheme_allowed = matches!(parsed.scheme(), "https" | "git" | "ssh")
+        || (parsed.scheme() == "file" && policy.local_targets_allowed());
+    if !scheme_allowed {
         return Err(IngestError::validation(
             "repository.url must use https, git, or ssh",
         ));
@@ -319,13 +365,13 @@ fn validate_repository_url(url: &str) -> Result<()> {
 
     if let Some(host) = parsed.host_str() {
         let port = parsed.port_or_known_default().unwrap_or(0);
-        validate_remote_host(host, port)?;
+        validate_remote_host(host, port, policy)?;
     }
 
     Ok(())
 }
 
-fn prepare_url_input(url: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
+fn prepare_url_input(url: &str, policy: IngestPolicy) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     if url.trim().is_empty() {
         return Err(IngestError::validation("url.url must not be empty"));
     }
@@ -338,7 +384,11 @@ fn prepare_url_input(url: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
     let host = parsed_url
         .host_str()
         .ok_or_else(|| IngestError::validation("url.url must include a host"))?;
-    validate_remote_host(host, parsed_url.port_or_known_default().unwrap_or(0))?;
+    validate_remote_host(
+        host,
+        parsed_url.port_or_known_default().unwrap_or(0),
+        policy,
+    )?;
 
     let staging_dir = TempDir::new().map_err(|e| {
         IngestError::internal_with_source(e, "failed to create URL staging directory")
@@ -348,7 +398,7 @@ fn prepare_url_input(url: &str) -> Result<(Vec<PathBuf>, Option<TempDir>)> {
         IngestError::internal_with_source(e, format!("failed to create {}", download_dir.display()))
     })?;
 
-    let artifact_path = download_remote_input(url, &download_dir)?;
+    let artifact_path = download_remote_input(url, &download_dir, policy)?;
     materialize_downloaded_artifact(staging_dir, artifact_path)
 }
 
@@ -414,11 +464,11 @@ fn materialize_downloaded_artifact(
     Ok((vec![artifact_path], Some(staging_dir)))
 }
 
-fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
+fn download_remote_input(url: &str, output_dir: &Path, policy: IngestPolicy) -> Result<PathBuf> {
     let client = Client::builder()
         .connect_timeout(CONNECT_TIMEOUT)
         .timeout(DOWNLOAD_TIMEOUT)
-        .redirect(ssrf_safe_redirect_policy())
+        .redirect(ssrf_safe_redirect_policy(policy))
         .build()
         .map_err(|e| {
             IngestError::internal_with_source(e, "failed to build remote-ingestion HTTP client")
@@ -483,8 +533,8 @@ fn download_remote_input(url: &str, output_dir: &Path) -> Result<PathBuf> {
 /// Redirect policy that re-validates the destination host on every hop so a
 /// public URL cannot redirect into an internal address (SSRF), while still
 /// bounding the redirect chain.
-fn ssrf_safe_redirect_policy() -> Policy {
-    Policy::custom(|attempt: Attempt| {
+fn ssrf_safe_redirect_policy(policy: IngestPolicy) -> Policy {
+    Policy::custom(move |attempt: Attempt| {
         if attempt.previous().len() >= MAX_REDIRECTS {
             return attempt.error(IngestError::validation("too many redirects"));
         }
@@ -494,7 +544,7 @@ fn ssrf_safe_redirect_policy() -> Policy {
                 "redirect target must include a host",
             ));
         };
-        match validate_remote_host(host, next.port_or_known_default().unwrap_or(0)) {
+        match validate_remote_host(host, next.port_or_known_default().unwrap_or(0), policy) {
             Ok(()) => attempt.follow(),
             Err(err) => attempt.error(err),
         }
@@ -505,7 +555,15 @@ fn ssrf_safe_redirect_policy() -> Policy {
 /// otherwise non-public addresses to prevent SSRF against internal services and
 /// cloud metadata endpoints. A hostname may resolve to several addresses; every
 /// resolved address must be public.
-fn validate_remote_host(host: &str, port: u16) -> Result<()> {
+///
+/// When the operator explicitly trusted local targets (`--allow-privileged-inputs`),
+/// this validation is skipped so trusted deployments can reach internal mirrors;
+/// the secure default still blocks them.
+fn validate_remote_host(host: &str, port: u16, policy: IngestPolicy) -> Result<()> {
+    if policy.local_targets_allowed() {
+        return Ok(());
+    }
+
     // Literal IPs are validated directly; reqwest/git may still resolve a
     // hostname to a different address later, but blocking known-bad literals and
     // re-checking on redirect bounds the practical SSRF surface.
@@ -991,63 +1049,105 @@ mod tests {
 
     #[test]
     fn url_input_rejects_non_http_scheme() {
-        let error =
-            prepare_url_input("file:///tmp/input.txt").expect_err("non-http URL input should fail");
+        let error = prepare_url_input(
+            "file:///tmp/input.txt",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("non-http URL input should fail");
         assert!(error.to_string().contains("http or https"));
     }
 
     #[test]
-    fn url_input_rejects_loopback_host() {
-        let error = prepare_url_input("http://127.0.0.1/archive.zip")
-            .expect_err("loopback URL input should fail");
+    fn url_input_rejects_loopback_host_by_default() {
+        let error = prepare_url_input(
+            "http://127.0.0.1/archive.zip",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("loopback URL input should fail by default");
         assert!(error.to_string().contains("non-public address"));
     }
 
     #[test]
     fn url_input_rejects_imds_link_local_host() {
-        let error = prepare_url_input("http://169.254.169.254/latest/meta-data/")
-            .expect_err("link-local URL input should fail");
+        let error = prepare_url_input(
+            "http://169.254.169.254/latest/meta-data/",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("link-local URL input should fail");
         assert!(error.to_string().contains("non-public address"));
     }
 
     #[test]
     fn url_input_rejects_private_host() {
-        let error = prepare_url_input("http://10.0.0.5/archive.zip")
-            .expect_err("private URL input should fail");
+        let error = prepare_url_input(
+            "http://10.0.0.5/archive.zip",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("private URL input should fail");
         assert!(error.to_string().contains("non-public address"));
     }
 
     #[test]
+    fn trusted_local_targets_skip_host_validation() {
+        // With trust_local_targets, host validation is skipped; the loopback URL
+        // is accepted and we fail later trying to actually connect, never at the
+        // SSRF gate.
+        let error = prepare_url_input(
+            "http://127.0.0.1:0/archive.zip",
+            IngestPolicy::trust_local_targets(),
+        )
+        .expect_err("connection to port 0 should fail");
+        assert!(!error.to_string().contains("non-public address"));
+    }
+
+    #[test]
     fn repository_url_rejects_ext_transport() {
-        let error = validate_repository_url("ext::sh -c id")
-            .expect_err("ext:: transport should be rejected");
+        let error =
+            validate_repository_url("ext::sh -c id", IngestPolicy::allow_privileged_inputs())
+                .expect_err("ext:: transport should be rejected");
         assert!(error.to_string().contains("https, git, or ssh"));
     }
 
     #[test]
     fn repository_url_rejects_file_transport() {
-        let error = validate_repository_url("file:///etc/passwd")
-            .expect_err("file:// transport should be rejected");
+        let error = validate_repository_url(
+            "file:///etc/passwd",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("file:// transport should be rejected");
         assert!(error.to_string().contains("https, git, or ssh"));
     }
 
     #[test]
-    fn repository_url_rejects_loopback_host() {
-        let error = validate_repository_url("https://127.0.0.1/repo.git")
-            .expect_err("loopback repository host should be rejected");
+    fn repository_url_rejects_loopback_host_by_default() {
+        let error = validate_repository_url(
+            "https://127.0.0.1/repo.git",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("loopback repository host should be rejected by default");
         assert!(error.to_string().contains("non-public address"));
     }
 
     #[test]
-    fn repository_url_allows_public_https() {
-        validate_repository_url("https://example.com/repo.git")
-            .expect("public https repository URL should be allowed");
+    fn repository_url_allows_public_ip_literal() {
+        // Use a public IP literal so the assertion does not depend on DNS.
+        validate_repository_url(
+            "https://93.184.216.34/repo.git",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect("public https repository URL should be allowed");
     }
 
     #[test]
     fn repository_input_rejects_dash_leading_reference() {
-        let error = prepare_repository_input("https://example.com/repo.git", "--upload-pack=evil")
-            .expect_err("dash-leading reference should be rejected");
+        // The dash check runs before URL/host validation, so this does not
+        // depend on DNS resolution of the host.
+        let error = prepare_repository_input(
+            "https://example.com/repo.git",
+            "--upload-pack=evil",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect_err("dash-leading reference should be rejected");
         assert!(error.to_string().contains("must not begin with '-'"));
     }
 

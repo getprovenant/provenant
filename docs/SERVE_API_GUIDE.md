@@ -20,6 +20,8 @@ By default, `provenant serve` is intended for same-host use and binds to loopbac
 
 When the service is bound beyond localhost, requests may come from other machines. In that mode, local-path, remote-URL, and repository inputs are disabled unless the operator explicitly starts the service with `--allow-privileged-inputs`. Upload input remains available because the caller supplies the content to scan instead of asking the service host to read local paths, fetch URLs, or run `git fetch`.
 
+Remote-URL and repository fetches are protected against server-side request forgery (SSRF). Regardless of bind, the service refuses to fetch targets that resolve to private, loopback, link-local (including the `169.254.169.254` cloud-metadata address), unique-local, or other non-public addresses, and it re-validates the target on every HTTP redirect. Repository URLs are restricted to the `https`, `git`, and `ssh` transports, and `git` runs with a deny-by-default transport allowlist so remote helpers such as `ext::` cannot execute. This SSRF protection stays on by default even on a loopback bind. Passing `--allow-privileged-inputs` additionally trusts the operator to reach local or private targets (for example internal mirrors), relaxing the address filter and permitting the local `file://` git transport.
+
 Use `--allow-privileged-inputs` only for trusted deployments with their own network access controls:
 
 ```sh
