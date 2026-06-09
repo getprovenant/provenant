@@ -14,12 +14,23 @@ use uuid::Uuid;
 /// repositories, so the cache tree must not be group/world-readable on a
 /// permissive-umask multi-user host. On non-Unix platforms this falls back to
 /// the standard `create_dir_all` behavior.
+///
+/// `DirBuilder::mode` only applies to directories this call creates. A directory
+/// left at looser permissions by an older provenant version (which created the
+/// cache tree with the default umask) would otherwise stay group/world-listable
+/// after upgrade, so when `path` already exists we make a best-effort attempt to
+/// tighten it to `0700`. The attempt is intentionally ignored on failure: we
+/// must not fail a scan when the cache directory is owned by another user.
 pub fn create_dir_all_private(path: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {
         use std::fs::DirBuilder;
-        use std::os::unix::fs::DirBuilderExt;
+        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 
+        if path.is_dir() {
+            let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o700));
+            return Ok(());
+        }
         DirBuilder::new().recursive(true).mode(0o700).create(path)
     }
     #[cfg(not(unix))]
@@ -128,5 +139,31 @@ mod tests {
             .permissions()
             .mode();
         assert_eq!(dir_mode & 0o777, 0o700, "created dir must be owner-only");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_create_dir_all_private_tightens_existing_loose_dir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = temp_dir.path().join("legacy-cache");
+        fs::create_dir(&dir).expect("create legacy dir");
+        // Simulate a cache dir left behind by an older version under a permissive
+        // umask.
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755))
+            .expect("set loose permissions");
+
+        create_dir_all_private(&dir).expect("harden existing dir");
+
+        let mode = fs::metadata(&dir)
+            .expect("dir metadata")
+            .permissions()
+            .mode();
+        assert_eq!(
+            mode & 0o777,
+            0o700,
+            "existing dir must be tightened to owner-only"
+        );
     }
 }
