@@ -26,6 +26,19 @@ Use `--allow-privileged-inputs` only for trusted deployments with their own netw
 provenant serve --bind 0.0.0.0:8080 --allow-privileged-inputs
 ```
 
+## Security posture
+
+`provenant serve` has **no built-in authentication or authorization**. Any client that can reach the listening port can submit scans and read results; there are no users, API keys, or per-request credentials. The service's only built-in protections are the bind address and the privileged-input gate described above:
+
+- The default `127.0.0.1:8080` bind keeps the service reachable only from the same host.
+- Privileged inputs (local paths, remote URLs, repositories) make the host read files, fetch URLs, or run `git fetch` on behalf of the caller. They are enabled on a loopback bind and disabled on a non-loopback bind unless you pass `--allow-privileged-inputs`.
+
+If you bind beyond loopback, treat the deployment as unauthenticated and put it behind your own access controls — a reverse proxy that enforces authentication, a network policy, or a firewall. Enable `--allow-privileged-inputs` only for trusted deployments with their own network access controls, since it lets any reachable caller drive sensitive server-side filesystem, network, and `git` access. The bounded request, upload, remote-download, and archive-extraction sizes the service enforces are denial-of-service mitigations, not access control.
+
+An optional request-credential (for example bearer-token) gate for exposed deployments is possible future work but is intentionally not implemented today.
+
+For the full security-posture statement and operator guidance, see [SECURITY.md](../SECURITY.md#serve-mode-security-posture).
+
 The current service surface includes:
 
 - `GET /livez`
@@ -301,7 +314,7 @@ The current API surface is intentionally narrow:
 - async jobs run under bounded background execution and may wait in `pending` before starting
 - upload input is JSON-only and bounded; multipart upload is not implemented
 - remote URL input currently supports only `http` and `https`
-- auth is not implemented
+- authentication and authorization are not implemented; see [Security posture](#security-posture)
 - async job state and result retention are bounded in-memory service state, not durable external persistence
 
 ## Machine-readable contract
