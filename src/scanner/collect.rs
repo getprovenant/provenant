@@ -47,6 +47,26 @@ impl CollectionLimits {
         Self::default()
     }
 
+    /// Resolves the symlink guard once per walk so each encountered symlink only
+    /// canonicalizes its own target instead of re-canonicalizing the scan root.
+    ///
+    /// When a guard is requested but its root cannot be canonicalized, the root
+    /// path is left un-canonicalized so containment checks fail closed (no real
+    /// canonical target will be considered contained), matching the prior
+    /// per-symlink behavior.
+    fn resolved_for_walk(&self) -> Self {
+        let symlink_root_guard = self
+            .symlink_root_guard
+            .as_ref()
+            .map(|root| fs::canonicalize(root).unwrap_or_else(|_| root.clone()));
+        Self {
+            max_file_count: self.max_file_count,
+            max_total_bytes: self.max_total_bytes,
+            deadline: self.deadline,
+            symlink_root_guard,
+        }
+    }
+
     fn deadline_exceeded(&self) -> bool {
         self.deadline
             .is_some_and(|deadline| Instant::now() >= deadline)
@@ -135,6 +155,7 @@ pub fn collect_paths_with_limits<P: AsRef<Path>>(
     exclude_patterns: &[Pattern],
     limits: &CollectionLimits,
 ) -> CollectedPaths {
+    let limits = &limits.resolved_for_walk();
     let depth_limit = depth_limit_from_cli(max_depth);
     let root = root.as_ref();
 
@@ -219,6 +240,7 @@ pub fn collect_selected_paths_with_limits(
     exclude_patterns: &[Pattern],
     limits: &CollectionLimits,
 ) -> CollectedPaths {
+    let limits = &limits.resolved_for_walk();
     let depth_limit = depth_limit_from_cli(max_depth);
 
     if is_path_excluded(root, exclude_patterns) {
@@ -452,8 +474,8 @@ fn classify_for_traversal(
 ) -> io::Result<TraversalMetadata> {
     let link_metadata = fs::symlink_metadata(path)?;
     if link_metadata.file_type().is_symlink() {
-        if let Some(root) = &limits.symlink_root_guard
-            && symlink_target_escapes_root(path, root)
+        if let Some(canonical_root) = &limits.symlink_root_guard
+            && symlink_target_escapes_root(path, canonical_root)
         {
             // An untrusted input tree points a symlink at content outside the
             // scan root; refuse to dereference it so we never read or emit
@@ -470,16 +492,12 @@ fn classify_for_traversal(
     Ok(classify_resolved_metadata(link_metadata, true))
 }
 
-/// Returns `true` when the symlink at `path` resolves outside `root`, or when
-/// the target cannot be canonicalized (treated as an escape so we fail closed).
-fn symlink_target_escapes_root(path: &Path, root: &Path) -> bool {
-    let canonical_root = match fs::canonicalize(root) {
-        Ok(canonical_root) => canonical_root,
-        // Without a trustworthy root anchor we cannot prove containment.
-        Err(_) => return true,
-    };
+/// Returns `true` when the symlink at `path` resolves outside `canonical_root`,
+/// or when the target cannot be canonicalized (treated as an escape so we fail
+/// closed). `canonical_root` is canonicalized once per walk by the caller.
+fn symlink_target_escapes_root(path: &Path, canonical_root: &Path) -> bool {
     match fs::canonicalize(path) {
-        Ok(canonical_target) => !canonical_target.starts_with(&canonical_root),
+        Ok(canonical_target) => !canonical_target.starts_with(canonical_root),
         Err(_) => true,
     }
 }
@@ -601,11 +619,16 @@ fn merge_collected(
     accumulator
         .collection_errors
         .extend(collected.collection_errors);
-    accumulator.limit_reached |= collected.limit_reached;
 
+    // Insert the subtree's already-collected files before propagating its
+    // limit flag. `insert_file` early-returns once `limit_reached` is set, so
+    // flipping the flag first would silently drop valid files the subtree
+    // gathered within its own sub-budget.
     for (path, metadata) in collected.files {
         insert_file(accumulator, path, metadata, limits);
     }
+    accumulator.limit_reached |= collected.limit_reached;
+
     for (path, metadata) in collected.directories {
         if accumulator.dir_seen.insert(path.clone()) {
             accumulator.directories.push((path, metadata));
@@ -617,7 +640,7 @@ fn merge_collected(
 mod tests {
     use super::{
         CollectionFrontier, CollectionLimits, collect_paths, collect_paths_with_limits,
-        collect_selected_paths,
+        collect_selected_paths, collect_selected_paths_with_limits,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -896,5 +919,67 @@ mod tests {
 
         assert!(!collected.limit_reached);
         assert_eq!(collected.file_count(), 5);
+    }
+
+    #[test]
+    fn truncated_subtree_keeps_files_collected_within_its_budget() {
+        // Regression: when a recursing subtree collects valid files and then
+        // trips the file-count limit, those already-collected files must still
+        // appear in the merged result instead of being silently dropped.
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let root = temp_dir.path();
+
+        let first = root.join("first");
+        fs::create_dir_all(&first).expect("create first dir");
+        for index in 0..3 {
+            fs::write(first.join(format!("f{index}.txt")), "x\n").expect("write file");
+        }
+
+        let second = root.join("second");
+        fs::create_dir_all(&second).expect("create second dir");
+        for index in 0..5 {
+            fs::write(second.join(format!("s{index}.txt")), "x\n").expect("write file");
+        }
+
+        let limits = CollectionLimits {
+            max_file_count: Some(5),
+            ..CollectionLimits::unbounded()
+        };
+        let collected = collect_selected_paths_with_limits(
+            root,
+            &[
+                CollectionFrontier {
+                    path: PathBuf::from("first"),
+                    recurse: true,
+                },
+                CollectionFrontier {
+                    path: PathBuf::from("second"),
+                    recurse: true,
+                },
+            ],
+            0,
+            &[],
+            &limits,
+        );
+
+        // 3 from `first` plus 2 collected from `second` before it tripped.
+        assert!(collected.limit_reached);
+        assert_eq!(collected.file_count(), 5);
+        assert_eq!(
+            collected
+                .files
+                .iter()
+                .filter(|(path, _)| path.starts_with(&first))
+                .count(),
+            3
+        );
+        assert_eq!(
+            collected
+                .files
+                .iter()
+                .filter(|(path, _)| path.starts_with(&second))
+                .count(),
+            2
+        );
     }
 }
