@@ -51,9 +51,35 @@
     "vcs_url": "git+https://github.com/csscomb/grunt-csscomb.git",
     "copyright": null,
     "holder": null,
-    "declared_license_expression": null,
-    "declared_license_expression_spdx": null,
-    "license_detections": [],
+    "declared_license_expression": "mit",
+    "declared_license_expression_spdx": "MIT",
+    "license_detections": [
+      {
+        "license_expression": "mit",
+        "license_expression_spdx": "MIT",
+        "matches": [
+          {
+            "license_expression": "mit",
+            "license_expression_spdx": "MIT",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 5,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "mit_30.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_30.RULE",
+            "matched_text": "- type: MIT\n  url: https://github.com/csscomb/grunt-csscomb/blob/master/LICENSE-MIT",
+            "referenced_filenames": [
+              "- type: MIT\n  url: https://github.com/csscomb/grunt-csscomb/blob/master/LICENSE-MIT"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
     "other_license_expression": null,
     "other_license_expression_spdx": null,
     "other_license_detections": [],

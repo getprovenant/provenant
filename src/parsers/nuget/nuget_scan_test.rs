@@ -91,4 +91,28 @@ mod tests {
             DatasourceId::NugetPackagesLock,
         );
     }
+
+    #[test]
+    fn test_nuget_scan_derives_holder_from_copyright() {
+        // The nuspec parser sets `copyright` but never `holder`. The central
+        // post-extraction hook must derive the holder via the copyright detector
+        // end-to-end through scanner dispatch.
+        let (files, _result) = scan_and_assemble(Path::new("testdata/nuget-golden/castle-core"));
+
+        let nuspec = files
+            .iter()
+            .find(|file| file.path.ends_with("/Castle.Core.nuspec"))
+            .expect("Castle.Core.nuspec should be scanned");
+        let package = nuspec
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::NugetNuspec))
+            .expect("nuspec package data should be present");
+
+        assert_eq!(
+            package.copyright.as_deref(),
+            Some("Copyright (c) 2004-2017 Castle Project - http://www.castleproject.org/")
+        );
+        assert_eq!(package.holder.as_deref(), Some("Castle Project"));
+    }
 }

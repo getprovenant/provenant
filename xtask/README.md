@@ -246,6 +246,22 @@ Example:
 cargo run --manifest-path xtask/Cargo.toml --bin update-parser-golden -- <ParserType> <input_file> <output_file>
 ```
 
+`update-parser-golden` rewrites a fixture's whole package object and only emits a
+single package, so it cannot refresh multi-package goldens or goldens that wrap
+the package in a richer document shape. For those, and to refresh only the
+fields the central post-extraction step owns (`declared_license_expression`,
+`declared_license_expression_spdx`, `license_detections`, `holder`) while
+leaving the rest of the fixture byte-stable, run the parser golden suite with
+the in-place refresh switch:
+
+```bash
+PROVENANT_UPDATE_PARSER_GOLDEN=1 cargo test --features golden-tests --test parsers_golden
+```
+
+The switch makes the golden comparators surgically patch those fields in place
+and report success without comparing; unset, the comparators behave normally.
+Always review the resulting diff before committing.
+
 ## `update-copyright-golden`
 
 `update-copyright-golden` syncs and updates copyright golden YAML fixtures (authors / ics / copyrights).

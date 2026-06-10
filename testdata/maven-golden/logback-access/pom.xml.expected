@@ -63,6 +63,36 @@
     "repository_download_url": "https://repo1.maven.org/maven2/ch/qos/logback/logback-access/0.2.5/logback-access-0.2.5.jar",
     "api_data_url": "https://repo1.maven.org/maven2/ch/qos/logback/logback-access/0.2.5/logback-access-0.2.5.pom",
     "datasource_id": "maven_pom",
-    "purl": "pkg:maven/ch.qos.logback/logback-access@0.2.5"
+    "purl": "pkg:maven/ch.qos.logback/logback-access@0.2.5",
+    "declared_license_expression": "lgpl-2.1-plus",
+    "declared_license_expression_spdx": "LGPL-2.1-or-later",
+    "license_detections": [
+      {
+        "license_expression": "lgpl-2.1-plus",
+        "license_expression_spdx": "LGPL-2.1-or-later",
+        "matches": [
+          {
+            "license_expression": "lgpl-2.1-plus",
+            "license_expression_spdx": "LGPL-2.1-or-later",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 10,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "lgpl-2.1-plus_515.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/lgpl-2.1-plus_515.RULE",
+            "matched_text": "- license:\n    name: GNU Lesser General Public License\n    url: http://www.gnu.org/licenses/lgpl.html",
+            "referenced_filenames": [
+              "- license:\n    name: GNU Lesser General Public License\n    url: http://www.gnu.org/licenses/lgpl.html"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "holder": null
   }
 ]

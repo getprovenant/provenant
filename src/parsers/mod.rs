@@ -333,7 +333,9 @@ use std::sync::Arc;
 
 use crate::license_detection::LicenseDetectionEngine;
 use crate::models::{DiagnosticSeverity, PackageData, PackageType, ScanDiagnostic};
-use crate::parsers::license_normalization::finalize_package_declared_license_references;
+use crate::parsers::license_normalization::{
+    finalize_package_declared_license_references, populate_declared_license_and_holder,
+};
 use crate::parsers::utils::MAX_ITERATION_COUNT;
 
 thread_local! {
@@ -378,6 +380,7 @@ where
         extract()
             .into_iter()
             .map(|mut package| {
+                populate_declared_license_and_holder(&mut package);
                 finalize_package_declared_license_references(&mut package);
                 package
             })
@@ -523,6 +526,7 @@ pub trait PackageParser {
         Self::extract_packages(path)
             .into_iter()
             .map(|mut package| {
+                populate_declared_license_and_holder(&mut package);
                 finalize_package_declared_license_references(&mut package);
                 package
             })

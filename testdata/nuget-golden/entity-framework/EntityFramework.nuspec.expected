@@ -38,9 +38,35 @@
     "vcs_url": null,
     "copyright": null,
     "holder": null,
-    "declared_license_expression": null,
-    "declared_license_expression_spdx": null,
-    "license_detections": [],
+    "declared_license_expression": "ms-net-library",
+    "declared_license_expression_spdx": "LicenseRef-scancode-ms-net-library",
+    "license_detections": [
+      {
+        "license_expression": "ms-net-library",
+        "license_expression_spdx": "LicenseRef-scancode-ms-net-library",
+        "matches": [
+          {
+            "license_expression": "ms-net-library",
+            "license_expression_spdx": "LicenseRef-scancode-ms-net-library",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "ms-net-library_6.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/ms-net-library_6.RULE",
+            "matched_text": "http://go.microsoft.com/fwlink/?LinkID=320539",
+            "referenced_filenames": [
+              "http://go.microsoft.com/fwlink/?LinkID=320539"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
     "other_license_expression": null,
     "other_license_expression_spdx": null,
     "other_license_detections": [],

@@ -1,70 +1,130 @@
 {
+  "packages": [
+    {
+      "type": "maven",
+      "namespace": "com.example",
+      "name": "test-library",
+      "version": "1.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": "Test Library\nA simple test library for Maven assembly",
+      "release_date": null,
+      "parties": [
+        {
+          "type": "organization",
+          "role": "vendor",
+          "name": "Example Corp",
+          "email": null,
+          "url": null
+        }
+      ],
+      "keywords": [],
+      "homepage_url": "https://github.com/example/test-library",
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "apache-2.0",
+      "declared_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "pom.xml",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 8,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "apache-2.0_771.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_771.RULE",
+              "matched_text": "- license:\n    name: Apache License 2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0",
+              "referenced_filenames": [
+                "- license:\n    name: Apache License 2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0"
+              ]
+            }
+          ],
+          "identifier": "apache_2_0-c6b77120-5aec-1811-2b12-f22e7b75b1bd"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": "- license:\n    name: Apache License 2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0\n",
+      "notice_text": null,
+      "source_packages": ["pkg:maven/com.example/test-library@1.0.0?classifier=sources"],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {},
+      "repository_homepage_url": "https://repo1.maven.org/maven2/com/example/test-library/1.0.0/",
+      "repository_download_url": "https://repo1.maven.org/maven2/com/example/test-library/1.0.0/test-library-1.0.0.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/com/example/test-library/1.0.0/test-library-1.0.0.pom",
+      "purl": "pkg:maven/com.example/test-library@1.0.0",
+      "package_uid": "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": ["META-INF/MANIFEST.MF", "pom.xml"],
+      "datasource_ids": ["java_jar_manifest", "maven_pom"]
+    }
+  ],
   "dependencies": [
     {
-      "datafile_path": "pom.xml",
-      "datasource_id": "maven_pom",
-      "dependency_uid": "pkg:maven/junit/junit@4.13.2?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "purl": "pkg:maven/junit/junit@4.13.2",
       "extracted_requirement": "4.13.2",
-      "for_package_uid": "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "is_direct": true,
+      "scope": "test",
+      "is_runtime": false,
       "is_optional": true,
       "is_pinned": true,
-      "is_runtime": false,
-      "purl": "pkg:maven/junit/junit@4.13.2",
-      "scope": "test"
-    },
-    {
+      "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
+      "dependency_uid": "pkg:maven/junit/junit@4.13.2?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
       "datafile_path": "pom.xml",
       "datasource_id": "maven_pom",
-      "dependency_uid": "pkg:maven/org.apache.commons/commons-lang3@3.12.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "namespace": null
+    },
+    {
+      "purl": "pkg:maven/org.apache.commons/commons-lang3@3.12.0",
       "extracted_requirement": "3.12.0",
-      "for_package_uid": "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "is_direct": true,
+      "scope": null,
+      "is_runtime": null,
       "is_optional": false,
       "is_pinned": true,
-      "purl": "pkg:maven/org.apache.commons/commons-lang3@3.12.0",
-      "scope": null
+      "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
+      "dependency_uid": "pkg:maven/org.apache.commons/commons-lang3@3.12.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_path": "pom.xml",
+      "datasource_id": "maven_pom",
+      "namespace": null
     }
   ],
   "files_with_packages": [
     {
+      "path": "META-INF/MANIFEST.MF",
       "for_packages": [
         "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ],
-      "path": "META-INF/MANIFEST.MF"
+      ]
     },
     {
+      "path": "pom.xml",
       "for_packages": [
         "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ],
-      "path": "pom.xml"
-    }
-  ],
-  "packages": [
-    {
-      "api_data_url": "https://repo1.maven.org/maven2/com/example/test-library/1.0.0/test-library-1.0.0.pom",
-      "datafile_paths": ["META-INF/MANIFEST.MF", "pom.xml"],
-      "datasource_ids": ["java_jar_manifest", "maven_pom"],
-      "description": "Test Library\nA simple test library for Maven assembly",
-      "extracted_license_statement": "- license:\n    name: Apache License 2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0\n",
-      "homepage_url": "https://github.com/example/test-library",
-      "name": "test-library",
-      "namespace": "com.example",
-      "package_uid": "pkg:maven/com.example/test-library@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "parties": [
-        {
-          "name": "Example Corp",
-          "role": "vendor",
-          "type": "organization"
-        }
-      ],
-      "primary_language": "Java",
-      "purl": "pkg:maven/com.example/test-library@1.0.0",
-      "repository_download_url": "https://repo1.maven.org/maven2/com/example/test-library/1.0.0/test-library-1.0.0.jar",
-      "repository_homepage_url": "https://repo1.maven.org/maven2/com/example/test-library/1.0.0/",
-      "source_packages": ["pkg:maven/com.example/test-library@1.0.0?classifier=sources"],
-      "type": "maven",
-      "version": "1.0.0"
+      ]
     }
   ]
 }

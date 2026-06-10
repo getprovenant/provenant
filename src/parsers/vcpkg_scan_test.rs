@@ -37,4 +37,30 @@ mod tests {
                 .any(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgJson))
         );
     }
+
+    #[test]
+    fn test_vcpkg_scan_populates_declared_license_from_extracted_statement() {
+        // The vcpkg parser only sets `extracted_license_statement`; the central
+        // post-extraction hook must derive the declared expression end-to-end
+        // through scanner dispatch, even without an active license engine.
+        let (files, _result) = scan_and_assemble(Path::new("testdata/vcpkg/port"));
+
+        let manifest = files
+            .iter()
+            .find(|file| file.path.ends_with("/vcpkg.json"))
+            .expect("vcpkg.json should be scanned");
+        let package = manifest
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgJson))
+            .expect("vcpkg package data should be present");
+
+        assert_eq!(package.extracted_license_statement.as_deref(), Some("MIT"));
+        assert_eq!(package.declared_license_expression.as_deref(), Some("mit"));
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+        assert!(!package.license_detections.is_empty());
+    }
 }

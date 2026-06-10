@@ -362,6 +362,180 @@ fn detection_matches_normalized_expression(
             == Some(normalized.declared_license_expression_spdx.as_str())
 }
 
+/// Central post-extraction population step, mirroring ScanCode's
+/// `populate_license_fields` / `populate_holder_field` contract.
+///
+/// Runs only as a fallback: it fills `declared_license_expression` (and the
+/// SPDX form plus `license_detections`) from `extracted_license_statement` when
+/// a parser left them unset, and derives `holder` from `copyright` when the
+/// parser left `holder` unset. It never overwrites values a parser already set,
+/// and leaves fields untouched when nothing confident can be derived (for the
+/// license half, the detection engine may be unavailable, in which case the
+/// fields stay `None`).
+pub(crate) fn populate_declared_license_and_holder(package_data: &mut PackageData) {
+    populate_declared_license_fields(package_data);
+    populate_holder_field(package_data);
+}
+
+fn populate_declared_license_fields(package_data: &mut PackageData) {
+    if package_data.declared_license_expression.is_some() {
+        return;
+    }
+    // A parser may leave `declared_license_expression` unset yet still emit
+    // `license_detections` (for example a detection that references license
+    // files beside the manifest, resolved later by
+    // `finalize_package_declared_license_references`). Never clobber those.
+    if !package_data.license_detections.is_empty() {
+        return;
+    }
+    // When the parser declared license/notice file references, those files own
+    // the declared expression via `finalize_package_declared_license_references`.
+    // Defer to it instead of detecting over the inline statement.
+    if !collect_declared_license_reference_filenames(package_data).is_empty() {
+        return;
+    }
+    let Some(statement) = package_data
+        .extracted_license_statement
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+
+    // Prefer cheap SPDX-expression normalization, then fall back to running the
+    // detection engine over the raw statement (e.g. "GPL (>= 2)", "Apache 2.0").
+    //
+    // The engine fallback is skipped for statements that look like multi-license
+    // composites or structured/multi-line dumps: running free-text detection over
+    // them can silently drop operands it cannot match (e.g.
+    // "MIT AND Apache 2.0 AND BSD-3-Clause" loses MIT) or latch onto an arbitrary
+    // fragment of a YAML/object dump, which is worse than an honest unset. When
+    // SPDX parsing already failed on such a statement, leaving the field unset is
+    // the safer contract.
+    let (declared, declared_spdx, detections) = {
+        let normalized = normalize_spdx_declared_license(Some(statement));
+        if normalized.0.is_some() {
+            normalized
+        } else if looks_like_multi_license_composite(statement) {
+            empty_declared_license_data()
+        } else {
+            detect_declared_license_from_text(statement, statement)
+        }
+    };
+
+    if declared.is_some() {
+        package_data.declared_license_expression = declared;
+        package_data.declared_license_expression_spdx = declared_spdx;
+        package_data.license_detections = detections;
+    }
+}
+
+fn populate_holder_field(package_data: &mut PackageData) {
+    if package_data
+        .holder
+        .as_deref()
+        .is_some_and(|holder| !holder.trim().is_empty())
+    {
+        return;
+    }
+    let Some(copyright) = package_data
+        .copyright
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+
+    let derived = derive_holder_from_copyright(copyright);
+    if !derived.trim().is_empty() {
+        package_data.holder = Some(derived);
+    }
+}
+
+/// Derives package holders from a copyright statement using the copyright
+/// detector, mirroring ScanCode's `populate_holder_field`: detect holders, and
+/// if none are found, retry with a `Copyright ` prefix on each line, then fall
+/// back to the raw copyright text.
+fn derive_holder_from_copyright(copyright: &str) -> String {
+    let holders = detect_holders(copyright);
+    if !holders.is_empty() {
+        return holders.join("\n");
+    }
+
+    let prefixed = copyright
+        .split('\n')
+        .map(|line| format!("Copyright {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let holders = detect_holders(&prefixed);
+    if !holders.is_empty() {
+        return holders.join("\n");
+    }
+
+    copyright.to_string()
+}
+
+/// Returns true when a statement looks like it carries several licenses. Such
+/// statements are unsafe to run through free-text detection as a
+/// declared-license fallback because unmatched operands are silently dropped
+/// (e.g. "MIT AND Apache 2.0 AND BSD-3-Clause" loses MIT, and a YAML dump of two
+/// `licenses` entries detects only the last one).
+///
+/// A single-license multi-line dump (one license name plus its URL) is NOT
+/// treated as composite: free-text detection over it still yields the correct
+/// single expression.
+fn looks_like_multi_license_composite(statement: &str) -> bool {
+    if statement.contains('\n') {
+        return counts_multiple_license_entries(statement);
+    }
+
+    let upper = format!(" {} ", statement.to_ascii_uppercase());
+    if upper.contains(" AND ") || upper.contains(" OR ") {
+        return true;
+    }
+    // Separators that commonly join distinct license names (e.g. "MIT/BSD",
+    // "GPL | LGPL", "MIT, Apache-2.0"). A "/" inside a URL is excluded by the
+    // surrounding scheme check.
+    if statement.contains('|') || statement.contains(';') || statement.contains(',') {
+        return true;
+    }
+    statement.contains('/') && !statement.contains("://")
+}
+
+/// Estimates whether a multi-line statement carries more than one license.
+///
+/// Parsers serialize structured `license`/`licenses` metadata to a YAML-style
+/// dump, so two or more list entries (lines starting with `-`) means several
+/// licenses. For bare multi-line statements with no list markers (e.g.
+/// "BSD-2-Clause\nGPL-2.0-or-later"), two or more non-empty lines means the
+/// same.
+fn counts_multiple_license_entries(statement: &str) -> bool {
+    let list_entries = statement
+        .lines()
+        .filter(|line| line.trim_start().starts_with('-'))
+        .count();
+    if list_entries > 0 {
+        return list_entries > 1;
+    }
+
+    statement
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count()
+        > 1
+}
+
+fn detect_holders(text: &str) -> Vec<String> {
+    let (_copyrights, holders, _authors) = crate::copyright::detect_copyrights(text, None);
+    holders
+        .into_iter()
+        .map(|detection| detection.holder)
+        .filter(|holder| !holder.trim().is_empty())
+        .collect()
+}
+
 pub(crate) fn finalize_package_declared_license_references(package_data: &mut PackageData) {
     let referenced_filenames = collect_declared_license_reference_filenames(package_data);
     if referenced_filenames.is_empty() {
@@ -913,5 +1087,201 @@ mod tests {
             expected_rule_identifier.as_str()
         );
         assert_eq!(detection.matches[0].rule_url, expected_rule_url);
+    }
+
+    fn package_with(
+        extracted: Option<&str>,
+        copyright: Option<&str>,
+        holder: Option<&str>,
+    ) -> PackageData {
+        PackageData {
+            extracted_license_statement: extracted.map(str::to_string),
+            copyright: copyright.map(str::to_string),
+            holder: holder.map(str::to_string),
+            ..PackageData::default()
+        }
+    }
+
+    #[test]
+    fn test_populate_declared_license_from_spdx_statement() {
+        let mut package = package_with(Some("MIT"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(package.declared_license_expression.as_deref(), Some("mit"));
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+        assert_eq!(package.license_detections.len(), 1);
+    }
+
+    #[test]
+    fn test_populate_declared_license_via_engine_fallback() {
+        // "Apache 2.0" is not a valid SPDX identifier, so this exercises the
+        // free-text detection fallback rather than SPDX normalization.
+        let mut package = package_with(Some("Apache 2.0"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(
+            package.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert!(!package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_skips_lossy_multi_license_statement() {
+        // Free-text detection silently drops the leading MIT here, so the hook
+        // must leave the fields unset rather than emit a partial expression.
+        let mut package = package_with(Some("MIT AND Apache 2.0 AND BSD-3-Clause"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.declared_license_expression_spdx.is_none());
+        assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_does_not_overwrite_existing() {
+        let mut package = package_with(Some("MIT"), None, None);
+        package.declared_license_expression = Some("apache-2.0".to_string());
+        package.declared_license_expression_spdx = Some("Apache-2.0".to_string());
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(
+            package.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_from_single_multiline_license_dump() {
+        // A serialized single `license` entry (name + url) is not composite and
+        // should yield the correct single expression.
+        let mut package = package_with(
+            Some(
+                "- license:\n    name: Apache-2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0.txt\n",
+            ),
+            None,
+            None,
+        );
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(
+            package.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert_eq!(package.license_detections.len(), 1);
+    }
+
+    #[test]
+    fn test_populate_declared_license_skips_multi_entry_license_dump() {
+        // A serialized list of several `licenses` entries is lossy under
+        // free-text detection (only the last is matched), so leave it unset.
+        let mut package = package_with(
+            Some("- type: MIT\n  url: x\n- type: Apache-2.0\n  url: y\n"),
+            None,
+            None,
+        );
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_preserves_existing_detections() {
+        // A parser that already built `license_detections` (e.g. referencing
+        // license files) must not have them clobbered by the fallback.
+        let mut package = package_with(Some("MIT"), None, None);
+        package.license_detections = vec![build_declared_license_detection(
+            &NormalizedDeclaredLicense::new("mit", "MIT"),
+            DeclaredLicenseMatchMetadata::single_line("LICENSE"),
+        )];
+        let original = package.license_detections.clone();
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert_eq!(package.license_detections, original);
+    }
+
+    #[test]
+    fn test_populate_declared_license_defers_to_license_file_references() {
+        // When the parser declared license-file references, those files own the
+        // declared expression via finalize; the fallback must not pre-empt them.
+        let mut package = package_with(Some("MIT"), None, None);
+        let mut extra_data = std::collections::HashMap::new();
+        extra_data.insert("license_files".to_string(), serde_json::json!(["LICENSE"]));
+        package.extra_data = Some(extra_data);
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_holder_from_copyright() {
+        let mut package = package_with(None, Some("Copyright (c) 2024 Example Corporation"), None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(package.holder.as_deref(), Some("Example Corporation"));
+    }
+
+    #[test]
+    fn test_populate_holder_falls_back_to_raw_copyright_when_no_holder_detected() {
+        let mut package = package_with(None, Some("2015"), None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(package.holder.as_deref(), Some("2015"));
+    }
+
+    #[test]
+    fn test_populate_holder_does_not_overwrite_existing() {
+        let mut package = package_with(
+            None,
+            Some("Copyright (c) 2024 Example Corporation"),
+            Some("Existing Holder"),
+        );
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(package.holder.as_deref(), Some("Existing Holder"));
+    }
+
+    #[test]
+    fn test_populate_leaves_fields_unset_without_inputs() {
+        let mut package = package_with(None, None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.holder.is_none());
+    }
+
+    #[test]
+    fn test_looks_like_multi_license_composite() {
+        assert!(looks_like_multi_license_composite("MIT AND Apache-2.0"));
+        assert!(looks_like_multi_license_composite("GPL | LGPL"));
+        assert!(looks_like_multi_license_composite("MIT/BSD"));
+        assert!(looks_like_multi_license_composite("MIT, Apache-2.0"));
+        assert!(!looks_like_multi_license_composite("GPL (>= 2)"));
+        assert!(!looks_like_multi_license_composite("Apache 2.0"));
+        assert!(!looks_like_multi_license_composite(
+            "https://example.com/LICENSE"
+        ));
+        // Single-license multi-line dumps are not composite.
+        assert!(!looks_like_multi_license_composite(
+            "- license:\n    name: Apache-2.0\n    url: https://example.com\n"
+        ));
+        // Multiple list entries / bare lines are composite.
+        assert!(looks_like_multi_license_composite(
+            "- type: MIT\n  url: x\n- type: Apache-2.0\n  url: y\n"
+        ));
+        assert!(looks_like_multi_license_composite(
+            "BSD-2-Clause\nGPL-2.0-or-later"
+        ));
     }
 }

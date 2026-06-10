@@ -103,6 +103,36 @@
     "repository_download_url": "https://pypi.org/packages/source/a/anonapi/anonapi-0.0.19.tar.gz",
     "api_data_url": "https://pypi.org/pypi/anonapi/0.0.19/json",
     "datasource_id": "pypi_wheel_metadata",
-    "purl": "pkg:pypi/anonapi@0.0.19?extension=py2.py3-none-any"
+    "purl": "pkg:pypi/anonapi@0.0.19?extension=py2.py3-none-any",
+    "declared_license_expression": "mit",
+    "declared_license_expression_spdx": "MIT",
+    "license_detections": [
+      {
+        "license_expression": "mit",
+        "license_expression_spdx": "MIT",
+        "matches": [
+          {
+            "license_expression": "mit",
+            "license_expression_spdx": "MIT",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 12,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "mit_31.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_31.RULE",
+            "matched_text": "license: MIT license\nclassifiers:\n  - 'License :: OSI Approved :: MIT License'",
+            "referenced_filenames": [
+              "license: MIT license\nclassifiers:\n  - 'License :: OSI Approved :: MIT License'"
+            ]
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "holder": null
   }
 ]
