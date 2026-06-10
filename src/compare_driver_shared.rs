@@ -502,6 +502,37 @@ pub fn package_field_content_differences(
     differences
 }
 
+/// Self-consistent tally of a [`package_field_content_differences`] result.
+///
+/// Each difference entry lands in exactly one of the three buckets, so the
+/// invariant `missing_in_provenant + extra_in_provenant + value_vs_value_mismatch
+/// == sum(by_field.values()) == total entries` always holds. Value-vs-value
+/// mismatches (both sides non-null but different) get their own bucket instead
+/// of being counted into both directional totals, which keeps the summary
+/// numbers reconcilable by any downstream consumer.
+#[derive(Debug, Default, Clone)]
+pub struct PackageFieldContentTally {
+    pub missing_in_provenant: usize,
+    pub extra_in_provenant: usize,
+    pub value_vs_value_mismatch: usize,
+    pub by_field: BTreeMap<String, usize>,
+}
+
+pub fn tally_package_field_content_differences(
+    differences: &[PackageFieldContentDifferenceEntry],
+) -> PackageFieldContentTally {
+    let mut tally = PackageFieldContentTally::default();
+    for entry in differences {
+        *tally.by_field.entry(entry.field.clone()).or_insert(0) += 1;
+        match (entry.scancode.is_some(), entry.provenant.is_some()) {
+            (true, false) => tally.missing_in_provenant += 1,
+            (false, true) => tally.extra_in_provenant += 1,
+            _ => tally.value_vs_value_mismatch += 1,
+        }
+    }
+    tally
+}
+
 pub fn difference_entries(
     left: &BTreeSet<String>,
     right: &BTreeSet<String>,
@@ -840,5 +871,108 @@ mod tests {
         assert_eq!(license.len(), 1);
         assert_eq!(license[0].scancode.as_deref(), Some("mit"));
         assert_eq!(license[0].provenant.as_deref(), Some("apache-2.0"));
+    }
+
+    /// Asserts the tally invariant: every entry lands in exactly one of the
+    /// three directional buckets, so they sum to both the total entry count and
+    /// the sum of `by_field`.
+    fn assert_tally_reconciles(tally: &PackageFieldContentTally, total_entries: usize) {
+        let bucket_total =
+            tally.missing_in_provenant + tally.extra_in_provenant + tally.value_vs_value_mismatch;
+        assert_eq!(
+            bucket_total, total_entries,
+            "directional buckets must sum to the number of difference entries"
+        );
+        let by_field_total: usize = tally.by_field.values().sum();
+        assert_eq!(
+            bucket_total, by_field_total,
+            "directional buckets must reconcile with by_field"
+        );
+    }
+
+    #[test]
+    fn tally_reconciles_for_one_sided_missing() {
+        // Content present only on the ScanCode side -> missing_in_provenant.
+        let scancode = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0", "holder": "Example Corp" }]
+        });
+        let provenant = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0" }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.missing_in_provenant, 1);
+        assert_eq!(tally.extra_in_provenant, 0);
+        assert_eq!(tally.value_vs_value_mismatch, 0);
+        assert_tally_reconciles(&tally, differences.len());
+    }
+
+    #[test]
+    fn tally_reconciles_for_one_sided_extra() {
+        // Content present only on the Provenant side -> extra_in_provenant.
+        let scancode = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0" }]
+        });
+        let provenant = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0", "holder": "Example Corp" }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.missing_in_provenant, 0);
+        assert_eq!(tally.extra_in_provenant, 1);
+        assert_eq!(tally.value_vs_value_mismatch, 0);
+        assert_tally_reconciles(&tally, differences.len());
+    }
+
+    #[test]
+    fn tally_reconciles_for_value_vs_value_mismatch() {
+        // Both sides non-null but different -> its own bucket, NOT double-counted
+        // into the directional totals.
+        let scancode = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "mit"
+            }]
+        });
+        let provenant = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "apache-2.0"
+            }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.missing_in_provenant, 0);
+        assert_eq!(tally.extra_in_provenant, 0);
+        assert_eq!(tally.value_vs_value_mismatch, 1);
+        assert_tally_reconciles(&tally, differences.len());
+    }
+
+    #[test]
+    fn tally_reconciles_for_mixed_entries() {
+        // A package gaining content (extra) plus a package with a value mismatch:
+        // the totals must still reconcile across all three buckets and by_field.
+        let scancode = json!({
+            "packages": [
+                { "purl": "pkg:npm/gains@1.0.0" },
+                { "purl": "pkg:npm/mismatch@1.0.0", "declared_license_expression": "mit" }
+            ]
+        });
+        let provenant = json!({
+            "packages": [
+                { "purl": "pkg:npm/gains@1.0.0", "holder": "Example Corp" },
+                { "purl": "pkg:npm/mismatch@1.0.0", "declared_license_expression": "apache-2.0" }
+            ]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.extra_in_provenant, 1);
+        assert_eq!(tally.value_vs_value_mismatch, 1);
+        assert_eq!(tally.missing_in_provenant, 0);
+        assert_tally_reconciles(&tally, differences.len());
     }
 }

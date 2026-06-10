@@ -196,8 +196,13 @@ both outputs agree exist (matched by purl, else the
 and file-level `files[].package_data[]`), it diffs the **content** of
 `declared_license_expression`, `declared_license_expression_spdx`, and `holder`.
 This catches a change that drops or corrupts declared-license/holder content
-even when every package identity still matches. Because it compares content for
-the first time, enabling it can surface pre-existing ScanCode-vs-Provenant
+even when every package identity still matches. Each difference is counted in
+exactly one of three reconcilable buckets: `missing_in_provenant` (content only
+on the ScanCode side), `extra_in_provenant` (content only on the Provenant
+side), and `value_vs_value_mismatch` (both sides carry content but the values
+differ), so `missing + extra + value_vs_value_mismatch` always equals the total
+number of differences and `sum(by_field.values())`. Because it compares content
+for the first time, enabling it can surface pre-existing ScanCode-vs-Provenant
 declared-license deltas that have nothing to do with any recent change; that is
 expected, valuable parity signal to classify, not automatically a regression.
 

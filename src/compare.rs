@@ -636,24 +636,18 @@ pub(crate) fn write_comparison_artifacts(
         .sum::<usize>();
     let package_field_content_value_differences =
         package_field_content_differences(&scancode, &provenant);
-    let mut package_field_content_missing = 0usize;
-    let mut package_field_content_extra = 0usize;
-    let mut package_field_content_by_field: BTreeMap<String, usize> = BTreeMap::new();
-    for entry in &package_field_content_value_differences {
-        *package_field_content_by_field
-            .entry(entry.field.clone())
-            .or_insert(0) += 1;
-        match (entry.scancode.is_some(), entry.provenant.is_some()) {
-            (true, false) => package_field_content_missing += 1,
-            (false, true) => package_field_content_extra += 1,
-            // Both sides carry a value but they differ: count it on each side so
-            // neither directional total hides a real content mismatch.
-            _ => {
-                package_field_content_missing += 1;
-                package_field_content_extra += 1;
-            }
-        }
-    }
+    // Value-vs-value mismatches (both sides non-null but different) are tracked
+    // in their own bucket rather than being double-counted into both directional
+    // totals. This keeps the summary self-consistent: `missing + extra +
+    // value_vs_value_mismatch == sum(by_field.values()) == one entry per delta`,
+    // so a consumer can cross-check the totals against `by_field`.
+    let package_field_content_tally =
+        tally_package_field_content_differences(&package_field_content_value_differences);
+    let package_field_content_missing = package_field_content_tally.missing_in_provenant;
+    let package_field_content_extra = package_field_content_tally.extra_in_provenant;
+    let package_field_content_value_vs_value_mismatch =
+        package_field_content_tally.value_vs_value_mismatch;
+    let package_field_content_by_field = package_field_content_tally.by_field;
     let raw_dependency_value_differences = raw_dependency_differences(&scancode, &provenant);
     let raw_dependency_missing = raw_dependency_value_differences
         .iter()
@@ -693,17 +687,22 @@ pub(crate) fn write_comparison_artifacts(
         json!({
             "missing_in_provenant": package_field_content_missing,
             "extra_in_provenant": package_field_content_extra,
+            "value_vs_value_mismatch": package_field_content_value_vs_value_mismatch,
             "by_field": package_field_content_by_field,
         }),
     );
     let package_field_content_summary = json!({
         "missing_in_provenant": package_field_content_missing,
         "extra_in_provenant": package_field_content_extra,
+        "value_vs_value_mismatch": package_field_content_value_vs_value_mismatch,
         "by_field": package_field_content_by_field,
         "fields_compared": PACKAGE_CONTENT_FIELDS,
     });
     scancode_favored_signal_count += package_field_content_missing;
     provenant_favored_signal_count += package_field_content_extra;
+    // A value-vs-value mismatch favors neither side, so it is a non-directional
+    // review signal rather than a directional one.
+    non_directional_signal_count += package_field_content_value_vs_value_mismatch;
     if top_level_package_skip_reason.is_none() {
         scancode_favored_signal_count += top_level_package_missing;
         provenant_favored_signal_count += top_level_package_extra;
@@ -778,6 +777,13 @@ pub(crate) fn write_comparison_artifacts(
         package_field_content_extra as i64,
         package_field_content_extra as i64,
         "identity-matched packages where declared-license/holder content is present only in Provenant output",
+    ));
+    rows.push(tsv_row(
+        "package_field_content_value_vs_value_mismatch",
+        package_field_content_value_vs_value_mismatch as i64,
+        package_field_content_value_vs_value_mismatch as i64,
+        0,
+        "identity-matched packages where both outputs carry declared-license/holder content but the values differ",
     ));
     rows.push(tsv_row(
         "top_level_license_expression_deltas",
