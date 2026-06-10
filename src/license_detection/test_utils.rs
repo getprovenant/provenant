@@ -8,9 +8,12 @@
 
 use std::collections::HashMap;
 
+use crate::license_detection::TokenMultiset;
+use crate::license_detection::TokenSet;
 use crate::license_detection::index::LicenseIndex;
-use crate::license_detection::index::dictionary::{TokenDictionary, TokenId};
+use crate::license_detection::index::dictionary::{TokenDictionary, TokenId, TokenKind};
 use crate::license_detection::models::Rule;
+use crate::license_detection::models::RuleId;
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::Query;
 
@@ -38,6 +41,101 @@ pub fn create_test_index(legalese: &[(&str, u16)], len_legalese: usize) -> Licen
 /// with len_legalese set to 2.
 pub fn create_test_index_default() -> LicenseIndex {
     create_test_index(&[("mit", 0), ("license", 1), ("apache", 2), ("2.0", 3)], 2)
+}
+
+/// Inserts a whitespace-tokenized rule into a test index and wires up the set,
+/// multiset, high-set, postings, and inverted-index structures needed by
+/// candidate selection and sequence matching.
+///
+/// `identifier` must be unique within the index. Returns the assigned `RuleId`.
+pub fn add_text_rule(
+    index: &mut LicenseIndex,
+    identifier: &str,
+    text: &str,
+    expression: &str,
+) -> RuleId {
+    let rid = RuleId::new(index.rules_by_rid.len());
+    let tokens: Vec<TokenId> = text
+        .split_whitespace()
+        .filter_map(|word| index.dictionary.get(word))
+        .collect();
+
+    let set = TokenSet::from_token_ids(tokens.iter().copied());
+    let mset = TokenMultiset::from_token_ids(&tokens);
+    let _ = index.sets_by_rid.insert(rid, set.clone());
+    let _ = index.msets_by_rid.insert(rid, mset);
+
+    let high_set: TokenSet = TokenSet::from_u16_iter(
+        set.iter()
+            .filter(|&tid| index.dictionary.token_kind(TokenId::new(tid)) == TokenKind::Legalese),
+    );
+    if !high_set.is_empty() {
+        let _ = index.high_sets_by_rid.insert(rid, high_set);
+    }
+
+    let mut high_postings: HashMap<TokenId, Vec<usize>> = HashMap::new();
+    for (pos, &tid) in tokens.iter().enumerate() {
+        if index.dictionary.token_kind(tid) == TokenKind::Legalese {
+            high_postings.entry(tid).or_default().push(pos);
+        }
+    }
+    let _ = index.high_postings_by_rid.insert(rid, high_postings);
+
+    let length_unique = set.len();
+    let high_length_unique = tokens
+        .iter()
+        .filter(|&&t| index.dictionary.token_kind(t) == TokenKind::Legalese)
+        .count();
+
+    let rule = Rule {
+        identifier: identifier.to_string(),
+        license_expression: expression.to_string(),
+        text: text.to_string(),
+        tokens: tokens.clone(),
+        rule_kind: crate::license_detection::models::RuleKind::Text,
+        is_false_positive: false,
+        is_required_phrase: false,
+        is_from_license: false,
+        relevance: 100,
+        minimum_coverage: None,
+        has_stored_minimum_coverage: false,
+        is_continuous: true,
+        referenced_filenames: None,
+        ignorable_urls: None,
+        ignorable_emails: None,
+        ignorable_copyrights: None,
+        ignorable_holders: None,
+        ignorable_authors: None,
+        language: None,
+        notes: None,
+        length_unique,
+        high_length_unique,
+        high_length: tokens.len(),
+        min_matched_length: 1,
+        min_high_matched_length: 1,
+        min_matched_length_unique: 1,
+        min_high_matched_length_unique: 1,
+        is_small: false,
+        is_tiny: false,
+        starts_with_license: false,
+        ends_with_license: false,
+        is_deprecated: false,
+        spdx_license_key: None,
+        other_spdx_license_keys: vec![],
+        required_phrase_spans: vec![],
+        stopwords_by_pos: HashMap::new(),
+    };
+
+    index.rules_by_rid.push(rule);
+    index.tids_by_rid.push(tokens.clone());
+
+    for &tid in &tokens {
+        if index.dictionary.token_kind(tid) == TokenKind::Legalese {
+            index.rids_by_high_tid.entry(tid).or_default().insert(rid);
+        }
+    }
+
+    rid
 }
 
 /// Creates a mock Rule for testing matchers.

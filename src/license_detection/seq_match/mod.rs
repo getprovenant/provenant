@@ -47,14 +47,10 @@ mod tests {
     use super::*;
     use crate::license_detection::index::IndexedRuleMetadata;
     use crate::license_detection::index::LicenseIndex;
-    use crate::license_detection::index::dictionary::{TokenId, TokenKind};
-    use crate::license_detection::models::Rule;
     use crate::license_detection::models::RuleId;
     use crate::license_detection::query::Query;
     use crate::license_detection::test_utils::create_test_index;
-    use crate::license_detection::{TokenMultiset, TokenSet};
     use crate::models::LineNumber;
-    use std::collections::HashMap;
 
     pub(super) fn create_seq_match_test_index() -> LicenseIndex {
         create_test_index(
@@ -70,86 +66,8 @@ mod tests {
     }
 
     pub(super) fn add_test_rule(index: &mut LicenseIndex, text: &str, expression: &str) -> RuleId {
-        let rid = RuleId::new(index.rules_by_rid.len());
-        let tokens: Vec<TokenId> = text
-            .split_whitespace()
-            .filter_map(|word| index.dictionary.get(word))
-            .collect();
-
-        let set = TokenSet::from_token_ids(tokens.iter().copied());
-        let mset = TokenMultiset::from_token_ids(&tokens);
-        let _ = index.sets_by_rid.insert(rid, set.clone());
-        let _ = index.msets_by_rid.insert(rid, mset);
-
-        let high_set: TokenSet =
-            TokenSet::from_u16_iter(set.iter().filter(|&tid| {
-                index.dictionary.token_kind(TokenId::new(tid)) == TokenKind::Legalese
-            }));
-        if !high_set.is_empty() {
-            let _ = index.high_sets_by_rid.insert(rid, high_set);
-        }
-
-        let mut high_postings: HashMap<TokenId, Vec<usize>> = HashMap::new();
-        for (pos, &tid) in tokens.iter().enumerate() {
-            if index.dictionary.token_kind(tid) == TokenKind::Legalese {
-                high_postings.entry(tid).or_default().push(pos);
-            }
-        }
-        let _ = index.high_postings_by_rid.insert(rid, high_postings);
-
-        let rule = Rule {
-            identifier: format!("{}.test", expression),
-            license_expression: expression.to_string(),
-            text: text.to_string(),
-            tokens: tokens.clone(),
-            rule_kind: crate::license_detection::models::RuleKind::Text,
-            is_false_positive: false,
-            is_required_phrase: false,
-            is_from_license: false,
-            relevance: 100,
-            minimum_coverage: None,
-            has_stored_minimum_coverage: false,
-            is_continuous: true,
-            referenced_filenames: None,
-            ignorable_urls: None,
-            ignorable_emails: None,
-            ignorable_copyrights: None,
-            ignorable_holders: None,
-            ignorable_authors: None,
-            language: None,
-            notes: None,
-            length_unique: tokens.len(),
-            high_length_unique: tokens
-                .iter()
-                .filter(|&&t| index.dictionary.token_kind(t) == TokenKind::Legalese)
-                .count(),
-            high_length: tokens.len(),
-            min_matched_length: 1,
-            min_high_matched_length: 1,
-            min_matched_length_unique: 1,
-            min_high_matched_length_unique: 1,
-            is_small: false,
-            is_tiny: false,
-            starts_with_license: false,
-            ends_with_license: false,
-            is_deprecated: false,
-            spdx_license_key: None,
-            other_spdx_license_keys: vec![],
-            required_phrase_spans: vec![],
-            stopwords_by_pos: std::collections::HashMap::new(),
-        };
-
-        index.rules_by_rid.push(rule.clone());
-        index.tids_by_rid.push(tokens.clone());
-
-        // Also populate inverted index for high-value tokens
-        for &tid in &tokens {
-            if index.dictionary.token_kind(tid) == TokenKind::Legalese {
-                index.rids_by_high_tid.entry(tid).or_default().insert(rid);
-            }
-        }
-
-        rid
+        let identifier = format!("{}.test", expression);
+        crate::license_detection::test_utils::add_text_rule(index, &identifier, text, expression)
     }
 
     #[test]
