@@ -1,0 +1,8 @@
+---
+license_expression: gpl-2.0-plus
+is_license_clue: yes
+relevance: 50
+notes: Bare versionless GPL wording is too weak to assert GPL-2.0-or-later; preserve it as clue-only evidence instead of a hard elevated-version detection.
+---
+
+freely available under the GPL

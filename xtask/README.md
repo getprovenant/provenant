@@ -28,6 +28,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 | `generate-supported-formats`      | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
 | `generate-benchmark-chart`        | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
 | `generate-index-artifact`         | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
+| `classify-rule-overmatch`         | Classify upstream license rules by overmatch-risk class and rank un-covered overlay candidates.                                             |
 
 ## `benchmark-target`
 
@@ -515,4 +516,44 @@ Examples:
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact -- --check
+```
+
+## `classify-rule-overmatch`
+
+`classify-rule-overmatch` scores every upstream ScanCode rule against the same
+overmatch-risk signals the bundled overlays in
+`resources/license_detection/index_build_policy.toml` already encode, then ranks
+the rules that share a systematic root cause but are not yet covered by an
+overlay. It is a read-only reporting tool: it never edits the dataset or policy.
+
+The risk classes mirror the existing overlay clusters:
+
+- `BareWeakWord`: short bare GPL-family shorthand mapped to an unversioned bucket
+  (GPL → `gpl-1.0-plus`, LGPL → `lgpl-2.0-plus`, AGPL → `agpl-3.0-plus`); too
+  weak to assert a concrete license, so a clue-only treatment fits.
+- `VersionMismatch`: a short notice whose expression asserts a _specific
+  elevated_ GPL/LGPL/AGPL version but whose text carries no matching version
+  anchor, so it can overmatch a neighbouring version.
+- `BareReferencedFilename`: a short notice that asserts a license via a bare
+  COPYING/LICENSE reference with no independent version anchor.
+- `BsdEndorsement`: a short `bsd-new` text rule that contains the endorsement
+  clause but is neither continuous nor full coverage.
+
+Rules already guarded by an inline required phrase (`{{...}}`), and false
+positive, clue, and deprecated rules, are skipped.
+
+Use it to triage candidates before curating overlays; the highest-signal,
+systematic class in practice is `BareWeakWord`. Treat the other classes as
+review candidates rather than blanket-apply targets: many of the flagged rules
+encode ScanCode's deliberate unversioned-bucket mappings, and demoting them
+would trade false positives for recall.
+
+Examples:
+
+```bash
+# Text report ranked by risk score (defaults to the bundled ScanCode corpus).
+cargo run --manifest-path xtask/Cargo.toml --bin classify-rule-overmatch
+
+# Machine-readable output for further analysis.
+cargo run --manifest-path xtask/Cargo.toml --bin classify-rule-overmatch -- --json
 ```
