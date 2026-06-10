@@ -410,6 +410,17 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
         return;
     };
 
+    // Some declared-metadata conventions point at a file-stored or versionless
+    // license rather than naming a confident license expression. Running
+    // free-text detection over them produces a confidently-wrong or over-specific
+    // value (e.g. an over-pinned version for a bare license URL, or a low-value
+    // `unknown-license-reference` for an npm `SEE LICENSE IN <file>` pointer). For
+    // a compliance field an honest unset is strictly better; the real license is
+    // recovered elsewhere (file-reference resolution, file-content detection).
+    if statement_defers_to_file_or_versionless_reference(statement) {
+        return;
+    }
+
     // Prefer cheap SPDX-expression normalization, then fall back to running the
     // detection engine over the raw statement (e.g. "GPL (>= 2)", "Apache 2.0").
     //
@@ -421,10 +432,20 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
     // SPDX parsing already failed on such a statement, leaving the field unset is
     // the safer contract.
     let (declared, declared_spdx, detections) = {
-        let normalized = normalize_spdx_declared_license(Some(statement));
+        // Structured "or later" version-range idioms (CRAN/Debian style, e.g.
+        // "GPL (>= 2)") encode an `-or-later` expression that free-text detection
+        // otherwise mis-reads as the `-only` form. Rewrite the idiom into a valid
+        // SPDX expression and normalize that instead of the raw statement.
+        let rewritten = rewrite_version_range_or_later_idiom(statement);
+        let effective_statement = rewritten.as_deref().unwrap_or(statement);
+
+        let normalized = normalize_spdx_declared_license(Some(effective_statement));
         if normalized.0.is_some() {
             normalized
-        } else if looks_like_multi_license_composite(statement) {
+        } else if rewritten.is_some() || looks_like_multi_license_composite(statement) {
+            // The idiom matched a known family but did not normalize confidently:
+            // prefer an honest unset over the wrong `-only` expression free-text
+            // detection would otherwise derive from the original statement.
             empty_declared_license_data()
         } else {
             // The statement is the manifest's own declared value, not a
@@ -541,6 +562,120 @@ fn counts_multiple_license_entries(statement: &str) -> bool {
         .filter(|line| !line.trim().is_empty())
         .count()
         > 1
+}
+
+/// Rewrites a CRAN/Debian-style "or later" version-range idiom such as
+/// `GPL (>= 2)` into an equivalent `<family>-<version>+` expression
+/// (`GPL-2.0+`) that normalizes to the correct `-or-later` SPDX form.
+///
+/// The `(>= N)` convention means "version N or any later version", so the
+/// honest mapping is the `+`/`-or-later` form, not the `-only` form free-text
+/// detection would otherwise produce. Only the GPL/LGPL/AGPL families use this
+/// idiom in declared metadata; anything else returns `None` so normal handling
+/// applies. A bare major version is expanded to its canonical point release
+/// (e.g. `2` -> `2.0`), while an explicit minor version is preserved
+/// (e.g. `2.1`). Both `>= N.M` and `>= N-M` separators are accepted.
+fn rewrite_version_range_or_later_idiom(statement: &str) -> Option<String> {
+    let trimmed = statement.trim();
+    let open = trimmed.find('(')?;
+    let close = trimmed.rfind(')')?;
+    if close <= open {
+        return None;
+    }
+
+    let family_raw = trimmed[..open].trim();
+    let family = match family_raw.to_ascii_uppercase().as_str() {
+        "GPL" => "GPL",
+        "LGPL" => "LGPL",
+        "AGPL" => "AGPL",
+        _ => return None,
+    };
+
+    let inner = trimmed[open + 1..close].trim();
+    let version_raw = inner.strip_prefix(">=")?.trim();
+    if version_raw.is_empty() {
+        return None;
+    }
+
+    // Accept "N", "N.M", or "N-M"; reject anything with stray characters so an
+    // unexpected idiom falls back to honest unset rather than a guess.
+    let mut parts = version_raw.split(['.', '-']);
+    let major = parts.next()?;
+    let minor = parts.next().unwrap_or("0");
+    if parts.next().is_some() {
+        return None;
+    }
+    if major.is_empty()
+        || !major.bytes().all(|b| b.is_ascii_digit())
+        || !minor.bytes().all(|b| b.is_ascii_digit())
+    {
+        return None;
+    }
+
+    Some(format!("{family}-{major}.{minor}+"))
+}
+
+/// Returns true when the declared statement is a pointer to a file-stored or
+/// versionless license rather than a confident license expression, so the
+/// declared-license hook must defer to an honest unset.
+///
+/// Covers two structured conventions that free-text detection mis-handles:
+/// - the npm `SEE LICENSE IN <file-or-url>` pointer (which the engine collapses
+///   to a low-value `unknown-license-reference`), and
+/// - a bare versionless license URL as the only license signal (which the
+///   engine over-pins to a concrete version + "or later").
+///
+/// Statements that name a license with an explicit version (including a
+/// versioned URL) are NOT treated as deferrals and continue through normal
+/// normalization/detection.
+fn statement_defers_to_file_or_versionless_reference(statement: &str) -> bool {
+    let trimmed = statement.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    // npm `SEE LICENSE IN <file>` / `SEE LICENSE IN <url>` pointer.
+    if trimmed.to_ascii_uppercase().starts_with("SEE LICENSE IN ") {
+        return true;
+    }
+
+    is_bare_versionless_license_url(trimmed)
+}
+
+/// Returns true when the statement's only license signal is a bare,
+/// versionless license URL (no explicit version in the URL path).
+fn is_bare_versionless_license_url(statement: &str) -> bool {
+    let mut url_tokens = 0usize;
+    for token in statement.split_whitespace() {
+        if !token.contains("://") {
+            // A non-URL token that is not a trivial connector ("see") means the
+            // statement carries another signal; do not treat it as a bare URL.
+            if !token.eq_ignore_ascii_case("see") {
+                return false;
+            }
+            continue;
+        }
+        url_tokens += 1;
+        if url_contains_explicit_version(token) {
+            return false;
+        }
+    }
+
+    url_tokens == 1
+}
+
+/// Returns true when a license URL's path carries an explicit version number
+/// (e.g. ".../gpl-3.0.html", ".../licenses/by/4.0/"), as opposed to a generic
+/// versionless page (e.g. ".../licenses/lgpl.html").
+///
+/// Only the path is inspected; digits in the scheme or host (e.g. a hostname
+/// like `example2.com`) are not version signals.
+fn url_contains_explicit_version(url: &str) -> bool {
+    let after_scheme = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let Some((_host, path)) = after_scheme.split_once('/') else {
+        return false;
+    };
+    path.bytes().any(|b| b.is_ascii_digit())
 }
 
 fn detect_holders(text: &str) -> Vec<String> {
@@ -1329,6 +1464,131 @@ mod tests {
 
         assert!(package.declared_license_expression.is_none());
         assert!(package.license_detections.is_empty());
+    }
+
+    fn declared_for(statement: &str) -> (Option<String>, Option<String>) {
+        let mut package = package_with(Some(statement), None, None);
+        populate_declared_license_and_holder(&mut package);
+        (
+            package.declared_license_expression,
+            package.declared_license_expression_spdx,
+        )
+    }
+
+    #[test]
+    fn test_version_range_or_later_idiom_maps_to_or_later() {
+        // Defect 1: the CRAN/Debian `(>= N)` idiom means "or later", so it must
+        // derive the `-or-later` SPDX form across the GPL/LGPL/AGPL families,
+        // not the `-only` form free-text detection would otherwise produce.
+        for (statement, expected_key, expected_spdx) in [
+            ("GPL (>= 2)", "gpl-2.0-plus", "GPL-2.0-or-later"),
+            ("GPL (>= 3)", "gpl-3.0-plus", "GPL-3.0-or-later"),
+            ("LGPL (>= 2.1)", "lgpl-2.1-plus", "LGPL-2.1-or-later"),
+            ("LGPL (>= 3)", "lgpl-3.0-plus", "LGPL-3.0-or-later"),
+            ("AGPL (>= 3)", "agpl-3.0-plus", "AGPL-3.0-or-later"),
+        ] {
+            let (declared, declared_spdx) = declared_for(statement);
+            assert_eq!(
+                declared.as_deref(),
+                Some(expected_key),
+                "declared key for {statement:?}"
+            );
+            assert_eq!(
+                declared_spdx.as_deref(),
+                Some(expected_spdx),
+                "declared spdx for {statement:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_version_range_idiom_accepts_dash_separator() {
+        // Debian-style "GPL (>= 2-0)" uses a dash between major and minor.
+        let (declared, declared_spdx) = declared_for("GPL (>= 2-0)");
+        assert_eq!(declared.as_deref(), Some("gpl-2.0-plus"));
+        assert_eq!(declared_spdx.as_deref(), Some("GPL-2.0-or-later"));
+    }
+
+    #[test]
+    fn test_existing_or_later_and_only_forms_are_preserved() {
+        // Regression guard for the still-correct cases listed under Defect 1.
+        for (statement, expected_key, expected_spdx) in [
+            ("GPL-2.0+", "gpl-2.0-plus", "GPL-2.0-or-later"),
+            ("GPL-2.0", "gpl-2.0", "GPL-2.0-only"),
+            ("GPLv2", "gpl-2.0", "GPL-2.0-only"),
+            ("MIT", "mit", "MIT"),
+            ("Apache License 2.0", "apache-2.0", "Apache-2.0"),
+            ("BSD-3-Clause", "bsd-3-clause", "BSD-3-Clause"),
+            ("Artistic-2.0", "artistic-2.0", "Artistic-2.0"),
+            ("WTFPL", "wtfpl", "WTFPL"),
+            ("MPL-2.0", "mpl-2.0", "MPL-2.0"),
+            ("EPL-2.0", "epl-2.0", "EPL-2.0"),
+        ] {
+            let (declared, declared_spdx) = declared_for(statement);
+            assert_eq!(
+                declared.as_deref(),
+                Some(expected_key),
+                "declared key for {statement:?}"
+            );
+            assert_eq!(
+                declared_spdx.as_deref(),
+                Some(expected_spdx),
+                "declared spdx for {statement:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_bare_versionless_license_url_falls_back_to_null() {
+        // Defect 2: a generic, versionless license page is not enough to pin a
+        // concrete version + "or later"; the hook must stay null.
+        let (declared, declared_spdx) = declared_for("see http://www.gnu.org/licenses/lgpl.html");
+        assert!(declared.is_none(), "got {declared:?}");
+        assert!(declared_spdx.is_none(), "got {declared_spdx:?}");
+    }
+
+    #[test]
+    fn test_versioned_license_url_still_normalizes() {
+        // Regression guard for Defect 2: a URL that names an explicit version
+        // (e.g. the chef nuspec Apache case) must still normalize.
+        let (declared, declared_spdx) = declared_for("http://www.apache.org/licenses/LICENSE-2.0");
+        assert_eq!(declared.as_deref(), Some("apache-2.0"));
+        assert_eq!(declared_spdx.as_deref(), Some("Apache-2.0"));
+    }
+
+    #[test]
+    fn test_npm_see_license_in_falls_back_to_null() {
+        // Defect 3: the npm `SEE LICENSE IN <file>`/`<url>` pointer must not be
+        // synthesized into a low-value `unknown-license-reference`.
+        for statement in [
+            "SEE LICENSE IN LICENSE.txt",
+            "SEE LICENSE IN https://example.com/license",
+            "see license in COPYING",
+        ] {
+            let (declared, declared_spdx) = declared_for(statement);
+            assert!(declared.is_none(), "{statement:?} -> {declared:?}");
+            assert!(
+                declared_spdx.is_none(),
+                "{statement:?} -> {declared_spdx:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_custom_licenseref_expression_still_normalizes() {
+        // Regression guard for Defect 3: a legitimate `LicenseRef-...` SPDX
+        // expression is still handled by the SPDX path.
+        let (declared, declared_spdx) = declared_for("LicenseRef-Custom");
+        assert_eq!(declared.as_deref(), Some("licenseref-custom"));
+        assert_eq!(declared_spdx.as_deref(), Some("LicenseRef-custom"));
+    }
+
+    #[test]
+    fn test_rewrite_version_range_or_later_idiom_rejects_non_families() {
+        assert!(rewrite_version_range_or_later_idiom("MIT (>= 2)").is_none());
+        assert!(rewrite_version_range_or_later_idiom("GPL (== 2)").is_none());
+        assert!(rewrite_version_range_or_later_idiom("GPL (>= 2.0.1)").is_none());
+        assert!(rewrite_version_range_or_later_idiom("GPL").is_none());
     }
 
     #[test]
