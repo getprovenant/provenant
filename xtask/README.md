@@ -188,6 +188,19 @@ classification; it is not itself a regression verdict. The summary also exposes
 directional signal buckets under `comparison_signal_summary` plus top-level
 directional maps for the ScanCode-favored and Provenant-favored sides.
 
+Alongside the identity-only `package_data` bucket, the summary also reports a
+`package_field_content` axis (mirrored in `package_field_content_summary` and
+the `package_field_content_value_differences.json` sample). For packages that
+both outputs agree exist (matched by purl, else the
+`type|name|version|datasource_id` fallback, across both top-level `packages[]`
+and file-level `files[].package_data[]`), it diffs the **content** of
+`declared_license_expression`, `declared_license_expression_spdx`, and `holder`.
+This catches a change that drops or corrupts declared-license/holder content
+even when every package identity still matches. Because it compares content for
+the first time, enabling it can surface pre-existing ScanCode-vs-Provenant
+declared-license deltas that have nothing to do with any recent change; that is
+expected, valuable parity signal to classify, not automatically a regression.
+
 Optional diagnostic logs when available:
 
 - `raw/scancode-stdout.txt`

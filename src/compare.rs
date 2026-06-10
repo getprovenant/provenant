@@ -634,6 +634,26 @@ pub(crate) fn write_comparison_artifacts(
         .filter(|entry| !entry.extra_in_provenant.is_empty())
         .map(|entry| entry.extra_in_provenant.len())
         .sum::<usize>();
+    let package_field_content_value_differences =
+        package_field_content_differences(&scancode, &provenant);
+    let mut package_field_content_missing = 0usize;
+    let mut package_field_content_extra = 0usize;
+    let mut package_field_content_by_field: BTreeMap<String, usize> = BTreeMap::new();
+    for entry in &package_field_content_value_differences {
+        *package_field_content_by_field
+            .entry(entry.field.clone())
+            .or_insert(0) += 1;
+        match (entry.scancode.is_some(), entry.provenant.is_some()) {
+            (true, false) => package_field_content_missing += 1,
+            (false, true) => package_field_content_extra += 1,
+            // Both sides carry a value but they differ: count it on each side so
+            // neither directional total hides a real content mismatch.
+            _ => {
+                package_field_content_missing += 1;
+                package_field_content_extra += 1;
+            }
+        }
+    }
     let raw_dependency_value_differences = raw_dependency_differences(&scancode, &provenant);
     let raw_dependency_missing = raw_dependency_value_differences
         .iter()
@@ -668,6 +688,22 @@ pub(crate) fn write_comparison_artifacts(
             "extra_in_provenant": raw_dependency_extra,
         }),
     );
+    file_metric_summary.insert(
+        "package_field_content".to_string(),
+        json!({
+            "missing_in_provenant": package_field_content_missing,
+            "extra_in_provenant": package_field_content_extra,
+            "by_field": package_field_content_by_field,
+        }),
+    );
+    let package_field_content_summary = json!({
+        "missing_in_provenant": package_field_content_missing,
+        "extra_in_provenant": package_field_content_extra,
+        "by_field": package_field_content_by_field,
+        "fields_compared": PACKAGE_CONTENT_FIELDS,
+    });
+    scancode_favored_signal_count += package_field_content_missing;
+    provenant_favored_signal_count += package_field_content_extra;
     if top_level_package_skip_reason.is_none() {
         scancode_favored_signal_count += top_level_package_missing;
         provenant_favored_signal_count += top_level_package_extra;
@@ -728,6 +764,20 @@ pub(crate) fn write_comparison_artifacts(
         raw_dependency_extra as i64,
         raw_dependency_extra as i64,
         "raw dependency identities present only in Provenant file-level package_data output",
+    ));
+    rows.push(tsv_row(
+        "package_field_content_missing_in_provenant",
+        package_field_content_missing as i64,
+        0,
+        -(package_field_content_missing as i64),
+        "identity-matched packages where declared-license/holder content is present only in ScanCode output",
+    ));
+    rows.push(tsv_row(
+        "package_field_content_extra_in_provenant",
+        0,
+        package_field_content_extra as i64,
+        package_field_content_extra as i64,
+        "identity-matched packages where declared-license/holder content is present only in Provenant output",
     ));
     rows.push(tsv_row(
         "top_level_license_expression_deltas",
@@ -809,6 +859,12 @@ pub(crate) fn write_comparison_artifacts(
             "row2_top_level_differences",
             layout.samples_dir.join("row2_top_level_differences.json"),
         ),
+        (
+            "package_field_content_value_differences",
+            layout
+                .samples_dir
+                .join("package_field_content_value_differences.json"),
+        ),
     ];
 
     write_pretty_json(&sample_paths[0].1, &scancode_only_output_paths)?;
@@ -824,6 +880,10 @@ pub(crate) fn write_comparison_artifacts(
     write_pretty_json(&sample_paths[10].1, &classify_value_differences)?;
     write_pretty_json(&sample_paths[11].1, &row2_value_differences)?;
     write_pretty_json(&sample_paths[12].1, &row2_top_level_differences)?;
+    write_pretty_json(
+        &sample_paths[13].1,
+        &package_field_content_value_differences,
+    )?;
 
     let summary = json!({
         "comparison_status": comparison_status,
@@ -852,6 +912,7 @@ pub(crate) fn write_comparison_artifacts(
         "top_level_package_summary": top_level_package_summary,
         "top_level_dependency_summary": top_level_dependency_summary,
         "raw_dependency_summary": raw_dependency_summary,
+        "package_field_content_summary": package_field_content_summary,
         "comparison_context": {
             "only_findings_active": only_findings_active,
             "path_presence_semantics": "final_output_membership",
