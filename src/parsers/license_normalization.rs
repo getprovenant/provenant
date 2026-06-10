@@ -410,14 +410,11 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
         return;
     };
 
-    // Some declared-metadata conventions point at a file-stored or versionless
-    // license rather than naming a confident license expression. Running
-    // free-text detection over them produces a confidently-wrong or over-specific
-    // value (e.g. an over-pinned version for a bare license URL, or a low-value
-    // `unknown-license-reference` for an npm `SEE LICENSE IN <file>` pointer). For
-    // a compliance field an honest unset is strictly better; the real license is
-    // recovered elsewhere (file-reference resolution, file-content detection).
-    if statement_defers_to_file_or_versionless_reference(statement) {
+    // The npm `SEE LICENSE IN <file>`/`<url>` convention points at a file-stored
+    // custom license rather than naming an expression. Free-text detection
+    // collapses it to a low-value `unknown-license-reference`, so leave the field
+    // unset and let file-reference resolution recover the real license.
+    if statement_is_see_license_in_pointer(statement) {
         return;
     }
 
@@ -454,6 +451,19 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
             detect_declared_license_from_text(statement, None)
         }
     };
+
+    // A versionless GNU-style license page (e.g. `.../licenses/lgpl.html`) must
+    // not be over-pinned to a versioned "or later" expression: when the only
+    // signal is a URL and detection invented an `-or-later`/`-plus` version the
+    // URL does not contain, prefer an honest unset. Correct unversioned or
+    // identity-versioned detections from a URL (e.g. `mit`, `ms-net-library`,
+    // `ms-net-library-2018-11`, `apache-2.0`) are preserved.
+    if let Some(declared_key) = declared.as_deref()
+        && statement_is_url_only(statement)
+        && expression_is_or_later_with_version_absent_from_statement(declared_key, statement)
+    {
+        return;
+    }
 
     if declared.is_some() {
         package_data.declared_license_expression = declared;
@@ -615,67 +625,91 @@ fn rewrite_version_range_or_later_idiom(statement: &str) -> Option<String> {
     Some(format!("{family}-{major}.{minor}+"))
 }
 
-/// Returns true when the declared statement is a pointer to a file-stored or
-/// versionless license rather than a confident license expression, so the
-/// declared-license hook must defer to an honest unset.
-///
-/// Covers two structured conventions that free-text detection mis-handles:
-/// - the npm `SEE LICENSE IN <file-or-url>` pointer (which the engine collapses
-///   to a low-value `unknown-license-reference`), and
-/// - a bare versionless license URL as the only license signal (which the
-///   engine over-pins to a concrete version + "or later").
-///
-/// Statements that name a license with an explicit version (including a
-/// versioned URL) are NOT treated as deferrals and continue through normal
-/// normalization/detection.
-fn statement_defers_to_file_or_versionless_reference(statement: &str) -> bool {
-    let trimmed = statement.trim();
-    if trimmed.is_empty() {
-        return false;
-    }
-
-    // npm `SEE LICENSE IN <file>` / `SEE LICENSE IN <url>` pointer.
-    if trimmed.to_ascii_uppercase().starts_with("SEE LICENSE IN ") {
-        return true;
-    }
-
-    is_bare_versionless_license_url(trimmed)
+/// Returns true when the statement is the npm `SEE LICENSE IN <file>`/`<url>`
+/// pointer convention.
+fn statement_is_see_license_in_pointer(statement: &str) -> bool {
+    statement
+        .trim()
+        .to_ascii_uppercase()
+        .starts_with("SEE LICENSE IN ")
 }
 
-/// Returns true when the statement's only license signal is a bare,
-/// versionless license URL (no explicit version in the URL path).
-fn is_bare_versionless_license_url(statement: &str) -> bool {
+/// Returns true when the statement's only license signal is a single URL
+/// (optionally preceded by a trivial connector such as "see"), with no other
+/// license-name token that could have driven detection.
+fn statement_is_url_only(statement: &str) -> bool {
     let mut url_tokens = 0usize;
     for token in statement.split_whitespace() {
-        if !token.contains("://") {
-            // A non-URL token that is not a trivial connector ("see") means the
-            // statement carries another signal; do not treat it as a bare URL.
-            if !token.eq_ignore_ascii_case("see") {
-                return false;
-            }
-            continue;
-        }
-        url_tokens += 1;
-        if url_contains_explicit_version(token) {
+        if token.contains("://") {
+            url_tokens += 1;
+        } else if !token.eq_ignore_ascii_case("see") {
             return false;
         }
     }
-
     url_tokens == 1
 }
 
-/// Returns true when a license URL's path carries an explicit version number
-/// (e.g. ".../gpl-3.0.html", ".../licenses/by/4.0/"), as opposed to a generic
-/// versionless page (e.g. ".../licenses/lgpl.html").
+/// Returns true when a derived license expression is an "or later" form
+/// (`-or-later`, `-plus`, or a trailing `+`) whose pinned version does not
+/// appear in the source statement.
 ///
-/// Only the path is inspected; digits in the scheme or host (e.g. a hostname
-/// like `example2.com`) are not version signals.
-fn url_contains_explicit_version(url: &str) -> bool {
-    let after_scheme = url.split_once("://").map_or(url, |(_, rest)| rest);
-    let Some((_host, path)) = after_scheme.split_once('/') else {
+/// The over-pinning risk is specific to versionless GNU-style license pages:
+/// `.../licenses/lgpl.html` detects `lgpl-2.0-plus`, inventing both the `2.0`
+/// version and the "or later" qualifier the page never states. A bare numeric
+/// key that is simply the license's own identity (e.g. `apache-2.0`,
+/// `ms-net-library-2018-11`) is NOT second-guessed, nor is an unversioned
+/// detection (`mit`, `ms-net-library`).
+fn expression_is_or_later_with_version_absent_from_statement(
+    expression: &str,
+    statement: &str,
+) -> bool {
+    if !is_or_later_expression(expression) {
+        return false;
+    }
+    let Some(version) = version_token_of_expression(expression) else {
         return false;
     };
-    path.bytes().any(|b| b.is_ascii_digit())
+    !statement_contains_version(statement, &version)
+}
+
+/// Returns true when a license key is an "or later" form: a `-or-later`/`-plus`
+/// suffix or a trailing `+`.
+fn is_or_later_expression(expression: &str) -> bool {
+    let key = expression.trim();
+    key.ends_with('+')
+        || key.to_ascii_lowercase().ends_with("-or-later")
+        || key.to_ascii_lowercase().ends_with("-plus")
+}
+
+/// Extracts the first numeric version component of a license key, if any
+/// (e.g. `lgpl-2.0-plus` -> `2.0`, `gpl-3.0` -> `3.0`, `mit` -> `None`).
+fn version_token_of_expression(expression: &str) -> Option<String> {
+    let mut current = String::new();
+    for ch in expression.chars() {
+        if ch.is_ascii_digit() || (ch == '.' && !current.is_empty()) {
+            current.push(ch);
+        } else if !current.is_empty() {
+            break;
+        }
+    }
+    let trimmed = current.trim_end_matches('.');
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
+/// Returns true when the statement contains the given version, accepting the
+/// common URL spelling variants (`2.0`, `2-0`, or a bare `2` for an `N.0`).
+fn statement_contains_version(statement: &str, version: &str) -> bool {
+    if statement.contains(version) {
+        return true;
+    }
+    let dashed = version.replace('.', "-");
+    if statement.contains(&dashed) {
+        return true;
+    }
+    if let Some(major) = version.strip_suffix(".0") {
+        return statement.contains(major);
+    }
+    false
 }
 
 fn detect_holders(text: &str) -> Vec<String> {
@@ -1539,18 +1573,53 @@ mod tests {
     }
 
     #[test]
-    fn test_bare_versionless_license_url_falls_back_to_null() {
-        // Defect 2: a generic, versionless license page is not enough to pin a
-        // concrete version + "or later"; the hook must stay null.
+    fn test_versionless_url_with_invented_version_falls_back_to_null() {
+        // Defect 2: a generic versionless license page must not be over-pinned to
+        // a concrete version. `.../licenses/lgpl.html` detects `lgpl-2.0-plus`,
+        // but the URL carries no `2.0`, so the invented version is suppressed to
+        // an honest null.
         let (declared, declared_spdx) = declared_for("see http://www.gnu.org/licenses/lgpl.html");
         assert!(declared.is_none(), "got {declared:?}");
         assert!(declared_spdx.is_none(), "got {declared_spdx:?}");
     }
 
     #[test]
+    fn test_unversioned_license_url_detections_are_preserved() {
+        // Regression guard for Defect 2: a URL that resolves to an *unversioned*
+        // license carries no invented version, so it must stay populated. These
+        // are the nuget bootstrap / jquery-ui / aspnet-mvc golden cases.
+        for (statement, expected_key) in [
+            (
+                "https://github.com/twbs/bootstrap/blob/master/LICENSE",
+                "mit",
+            ),
+            ("http://jquery.org/license", "mit"),
+            (
+                "http://www.microsoft.com/web/webpi/eula/net_library_eula_enu.htm",
+                "ms-net-library",
+            ),
+            // Identity-versioned key (date baked into the license name, not an
+            // invented SPDX "or later" version) from a URL with no matching
+            // digits must still be preserved.
+            (
+                "http://go.microsoft.com/fwlink/?LinkId=329770",
+                "ms-net-library-2018-11",
+            ),
+        ] {
+            let (declared, _spdx) = declared_for(statement);
+            assert_eq!(
+                declared.as_deref(),
+                Some(expected_key),
+                "declared for {statement:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_versioned_license_url_still_normalizes() {
-        // Regression guard for Defect 2: a URL that names an explicit version
-        // (e.g. the chef nuspec Apache case) must still normalize.
+        // Regression guard for Defect 2: a URL that names the version it derives
+        // (e.g. the chef nuspec Apache case, `.../LICENSE-2.0` -> `apache-2.0`)
+        // must still normalize, since the version is present in the URL.
         let (declared, declared_spdx) = declared_for("http://www.apache.org/licenses/LICENSE-2.0");
         assert_eq!(declared.as_deref(), Some("apache-2.0"));
         assert_eq!(declared_spdx.as_deref(), Some("Apache-2.0"));
