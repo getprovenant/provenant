@@ -631,7 +631,10 @@ fn extract_root_package_identity(
 ///
 /// npm lockfile `license` values are SPDX-by-convention strings (e.g. `"MIT"`,
 /// `"(MIT OR Apache-2.0)"`). The deprecated object form `{ "type": ... }` and
-/// the legacy `licenses` array are also tolerated by reading the `type` field.
+/// the legacy plural `licenses` array are also tolerated by reading the `type`
+/// field. Per the npm spec, multiple entries in the `licenses` array express
+/// dual-licensing where a user may comply with any one of them, so they are
+/// combined with SPDX `OR` (not `AND`).
 fn extract_package_license(value: &Value) -> Option<String> {
     if let Some(license) = value.get(FIELD_LICENSE) {
         if let Some(text) = license.as_str() {
@@ -650,7 +653,13 @@ fn extract_package_license(value: &Value) -> Option<String> {
             .filter_map(non_empty_string)
             .collect();
         if !types.is_empty() {
-            return Some(truncate_field(types.join(" AND ")));
+            let joined = types.join(" OR ");
+            let statement = if types.len() > 1 {
+                format!("({})", joined)
+            } else {
+                joined
+            };
+            return Some(truncate_field(statement));
         }
     }
 

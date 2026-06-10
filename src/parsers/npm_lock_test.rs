@@ -217,6 +217,64 @@ mod tests {
     }
 
     #[test]
+    fn test_v3_resolved_package_legacy_licenses_array_is_dual_license_or() {
+        // The deprecated plural `licenses` array expresses dual-licensing: the
+        // user may comply with any one entry, so the entries combine with OR.
+        let content = r#"{
+            "name": "demo",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {
+                "": { "name": "demo", "version": "1.0.0" },
+                "node_modules/dual-array": {
+                    "version": "1.0.0",
+                    "licenses": [
+                        { "type": "MIT", "url": "http://example.com/mit" },
+                        { "type": "Apache-2.0", "url": "http://example.com/apache" }
+                    ]
+                }
+            }
+        }"#;
+        let (_tmp, path) = create_temp_lock_file(content);
+        let package_data = NpmLockParser::extract_first_package(&path);
+
+        let dual = resolved_for(&package_data, "dual-array");
+        assert_eq!(
+            dual.extracted_license_statement,
+            Some("(MIT OR Apache-2.0)".to_string())
+        );
+        assert_eq!(
+            dual.declared_license_expression_spdx,
+            Some("Apache-2.0 OR MIT".to_string())
+        );
+    }
+
+    #[test]
+    fn test_v3_resolved_package_single_entry_licenses_array() {
+        let content = r#"{
+            "name": "demo",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {
+                "": { "name": "demo", "version": "1.0.0" },
+                "node_modules/single-array": {
+                    "version": "1.0.0",
+                    "licenses": [ { "type": "MIT", "url": "http://example.com/mit" } ]
+                }
+            }
+        }"#;
+        let (_tmp, path) = create_temp_lock_file(content);
+        let package_data = NpmLockParser::extract_first_package(&path);
+
+        let single = resolved_for(&package_data, "single-array");
+        assert_eq!(single.extracted_license_statement, Some("MIT".to_string()));
+        assert_eq!(
+            single.declared_license_expression_spdx,
+            Some("MIT".to_string())
+        );
+    }
+
+    #[test]
     fn test_v3_resolved_package_without_license_stays_unset() {
         let content = r#"{
             "name": "demo",
