@@ -112,7 +112,7 @@ fn test_mpl_prefix_line_without_trailing_holder_keeps_plain_copyright() {
 #[test]
 fn test_normalize_split_angle_bracket_urls_keeps_tail() {
     let input = "Copyright Krzysztof <https://github.com\nHavret>, Stack Builders <https://github.com\nstackbuilders>, end";
-    let out = super::normalize_split_angle_bracket_urls(input);
+    let out = super::normalize_split_input(input);
     let out: &str = out.as_ref();
     assert!(
         out.contains("https://github.com Havret")

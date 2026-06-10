@@ -43,6 +43,46 @@ fn test_multiline_copyright_after_created_line() {
 }
 
 #[test]
+fn test_multiline_obfuscated_email_continuation_recovers_clean_holder() {
+    // The holder's obfuscated-email contact wraps onto the next comment line.
+    // The full `(chris at kohlhoff dot com)` span must be folded back so the
+    // holder is recovered cleanly instead of leaking the first email token.
+    for input in [
+        "//\n// Copyright (c) 2003-2008 Christopher M. Kohlhoff\n// (chris at kohlhoff dot com)\n//\n// Distributed under the Boost Software License, Version 1.0.\n//\n",
+        "/*\n * Copyright (c) 2003-2008 Christopher M. Kohlhoff\n * (chris at kohlhoff dot com)\n */\n",
+        "# Copyright (c) 2003-2008 Christopher M. Kohlhoff\n# (chris at kohlhoff dot com)\n",
+    ] {
+        let (_c, h, _a) = detect_copyrights_from_text(input);
+        let holders: Vec<&str> = h.iter().map(|hr| hr.holder.as_str()).collect();
+        assert!(
+            holders.contains(&"Christopher M. Kohlhoff"),
+            "Expected clean holder, got: {holders:?}"
+        );
+        assert!(
+            !holders.iter().any(|hr| hr.contains("chris")),
+            "Holder must not leak the email token `chris`, got: {holders:?}"
+        );
+    }
+}
+
+#[test]
+fn test_multiline_obfuscated_email_continuation_leaves_non_email_parens_alone() {
+    // A following parenthetical that is not an obfuscated email must not be
+    // folded into the holder line.
+    let input = "// Copyright (c) 2020 Acme Inc\n// (see LICENSE for details)\n";
+    let (_c, h, _a) = detect_copyrights_from_text(input);
+    let holders: Vec<&str> = h.iter().map(|hr| hr.holder.as_str()).collect();
+    assert!(
+        holders.contains(&"Acme Inc"),
+        "Expected Acme Inc holder, got: {holders:?}"
+    );
+    assert!(
+        !holders.iter().any(|hr| hr.contains("LICENSE")),
+        "Holder must not absorb the non-email parenthetical, got: {holders:?}"
+    );
+}
+
+#[test]
 fn test_multiline_copyrighted_by_href_links_merges_trailing_copyright_clause() {
     let input = "copyrighted by <A\nHREF=\"http://www.dre.vanderbilt.edu/~schmidt/\">Douglas C. Schmidt</A>\nand his <a\nHREF=\"http://www.cs.wustl.edu/~schmidt/ACE-members.html\">research\ngroup</a> at <A HREF=\"http://www.wustl.edu/\">Washington\nUniversity</A>, <A HREF=\"http://www.uci.edu\">University of California,\nIrvine</A>, and <A HREF=\"http://www.vanderbilt.edu\">Vanderbilt\nUniversity</A>, Copyright (c) 1993-2009, all rights reserved.";
     let (c, _h, _a) = detect_copyrights_from_text(input);
