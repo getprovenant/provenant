@@ -275,19 +275,26 @@ fn build_side(
     prepare_self_worktree(project_root, &resolved, &worktree_dir)
         .with_context(|| format!("failed to materialize {label} worktree for {resolved}"))?;
 
-    build_release(&worktree_dir, label)?;
+    // Arm cleanup before building: once the worktree exists, the owning `Side`
+    // holds the cleanup handle so its `Drop` removes the worktree even if the
+    // build below fails or the binary is missing. Returning the error after
+    // constructing `side` lets that `Drop` fire, avoiding a build-artifact leak
+    // under `.provenant/perf-ab-build/`.
     let binary = worktree_dir.join("target/release/provenant");
-    if !binary.is_file() {
-        bail!("{label} binary not found at {}", binary.display());
-    }
-
-    Ok(Side {
+    let side = Side {
         label,
         git_ref: git_ref.to_string(),
         binary,
         build_revision: Some(resolved),
-        cleanup: Some((cache_dir, worktree_dir)),
-    })
+        cleanup: Some((cache_dir, worktree_dir.clone())),
+    };
+
+    build_release(&worktree_dir, label)?;
+    if !side.binary.is_file() {
+        bail!("{label} binary not found at {}", side.binary.display());
+    }
+
+    Ok(side)
 }
 
 fn self_repo_cache(project_root: &Path) -> PathBuf {
@@ -713,6 +720,75 @@ mod tests {
         assert_ne!(
             normalize_scan_json(a).unwrap(),
             normalize_scan_json(b).unwrap()
+        );
+    }
+
+    fn git(dir: &Path, args: &[&str]) {
+        let output = Command::new("git")
+            .current_dir(dir)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    /// A `Side` armed with a `cleanup` handle removes its worktree on drop, so
+    /// the build path is leak-proof no matter which error fires after the
+    /// worktree is materialized (build failure, missing binary, etc.).
+    #[test]
+    fn side_drop_removes_armed_worktree() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let source = temp.path().join("source");
+        fs::create_dir_all(&source).unwrap();
+        git(&source, &["init"]);
+        git(&source, &["config", "user.name", "Test User"]);
+        git(&source, &["config", "user.email", "test@example.com"]);
+        git(&source, &["config", "commit.gpgsign", "false"]);
+        fs::write(source.join("tracked.txt"), "hello\n").unwrap();
+        git(&source, &["add", "tracked.txt"]);
+        git(&source, &["commit", "-m", "init"]);
+
+        let cache_dir = temp.path().join("cache.git");
+        run_git(
+            Command::new("git")
+                .args(["clone", "--bare", "--local"])
+                .arg(&source)
+                .arg(&cache_dir),
+            "failed to create bare clone",
+        )
+        .unwrap();
+        let resolved = String::from_utf8_lossy(
+            &Command::new("git")
+                .arg(format!("--git-dir={}", cache_dir.display()))
+                .args(["rev-parse", "HEAD"])
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .trim()
+        .to_string();
+
+        let worktree_dir = temp.path().join("worktree");
+        prepare_repo_worktree(&cache_dir, &resolved, &worktree_dir).unwrap();
+        assert!(worktree_dir.exists());
+
+        let side = Side {
+            label: "base",
+            git_ref: "HEAD".to_string(),
+            binary: worktree_dir.join("target/release/provenant"),
+            build_revision: Some(resolved),
+            cleanup: Some((cache_dir, worktree_dir.clone())),
+        };
+        drop(side);
+
+        assert!(
+            !worktree_dir.exists(),
+            "armed Side drop should remove the worktree"
         );
     }
 }
