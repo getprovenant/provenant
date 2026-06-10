@@ -77,7 +77,7 @@
             "rule_identifier": "gpl-3.0-plus_28.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/gpl-3.0-plus_28.RULE",
             "matched_text": "GPLv3+",
-            "referenced_filenames": ["GPLv3+"]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

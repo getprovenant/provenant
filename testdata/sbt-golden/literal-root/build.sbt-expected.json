@@ -44,9 +44,7 @@
             "rule_identifier": "apache-2.0_required_phrase_11.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_required_phrase_11.RULE",
             "matched_text": "- license:\n    name: Apache-2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0.txt",
-            "referenced_filenames": [
-              "- license:\n    name: Apache-2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0.txt"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

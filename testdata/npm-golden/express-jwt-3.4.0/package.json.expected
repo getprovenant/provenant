@@ -63,9 +63,7 @@
             "rule_identifier": "mit_13.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_13.RULE",
             "matched_text": "- type: MIT\n  url: http://www.opensource.org/licenses/MIT",
-            "referenced_filenames": [
-              "- type: MIT\n  url: http://www.opensource.org/licenses/MIT"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

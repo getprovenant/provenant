@@ -43,7 +43,7 @@
             "rule_identifier": "spdx_license_id_apache-2.0_for_apache-2.0.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/spdx_license_id_apache-2.0_for_apache-2.0.RULE",
             "matched_text": "Apache 2.0",
-            "referenced_filenames": ["Apache 2.0"]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

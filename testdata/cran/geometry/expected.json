@@ -101,7 +101,7 @@
             "rule_identifier": "gpl-3.0_25.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/gpl-3.0_25.RULE",
             "matched_text": "GPL (>= 3)",
-            "referenced_filenames": ["GPL (>= 3)"]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

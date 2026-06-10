@@ -135,9 +135,16 @@ pub(crate) fn normalize_spdx_declared_license(
     )
 }
 
+/// Runs free-text license detection over `text` and shapes the result into
+/// declared-license data.
+///
+/// `referenced_filename` records the file the statement was read from when the
+/// license came from a *referenced* file (so the detection carries that
+/// provenance). Pass `None` when the statement is the manifest's own declared
+/// value, since there is no separate referenced file in that case.
 pub(crate) fn detect_declared_license_from_text(
     text: &str,
-    referenced_filename: &str,
+    referenced_filename: Option<&str>,
 ) -> (Option<String>, Option<String>, Vec<LicenseDetection>) {
     let text = text.trim();
     if text.is_empty() {
@@ -170,7 +177,7 @@ pub(crate) fn detect_declared_license_from_text(
         declared_license_expression_spdx,
     ) {
         (Some(declared), Some(declared_spdx)) => {
-            let references = [referenced_filename];
+            let references: Vec<&str> = referenced_filename.into_iter().collect();
             build_declared_license_data_from_pair(
                 declared,
                 declared_spdx,
@@ -420,7 +427,10 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
         } else if looks_like_multi_license_composite(statement) {
             empty_declared_license_data()
         } else {
-            detect_declared_license_from_text(statement, statement)
+            // The statement is the manifest's own declared value, not a
+            // referenced file, so it must not be recorded as a referenced
+            // filename in the resulting detection.
+            detect_declared_license_from_text(statement, None)
         }
     };
 
@@ -465,7 +475,7 @@ fn derive_holder_from_copyright(copyright: &str) -> String {
     }
 
     let prefixed = copyright
-        .split('\n')
+        .lines()
         .map(|line| format!("Copyright {line}"))
         .collect::<Vec<_>>()
         .join("\n");
@@ -496,12 +506,18 @@ fn looks_like_multi_license_composite(statement: &str) -> bool {
         return true;
     }
     // Separators that commonly join distinct license names (e.g. "MIT/BSD",
-    // "GPL | LGPL", "MIT, Apache-2.0"). A "/" inside a URL is excluded by the
-    // surrounding scheme check.
+    // "GPL | LGPL", "MIT, Apache-2.0").
     if statement.contains('|') || statement.contains(';') || statement.contains(',') {
         return true;
     }
-    statement.contains('/') && !statement.contains("://")
+    // A bare "/" separates license names, but a "/" inside a URL (e.g.
+    // "http://x") must not count. Inspect each whitespace token and ignore the
+    // ones that look like URLs, so "MIT/BSD see http://x" is still composite
+    // while "https://example.com/LICENSE" is not.
+    statement
+        .split_whitespace()
+        .filter(|token| !token.contains("://"))
+        .any(|token| token.contains('/'))
 }
 
 /// Estimates whether a multi-line statement carries more than one license.
@@ -1143,6 +1159,97 @@ mod tests {
         assert!(package.declared_license_expression.is_none());
         assert!(package.declared_license_expression_spdx.is_none());
         assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_via_engine_fallback_has_no_referenced_filenames() {
+        // A declared license derived from the manifest's own statement (here via
+        // the free-text engine fallback) has no separate referenced file, so the
+        // detection must not record the statement text as a referenced filename.
+        let mut package = package_with(Some("Apache 2.0"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(!package.license_detections.is_empty());
+        for detection in &package.license_detections {
+            for detection_match in &detection.matches {
+                assert!(
+                    detection_match
+                        .referenced_filenames
+                        .as_ref()
+                        .is_none_or(|filenames| filenames.is_empty()),
+                    "engine-fallback declared license must not record referenced filenames, got {:?}",
+                    detection_match.referenced_filenames
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_detect_declared_license_from_text_without_referenced_filename() {
+        let (declared, _declared_spdx, detections) =
+            detect_declared_license_from_text("Apache 2.0", None);
+
+        assert_eq!(declared.as_deref(), Some("apache-2.0"));
+        assert_eq!(detections.len(), 1);
+        assert!(
+            detections[0].matches[0]
+                .referenced_filenames
+                .as_ref()
+                .is_none_or(|filenames| filenames.is_empty())
+        );
+    }
+
+    #[test]
+    fn test_detect_declared_license_from_text_with_referenced_filename() {
+        let (declared, _declared_spdx, detections) =
+            detect_declared_license_from_text("Apache 2.0", Some("LICENSE"));
+
+        assert_eq!(declared.as_deref(), Some("apache-2.0"));
+        assert_eq!(detections.len(), 1);
+        assert_eq!(
+            detections[0].matches[0].referenced_filenames.as_deref(),
+            Some(["LICENSE".to_string()].as_slice())
+        );
+    }
+
+    #[test]
+    fn test_populate_holder_handles_crlf_like_lf() {
+        let crlf = package_with(
+            None,
+            Some("Copyright (c) 2024 Foo Corp\r\nCopyright (c) 2024 Bar Inc"),
+            None,
+        );
+        let lf = package_with(
+            None,
+            Some("Copyright (c) 2024 Foo Corp\nCopyright (c) 2024 Bar Inc"),
+            None,
+        );
+
+        let mut crlf_package = crlf;
+        let mut lf_package = lf;
+        populate_declared_license_and_holder(&mut crlf_package);
+        populate_declared_license_and_holder(&mut lf_package);
+
+        assert_eq!(crlf_package.holder, lf_package.holder);
+        assert!(
+            !crlf_package
+                .holder
+                .as_deref()
+                .unwrap_or_default()
+                .contains('\r'),
+            "CRLF copyright must not leak a trailing carriage return into the holder"
+        );
+    }
+
+    #[test]
+    fn test_looks_like_multi_license_composite_slash_with_url() {
+        // A bare slash separating license names is composite even when a URL is
+        // also present.
+        assert!(looks_like_multi_license_composite("MIT/BSD see http://x"));
+        // A slash that only appears inside a URL is not a separator.
+        assert!(!looks_like_multi_license_composite(
+            "Apache 2.0 http://www.apache.org/licenses/LICENSE-2.0"
+        ));
     }
 
     #[test]

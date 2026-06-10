@@ -57,7 +57,7 @@
             "rule_identifier": "mit_30.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_30.RULE",
             "matched_text": "licenses.mit",
-            "referenced_filenames": ["licenses.mit"]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

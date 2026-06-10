@@ -59,9 +59,7 @@
             "rule_identifier": "mit_180.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_180.RULE",
             "matched_text": "https://github.com/twbs/bootstrap/blob/master/LICENSE",
-            "referenced_filenames": [
-              "https://github.com/twbs/bootstrap/blob/master/LICENSE"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

@@ -106,9 +106,7 @@
             "rule_identifier": "lgpl_bare_single_word.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/lgpl_bare_single_word.RULE",
             "matched_text": "- license:\n    name: LGPL\n    url: http://www.gnu.org/copyleft/lesser.html",
-            "referenced_filenames": [
-              "- license:\n    name: LGPL\n    url: http://www.gnu.org/copyleft/lesser.html"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

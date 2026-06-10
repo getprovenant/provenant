@@ -61,9 +61,7 @@
             "rule_identifier": "mit_31.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_31.RULE",
             "matched_text": "license: MIT license\nclassifiers:\n  - 'License :: OSI Approved :: MIT License'",
-            "referenced_filenames": [
-              "license: MIT license\nclassifiers:\n  - 'License :: OSI Approved :: MIT License'"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

@@ -72,9 +72,7 @@
             "rule_identifier": "mit_30.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_30.RULE",
             "matched_text": "- type: MIT\n  url: https://github.com/csscomb/grunt-csscomb/blob/master/LICENSE-MIT",
-            "referenced_filenames": [
-              "- type: MIT\n  url: https://github.com/csscomb/grunt-csscomb/blob/master/LICENSE-MIT"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

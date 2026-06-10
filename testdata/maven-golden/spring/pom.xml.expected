@@ -598,9 +598,7 @@
             "rule_identifier": "apache-2.0_1309.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_1309.RULE",
             "matched_text": "- license:\n    name: The Apache Software License, Version 2.0\n    url: http://www.apache.org/licenses/LICENSE-2.0.txt",
-            "referenced_filenames": [
-              "- license:\n    name: The Apache Software License, Version 2.0\n    url: http://www.apache.org/licenses/LICENSE-2.0.txt"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

@@ -59,9 +59,7 @@
             "rule_identifier": "ms-net-library_6.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/ms-net-library_6.RULE",
             "matched_text": "http://go.microsoft.com/fwlink/?LinkID=320539",
-            "referenced_filenames": [
-              "http://go.microsoft.com/fwlink/?LinkID=320539"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

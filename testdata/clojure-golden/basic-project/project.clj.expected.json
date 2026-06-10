@@ -92,9 +92,7 @@
             "rule_identifier": "epl-1.0_30.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/epl-1.0_30.RULE",
             "matched_text": "- license:\n    name: Eclipse Public License\n    url: https://www.eclipse.org/legal/epl-v10.html",
-            "referenced_filenames": [
-              "- license:\n    name: Eclipse Public License\n    url: https://www.eclipse.org/legal/epl-v10.html"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null
