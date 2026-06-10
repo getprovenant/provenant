@@ -355,72 +355,84 @@ pub fn prepare_text_line(line: &str) -> String {
     s = REGISTERED_SIGN_AFTER_ASCII_RE
         .replace_all(&s, "${head} (r) ")
         .into_owned();
-    s = s
-        .replace("&reg;", " (r) ")
-        .replace("&reg", " (r) ")
-        .replace("&#174;", " (r) ");
+    // Registered-mark HTML entities only occur in strings containing `&`;
+    // skip the replacement chain for the common case where no `&` is present.
+    if s.contains('&') {
+        s = s
+            .replace("&reg;", " (r) ")
+            .replace("&reg", " (r) ")
+            .replace("&#174;", " (r) ");
+    }
 
     // ── HTML entity decoding ──
     // Must also happen BEFORE # and % removal for the same reason.
 
-    if s.to_ascii_lowercase().contains("&lt;") && s.contains('@') {
+    if s.contains('&') && s.contains('@') && s.to_ascii_lowercase().contains("&lt;") {
         s = ESCAPED_ANGLE_EMAIL_RE
             .replace_all(&s, "<${email}>")
             .into_owned();
     }
 
-    s = s
-        // Emdash
-        .replace('\u{2013}', "-")
-        // CR/LF entities
-        .replace("&#13;&#10;", " ")
-        .replace("&#13;", " ")
-        .replace("&#10;", " ")
-        // Space entities
-        .replace("&nbsp;", " ")
-        .replace("&nbsp", " ")
-        .replace("&ensp;", " ")
-        .replace("&emsp;", " ")
-        .replace("&thinsp;", " ")
-        // Named entities
-        .replace("&quot;", "\"")
-        .replace("&#34;", "\"")
-        .replace("&auml;", "ä")
-        .replace("&auml", "ä")
-        .replace("&Auml;", "Ä")
-        .replace("&Auml", "Ä")
-        .replace("&ouml;", "ö")
-        .replace("&ouml", "ö")
-        .replace("&Ouml;", "Ö")
-        .replace("&Ouml", "Ö")
-        .replace("&uuml;", "ü")
-        .replace("&uuml", "ü")
-        .replace("&Uuml;", "Ü")
-        .replace("&Uuml", "Ü")
-        .replace("&szlig;", "ß")
-        .replace("&szlig", "ß")
-        .replace("&#196;", "Ä")
-        .replace("&#214;", "Ö")
-        .replace("&#220;", "Ü")
-        .replace("&#228;", "ä")
-        .replace("&#246;", "ö")
-        .replace("&#252;", "ü")
-        .replace("&#223;", "ß")
-        .replace("&#xC4;", "Ä")
-        .replace("&#xD6;", "Ö")
-        .replace("&#xDC;", "Ü")
-        .replace("&#xE4;", "ä")
-        .replace("&#xF6;", "ö")
-        .replace("&#xFC;", "ü")
-        .replace("&#xDF;", "ß")
-        .replace("&amp;", "&")
-        .replace("&#38;", "&")
-        .replace("&gt;", ">")
-        .replace("&gt", ">")
-        .replace("&#62;", ">")
-        .replace("&lt;", "<")
-        .replace("&lt", "<")
-        .replace("&#60;", "<");
+    // Emdash normalization is independent of HTML entities and applies to any
+    // line, so it stays unconditional.
+    s = s.replace('\u{2013}', "-");
+
+    // Every remaining pattern in the HTML-entity decode chain begins with `&`,
+    // so the entire chain is a no-op when the line contains no `&`. Source code
+    // lines rarely contain `&`, so this guard skips ~50 full-string passes for
+    // the overwhelming majority of lines without changing output.
+    if s.contains('&') {
+        s = s
+            // CR/LF entities
+            .replace("&#13;&#10;", " ")
+            .replace("&#13;", " ")
+            .replace("&#10;", " ")
+            // Space entities
+            .replace("&nbsp;", " ")
+            .replace("&nbsp", " ")
+            .replace("&ensp;", " ")
+            .replace("&emsp;", " ")
+            .replace("&thinsp;", " ")
+            // Named entities
+            .replace("&quot;", "\"")
+            .replace("&#34;", "\"")
+            .replace("&auml;", "ä")
+            .replace("&auml", "ä")
+            .replace("&Auml;", "Ä")
+            .replace("&Auml", "Ä")
+            .replace("&ouml;", "ö")
+            .replace("&ouml", "ö")
+            .replace("&Ouml;", "Ö")
+            .replace("&Ouml", "Ö")
+            .replace("&uuml;", "ü")
+            .replace("&uuml", "ü")
+            .replace("&Uuml;", "Ü")
+            .replace("&Uuml", "Ü")
+            .replace("&szlig;", "ß")
+            .replace("&szlig", "ß")
+            .replace("&#196;", "Ä")
+            .replace("&#214;", "Ö")
+            .replace("&#220;", "Ü")
+            .replace("&#228;", "ä")
+            .replace("&#246;", "ö")
+            .replace("&#252;", "ü")
+            .replace("&#223;", "ß")
+            .replace("&#xC4;", "Ä")
+            .replace("&#xD6;", "Ö")
+            .replace("&#xDC;", "Ü")
+            .replace("&#xE4;", "ä")
+            .replace("&#xF6;", "ö")
+            .replace("&#xFC;", "ü")
+            .replace("&#xDF;", "ß")
+            .replace("&amp;", "&")
+            .replace("&#38;", "&")
+            .replace("&gt;", ">")
+            .replace("&gt", ">")
+            .replace("&#62;", ">")
+            .replace("&lt;", "<")
+            .replace("&lt", "<")
+            .replace("&#60;", "<");
+    }
 
     // Now remove remaining code comment markers (*, #, %) and strip edges.
     // HTML entities have already been decoded so # and % are safe to remove.
@@ -838,6 +850,26 @@ mod tests {
     #[test]
     fn test_emdash_normalization() {
         assert_eq!(prepare_text_line("2020\u{2013}2024"), "2020-2024");
+    }
+
+    #[test]
+    fn test_emdash_normalized_without_ampersand() {
+        // Emdash normalization must apply even when the line has no HTML
+        // entities, since the `&`-gated entity-decode chain is skipped then.
+        assert_eq!(
+            prepare_text_line("Copyright 2020\u{2013}2024 Acme"),
+            "Copyright 2020-2024 Acme"
+        );
+    }
+
+    #[test]
+    fn test_emdash_and_entity_decode_in_same_line() {
+        // Locks the cascade: emdash is normalized AND the `&`-entity chain runs
+        // when both appear together (the chain was split from the emdash step).
+        assert_eq!(
+            prepare_text_line("Foo 2020\u{2013}2024 &amp; Bar &nbsp;baz"),
+            "Foo 2020-2024 & Bar baz"
+        );
     }
 
     #[test]
