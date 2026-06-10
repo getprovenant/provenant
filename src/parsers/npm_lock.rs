@@ -37,6 +37,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::PackageParser;
+use super::license_normalization::normalize_spdx_declared_license;
 use super::metadata::ParserMetadata;
 
 // Field name constants
@@ -51,6 +52,8 @@ const FIELD_DEV: &str = "dev";
 const FIELD_OPTIONAL: &str = "optional";
 const FIELD_DEV_OPTIONAL: &str = "devOptional";
 const FIELD_LINK: &str = "link";
+const FIELD_LICENSE: &str = "license";
+const FIELD_LICENSES: &str = "licenses";
 
 /// npm lockfile parser supporting package-lock.json v1, v2, and v3 formats.
 ///
@@ -162,6 +165,14 @@ fn parse_lockfile_v2_plus(
         normalize_root_package_metadata(&root_name, &root_version);
     let linked_workspace_names = collect_linked_workspace_names(packages);
 
+    // v2/v3 lockfiles carry the root project's license on the `packages[""]` entry.
+    let root_license_statement = packages.get("").and_then(extract_package_license);
+    let (
+        root_declared_license_expression,
+        root_declared_license_expression_spdx,
+        root_license_detections,
+    ) = normalize_spdx_declared_license(root_license_statement.as_deref());
+
     // Collect root-level dependencies from top-level sections
     let mut root_deps = std::collections::HashSet::new();
 
@@ -238,6 +249,7 @@ fn parse_lockfile_v2_plus(
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let is_direct = root_deps.contains(&install_name) && is_direct_dependency_path(key);
+        let license_statement = extract_package_license(value);
 
         let dependency = match version {
             Some(version) => build_npm_dependency(
@@ -252,6 +264,7 @@ fn parse_lockfile_v2_plus(
                 from,
                 in_bundle,
                 Vec::new(),
+                license_statement,
             ),
             None if is_link => build_link_dependency(
                 &package_name,
@@ -296,13 +309,13 @@ fn parse_lockfile_v2_plus(
         vcs_url: None,
         copyright: None,
         holder: None,
-        declared_license_expression: None,
-        declared_license_expression_spdx: None,
-        license_detections: Vec::new(),
+        declared_license_expression: root_declared_license_expression,
+        declared_license_expression_spdx: root_declared_license_expression_spdx,
+        license_detections: root_license_detections,
         other_license_expression: None,
         other_license_expression_spdx: None,
         other_license_detections: Vec::new(),
-        extracted_license_statement: None,
+        extracted_license_statement: root_license_statement,
         notice_text: None,
         source_packages: Vec::new(),
         file_references: Vec::new(),
@@ -483,6 +496,7 @@ fn parse_dependencies_v1_with_depth(
             from,
             in_bundle,
             nested_deps,
+            None,
         );
 
         dependencies.push(dependency);
@@ -611,6 +625,45 @@ fn extract_root_package_identity(
     });
 
     (name.unwrap_or_default(), version.unwrap_or_default())
+}
+
+/// Extract a declared-license candidate from a v2/v3 `packages[*]` entry.
+///
+/// npm lockfile `license` values are SPDX-by-convention strings (e.g. `"MIT"`,
+/// `"(MIT OR Apache-2.0)"`). The deprecated object form `{ "type": ... }` and
+/// the legacy plural `licenses` array are also tolerated by reading the `type`
+/// field. Per the npm spec, multiple entries in the `licenses` array express
+/// dual-licensing where a user may comply with any one of them, so they are
+/// combined with SPDX `OR` (not `AND`).
+fn extract_package_license(value: &Value) -> Option<String> {
+    if let Some(license) = value.get(FIELD_LICENSE) {
+        if let Some(text) = license.as_str() {
+            return non_empty_string(text).map(truncate_field);
+        }
+        if let Some(type_val) = license.get("type").and_then(|v| v.as_str()) {
+            return non_empty_string(type_val).map(truncate_field);
+        }
+    }
+
+    if let Some(licenses) = value.get(FIELD_LICENSES).and_then(|v| v.as_array()) {
+        let types: Vec<String> = licenses
+            .iter()
+            .take(MAX_ITERATION_COUNT)
+            .filter_map(|entry| entry.get("type").and_then(|v| v.as_str()))
+            .filter_map(non_empty_string)
+            .collect();
+        if !types.is_empty() {
+            let joined = types.join(" OR ");
+            let statement = if types.len() > 1 {
+                format!("({})", joined)
+            } else {
+                joined
+            };
+            return Some(truncate_field(statement));
+        }
+    }
+
+    None
 }
 
 fn non_empty_string(value: &str) -> Option<String> {
@@ -769,6 +822,7 @@ fn build_npm_dependency(
     from: Option<&str>,
     in_bundle: bool,
     nested_deps: Vec<Dependency>,
+    license_statement: Option<String>,
 ) -> Dependency {
     let (dep_namespace, dep_name) = extract_namespace_and_name(package_name);
     let dep_namespace = truncate_field(dep_namespace);
@@ -821,6 +875,9 @@ fn build_npm_dependency(
     let sha1_from_url = resolved.as_deref().and_then(parse_resolved_url);
     let sha1 = sha1_from_integrity.or(sha1_from_url);
 
+    let (declared_license_expression, declared_license_expression_spdx, license_detections) =
+        normalize_spdx_declared_license(license_statement.as_deref());
+
     let mut dep_extra_data = HashMap::new();
     if let Some(from) = from {
         dep_extra_data.insert("from".to_string(), Value::String(from.to_string()));
@@ -836,6 +893,10 @@ fn build_npm_dependency(
         sha256: None,
         sha512: sha512_from_integrity.and_then(|h| Sha512Digest::from_hex(&h).ok()),
         md5: None,
+        declared_license_expression,
+        declared_license_expression_spdx,
+        license_detections,
+        extracted_license_statement: license_statement,
         is_virtual: true,
         extra_data: None,
         dependencies: nested_deps,
