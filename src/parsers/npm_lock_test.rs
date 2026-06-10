@@ -117,6 +117,126 @@ mod tests {
         }
     }
 
+    // ===== Per-package license tests (v2/v3 `packages[*].license`) =====
+
+    fn resolved_for<'a>(
+        package_data: &'a crate::models::PackageData,
+        name: &str,
+    ) -> &'a crate::models::ResolvedPackage {
+        package_data
+            .dependencies
+            .iter()
+            .filter_map(|dep| dep.resolved_package.as_deref())
+            .find(|resolved| resolved.name == name)
+            .unwrap_or_else(|| panic!("expected resolved package for {name}"))
+    }
+
+    #[test]
+    fn test_v2_root_license_normalized() {
+        let content = r#"{
+            "name": "demo",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {
+                "": { "name": "demo", "version": "1.0.0", "license": "Apache-2.0" }
+            }
+        }"#;
+        let (_tmp, path) = create_temp_lock_file(content);
+        let package_data = NpmLockParser::extract_first_package(&path);
+
+        assert_eq!(
+            package_data.extracted_license_statement,
+            Some("Apache-2.0".to_string())
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx,
+            Some("Apache-2.0".to_string())
+        );
+        assert!(!package_data.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_v3_resolved_package_license_string_and_expression() {
+        let content = r#"{
+            "name": "demo",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {
+                "": { "name": "demo", "version": "1.0.0" },
+                "node_modules/plain": { "version": "1.2.3", "license": "MIT" },
+                "node_modules/dual": { "version": "4.5.6", "license": "(MIT OR Apache-2.0)" }
+            }
+        }"#;
+        let (_tmp, path) = create_temp_lock_file(content);
+        let package_data = NpmLockParser::extract_first_package(&path);
+
+        let plain = resolved_for(&package_data, "plain");
+        assert_eq!(plain.extracted_license_statement, Some("MIT".to_string()));
+        assert_eq!(
+            plain.declared_license_expression_spdx,
+            Some("MIT".to_string())
+        );
+
+        let dual = resolved_for(&package_data, "dual");
+        assert_eq!(
+            dual.extracted_license_statement,
+            Some("(MIT OR Apache-2.0)".to_string())
+        );
+        assert_eq!(
+            dual.declared_license_expression_spdx,
+            Some("Apache-2.0 OR MIT".to_string())
+        );
+    }
+
+    #[test]
+    fn test_v3_resolved_package_license_object_form() {
+        let content = r#"{
+            "name": "demo",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {
+                "": { "name": "demo", "version": "1.0.0" },
+                "node_modules/legacy": {
+                    "version": "1.0.0",
+                    "license": { "type": "BSD-3-Clause", "url": "http://example.com" }
+                }
+            }
+        }"#;
+        let (_tmp, path) = create_temp_lock_file(content);
+        let package_data = NpmLockParser::extract_first_package(&path);
+
+        let legacy = resolved_for(&package_data, "legacy");
+        assert_eq!(
+            legacy.extracted_license_statement,
+            Some("BSD-3-Clause".to_string())
+        );
+        assert_eq!(
+            legacy.declared_license_expression_spdx,
+            Some("BSD-3-Clause".to_string())
+        );
+    }
+
+    #[test]
+    fn test_v3_resolved_package_without_license_stays_unset() {
+        let content = r#"{
+            "name": "demo",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {
+                "": { "name": "demo", "version": "1.0.0" },
+                "node_modules/nolicense": { "version": "1.0.0" }
+            }
+        }"#;
+        let (_tmp, path) = create_temp_lock_file(content);
+        let package_data = NpmLockParser::extract_first_package(&path);
+
+        let resolved = resolved_for(&package_data, "nolicense");
+        assert!(resolved.extracted_license_statement.is_none());
+        assert!(resolved.declared_license_expression.is_none());
+        assert!(resolved.declared_license_expression_spdx.is_none());
+        assert!(resolved.license_detections.is_empty());
+    }
+
     #[test]
     fn test_parse_scoped_packages() {
         let lock_path = load_testdata_file("package-lock-scoped.json");
