@@ -355,72 +355,80 @@ pub fn prepare_text_line(line: &str) -> String {
     s = REGISTERED_SIGN_AFTER_ASCII_RE
         .replace_all(&s, "${head} (r) ")
         .into_owned();
-    s = s
-        .replace("&reg;", " (r) ")
-        .replace("&reg", " (r) ")
-        .replace("&#174;", " (r) ");
 
-    // ── HTML entity decoding ──
-    // Must also happen BEFORE # and % removal for the same reason.
+    // HTML entity decoding (registered mark, copyright variants handled above,
+    // emdash, named/numeric entities). Every needle from here is either the
+    // emdash codepoint or begins with `&`, so skip the allocating chains when
+    // neither trigger is present (the common case for code lines).
+    let has_ampersand = s.contains('&');
+    if has_ampersand {
+        s = s
+            .replace("&reg;", " (r) ")
+            .replace("&reg", " (r) ")
+            .replace("&#174;", " (r) ");
 
-    if s.to_ascii_lowercase().contains("&lt;") && s.contains('@') {
-        s = ESCAPED_ANGLE_EMAIL_RE
-            .replace_all(&s, "<${email}>")
-            .into_owned();
+        // Must also happen BEFORE # and % removal for the same reason.
+        if s.to_ascii_lowercase().contains("&lt;") && s.contains('@') {
+            s = ESCAPED_ANGLE_EMAIL_RE
+                .replace_all(&s, "<${email}>")
+                .into_owned();
+        }
     }
 
-    s = s
-        // Emdash
-        .replace('\u{2013}', "-")
-        // CR/LF entities
-        .replace("&#13;&#10;", " ")
-        .replace("&#13;", " ")
-        .replace("&#10;", " ")
-        // Space entities
-        .replace("&nbsp;", " ")
-        .replace("&nbsp", " ")
-        .replace("&ensp;", " ")
-        .replace("&emsp;", " ")
-        .replace("&thinsp;", " ")
-        // Named entities
-        .replace("&quot;", "\"")
-        .replace("&#34;", "\"")
-        .replace("&auml;", "ä")
-        .replace("&auml", "ä")
-        .replace("&Auml;", "Ä")
-        .replace("&Auml", "Ä")
-        .replace("&ouml;", "ö")
-        .replace("&ouml", "ö")
-        .replace("&Ouml;", "Ö")
-        .replace("&Ouml", "Ö")
-        .replace("&uuml;", "ü")
-        .replace("&uuml", "ü")
-        .replace("&Uuml;", "Ü")
-        .replace("&Uuml", "Ü")
-        .replace("&szlig;", "ß")
-        .replace("&szlig", "ß")
-        .replace("&#196;", "Ä")
-        .replace("&#214;", "Ö")
-        .replace("&#220;", "Ü")
-        .replace("&#228;", "ä")
-        .replace("&#246;", "ö")
-        .replace("&#252;", "ü")
-        .replace("&#223;", "ß")
-        .replace("&#xC4;", "Ä")
-        .replace("&#xD6;", "Ö")
-        .replace("&#xDC;", "Ü")
-        .replace("&#xE4;", "ä")
-        .replace("&#xF6;", "ö")
-        .replace("&#xFC;", "ü")
-        .replace("&#xDF;", "ß")
-        .replace("&amp;", "&")
-        .replace("&#38;", "&")
-        .replace("&gt;", ">")
-        .replace("&gt", ">")
-        .replace("&#62;", ">")
-        .replace("&lt;", "<")
-        .replace("&lt", "<")
-        .replace("&#60;", "<");
+    if has_ampersand || s.contains('\u{2013}') {
+        s = s
+            // Emdash
+            .replace('\u{2013}', "-")
+            // CR/LF entities
+            .replace("&#13;&#10;", " ")
+            .replace("&#13;", " ")
+            .replace("&#10;", " ")
+            // Space entities
+            .replace("&nbsp;", " ")
+            .replace("&nbsp", " ")
+            .replace("&ensp;", " ")
+            .replace("&emsp;", " ")
+            .replace("&thinsp;", " ")
+            // Named entities
+            .replace("&quot;", "\"")
+            .replace("&#34;", "\"")
+            .replace("&auml;", "ä")
+            .replace("&auml", "ä")
+            .replace("&Auml;", "Ä")
+            .replace("&Auml", "Ä")
+            .replace("&ouml;", "ö")
+            .replace("&ouml", "ö")
+            .replace("&Ouml;", "Ö")
+            .replace("&Ouml", "Ö")
+            .replace("&uuml;", "ü")
+            .replace("&uuml", "ü")
+            .replace("&Uuml;", "Ü")
+            .replace("&Uuml", "Ü")
+            .replace("&szlig;", "ß")
+            .replace("&szlig", "ß")
+            .replace("&#196;", "Ä")
+            .replace("&#214;", "Ö")
+            .replace("&#220;", "Ü")
+            .replace("&#228;", "ä")
+            .replace("&#246;", "ö")
+            .replace("&#252;", "ü")
+            .replace("&#223;", "ß")
+            .replace("&#xC4;", "Ä")
+            .replace("&#xD6;", "Ö")
+            .replace("&#xDC;", "Ü")
+            .replace("&#xE4;", "ä")
+            .replace("&#xF6;", "ö")
+            .replace("&#xFC;", "ü")
+            .replace("&#xDF;", "ß")
+            .replace("&amp;", "&")
+            .replace("&#38;", "&")
+            .replace("&gt;", ">")
+            .replace("&gt", ">")
+            .replace("&#62;", ">")
+            .replace("&lt;", "<")
+            .replace("&lt", "<")
+            .replace("&#60;", "<");
+    }
 
     // Now remove remaining code comment markers (*, #, %) and strip edges.
     // HTML entities have already been decoded so # and % are safe to remove.
