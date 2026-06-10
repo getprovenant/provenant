@@ -1699,6 +1699,21 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         .filter(|entry| !entry.extra_in_provenant.is_empty())
         .map(|entry| entry.extra_in_provenant.len())
         .sum::<usize>();
+    // Identity-matched declared-license/holder content axis. Reuses the shared
+    // diff/tally helpers so the benchmark/compare-outputs summary treats this
+    // axis exactly like the CLI `compare` subcommand. Enabling it here can
+    // surface pre-existing ScanCode-vs-Provenant declared-license content deltas
+    // that predate the post-extraction population hook; that is expected parity
+    // signal to classify, not automatically a regression to fix in this change.
+    let package_field_content_value_differences =
+        package_field_content_differences(&scancode, &provenant);
+    let package_field_content_tally =
+        tally_package_field_content_differences(&package_field_content_value_differences);
+    let package_field_content_missing = package_field_content_tally.missing_in_provenant;
+    let package_field_content_extra = package_field_content_tally.extra_in_provenant;
+    let package_field_content_value_vs_value_mismatch =
+        package_field_content_tally.value_vs_value_mismatch;
+    let package_field_content_by_field = package_field_content_tally.by_field;
     let top_level_package_summary = json!({
         "missing_in_provenant": top_level_package_missing,
         "extra_in_provenant": top_level_package_extra,
@@ -1722,6 +1737,27 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             "extra_in_provenant": raw_dependency_extra,
         }),
     );
+    file_metric_summary.insert(
+        "package_field_content".to_string(),
+        json!({
+            "missing_in_provenant": package_field_content_missing,
+            "extra_in_provenant": package_field_content_extra,
+            "value_vs_value_mismatch": package_field_content_value_vs_value_mismatch,
+            "by_field": package_field_content_by_field,
+        }),
+    );
+    let package_field_content_summary = json!({
+        "missing_in_provenant": package_field_content_missing,
+        "extra_in_provenant": package_field_content_extra,
+        "value_vs_value_mismatch": package_field_content_value_vs_value_mismatch,
+        "by_field": package_field_content_by_field,
+        "fields_compared": PACKAGE_CONTENT_FIELDS,
+    });
+    scancode_favored_signal_count += package_field_content_missing;
+    provenant_favored_signal_count += package_field_content_extra;
+    // A value-vs-value mismatch favors neither side, so it is a non-directional
+    // review signal rather than a directional one.
+    non_directional_signal_count += package_field_content_value_vs_value_mismatch;
     if top_level_package_skip_reason.is_none() {
         scancode_favored_signal_count += top_level_package_missing;
         provenant_favored_signal_count += top_level_package_extra;
@@ -1782,6 +1818,27 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         raw_dependency_extra as i64,
         raw_dependency_extra as i64,
         "raw dependency identities present only in Provenant file-level package_data output",
+    ));
+    rows.push(tsv_row(
+        "package_field_content_missing_in_provenant",
+        package_field_content_missing as i64,
+        0,
+        -(package_field_content_missing as i64),
+        "identity-matched packages where declared-license/holder content is present only in ScanCode output",
+    ));
+    rows.push(tsv_row(
+        "package_field_content_extra_in_provenant",
+        0,
+        package_field_content_extra as i64,
+        package_field_content_extra as i64,
+        "identity-matched packages where declared-license/holder content is present only in Provenant output",
+    ));
+    rows.push(tsv_row(
+        "package_field_content_value_vs_value_mismatch",
+        package_field_content_value_vs_value_mismatch as i64,
+        package_field_content_value_vs_value_mismatch as i64,
+        0,
+        "identity-matched packages where both outputs carry declared-license/holder content but the values differ",
     ));
     rows.push(tsv_row(
         "top_level_license_expression_deltas",
@@ -1863,6 +1920,12 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             "row2_top_level_differences",
             context.samples_dir.join("row2_top_level_differences.json"),
         ),
+        (
+            "package_field_content_value_differences",
+            context
+                .samples_dir
+                .join("package_field_content_value_differences.json"),
+        ),
     ];
     write_pretty_json(&sample_paths[0].1, &scancode_only_output_paths)?;
     write_pretty_json(&sample_paths[1].1, &provenant_only_output_paths)?;
@@ -1877,6 +1940,10 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     write_pretty_json(&sample_paths[10].1, &classify_value_differences)?;
     write_pretty_json(&sample_paths[11].1, &row2_value_differences)?;
     write_pretty_json(&sample_paths[12].1, &row2_top_level_differences)?;
+    write_pretty_json(
+        &sample_paths[13].1,
+        &package_field_content_value_differences,
+    )?;
 
     let summary = json!({
         "comparison_status": comparison_status,
@@ -1905,6 +1972,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         "top_level_package_summary": top_level_package_summary,
         "top_level_dependency_summary": top_level_dependency_summary,
         "raw_dependency_summary": raw_dependency_summary,
+        "package_field_content_summary": package_field_content_summary,
         "comparison_context": {
             "only_findings_active": only_findings_active,
             "path_presence_semantics": "final_output_membership",
@@ -4507,5 +4575,53 @@ mod tests {
         assert!(error.contains("multiple --target-path values currently support files only"));
 
         let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn package_field_content_axis_tally_reconciles_for_compare_outputs() {
+        // Mirrors how generate_comparison_artifacts wires the shared axis:
+        // identity-matched packages whose declared-license/holder content drifts
+        // must land in exactly one bucket so the summary numbers reconcile.
+        let scancode = json!({
+            "files": [{
+                "path": "setup.py",
+                "type": "file",
+                "package_data": [{
+                    "type": "pypi",
+                    "name": "left-pad",
+                    "version": "1.3.0",
+                    "purl": "pkg:pypi/left-pad@1.3.0",
+                    "declared_license_expression": "mit",
+                    "holder": "Acme"
+                }]
+            }]
+        });
+        let provenant = json!({
+            "files": [{
+                "path": "setup.py",
+                "type": "file",
+                "package_data": [{
+                    "type": "pypi",
+                    "name": "left-pad",
+                    "version": "1.3.0",
+                    "purl": "pkg:pypi/left-pad@1.3.0",
+                    "declared_license_expression": "apache-2.0",
+                    "holder": null
+                }]
+            }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+
+        assert_eq!(tally.value_vs_value_mismatch, 1);
+        assert_eq!(tally.missing_in_provenant, 1);
+        assert_eq!(tally.extra_in_provenant, 0);
+        let by_field_total: usize = tally.by_field.values().sum();
+        assert_eq!(
+            tally.missing_in_provenant + tally.extra_in_provenant + tally.value_vs_value_mismatch,
+            by_field_total
+        );
+        assert_eq!(by_field_total, differences.len());
     }
 }
