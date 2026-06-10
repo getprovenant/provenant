@@ -34,7 +34,7 @@ pub(super) fn maybe_expand_copyrighted_by_href_urls<'a>(content: &'a str) -> Cow
 /// tld)` span and the parser leaks the first token (e.g. `chris`) into the
 /// holder. Folding the parenthetical back onto the preceding line restores the
 /// single-line behavior, which already recovers the clean holder.
-pub(super) fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str) -> Cow<'a, str> {
+fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str) -> Cow<'a, str> {
     // Conservative: the previous line carries a copyright marker, and the
     // continuation line is solely a comment-prefixed `(... at ... dot ...)`.
     static SPLIT_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -59,7 +59,20 @@ pub(super) fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str
     )
 }
 
-pub(super) fn normalize_split_angle_bracket_urls<'a>(content: &'a str) -> Cow<'a, str> {
+/// Apply every pre-line-split normalization in sequence, returning one `Cow`.
+///
+/// This is the single seam the detector uses to fold multi-line constructs back
+/// onto one logical line before the per-line preparation runs. Adding another
+/// split-normalizer means chaining it here, not at each detector call site.
+pub(super) fn normalize_split_input<'a>(content: &'a str) -> Cow<'a, str> {
+    let normalized = normalize_split_angle_bracket_urls(content);
+    match normalize_split_obfuscated_email_continuation(normalized.as_ref()) {
+        Cow::Borrowed(_) => normalized,
+        Cow::Owned(joined) => Cow::Owned(joined),
+    }
+}
+
+fn normalize_split_angle_bracket_urls<'a>(content: &'a str) -> Cow<'a, str> {
     static SPLIT_URL_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?is)<\s*(?P<url>https?://[^\s>]+)\s*\r?\n\s*(?P<tail>[^\s>]+)\s*>").unwrap()
     });

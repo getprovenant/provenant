@@ -21,8 +21,7 @@ use regex::Regex;
 
 use super::candidates::collect_candidate_lines;
 use super::detector_input_normalization::{
-    maybe_expand_copyrighted_by_href_urls, normalize_split_angle_bracket_urls,
-    normalize_split_obfuscated_email_continuation,
+    maybe_expand_copyrighted_by_href_urls, normalize_split_input,
 };
 use super::lexer::get_tokens;
 use super::line_tracking::{LineNumberIndex, PreparedLineCache};
@@ -226,11 +225,7 @@ pub fn detect_copyrights_from_text_with_deadline(
         return (copyrights, holders, authors);
     }
 
-    let normalized = normalize_split_angle_bracket_urls(content);
-    let normalized = match normalize_split_obfuscated_email_continuation(normalized.as_ref()) {
-        Cow::Borrowed(_) => normalized,
-        Cow::Owned(joined) => Cow::Owned(joined),
-    };
+    let normalized = normalize_split_input(content);
     let expanded = maybe_expand_copyrighted_by_href_urls(normalized.as_ref());
     let did_expand_href = matches!(expanded, Cow::Owned(_));
     let content = expanded.as_ref();
@@ -492,11 +487,7 @@ pub(super) fn detect_copyright_phase_boundaries(content: &str) -> PhaseBoundaryD
         };
     }
 
-    let normalized = normalize_split_angle_bracket_urls(content);
-    let normalized = match normalize_split_obfuscated_email_continuation(normalized.as_ref()) {
-        Cow::Borrowed(_) => normalized,
-        Cow::Owned(joined) => Cow::Owned(joined),
-    };
+    let normalized = normalize_split_input(content);
     let expanded = maybe_expand_copyrighted_by_href_urls(normalized.as_ref());
     let did_expand_href = matches!(expanded, Cow::Owned(_));
     let content = expanded.as_ref();
