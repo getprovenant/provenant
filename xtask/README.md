@@ -18,6 +18,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `benchmark-target`                | Measure Provenant against an explicit local or remote benchmark target.                                                                     |
 | `compare-outputs`                 | Compare Provenant and ScanCode raw outputs, either by running both scanners on one target or by comparing two existing JSON files directly. |
+| `perf-ab`                         | A/B-time a scan across two Provenant git refs (self before/after) and report the head-vs-base speedup.                                      |
 | `update-parser-golden`            | Regenerate parser `.expected.json` fixtures from current Rust parser output.                                                                |
 | `update-copyright-golden`         | Maintain copyright golden YAML fixtures with parity-gated or Rust-owned update modes.                                                       |
 | `update-license-golden`           | Maintain license golden YAML fixtures with parity-gated or Rust-owned update modes.                                                         |
@@ -240,6 +241,68 @@ Optional diagnostic logs when available:
 - `scancode-stdout.txt` and `provenant-stdout.txt` are best-effort diagnostic logs. The compare pipeline only requires the JSON outputs, so a log-write failure no longer makes the command fail.
 - Path-only buckets in `comparison/summary.json`, `comparison/summary.tsv`, and `comparison/samples/*.json` describe **final output membership**, not proven scan coverage. When the compared outputs used `--only-findings`, a path shown only on one side can simply mean the other side scanned it but filtered it away because no findings remained.
 - The command adds Git control-path ignore rules (`.git`, nested `.git`, and their contents) on the ScanCode side so repository metadata does not dominate the comparison artifacts without hiding package-adjacent files such as `.gitmodules`. Provenant already excludes `.git` directories during path collection by default, so xtask does not need to restate those ignores for Provenant. The harness no longer injects a blanket `target/*` ignore because some upstream repositories legitimately use `target/` as source content.
+
+## `perf-ab`
+
+### Purpose
+
+`perf-ab` answers "did my code change actually make Provenant faster?". It
+builds two Provenant git refs in release mode and **interleaved-A/B-times** a
+scan against the same target, reporting per-side medians and the head-vs-base
+speedup.
+
+This is a **self before/after** comparison and is intentionally different from
+`benchmark-target` and `compare-outputs`, which measure **Provenant against
+ScanCode**. `perf-ab` never runs ScanCode and its timings do not belong in
+`docs/BENCHMARKS.md`; it is for attributing a wall-clock change to your own
+edit. The companion `benchmark-perf-change` skill describes the full
+profile-first, regression-guarded workflow this command supports.
+
+### Usage
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml --bin perf-ab -- --help
+cargo run --manifest-path xtask/Cargo.toml --bin perf-ab -- --base origin/main --head HEAD --target-path /path/to/repo -- -c -n 1
+cargo run --manifest-path xtask/Cargo.toml --bin perf-ab -- --base origin/main --head HEAD --repo-url https://github.com/org/repo.git --repo-ref <sha> --rounds 7 --profile licenses
+cargo run --manifest-path xtask/Cargo.toml --bin perf-ab -- --base <ref> --head <ref> --target-path /path/to/repo --check-output -- -clupe -n 1
+cargo run --manifest-path xtask/Cargo.toml --bin perf-ab -- --base-bin ./base/provenant --head-bin ./head/provenant --target-path /path/to/repo -- -c -n 1
+```
+
+CLI arguments:
+
+- `--base REF`: base git ref to build and time (the "before" side). Default `origin/main`.
+- `--head REF`: head git ref to build and time (the "after" side). Default `HEAD`.
+- Choose exactly one target: either `--repo-url` (with `--repo-ref`) via the shared repo cache, or `--target-path PATH` for a local directory scanned in place.
+- `--repo-ref REF`: required with `--repo-url`; commit SHA, tag, or branch of the target repo.
+- `--rounds N`: number of interleaved timed rounds per side after the discarded warmup. Default `5`.
+- `--base-bin PATH` / `--head-bin PATH`: use a prebuilt binary for that side and skip building the ref.
+- `--check-output`: scan with both binaries to JSON and assert byte-identical output after normalizing the volatile header. The correctness gate for pure-refactor perf changes.
+- `--profile common|common-with-compiled|licenses|packages`: scan-flag shorthand shared by both sides. Mutually exclusive with explicit flags after `--`.
+- Pass either a supported `--profile` or explicit scan flags after `--` (for example `-- -c -n 1`). The same flags are forwarded to both binaries.
+
+### What It Does
+
+1. Resolves the scan target: either a local `--target-path` scanned in place, or `--repo-url` + `--repo-ref` materialized through the shared repo cache under `.provenant/repo-cache/` and removed after the run.
+2. Builds each ref in release (`cargo build --release --bin provenant`) into a stable per-ref worktree under `.provenant/perf-ab-build/`, backed by a dedicated bare clone of the current repo so the developer's working tree is untouched. `--base-bin` / `--head-bin` skip the build for that side.
+3. Optionally runs the `--check-output` correctness gate before timing.
+4. Runs one discarded warmup scan per binary, then `--rounds` interleaved timed scans (base, head, base, head, …) so machine-wide drift is shared evenly.
+5. Reports per-round real times, the per-side median, and the speedup as both a percent reduction and a factor (a factor below `1.0` is flagged as a regression).
+6. Writes a run manifest under `.provenant/perf-ab/<run-id>/run-manifest.json` recording both refs, their resolved build revisions, the binaries used, the per-round timings, and the computed speedup.
+
+### Output
+
+Each run writes artifacts under:
+
+- `.provenant/perf-ab/<run-id>/run-manifest.json`
+- `.provenant/perf-ab/<run-id>/<side>-<phase>-scan.json` (scratch scan outputs from timed runs)
+
+### Notes
+
+- Both sides always run with `--no-license-index-cache` so a warmed license index from one round does not skew the next, matching `benchmark-target` fairness.
+- The warmup run is discarded; only the `--rounds` interleaved timed runs feed the median.
+- Build each ref in release on a stable checkout; do not point `--base-bin`/`--head-bin` at debug or differently-profiled binaries, which would make the comparison meaningless.
+- `--check-output` normalizes only the volatile top-level `headers` block (version, timestamps, duration) before comparing; any remaining diff fails the run, because a behavior-preserving perf change must be byte-identical.
+- Building two release binaries is slow. Use `--base-bin`/`--head-bin` when you already have both binaries, or `--repo-ref`/refs that share most compiled artifacts.
 
 ## `update-parser-golden`
 

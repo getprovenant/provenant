@@ -38,6 +38,10 @@ name = "compare-outputs"
 path = "src/bin/compare_outputs.rs"
 
 [[bin]]
+name = "perf-ab"
+path = "src/bin/perf_ab.rs"
+
+[[bin]]
 name = "generate-benchmark-chart"
 path = "src/bin/generate_benchmark_chart.rs"
 
