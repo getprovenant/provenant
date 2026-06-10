@@ -200,7 +200,7 @@
               "license_expression": "bsd-new",
               "license_expression_spdx": "BSD-3-Clause",
               "rule_identifier": "bsd-new_195.RULE",
-              "referenced_filenames": ["license: BSD-3-Clause"]
+              "referenced_filenames": []
             }
           ]
         }
@@ -257,7 +257,7 @@
                   "license_expression": "bsd-new",
                   "license_expression_spdx": "BSD-3-Clause",
                   "rule_identifier": "bsd-new_195.RULE",
-                  "referenced_filenames": ["license: BSD-3-Clause"]
+                  "referenced_filenames": []
                 }
               ]
             }
@@ -295,7 +295,7 @@
               "license_expression": "bsd-new",
               "license_expression_spdx": "BSD-3-Clause",
               "rule_identifier": "bsd-new_195.RULE",
-              "referenced_filenames": ["license: BSD-3-Clause"]
+              "referenced_filenames": []
             }
           ]
         }

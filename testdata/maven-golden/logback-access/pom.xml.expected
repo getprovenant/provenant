@@ -85,9 +85,7 @@
             "rule_identifier": "lgpl-2.1-plus_515.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/lgpl-2.1-plus_515.RULE",
             "matched_text": "- license:\n    name: GNU Lesser General Public License\n    url: http://www.gnu.org/licenses/lgpl.html",
-            "referenced_filenames": [
-              "- license:\n    name: GNU Lesser General Public License\n    url: http://www.gnu.org/licenses/lgpl.html"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

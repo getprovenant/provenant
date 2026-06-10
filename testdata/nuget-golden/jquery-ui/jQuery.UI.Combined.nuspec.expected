@@ -59,9 +59,7 @@
             "rule_identifier": "mit_jquery_url.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/mit_jquery_url.RULE",
             "matched_text": "http://jquery.org/license",
-            "referenced_filenames": [
-              "http://jquery.org/license"
-            ]
+            "referenced_filenames": []
           }
         ],
         "identifier": null

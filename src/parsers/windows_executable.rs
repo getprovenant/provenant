@@ -964,7 +964,7 @@ fn merge_sibling_license_text(path: &Path, package: &mut PackageData) {
     };
 
     let (declared_license_expression, declared_license_expression_spdx, license_detections) =
-        detect_declared_license_from_text(&license_text, &license_path);
+        detect_declared_license_from_text(&license_text, Some(license_path.as_str()));
 
     if declared_license_expression_spdx.is_some() {
         package.declared_license_expression = declared_license_expression;
