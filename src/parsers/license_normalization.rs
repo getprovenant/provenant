@@ -585,11 +585,21 @@ fn counts_multiple_license_entries(statement: &str) -> bool {
 /// applies. A bare major version is expanded to its canonical point release
 /// (e.g. `2` -> `2.0`), while an explicit minor version is preserved
 /// (e.g. `2.1`). Both `>= N.M` and `>= N-M` separators are accepted.
+///
+/// The idiom must span the WHOLE statement. A compound CRAN declaration such as
+/// `LGPL (>= 2.1) | GPL-2` carries additional license operands after the range;
+/// rewriting only the leading operand would silently drop the rest and bypass
+/// the multi-license composite guard. When anything follows the closing paren,
+/// this returns `None` so the statement falls through to that guard (which
+/// leaves the declared expression an honest `null`).
 fn rewrite_version_range_or_later_idiom(statement: &str) -> Option<String> {
     let trimmed = statement.trim();
     let open = trimmed.find('(')?;
     let close = trimmed.rfind(')')?;
     if close <= open {
+        return None;
+    }
+    if !trimmed[close + 1..].trim().is_empty() {
         return None;
     }
 
@@ -1658,6 +1668,43 @@ mod tests {
         assert!(rewrite_version_range_or_later_idiom("GPL (== 2)").is_none());
         assert!(rewrite_version_range_or_later_idiom("GPL (>= 2.0.1)").is_none());
         assert!(rewrite_version_range_or_later_idiom("GPL").is_none());
+    }
+
+    #[test]
+    fn test_rewrite_version_range_or_later_idiom_rejects_trailing_operands() {
+        // A compound CRAN declaration carries more license operands after the
+        // range. Rewriting only the leading operand would silently drop the rest
+        // and bypass the composite guard, so the idiom must not fire.
+        assert!(rewrite_version_range_or_later_idiom("LGPL (>= 2.1) | GPL-2").is_none());
+        assert!(rewrite_version_range_or_later_idiom("GPL (>= 2), MIT").is_none());
+        assert!(rewrite_version_range_or_later_idiom("GPL (>= 2) | file LICENSE").is_none());
+        // The whole-statement idiom still rewrites.
+        assert_eq!(
+            rewrite_version_range_or_later_idiom("GPL (>= 2)").as_deref(),
+            Some("GPL-2.0+")
+        );
+        assert_eq!(
+            rewrite_version_range_or_later_idiom("GPL (>= 3)").as_deref(),
+            Some("GPL-3.0+")
+        );
+    }
+
+    #[test]
+    fn test_compound_version_range_statement_is_null() {
+        // Hook-level guard: a compound statement must yield an honest null, not a
+        // partial `lgpl-2.1-plus` that drops the trailing operand.
+        for statement in [
+            "LGPL (>= 2.1) | GPL-2",
+            "GPL (>= 2), MIT",
+            "GPL (>= 2) | file LICENSE",
+        ] {
+            let (declared, declared_spdx) = declared_for(statement);
+            assert!(declared.is_none(), "{statement:?} -> {declared:?}");
+            assert!(
+                declared_spdx.is_none(),
+                "{statement:?} -> {declared_spdx:?}"
+            );
+        }
     }
 
     #[test]
