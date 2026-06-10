@@ -366,12 +366,17 @@ fn find_set_candidates<'a>(
     high_resemblance: bool,
     deadline: Option<Instant>,
 ) -> Vec<Candidate<'a>> {
-    let candidate_rids: HashSet<RuleId> = query_data
+    let candidate_rid_set: HashSet<RuleId> = query_data
         .query_high_set
         .iter()
         .filter_map(|tid| index.rids_by_high_tid.get(&TokenId::new(tid)))
         .flat_map(|rids| rids.iter().copied())
         .collect();
+
+    // Sort so a deadline-truncated run returns a deterministic prefix rather
+    // than an arbitrary `HashSet`-ordered subset (issue #1017).
+    let mut candidate_rids: Vec<RuleId> = candidate_rid_set.into_iter().collect();
+    candidate_rids.sort_unstable();
 
     let mut candidates = Vec::new();
 
@@ -1061,6 +1066,95 @@ mod tests {
             sorted[0].rid,
             RuleId::new(2),
             "Python final candidate tuple ordering falls back to higher rid after equal scores"
+        );
+    }
+
+    /// Regression test for issue #1017: candidate selection must be
+    /// deterministic. `find_set_candidates` previously iterated a `HashSet`
+    /// (randomized order per process run), so a deadline-truncated run collected
+    /// a different arbitrary subset each run. The candidate rule IDs are now
+    /// sorted before the deadline-bounded loop, so the visited order is stable
+    /// and ascending by `RuleId`; any prefix the deadline truncates is therefore
+    /// itself deterministic.
+    #[test]
+    fn test_find_set_candidates_iterates_rids_in_deterministic_sorted_order() {
+        use crate::license_detection::query::Query;
+        use crate::license_detection::test_utils::{add_text_rule, create_test_index};
+
+        let mut index = create_test_index(
+            &[
+                ("license", 0),
+                ("copyright", 1),
+                ("permission", 2),
+                ("redistribute", 3),
+                ("granted", 4),
+            ],
+            5,
+        );
+
+        // Enough rules sharing the "license" high token that the deadline-bounded
+        // loop spans more than one checkpoint (checked at rid_index % 128 == 0),
+        // so a real mid-loop truncation would return a non-trivial prefix.
+        const RULE_COUNT: usize = 200;
+        for i in 0..RULE_COUNT {
+            let identifier = format!("lic.{i}.test");
+            add_text_rule(&mut index, &identifier, "license copyright", "lic");
+        }
+
+        let query = Query::from_extracted_text(
+            "license copyright permission redistribute granted",
+            &index,
+            false,
+        )
+        .expect("query construction should succeed");
+        let query_run = query.whole_query_run();
+        let query_data =
+            QueryData::new(&index, &query_run).expect("query data should be constructible");
+
+        let rid_sequence = |candidates: &[Candidate<'_>]| -> Vec<RuleId> {
+            candidates.iter().map(|c| c.rid).collect()
+        };
+
+        // The full (non-deadline) run must visit candidate rids in ascending
+        // RuleId order, and that order must be byte-identical across repeated
+        // calls within the same process. With the old HashSet iteration this
+        // ordering was randomized.
+        let baseline = rid_sequence(&find_set_candidates(&index, &query_data, false, None));
+        assert!(
+            baseline.len() > 128,
+            "expected enough candidates to span more than one deadline checkpoint, got {}",
+            baseline.len()
+        );
+
+        let mut sorted_baseline = baseline.clone();
+        sorted_baseline.sort_unstable();
+        assert_eq!(
+            baseline, sorted_baseline,
+            "candidate rids must be visited in ascending RuleId order"
+        );
+
+        for _ in 0..16 {
+            let again = rid_sequence(&find_set_candidates(&index, &query_data, false, None));
+            assert_eq!(
+                baseline, again,
+                "candidate iteration order must be deterministic across calls"
+            );
+        }
+
+        // The loop truncates the already-sorted sequence at a checkpoint, so any
+        // prefix it returns is a deterministic prefix of `baseline`. This is the
+        // invariant that makes a deadline-truncated run reproducible regardless of
+        // when the deadline fires; with the old HashSet ordering it would not hold.
+        let truncated = rid_sequence(&find_set_candidates(
+            &index,
+            &query_data,
+            false,
+            Some(Instant::now()),
+        ));
+        assert_eq!(
+            truncated,
+            baseline[..truncated.len()].to_vec(),
+            "a deadline-truncated run must return a deterministic prefix of the full ordering"
         );
     }
 }
