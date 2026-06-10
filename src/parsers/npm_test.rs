@@ -243,9 +243,17 @@ mod tests {
         let (_temp_file_1, path_1) = create_temp_package_json(license_obj_content);
         let package_data_1 = NpmParser::extract_first_package(&path_1);
 
-        assert_eq!(package_data_1.declared_license_expression, None);
-        assert_eq!(package_data_1.declared_license_expression_spdx, None);
-        assert_eq!(package_data_1.license_detections.len(), 0);
+        // The central post-extraction step derives the declared expression from
+        // the single serialized `license` object (BSD-3-Clause -> bsd-new).
+        assert_eq!(
+            package_data_1.declared_license_expression.as_deref(),
+            Some("bsd-new")
+        );
+        assert_eq!(
+            package_data_1.declared_license_expression_spdx.as_deref(),
+            Some("BSD-3-Clause")
+        );
+        assert_eq!(package_data_1.license_detections.len(), 1);
         assert!(package_data_1.extracted_license_statement.is_some());
 
         // Test deprecated licenses array

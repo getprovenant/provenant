@@ -54,9 +54,17 @@ mod tests {
             Some("https://example.com/demo".to_string())
         );
 
-        assert_eq!(package_data.declared_license_expression, None);
-        assert_eq!(package_data.declared_license_expression_spdx, None);
-        assert_eq!(package_data.license_detections.len(), 0);
+        // The central post-extraction step derives the declared expression from
+        // the single serialized `license` entry.
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert_eq!(package_data.license_detections.len(), 1);
         assert_eq!(
             package_data.description,
             Some("Demo Application\nA sample Maven project".to_string())
@@ -134,9 +142,17 @@ mod tests {
             Some("https://test.example.com".to_string())
         );
 
-        assert_eq!(package_data.declared_license_expression, None);
-        assert_eq!(package_data.declared_license_expression_spdx, None);
-        assert_eq!(package_data.license_detections.len(), 0);
+        // The central post-extraction step derives the declared expression from
+        // the single serialized `license` entry (MIT License -> mit).
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("mit")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+        assert_eq!(package_data.license_detections.len(), 1);
         assert_eq!(package_data.description, Some("Test Project".to_string()));
         assert_eq!(
             package_data.extracted_license_statement,

@@ -11,16 +11,16 @@
         "name": "Atif Aziz"
       }
     ],
-    "declared_license_expression": "gpl-2.0",
-    "declared_license_expression_spdx": "GPL-2.0-only",
+    "declared_license_expression": "unknown-license-reference",
+    "declared_license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
     "license_detections": [
       {
-        "license_expression": "gpl-2.0",
-        "license_expression_spdx": "GPL-2.0-only",
+        "license_expression": "unknown-license-reference",
+        "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
         "matches": [
           {
-            "license_expression": "gpl-2.0",
-            "license_expression_spdx": "GPL-2.0-only",
+            "license_expression": "unknown-license-reference",
+            "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
             "from_file": null,
             "start_line": 1,
             "end_line": 1,
@@ -29,10 +29,10 @@
             "matched_length": 6,
             "match_coverage": 100.0,
             "rule_relevance": 100,
-            "rule_identifier": "gpl-2.0_39.RULE",
-            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/gpl-2.0_39.RULE",
-            "matched_text": "GNU GENERAL PUBLIC LICENSE\nVersion 2",
-            "referenced_filenames": ["GNU GENERAL PUBLIC LICENSE\nVersion 2"]
+            "rule_identifier": "parser-declared-license",
+            "rule_url": null,
+            "matched_text": "GNU GENERAL PUBLIC LICENSE\nVersion 2\n",
+            "referenced_filenames": ["COPYING.txt"]
           }
         ],
         "identifier": null

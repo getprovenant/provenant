@@ -381,6 +381,19 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
     if package_data.declared_license_expression.is_some() {
         return;
     }
+    // A parser may leave `declared_license_expression` unset yet still emit
+    // `license_detections` (for example a detection that references license
+    // files beside the manifest, resolved later by
+    // `finalize_package_declared_license_references`). Never clobber those.
+    if !package_data.license_detections.is_empty() {
+        return;
+    }
+    // When the parser declared license/notice file references, those files own
+    // the declared expression via `finalize_package_declared_license_references`.
+    // Defer to it instead of detecting over the inline statement.
+    if !collect_declared_license_reference_filenames(package_data).is_empty() {
+        return;
+    }
     let Some(statement) = package_data
         .extracted_license_statement
         .as_deref()
@@ -394,10 +407,12 @@ fn populate_declared_license_fields(package_data: &mut PackageData) {
     // detection engine over the raw statement (e.g. "GPL (>= 2)", "Apache 2.0").
     //
     // The engine fallback is skipped for statements that look like multi-license
-    // composites: running free-text detection over them can silently drop
-    // operands it cannot match (e.g. "MIT AND Apache 2.0 AND BSD-3-Clause" loses
-    // MIT), which is worse than an honest unset. When SPDX parsing already
-    // failed on such a statement, leaving the field unset is the safer contract.
+    // composites or structured/multi-line dumps: running free-text detection over
+    // them can silently drop operands it cannot match (e.g.
+    // "MIT AND Apache 2.0 AND BSD-3-Clause" loses MIT) or latch onto an arbitrary
+    // fragment of a YAML/object dump, which is worse than an honest unset. When
+    // SPDX parsing already failed on such a statement, leaving the field unset is
+    // the safer contract.
     let (declared, declared_spdx, detections) = {
         let normalized = normalize_spdx_declared_license(Some(statement));
         if normalized.0.is_some() {
@@ -462,11 +477,20 @@ fn derive_holder_from_copyright(copyright: &str) -> String {
     copyright.to_string()
 }
 
-/// Returns true when a statement looks like it joins several licenses with a
-/// boolean or list separator. Such statements are unsafe to run through
-/// free-text detection as a declared-license fallback because unmatched
-/// operands are silently dropped.
+/// Returns true when a statement looks like it carries several licenses. Such
+/// statements are unsafe to run through free-text detection as a
+/// declared-license fallback because unmatched operands are silently dropped
+/// (e.g. "MIT AND Apache 2.0 AND BSD-3-Clause" loses MIT, and a YAML dump of two
+/// `licenses` entries detects only the last one).
+///
+/// A single-license multi-line dump (one license name plus its URL) is NOT
+/// treated as composite: free-text detection over it still yields the correct
+/// single expression.
 fn looks_like_multi_license_composite(statement: &str) -> bool {
+    if statement.contains('\n') {
+        return counts_multiple_license_entries(statement);
+    }
+
     let upper = format!(" {} ", statement.to_ascii_uppercase());
     if upper.contains(" AND ") || upper.contains(" OR ") {
         return true;
@@ -478,6 +502,29 @@ fn looks_like_multi_license_composite(statement: &str) -> bool {
         return true;
     }
     statement.contains('/') && !statement.contains("://")
+}
+
+/// Estimates whether a multi-line statement carries more than one license.
+///
+/// Parsers serialize structured `license`/`licenses` metadata to a YAML-style
+/// dump, so two or more list entries (lines starting with `-`) means several
+/// licenses. For bare multi-line statements with no list markers (e.g.
+/// "BSD-2-Clause\nGPL-2.0-or-later"), two or more non-empty lines means the
+/// same.
+fn counts_multiple_license_entries(statement: &str) -> bool {
+    let list_entries = statement
+        .lines()
+        .filter(|line| line.trim_start().starts_with('-'))
+        .count();
+    if list_entries > 0 {
+        return list_entries > 1;
+    }
+
+    statement
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count()
+        > 1
 }
 
 fn detect_holders(text: &str) -> Vec<String> {
@@ -1113,6 +1160,71 @@ mod tests {
     }
 
     #[test]
+    fn test_populate_declared_license_from_single_multiline_license_dump() {
+        // A serialized single `license` entry (name + url) is not composite and
+        // should yield the correct single expression.
+        let mut package = package_with(
+            Some(
+                "- license:\n    name: Apache-2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0.txt\n",
+            ),
+            None,
+            None,
+        );
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(
+            package.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert_eq!(package.license_detections.len(), 1);
+    }
+
+    #[test]
+    fn test_populate_declared_license_skips_multi_entry_license_dump() {
+        // A serialized list of several `licenses` entries is lossy under
+        // free-text detection (only the last is matched), so leave it unset.
+        let mut package = package_with(
+            Some("- type: MIT\n  url: x\n- type: Apache-2.0\n  url: y\n"),
+            None,
+            None,
+        );
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_preserves_existing_detections() {
+        // A parser that already built `license_detections` (e.g. referencing
+        // license files) must not have them clobbered by the fallback.
+        let mut package = package_with(Some("MIT"), None, None);
+        package.license_detections = vec![build_declared_license_detection(
+            &NormalizedDeclaredLicense::new("mit", "MIT"),
+            DeclaredLicenseMatchMetadata::single_line("LICENSE"),
+        )];
+        let original = package.license_detections.clone();
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert_eq!(package.license_detections, original);
+    }
+
+    #[test]
+    fn test_populate_declared_license_defers_to_license_file_references() {
+        // When the parser declared license-file references, those files own the
+        // declared expression via finalize; the fallback must not pre-empt them.
+        let mut package = package_with(Some("MIT"), None, None);
+        let mut extra_data = std::collections::HashMap::new();
+        extra_data.insert("license_files".to_string(), serde_json::json!(["LICENSE"]));
+        package.extra_data = Some(extra_data);
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.license_detections.is_empty());
+    }
+
+    #[test]
     fn test_populate_holder_from_copyright() {
         let mut package = package_with(None, Some("Copyright (c) 2024 Example Corporation"), None);
         populate_declared_license_and_holder(&mut package);
@@ -1159,6 +1271,17 @@ mod tests {
         assert!(!looks_like_multi_license_composite("Apache 2.0"));
         assert!(!looks_like_multi_license_composite(
             "https://example.com/LICENSE"
+        ));
+        // Single-license multi-line dumps are not composite.
+        assert!(!looks_like_multi_license_composite(
+            "- license:\n    name: Apache-2.0\n    url: https://example.com\n"
+        ));
+        // Multiple list entries / bare lines are composite.
+        assert!(looks_like_multi_license_composite(
+            "- type: MIT\n  url: x\n- type: Apache-2.0\n  url: y\n"
+        ));
+        assert!(looks_like_multi_license_composite(
+            "BSD-2-Clause\nGPL-2.0-or-later"
         ));
     }
 }
