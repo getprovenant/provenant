@@ -9,6 +9,8 @@ This skill drives the repeated compare-review-fix-rerun workflow used to verify 
 
 It covers the full scan pipeline: package and dependency extraction, license detection, copyright detection, author/holder cleanup, URL/email normalization, assembly behavior, and other common-profile output differences that show up during benchmark verification.
 
+This is the **parity-and-advantage vs ScanCode** lane. If instead you want to prove that a specific Provenant **code change** made the scanner faster (before/after on the same code, profile-first, regression-guarded), use [`benchmark-perf-change`](../benchmark-perf-change/SKILL.md) and its `xtask perf-ab` harness. Self before/after timings from that lane do **not** belong in `docs/BENCHMARKS.md`; this skill owns that file.
+
 ## Best fit
 
 Use this skill when the task sounds like:
