@@ -7,8 +7,24 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::compare_normalization::{
-    normalize_compare_path, normalize_text, package_fallback_identity, package_identity,
+    normalize_compare_path, normalize_license_expression, normalize_text,
+    package_fallback_identity, package_identity,
 };
+
+/// Package content fields whose values are compared by the
+/// package-field-content axis (see [`package_field_content_differences`]).
+///
+/// This axis is intentionally separate from the identity-only `package_data`
+/// metric: two outputs can agree on every package identity yet disagree on the
+/// declared-license/holder content those packages carry. The post-extraction
+/// declared-license/holder population hook fills exactly these fields, so a
+/// regression that drops or corrupts their content shows up here even though
+/// the identity bucket stays clean.
+pub const PACKAGE_CONTENT_FIELDS: &[&str] = &[
+    "declared_license_expression",
+    "declared_license_expression_spdx",
+    "holder",
+];
 
 pub const FILES_COUNT_SOURCE: &str = "files[]";
 pub const PACKAGES_COUNT_SOURCE: &str = "packages[]";
@@ -48,6 +64,15 @@ pub struct ValueDifferenceEntry {
 #[derive(Debug, Serialize, Clone)]
 pub struct ScalarDifferenceEntry {
     pub path: String,
+    pub scancode: Option<String>,
+    pub provenant: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct PackageFieldContentDifferenceEntry {
+    pub path: String,
+    pub identity: String,
+    pub field: String,
     pub scancode: Option<String>,
     pub provenant: Option<String>,
 }
@@ -360,6 +385,154 @@ pub fn raw_dependency_identities_by_path(value: &Value) -> BTreeMap<String, BTre
     output
 }
 
+/// Normalizes one package content field for comparison.
+///
+/// License expressions go through [`normalize_license_expression`] so operand
+/// order and trivial parenthesization differences do not register as deltas;
+/// other fields (e.g. `holder`) are whitespace-normalized only. Returns `None`
+/// for absent, null, or whitespace-only values so a missing field and an empty
+/// string compare equal.
+pub fn normalize_package_content_field(item: &Value, field: &str) -> Option<String> {
+    let raw = item.get(field).and_then(Value::as_str)?;
+    let normalized = match field {
+        "declared_license_expression" | "declared_license_expression_spdx" => {
+            normalize_license_expression(raw)
+        }
+        _ => normalize_text(raw),
+    };
+    (!normalized.is_empty()).then_some(normalized)
+}
+
+/// Collects every package row keyed by `(path, identity)` for the
+/// package-field-content axis, drawing from both top-level assembled
+/// `packages[]` and file-level `files[].package_data[]`.
+///
+/// Top-level packages are bucketed under the synthetic `<top-level>` path so
+/// they line up across the two compared outputs regardless of which file
+/// produced them; file-level rows keep their owning file path. Within a path,
+/// rows are keyed by package identity (purl, else the
+/// type|name|version|datasource_id fallback). When two rows in the same path
+/// share an identity, the first one wins, which is sufficient for the declared
+/// license/holder content this axis tracks.
+pub fn package_content_rows_by_key(value: &Value) -> BTreeMap<(String, String), Value> {
+    let mut output: BTreeMap<(String, String), Value> = BTreeMap::new();
+
+    for item in value
+        .get("packages")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let identity = package_identity(item)
+            .map(str::to_string)
+            .or_else(|| package_fallback_identity(item))
+            .unwrap_or_else(|| "<unknown>".to_string());
+        output
+            .entry(("<top-level>".to_string(), identity))
+            .or_insert_with(|| item.clone());
+    }
+
+    for file in value
+        .get("files")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let path = file
+            .get("path")
+            .and_then(Value::as_str)
+            .map(normalize_compare_path)
+            .unwrap_or_else(|| "<unknown>".to_string());
+        for item in file
+            .get("package_data")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            let identity = package_identity(item)
+                .map(str::to_string)
+                .or_else(|| package_fallback_identity(item))
+                .unwrap_or_else(|| "<unknown>".to_string());
+            output
+                .entry((path.clone(), identity))
+                .or_insert_with(|| item.clone());
+        }
+    }
+
+    output
+}
+
+/// Diffs the content of [`PACKAGE_CONTENT_FIELDS`] for packages matched by
+/// `(path, identity)` across the two outputs.
+///
+/// Only identity-matched rows are compared: rows present on a single side are
+/// an identity-level signal already surfaced by the `package_data` and
+/// top-level package buckets, so they are skipped here to keep this axis
+/// focused on content drift for packages both outputs agree exist.
+///
+/// Enabling this axis can surface pre-existing ScanCode-vs-Provenant
+/// declared-license deltas that predate the post-extraction population hook.
+/// That is expected and valuable signal, not necessarily a regression to fix.
+pub fn package_field_content_differences(
+    scancode: &Value,
+    provenant: &Value,
+) -> Vec<PackageFieldContentDifferenceEntry> {
+    let sc_rows = package_content_rows_by_key(scancode);
+    let pr_rows = package_content_rows_by_key(provenant);
+
+    let mut differences = Vec::new();
+    for ((path, identity), sc_item) in &sc_rows {
+        let Some(pr_item) = pr_rows.get(&(path.clone(), identity.clone())) else {
+            continue;
+        };
+        for field in PACKAGE_CONTENT_FIELDS {
+            let sc_value = normalize_package_content_field(sc_item, field);
+            let pr_value = normalize_package_content_field(pr_item, field);
+            if sc_value != pr_value {
+                differences.push(PackageFieldContentDifferenceEntry {
+                    path: path.clone(),
+                    identity: identity.clone(),
+                    field: (*field).to_string(),
+                    scancode: sc_value,
+                    provenant: pr_value,
+                });
+            }
+        }
+    }
+    differences
+}
+
+/// Self-consistent tally of a [`package_field_content_differences`] result.
+///
+/// Each difference entry lands in exactly one of the three buckets, so the
+/// invariant `missing_in_provenant + extra_in_provenant + value_vs_value_mismatch
+/// == sum(by_field.values()) == total entries` always holds. Value-vs-value
+/// mismatches (both sides non-null but different) get their own bucket instead
+/// of being counted into both directional totals, which keeps the summary
+/// numbers reconcilable by any downstream consumer.
+#[derive(Debug, Default, Clone)]
+pub struct PackageFieldContentTally {
+    pub missing_in_provenant: usize,
+    pub extra_in_provenant: usize,
+    pub value_vs_value_mismatch: usize,
+    pub by_field: BTreeMap<String, usize>,
+}
+
+pub fn tally_package_field_content_differences(
+    differences: &[PackageFieldContentDifferenceEntry],
+) -> PackageFieldContentTally {
+    let mut tally = PackageFieldContentTally::default();
+    for entry in differences {
+        *tally.by_field.entry(entry.field.clone()).or_insert(0) += 1;
+        match (entry.scancode.is_some(), entry.provenant.is_some()) {
+            (true, false) => tally.missing_in_provenant += 1,
+            (false, true) => tally.extra_in_provenant += 1,
+            _ => tally.value_vs_value_mismatch += 1,
+        }
+    }
+    tally
+}
+
 pub fn difference_entries(
     left: &BTreeSet<String>,
     right: &BTreeSet<String>,
@@ -555,4 +728,251 @@ pub fn tsv_row(
         delta.to_string(),
         notes.to_string(),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn entries_for(
+        differences: &[PackageFieldContentDifferenceEntry],
+        field: &str,
+    ) -> Vec<PackageFieldContentDifferenceEntry> {
+        differences
+            .iter()
+            .filter(|entry| entry.field == field)
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn normalize_package_content_field_treats_empty_and_absent_as_none() {
+        let item = json!({ "declared_license_expression": "", "holder": "   " });
+        assert_eq!(
+            normalize_package_content_field(&item, "declared_license_expression"),
+            None
+        );
+        assert_eq!(normalize_package_content_field(&item, "holder"), None);
+        assert_eq!(normalize_package_content_field(&item, "missing"), None);
+    }
+
+    #[test]
+    fn normalize_package_content_field_canonicalizes_license_expressions() {
+        let item = json!({ "declared_license_expression": "(MIT OR Apache-2.0)" });
+        assert_eq!(
+            normalize_package_content_field(&item, "declared_license_expression").as_deref(),
+            Some("Apache-2.0 OR MIT")
+        );
+    }
+
+    #[test]
+    fn package_field_content_reports_declared_license_gained() {
+        let scancode = json!({
+            "files": [{
+                "path": "metadata.rb",
+                "type": "file",
+                "package_data": [{
+                    "purl": "pkg:chef/example@1.0.0",
+                    "declared_license_expression": null
+                }]
+            }]
+        });
+        let provenant = json!({
+            "files": [{
+                "path": "metadata.rb",
+                "type": "file",
+                "package_data": [{
+                    "purl": "pkg:chef/example@1.0.0",
+                    "declared_license_expression": "apache-2.0",
+                    "declared_license_expression_spdx": "Apache-2.0"
+                }]
+            }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let license = entries_for(&differences, "declared_license_expression");
+        assert_eq!(license.len(), 1);
+        assert_eq!(license[0].scancode, None);
+        assert_eq!(license[0].provenant.as_deref(), Some("apache-2.0"));
+        assert_eq!(license[0].path, "metadata.rb");
+        assert_eq!(license[0].identity, "pkg:chef/example@1.0.0");
+        // The SPDX form gained content too.
+        assert_eq!(
+            entries_for(&differences, "declared_license_expression_spdx").len(),
+            1
+        );
+    }
+
+    #[test]
+    fn package_field_content_matches_top_level_packages_by_identity() {
+        let scancode = json!({
+            "packages": [{ "purl": "pkg:chef/example@1.0.0" }]
+        });
+        let provenant = json!({
+            "packages": [{ "purl": "pkg:chef/example@1.0.0", "holder": "Example Corp" }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let holder = entries_for(&differences, "holder");
+        assert_eq!(holder.len(), 1);
+        assert_eq!(holder[0].path, "<top-level>");
+        assert_eq!(holder[0].provenant.as_deref(), Some("Example Corp"));
+    }
+
+    #[test]
+    fn package_field_content_ignores_operand_order_only_differences() {
+        let scancode = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "MIT OR Apache-2.0"
+            }]
+        });
+        let provenant = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "Apache-2.0 OR MIT"
+            }]
+        });
+
+        assert!(package_field_content_differences(&scancode, &provenant).is_empty());
+    }
+
+    #[test]
+    fn package_field_content_skips_identity_only_present_on_one_side() {
+        let scancode = json!({
+            "packages": [{ "purl": "pkg:npm/only-scancode@1.0.0", "holder": "A" }]
+        });
+        let provenant = json!({
+            "packages": [{ "purl": "pkg:npm/only-provenant@1.0.0", "holder": "B" }]
+        });
+
+        // Identity-only deltas are surfaced by the package_data buckets, not here.
+        assert!(package_field_content_differences(&scancode, &provenant).is_empty());
+    }
+
+    #[test]
+    fn package_field_content_reports_value_mismatch_on_both_sides() {
+        let scancode = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "mit"
+            }]
+        });
+        let provenant = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "apache-2.0"
+            }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let license = entries_for(&differences, "declared_license_expression");
+        assert_eq!(license.len(), 1);
+        assert_eq!(license[0].scancode.as_deref(), Some("mit"));
+        assert_eq!(license[0].provenant.as_deref(), Some("apache-2.0"));
+    }
+
+    /// Asserts the tally invariant: every entry lands in exactly one of the
+    /// three directional buckets, so they sum to both the total entry count and
+    /// the sum of `by_field`.
+    fn assert_tally_reconciles(tally: &PackageFieldContentTally, total_entries: usize) {
+        let bucket_total =
+            tally.missing_in_provenant + tally.extra_in_provenant + tally.value_vs_value_mismatch;
+        assert_eq!(
+            bucket_total, total_entries,
+            "directional buckets must sum to the number of difference entries"
+        );
+        let by_field_total: usize = tally.by_field.values().sum();
+        assert_eq!(
+            bucket_total, by_field_total,
+            "directional buckets must reconcile with by_field"
+        );
+    }
+
+    #[test]
+    fn tally_reconciles_for_one_sided_missing() {
+        // Content present only on the ScanCode side -> missing_in_provenant.
+        let scancode = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0", "holder": "Example Corp" }]
+        });
+        let provenant = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0" }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.missing_in_provenant, 1);
+        assert_eq!(tally.extra_in_provenant, 0);
+        assert_eq!(tally.value_vs_value_mismatch, 0);
+        assert_tally_reconciles(&tally, differences.len());
+    }
+
+    #[test]
+    fn tally_reconciles_for_one_sided_extra() {
+        // Content present only on the Provenant side -> extra_in_provenant.
+        let scancode = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0" }]
+        });
+        let provenant = json!({
+            "packages": [{ "purl": "pkg:npm/example@1.0.0", "holder": "Example Corp" }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.missing_in_provenant, 0);
+        assert_eq!(tally.extra_in_provenant, 1);
+        assert_eq!(tally.value_vs_value_mismatch, 0);
+        assert_tally_reconciles(&tally, differences.len());
+    }
+
+    #[test]
+    fn tally_reconciles_for_value_vs_value_mismatch() {
+        // Both sides non-null but different -> its own bucket, NOT double-counted
+        // into the directional totals.
+        let scancode = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "mit"
+            }]
+        });
+        let provenant = json!({
+            "packages": [{
+                "purl": "pkg:npm/example@1.0.0",
+                "declared_license_expression": "apache-2.0"
+            }]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.missing_in_provenant, 0);
+        assert_eq!(tally.extra_in_provenant, 0);
+        assert_eq!(tally.value_vs_value_mismatch, 1);
+        assert_tally_reconciles(&tally, differences.len());
+    }
+
+    #[test]
+    fn tally_reconciles_for_mixed_entries() {
+        // A package gaining content (extra) plus a package with a value mismatch:
+        // the totals must still reconcile across all three buckets and by_field.
+        let scancode = json!({
+            "packages": [
+                { "purl": "pkg:npm/gains@1.0.0" },
+                { "purl": "pkg:npm/mismatch@1.0.0", "declared_license_expression": "mit" }
+            ]
+        });
+        let provenant = json!({
+            "packages": [
+                { "purl": "pkg:npm/gains@1.0.0", "holder": "Example Corp" },
+                { "purl": "pkg:npm/mismatch@1.0.0", "declared_license_expression": "apache-2.0" }
+            ]
+        });
+
+        let differences = package_field_content_differences(&scancode, &provenant);
+        let tally = tally_package_field_content_differences(&differences);
+        assert_eq!(tally.extra_in_provenant, 1);
+        assert_eq!(tally.value_vs_value_mismatch, 1);
+        assert_eq!(tally.missing_in_provenant, 0);
+        assert_tally_reconciles(&tally, differences.len());
+    }
 }
