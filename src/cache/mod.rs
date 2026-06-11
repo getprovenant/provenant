@@ -12,7 +12,7 @@ pub(crate) mod locking;
 
 pub use config::{CACHE_DIR_ENV_VAR, CacheConfig, DEFAULT_CACHE_DIR_NAME};
 pub use incremental::{
-    IncrementalManifest, IncrementalManifestEntry, incremental_manifest_path,
+    FileStateFingerprint, IncrementalManifest, IncrementalManifestEntry, incremental_manifest_path,
     load_incremental_manifest, manifest_entry_matches_path, metadata_fingerprint,
     write_incremental_manifest,
 };

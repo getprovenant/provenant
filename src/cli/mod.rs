@@ -344,8 +344,9 @@ pub struct ScanArgs {
 
     /// Trust size + mtime for incremental reuse, skipping the content re-hash of
     /// unchanged files. Speeds up warm incremental re-scans at the cost of
-    /// missing the rare edit that keeps the same size and mtime tick. Default
-    /// off keeps the paranoid full-hash check so scans stay reproducible.
+    /// missing the rare edit that keeps the same size and mtime tick. Such a miss
+    /// is not permanent: the next scan without this flag re-hashes and detects it.
+    /// Default off keeps the paranoid full-hash check so scans stay reproducible.
     #[arg(long = "cache-trust-mtime", requires = "incremental")]
     pub cache_trust_mtime: bool,
 

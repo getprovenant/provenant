@@ -485,6 +485,13 @@ than catching that rare same-tick, same-size edit (for example, fast local
 iteration on large trees). A genuinely changed size or mtime is still detected as
 changed in either mode.
 
+The miss does not become permanent: when a trust-mtime run reuses a stale result,
+the rewritten manifest keeps the hash of the bytes that produced that result rather
+than re-hashing the current file. A later run without `--cache-trust-mtime`
+therefore re-hashes, sees the hash no longer matches, and re-scans the file. In
+other words, switching back to the default paranoid mode recovers correct results
+on the next scan.
+
 ### 17. "I want policy-aware license review"
 
 ```sh
