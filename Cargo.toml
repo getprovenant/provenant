@@ -1,6 +1,6 @@
 [package]
 name = "provenant-cli"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 # Auto-synced from rust-toolchain.toml (major.minor of the pinned channel) by
 # scripts/check_release_version_sync.sh. Do not edit by hand.
