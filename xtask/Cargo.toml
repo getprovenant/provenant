@@ -57,6 +57,10 @@ path = "src/bin/generate_output_field_reference.rs"
 name = "generate-legalese-artifact"
 path = "src/bin/generate_legalese_artifact/main.rs"
 
+[[bin]]
+name = "classify-rule-overmatch"
+path = "src/bin/classify_rule_overmatch.rs"
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
