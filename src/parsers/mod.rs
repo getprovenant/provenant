@@ -17,6 +17,7 @@ mod arch;
 mod arch_scan_test;
 #[cfg(test)]
 mod arch_test;
+pub(crate) mod archive;
 mod autotools;
 #[cfg(test)]
 mod autotools_test;
@@ -184,6 +185,11 @@ mod huggingface;
 mod huggingface_scan_test;
 #[cfg(test)]
 mod huggingface_test;
+mod ivy;
+#[cfg(test)]
+mod ivy_scan_test;
+#[cfg(test)]
+mod ivy_test;
 mod julia;
 #[cfg(test)]
 mod julia_test;
@@ -659,6 +665,7 @@ pub use self::hex_lock::HexLockParser;
 pub use self::huggingface::{
     HuggingfaceConfigParser, HuggingfaceModelCardParser, HuggingfaceModelIndexParser,
 };
+pub use self::ivy::IvyXmlParser;
 pub use self::julia::{JuliaManifestTomlParser, JuliaProjectTomlParser};
 pub use self::maven::MavenParser;
 pub use self::meson::MesonParser;
@@ -666,10 +673,10 @@ pub use self::microsoft_update_manifest::MicrosoftUpdateManifestParser;
 pub use self::misc::{
     AndroidLibraryRecognizer, AppleDmgRecognizer, Axis2MarRecognizer, Axis2ModuleXmlRecognizer,
     CabArchiveRecognizer, ChromeCrxRecognizer, InstallShieldRecognizer, IosIpaRecognizer,
-    IsoImageRecognizer, IvyXmlRecognizer, JBossSarRecognizer, JBossServiceXmlRecognizer,
-    JavaEarAppXmlRecognizer, JavaEarRecognizer, JavaJarRecognizer, JavaWarRecognizer,
-    JavaWarWebXmlRecognizer, MeteorPackageRecognizer, MozillaXpiRecognizer, NsisRecognizer,
-    SharArchiveRecognizer, SquashfsRecognizer,
+    IsoImageRecognizer, JBossSarRecognizer, JBossServiceXmlRecognizer, JavaEarAppXmlRecognizer,
+    JavaEarRecognizer, JavaJarRecognizer, JavaWarRecognizer, JavaWarWebXmlRecognizer,
+    MeteorPackageRecognizer, MozillaXpiRecognizer, NsisRecognizer, SharArchiveRecognizer,
+    SquashfsRecognizer,
 };
 pub use self::nix::{NixDefaultParser, NixFlakeLockParser, NixFlakeParser};
 pub use self::npm::NpmParser;
@@ -964,6 +971,7 @@ register_package_handlers! {
         HuggingfaceModelCardParser,
         HuggingfaceConfigParser,
         HuggingfaceModelIndexParser,
+        IvyXmlParser,
         JuliaManifestTomlParser,
         JuliaProjectTomlParser,
         MavenParser,
@@ -1033,7 +1041,6 @@ register_package_handlers! {
         InstallShieldRecognizer,
         IosIpaRecognizer,
         IsoImageRecognizer,
-        IvyXmlRecognizer,
         JavaEarAppXmlRecognizer,
         JavaEarRecognizer,
         JavaJarRecognizer,

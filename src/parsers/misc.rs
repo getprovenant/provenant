@@ -11,15 +11,18 @@
 //!
 //! # Implementation Notes
 //!
-//! - All recognizers use the `file_recognizer!` macro to reduce boilerplate
-//! - Recognizers return minimal PackageData with only package_type and datasource_id set
+//! - Most recognizers use the `file_recognizer!` macro to reduce boilerplate and
+//!   return minimal PackageData with only package_type and datasource_id set
 //! - These correspond to Python's misc.py NonAssemblableDatafileHandler classes
-//! - No actual parsing is performed (Python also has `# TODO: parse me!!!`)
+//! - The JVM-archive recognizers (`.jar`/`.war`/`.aar`) are an exception: they
+//!   perform bounded ZIP introspection of `META-INF/MANIFEST.MF` and
+//!   `META-INF/maven/**/pom.properties` to recover real package metadata
 //! - Some recognizers use magic byte detection for disambiguation (Squashfs, NSIS, InstallShield)
 
 use std::path::Path;
 
 use super::PackageParser;
+use super::maven::{JvmArchiveKind, extract_jvm_archive};
 use crate::models::{DatasourceId, PackageData, PackageType};
 use crate::utils::magic;
 
@@ -59,26 +62,39 @@ macro_rules! file_recognizer {
 
 // Java Archives
 
-file_recognizer!(
-    JavaJarRecognizer,
-    PackageType::Jar,
-    DatasourceId::JavaJar,
-    |path: &Path| path.extension().and_then(|e| e.to_str()) == Some("jar")
-);
+/// `.jar` archive introspector.
+///
+/// Reads `META-INF/MANIFEST.MF` and `META-INF/maven/**/pom.properties` from the
+/// archive via the shared bounded-ZIP reader and falls back to the bare
+/// recognizer row when no metadata can be recovered.
+pub struct JavaJarRecognizer;
 
-file_recognizer!(
-    IvyXmlRecognizer,
-    PackageType::Ivy,
-    DatasourceId::AntIvyXml,
-    |path: &Path| path.to_str().is_some_and(|p| p.ends_with("/ivy.xml"))
-);
+impl PackageParser for JavaJarRecognizer {
+    const PACKAGE_TYPE: PackageType = PackageType::Jar;
 
-file_recognizer!(
-    JavaWarRecognizer,
-    PackageType::War,
-    DatasourceId::JavaWarArchive,
-    |path: &Path| path.extension().and_then(|e| e.to_str()) == Some("war")
-);
+    fn is_match(path: &Path) -> bool {
+        path.extension().and_then(|e| e.to_str()) == Some("jar")
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        extract_jvm_archive(path, JvmArchiveKind::Jar)
+    }
+}
+
+/// `.war` web-application archive introspector. See [`JavaJarRecognizer`].
+pub struct JavaWarRecognizer;
+
+impl PackageParser for JavaWarRecognizer {
+    const PACKAGE_TYPE: PackageType = PackageType::War;
+
+    fn is_match(path: &Path) -> bool {
+        path.extension().and_then(|e| e.to_str()) == Some("war")
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        extract_jvm_archive(path, JvmArchiveKind::War)
+    }
+}
 
 file_recognizer!(
     JavaWarWebXmlRecognizer,
@@ -159,12 +175,20 @@ file_recognizer!(
 
 // Mobile Apps
 
-file_recognizer!(
-    AndroidLibraryRecognizer,
-    PackageType::AndroidLib,
-    DatasourceId::AndroidAarLibrary,
-    |path: &Path| path.extension().and_then(|e| e.to_str()) == Some("aar")
-);
+/// `.aar` Android library archive introspector. See [`JavaJarRecognizer`].
+pub struct AndroidLibraryRecognizer;
+
+impl PackageParser for AndroidLibraryRecognizer {
+    const PACKAGE_TYPE: PackageType = PackageType::AndroidLib;
+
+    fn is_match(path: &Path) -> bool {
+        path.extension().and_then(|e| e.to_str()) == Some("aar")
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        extract_jvm_archive(path, JvmArchiveKind::Aar)
+    }
+}
 
 file_recognizer!(
     MozillaXpiRecognizer,
@@ -265,7 +289,6 @@ pub(crate) static RECOGNIZER_METADATA: &[super::metadata::ParserMetadata] = &[
         description: "Misc file type recognizers (JAR, WAR, EAR, AAR, iOS, Chrome, Mozilla, installers, disk images, etc.)",
         file_patterns: &[
             "**/*.jar",
-            "**/ivy.xml",
             "**/*.war",
             "**/WEB-INF/web.xml",
             "**/*.ear",

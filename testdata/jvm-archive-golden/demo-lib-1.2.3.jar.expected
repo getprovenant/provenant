@@ -1,0 +1,18 @@
+[
+  {
+    "type": "maven",
+    "namespace": "org.example",
+    "name": "demo-lib",
+    "version": "1.2.3",
+    "primary_language": "Java",
+    "parties": [
+      {
+        "type": "organization",
+        "role": "vendor",
+        "name": "Example Org"
+      }
+    ],
+    "datasource_id": "java_jar",
+    "purl": "pkg:maven/org.example/demo-lib@1.2.3"
+  }
+]

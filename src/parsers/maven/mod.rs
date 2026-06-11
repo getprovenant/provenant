@@ -21,10 +21,17 @@
 //! - Multiple license support (combined with " OR ")
 
 mod coordinates;
+mod jar;
 mod manifest;
 mod pom;
 mod properties;
 
+pub use self::jar::{JvmArchiveKind, extract_jvm_archive};
+
+#[cfg(test)]
+mod jar_scan_test;
+#[cfg(test)]
+mod jar_test;
 #[cfg(test)]
 mod manifest_test;
 #[cfg(test)]

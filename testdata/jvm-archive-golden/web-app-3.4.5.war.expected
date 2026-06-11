@@ -1,0 +1,12 @@
+[
+  {
+    "type": "maven",
+    "namespace": "com.example.web",
+    "name": "web-app",
+    "version": "3.4.5",
+    "primary_language": "Java",
+    "parties": [],
+    "datasource_id": "java_war_archive",
+    "purl": "pkg:maven/com.example.web/web-app@3.4.5"
+  }
+]
