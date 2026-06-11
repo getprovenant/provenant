@@ -6,7 +6,7 @@ mod tests {
     use super::super::assemble;
     use crate::models::{
         DatasourceId, Dependency, FileInfo, FileType, Package, PackageData, PackageType,
-        Sha256Digest,
+        PackageUid, Sha256Digest,
     };
     use serde_json::json;
     use std::collections::HashMap;
@@ -3921,5 +3921,176 @@ mod tests {
             2,
             "Expected database file to reference both packages"
         );
+    }
+
+    /// Builds a fingerprint of an assembly run that is independent of the
+    /// random UUID suffix baked into every `PackageUid`, but still sensitive to
+    /// assembler-order-dependent decisions such as which package claims a file.
+    ///
+    /// Each `PackageUid` is resolved to its owning package's stable identity
+    /// (purl + name + version + datafile_paths + datasource_ids) so that two runs
+    /// producing the same logical assignment compare equal, while a run that
+    /// assigns a file to a different package (the symptom of nondeterministic
+    /// assembler order) compares unequal.
+    fn assembly_fingerprint(files: &mut [FileInfo]) -> String {
+        use std::collections::HashMap;
+
+        let result = assemble(files);
+
+        let mut uid_to_identity: HashMap<String, String> = HashMap::new();
+        for package in &result.packages {
+            let identity = format!(
+                "purl={:?}|name={:?}|version={:?}|datafiles={:?}|datasources={:?}",
+                package.purl,
+                package.name,
+                package.version,
+                package.datafile_paths,
+                package
+                    .datasource_ids
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>(),
+            );
+            uid_to_identity.insert(package.package_uid.to_string(), identity);
+        }
+
+        let resolve = |uid: &PackageUid| -> String {
+            uid_to_identity
+                .get(uid.as_ref())
+                .cloned()
+                .unwrap_or_else(|| format!("<unknown:{uid}>"))
+        };
+
+        let mut fingerprint = String::new();
+
+        let mut package_lines: Vec<String> = uid_to_identity.values().cloned().collect();
+        package_lines.sort();
+        fingerprint.push_str("PACKAGES\n");
+        for line in package_lines {
+            fingerprint.push_str(&line);
+            fingerprint.push('\n');
+        }
+
+        fingerprint.push_str("DEPENDENCIES\n");
+        let mut dep_lines: Vec<String> = result
+            .dependencies
+            .iter()
+            .map(|dep| {
+                format!(
+                    "purl={:?}|req={:?}|scope={:?}|datafile={}|datasource={}|for={}",
+                    dep.purl,
+                    dep.extracted_requirement,
+                    dep.scope,
+                    dep.datafile_path,
+                    dep.datasource_id,
+                    dep.for_package_uid
+                        .as_ref()
+                        .map(&resolve)
+                        .unwrap_or_else(|| "<none>".to_string()),
+                )
+            })
+            .collect();
+        dep_lines.sort();
+        for line in dep_lines {
+            fingerprint.push_str(&line);
+            fingerprint.push('\n');
+        }
+
+        fingerprint.push_str("FILE_OWNERSHIP\n");
+        let mut file_lines: Vec<String> = files
+            .iter()
+            .map(|file| {
+                let mut owners: Vec<String> = file.for_packages.iter().map(&resolve).collect();
+                owners.sort();
+                format!("{} -> {:?}", file.path, owners)
+            })
+            .collect();
+        file_lines.sort();
+        for line in file_lines {
+            fingerprint.push_str(&line);
+            fingerprint.push('\n');
+        }
+
+        fingerprint
+    }
+
+    /// Regression guard for nondeterministic per-directory assembler order
+    /// (issue #1026, bug 1). A polyglot directory contains manifests from
+    /// multiple ecosystems, so the set of active assembler configs has more than
+    /// one member. Iterating that set in `HashSet` order made file ownership
+    /// nondeterministic run-to-run; this asserts the resolved assignment is
+    /// stable across many repeated runs.
+    #[test]
+    fn test_assemble_polyglot_directory_is_deterministic() {
+        let build_files = || {
+            let mut npm = create_test_file_info(
+                "repo/package.json",
+                DatasourceId::NpmPackageJson,
+                Some("pkg:npm/poly@1.0.0"),
+                Some("poly"),
+                Some("1.0.0"),
+                vec![create_test_dependency(
+                    "pkg:npm/left-pad",
+                    Some("^1.0.0"),
+                    None,
+                )],
+            );
+            npm.package_data[0].package_type = Some(PackageType::Npm);
+
+            let mut cargo = create_test_file_info(
+                "repo/Cargo.toml",
+                DatasourceId::CargoToml,
+                Some("pkg:cargo/poly-rs@2.0.0"),
+                Some("poly-rs"),
+                Some("2.0.0"),
+                vec![create_test_dependency("pkg:cargo/serde", Some("1"), None)],
+            );
+            cargo.package_data[0].package_type = Some(PackageType::Cargo);
+
+            let mut composer = create_test_file_info(
+                "repo/composer.json",
+                DatasourceId::PhpComposerJson,
+                Some("pkg:composer/poly-php@3.0.0"),
+                Some("poly-php"),
+                Some("3.0.0"),
+                vec![],
+            );
+            composer.package_data[0].package_type = Some(PackageType::Composer);
+
+            vec![npm, cargo, composer]
+        };
+
+        // The active config keys must be visited in a stable, sorted order. A
+        // `HashSet` here would order keys by hash seeding, breaking this.
+        let files = build_files();
+        let file_indices: Vec<usize> = (0..files.len()).collect();
+        let keys = super::super::active_config_keys(
+            &files,
+            &file_indices,
+            &super::super::ASSEMBLER_LOOKUP,
+        );
+        let collected: Vec<DatasourceId> = keys.iter().copied().collect();
+        let mut sorted = collected.clone();
+        sorted.sort();
+        assert!(
+            collected.len() >= 2,
+            "polyglot fixture should activate multiple assemblers, got {collected:?}"
+        );
+        assert_eq!(
+            collected, sorted,
+            "active assembler config keys must be visited in deterministic sorted order"
+        );
+
+        let mut baseline_files = build_files();
+        let baseline = assembly_fingerprint(&mut baseline_files);
+
+        for run in 0..50 {
+            let mut files = build_files();
+            let fingerprint = assembly_fingerprint(&mut files);
+            assert_eq!(
+                fingerprint, baseline,
+                "assembly output diverged on run {run}; per-directory assembler order is not deterministic"
+            );
+        }
     }
 }

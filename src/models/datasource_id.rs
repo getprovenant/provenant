@@ -25,7 +25,27 @@ use strum::{EnumCount, EnumIter};
 /// Variants serialize as PascalCase in the cache/spill format (e.g., `NpmPackageJson`).
 /// For JSON output, use `as_str()` / `Display` which returns snake_case strings
 /// matching the Python ScanCode Toolkit values (e.g., `npm_package_json`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, EnumCount, EnumIter)]
+///
+/// # Ordering
+///
+/// `PartialOrd`/`Ord` are derived and therefore follow **declaration order**. The assembly
+/// stage iterates active assembler configs via a `BTreeSet<DatasourceId>`, so adding or
+/// reordering variants changes the per-directory assembler execution sequence in polyglot
+/// directories.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    EnumCount,
+    EnumIter,
+)]
 pub enum DatasourceId {
     // ── About/README/OS ──
     AboutFile,

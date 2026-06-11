@@ -28,7 +28,7 @@ mod swift_merge;
 mod topology;
 mod windows_update_merge;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
@@ -105,17 +105,7 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
     let topology_plan = topology::TopologyPlan::build(files, &dir_files);
 
     for file_indices in dir_files.values() {
-        let mut groups: HashSet<DatasourceId> = HashSet::new();
-
-        for &idx in file_indices {
-            for pkg_data in &files[idx].package_data {
-                if let Some(dsid) = pkg_data.datasource_id
-                    && let Some(&config_key) = assembler_lookup.get(&dsid)
-                {
-                    groups.insert(config_key);
-                }
-            }
-        }
+        let groups = active_config_keys(files, file_indices, assembler_lookup);
 
         for &config_key in &groups {
             let config = assembler_config_lookup
@@ -159,19 +149,23 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
             nested_merge::assemble_nested_patterns(files, config)
         {
             let package_uid = pkg.package_uid.clone();
-            let purl = pkg.purl.clone();
-            let removed_package_uids: Vec<PackageUid> = packages
+
+            // The nested merge subsumes exactly the per-directory packages that were
+            // previously created for the files it consumed. Those packages are recorded
+            // on the affected files' `for_packages`, so key dedup off those specific UIDs
+            // rather than a blanket purl match (which would also delete unrelated packages,
+            // including every purl-less package scan-wide when the merged purl is `None`).
+            let removed_package_uids: HashSet<PackageUid> = affected_indices
                 .iter()
-                .filter(|p| p.purl == purl)
-                .map(|p| p.package_uid.clone())
+                .flat_map(|idx| files[*idx].for_packages.iter().cloned())
+                .filter(|uid| *uid != package_uid)
                 .collect();
 
-            packages.retain(|p| p.purl != purl);
+            packages.retain(|p| !removed_package_uids.contains(&p.package_uid));
             dependencies.retain(|d| {
-                d.for_package_uid.as_ref() != Some(&package_uid)
-                    && !removed_package_uids
-                        .iter()
-                        .any(|old_uid| d.for_package_uid.as_ref() == Some(old_uid))
+                d.for_package_uid
+                    .as_ref()
+                    .is_none_or(|old_uid| !removed_package_uids.contains(old_uid))
             });
 
             for idx in &affected_indices {
@@ -364,6 +358,31 @@ pub(super) fn should_skip_placeholder_only_cocoapods_podspec(
             .and_then(|data| data.get("dynamic_identity_placeholders"))
             .and_then(|value| value.as_bool())
             == Some(true)
+}
+
+/// Collect the assembler config keys active in a directory in a deterministic
+/// order.
+///
+/// The keys are gathered into a `BTreeSet` so iteration order is stable across
+/// runs and processes. A `HashSet` here made per-directory assembler execution
+/// order depend on hash seeding, which produced run-to-run nondeterministic
+/// output in polyglot directories (issue #1026).
+fn active_config_keys(
+    files: &[FileInfo],
+    file_indices: &[usize],
+    assembler_lookup: &HashMap<DatasourceId, DatasourceId>,
+) -> BTreeSet<DatasourceId> {
+    let mut groups: BTreeSet<DatasourceId> = BTreeSet::new();
+    for &idx in file_indices {
+        for pkg_data in &files[idx].package_data {
+            if let Some(dsid) = pkg_data.datasource_id
+                && let Some(&config_key) = assembler_lookup.get(&dsid)
+            {
+                groups.insert(config_key);
+            }
+        }
+    }
+    groups
 }
 
 /// Group file indices by their parent directory path.
