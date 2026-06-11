@@ -648,6 +648,15 @@ fn load_native_scan_session(
             previous_manifest.as_ref(),
             cache_config.trust_mtime(),
         );
+        // Only files that were actually reused may carry their stored hash
+        // forward; freshly re-scanned files must re-hash their current bytes so
+        // the manifest converges. A reused and a re-scanned file can share the
+        // same fingerprint after a silent same-size/same-mtime edit, so the
+        // fingerprint alone cannot tell them apart.
+        let reused_relative_paths: std::collections::HashSet<String> = reused_files
+            .iter()
+            .map(|file| normalize_relative_scan_path(Path::new(&file.path), Path::new(&scan_path)))
+            .collect();
         result.files =
             merge_incremental_file_results(result.files, reused_files, &ordered_file_paths);
 
@@ -657,6 +666,7 @@ fn load_native_scan_session(
             &result.files,
             &options_fingerprint,
             previous_manifest.as_ref(),
+            &reused_relative_paths,
         );
         write_incremental_manifest(cache_config.root_dir(), &manifest_path, &manifest)?;
     }
@@ -828,6 +838,7 @@ fn build_incremental_manifest(
     files: &[FileInfo],
     options_fingerprint: &str,
     previous_manifest: Option<&IncrementalManifest>,
+    reused_relative_paths: &std::collections::HashSet<String>,
 ) -> IncrementalManifest {
     let files_by_relative_path: std::collections::HashMap<_, _> = files
         .iter()
@@ -847,17 +858,24 @@ fn build_incremental_manifest(
             let state = metadata_fingerprint(metadata)?;
             let file_info = files_by_relative_path.get(&relative_path)?.clone();
             // `content_sha256` must describe the bytes that produced `file_info`.
-            // For a reused entry under `--cache-trust-mtime`, `file_info` is the
+            // For an entry reused via `--cache-trust-mtime`, `file_info` is the
             // *previous* scan result, so re-reading the current file here would
             // store a hash for bytes that do not match the stored result. That
             // poisons the manifest: a later paranoid rescan would re-hash, match
             // the freshly written hash, and reuse the stale result forever.
-            // Carry over the previous entry's hash when its fingerprint still
-            // matches; this is a no-op for paranoid reuse (same bytes, same hash)
-            // and lets paranoid mode self-heal after a trust-mtime miss.
+            // Carry over the previous entry's hash only for actually-reused
+            // paths; this is a no-op for paranoid reuse (same bytes, same hash)
+            // and lets paranoid mode self-heal after a trust-mtime miss. A
+            // freshly re-scanned file must NOT carry over: it can share the same
+            // fingerprint as a reused one, and carrying over the old hash would
+            // make every later paranoid run re-scan it forever without the
+            // manifest ever converging.
             let content_sha256 = file_info
                 .sha256
                 .or_else(|| {
+                    if !reused_relative_paths.contains(&relative_path) {
+                        return None;
+                    }
                     previous_manifest
                         .and_then(|manifest| manifest.entry(&relative_path))
                         .filter(|entry| entry.state == state)
@@ -910,6 +928,10 @@ mod incremental_manifest_tests {
     use super::*;
     use crate::cache::FileStateFingerprint;
     use crate::models::Sha256Digest;
+
+    fn reused_paths(paths: &[&str]) -> std::collections::HashSet<String> {
+        paths.iter().map(|p| p.to_string()).collect()
+    }
 
     fn file_info_without_hash(path: &Path, size: u64) -> FileInfo {
         FileInfo::new(
@@ -985,9 +1007,16 @@ mod incremental_manifest_tests {
 
         let collected = vec![(file_path.clone(), metadata.clone())];
         let files = vec![file_info_without_hash(&file_path, metadata.len())];
+        let reused = reused_paths(&["f.txt"]);
 
-        let manifest =
-            build_incremental_manifest(scan_root, &collected, &files, "opts", Some(&previous));
+        let manifest = build_incremental_manifest(
+            scan_root,
+            &collected,
+            &files,
+            "opts",
+            Some(&previous),
+            &reused,
+        );
 
         let entry = manifest.entry("f.txt").expect("entry");
         assert_eq!(
@@ -1010,7 +1039,14 @@ mod incremental_manifest_tests {
         let collected = vec![(file_path.clone(), metadata.clone())];
         let files = vec![file_info_without_hash(&file_path, metadata.len())];
 
-        let manifest = build_incremental_manifest(scan_root, &collected, &files, "opts", None);
+        let manifest = build_incremental_manifest(
+            scan_root,
+            &collected,
+            &files,
+            "opts",
+            None,
+            &reused_paths(&[]),
+        );
 
         let entry = manifest.entry("f.txt").expect("entry");
         assert_eq!(entry.content_sha256, current_hash);
@@ -1048,8 +1084,14 @@ mod incremental_manifest_tests {
         // keep the old hash rather than re-reading and storing the current hash.
         let collected = vec![(file_path.clone(), metadata.clone())];
         let reused = vec![file_info_without_hash(&file_path, metadata.len())];
-        let manifest =
-            build_incremental_manifest(scan_root, &collected, &reused, "opts", Some(&previous));
+        let manifest = build_incremental_manifest(
+            scan_root,
+            &collected,
+            &reused,
+            "opts",
+            Some(&previous),
+            &reused_paths(&["f.txt"]),
+        );
         let entry = manifest.entry("f.txt").expect("entry");
         assert_eq!(
             entry.content_sha256, old_hash,
@@ -1061,6 +1103,57 @@ mod incremental_manifest_tests {
             !manifest_entry_matches_path(entry, &file_path, &metadata, false)
                 .expect("paranoid compare"),
             "paranoid rescan must detect the silent change instead of serving stale results"
+        );
+    }
+
+    // A freshly re-scanned file (NOT in the reused set) must store its CURRENT
+    // hash even when a previous manifest entry shares the same fingerprint. If it
+    // carried over the old hash instead, every later paranoid run would re-hash,
+    // see a mismatch, re-scan, and re-write the old hash again -- the manifest
+    // would never converge for that file. This guards that the carry-over is
+    // gated on actual reuse, not on the fingerprint alone.
+    #[test]
+    fn test_build_manifest_uses_current_hash_for_freshly_scanned_file() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let scan_root = temp_dir.path();
+        let file_path = scan_root.join("f.txt");
+        fs::write(&file_path, b"new bytes").expect("write file");
+        let metadata = fs::metadata(&file_path).expect("metadata");
+        let state = metadata_fingerprint(&metadata).expect("fingerprint");
+        let old_hash = calculate_sha256(b"old bytes");
+        let current_hash = calculate_sha256(b"new bytes");
+        assert_ne!(old_hash, current_hash);
+
+        // Previous entry shares the fingerprint but the file was re-scanned now.
+        let previous = previous_manifest_with_hash(
+            "f.txt",
+            state,
+            old_hash,
+            file_info_without_hash(&file_path, metadata.len()),
+        );
+
+        let collected = vec![(file_path.clone(), metadata.clone())];
+        let files = vec![file_info_without_hash(&file_path, metadata.len())];
+        // Empty reused set: this path was re-scanned, not reused.
+        let manifest = build_incremental_manifest(
+            scan_root,
+            &collected,
+            &files,
+            "opts",
+            Some(&previous),
+            &reused_paths(&[]),
+        );
+
+        let entry = manifest.entry("f.txt").expect("entry");
+        assert_eq!(
+            entry.content_sha256, current_hash,
+            "a re-scanned file must store its current hash so the manifest converges"
+        );
+        // The manifest is now self-consistent: a later paranoid check matches.
+        assert!(
+            manifest_entry_matches_path(entry, &file_path, &metadata, false)
+                .expect("paranoid compare"),
+            "after re-scan the manifest must stop flagging the unchanged file"
         );
     }
 }
