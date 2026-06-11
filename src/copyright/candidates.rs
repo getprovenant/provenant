@@ -79,8 +79,11 @@ const ENCODED_CHAR_RATIO: f64 = 0.90;
 /// Check whether a long line contains copyright-relevant content.
 ///
 /// Returns `true` if the line has strong copyright indicators anywhere in it.
-/// Strong indicators are: "opyr"/"opyl"/"auth" (case-insensitive), or "(c)"
-/// followed by a digit (distinguishes copyright `(c)2024` from code `(c){var`).
+/// Strong indicators are: "opyr"/"opyl"/"auth" (case-insensitive), the `©`
+/// copyright sign (U+00A9), or "(c)" followed by a digit (distinguishes
+/// copyright `(c)2024` from code `(c){var`). `©` mirrors ScanCode's
+/// `statement_markers`, so a minified line carrying only a `©` notice past the
+/// length cap is still treated as copyright-relevant.
 ///
 /// Uses byte-level search to avoid allocating a lowercase copy of potentially
 /// huge (100KB+) lines.
@@ -89,7 +92,21 @@ fn has_copyright_indicators(line: &str) -> bool {
     contains_ascii_ci(bytes, b"opyr")
         || contains_ascii_ci(bytes, b"opyl")
         || contains_ascii_ci(bytes, b"auth")
+        || contains_bytes(bytes, COPYRIGHT_SIGN_UTF8)
         || has_c_sign_before_year(bytes)
+}
+
+/// UTF-8 encoding of `©` (U+00A9 COPYRIGHT SIGN).
+const COPYRIGHT_SIGN_UTF8: &[u8] = &[0xC2, 0xA9];
+
+/// Exact (case-sensitive) byte-substring search without allocation.
+fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() || needle.len() > haystack.len() {
+        return needle.is_empty();
+    }
+    haystack
+        .windows(needle.len())
+        .any(|window| window == needle)
 }
 
 /// Check whether a long or obvious-code line should still be treated as copyright-relevant.
@@ -102,6 +119,7 @@ fn has_long_line_copyright_indicators(line: &str) -> bool {
     contains_ascii_ci(bytes, b"opyr")
         || contains_ascii_ci(bytes, b"opyl")
         || has_explicit_author_marker(bytes)
+        || contains_bytes(bytes, COPYRIGHT_SIGN_UTF8)
         || has_c_sign_before_year(bytes)
 }
 
@@ -1347,6 +1365,22 @@ mod tests {
         assert!(!has_copyright_indicators(
             "just some random @ text with right margin"
         ));
+    }
+
+    #[test]
+    fn test_indicators_copyright_sign() {
+        assert!(has_copyright_indicators("\u{a9} 2024 Acme Inc."));
+        assert!(has_long_line_copyright_indicators("\u{a9} 2024 Acme Inc."));
+    }
+
+    #[test]
+    fn test_long_line_with_only_copyright_sign_is_not_skipped() {
+        // A minified line past MAX_LINE_LENGTH whose only copyright signal is `©`
+        // must still be collected as a candidate.
+        let filler = "a;b=c+d;".repeat(400); // > MAX_LINE_LENGTH bytes
+        let line = format!("{filler}/*\u{a9} 2024 Acme Inc.*/{filler}");
+        assert!(line.len() > MAX_LINE_LENGTH);
+        assert!(has_long_line_copyright_indicators(&line));
     }
 
     #[test]

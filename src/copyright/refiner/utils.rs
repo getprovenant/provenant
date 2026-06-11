@@ -381,15 +381,34 @@ pub(super) fn strip_repeated_leading_holder_prefix(h: &str) -> String {
     h.to_string()
 }
 
-/// Drop trailing words longer than 80 characters (garbled/binary data).
+/// Truncate a string at the first garbled/binary word.
+///
+/// A word longer than 80 bytes is treated as the onset of garbled or binary
+/// data (minified JS, base64 blobs, raw bytes adjacent to copyright text), so
+/// the word and everything after it is dropped. This is a Provenant-specific
+/// guard; ScanCode has no equivalent.
+///
+/// The exception is a long *URL* token sitting between real holders, e.g.
+/// `Acme Corp <long url> Other Holder`: the URL is skipped but the trailing
+/// holders are preserved. Binary garbage does not look like a URL, so it still
+/// stops the scan and the trailing junk fragments are discarded.
 pub(super) fn truncate_long_words(s: &str) -> String {
-    let words: Vec<&str> = s.split_whitespace().collect();
     let mut result: Vec<&str> = Vec::new();
-    for w in &words {
+    for w in s.split_whitespace() {
         if w.len() > 80 {
+            if is_url_like_word(w) {
+                continue;
+            }
             break;
         }
         result.push(w);
     }
     result.join(" ")
+}
+
+/// A long word is URL-like when it carries a `://` scheme separator (covering
+/// wrapped forms such as `(https://...)`). Used to decide whether an overlong
+/// token is a skippable URL or the onset of binary garbage.
+fn is_url_like_word(w: &str) -> bool {
+    w.contains("://")
 }
