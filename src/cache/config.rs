@@ -16,6 +16,7 @@ pub const CACHE_DIR_ENV_VAR: &str = "PROVENANT_CACHE";
 pub struct CacheConfig {
     root_dir: PathBuf,
     incremental: bool,
+    trust_mtime: bool,
 }
 
 impl CacheConfig {
@@ -24,13 +25,15 @@ impl CacheConfig {
         Self {
             root_dir,
             incremental: false,
+            trust_mtime: false,
         }
     }
 
-    pub fn with_options(root_dir: PathBuf, incremental: bool) -> Self {
+    pub fn with_options(root_dir: PathBuf, incremental: bool, trust_mtime: bool) -> Self {
         Self {
             root_dir,
             incremental,
+            trust_mtime,
         }
     }
 
@@ -76,10 +79,12 @@ impl CacheConfig {
         cli_cache_dir: Option<&Path>,
         env_cache_dir: Option<&Path>,
         incremental: bool,
+        trust_mtime: bool,
     ) -> Self {
         Self::with_options(
             Self::resolve_root_dir(scan_root, cli_cache_dir, env_cache_dir),
             incremental,
+            trust_mtime,
         )
     }
 
@@ -93,6 +98,12 @@ impl CacheConfig {
 
     pub const fn incremental_enabled(&self) -> bool {
         self.incremental
+    }
+
+    /// When `true`, warm incremental scans accept a cached entry on a size +
+    /// mtime fingerprint match without re-reading and re-hashing the file.
+    pub const fn trust_mtime(&self) -> bool {
+        self.trust_mtime
     }
 
     pub fn ensure_dirs(&self) -> io::Result<()> {
@@ -155,7 +166,8 @@ mod tests {
     #[test]
     fn test_ensure_dirs_creates_expected_tree() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let config = CacheConfig::with_options(temp_dir.path().join(DEFAULT_CACHE_DIR_NAME), true);
+        let config =
+            CacheConfig::with_options(temp_dir.path().join(DEFAULT_CACHE_DIR_NAME), true, false);
 
         config
             .ensure_dirs()
@@ -196,7 +208,7 @@ mod tests {
     #[test]
     fn test_clear_removes_cache_root_directory() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let config = CacheConfig::with_options(temp_dir.path().join("cache-root"), true);
+        let config = CacheConfig::with_options(temp_dir.path().join("cache-root"), true, false);
 
         config
             .ensure_dirs()

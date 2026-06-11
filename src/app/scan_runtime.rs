@@ -80,6 +80,7 @@ pub(crate) fn prepare_cache_config(
         request.cache_dir.as_deref().map(Path::new),
         env_cache_dir.as_deref(),
         request.incremental,
+        request.cache_trust_mtime,
     );
 
     if request.cache_clear {

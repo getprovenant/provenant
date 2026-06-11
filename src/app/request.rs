@@ -40,6 +40,7 @@ pub(crate) struct ScanRequest {
     pub(crate) cache_dir: Option<String>,
     pub(crate) cache_clear: bool,
     pub(crate) incremental: bool,
+    pub(crate) cache_trust_mtime: bool,
     pub(crate) max_depth: usize,
     pub(crate) max_in_memory: MemoryMode,
     pub(crate) info: bool,

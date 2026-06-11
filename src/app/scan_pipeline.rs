@@ -602,6 +602,7 @@ fn load_native_scan_session(
             &mut collected.files,
             Path::new(&scan_path),
             previous_manifest.as_ref(),
+            cache_config.trust_mtime(),
         );
         progress.record_incremental_reused(reused_files.len());
     }
@@ -644,6 +645,7 @@ fn load_native_scan_session(
             &mut all_collected_files.clone(),
             Path::new(&scan_path),
             load_incremental_manifest(&manifest_path, &options_fingerprint)?.as_ref(),
+            cache_config.trust_mtime(),
         );
         result.files =
             merge_incremental_file_results(result.files, reused_files, &ordered_file_paths);
@@ -753,6 +755,7 @@ fn partition_incremental_files(
     collected_files: &mut Vec<(PathBuf, fs::Metadata)>,
     scan_root: &Path,
     manifest: Option<&IncrementalManifest>,
+    trust_mtime: bool,
 ) -> Vec<FileInfo> {
     let Some(manifest) = manifest else {
         return Vec::new();
@@ -768,7 +771,7 @@ fn partition_incremental_files(
             continue;
         };
 
-        match manifest_entry_matches_path(entry, &path, &metadata) {
+        match manifest_entry_matches_path(entry, &path, &metadata, trust_mtime) {
             Ok(true) => reused_files.push(entry.file_info.clone()),
             Ok(false) | Err(_) => files_to_scan.push((path, metadata)),
         }

@@ -342,6 +342,13 @@ pub struct ScanArgs {
     #[arg(long = "incremental")]
     pub incremental: bool,
 
+    /// Trust size + mtime for incremental reuse, skipping the content re-hash of
+    /// unchanged files. Speeds up warm incremental re-scans at the cost of
+    /// missing the rare edit that keeps the same size and mtime tick. Default
+    /// off keeps the paranoid full-hash check so scans stay reproducible.
+    #[arg(long = "cache-trust-mtime", requires = "incremental")]
+    pub cache_trust_mtime: bool,
+
     /// Maximum number of file and directory scan details kept in memory.
     /// Use 0 for unlimited memory or -1 for disk-only spill during the scan.
     #[arg(
@@ -724,6 +731,7 @@ impl ScanArgs {
 
         push_string_option(&mut flags, "--cache-dir", self.cache_dir.as_ref());
         push_bool_option(&mut flags, "--cache-clear", self.cache_clear);
+        push_bool_option(&mut flags, "--cache-trust-mtime", self.cache_trust_mtime);
         push_bool_option(&mut flags, "--classify", self.classify);
         push_string_option(&mut flags, "--custom-output", self.custom_output.as_ref());
         push_string_option(
@@ -906,6 +914,7 @@ impl From<&ScanArgs> for ScanRequest {
             cache_dir: cli.cache_dir.clone(),
             cache_clear: cli.cache_clear,
             incremental: cli.incremental,
+            cache_trust_mtime: cli.cache_trust_mtime,
             max_depth: cli.max_depth,
             max_in_memory: cli.max_in_memory,
             info: cli.info,

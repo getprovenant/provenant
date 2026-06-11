@@ -460,6 +460,31 @@ Important details:
 - if the previous manifest is missing, unreadable, or incompatible, Provenant falls back to a full rescan and rewrites it.
 - incremental reuse applies to native scans, not `--from-json` reshaping.
 
+#### Faster warm re-scans with `--cache-trust-mtime`
+
+By default, incremental reuse is paranoid: even when a file's size and nanosecond
+mtime still match the cached fingerprint, Provenant re-reads the file and re-hashes
+its content (SHA-256) before reusing the cached result. This makes default scans
+fully reproducible and byte-identical, but it still pays full read + hash I/O for
+the entire tree on every warm re-scan.
+
+`--cache-trust-mtime` (only valid together with `--incremental`) opts into trusting
+the size + mtime fingerprint: a matching fingerprint reuses the cached result
+without re-reading or re-hashing the file.
+
+Trade-off:
+
+- Faster: warm re-scans skip the read + SHA-256 of every unchanged file.
+- Slightly less safe: it can miss a file that was modified in place within the same
+  mtime tick at exactly the same size (rare, and typically only seen with very fast
+  programmatic edits or filesystems with coarse mtime resolution).
+
+The default stays paranoid (full re-hash) so reproducibility is never silently
+traded away. Reach for `--cache-trust-mtime` when warm-rescan speed matters more
+than catching that rare same-tick, same-size edit (for example, fast local
+iteration on large trees). A genuinely changed size or mtime is still detected as
+changed in either mode.
+
 ### 17. "I want policy-aware license review"
 
 ```sh

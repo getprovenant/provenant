@@ -1076,6 +1076,39 @@ fn test_parses_incremental_flag() {
     .expect("cli parse should accept incremental flag");
 
     assert!(parsed.incremental);
+    assert!(!parsed.cache_trust_mtime);
+}
+
+#[test]
+fn test_parses_cache_trust_mtime_flag_with_incremental() {
+    let parsed = Cli::try_parse_from([
+        "provenant",
+        "--json-pp",
+        "scan.json",
+        "--incremental",
+        "--cache-trust-mtime",
+        "samples",
+    ])
+    .expect("cli parse should accept cache-trust-mtime with incremental");
+
+    assert!(parsed.incremental);
+    assert!(parsed.cache_trust_mtime);
+}
+
+#[test]
+fn test_cache_trust_mtime_requires_incremental() {
+    let result = Cli::try_parse_from([
+        "provenant",
+        "--json-pp",
+        "scan.json",
+        "--cache-trust-mtime",
+        "samples",
+    ]);
+
+    assert!(
+        result.is_err(),
+        "--cache-trust-mtime must require --incremental"
+    );
 }
 
 #[test]
