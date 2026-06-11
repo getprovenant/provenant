@@ -11,6 +11,7 @@
 use std::path::Path;
 
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
 
 use super::PackageParser;
@@ -67,7 +68,12 @@ fn attr_value(element: &BytesStart, key: &[u8]) -> Option<String> {
         .attributes()
         .filter_map(|attr| attr.ok())
         .find(|attr| attr.key.as_ref() == key)
-        .and_then(|attr| String::from_utf8(attr.value.to_vec()).ok())
+        // Decode XML entities (e.g. `&amp;`) so namespaces/purls carry the real value.
+        .and_then(|attr| {
+            attr.normalized_value(XmlVersion::Implicit1_0)
+                .ok()
+                .map(|value| value.into_owned())
+        })
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
 }

@@ -157,22 +157,28 @@ fn apply_pom_properties(package_data: &mut PackageData, pom_properties: Option<&
     };
 
     let coords = interpret_pom_properties(content);
-    if let Some(group_id) = coords.group_id {
-        package_data.namespace = Some(truncate_field(group_id));
+    if let Some(group_id) = coords.group_id.as_ref() {
+        package_data.namespace = Some(truncate_field(group_id.clone()));
     }
-    if let Some(artifact_id) = coords.artifact_id {
-        package_data.name = Some(truncate_field(artifact_id));
+    if let Some(artifact_id) = coords.artifact_id.as_ref() {
+        package_data.name = Some(truncate_field(artifact_id.clone()));
     }
-    if let Some(version) = coords.version {
-        package_data.version = Some(truncate_field(version));
+    if let Some(version) = coords.version.as_ref() {
+        package_data.version = Some(truncate_field(version.clone()));
     }
 
-    if let (Some(namespace), Some(name)) = (&package_data.namespace, &package_data.name) {
+    // Build the Maven purl only when pom.properties itself carries all three
+    // coordinates, matching the standalone pom.properties parser contract. This
+    // avoids folding a MANIFEST.MF version into pom.properties group/artifact (or
+    // vice versa) and emitting a purl the standalone parser never would.
+    if let (Some(group_id), Some(artifact_id), Some(version)) =
+        (coords.group_id, coords.artifact_id, coords.version)
+    {
         package_data.package_type = Some(PackageType::Maven);
         package_data.purl = Some(truncate_field(build_maven_purl(
-            namespace,
-            name,
-            package_data.version.as_deref(),
+            &group_id,
+            &artifact_id,
+            Some(&version),
             None,
             None,
         )));

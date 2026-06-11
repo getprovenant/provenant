@@ -84,3 +84,23 @@ fn test_malformed_xml_falls_back_to_default() {
     // datasource_id is set even on the error path.
     assert_eq!(packages[0].datasource_id, Some(DatasourceId::AntIvyXml));
 }
+
+#[test]
+fn test_xml_entities_are_decoded() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("ivy.xml");
+    let mut file = std::fs::File::create(&path).expect("create");
+    file.write_all(
+        br#"<ivy-module version="2.0">
+    <info organisation="org.example&amp;co" module="a&amp;b" revision="1.0"/>
+</ivy-module>"#,
+    )
+    .expect("write");
+    drop(file);
+
+    let packages = IvyXmlParser::extract_packages(&path);
+    let pkg = &packages[0];
+    assert_eq!(pkg.namespace.as_deref(), Some("org.example&co"));
+    assert_eq!(pkg.name.as_deref(), Some("a&b"));
+}

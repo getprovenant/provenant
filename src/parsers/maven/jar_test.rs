@@ -79,6 +79,23 @@ fn test_aar_recovers_pom_properties_only() {
 }
 
 #[test]
+fn test_pom_properties_without_version_does_not_emit_purl() {
+    // pom.properties supplies group/artifact but no version; the MANIFEST.MF has a
+    // version. We must not fold the manifest version into a pom-coordinate purl, to
+    // stay consistent with the standalone pom.properties parser contract.
+    let path = PathBuf::from("testdata/jvm-archive-golden/partial-no-version.jar");
+    let packages = extract_jvm_archive(&path, JvmArchiveKind::Jar);
+
+    let pkg = &packages[0];
+    assert_eq!(pkg.datasource_id, Some(DatasourceId::JavaJar));
+    assert_eq!(pkg.namespace.as_deref(), Some("org.partial"));
+    assert_eq!(pkg.name.as_deref(), Some("partial-lib"));
+    // Manifest version is retained on the package, but no purl is synthesized.
+    assert_eq!(pkg.version.as_deref(), Some("9.9.9"));
+    assert!(pkg.purl.is_none());
+}
+
+#[test]
 fn test_missing_archive_falls_back_to_bare_row() {
     let path = PathBuf::from("testdata/jvm-archive-golden/does-not-exist.jar");
     let packages = extract_jvm_archive(&path, JvmArchiveKind::Jar);
