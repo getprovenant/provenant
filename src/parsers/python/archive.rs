@@ -9,7 +9,9 @@ use super::utils::{
 use crate::models::{DatasourceId, FileReference, PackageData, Sha256Digest};
 use crate::parser_warn as warn;
 use crate::parsers::PackageParser;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, MAX_ITERATION_COUNT, read_file_to_string, truncate_field,
+};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use bzip2::read::BzDecoder;
@@ -1133,7 +1135,7 @@ pub(super) fn parse_record_csv(content: &str) -> Vec<FileReference> {
 pub(super) fn parse_file_list(content: &str) -> Vec<FileReference> {
     content
         .lines()
-        .take(MAX_ITERATION_COUNT)
+        .capped("python archive file list")
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(|path| FileReference::from_path(path.to_string()))

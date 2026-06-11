@@ -42,7 +42,7 @@ use crate::parser_warn as warn;
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
-use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 /// Parser for a Hugging Face model-card `README.md` (YAML frontmatter).
 pub struct HuggingfaceModelCardParser;
@@ -493,7 +493,7 @@ fn parse_config(json: &JsonValue, datasource_id: DatasourceId) -> PackageData {
     if let Some(architectures) = json.get("architectures").and_then(JsonValue::as_array) {
         let values: Vec<serde_json::Value> = architectures
             .iter()
-            .take(MAX_ITERATION_COUNT)
+            .capped("config.json architectures")
             .filter_map(|value| value.as_str())
             .map(|value| serde_json::Value::String(truncate_field(value.to_string())))
             .collect();
@@ -542,7 +542,7 @@ fn collect_string_seq(value: Option<&yaml_serde::Value>) -> Vec<String> {
             .as_sequence()
             .into_iter()
             .flatten()
-            .take(MAX_ITERATION_COUNT)
+            .capped("model card string sequence")
             .filter_map(yaml_serde::Value::as_str)
             .map(str::trim)
             .filter(|entry| !entry.is_empty())

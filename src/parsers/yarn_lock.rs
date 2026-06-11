@@ -29,7 +29,7 @@ use crate::models::{
     DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha512Digest,
 };
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, parse_sri, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, npm_purl, parse_sri, truncate_field};
 use serde_json::Value as JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -118,7 +118,8 @@ fn parse_yarn_v2(
     let mut dependencies = Vec::new();
     let package_extra_data = extract_yarn_v2_package_extra_data(yaml_map);
 
-    for (spec, details) in yaml_map.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(yaml_map.len(), "yarn.lock v2 entries");
+    for (spec, details) in yaml_map.iter().take(limit) {
         if spec.as_str().map(|s| s == "__metadata").unwrap_or(false) {
             continue;
         }
@@ -270,7 +271,9 @@ fn parse_yarn_v1(
     let mut dependencies = Vec::new();
     let mut seen_purls = HashSet::new();
 
-    for block in content.split("\n\n").take(MAX_ITERATION_COUNT) {
+    let block_count = content.split("\n\n").count();
+    let limit = capped_iteration_limit(block_count, "yarn.lock v1 blocks");
+    for block in content.split("\n\n").take(limit) {
         if is_empty_or_comment_block(block) {
             continue;
         }
@@ -587,7 +590,9 @@ fn load_manifest_dependency_info(path: &Path) -> HashMap<String, ManifestDepende
         .get("peerDependencies")
         .and_then(|value| value.as_object())
     {
-        for name in peer_dependencies.keys().take(MAX_ITERATION_COUNT) {
+        let limit =
+            capped_iteration_limit(peer_dependencies.len(), "yarn manifest peerDependencies");
+        for name in peer_dependencies.keys().take(limit) {
             dependencies.insert(
                 name.clone(),
                 ManifestDependencyInfo {
@@ -609,7 +614,9 @@ fn insert_manifest_dependency_info(
     info: ManifestDependencyInfo,
 ) {
     if let Some(entries) = json.get(field).and_then(|value| value.as_object()) {
-        for name in entries.keys().take(MAX_ITERATION_COUNT) {
+        let context = format!("yarn manifest {field}");
+        let limit = capped_iteration_limit(entries.len(), &context);
+        for name in entries.keys().take(limit) {
             dependencies.insert(name.clone(), info.clone());
         }
     }
@@ -791,7 +798,8 @@ fn parse_yaml_dependencies(yaml_value: Option<&Value>) -> Vec<Dependency> {
     if let Some(deps_value) = yaml_value
         && let Some(mapping) = deps_value.as_mapping()
     {
-        for (key, value) in mapping.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(mapping.len(), "yarn.lock v2 nested dependencies");
+        for (key, value) in mapping.iter().take(limit) {
             let name = match key.as_str() {
                 Some(s) => s.to_string(),
                 None => continue,

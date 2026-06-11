@@ -26,7 +26,7 @@ use packageurl::PackageUrl;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 use crate::models::PackageData;
 
@@ -92,7 +92,7 @@ impl PackageParser for RpmMarinerManifestParser {
 pub(crate) fn parse_rpm_mariner_manifest(content: &str) -> Vec<PackageData> {
     let mut packages = Vec::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("rpm mariner manifest lines") {
         // Only trim whitespace, not tabs
         let line = line.trim_matches(|c: char| c.is_whitespace() && c != '\t');
         if line.is_empty() {

@@ -18,7 +18,7 @@ use url::Url;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::PackageParser;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 
 /// Parses Swift Package Manager lockfiles (Package.resolved).
 ///
@@ -184,15 +184,17 @@ fn parse_resolved(path: &Path) -> Result<PackageData, String> {
 }
 
 fn parse_v2_v3_pins(pins: &[PinV2]) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(pins.len(), "Package.resolved v2/v3 pins");
     pins.iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(pin_v2_to_dependency)
         .collect()
 }
 
 fn parse_v1_pins(pins: &[PinV1]) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(pins.len(), "Package.resolved v1 pins");
     pins.iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(pin_v1_to_dependency)
         .collect()
 }

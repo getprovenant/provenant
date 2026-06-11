@@ -11,7 +11,8 @@ use yaml_serde::{Mapping, Value as YamlValue};
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, capped_iteration_limit, read_file_to_string,
+    split_name_email, truncate_field,
 };
 
 use super::PackageParser;
@@ -320,7 +321,9 @@ fn parse_cabal_project(content: &str) -> PackageData {
         source_repo_entries.push(entry);
     }
 
-    for entry in source_repo_entries.into_iter().take(MAX_ITERATION_COUNT) {
+    let limit =
+        capped_iteration_limit(source_repo_entries.len(), "cabal source-repository entries");
+    for entry in source_repo_entries.into_iter().take(limit) {
         dependencies.push(build_source_repository_dependency(entry));
     }
 
@@ -358,7 +361,7 @@ fn parse_stack_yaml(yaml: &YamlValue) -> PackageData {
         dependencies.extend(parse_stack_extra_dep_entries(extra_deps));
     }
 
-    for (key, value) in mapping.iter().take(MAX_ITERATION_COUNT) {
+    for (key, value) in mapping.iter().capped("stack.yaml top-level keys") {
         let Some(key) = key.as_str() else {
             continue;
         };
@@ -533,7 +536,7 @@ fn parse_stack_package_entries(value: &YamlValue) -> Vec<Dependency> {
 
     sequence
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("stack.yaml packages")
         .filter_map(|entry| match entry {
             YamlValue::String(path) => {
                 let mut extra_data = HashMap::new();
@@ -585,7 +588,7 @@ fn parse_stack_extra_dep_entries(value: &YamlValue) -> Vec<Dependency> {
 
     sequence
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("stack.yaml extra-deps")
         .filter_map(|entry| match entry {
             YamlValue::String(spec) => parse_stack_extra_dep_string(spec),
             YamlValue::Mapping(map) => Some(parse_stack_extra_dep_mapping(map, entry)),
@@ -856,7 +859,7 @@ fn split_dependency_entries(value: &str) -> Vec<String> {
     let mut brace_depth = 0usize;
     let mut bracket_depth = 0usize;
 
-    for character in value.chars().take(MAX_ITERATION_COUNT) {
+    for character in value.chars().capped("cabal dependency entry characters") {
         match character {
             '(' => paren_depth += 1,
             ')' => paren_depth = paren_depth.saturating_sub(1),
@@ -889,7 +892,7 @@ fn split_dependency_entries(value: &str) -> Vec<String> {
 fn split_multiline_entries(value: &str) -> Vec<String> {
     value
         .lines()
-        .take(MAX_ITERATION_COUNT)
+        .capped("cabal multiline entries")
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(|line| line.strip_prefix("-").unwrap_or(line).trim().to_string())

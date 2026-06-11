@@ -16,7 +16,9 @@ use crate::models::{
     Sha512Digest,
 };
 use crate::parsers::python::read_toml_file;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
+use crate::parsers::utils::{
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, truncate_field,
+};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -131,9 +133,10 @@ fn parse_pylock_toml(toml_content: &TomlValue) -> PackageData {
         return default_package_data();
     };
 
+    let package_limit = capped_iteration_limit(package_values.len(), "pylock.toml packages");
     let package_tables: Vec<&TomlMap<String, TomlValue>> = package_values
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(package_limit)
         .filter_map(TomlValue::as_table)
         .collect();
     if package_tables.is_empty() {
@@ -349,10 +352,14 @@ fn resolve_dependency_reference_indices(
     package_tables: &[&TomlMap<String, TomlValue>],
     reference: &TomlMap<String, TomlValue>,
 ) -> Vec<usize> {
+    let limit = capped_iteration_limit(
+        package_tables.len(),
+        "pylock.toml dependency reference indices",
+    );
     let matches: Vec<usize> = package_tables
         .iter()
         .enumerate()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|(index, package_table)| {
             package_reference_matches(package_table, reference).then_some(index)
         })

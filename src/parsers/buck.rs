@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use starlark_syntax::syntax::ast;
 use starlark_syntax::syntax::{AstModule, Dialect};
@@ -108,10 +108,9 @@ fn parse_buck_build(path: &Path) -> Result<Vec<PackageData>, String> {
 
     let mut packages = Vec::new();
 
-    for statement in top_level_statements(&module)
-        .iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let statements = top_level_statements(&module);
+    let limit = capped_iteration_limit(statements.len(), "BUCK top-level statements");
+    for statement in statements.iter().take(limit) {
         if let Some(package_data) = extract_build_package_from_statement(statement) {
             packages.push(package_data);
         }
@@ -125,10 +124,9 @@ fn parse_metadata_bzl(path: &Path) -> Result<PackageData, String> {
     let content = read_file_to_string(path, None).map_err(|e| e.to_string())?;
     let module = parse_starlark_module("<METADATA.bzl>", content)?;
 
-    for statement in top_level_statements(&module)
-        .iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let statements = top_level_statements(&module);
+    let limit = capped_iteration_limit(statements.len(), "METADATA.bzl top-level statements");
+    for statement in statements.iter().take(limit) {
         if let Some(dict) = extract_metadata_assignment_dict(statement) {
             return Ok(extract_metadata_dict(dict));
         }
@@ -219,7 +217,8 @@ fn extract_metadata_assignment_dict(
 fn extract_metadata_dict(dict: &[(ast::AstExpr, ast::AstExpr)]) -> PackageData {
     let mut fields: HashMap<String, MetadataValue> = HashMap::new();
 
-    for (key, value) in dict.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(dict.len(), "BUCK metadata dict entries");
+    for (key, value) in dict.iter().take(limit) {
         let Some(key_name) = expr_as_string(key) else {
             continue;
         };
@@ -493,9 +492,10 @@ fn metadata_value_from_expr(expr: &ast::AstExpr) -> Option<MetadataValue> {
         ast::ExprP::List(items) | ast::ExprP::Tuple(items) => items,
         _ => return None,
     };
+    let limit = capped_iteration_limit(items.len(), "BUCK metadata list items");
     let values: Vec<_> = items
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(expr_as_string)
         .collect();
     (!values.is_empty()).then_some(MetadataValue::List(values))
@@ -576,9 +576,10 @@ fn extract_named_kwarg_string_list(call: &StarlarkCall<'_>, key: &str) -> Option
         ast::ExprP::List(items) | ast::ExprP::Tuple(items) => items,
         _ => return None,
     };
+    let limit = capped_iteration_limit(items.len(), "BUCK kwarg string-list items");
     let values: Vec<_> = items
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(expr_as_string)
         .collect();
     (!values.is_empty()).then_some(values)

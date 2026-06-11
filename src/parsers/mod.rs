@@ -342,7 +342,7 @@ use crate::models::{DiagnosticSeverity, PackageData, PackageType, ScanDiagnostic
 use crate::parsers::license_normalization::{
     finalize_package_declared_license_references, populate_declared_license_and_holder,
 };
-use crate::parsers::utils::MAX_ITERATION_COUNT;
+use crate::parsers::utils::CappedIterExt;
 
 thread_local! {
     static PARSER_DIAGNOSTIC_STACK: RefCell<Vec<Vec<ScanDiagnostic>>> = const { RefCell::new(Vec::new()) };
@@ -390,7 +390,7 @@ where
                 finalize_package_declared_license_references(&mut package);
                 package
             })
-            .take(MAX_ITERATION_COUNT)
+            .capped("packages emitted by parser")
             .collect::<Vec<_>>()
     }));
     PARSER_LICENSE_ENGINE_STACK.with(|stack| {

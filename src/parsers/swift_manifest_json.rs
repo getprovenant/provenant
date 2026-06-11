@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use super::utils::{MAX_ITERATION_COUNT, truncate_field};
+use super::utils::{capped_iteration_limit, truncate_field};
 
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
@@ -162,7 +162,8 @@ fn get_dependencies(dependencies: Option<&Value>) -> Vec<Dependency> {
 
     let mut dependent_packages = Vec::new();
 
-    for dependency in deps_array.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(deps_array.len(), "Swift manifest dependencies");
+    for dependency in deps_array.iter().take(limit) {
         if let Some(dep) = parse_manifest_dependency(dependency) {
             dependent_packages.push(dep);
         }

@@ -30,7 +30,8 @@ use crate::models::{
     Sha256Digest, Sha512Digest,
 };
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, npm_purl, parse_sri, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, capped_iteration_limit, npm_purl, parse_sri, read_file_to_string,
+    truncate_field,
 };
 use std::path::Path;
 use yaml_serde::Value;
@@ -110,12 +111,14 @@ fn compute_dev_only_packages_v9(lock_data: &Value) -> std::collections::HashSet<
 
     // Step 1: Parse importers section to identify direct dependencies
     if let Some(importers) = lock_data.get("importers").and_then(|v| v.as_mapping()) {
-        for (_importer_path, importer_data) in importers.iter().take(MAX_ITERATION_COUNT) {
+        let importer_limit = capped_iteration_limit(importers.len(), "pnpm lockfile importers");
+        for (_importer_path, importer_data) in importers.iter().take(importer_limit) {
             if let Some(deps) = importer_data
                 .get("dependencies")
                 .and_then(|v| v.as_mapping())
             {
-                for (name, version_data) in deps.iter().take(MAX_ITERATION_COUNT) {
+                let limit = capped_iteration_limit(deps.len(), "pnpm importer dependencies");
+                for (name, version_data) in deps.iter().take(limit) {
                     if let Some(version) = version_data.get("version").and_then(|v| v.as_str()) {
                         let pkg_key = format_package_key_v9(name.as_str().unwrap_or(""), version);
                         prod_roots.insert(pkg_key);
@@ -127,7 +130,8 @@ fn compute_dev_only_packages_v9(lock_data: &Value) -> std::collections::HashSet<
                 .get("devDependencies")
                 .and_then(|v| v.as_mapping())
             {
-                for (name, version_data) in dev_deps.iter().take(MAX_ITERATION_COUNT) {
+                let limit = capped_iteration_limit(dev_deps.len(), "pnpm importer devDependencies");
+                for (name, version_data) in dev_deps.iter().take(limit) {
                     if let Some(version) = version_data.get("version").and_then(|v| v.as_str()) {
                         let pkg_key = format_package_key_v9(name.as_str().unwrap_or(""), version);
                         dev_roots.insert(pkg_key);
@@ -141,12 +145,14 @@ fn compute_dev_only_packages_v9(lock_data: &Value) -> std::collections::HashSet<
     let mut graph: HashMap<String, Vec<String>> = HashMap::new();
 
     if let Some(snapshots) = lock_data.get("snapshots").and_then(|v| v.as_mapping()) {
-        for (pkg_key, pkg_data) in snapshots.iter().take(MAX_ITERATION_COUNT) {
+        let snapshot_limit = capped_iteration_limit(snapshots.len(), "pnpm lockfile snapshots");
+        for (pkg_key, pkg_data) in snapshots.iter().take(snapshot_limit) {
             let pkg_key_str = pkg_key.as_str().unwrap_or("").to_string();
             let mut children = Vec::new();
 
             if let Some(deps) = pkg_data.get("dependencies").and_then(|v| v.as_mapping()) {
-                for (dep_name, dep_version) in deps.iter().take(MAX_ITERATION_COUNT) {
+                let limit = capped_iteration_limit(deps.len(), "pnpm snapshot dependencies");
+                for (dep_name, dep_version) in deps.iter().take(limit) {
                     let dep_name_str = dep_name.as_str().unwrap_or("");
                     let dep_version_str = dep_version.as_str().unwrap_or("");
                     let child_key = format!("{}@{}", dep_name_str, dep_version_str);
@@ -158,7 +164,9 @@ fn compute_dev_only_packages_v9(lock_data: &Value) -> std::collections::HashSet<
                 .get("optionalDependencies")
                 .and_then(|v| v.as_mapping())
             {
-                for (dep_name, dep_version) in opt_deps.iter().take(MAX_ITERATION_COUNT) {
+                let limit =
+                    capped_iteration_limit(opt_deps.len(), "pnpm snapshot optionalDependencies");
+                for (dep_name, dep_version) in opt_deps.iter().take(limit) {
                     let dep_name_str = dep_name.as_str().unwrap_or("");
                     let dep_version_str = dep_version.as_str().unwrap_or("");
                     let child_key = format!("{}@{}", dep_name_str, dep_version_str);
@@ -183,6 +191,10 @@ fn compute_dev_only_packages_v9(lock_data: &Value) -> std::collections::HashSet<
     while let Some(current) = queue.pop_front() {
         bfs_iterations += 1;
         if bfs_iterations > MAX_ITERATION_COUNT {
+            crate::parser_warn!(
+                "Truncated pnpm dev/prod reachability traversal at {} iterations (MAX_ITERATION_COUNT); dev classification may be incomplete",
+                MAX_ITERATION_COUNT
+            );
             break;
         }
         if let Some(children) = graph.get(&current) {
@@ -211,6 +223,15 @@ fn format_package_key_v9(name: &str, version: &str) -> String {
     truncate_field(format!("{}@{}", name, clean_version))
 }
 
+/// Whether `parse_purl_fields` knows how to decode keys for this lockfile
+/// version. v5, v6, and v9 are the supported shapes; anything else makes every
+/// package key unparseable.
+fn is_supported_lockfile_version(lockfile_version: &str) -> bool {
+    lockfile_version.starts_with('5')
+        || lockfile_version.starts_with('6')
+        || lockfile_version.starts_with('9')
+}
+
 /// Parse pnpm lockfile and extract package data
 fn parse_pnpm_lockfile(lock_data: &Value) -> PackageData {
     let lockfile_version = detect_pnpm_version(lock_data);
@@ -228,7 +249,20 @@ fn parse_pnpm_lockfile(lock_data: &Value) -> PackageData {
 
     // Extract packages based on version
     if let Some(packages_map) = lock_data.get("packages").and_then(|v| v.as_mapping()) {
-        for (purl_fields, data) in packages_map.iter().take(MAX_ITERATION_COUNT) {
+        // An unrecognised lockfile version makes every key unparseable. Warn
+        // once here (with the entry count) instead of once per entry, which
+        // would otherwise be both a warning storm and misleading per key.
+        if !is_supported_lockfile_version(&lockfile_version) && !packages_map.is_empty() {
+            crate::parser_warn!(
+                "Skipping {} pnpm lockfile package entries: unsupported lockfileVersion {:?}",
+                packages_map.len(),
+                lockfile_version
+            );
+            return result;
+        }
+
+        let limit = capped_iteration_limit(packages_map.len(), "pnpm lockfile packages");
+        for (purl_fields, data) in packages_map.iter().take(limit) {
             let purl_fields_str = match purl_fields.as_str() {
                 Some(s) => s,
                 None => continue,
@@ -394,7 +428,8 @@ fn parse_nested_dependencies(data: &Value) -> Vec<Dependency> {
     let mut all_dependencies = Vec::new();
 
     if let Some(deps) = data.get("dependencies").and_then(|v| v.as_mapping()) {
-        for (name, version) in deps.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(deps.len(), "pnpm nested dependencies");
+        for (name, version) in deps.iter().take(limit) {
             if let Some(dep) = create_simple_dependency(name.as_str(), version.as_str(), None) {
                 all_dependencies.push(dep);
             }
@@ -402,7 +437,8 @@ fn parse_nested_dependencies(data: &Value) -> Vec<Dependency> {
     }
 
     if let Some(dev_deps) = data.get("devDependencies").and_then(|v| v.as_mapping()) {
-        for (name, version) in dev_deps.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(dev_deps.len(), "pnpm nested devDependencies");
+        for (name, version) in dev_deps.iter().take(limit) {
             if let Some(dep) =
                 create_simple_dependency(name.as_str(), version.as_str(), Some("dev".to_string()))
             {
@@ -412,7 +448,8 @@ fn parse_nested_dependencies(data: &Value) -> Vec<Dependency> {
     }
 
     if let Some(peer_deps) = data.get("peerDependencies").and_then(|v| v.as_mapping()) {
-        for (name, version) in peer_deps.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(peer_deps.len(), "pnpm nested peerDependencies");
+        for (name, version) in peer_deps.iter().take(limit) {
             if let Some(dep) =
                 create_simple_dependency(name.as_str(), version.as_str(), Some("peer".to_string()))
             {
@@ -425,7 +462,8 @@ fn parse_nested_dependencies(data: &Value) -> Vec<Dependency> {
         .get("optionalDependencies")
         .and_then(|v| v.as_mapping())
     {
-        for (name, version) in opt_deps.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(opt_deps.len(), "pnpm nested optionalDependencies");
+        for (name, version) in opt_deps.iter().take(limit) {
             if let Some(dep) = create_simple_dependency(
                 name.as_str(),
                 version.as_str(),
@@ -480,7 +518,22 @@ pub fn extract_dependency(
     lockfile_version: &str,
     is_dev_only_v9: bool,
 ) -> Option<Dependency> {
-    let (namespace, name, version) = parse_purl_fields(clean_purl_fields, lockfile_version)?;
+    let (namespace, name, version) = match parse_purl_fields(clean_purl_fields, lockfile_version) {
+        Some(parsed) => parsed,
+        None => {
+            // Only warn per entry for a supported version, where a None means a
+            // genuinely malformed key. Unsupported versions are reported once
+            // (with the entry count) by the caller, not per entry here.
+            if is_supported_lockfile_version(lockfile_version) {
+                crate::parser_warn!(
+                    "Skipping pnpm lockfile entry with unparseable key {:?} (lockfileVersion {})",
+                    clean_purl_fields,
+                    lockfile_version
+                );
+            }
+            return None;
+        }
+    };
     let namespace = namespace.map(truncate_field);
     let name = truncate_field(name);
     let version = truncate_field(version);

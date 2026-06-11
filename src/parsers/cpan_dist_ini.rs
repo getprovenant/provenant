@@ -20,7 +20,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 use serde_json::json;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
@@ -151,7 +153,7 @@ fn parse_ini_structure(
     let mut sections: HashMap<String, HashMap<String, String>> = HashMap::new();
     let mut current_section: Option<String> = None;
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("dist.ini lines") {
         let line = line.trim();
 
         if line.is_empty() || line.starts_with(';') || line.starts_with('#') {
@@ -229,7 +231,8 @@ fn parse_dependencies(sections: &HashMap<String, HashMap<String, String>>) -> Ve
     let mut sorted_sections: Vec<_> = sections.iter().collect();
     sorted_sections.sort_by_key(|(left_name, _)| *left_name);
 
-    for (section_name, fields) in sorted_sections.iter().take(MAX_ITERATION_COUNT) {
+    let sections_limit = capped_iteration_limit(sorted_sections.len(), "dist.ini prereq sections");
+    for (section_name, fields) in sorted_sections.iter().take(sections_limit) {
         let Some(scope) = classify_prereq_scope(section_name) else {
             continue;
         };
@@ -237,7 +240,8 @@ fn parse_dependencies(sections: &HashMap<String, HashMap<String, String>>) -> Ve
         let mut sorted_fields: Vec<_> = fields.iter().collect();
         sorted_fields.sort_by_key(|(left_name, _)| *left_name);
 
-        for (module_name, version_req) in sorted_fields.iter().take(MAX_ITERATION_COUNT) {
+        let fields_limit = capped_iteration_limit(sorted_fields.len(), "dist.ini prereq modules");
+        for (module_name, version_req) in sorted_fields.iter().take(fields_limit) {
             let purl = truncate_field(format!(
                 "pkg:cpan/{}",
                 crate::parsers::cpan::cpan_distribution_name(module_name)

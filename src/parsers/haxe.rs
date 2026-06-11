@@ -34,7 +34,7 @@ use super::license_normalization::{
     empty_declared_license_data,
 };
 use super::metadata::ParserMetadata;
-use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::utils::{CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field};
 
 /// Haxe package manifest (haxelib.json) parser.
 ///
@@ -93,16 +93,15 @@ impl PackageParser for HaxeParser {
                 (None, None, None)
             };
 
-        // Extract dependencies (maintain insertion order by sorting)
+        // Extract dependencies (maintain insertion order by sorting).
+        // `dependencies` is a std HashMap; sort before capping so truncation
+        // drops a deterministic set of entries when the cap is exceeded.
         let mut dependencies = Vec::new();
-        let mut deps_list: Vec<_> = json_content
-            .dependencies
-            .into_iter()
-            .take(MAX_ITERATION_COUNT)
-            .collect();
+        let mut deps_list: Vec<_> = json_content.dependencies.into_iter().collect();
         deps_list.sort_by(|a, b| a.0.cmp(&b.0));
+        let deps_limit = capped_iteration_limit(deps_list.len(), "haxelib.json dependencies");
 
-        for (dep_name, dep_version) in deps_list {
+        for (dep_name, dep_version) in deps_list.into_iter().take(deps_limit) {
             let is_pinned = !dep_version.is_empty();
             let dep_purl = create_dep_package_url(&dep_name, &dep_version, is_pinned);
 
@@ -124,7 +123,7 @@ impl PackageParser for HaxeParser {
         for contrib in json_content
             .contributors
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .capped("haxelib.json contributors")
         {
             parties.push(Party {
                 r#type: Some(PartyType::Person),
@@ -152,7 +151,7 @@ impl PackageParser for HaxeParser {
             keywords: json_content
                 .tags
                 .into_iter()
-                .take(MAX_ITERATION_COUNT)
+                .capped("haxelib.json tags")
                 .map(truncate_field)
                 .collect(),
             homepage_url: json_content.url.map(truncate_field),

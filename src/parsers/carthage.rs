@@ -6,7 +6,7 @@ use std::path::Path;
 use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 
 use super::PackageParser;
@@ -115,7 +115,7 @@ struct ParsedLine {
 fn parse_cartfile_lines(content: &str, is_resolved: bool) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("Cartfile lines") {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;

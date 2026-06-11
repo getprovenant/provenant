@@ -12,7 +12,8 @@ use crate::models::{
     DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha512Digest,
 };
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard, npm_purl, parse_sri, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard, npm_purl, parse_sri,
+    truncate_field,
 };
 
 use super::PackageParser;
@@ -368,7 +369,7 @@ fn parse_dependency_entries(
 
     bytes
         .chunks_exact(DEPENDENCY_ENTRY_SIZE)
-        .take(MAX_ITERATION_COUNT)
+        .capped("bun.lockb dependency entries")
         .map(|entry| {
             Ok(BunLockbDependencyEntry {
                 name: decode_bun_string(&entry[0..8], string_bytes)?,
@@ -386,7 +387,7 @@ fn parse_resolution_ids(bytes: &[u8]) -> Result<Vec<u32>, String> {
 
     bytes
         .chunks_exact(4)
-        .take(MAX_ITERATION_COUNT)
+        .capped("bun.lockb resolution ids")
         .map(|chunk| {
             let arr: [u8; 4] = chunk
                 .try_into()
@@ -423,7 +424,7 @@ fn build_dependencies_for_package(
     dep_slice
         .iter()
         .zip(res_slice.iter())
-        .take(MAX_ITERATION_COUNT)
+        .capped("bun.lockb package dependencies")
         .map(|(entry, package_id)| {
             let manifest = behavior_to_manifest(entry.behavior);
             let resolved_package = if (*package_id as usize) < packages.len() {

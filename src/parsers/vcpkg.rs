@@ -9,7 +9,7 @@ use packageurl::PackageUrl;
 use serde_json::Value;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, split_name_email, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, split_name_email, truncate_field};
 
 use super::PackageParser;
 
@@ -118,12 +118,15 @@ fn extract_maintainers(json: &Value) -> Vec<Party> {
 
     let maintainers: Vec<String> = match value {
         Value::String(s) => vec![s.clone()],
-        Value::Array(values) => values
-            .iter()
-            .take(MAX_ITERATION_COUNT)
-            .filter_map(Value::as_str)
-            .map(ToOwned::to_owned)
-            .collect(),
+        Value::Array(values) => {
+            let limit = capped_iteration_limit(values.len(), "vcpkg maintainers");
+            values
+                .iter()
+                .take(limit)
+                .filter_map(Value::as_str)
+                .map(ToOwned::to_owned)
+                .collect()
+        }
         _ => Vec::new(),
     };
 
@@ -150,24 +153,28 @@ fn extract_dependencies(json: &Value) -> Vec<Dependency> {
         .get("dependencies")
         .and_then(Value::as_array)
         .map(|deps| {
+            let limit = capped_iteration_limit(deps.len(), "vcpkg dependencies");
             deps.iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(parse_dependency_entry)
                 .collect()
         })
         .unwrap_or_default();
 
     if let Some(features) = json.get("features").and_then(Value::as_object) {
-        for (feature_name, feature_value) in features.iter().take(MAX_ITERATION_COUNT) {
+        let features_limit = capped_iteration_limit(features.len(), "vcpkg features");
+        for (feature_name, feature_value) in features.iter().take(features_limit) {
             let Some(feature_dependencies) =
                 feature_value.get("dependencies").and_then(Value::as_array)
             else {
                 continue;
             };
 
+            let feature_deps_limit =
+                capped_iteration_limit(feature_dependencies.len(), "vcpkg feature dependencies");
             for dependency in feature_dependencies
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(feature_deps_limit)
                 .filter_map(parse_dependency_entry)
                 .map(|mut dependency| {
                     let mut extra_data = dependency.extra_data.take().unwrap_or_default();

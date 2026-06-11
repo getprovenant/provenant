@@ -10,7 +10,7 @@ use serde_json::Value as JsonValue;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
+    CappedIterExt, capped_iteration_limit, read_file_to_string, split_name_email, truncate_field,
 };
 
 use super::PackageParser;
@@ -95,7 +95,7 @@ type MultiMap = HashMap<String, Vec<String>>;
 fn parse_key_value_lines(content: &str) -> MultiMap {
     let mut fields: MultiMap = HashMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("arch key=value lines") {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -121,7 +121,7 @@ fn parse_srcinfo_like(content: &str, datasource_id: DatasourceId) -> Vec<Package
     let mut packages: Vec<MultiMap> = Vec::new();
     let mut current_is_pkgbase = true;
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("arch .SRCINFO-like lines") {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -367,7 +367,8 @@ fn build_dependencies(fields: &MultiMap) -> Vec<Dependency> {
     let mut keys: Vec<_> = fields.keys().cloned().collect();
     keys.sort();
 
-    for key in keys.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(keys.len(), "arch dependency keys");
+    for key in keys.iter().take(limit) {
         let Some((scope, is_runtime, is_optional)) = dependency_semantics(key) else {
             continue;
         };
@@ -424,7 +425,15 @@ fn build_extra_data(
 
     let mut extra = HashMap::new();
 
-    for (key, values) in fields.iter().take(MAX_ITERATION_COUNT) {
+    // `fields` is an unordered HashMap, so sort the keys before applying the
+    // iteration cap to keep which entries survive truncation deterministic.
+    let mut field_keys: Vec<&String> = fields.keys().collect();
+    field_keys.sort();
+    let limit = capped_iteration_limit(field_keys.len(), "arch extra fields");
+    for key in field_keys.into_iter().take(limit) {
+        let Some(values) = fields.get(key) else {
+            continue;
+        };
         if consumed.contains(key.as_str()) {
             continue;
         }

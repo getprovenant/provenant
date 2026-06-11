@@ -35,7 +35,7 @@ use toml::map::Map as TomlMap;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Sha256Digest};
 use crate::parsers::python::read_toml_file;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -149,7 +149,7 @@ fn extract_lockfile_dependencies(
         .get(section)
         .and_then(|value| value.as_object())
     {
-        for (name, value) in section_map.iter().take(MAX_ITERATION_COUNT) {
+        for (name, value) in section_map.iter().capped("Pipfile.lock section packages") {
             if let Some(dependency) = build_lockfile_dependency(name, value, scope, is_runtime) {
                 dependencies.push(dependency);
             }
@@ -286,7 +286,7 @@ fn extract_pipfile_dependencies(
 ) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for (name, value) in packages.iter().take(MAX_ITERATION_COUNT) {
+    for (name, value) in packages.iter().capped("Pipfile packages") {
         if let Some(dependency) = build_pipfile_dependency(name, value, scope, is_runtime) {
             dependencies.push(dependency);
         }

@@ -36,7 +36,7 @@ use crate::models::{
     DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 use crate::parsers::python::{build_pypi_urls, read_toml_file};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, truncate_field};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -102,7 +102,8 @@ fn parse_poetry_lock(toml_content: &TomlValue) -> PackageData {
         .and_then(|value| value.as_table());
 
     let mut dependencies = Vec::new();
-    for package in packages.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(packages.len(), "poetry.lock packages");
+    for package in packages.iter().take(limit) {
         if let Some(package_table) = package.as_table()
             && let Some(dependency) = build_dependency_from_package(package_table)
         {
@@ -284,7 +285,8 @@ fn extract_package_dependencies(package_table: &TomlMap<String, TomlValue>) -> V
         .get(FIELD_DEPENDENCIES)
         .and_then(|value| value.as_table())
     {
-        for (dep_name, dep_value) in dep_table.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(dep_table.len(), "poetry.lock package dependencies");
+        for (dep_name, dep_value) in dep_table.iter().take(limit) {
             if let Some(dependency) = build_dependency_from_table(dep_name, dep_value) {
                 dependencies.push(dependency);
             }
@@ -295,9 +297,12 @@ fn extract_package_dependencies(package_table: &TomlMap<String, TomlValue>) -> V
         .get(FIELD_EXTRAS)
         .and_then(|value| value.as_table())
     {
-        for (extra_name, extra_values) in extras_table.iter().take(MAX_ITERATION_COUNT) {
+        let extras_limit = capped_iteration_limit(extras_table.len(), "poetry.lock package extras");
+        for (extra_name, extra_values) in extras_table.iter().take(extras_limit) {
             if let Some(extra_list) = extra_values.as_array() {
-                for extra in extra_list.iter().take(MAX_ITERATION_COUNT) {
+                let extra_limit =
+                    capped_iteration_limit(extra_list.len(), "poetry.lock package extra list");
+                for extra in extra_list.iter().take(extra_limit) {
                     if let Some(spec) = extra.as_str()
                         && let Some(dependency) = build_dependency_from_extra(extra_name, spec)
                     {

@@ -13,7 +13,10 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
 use super::metadata::ParserMetadata;
-use super::utils::{MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field};
+use super::utils::{
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
+};
 
 pub struct MesonParser;
 
@@ -59,7 +62,8 @@ fn parse_meson_build(content: &str) -> Result<PackageData, String> {
     let mut dependencies = Vec::new();
     let mut control_flow_depth = 0usize;
 
-    for statement in statements.into_iter().take(MAX_ITERATION_COUNT) {
+    let statement_limit = capped_iteration_limit(statements.len(), "meson: top-level statements");
+    for statement in statements.into_iter().take(statement_limit) {
         let trimmed = statement.trim();
         if trimmed.is_empty() {
             continue;
@@ -210,9 +214,11 @@ fn extract_dependencies_from_call(call: &CallExpr) -> Vec<Dependency> {
     let required = call.keyword.get("required").and_then(expr_as_bool);
     let native = call.keyword.get("native").and_then(expr_as_bool);
 
+    let dependency_limit =
+        capped_iteration_limit(dependency_names.len(), "meson: dependency() names");
     dependency_names
         .into_iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(dependency_limit)
         .map(|name| {
             let mut extra_data = HashMap::new();
 

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
 use yaml_serde::{Mapping, Value};
@@ -166,7 +166,7 @@ fn extract_chart_yaml_dependencies(yaml_content: &Value) -> Vec<Dependency> {
 
     entries
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("Chart.yaml dependencies")
         .filter_map(Value::as_mapping)
         .filter_map(parse_chart_yaml_dependency)
         .collect()
@@ -231,7 +231,7 @@ fn extract_chart_lock_dependencies(yaml_content: &Value) -> Vec<Dependency> {
 
     entries
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("Chart.lock dependencies")
         .filter_map(Value::as_mapping)
         .filter_map(parse_chart_lock_dependency)
         .collect()
@@ -292,7 +292,7 @@ fn extract_maintainers(yaml_content: &Value) -> Vec<Party> {
 
     maintainers
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("Chart.yaml maintainers")
         .filter_map(Value::as_mapping)
         .filter_map(|mapping| {
             let name = mapping_get(mapping, "name").and_then(yaml_value_to_string)?;
@@ -328,7 +328,7 @@ fn extract_string_values(value: &Value) -> Vec<String> {
         Value::String(value) => vec![truncate_field(value.clone())],
         Value::Sequence(values) => values
             .iter()
-            .take(MAX_ITERATION_COUNT)
+            .capped("Chart.yaml string list field")
             .filter_map(yaml_value_to_string)
             .collect(),
         _ => Vec::new(),

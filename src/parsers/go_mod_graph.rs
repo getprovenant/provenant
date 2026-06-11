@@ -8,7 +8,7 @@ use std::path::Path;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 use super::PackageParser;
 use super::go::{create_golang_purl, split_module_path};
@@ -69,7 +69,7 @@ pub(crate) fn parse_go_mod_graph(content: &str) -> PackageData {
     let mut root_module: Option<String> = None;
     let mut dependency_map: BTreeMap<String, Dependency> = BTreeMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("go.mod graph lines") {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;

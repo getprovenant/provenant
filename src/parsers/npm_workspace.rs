@@ -24,7 +24,7 @@
 use crate::models::PackageData;
 use crate::models::{DatasourceId, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use std::path::Path;
 use yaml_serde::Value;
 
@@ -93,9 +93,13 @@ fn parse_workspace_file(workspace_data: &Value) -> PackageData {
 
     match workspaces {
         Some(workspace_patterns) => {
+            let limit = capped_iteration_limit(
+                workspace_patterns.len(),
+                "pnpm workspace: packages patterns",
+            );
             let workspaces_vec: Vec<String> = workspace_patterns
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|v| v.as_str())
                 .map(|s| truncate_field(s.to_string()))
                 .collect();

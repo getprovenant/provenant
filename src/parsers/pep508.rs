@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_FIELD_LENGTH, MAX_ITERATION_COUNT, truncate_field};
+use crate::parsers::utils::{CappedIterExt, MAX_FIELD_LENGTH, truncate_field};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Pep508Requirement {
@@ -92,7 +92,7 @@ fn parse_name_and_extras(input: &str) -> Option<(String, Vec<String>, &str)> {
     }
 
     let mut name_end = trimmed.len();
-    for (idx, ch) in trimmed.char_indices().take(MAX_ITERATION_COUNT) {
+    for (idx, ch) in trimmed.char_indices().capped("pep508 name characters") {
         if ch == '[' || ch.is_whitespace() || matches!(ch, '<' | '>' | '=' | '!' | '~' | ';') {
             name_end = idx;
             break;
@@ -114,7 +114,7 @@ fn parse_name_and_extras(input: &str) -> Option<(String, Vec<String>, &str)> {
         let extras_str = &rest_trimmed[1..close_idx];
         extras = extras_str
             .split(',')
-            .take(MAX_ITERATION_COUNT)
+            .capped("pep508 extras")
             .map(|value| value.trim())
             .filter(|value| !value.is_empty())
             .map(|value| truncate_field(value.to_string()))

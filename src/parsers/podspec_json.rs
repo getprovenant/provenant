@@ -30,7 +30,7 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 use crate::parsers::podfile_lock::build_cocoapods_purl;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 use serde_json::Value;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
@@ -391,7 +391,7 @@ fn extract_parties(json: &Value) -> Vec<Party> {
     if let Some(authors) = json.get(FIELD_AUTHORS) {
         if let Some(authors_obj) = authors.as_object() {
             // Authors as dict: key=name, value=url
-            for (name, value) in authors_obj.iter().take(MAX_ITERATION_COUNT) {
+            for (name, value) in authors_obj.iter().capped("podspec.json authors") {
                 let name_str = truncate_field(name.trim().to_string());
                 if !name_str.is_empty() {
                     let url = value.as_str().and_then(|s| {
@@ -445,7 +445,7 @@ fn extract_dependencies(json: &Value) -> Vec<Dependency> {
     if let Some(deps) = json.get(FIELD_DEPENDENCIES)
         && let Some(deps_obj) = deps.as_object()
     {
-        for (name, requirement) in deps_obj.iter().take(MAX_ITERATION_COUNT) {
+        for (name, requirement) in deps_obj.iter().capped("podspec.json dependencies") {
             let name_str = name.trim();
             if name_str.is_empty() {
                 continue;

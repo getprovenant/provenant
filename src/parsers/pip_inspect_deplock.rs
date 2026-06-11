@@ -41,7 +41,7 @@ use super::python::PythonParser;
 #[cfg(test)]
 use super::python::extract_requires_dist_dependencies;
 #[cfg(test)]
-use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
+use crate::parsers::utils::{CappedIterExt, truncate_field};
 
 const PACKAGE_TYPE: PackageType = PackageType::Pypi;
 
@@ -125,7 +125,7 @@ pub(crate) fn parse_pip_inspect_deplock(content: &str) -> PackageData {
     // Find the main package (has direct_url and is_requested)
     let main_package = installed_packages
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("pip inspect installed packages")
         .find(|p| p.requested.unwrap_or(false) && p.direct_url.is_some());
 
     let metadata = if let Some(pkg) = main_package {
@@ -134,7 +134,7 @@ pub(crate) fn parse_pip_inspect_deplock(content: &str) -> PackageData {
         // If no main package found, try to find any requested package
         installed_packages
             .iter()
-            .take(MAX_ITERATION_COUNT)
+            .capped("pip inspect installed packages")
             .find(|p| p.requested.unwrap_or(false))
             .and_then(|p| p.metadata.as_ref())
     };

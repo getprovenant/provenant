@@ -34,7 +34,9 @@ use yaml_serde::Value as YamlValue;
 use crate::models::{
     DatasourceId, Dependency, FileReference, PackageData, PackageType, Party, PartyType,
 };
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 
 use super::PackageParser;
 use super::license_normalization::{
@@ -247,7 +249,7 @@ impl PackageParser for CpanManifestParser {
 
         let file_references = content
             .lines()
-            .take(MAX_ITERATION_COUNT)
+            .capped("CPAN MANIFEST lines")
             .filter(|line| !line.trim().is_empty())
             .filter(|line| !line.trim().starts_with('#'))
             .map(|line| {
@@ -334,9 +336,10 @@ fn extract_license_from_json(json: &serde_json::Map<String, JsonValue>) -> Optio
     json.get(FIELD_LICENSE).and_then(|v| match v {
         JsonValue::String(s) => Some(truncate_field(s.clone())),
         JsonValue::Array(arr) => {
+            let limit = capped_iteration_limit(arr.len(), "CPAN JSON license array");
             let licenses: Vec<String> = arr
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|item| item.as_str().map(|s| truncate_field(s.to_string())))
                 .collect();
             if licenses.is_empty() {
@@ -354,9 +357,10 @@ fn extract_license_from_yaml(yaml: &yaml_serde::Mapping) -> Option<String> {
         .and_then(|v| match v {
             YamlValue::String(s) => Some(truncate_field(s.clone())),
             YamlValue::Sequence(arr) => {
+                let limit = capped_iteration_limit(arr.len(), "CPAN YAML license sequence");
                 let licenses: Vec<String> = arr
                     .iter()
-                    .take(MAX_ITERATION_COUNT)
+                    .take(limit)
                     .filter_map(|item| item.as_str().map(|s| truncate_field(s.to_string())))
                     .collect();
                 if licenses.is_empty() {
@@ -408,14 +412,17 @@ impl LicenseValueAdapter for JsonValue {
     fn license_values(&self) -> Vec<String> {
         match self {
             JsonValue::String(value) => vec![truncate_field(value.trim().to_string())],
-            JsonValue::Array(values) => values
-                .iter()
-                .take(MAX_ITERATION_COUNT)
-                .filter_map(|value| value.as_str())
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(|s| truncate_field(s.to_string()))
-                .collect(),
+            JsonValue::Array(values) => {
+                let limit = capped_iteration_limit(values.len(), "CPAN JSON license values");
+                values
+                    .iter()
+                    .take(limit)
+                    .filter_map(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(|s| truncate_field(s.to_string()))
+                    .collect()
+            }
             _ => Vec::new(),
         }
     }
@@ -425,14 +432,17 @@ impl LicenseValueAdapter for YamlValue {
     fn license_values(&self) -> Vec<String> {
         match self {
             YamlValue::String(value) => vec![truncate_field(value.trim().to_string())],
-            YamlValue::Sequence(values) => values
-                .iter()
-                .take(MAX_ITERATION_COUNT)
-                .filter_map(|value| value.as_str())
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(|s| truncate_field(s.to_string()))
-                .collect(),
+            YamlValue::Sequence(values) => {
+                let limit = capped_iteration_limit(values.len(), "CPAN YAML license values");
+                values
+                    .iter()
+                    .take(limit)
+                    .filter_map(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(|s| truncate_field(s.to_string()))
+                    .collect()
+            }
             _ => Vec::new(),
         }
     }
@@ -457,9 +467,10 @@ fn extract_parties_from_json(json: &serde_json::Map<String, JsonValue>) -> Vec<P
     json.get(FIELD_AUTHOR)
         .and_then(|v| v.as_array())
         .map_or_else(Vec::new, |authors| {
+            let limit = capped_iteration_limit(authors.len(), "CPAN JSON authors");
             authors
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|author| {
                     author.as_str().map(|s| {
                         let (name, email) = parse_author_string(s);
@@ -483,9 +494,10 @@ fn extract_parties_from_yaml(yaml: &yaml_serde::Mapping) -> Vec<Party> {
     yaml.get(YamlValue::String(FIELD_AUTHOR.to_string()))
         .and_then(|v| v.as_sequence())
         .map_or_else(Vec::new, |authors| {
+            let limit = capped_iteration_limit(authors.len(), "CPAN YAML authors");
             authors
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|author| {
                     author.as_str().map(|s| {
                         let (name, email) = parse_author_string(s);
@@ -715,8 +727,9 @@ fn extract_dependency_group(
     is_runtime: bool,
     is_optional: bool,
 ) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(deps.len(), "CPAN JSON dependency group");
     deps.iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|(name, version)| {
             if name == "perl" {
                 return None;
@@ -754,8 +767,9 @@ fn extract_yaml_dependency_group(
     is_runtime: bool,
     is_optional: bool,
 ) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(deps.len(), "CPAN YAML dependency group");
     deps.iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|(key, value)| {
             let name = key.as_str()?;
 

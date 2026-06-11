@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::Value;
 
@@ -276,8 +276,9 @@ fn extract_dependencies(
         .get(field)
         .and_then(|value| value.as_object())
         .map_or_else(Vec::new, |deps| {
+            let limit = capped_iteration_limit(deps.len(), "composer.json dependencies");
             deps.iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|(name, requirement)| {
                     let requirement_str = requirement.as_str()?;
                     let (namespace, package_name) = split_namespace_name(name);
@@ -350,13 +351,16 @@ fn extract_lock_packages(json_content: &Value) -> Vec<PackageData> {
 
     let mut extracted = Vec::with_capacity(packages.len() + packages_dev.len());
 
-    for package in packages.iter().take(MAX_ITERATION_COUNT) {
+    let packages_limit = capped_iteration_limit(packages.len(), "composer.lock packages");
+    for package in packages.iter().take(packages_limit) {
         if let Some(package_data) = build_lock_package_data(package, false) {
             extracted.push(package_data);
         }
     }
 
-    for package in packages_dev.iter().take(MAX_ITERATION_COUNT) {
+    let packages_dev_limit =
+        capped_iteration_limit(packages_dev.len(), "composer.lock packages-dev");
+    for package in packages_dev.iter().take(packages_dev_limit) {
         if let Some(package_data) = build_lock_package_data(package, true) {
             extracted.push(package_data);
         }
@@ -373,7 +377,8 @@ fn extract_lock_package_list(
 ) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for package in packages.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(packages.len(), "composer.lock package list");
+    for package in packages.iter().take(limit) {
         if let Some(dependency) = build_lock_dependency(package, scope, is_runtime, is_optional) {
             dependencies.push(dependency);
         }
@@ -733,9 +738,10 @@ fn extract_keywords(json_content: &Value) -> Vec<String> {
         .get(FIELD_KEYWORDS)
         .and_then(|value| value.as_array())
         .map(|values| {
+            let limit = capped_iteration_limit(values.len(), "composer.json keywords");
             values
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|value| {
                     value
                         .as_str()
@@ -753,7 +759,8 @@ fn extract_parties(json_content: &Value, namespace: &Option<String>) -> Vec<Part
         .get(FIELD_AUTHORS)
         .and_then(|value| value.as_array())
     {
-        for author in authors.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(authors.len(), "composer.json authors");
+        for author in authors.iter().take(limit) {
             if let Some(author) = author.as_object() {
                 let name = author
                     .get("name")

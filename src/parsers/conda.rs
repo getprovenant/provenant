@@ -36,7 +36,9 @@ use std::path::Path;
 use packageurl::PackageUrl;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 use regex::Regex;
 use yaml_serde::Value;
 
@@ -258,7 +260,8 @@ impl PackageParser for CondaMetaYamlParser {
             for (scope_key, reqs_value) in requirements {
                 let scope = scope_key.as_str().unwrap_or("unknown");
                 if let Some(reqs) = reqs_value.as_sequence() {
-                    for req in reqs.iter().take(MAX_ITERATION_COUNT) {
+                    let limit = capped_iteration_limit(reqs.len(), "conda meta.yaml requirements");
+                    for req in reqs.iter().take(limit) {
                         if let Some(req_str) = req.as_str()
                             && let Some(dep) = parse_conda_requirement(req_str, scope)
                         {
@@ -554,7 +557,8 @@ fn collect_recipe_yaml_requirement_strings(
     }
 
     if let Some(items) = value.as_sequence() {
-        for item in items.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(items.len(), "recipe.yaml requirement items");
+        for item in items.iter().take(limit) {
             collect_recipe_yaml_requirement_strings(item, context, requirements);
         }
         return;
@@ -714,10 +718,13 @@ fn looks_like_conda_environment_yaml(yaml: &Value) -> bool {
 }
 
 fn looks_like_template_yaml(contents: &str) -> bool {
-    contents.lines().take(MAX_ITERATION_COUNT).any(|line| {
-        let trimmed = line.trim_start();
-        trimmed.starts_with("{{") || trimmed.starts_with("{%-") || trimmed.starts_with("{%")
-    })
+    contents
+        .lines()
+        .capped("conda template detection lines")
+        .any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with("{{") || trimmed.starts_with("{%-") || trimmed.starts_with("{%")
+        })
 }
 
 /// Extract Jinja2-style variables from a Conda meta.yaml
@@ -727,7 +734,7 @@ fn looks_like_template_yaml(contents: &str) -> bool {
 pub fn extract_jinja2_variables(content: &str) -> HashMap<String, String> {
     let mut variables = HashMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("conda Jinja2 variable lines") {
         let trimmed = line.trim();
         if let Some(inner) = extract_jinja_statement(trimmed)
             && let Some(inner) = inner.strip_prefix("set").map(str::trim)
@@ -910,7 +917,8 @@ fn extract_environment_dependencies(yaml: &Value) -> Vec<Dependency> {
     };
 
     let mut deps = Vec::new();
-    for dep_value in dependencies.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(dependencies.len(), "conda environment dependencies");
+    for dep_value in dependencies.iter().take(limit) {
         if let Some(dep_str) = dep_value.as_str() {
             if let Some(dep) = parse_environment_string_dependency(dep_str) {
                 deps.push(dep);
@@ -1039,9 +1047,10 @@ fn create_conda_dependency(
 }
 
 fn extract_pip_dependencies(pip_deps: &[Value]) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(pip_deps.len(), "conda pip dependencies");
     pip_deps
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|pip_dep| {
             if let Some(pip_req_str) = pip_dep.as_str()
                 && let Some(parsed_req) =

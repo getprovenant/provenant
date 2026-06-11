@@ -29,7 +29,7 @@ use std::path::Path;
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
-use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 /// Gradle gradle.lockfile parser.
 ///
@@ -119,7 +119,7 @@ impl PackageParser for GradleLockfileParser {
 fn extract_dependencies(content: &str) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("gradle.lockfile lines") {
         let line = line.trim();
 
         // Skip empty lines and comments

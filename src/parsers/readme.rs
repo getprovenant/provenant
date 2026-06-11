@@ -29,7 +29,7 @@
 use crate::models::PackageData;
 use crate::models::{DatasourceId, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 use std::path::Path;
 
 use super::PackageParser;
@@ -88,7 +88,7 @@ impl PackageParser for ReadmeParser {
         let mut pkg = default_package_data();
 
         // Parse key:value pairs
-        for line in content.lines().take(MAX_ITERATION_COUNT) {
+        for line in content.lines().capped("readme key:value lines") {
             let line = line.trim();
             if line.is_empty() {
                 continue;

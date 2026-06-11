@@ -24,7 +24,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage};
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
 };
 
 use super::PackageParser;
@@ -193,10 +194,14 @@ fn build_dependency(
     let name = truncate_field(dep.name.as_ref()?.clone());
     let version = normalize_version(dep.version.clone());
     let purl = create_dependency_purl(dep, version.as_deref());
+    let nested_limit = capped_iteration_limit(
+        dep.dependencies.len(),
+        "swift show-dependencies nested dependencies",
+    );
     let nested_dependencies = dep
         .dependencies
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(nested_limit)
         .filter_map(|child| build_dependency(child, true, guard))
         .collect();
 

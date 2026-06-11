@@ -30,7 +30,8 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
 };
 use packageurl::PackageUrl;
 use yaml_serde::{Mapping, Value};
@@ -294,7 +295,8 @@ fn extract_lock_dependencies(lock_data: &Value) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
     if let Some(sdks) = lock_data.get(FIELD_SDKS).and_then(Value::as_mapping) {
-        for (name_value, version_value) in sdks.iter().take(MAX_ITERATION_COUNT) {
+        let sdks_limit = capped_iteration_limit(sdks.len(), "pubspec.lock SDKs");
+        for (name_value, version_value) in sdks.iter().take(sdks_limit) {
             if let (Some(name), Some(version_str)) = (name_value.as_str(), version_value.as_str()) {
                 let purl = build_dependency_purl(name, None).map(truncate_field);
                 dependencies.push(Dependency {
@@ -333,7 +335,8 @@ fn extract_lock_dependencies(lock_data: &Value) -> Vec<Dependency> {
         reachable_lock_packages(packages, &["direct main", "direct overridden"]);
     let dev_only_reachable = reachable_lock_packages(packages, &["direct dev"]);
 
-    for (name_value, details_value) in packages.iter().take(MAX_ITERATION_COUNT) {
+    let packages_limit = capped_iteration_limit(packages.len(), "pubspec.lock packages");
+    for (name_value, details_value) in packages.iter().take(packages_limit) {
         let name = match name_value.as_str() {
             Some(value) => value,
             None => continue,
@@ -393,7 +396,8 @@ fn extract_lock_package_dependencies(details: &Mapping) -> Vec<Dependency> {
         return dependencies;
     };
 
-    for (name_value, requirement_value) in dep_map.iter().take(MAX_ITERATION_COUNT) {
+    let dep_limit = capped_iteration_limit(dep_map.len(), "pubspec.lock package dependencies");
+    for (name_value, requirement_value) in dep_map.iter().take(dep_limit) {
         let name = match name_value.as_str() {
             Some(value) => value,
             None => continue,
@@ -486,7 +490,8 @@ fn collect_dependencies(
         return dependencies;
     };
 
-    for (name_value, requirement_value) in dep_map.iter().take(MAX_ITERATION_COUNT) {
+    let dep_limit = capped_iteration_limit(dep_map.len(), "pubspec.yaml dependencies");
+    for (name_value, requirement_value) in dep_map.iter().take(dep_limit) {
         let name = match name_value.as_str() {
             Some(value) => value,
             None => continue,
@@ -549,7 +554,8 @@ fn format_dependency_mapping(map: &Mapping, guard: &mut RecursionGuard<()>) -> O
 
     let mut parts = Vec::new();
 
-    for (key, value) in map.iter().take(MAX_ITERATION_COUNT) {
+    let map_limit = capped_iteration_limit(map.len(), "pubspec dependency mapping");
+    for (key, value) in map.iter().take(map_limit) {
         let Some(key_str) = key.as_str() else {
             continue;
         };
@@ -683,7 +689,8 @@ fn extract_authors(yaml_content: &Value) -> Vec<crate::models::Party> {
     if let Some(authors_value) = yaml_content.get(FIELD_AUTHORS)
         && let Some(authors_array) = authors_value.as_sequence()
     {
-        for author_value in authors_array.iter().take(MAX_ITERATION_COUNT) {
+        let authors_limit = capped_iteration_limit(authors_array.len(), "pubspec.yaml authors");
+        for author_value in authors_array.iter().take(authors_limit) {
             if let Some(author_str) = author_value.as_str() {
                 parties.push(Party {
                     r#type: None,
@@ -814,7 +821,8 @@ fn reachable_lock_packages(packages: &Mapping, roots: &[&str]) -> HashSet<String
     let mut queue = VecDeque::new();
     let mut iterations = 0usize;
 
-    for (name_value, details_value) in packages.iter().take(MAX_ITERATION_COUNT) {
+    let roots_limit = capped_iteration_limit(packages.len(), "pubspec.lock reachability roots");
+    for (name_value, details_value) in packages.iter().take(roots_limit) {
         let Some(name) = name_value.as_str() else {
             continue;
         };
@@ -849,10 +857,12 @@ fn reachable_lock_packages(packages: &Mapping, roots: &[&str]) -> HashSet<String
             continue;
         };
 
+        let dep_keys_limit =
+            capped_iteration_limit(dep_map.len(), "pubspec.lock reachability edges");
         for dep_name in dep_map
             .keys()
             .filter_map(Value::as_str)
-            .take(MAX_ITERATION_COUNT)
+            .take(dep_keys_limit)
         {
             queue.push_back(truncate_field(dep_name.to_string()));
         }

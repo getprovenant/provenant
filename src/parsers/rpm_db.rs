@@ -28,7 +28,7 @@ use crate::parser_warn as warn;
 
 use crate::models::{DatasourceId, PackageData, PackageType};
 use crate::models::{Dependency, FileReference};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
+use crate::parsers::utils::{MAX_MANIFEST_SIZE, capped_iteration_limit, truncate_field};
 
 use super::PackageParser;
 use super::license_normalization::{
@@ -222,12 +222,15 @@ fn parse_rpm_database(
 
     let native_kind = native_kind_for_datasource(datasource_id)?;
     match read_installed_rpm_packages(path, native_kind) {
-        Ok(packages) => Ok(packages
-            .into_iter()
-            .take(MAX_ITERATION_COUNT)
-            .map(native_package_to_query_package)
-            .map(|pkg| build_package_data(pkg, datasource_id))
-            .collect()),
+        Ok(packages) => {
+            let limit = capped_iteration_limit(packages.len(), "rpm_db native packages");
+            Ok(packages
+                .into_iter()
+                .take(limit)
+                .map(native_package_to_query_package)
+                .map(|pkg| build_package_data(pkg, datasource_id))
+                .collect())
+        }
         Err(native_error) => Err(format!(
             "native installed RPM reader failed for {:?}: {}",
             path, native_error
@@ -257,6 +260,13 @@ fn native_kind_for_datasource(datasource_id: DatasourceId) -> Result<InstalledRp
 }
 
 fn native_package_to_query_package(package: InstalledRpmPackage) -> RpmQueryPackage {
+    let requires_limit = capped_iteration_limit(package.requires.len(), "rpm_db package requires");
+    let file_names_limit =
+        capped_iteration_limit(package.file_names.len(), "rpm_db package file_names");
+    let base_names_limit =
+        capped_iteration_limit(package.base_names.len(), "rpm_db package base_names");
+    let dir_names_limit =
+        capped_iteration_limit(package.dir_names.len(), "rpm_db package dir_names");
     RpmQueryPackage {
         name: truncate_optional_string(Some(package.name)),
         epoch: Some(package.epoch.to_string()),
@@ -272,26 +282,26 @@ fn native_package_to_query_package(package: InstalledRpmPackage) -> RpmQueryPack
         requires: package
             .requires
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(requires_limit)
             .map(truncate_field)
             .collect(),
         file_names: package
             .file_names
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(file_names_limit)
             .map(|s| Some(truncate_field(s)))
             .collect(),
         dir_indexes: package.dir_indexes,
         base_names: package
             .base_names
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(base_names_limit)
             .map(|s| Some(truncate_field(s)))
             .collect(),
         dir_names: package
             .dir_names
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(dir_names_limit)
             .map(truncate_field)
             .collect(),
     }
@@ -327,10 +337,14 @@ fn build_file_references(
         return Vec::new();
     }
 
+    let limit = capped_iteration_limit(
+        base_names.len().min(dir_indexes.len()),
+        "rpm_db file references",
+    );
     base_names
         .iter()
         .zip(dir_indexes.iter())
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|(basename, &dir_idx)| {
             let dirname = dir_names.get(dir_idx as usize)?;
             let basename = basename.as_deref().unwrap_or_default();
@@ -352,9 +366,10 @@ fn build_file_references(
 }
 
 fn build_file_references_from_paths(paths: &[Option<String>]) -> Vec<FileReference> {
+    let limit = capped_iteration_limit(paths.len(), "rpm_db file references from paths");
     paths
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|path| {
             let path = path.as_deref()?.trim();
             if path.is_empty() || path == "/" {
@@ -401,10 +416,11 @@ fn build_package_data(pkg: RpmQueryPackage, datasource_id: DatasourceId) -> Pack
     let architecture = normalize_optional_string(pkg.arch)
         .map(truncate_field)
         .or_else(|| infer_platform_architecture(pkg.platform.as_deref()));
+    let requires_limit = capped_iteration_limit(pkg.requires.len(), "rpm_db package dependencies");
     let dependencies = pkg
         .requires
         .into_iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(requires_limit)
         .filter_map(|require| build_dependency(&require))
         .collect();
     let extracted_license_statement = normalize_optional_string(pkg.license).map(truncate_field);

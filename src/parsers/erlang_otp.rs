@@ -12,7 +12,8 @@ use crate::models::{
 };
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, capped_iteration_limit, read_file_to_string,
+    truncate_field,
 };
 
 use super::PackageParser;
@@ -366,6 +367,10 @@ fn parse_dotted_terms(content: &str) -> Result<Vec<ErlTerm>, String> {
             continue;
         }
         if count >= MAX_ITERATION_COUNT {
+            warn!(
+                "Truncated Erlang term parsing at {} top-level terms (MAX_ITERATION_COUNT); remaining terms dropped",
+                MAX_ITERATION_COUNT
+            );
             break;
         }
         let term = parser.parse_term()?;
@@ -835,7 +840,8 @@ fn parse_rebar_config(content: &str) -> Result<PackageData, String> {
             match key.as_deref() {
                 Some("deps") => {
                     if let ErlTerm::List(deps) = &fields[1] {
-                        for dep in deps.iter().take(MAX_ITERATION_COUNT) {
+                        let deps_limit = capped_iteration_limit(deps.len(), "rebar.config deps");
+                        for dep in deps.iter().take(deps_limit) {
                             if let Some(d) = parse_rebar_dep(dep) {
                                 package.dependencies.push(d);
                             }
@@ -1038,7 +1044,8 @@ fn parse_profile_deps(term: &ErlTerm, dependencies: &mut Vec<Dependency>) {
         _ => return,
     };
 
-    for profile in profiles.iter().take(MAX_ITERATION_COUNT) {
+    let profiles_limit = capped_iteration_limit(profiles.len(), "rebar.config profiles");
+    for profile in profiles.iter().take(profiles_limit) {
         if let ErlTerm::Tuple(fields) = profile
             && fields.len() == 2
         {
@@ -1050,7 +1057,9 @@ fn parse_profile_deps(term: &ErlTerm, dependencies: &mut Vec<Dependency>) {
                         && term_to_str(&opt_fields[0]).as_deref() == Some("deps")
                         && let ErlTerm::List(deps) = &opt_fields[1]
                     {
-                        for dep in deps.iter().take(MAX_ITERATION_COUNT) {
+                        let profile_deps_limit =
+                            capped_iteration_limit(deps.len(), "rebar.config profile deps");
+                        for dep in deps.iter().take(profile_deps_limit) {
                             if let Some(mut d) = parse_rebar_dep(dep) {
                                 d.scope = Some(truncate_field(profile_name.clone()));
                                 dependencies.push(d);
@@ -1138,7 +1147,8 @@ fn parse_rebar_lock(content: &str) -> Result<PackageData, String> {
 
     let mut package = default_rebar_lock_package();
 
-    for dep_term in dep_list.iter().take(MAX_ITERATION_COUNT) {
+    let dep_list_limit = capped_iteration_limit(dep_list.len(), "rebar.lock deps");
+    for dep_term in dep_list.iter().take(dep_list_limit) {
         if let Some(dep) = parse_lock_dep(dep_term, &hash_map) {
             package.dependencies.push(dep);
         }
@@ -1252,7 +1262,9 @@ fn extract_pkg_hashes(term: &ErlTerm) -> HashMap<String, String> {
             && term_to_str(&fields[0]).as_deref() == Some("pkg_hash")
             && let ErlTerm::List(hash_list) = &fields[1]
         {
-            for entry in hash_list.iter().take(MAX_ITERATION_COUNT) {
+            let hash_list_limit =
+                capped_iteration_limit(hash_list.len(), "rebar.lock pkg_hash entries");
+            for entry in hash_list.iter().take(hash_list_limit) {
                 if let ErlTerm::Tuple(pair) = entry
                     && pair.len() == 2
                     && let (Some(name), Some(hash)) = (term_to_str(&pair[0]), term_to_str(&pair[1]))

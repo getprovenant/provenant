@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::pnpm_lock::*;
-use crate::models::PackageType;
-use crate::parsers::PackageParser;
+use crate::models::{DatasourceId, DiagnosticSeverity, PackageType};
+use crate::parsers::{PackageParser, capture_parser_diagnostics};
+use std::io::Write;
 use std::path::PathBuf;
 
 #[test]
@@ -409,4 +410,112 @@ fn test_parse_purl_fields_v6_scoped_with_underscore() {
     assert_eq!(namespace, Some("@babel".to_string()));
     assert_eq!(name, "helper_string_parser".to_string());
     assert_eq!(version, "7.24.8".to_string());
+}
+
+#[test]
+fn test_malformed_pnpm_entry_records_warning_and_keeps_valid_entries() {
+    // A v9 lockfile with one valid entry and one malformed key (a scoped name
+    // with an extra path segment) that parse_purl_fields cannot decode. The
+    // malformed entry must be skipped, but with a diagnostic naming the key,
+    // while the valid entry still parses.
+    let content = r#"lockfileVersion: '9.0'
+
+packages:
+  lodash@4.17.21:
+    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvKw==}
+  '@scope/extra/name@1.0.0':
+    resolution: {integrity: sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==}
+"#;
+
+    let dir = tempfile::tempdir().unwrap();
+    let lock_path = dir.path().join("pnpm-lock.yaml");
+    let mut file = std::fs::File::create(&lock_path).unwrap();
+    file.write_all(content.as_bytes()).unwrap();
+
+    let result = capture_parser_diagnostics(
+        || PnpmLockParser::extract_packages(&lock_path),
+        "PnpmLockParser",
+        &lock_path,
+        None,
+    );
+
+    assert_eq!(result.packages.len(), 1);
+    assert_eq!(
+        result.packages[0].datasource_id,
+        Some(DatasourceId::PnpmLockYaml)
+    );
+
+    // The valid entry still parses.
+    assert!(
+        result.packages[0]
+            .dependencies
+            .iter()
+            .any(|dep| dep.purl.as_deref() == Some("pkg:npm/lodash@4.17.21")),
+        "expected the valid lodash entry to survive, got: {:?}",
+        result.packages[0].dependencies
+    );
+
+    // The malformed entry is skipped, with a diagnostic naming the offending key.
+    assert!(
+        result.scan_diagnostics.iter().any(|diagnostic| {
+            diagnostic.severity == DiagnosticSeverity::Warning
+                && diagnostic.message.contains("unparseable key")
+                && diagnostic.message.contains("@scope/extra/name@1.0.0")
+        }),
+        "expected a warning naming the unparseable key, got: {:?}",
+        result.scan_diagnostics
+    );
+}
+
+#[test]
+fn test_unsupported_lockfile_version_warns_once_not_per_entry() {
+    // An unsupported lockfileVersion makes every key unparseable. The parser
+    // must emit a single "unsupported lockfileVersion" warning naming the entry
+    // count, NOT one misleading per-entry "unparseable key" warning.
+    let content = r#"lockfileVersion: '4.0'
+
+packages:
+  lodash@4.17.21:
+    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvKw==}
+  react@18.0.0:
+    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvKw==}
+"#;
+
+    let dir = tempfile::tempdir().unwrap();
+    let lock_path = dir.path().join("pnpm-lock.yaml");
+    let mut file = std::fs::File::create(&lock_path).unwrap();
+    file.write_all(content.as_bytes()).unwrap();
+
+    let result = capture_parser_diagnostics(
+        || PnpmLockParser::extract_packages(&lock_path),
+        "PnpmLockParser",
+        &lock_path,
+        None,
+    );
+
+    // No entries are extractable, but datasource identity is preserved.
+    assert_eq!(result.packages.len(), 1);
+    assert!(result.packages[0].dependencies.is_empty());
+
+    // Exactly one warning, naming the version and the entry count; never the
+    // per-entry "unparseable key" message.
+    let warnings: Vec<&str> = result
+        .scan_diagnostics
+        .iter()
+        .filter(|d| d.severity == DiagnosticSeverity::Warning)
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        warnings.len(),
+        1,
+        "expected exactly one warning, got: {warnings:?}"
+    );
+    assert!(
+        warnings[0].contains("unsupported lockfileVersion") && warnings[0].contains("4.0"),
+        "expected a single unsupported-version warning, got: {warnings:?}"
+    );
+    assert!(
+        !warnings[0].contains("unparseable key"),
+        "must not emit the per-entry unparseable-key message for unsupported versions"
+    );
 }

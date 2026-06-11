@@ -11,7 +11,7 @@ use crate::models::{
     DatasourceId, Dependency, Md5Digest, PackageData, PackageType, ResolvedPackage, Sha1Digest,
     Sha256Digest, Sha512Digest,
 };
-use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, parse_sri, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, npm_purl, parse_sri, truncate_field};
 
 use super::PackageParser;
 
@@ -124,7 +124,8 @@ fn parse_bun_lockfile(root: &JsonValue) -> PackageData {
     };
 
     let mut dependencies = Vec::new();
-    for (key, value) in packages.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(packages.len(), "bun.lock packages");
+    for (key, value) in packages.iter().take(limit) {
         if let Some(dependency) = parse_package_entry(
             key,
             value,
@@ -165,7 +166,8 @@ fn extract_workspace_info(root: &JsonValue) -> WorkspaceContext {
         .map(|s| truncate_field(s.to_owned()));
 
     if let Some(workspaces) = workspaces {
-        for workspace in workspaces.values().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(workspaces.len(), "bun.lock workspace versions");
+        for workspace in workspaces.values().take(limit) {
             if let Some(name) = workspace.get("name").and_then(|value| value.as_str())
                 && let Some(version) = workspace.get("version").and_then(|value| value.as_str())
             {
@@ -181,7 +183,8 @@ fn extract_workspace_info(root: &JsonValue) -> WorkspaceContext {
     }
 
     if let Some(workspaces) = workspaces {
-        for workspace in workspaces.values().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(workspaces.len(), "bun.lock workspace manifests");
+        for workspace in workspaces.values().take(limit) {
             insert_manifest_dependency_info(
                 workspace.get("dependencies"),
                 "dependencies",
@@ -233,7 +236,8 @@ fn insert_manifest_dependency_info(
         return;
     };
 
-    for name in map.keys().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(map.len(), "bun.lock manifest dependency names");
+    for name in map.keys().take(limit) {
         out.insert(
             truncate_field(name.clone()),
             ManifestDependencyInfo {
@@ -491,8 +495,9 @@ fn build_nested_dependencies(
         return Vec::new();
     };
 
+    let limit = capped_iteration_limit(deps.len(), "bun.lock nested dependencies");
     deps.iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|(name, value)| {
             let requirement = value.as_str()?;
             let version = if requirement.starts_with("workspace:") {

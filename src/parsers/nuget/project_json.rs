@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use crate::utils::text::strip_utf8_bom_str;
 
 use super::super::PackageParser;
-use super::super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::super::utils::{CappedIterExt, read_file_to_string, truncate_field};
 use super::{
     build_nuget_party, build_nuget_purl, build_nuget_urls, default_package_data,
     insert_extra_string,
@@ -179,7 +179,9 @@ fn parse_project_json_manifest(parsed: &serde_json::Value) -> PackageData {
         .get("dependencies")
         .and_then(|value| value.as_object())
     {
-        for (dependency_name, dependency_spec) in root_dependencies.iter().take(MAX_ITERATION_COUNT)
+        for (dependency_name, dependency_spec) in root_dependencies
+            .iter()
+            .capped("project.json root dependencies")
         {
             if let Some(dependency) =
                 parse_project_json_dependency(dependency_name, dependency_spec, None)
@@ -190,7 +192,7 @@ fn parse_project_json_manifest(parsed: &serde_json::Value) -> PackageData {
     }
 
     if let Some(frameworks) = parsed.get("frameworks").and_then(|value| value.as_object()) {
-        for (framework, framework_value) in frameworks.iter().take(MAX_ITERATION_COUNT) {
+        for (framework, framework_value) in frameworks.iter().capped("project.json frameworks") {
             let Some(framework_dependencies) = framework_value
                 .get("dependencies")
                 .and_then(|value| value.as_object())
@@ -198,8 +200,9 @@ fn parse_project_json_manifest(parsed: &serde_json::Value) -> PackageData {
                 continue;
             };
 
-            for (dependency_name, dependency_spec) in
-                framework_dependencies.iter().take(MAX_ITERATION_COUNT)
+            for (dependency_name, dependency_spec) in framework_dependencies
+                .iter()
+                .capped("project.json framework dependencies")
             {
                 if let Some(dependency) = parse_project_json_dependency(
                     dependency_name,
@@ -316,14 +319,14 @@ fn parse_project_lock_manifest(parsed: &serde_json::Value) -> PackageData {
         .get("projectFileDependencyGroups")
         .and_then(|value| value.as_object())
     {
-        for (framework, entries) in groups.iter().take(MAX_ITERATION_COUNT) {
+        for (framework, entries) in groups.iter().capped("project.lock dependency groups") {
             let Some(entries) = entries.as_array() else {
                 continue;
             };
 
             for entry in entries
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .capped("project.lock group entries")
                 .filter_map(|value| value.as_str())
             {
                 if let Some(dependency) = parse_project_lock_dependency(

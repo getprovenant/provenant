@@ -8,7 +8,7 @@ use std::cell::Cell;
 
 use crate::parser_warn as warn;
 use crate::parsers::active_parser_license_engine;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard};
+use crate::parsers::utils::{RecursionGuard, capped_iteration_limit};
 
 use crate::license_detection::LicenseDetectionEngine;
 use crate::license_detection::expression::{
@@ -846,7 +846,11 @@ fn collect_reference_strings(value: Option<&serde_json::Value>, references: &mut
         }
         serde_json::Value::String(_) => {}
         serde_json::Value::Array(values) => {
-            for value in values.iter().take(MAX_ITERATION_COUNT) {
+            let limit = capped_iteration_limit(
+                values.len(),
+                "license_normalization: declared license reference array",
+            );
+            for value in values.iter().take(limit) {
                 if let Some(value) = value.as_str().filter(|value| !value.trim().is_empty()) {
                     references.push(value.trim().to_string());
                 }

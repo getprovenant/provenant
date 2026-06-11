@@ -13,7 +13,7 @@ use serde::Deserialize;
 use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
+use crate::parsers::utils::{CappedIterExt, capped_iteration_limit, truncate_field};
 
 use super::ParsePackagesResult;
 use super::go::create_golang_purl;
@@ -113,10 +113,11 @@ fn parse_rust_binary_bytes(bytes: &[u8]) -> Vec<PackageData> {
         return Vec::new();
     };
 
+    let limit = capped_iteration_limit(audit_data.packages.len(), "Rust binary audit packages");
     audit_data
         .packages
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .map(|package| build_rust_binary_package(package, &audit_data.packages))
         .collect()
 }
@@ -137,10 +138,12 @@ fn build_rust_binary_package(
     packages: &[RustBinaryAuditPackage],
 ) -> PackageData {
     let purl = create_cargo_purl(&package.name, &package.version);
+    let limit =
+        capped_iteration_limit(package.dependencies.len(), "Rust binary audit dependencies");
     let dependencies = package
         .dependencies
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|index| packages.get(*index))
         .filter_map(|dependency| {
             let purl = create_cargo_purl(&dependency.name, &dependency.version)?;
@@ -298,7 +301,7 @@ fn decode_uvarint(bytes: &[u8]) -> Option<(usize, usize)> {
 
 fn parse_go_modinfo_packages(modinfo: &str) -> Vec<PackageData> {
     let mut packages = Vec::new();
-    for line in modinfo.lines().take(MAX_ITERATION_COUNT) {
+    for line in modinfo.lines().capped("Go binary modinfo lines") {
         if let Some(rest) = line.strip_prefix("path\t") {
             packages.push(build_go_binary_package(rest, None, true));
             continue;

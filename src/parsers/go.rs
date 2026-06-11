@@ -29,7 +29,9 @@
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 use packageurl::PackageUrl;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -95,7 +97,7 @@ pub fn parse_go_mod(content: &str) -> PackageData {
     let mut retracted_versions: Vec<String> = Vec::new();
     let mut block_state = BlockState::None;
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("go.mod lines") {
         let trimmed = line.trim();
 
         if trimmed.is_empty() || trimmed.starts_with("//") {
@@ -587,7 +589,7 @@ pub fn parse_go_sum(content: &str) -> PackageData {
     let mut dependencies = Vec::new();
     let mut seen = HashSet::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("go.sum lines") {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
@@ -710,7 +712,7 @@ pub fn parse_go_work(content: &str, work_path: &Path) -> PackageData {
     let mut unresolved_use_paths: Vec<String> = Vec::new();
     let mut block_state = BlockState::None;
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("go.work lines") {
         let trimmed = line.trim();
 
         if trimmed.is_empty() || trimmed.starts_with("//") {
@@ -876,7 +878,8 @@ fn resolve_workspace_use_dependencies(
     let mut dependencies = Vec::new();
     let mut unresolved = Vec::new();
 
-    for use_path in use_paths.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(use_paths.len(), "go.work use paths");
+    for use_path in use_paths.iter().take(limit) {
         let go_mod_path = base_dir.join(use_path).join("go.mod");
         let module_path = read_file_to_string(&go_mod_path, None)
             .ok()
@@ -920,7 +923,7 @@ fn resolve_workspace_use_dependencies(
 }
 
 fn extract_module_path_from_go_mod(content: &str) -> Option<String> {
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("go.mod module-path lines") {
         let trimmed = line.trim();
         if let Some(module_path) = trimmed.strip_prefix("module ") {
             let module_path = strip_comment(module_path).trim();
@@ -1123,7 +1126,8 @@ pub fn parse_godeps_json(content: &str) -> PackageData {
     let mut dependencies = Vec::new();
 
     if let Some(deps) = json.get("Deps").and_then(|v| v.as_array()) {
-        for dep in deps.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(deps.len(), "go list Deps");
+        for dep in deps.iter().take(limit) {
             let dep_import_path = dep.get("ImportPath").and_then(|v| v.as_str());
             let rev = dep.get("Rev").and_then(|v| v.as_str());
 
