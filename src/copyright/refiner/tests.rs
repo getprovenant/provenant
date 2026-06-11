@@ -2466,3 +2466,54 @@ fn test_refine_copyright_and_holder_trim_contact_and_ladspa_junk() {
         Some("Nokia Corporation".to_string())
     );
 }
+
+// ── truncate_long_words ─────────────────────────────────────────
+
+#[test]
+fn test_truncate_long_words_skips_long_url_keeps_trailing_holders() {
+    // A long URL token between real holders is skipped, not treated as the end
+    // of the string: the trailing holders survive.
+    let long_url =
+        "https://docs.aws.amazon.com/config/latest/developerguide/securityhub-enabled.html";
+    assert!(long_url.len() > 80);
+    assert_eq!(
+        truncate_long_words(&format!("Acme Corp ({long_url}) Other Real Holder")),
+        "Acme Corp Other Real Holder"
+    );
+}
+
+#[test]
+fn test_truncate_long_words_stops_at_binary_garbage() {
+    // A long non-URL token is the onset of garbled/binary data, so it and the
+    // trailing junk fragments are dropped.
+    let garbage = "x".repeat(120);
+    assert_eq!(
+        truncate_long_words(&format!("Acme Corp {garbage} more junk")),
+        "Acme Corp"
+    );
+}
+
+#[test]
+fn test_truncate_long_words_length_boundary() {
+    // Words up to 80 bytes are kept; 81+ (non-URL) stop the scan.
+    let exactly_80 = "y".repeat(80);
+    let just_over_80 = "z".repeat(81);
+    assert_eq!(
+        truncate_long_words(&format!("{exactly_80} {just_over_80} tail")),
+        exactly_80
+    );
+    // Strings with no long words are returned unchanged (whitespace normalized).
+    assert_eq!(truncate_long_words("Acme Corp"), "Acme Corp");
+}
+
+#[test]
+fn test_refine_holder_keeps_holders_after_long_url() {
+    // Mirrors the junk-copyright-251 fixture: a long URL between the leading and
+    // trailing holders is dropped while both holders survive.
+    let long_url =
+        "https://docs.aws.amazon.com/config/latest/developerguide/securityhub-enabled.html";
+    assert_eq!(
+        refine_holder(&format!("securityhub-enabled {long_url} The AWS Account")),
+        Some("securityhub-enabled The AWS Account".to_string())
+    );
+}

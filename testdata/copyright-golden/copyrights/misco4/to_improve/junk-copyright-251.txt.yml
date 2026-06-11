@@ -3,7 +3,7 @@ what:
   - holders
   - authors
 copyrights:
-  - (c) securityhub-enabled
+  - (c) securityhub-enabled The AWS Account
 holders:
   - securityhub-enabled The AWS Account
 authors: []
