@@ -78,13 +78,27 @@ pub fn metadata_fingerprint(metadata: &fs::Metadata) -> Option<FileStateFingerpr
     })
 }
 
+/// Decides whether a cached manifest entry can be reused for `path`.
+///
+/// Both modes first require the size + nanosecond-mtime fingerprint to match.
+///
+/// When `trust_mtime` is `false` (the default, paranoid mode) the file is
+/// re-read and SHA-256 hashed, so a content change that preserves both size and
+/// mtime is still detected. When `trust_mtime` is `true` the fingerprint match
+/// alone is accepted and the read + hash are skipped, trading the rare
+/// same-tick, same-size silent edit for warm-rescan speed.
 pub fn manifest_entry_matches_path(
     entry: &IncrementalManifestEntry,
     path: &Path,
     metadata: &fs::Metadata,
+    trust_mtime: bool,
 ) -> io::Result<bool> {
     if !metadata_fingerprint(metadata).is_some_and(|fingerprint| fingerprint == entry.state) {
         return Ok(false);
+    }
+
+    if trust_mtime {
+        return Ok(true);
     }
 
     let bytes = fs::read(path)?;
@@ -292,6 +306,105 @@ mod tests {
             ),
         };
 
-        assert!(!manifest_entry_matches_path(&entry, &file_path, &metadata).expect("compare path"));
+        assert!(
+            !manifest_entry_matches_path(&entry, &file_path, &metadata, false)
+                .expect("compare path")
+        );
+    }
+
+    /// Builds a manifest entry whose recorded SHA-256 deliberately does NOT
+    /// match the file's real contents, so any code path that re-hashes the file
+    /// returns `false` while a path that trusts the fingerprint returns `true`.
+    fn entry_with_wrong_hash(
+        file_path: &Path,
+        metadata: &fs::Metadata,
+    ) -> IncrementalManifestEntry {
+        IncrementalManifestEntry {
+            state: metadata_fingerprint(metadata).expect("fingerprint"),
+            content_sha256: Sha256Digest::EMPTY,
+            file_info: FileInfo::new(
+                "main.rs".to_string(),
+                "main".to_string(),
+                ".rs".to_string(),
+                file_path.to_string_lossy().to_string(),
+                FileType::File,
+                None,
+                None,
+                metadata.len(),
+                None,
+                None,
+                None,
+                None,
+                None,
+                Vec::new(),
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            ),
+        }
+    }
+
+    #[test]
+    fn test_trust_mtime_accepts_fingerprint_match_without_rehashing() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let file_path = temp_dir.path().join("src/main.rs");
+        fs::create_dir_all(file_path.parent().expect("parent")).expect("create parent");
+        fs::write(&file_path, "fn main() {}\n").expect("write file");
+        let metadata = fs::metadata(&file_path).expect("metadata");
+
+        // The recorded hash is wrong, so the only way this returns `true` is by
+        // trusting the fingerprint and skipping the read + hash.
+        let entry = entry_with_wrong_hash(&file_path, &metadata);
+
+        assert!(
+            manifest_entry_matches_path(&entry, &file_path, &metadata, true).expect("compare path"),
+            "trust-mtime mode must accept a size+mtime match without re-hashing"
+        );
+    }
+
+    #[test]
+    fn test_default_mode_rehashes_on_fingerprint_match() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let file_path = temp_dir.path().join("src/main.rs");
+        fs::create_dir_all(file_path.parent().expect("parent")).expect("create parent");
+        fs::write(&file_path, "fn main() {}\n").expect("write file");
+        let metadata = fs::metadata(&file_path).expect("metadata");
+
+        // Same wrong-hash entry: default (paranoid) mode must re-hash and reject.
+        let entry = entry_with_wrong_hash(&file_path, &metadata);
+
+        assert!(
+            !manifest_entry_matches_path(&entry, &file_path, &metadata, false)
+                .expect("compare path"),
+            "default mode must re-hash and reject a fingerprint match whose content differs"
+        );
+    }
+
+    #[test]
+    fn test_trust_mtime_still_detects_changed_fingerprint() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let file_path = temp_dir.path().join("src/main.rs");
+        fs::create_dir_all(file_path.parent().expect("parent")).expect("create parent");
+        fs::write(&file_path, "fn main() {}\n").expect("write file");
+        let metadata = fs::metadata(&file_path).expect("metadata");
+
+        // Record a fingerprint for a different size so the size check alone fails.
+        let mut state = metadata_fingerprint(&metadata).expect("fingerprint");
+        state.size += 1;
+        let mut entry = entry_with_wrong_hash(&file_path, &metadata);
+        entry.state = state;
+
+        assert!(
+            !manifest_entry_matches_path(&entry, &file_path, &metadata, true)
+                .expect("compare path"),
+            "trust-mtime mode must still treat a changed size/mtime fingerprint as changed"
+        );
     }
 }

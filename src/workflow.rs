@@ -61,6 +61,12 @@ pub struct ScanOptions {
     pub cache_dir: Option<PathBuf>,
     pub cache_clear: bool,
     pub incremental: bool,
+    /// Opt-in trust-mtime mode for warm incremental scans.
+    ///
+    /// When `true`, a cached entry is reused on a size + mtime fingerprint match
+    /// without re-reading and re-hashing the file. Default `false` keeps the
+    /// paranoid full-hash behavior so default scans stay byte-identical.
+    pub cache_trust_mtime: bool,
     pub reindex: bool,
     pub no_license_index_cache: bool,
     pub license_text: bool,
@@ -129,6 +135,7 @@ impl Default for ScanOptions {
             cache_dir: None,
             cache_clear: false,
             incremental: false,
+            cache_trust_mtime: false,
             reindex: false,
             no_license_index_cache: false,
             license_text: false,
@@ -270,6 +277,7 @@ fn request_for_native_paths(input_paths: Vec<String>, options: &ScanOptions) -> 
             .map(|path| path.to_string_lossy().to_string()),
         cache_clear: options.cache_clear,
         incremental: options.incremental,
+        cache_trust_mtime: options.cache_trust_mtime,
         max_depth: options.max_depth,
         max_in_memory: options.max_in_memory,
         info: options.collect_info,
