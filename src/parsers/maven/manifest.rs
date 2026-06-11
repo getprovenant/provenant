@@ -26,6 +26,16 @@ pub(super) fn parse_manifest_mf(path: &Path) -> PackageData {
         }
     };
 
+    interpret_manifest_mf(&content, path)
+}
+
+/// Interpret MANIFEST.MF text into package data.
+///
+/// Shared by the file-backed [`parse_manifest_mf`] and by JVM-archive
+/// introspection (JAR/WAR/AAR), which supplies manifest content read from a
+/// bounded ZIP entry plus the archive `path` for Maven-coordinate inference and
+/// diagnostics.
+pub(crate) fn interpret_manifest_mf(content: &str, path: &Path) -> PackageData {
     let mut package_data = default_package_data(DatasourceId::JavaJarManifest);
 
     let mut headers: Vec<(String, String)> = Vec::new();

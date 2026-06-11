@@ -1,0 +1,31 @@
+[
+  {
+    "type": "ivy",
+    "namespace": "org.apache.example",
+    "name": "example-core",
+    "version": "4.5.6",
+    "primary_language": "Java",
+    "parties": [],
+    "dependencies": [
+      {
+        "purl": "pkg:ivy/commons-lang/commons-lang",
+        "extracted_requirement": "2.6",
+        "scope": "compile",
+        "is_direct": true
+      },
+      {
+        "purl": "pkg:ivy/junit/junit",
+        "extracted_requirement": "4.13.2",
+        "scope": "test",
+        "is_direct": true
+      },
+      {
+        "purl": "pkg:ivy/local-only",
+        "extracted_requirement": "1.0",
+        "is_direct": true
+      }
+    ],
+    "datasource_id": "ant_ivy_xml",
+    "purl": "pkg:ivy/org.apache.example/example-core@4.5.6"
+  }
+]

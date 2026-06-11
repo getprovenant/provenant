@@ -60,6 +60,7 @@ mod parsers {
         gradle_lock,
         helm,
         hex_lock,
+        ivy,
         julia,
         maven,
         meson,

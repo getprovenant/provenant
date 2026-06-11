@@ -45,28 +45,6 @@ fn test_java_jar_recognizer() {
 }
 
 #[test]
-fn test_ivy_xml_recognizer() {
-    // Positive cases
-    assert!(IvyXmlRecognizer::is_match(&PathBuf::from(
-        "project/ivy.xml"
-    )));
-    assert!(IvyXmlRecognizer::is_match(&PathBuf::from(
-        "/home/user/myapp/ivy.xml"
-    )));
-
-    // Negative cases
-    assert!(!IvyXmlRecognizer::is_match(&PathBuf::from("ivy.xml.bak")));
-    assert!(!IvyXmlRecognizer::is_match(&PathBuf::from("pom.xml")));
-    assert!(!IvyXmlRecognizer::is_match(&PathBuf::from("ivyconfig.xml")));
-
-    // Extract packages
-    let packages = IvyXmlRecognizer::extract_packages(&PathBuf::from("ivy.xml"));
-    assert_eq!(packages.len(), 1);
-    assert_eq!(packages[0].package_type, Some(PackageType::Ivy));
-    assert_eq!(packages[0].datasource_id, Some(DatasourceId::AntIvyXml));
-}
-
-#[test]
 fn test_java_war_recognizer() {
     // Positive cases
     assert!(JavaWarRecognizer::is_match(&PathBuf::from(

@@ -1,0 +1,12 @@
+[
+  {
+    "type": "maven",
+    "namespace": "com.example.android",
+    "name": "ui-lib",
+    "version": "0.9.0",
+    "primary_language": "Java",
+    "parties": [],
+    "datasource_id": "android_aar_library",
+    "purl": "pkg:maven/com.example.android/ui-lib@0.9.0"
+  }
+]

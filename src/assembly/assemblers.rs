@@ -791,6 +791,16 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["ivy.xml"],
         mode: AssemblyMode::SiblingMerge,
     },
+    // JVM archives introspected in place (one archive == one package).
+    AssemblerConfig {
+        datasource_ids: &[
+            DatasourceId::JavaJar,
+            DatasourceId::JavaWarArchive,
+            DatasourceId::AndroidAarLibrary,
+        ],
+        sibling_file_patterns: &["*.jar", "*.war", "*.aar"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // Meteor (JavaScript platform)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::MeteorPackage],
@@ -885,7 +895,6 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     // Binary archives (require external extraction via ExtractCode before scanning)
     DatasourceId::AlpineApkArchive,
     DatasourceId::AndroidAab,
-    DatasourceId::AndroidAarLibrary,
     DatasourceId::AndroidApk,
     DatasourceId::AndroidManifestXml,
     DatasourceId::AndroidSoongMetadata,
@@ -898,8 +907,6 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::IosIpa,
     DatasourceId::IsoDiskImage,
     DatasourceId::JavaEarArchive,
-    DatasourceId::JavaJar,
-    DatasourceId::JavaWarArchive,
     DatasourceId::JbossSar,
     DatasourceId::MicrosoftCabinet,
     DatasourceId::MozillaXpi,

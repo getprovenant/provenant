@@ -27,6 +27,42 @@ pub(super) fn parse_pom_properties(path: &Path) -> PackageData {
     package_data.primary_language = Some("Java".to_string());
     package_data.datasource_id = Some(DatasourceId::MavenPomProperties);
 
+    let MavenPomProperties {
+        group_id,
+        artifact_id,
+        version,
+    } = interpret_pom_properties(&content);
+
+    package_data.namespace = group_id.map(truncate_field);
+    package_data.name = artifact_id.map(truncate_field);
+    package_data.version = version.map(truncate_field);
+
+    if let (Some(group_id), Some(artifact_id), Some(version)) = (
+        &package_data.namespace,
+        &package_data.name,
+        &package_data.version,
+    ) {
+        package_data.purl = Some(truncate_field(format!(
+            "pkg:maven/{}/{}@{}",
+            group_id, artifact_id, version
+        )));
+    }
+
+    package_data
+}
+
+/// Maven coordinates recovered from a `pom.properties` body.
+pub(crate) struct MavenPomProperties {
+    pub(crate) group_id: Option<String>,
+    pub(crate) artifact_id: Option<String>,
+    pub(crate) version: Option<String>,
+}
+
+/// Interpret `pom.properties` text into raw Maven coordinates.
+///
+/// Shared by the file-backed [`parse_pom_properties`] and by JVM-archive
+/// introspection, which reads the body from a bounded ZIP entry.
+pub(crate) fn interpret_pom_properties(content: &str) -> MavenPomProperties {
     let mut group_id: Option<String> = None;
     let mut artifact_id: Option<String> = None;
     let mut version: Option<String> = None;
@@ -64,20 +100,9 @@ pub(super) fn parse_pom_properties(path: &Path) -> PackageData {
         }
     }
 
-    package_data.namespace = group_id.map(truncate_field);
-    package_data.name = artifact_id.map(truncate_field);
-    package_data.version = version.map(truncate_field);
-
-    if let (Some(group_id), Some(artifact_id), Some(version)) = (
-        &package_data.namespace,
-        &package_data.name,
-        &package_data.version,
-    ) {
-        package_data.purl = Some(truncate_field(format!(
-            "pkg:maven/{}/{}@{}",
-            group_id, artifact_id, version
-        )));
+    MavenPomProperties {
+        group_id,
+        artifact_id,
+        version,
     }
-
-    package_data
 }
