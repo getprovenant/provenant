@@ -15,7 +15,9 @@ use zip::ZipArchive;
 
 use crate::models::{DatasourceId, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field,
+};
 use crate::utils::magic;
 
 use super::PackageParser;
@@ -560,7 +562,11 @@ fn xml_attributes_to_map(
 ) -> Result<HashMap<String, String>, String> {
     let mut attributes = HashMap::new();
 
-    for attribute in event.attributes().flatten().take(MAX_ITERATION_COUNT) {
+    for attribute in event
+        .attributes()
+        .flatten()
+        .capped("AndroidManifest.xml attributes")
+    {
         let key = String::from_utf8_lossy(attribute.key.as_ref()).into_owned();
         let value = attribute
             .decoded_and_normalized_value(XmlVersion::Implicit1_0, reader.decoder())

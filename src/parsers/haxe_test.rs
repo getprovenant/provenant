@@ -222,4 +222,50 @@ mod tests {
         assert_eq!(package_data.package_type, Some(PackageType::Haxe));
         assert!(package_data.name.is_none());
     }
+
+    #[test]
+    fn test_dependencies_emitted_in_deterministic_sorted_order() {
+        // `dependencies` is a std HashMap upstream, so iteration order is
+        // nondeterministic. The parser sorts by name before capping/emitting so
+        // output order (and which entries survive truncation) is reproducible.
+        let content = r#"{
+            "name": "ordered",
+            "version": "1.0.0",
+            "dependencies": {
+                "zeta": "",
+                "alpha": "1.0.0",
+                "mu": "",
+                "beta": "2.0.0"
+            }
+        }"#;
+
+        let (_temp_dir, haxelib_path) = create_temp_haxelib_json(content);
+
+        let purls_for_run = || {
+            HaxeParser::extract_first_package(&haxelib_path)
+                .dependencies
+                .into_iter()
+                .map(|dep| dep.purl)
+                .collect::<Vec<_>>()
+        };
+
+        let first = purls_for_run();
+        let second = purls_for_run();
+
+        // Reproducible across runs.
+        assert_eq!(first, second);
+        // And sorted by dependency name (alpha, beta, mu, zeta).
+        let names: Vec<String> = first
+            .iter()
+            .filter_map(|purl| purl.as_ref())
+            .map(|purl| {
+                purl.trim_start_matches("pkg:haxe/")
+                    .split(['@', '?'])
+                    .next()
+                    .unwrap_or("")
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(names, vec!["alpha", "beta", "mu", "zeta"]);
+    }
 }

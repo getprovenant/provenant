@@ -15,7 +15,9 @@ use crate::models::{
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
-use super::utils::{MAX_ITERATION_COUNT, parse_sri, read_file_to_string, truncate_field};
+use super::utils::{
+    CappedIterExt, capped_iteration_limit, parse_sri, read_file_to_string, truncate_field,
+};
 
 const FIELD_VERSION: &str = "version";
 const FIELD_SPECIFIERS: &str = "specifiers";
@@ -129,7 +131,9 @@ fn extract_flat_dependencies(json: &Value) -> (Vec<Dependency>, Vec<String>) {
     let mut direct_jsr_keys = HashSet::new();
     let mut direct_npm_keys = HashSet::new();
 
-    for specifier in workspace_direct.iter().take(MAX_ITERATION_COUNT) {
+    let workspace_limit =
+        capped_iteration_limit(workspace_direct.len(), "deno.lock workspace specifiers");
+    for specifier in workspace_direct.iter().take(workspace_limit) {
         if let Some(resolved_key) = specifiers.get(specifier).and_then(Value::as_str) {
             if specifier.starts_with("jsr:") {
                 if let Some(full_key) = resolve_jsr_full_key(specifier, resolved_key)
@@ -151,7 +155,8 @@ fn extract_flat_dependencies(json: &Value) -> (Vec<Dependency>, Vec<String>) {
     }
 
     if let Some(jsr_map) = json.get(FIELD_JSR).and_then(Value::as_object) {
-        for key in jsr_map.keys().take(MAX_ITERATION_COUNT) {
+        let jsr_limit = capped_iteration_limit(jsr_map.len(), "deno.lock jsr packages");
+        for key in jsr_map.keys().take(jsr_limit) {
             if direct_jsr_keys.contains(key) {
                 continue;
             }
@@ -162,7 +167,8 @@ fn extract_flat_dependencies(json: &Value) -> (Vec<Dependency>, Vec<String>) {
     }
 
     if let Some(npm_map) = json.get(FIELD_NPM).and_then(Value::as_object) {
-        for key in npm_map.keys().take(MAX_ITERATION_COUNT) {
+        let npm_limit = capped_iteration_limit(npm_map.len(), "deno.lock npm packages");
+        for key in npm_map.keys().take(npm_limit) {
             if direct_npm_keys.contains(key) {
                 continue;
             }
@@ -212,7 +218,9 @@ fn extract_nested_npm_dependencies(json: &Value) -> Vec<Dependency> {
         .unwrap_or_default();
 
     let mut dependencies = Vec::new();
-    for key in packages_map.keys().take(MAX_ITERATION_COUNT) {
+    let packages_limit =
+        capped_iteration_limit(packages_map.len(), "deno.lock nested npm packages");
+    for key in packages_map.keys().take(packages_limit) {
         let requested = requested_by_resolved.get(key).map(String::as_str);
         if let Some(dep) = build_npm_dependency(key, requested.is_some(), packages, requested) {
             dependencies.push(dep);
@@ -226,7 +234,8 @@ fn extract_nested_npm_dependencies(json: &Value) -> Vec<Dependency> {
 fn extract_redirect_dependencies(json: &Value) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
     if let Some(redirects) = json.get(FIELD_REDIRECTS).and_then(Value::as_object) {
-        for (source, target) in redirects.iter().take(MAX_ITERATION_COUNT) {
+        let redirects_limit = capped_iteration_limit(redirects.len(), "deno.lock redirects");
+        for (source, target) in redirects.iter().take(redirects_limit) {
             let Some(target_url) = target.as_str() else {
                 continue;
             };
@@ -387,6 +396,12 @@ fn build_npm_dependency(
     let version_str = truncate_field(version.to_string());
     let purl = create_npm_purl(namespace.as_deref(), &name, Some(&version_str)).map(truncate_field);
 
+    let resolved_dependency_keys = npm_dependency_keys(npm_object.get(FIELD_DEPENDENCIES));
+    let resolved_dependency_limit = capped_iteration_limit(
+        resolved_dependency_keys.len(),
+        "deno.lock npm resolved dependencies",
+    );
+
     Some(Dependency {
         purl: purl.clone(),
         extracted_requirement: extracted_requirement.map(|value| truncate_field(value.to_string())),
@@ -416,9 +431,9 @@ fn build_npm_dependency(
             md5: None,
             is_virtual: true,
             extra_data: None,
-            dependencies: npm_dependency_keys(npm_object.get(FIELD_DEPENDENCIES))
+            dependencies: resolved_dependency_keys
                 .into_iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(resolved_dependency_limit)
                 .filter_map(|value| {
                     let (namespace, name, version) = parse_npm_key(&value)?;
                     Some(Dependency {
@@ -460,7 +475,7 @@ fn extract_jsr_resolved_dependencies(
         .into_iter()
         .flatten()
         .filter_map(Value::as_str)
-        .take(MAX_ITERATION_COUNT)
+        .capped("deno.lock jsr resolved dependencies")
         .filter_map(|value| {
             let (namespace, name, version) = parse_jsr_dependency_reference(value)?;
             Some(Dependency {

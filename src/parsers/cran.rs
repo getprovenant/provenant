@@ -34,7 +34,7 @@ use packageurl::PackageUrl;
 use regex::Regex;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 use super::PackageParser;
 
@@ -189,7 +189,7 @@ fn parse_dcf(content: &str) -> HashMap<String, String> {
     let mut current_field: Option<String> = None;
     let mut current_value = String::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("DESCRIPTION DCF lines") {
         // Check if line is a continuation (starts with whitespace)
         if line.starts_with(' ') || line.starts_with('\t') {
             if current_field.is_some() {
@@ -228,7 +228,7 @@ fn parse_dcf(content: &str) -> HashMap<String, String> {
 fn parse_dependencies(deps_str: &str, scope: Option<&str>) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for dep in deps_str.split(',').take(MAX_ITERATION_COUNT) {
+    for dep in deps_str.split(',').capped("CRAN dependency list") {
         let dep = dep.trim();
         if dep.is_empty() {
             continue;
@@ -352,7 +352,7 @@ fn split_author_entries(author_str: &str) -> Vec<&str> {
     let mut bracket_depth: usize = 0;
     let mut paren_depth: usize = 0;
 
-    for (idx, ch) in author_str.char_indices().take(MAX_ITERATION_COUNT) {
+    for (idx, ch) in author_str.char_indices().capped("CRAN author string") {
         match ch {
             '[' => bracket_depth += 1,
             ']' => bracket_depth = bracket_depth.saturating_sub(1),

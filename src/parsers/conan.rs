@@ -40,7 +40,7 @@ use super::PackageParser;
 use super::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data, normalize_declared_license_key,
 };
-use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::utils::{CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field};
 
 const MAX_AST_DEPTH: usize = 50;
 const MAX_AST_NODES: usize = 10_000;
@@ -124,7 +124,8 @@ fn extract_conanfile_data(class_def: &ast::StmtClassDef) -> PackageData {
     let mut requires_list = Vec::new();
     let mut tool_requires_list = Vec::new();
 
-    for stmt in class_def.body.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(class_def.body.len(), "conanfile.py class body");
+    for stmt in class_def.body.iter().take(limit) {
         match stmt {
             ast::Stmt::Assign(ast::StmtAssign { targets, value, .. }) => {
                 if let Some(target_name) = get_assignment_target(targets) {
@@ -506,7 +507,7 @@ fn parse_conanfile_txt(contents: &str) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
     let mut current_section = None;
 
-    for line in contents.lines().take(MAX_ITERATION_COUNT) {
+    for line in contents.lines().capped("conanfile.txt lines") {
         let trimmed = line.trim();
 
         if trimmed.is_empty() || trimmed.starts_with('#') {
@@ -545,7 +546,8 @@ fn parse_conan_lock(json: &Value) -> Vec<Dependency> {
     if let Some(graph_lock) = json.get("graph_lock")
         && let Some(nodes) = graph_lock.get("nodes").and_then(|n| n.as_object())
     {
-        for (_node_id, node_data) in nodes.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(nodes.len(), "conan.lock graph_lock nodes");
+        for (_node_id, node_data) in nodes.iter().take(limit) {
             if let Some(ref_str) = node_data.get("ref").and_then(|r| r.as_str())
                 && !ref_str.is_empty()
                 && ref_str != "conanfile"
@@ -569,7 +571,8 @@ fn parse_conan_lock(json: &Value) -> Vec<Dependency> {
         ("python_requires", false, "python_requires"),
     ] {
         if let Some(refs) = json.get(key).and_then(|v| v.as_array()) {
-            for entry in refs.iter().take(MAX_ITERATION_COUNT) {
+            let limit = capped_iteration_limit(refs.len(), "conan.lock requires");
+            for entry in refs.iter().take(limit) {
                 if let Some(ref_str) = entry.as_str()
                     && !ref_str.is_empty()
                     && let Some(mut dep) = parse_conan_reference(ref_str)

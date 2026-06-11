@@ -6,7 +6,8 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
 };
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
@@ -98,7 +99,8 @@ fn parse_mix_lock(content: &str) -> Result<PackageData, String> {
     };
 
     let mut dependencies = Vec::new();
-    for (key, value) in entries.into_iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(entries.len(), "mix.lock entries");
+    for (key, value) in entries.into_iter().take(limit) {
         if let Some(dep) = build_dependency_from_lock_entry(&key, &value)? {
             dependencies.push(dep);
         }
@@ -256,7 +258,8 @@ fn term_to_dependency_tuples(term: &Term) -> Result<Vec<DependencyTuple>, String
     };
 
     let mut result = Vec::new();
-    for item in items.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(items.len(), "mix.lock dependency tuples");
+    for item in items.iter().take(limit) {
         let tuple = match item {
             Term::Tuple(items) if items.len() == 3 => items,
             _ => continue,

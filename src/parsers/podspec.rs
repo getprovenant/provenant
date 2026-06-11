@@ -41,7 +41,9 @@ use crate::parsers::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data_from_pair,
     normalize_spdx_declared_license,
 };
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 
 /// Parses CocoaPods specification files (.podspec).
 ///
@@ -387,7 +389,7 @@ fn extract_metadata_field(content: &str, pattern: &Regex) -> Option<String> {
 }
 
 fn extract_raw_field(content: &str, pattern: &Regex) -> Option<String> {
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("podspec extract_raw_field lines") {
         let cleaned_line = pre_process(line);
         if let Some(value) = pattern.captures(&cleaned_line).and_then(|caps| caps.get(1)) {
             return Some(value.as_str().trim().to_string());
@@ -398,7 +400,7 @@ fn extract_raw_field(content: &str, pattern: &Regex) -> Option<String> {
 
 /// Extract a single field using a regex pattern
 fn extract_field(content: &str, pattern: &Regex) -> Option<String> {
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("podspec extract_field lines") {
         let cleaned_line = pre_process(line);
         if let Some(value) = pattern.captures(&cleaned_line).and_then(|caps| caps.get(1)) {
             return Some(clean_string(value.as_str()));
@@ -409,7 +411,10 @@ fn extract_field(content: &str, pattern: &Regex) -> Option<String> {
 
 /// Extract description, handling multiline heredoc format
 fn extract_description(content: &str) -> Option<String> {
-    let lines: Vec<&str> = content.lines().take(MAX_ITERATION_COUNT).collect();
+    let lines: Vec<&str> = content
+        .lines()
+        .capped("podspec extract_description lines")
+        .collect();
 
     for (i, line) in lines.iter().enumerate() {
         let cleaned = pre_process(line);
@@ -458,7 +463,8 @@ fn extract_multiline_description(lines: &[&str], start_index: usize) -> Option<S
     let mut description_lines = Vec::new();
     let mut found_start = false;
 
-    for line in lines.iter().take(MAX_ITERATION_COUNT).skip(start_index) {
+    let limit = capped_iteration_limit(lines.len(), "podspec extract_multiline_description lines");
+    for line in lines.iter().take(limit).skip(start_index) {
         if !found_start && line.contains("<<-") {
             found_start = true;
             continue;
@@ -484,7 +490,7 @@ fn extract_multiline_description(lines: &[&str], start_index: usize) -> Option<S
 fn extract_authors(content: &str) -> Vec<(String, Option<String>)> {
     let mut authors = Vec::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("podspec extract_authors lines") {
         let cleaned_line = pre_process(line);
         if let Some(value) = AUTHOR_PATTERN
             .captures(&cleaned_line)
@@ -513,7 +519,7 @@ fn extract_authors(content: &str) -> Vec<(String, Option<String>)> {
 }
 
 fn extract_source_url(content: &str) -> Option<String> {
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("podspec extract_source_url lines") {
         let cleaned_line = pre_process(line);
         let Some(value) = SOURCE_PATTERN
             .captures(&cleaned_line)
@@ -584,7 +590,7 @@ fn parse_author_string(author: &str) -> (String, Option<String>) {
 fn extract_dependencies(content: &str) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("podspec extract_dependencies lines") {
         let cleaned_line = pre_process(line);
         if let Some(caps) = DEPENDENCY_PATTERN.captures(&cleaned_line) {
             let method = caps.get(0).map(|m| m.as_str()).unwrap_or("");

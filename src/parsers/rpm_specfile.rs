@@ -38,7 +38,8 @@ use regex::Regex;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, capped_iteration_limit, read_file_to_string,
+    split_name_email, truncate_field,
 };
 
 use super::PackageParser;
@@ -151,7 +152,7 @@ fn parse_specfile(content: &str) -> PackageData {
 
             match tag.as_str() {
                 "buildrequires" => {
-                    for dep in value.split(',').take(MAX_ITERATION_COUNT) {
+                    for dep in value.split(',').capped("rpm specfile BuildRequires") {
                         let dep = dep.trim();
                         if !dep.is_empty() {
                             build_requires.push(dep.to_string());
@@ -170,7 +171,7 @@ fn parse_specfile(content: &str) -> PackageData {
                         Some("runtime".to_string())
                     };
 
-                    for dep in value.split(',').take(MAX_ITERATION_COUNT) {
+                    for dep in value.split(',').capped("rpm specfile Requires") {
                         let dep = dep.trim();
                         if !dep.is_empty() {
                             requires.push((dep.to_string(), scope.clone()));
@@ -178,7 +179,7 @@ fn parse_specfile(content: &str) -> PackageData {
                     }
                 }
                 "provides" => {
-                    for prov in value.split(',').take(MAX_ITERATION_COUNT) {
+                    for prov in value.split(',').capped("rpm specfile Provides") {
                         let prov = prov.trim();
                         if !prov.is_empty() {
                             provides.push(prov.to_string());
@@ -309,7 +310,9 @@ fn parse_specfile(content: &str) -> PackageData {
     // Create dependencies
     let mut dependencies = Vec::new();
 
-    for dep_str in build_requires.into_iter().take(MAX_ITERATION_COUNT) {
+    let build_requires_limit =
+        capped_iteration_limit(build_requires.len(), "rpm specfile build dependencies");
+    for dep_str in build_requires.into_iter().take(build_requires_limit) {
         let dep_str = truncate_field(expand_macros(&dep_str, &macros));
         let dep_name = extract_dep_name(&dep_str);
         let purl = build_rpm_purl(&dep_name, None).map(truncate_field);
@@ -327,7 +330,9 @@ fn parse_specfile(content: &str) -> PackageData {
         });
     }
 
-    for (dep_str, scope) in requires.into_iter().take(MAX_ITERATION_COUNT) {
+    let requires_limit =
+        capped_iteration_limit(requires.len(), "rpm specfile runtime dependencies");
+    for (dep_str, scope) in requires.into_iter().take(requires_limit) {
         let dep_str = truncate_field(expand_macros(&dep_str, &macros));
         let dep_name = extract_dep_name(&dep_str);
         let purl = build_rpm_purl(&dep_name, None).map(truncate_field);
@@ -363,9 +368,10 @@ fn parse_specfile(content: &str) -> PackageData {
         extra_data.insert("group".to_string(), serde_json::Value::String(g));
     }
     if !provides.is_empty() {
+        let provides_limit = capped_iteration_limit(provides.len(), "rpm specfile provides");
         let provides_json: Vec<serde_json::Value> = provides
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(provides_limit)
             .map(|prov| serde_json::Value::String(truncate_field(expand_macros(&prov, &macros))))
             .collect();
         extra_data.insert(

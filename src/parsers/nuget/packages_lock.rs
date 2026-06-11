@@ -10,7 +10,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 
 use super::super::PackageParser;
-use super::super::utils::{MAX_ITERATION_COUNT, read_file_to_string};
+use super::super::utils::{capped_iteration_limit, read_file_to_string};
 use super::default_package_data;
 
 pub struct PackagesLockParser;
@@ -42,22 +42,19 @@ impl PackageParser for PackagesLockParser {
         };
 
         let mut dependencies = Vec::new();
-        let mut iteration_count: usize = 0;
 
         if let Some(deps_obj) = parsed.get("dependencies").and_then(|v| v.as_object()) {
-            for (target_framework, packages) in deps_obj.iter().take(MAX_ITERATION_COUNT) {
+            let framework_limit = capped_iteration_limit(
+                deps_obj.len(),
+                "nuget packages.lock.json: target frameworks",
+            );
+            for (target_framework, packages) in deps_obj.iter().take(framework_limit) {
                 if let Some(packages_obj) = packages.as_object() {
-                    for (package_name, package_info) in
-                        packages_obj.iter().take(MAX_ITERATION_COUNT)
-                    {
-                        iteration_count += 1;
-                        if iteration_count > MAX_ITERATION_COUNT {
-                            warn!(
-                                "Iteration limit exceeded in packages.lock.json at {:?}; stopping at {} dependencies",
-                                path, MAX_ITERATION_COUNT
-                            );
-                            break;
-                        }
+                    let package_limit = capped_iteration_limit(
+                        packages_obj.len(),
+                        "nuget packages.lock.json: framework packages",
+                    );
+                    for (package_name, package_info) in packages_obj.iter().take(package_limit) {
                         if let Some(info_obj) = package_info.as_object() {
                             let version = info_obj
                                 .get("resolved")

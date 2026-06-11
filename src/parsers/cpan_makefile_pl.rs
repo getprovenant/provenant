@@ -20,7 +20,9 @@ use std::path::Path;
 use std::sync::LazyLock;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, MAX_ITERATION_COUNT, read_file_to_string, truncate_field,
+};
 use packageurl::PackageUrl;
 use regex::Regex;
 use serde_json::json;
@@ -370,6 +372,10 @@ fn extract_writemakefile_block(content: &str) -> String {
 
     for (i, &ch) in chars.iter().enumerate() {
         if i >= MAX_ITERATION_COUNT {
+            crate::parser_warn!(
+                "Truncated Makefile.PL WriteMakefile block scan at {} characters (MAX_ITERATION_COUNT); closing parenthesis not found within the cap",
+                MAX_ITERATION_COUNT
+            );
             break;
         }
         match ch {
@@ -397,7 +403,7 @@ fn parse_hash_fields(content: &str) -> HashMap<String, String> {
 
     for cap in RE_SIMPLE_KV
         .captures_iter(content)
-        .take(MAX_ITERATION_COUNT)
+        .capped("Makefile.PL key/value fields")
     {
         let key = cap.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
         let value = cap
@@ -424,7 +430,7 @@ fn parse_hash_fields(content: &str) -> HashMap<String, String> {
 fn parse_hash_dependencies(content: &str, fields: &mut HashMap<String, String>) {
     for cap in RE_HASH_BLOCK
         .captures_iter(content)
-        .take(MAX_ITERATION_COUNT)
+        .capped("Makefile.PL hash blocks")
     {
         let key = cap.get(1).map(|m| m.as_str()).unwrap_or("");
         let hash_content = cap.get(2).map(|m| m.as_str()).unwrap_or("");
@@ -446,7 +452,7 @@ fn parse_author_array(content: &str, fields: &mut HashMap<String, String>) {
 
         let authors: Vec<String> = RE_QUOTED_STRING
             .captures_iter(array_content)
-            .take(MAX_ITERATION_COUNT)
+            .capped("Makefile.PL author array")
             .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
             .collect();
 
@@ -540,7 +546,7 @@ fn extract_deps_from_hash(hash_content: &str, scope: &str, is_runtime: bool) -> 
 
     for cap in RE_DEP_PAIR
         .captures_iter(hash_content)
-        .take(MAX_ITERATION_COUNT)
+        .capped("Makefile.PL dependency pairs")
     {
         let module_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
 

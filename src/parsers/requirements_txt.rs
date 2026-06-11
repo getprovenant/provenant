@@ -37,7 +37,8 @@ use serde_json::Value as JsonValue;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::pep508::{Pep508Requirement, parse_pep508_requirement};
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard, read_file_to_string, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard,
+    capped_iteration_limit, read_file_to_string, truncate_field,
 };
 
 use super::PackageParser;
@@ -261,10 +262,9 @@ fn parse_requirements_with_includes(
         }
     };
 
-    for line in collect_logical_lines(&content)
-        .into_iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let logical_lines = collect_logical_lines(&content);
+    let limit = capped_iteration_limit(logical_lines.len(), "requirements.txt logical lines");
+    for line in logical_lines.into_iter().take(limit) {
         let cleaned = strip_inline_comment(&line);
         let trimmed = cleaned.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') {
@@ -355,7 +355,7 @@ fn collect_logical_lines(content: &str) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current = String::new();
 
-    for raw_line in content.lines().take(MAX_ITERATION_COUNT) {
+    for raw_line in content.lines().capped("requirements.txt raw lines") {
         let line = raw_line.trim_end_matches('\r');
         let trimmed = line.trim_end();
         let is_continuation = trimmed.ends_with('\\');

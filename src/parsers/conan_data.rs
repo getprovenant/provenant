@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::models::PackageData;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 
 use super::PackageParser;
 
@@ -178,7 +178,13 @@ pub(crate) fn parse_conandata_yml(content: &str) -> Vec<PackageData> {
 
     let mut packages = Vec::new();
 
-    for (version, sources_value) in sources.into_iter().take(MAX_ITERATION_COUNT) {
+    // `sources` is an unordered HashMap; sort by version key so truncation at
+    // the cap drops a deterministic, reproducible set of entries.
+    let limit = capped_iteration_limit(sources.len(), "conandata.yml sources");
+    let mut sources: Vec<_> = sources.into_iter().collect();
+    sources.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+    for (version, sources_value) in sources.into_iter().take(limit) {
         let source_infos = sources_to_infos(sources_value);
         let mut extra_data = HashMap::new();
 

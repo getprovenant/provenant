@@ -26,7 +26,7 @@
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::Value;
 use std::path::Path;
@@ -191,9 +191,10 @@ fn extract_license_statement(json: &Value) -> Option<String> {
                 }
             }
             Value::Array(licenses) => {
+                let limit = capped_iteration_limit(licenses.len(), "bower license array");
                 let license_strings: Vec<String> = licenses
                     .iter()
-                    .take(MAX_ITERATION_COUNT)
+                    .take(limit)
                     .filter_map(|v| v.as_str())
                     .map(|s| s.trim())
                     .filter(|s| !s.is_empty())
@@ -220,9 +221,10 @@ fn normalize_bower_declared_license(
 ) {
     match json.get(FIELD_LICENSE) {
         Some(Value::Array(licenses)) => {
+            let limit = capped_iteration_limit(licenses.len(), "bower declared license array");
             let normalized = licenses
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|value| value.as_str().map(str::trim))
                 .filter(|value| !value.is_empty())
                 .map(normalize_declared_license_key)
@@ -250,8 +252,9 @@ fn extract_keywords(json: &Value) -> Vec<String> {
     json.get(FIELD_KEYWORDS)
         .and_then(|v| v.as_array())
         .map(|arr| {
+            let limit = capped_iteration_limit(arr.len(), "bower keywords");
             arr.iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|v| v.as_str())
                 .map(|s| truncate_field(s.to_string()))
                 .collect()
@@ -265,7 +268,8 @@ fn extract_parties(json: &Value) -> Vec<Party> {
     let mut parties = Vec::new();
 
     if let Some(authors) = json.get(FIELD_AUTHORS).and_then(|v| v.as_array()) {
-        for author in authors.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(authors.len(), "bower authors");
+        for author in authors.iter().take(limit) {
             if let Some(party) = extract_party_from_author(author) {
                 parties.push(party);
             }
@@ -391,8 +395,9 @@ fn extract_dependencies(
     json.get(field)
         .and_then(|deps| deps.as_object())
         .map_or_else(Vec::new, |deps| {
+            let limit = capped_iteration_limit(deps.len(), "bower dependencies");
             deps.iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|(name, requirement)| {
                     let requirement_str = requirement.as_str()?;
                     let package_url =

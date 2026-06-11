@@ -33,7 +33,7 @@ use regex::Regex;
 use super::metadata::ParserMetadata;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::PackageParser;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 /// Parses CocoaPods Podfile dependency files.
 ///
@@ -171,7 +171,7 @@ fn extract_dependencies_with_context(content: &str, base_dir: Option<&Path>) -> 
     let contexts = load_podfile_contexts(content, base_dir);
     let version_hashes = extract_podfile_hash_assignments(&contexts);
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("Podfile lines") {
         let cleaned_line = pre_process(line);
         if let Some(caps) = POD_PATTERN.captures(&cleaned_line) {
             let name = truncate_field(caps.get(1).map(|m| m.as_str()).unwrap_or("").to_string());
@@ -277,7 +277,7 @@ fn load_podfile_contexts(content: &str, base_dir: Option<&Path>) -> Vec<String> 
 
     for captures in REQUIRE_RELATIVE_PATTERN
         .captures_iter(content)
-        .take(MAX_ITERATION_COUNT)
+        .capped("Podfile require_relative matches")
     {
         let Some(required) = captures.get(1).map(|value| value.as_str()) else {
             continue;
@@ -313,10 +313,10 @@ fn extract_podfile_hash_assignments(
 ) -> HashMap<String, HashMap<String, String>> {
     let mut hashes = HashMap::new();
 
-    for context in contexts.iter().take(MAX_ITERATION_COUNT) {
+    for context in contexts.iter().capped("Podfile hash-assignment contexts") {
         for captures in HASH_ASSIGNMENT_PATTERN
             .captures_iter(context)
-            .take(MAX_ITERATION_COUNT)
+            .capped("Podfile hash assignments")
         {
             let Some(hash_name) = captures.get(1).map(|value| value.as_str().to_string()) else {
                 continue;
@@ -328,7 +328,7 @@ fn extract_podfile_hash_assignments(
             let mut entries = HashMap::new();
             for entry in HASH_ENTRY_PATTERN
                 .captures_iter(body)
-                .take(MAX_ITERATION_COUNT)
+                .capped("Podfile hash entries")
             {
                 let Some(key) = entry.get(1).map(|value| value.as_str().to_string()) else {
                     continue;

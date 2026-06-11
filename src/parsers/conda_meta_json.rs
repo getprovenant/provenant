@@ -26,7 +26,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -226,7 +226,8 @@ fn build_conda_file_references(
     }
 
     if let Some(files) = files {
-        for file in files.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(files.len(), "conda meta files");
+        for file in files.iter().take(limit) {
             refs.push(FileReference {
                 path: truncate_field(file.clone()),
                 size: None,

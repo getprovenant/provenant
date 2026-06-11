@@ -26,7 +26,9 @@ use std::path::Path;
 use crate::parser_warn as warn;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -74,9 +76,10 @@ impl PackageParser for GitmodulesParser {
             return vec![default_package_data()];
         }
 
+        let submodules_limit = capped_iteration_limit(submodules.len(), ".gitmodules submodules");
         let dependencies: Vec<Dependency> = submodules
             .into_iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(submodules_limit)
             .map(|sub| Dependency {
                 purl: sub.purl.map(truncate_field),
                 extracted_requirement: Some(truncate_field(format!("{} at {}", sub.path, sub.url))),
@@ -110,7 +113,7 @@ fn parse_gitmodules(content: &str) -> Vec<Submodule> {
     let mut current_section: Option<HashMap<String, String>> = None;
     let mut current_name: Option<String> = None;
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped(".gitmodules lines") {
         let line = line.trim();
 
         if line.is_empty() || line.starts_with('#') || line.starts_with(';') {

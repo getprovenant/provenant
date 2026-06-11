@@ -31,7 +31,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, MAX_ITERATION_COUNT, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 
 const MAX_RECURSION_DEPTH: usize = 50;
 use packageurl::PackageUrl;
@@ -430,7 +432,9 @@ fn extract_raw_dependencies(tokens: &[Tok]) -> Vec<RawDep> {
     let mut dependencies = Vec::new();
 
     for block in blocks {
-        for rd in parse_block(&block).into_iter().take(MAX_ITERATION_COUNT) {
+        let parsed = parse_block(&block);
+        let limit = capped_iteration_limit(parsed.len(), "gradle dependency block");
+        for rd in parsed.into_iter().take(limit) {
             dependencies.push(rd);
         }
     }
@@ -1121,7 +1125,10 @@ fn load_gradle_script_properties(path: &Path, content: &str) -> HashMap<String, 
     ];
 
     for pattern in literal_assignment_patterns {
-        for captures in pattern.captures_iter(content).take(MAX_ITERATION_COUNT) {
+        for captures in pattern
+            .captures_iter(content)
+            .capped("gradle literal assignments")
+        {
             let Some(name) = captures.get(1).map(|value| value.as_str().trim()) else {
                 continue;
             };
@@ -1140,7 +1147,7 @@ fn load_gradle_script_properties(path: &Path, content: &str) -> HashMap<String, 
 
     for captures in delegated_project_property_pattern
         .captures_iter(content)
-        .take(MAX_ITERATION_COUNT)
+        .capped("gradle delegated project properties")
     {
         let Some(name) = captures.get(1).map(|value| value.as_str().trim()) else {
             continue;
@@ -1165,7 +1172,7 @@ fn load_gradle_properties(path: &Path) -> HashMap<String, String> {
         };
 
         let mut properties = HashMap::new();
-        for line in content.lines().take(MAX_ITERATION_COUNT) {
+        for line in content.lines().capped("gradle.properties lines") {
             let trimmed = line.split('#').next().unwrap_or("").trim();
             if trimmed.is_empty() {
                 continue;
@@ -1305,7 +1312,11 @@ fn find_build_src_dir(path: &Path) -> Option<PathBuf> {
 fn find_nearby_sibling_build_src_tiers(path: &Path) -> Vec<Vec<PathBuf>> {
     let mut tiers = Vec::new();
 
-    for ancestor in path.ancestors().skip(1).take(MAX_ITERATION_COUNT) {
+    for ancestor in path
+        .ancestors()
+        .skip(1)
+        .capped("gradle sibling buildSrc ancestors")
+    {
         let sibling_dirs = collect_sibling_build_src_dirs(ancestor, path);
         if !sibling_dirs.is_empty() {
             tiers.push(sibling_dirs);
@@ -1325,7 +1336,7 @@ fn collect_sibling_build_src_dirs(ancestor: &Path, current_path: &Path) -> Vec<P
     };
 
     let mut build_src_dirs = Vec::new();
-    for entry in entries.flatten().take(MAX_ITERATION_COUNT) {
+    for entry in entries.flatten().capped("gradle sibling directory entries") {
         let child_dir = entry.path();
         if !child_dir.is_dir() || current_path.starts_with(&child_dir) {
             continue;
@@ -1351,10 +1362,16 @@ fn resolve_nearby_sibling_build_src_value(
     symbolic_ref: &str,
     sibling_build_src_tiers: &[Vec<PathBuf>],
 ) -> Option<String> {
-    for sibling_build_src_dirs in sibling_build_src_tiers.iter().take(MAX_ITERATION_COUNT) {
+    let tier_limit = capped_iteration_limit(
+        sibling_build_src_tiers.len(),
+        "gradle sibling buildSrc tiers",
+    );
+    for sibling_build_src_dirs in sibling_build_src_tiers.iter().take(tier_limit) {
         let mut resolved_value: Option<String> = None;
 
-        for build_src_dir in sibling_build_src_dirs.iter().take(MAX_ITERATION_COUNT) {
+        let dir_limit =
+            capped_iteration_limit(sibling_build_src_dirs.len(), "gradle sibling buildSrc dirs");
+        for build_src_dir in sibling_build_src_dirs.iter().take(dir_limit) {
             let Some(constants) = load_build_src_constants(build_src_dir) else {
                 continue;
             };
@@ -1414,7 +1431,8 @@ fn parse_build_src_constants_dir(build_src_dir: &Path) -> Option<BuildSrcConstMa
     }
 
     let mut constants = HashMap::new();
-    for file in kotlin_files.into_iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(kotlin_files.len(), "gradle buildSrc kotlin files");
+    for file in kotlin_files.into_iter().take(limit) {
         let Ok(content) = read_file_to_string(&file, None) else {
             continue;
         };
@@ -1433,7 +1451,10 @@ fn collect_build_src_kotlin_files(dir: &Path, files: &mut Vec<PathBuf>) {
         return;
     };
 
-    for entry in entries.flatten().take(MAX_ITERATION_COUNT) {
+    for entry in entries
+        .flatten()
+        .capped("gradle buildSrc directory entries")
+    {
         if files.len() >= MAX_ITERATION_COUNT {
             break;
         }
@@ -1739,7 +1760,7 @@ fn parse_gradle_version_catalog(
     let mut versions = std::collections::HashMap::new();
     let mut libraries = std::collections::HashMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("gradle version catalog lines") {
         let trimmed = line.split('#').next().unwrap_or("").trim();
         if trimmed.is_empty() {
             continue;
@@ -1768,7 +1789,12 @@ fn parse_gradle_version_catalog(
     }
 
     let mut result = std::collections::HashMap::new();
-    for (alias, raw_value) in libraries.into_iter().take(MAX_ITERATION_COUNT) {
+    // `libraries` is a std HashMap; sort by alias so truncation drops a
+    // deterministic set of entries when the cap is exceeded.
+    let mut libraries: Vec<(String, String)> = libraries.into_iter().collect();
+    libraries.sort_by(|a, b| a.0.cmp(&b.0));
+    let limit = capped_iteration_limit(libraries.len(), "gradle version catalog libraries");
+    for (alias, raw_value) in libraries.into_iter().take(limit) {
         let Some(entry) = parse_gradle_catalog_entry(&raw_value, &versions) else {
             continue;
         };
@@ -1801,7 +1827,7 @@ fn parse_gradle_catalog_entry(
 
     let inner = &raw_value[1..raw_value.len() - 1];
     let mut fields = std::collections::HashMap::new();
-    for pair in inner.split(',').take(MAX_ITERATION_COUNT) {
+    for pair in inner.split(',').capped("gradle catalog entry fields") {
         let Some((key, value)) = pair.split_once('=') else {
             continue;
         };

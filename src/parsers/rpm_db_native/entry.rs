@@ -8,7 +8,9 @@ use std::io::Cursor;
 use anyhow::{Context, Result, anyhow};
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, truncate_field};
+use crate::parsers::utils::{
+    MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, capped_iteration_limit, truncate_field,
+};
 
 use super::tags::{
     HEADER_I18NTABLE, RPMTAG_HEADERI18NTABLE, RPMTAG_HEADERIMAGE, RPMTAG_HEADERIMMUTABLE,
@@ -310,10 +312,9 @@ impl HeaderBlob {
     fn verify_entries(&self, data: &[u8]) -> Result<()> {
         let mut end: u32 = 0;
         let entry_offset = usize::from(self.region_tag != 0);
-        for entry in self.entry_infos[entry_offset..]
-            .iter()
-            .take(MAX_ITERATION_COUNT)
-        {
+        let entries = &self.entry_infos[entry_offset..];
+        let limit = capped_iteration_limit(entries.len(), "RPM native verify_entries");
+        for entry in entries.iter().take(limit) {
             let info = entry.to_native()?;
             let kind = info.kind;
             let offset_u32 = positive_offset(info.offset)
@@ -363,7 +364,8 @@ fn swab_region(
     data_end: u32,
 ) -> Result<(Vec<IndexEntry>, u32)> {
     let mut entries = Vec::new();
-    for (index, entry_info) in entry_infos.iter().enumerate().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(entry_infos.len(), "RPM native swab_region entries");
+    for (index, entry_info) in entry_infos.iter().enumerate().take(limit) {
         let info = entry_info.to_native()?;
         let kind = info.kind;
         let start = data_start + positive_offset(info.offset)?;

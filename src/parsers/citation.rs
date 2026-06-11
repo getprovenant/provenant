@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
-use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 pub struct CitationCffParser;
 
@@ -108,7 +108,7 @@ fn extract_author_parties(value: Option<&yaml_serde::Value>) -> Vec<Party> {
         .and_then(yaml_serde::Value::as_sequence)
         .into_iter()
         .flatten()
-        .take(MAX_ITERATION_COUNT)
+        .capped("CITATION.cff authors")
         .filter_map(|entry| {
             let name = entry
                 .get("name")

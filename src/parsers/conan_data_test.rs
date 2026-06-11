@@ -24,6 +24,40 @@ mod tests {
     }
 
     #[test]
+    fn test_versions_emitted_in_deterministic_sorted_order() {
+        // `sources` is deserialized into a std HashMap, so iteration order is
+        // nondeterministic. The parser sorts by version key before capping so
+        // emitted PackageData order (and truncation survivors) is reproducible.
+        let content = r#"
+sources:
+  "2.0.0":
+    url: "https://example.com/package-2.0.0.tar.gz"
+  "1.0.0":
+    url: "https://example.com/package-1.0.0.tar.gz"
+  "1.5.0":
+    url: "https://example.com/package-1.5.0.tar.gz"
+"#;
+        let run = || {
+            parse_conandata_yml(content)
+                .into_iter()
+                .filter_map(|p| p.version)
+                .collect::<Vec<_>>()
+        };
+        let first = run();
+        let second = run();
+        assert_eq!(first, second, "version order must be reproducible");
+        assert_eq!(
+            first,
+            vec![
+                "1.0.0".to_string(),
+                "1.5.0".to_string(),
+                "2.0.0".to_string()
+            ],
+            "versions must be emitted in sorted order"
+        );
+    }
+
+    #[test]
     fn test_parse_basic_conandata() {
         let content = r#"
 sources:

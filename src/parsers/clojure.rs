@@ -6,7 +6,8 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
 };
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
@@ -546,9 +547,10 @@ fn extract_deps_map(
     scope: Option<&str>,
     runtime: bool,
 ) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(entries.len(), "deps.edn deps map");
     entries
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|(lib, coord)| build_deps_edn_dependency(lib, coord, scope, runtime))
         .collect()
 }
@@ -605,9 +607,10 @@ fn build_deps_edn_dependency(
 }
 
 fn extract_project_dependencies(entries: &[Form], scope: Option<&str>) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(entries.len(), "project.clj dependencies");
     entries
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|entry| {
             let Form::Vector(parts) = entry else {
                 return None;

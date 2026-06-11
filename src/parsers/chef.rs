@@ -40,7 +40,9 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
-use super::utils::{MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, read_file_to_string, truncate_field};
+use super::utils::{
+    CappedIterExt, MAX_MANIFEST_SIZE, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 
 const FIELD_NAME: &str = "name";
 const FIELD_VERSION: &str = "version";
@@ -174,7 +176,8 @@ impl PackageParser for ChefMetadataJsonParser {
             .get(FIELD_DEPENDENCIES)
             .and_then(|v| v.as_object())
         {
-            for (dep_name, dep_version) in deps_obj.iter().take(MAX_ITERATION_COUNT) {
+            let limit = capped_iteration_limit(deps_obj.len(), "metadata.json dependencies");
+            for (dep_name, dep_version) in deps_obj.iter().take(limit) {
                 let version_constraint = dep_version
                     .as_str()
                     .map(|s| s.trim().to_string())
@@ -188,7 +191,8 @@ impl PackageParser for ChefMetadataJsonParser {
         }
 
         if let Some(depends_obj) = json_content.get(FIELD_DEPENDS).and_then(|v| v.as_object()) {
-            for (dep_name, dep_version) in depends_obj.iter().take(MAX_ITERATION_COUNT) {
+            let limit = capped_iteration_limit(depends_obj.len(), "metadata.json depends");
+            for (dep_name, dep_version) in depends_obj.iter().take(limit) {
                 let version_constraint = dep_version
                     .as_str()
                     .map(|s| s.trim().to_string())
@@ -280,7 +284,7 @@ impl PackageParser for ChefMetadataRbParser {
         let mut fields: HashMap<String, String> = HashMap::new();
         let mut deps: HashMap<String, Option<String>> = HashMap::new();
 
-        for line in reader.lines().take(MAX_ITERATION_COUNT) {
+        for line in reader.lines().capped("metadata.rb lines") {
             let line = match line {
                 Ok(l) => l,
                 Err(e) => {

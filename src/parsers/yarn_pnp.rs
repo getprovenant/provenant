@@ -6,7 +6,7 @@ use std::path::Path;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, npm_purl, truncate_field};
 
 use super::PackageParser;
 
@@ -75,7 +75,8 @@ fn parse_yarn_pnp(content: &str) -> Result<PackageData, String> {
     let mut seen_locators = HashSet::new();
     let mut dependencies = Vec::new();
 
-    for entry in registry_entries.iter().take(MAX_ITERATION_COUNT) {
+    let entries_limit = capped_iteration_limit(registry_entries.len(), "yarn PnP registry entries");
+    for entry in registry_entries.iter().take(entries_limit) {
         let Some(locator) = entry.get(0).and_then(serde_json::Value::as_str) else {
             continue;
         };
@@ -132,9 +133,10 @@ fn parse_root_dependency_map(entry: &serde_json::Value) -> Option<HashMap<String
 
 fn parse_dependency_pairs(value: &serde_json::Value) -> HashMap<String, String> {
     if let Some(array) = value.as_array() {
+        let limit = capped_iteration_limit(array.len(), "yarn PnP dependency pairs");
         return array
             .iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(limit)
             .filter_map(|pair| {
                 let pair = pair.as_array()?;
                 let name = pair.first()?.as_str()?;
@@ -147,11 +149,15 @@ fn parse_dependency_pairs(value: &serde_json::Value) -> HashMap<String, String> 
             .collect();
     }
 
+    let object_limit = capped_iteration_limit(
+        value.as_object().map_or(0, serde_json::Map::len),
+        "yarn PnP dependency object",
+    );
     value
         .as_object()
         .into_iter()
         .flatten()
-        .take(MAX_ITERATION_COUNT)
+        .take(object_limit)
         .filter_map(|(name, reference)| {
             reference.as_str().map(|reference| {
                 (

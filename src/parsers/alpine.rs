@@ -35,7 +35,8 @@ use crate::models::{
     PartyType, Sha1Digest,
 };
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, capped_iteration_limit, read_file_to_string,
+    split_name_email, truncate_field,
 };
 
 const MAX_ARCHIVE_SIZE: u64 = 1024 * 1024 * 1024; // 1GB uncompressed
@@ -133,7 +134,8 @@ fn parse_alpine_installed_db(content: &str) -> Vec<PackageData> {
 
     let mut all_packages = Vec::new();
 
-    for raw_text in raw_paragraphs.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(raw_paragraphs.len(), "alpine installed DB packages");
+    for raw_text in raw_paragraphs.iter().take(limit) {
         let headers = parse_alpine_headers(raw_text);
         let pkg = parse_alpine_package_paragraph(&headers, raw_text);
         if pkg.name.is_some() {
@@ -156,7 +158,7 @@ fn parse_alpine_installed_db(content: &str) -> Vec<PackageData> {
 fn parse_alpine_headers(content: &str) -> HashMap<String, Vec<String>> {
     let mut headers: HashMap<String, Vec<String>> = HashMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("alpine DB header lines") {
         if line.is_empty() {
             continue;
         }
@@ -1004,7 +1006,7 @@ fn extract_file_references(raw_text: &str) -> Vec<FileReference> {
     let mut current_dir = String::new();
     let mut current_file: Option<FileReference> = None;
 
-    for line in raw_text.lines().take(MAX_ITERATION_COUNT) {
+    for line in raw_text.lines().capped("alpine file-reference lines") {
         if line.is_empty() {
             continue;
         }
@@ -1082,7 +1084,7 @@ fn extract_file_references(raw_text: &str) -> Vec<FileReference> {
 fn extract_providers(raw_text: &str) -> Vec<String> {
     let mut providers = Vec::new();
 
-    for line in raw_text.lines().take(MAX_ITERATION_COUNT) {
+    for line in raw_text.lines().capped("alpine provider lines") {
         if line.is_empty() {
             continue;
         }
@@ -1274,7 +1276,7 @@ fn apk_pkginfo_content(path: &Path, archive_size: u64) -> Result<Option<String>,
 fn parse_pkginfo(content: &str) -> PackageData {
     let mut fields: HashMap<&str, Vec<&str>> = HashMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("alpine .PKGINFO lines") {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;

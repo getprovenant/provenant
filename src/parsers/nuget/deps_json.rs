@@ -7,7 +7,7 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parser_warn as warn;
 
 use super::super::PackageParser;
-use super::super::utils::{MAX_ITERATION_COUNT, read_file_to_string};
+use super::super::utils::{capped_iteration_limit, read_file_to_string};
 use super::{build_nuget_purl, build_nuget_urls, default_package_data};
 
 pub struct DotNetDepsJsonParser;
@@ -73,16 +73,8 @@ fn parse_dotnet_deps_json(parsed: &serde_json::Value, path: &Path) -> PackageDat
         .unwrap_or_default();
 
     let mut dependencies = Vec::new();
-    let mut iteration_count: usize = 0;
-    for (library_key, target_entry) in selected_target.iter().take(MAX_ITERATION_COUNT) {
-        iteration_count += 1;
-        if iteration_count > MAX_ITERATION_COUNT {
-            warn!(
-                "Iteration limit exceeded in .deps.json at {:?}; stopping at {} dependencies",
-                path, MAX_ITERATION_COUNT
-            );
-            break;
-        }
+    let limit = capped_iteration_limit(selected_target.len(), "nuget .deps.json: target libraries");
+    for (library_key, target_entry) in selected_target.iter().take(limit) {
         if root_key.as_deref() == Some(library_key.as_str()) {
             continue;
         }

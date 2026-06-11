@@ -22,7 +22,7 @@
 //! Python implementation: `reference/scancode-toolkit/src/packagedcode/build.py` (BazelBuildHandler)
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
+use crate::parsers::utils::{RecursionGuard, capped_iteration_limit, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::path::Path;
@@ -84,10 +84,9 @@ fn parse_bazel_build(path: &Path) -> Result<Vec<PackageData>, String> {
 
     let mut packages = Vec::new();
 
-    for statement in top_level_statements(&module)
-        .iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let statements = top_level_statements(&module);
+    let limit = capped_iteration_limit(statements.len(), "bazel BUILD top-level statements");
+    for statement in statements.iter().take(limit) {
         if let Some(mut package_data) = extract_package_from_statement(statement) {
             set_scancode_simple_top_level(&mut package_data, scancode_simple_top_level);
             packages.push(package_data);
@@ -210,10 +209,9 @@ fn parse_bazel_module(path: &Path) -> Result<PackageData, String> {
     let mut dependencies = Vec::new();
     let mut overrides = Vec::new();
 
-    for statement in top_level_statements(&module)
-        .iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let statements = top_level_statements(&module);
+    let limit = capped_iteration_limit(statements.len(), "MODULE.bazel top-level statements");
+    for statement in statements.iter().take(limit) {
         let Some(call) = extract_call(statement) else {
             continue;
         };
@@ -334,9 +332,10 @@ fn extract_string_list_kwarg(call: &StarlarkCall<'_>, key: &str) -> Option<Vec<S
         ast::ExprP::List(items) | ast::ExprP::Tuple(items) => items,
         _ => return None,
     };
+    let limit = capped_iteration_limit(items.len(), "bazel string-list kwarg items");
     let values: Vec<_> = items
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(expr_as_string)
         .collect();
     (!values.is_empty()).then_some(values)
@@ -361,10 +360,9 @@ fn extract_bazel_dependency(call: &StarlarkCall<'_>) -> Option<Dependency> {
     let is_dev = extract_bool_kwarg(call, "dev_dependency").unwrap_or(false);
     let mut extra_data = JsonMap::new();
 
-    for field in ["repo_name", "max_compatibility_level", "registry"]
-        .iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let fields = ["repo_name", "max_compatibility_level", "registry"];
+    let limit = capped_iteration_limit(fields.len(), "bazel dependency extra fields");
+    for field in fields.iter().take(limit) {
         if let Some(value) = extract_kwarg_json(call, field) {
             extra_data.insert(field.to_string(), value);
         }
@@ -386,7 +384,8 @@ fn extract_bazel_dependency(call: &StarlarkCall<'_>) -> Option<Dependency> {
 fn extract_override(kind: &str, call: &StarlarkCall<'_>) -> JsonValue {
     let mut override_map = JsonMap::new();
     override_map.insert("kind".to_string(), JsonValue::String(kind.to_string()));
-    for argument in call.args.args.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(call.args.args.len(), "bazel override arguments");
+    for argument in call.args.args.iter().take(limit) {
         if let ast::ArgumentP::Named(name, value) = &argument.node
             && let Some(value) = expr_to_json(value, &mut RecursionGuard::depth_only())
         {
@@ -445,15 +444,19 @@ fn expr_to_json(expr: &ast::AstExpr, guard: &mut RecursionGuard<()>) -> Option<J
             "None" => Some(JsonValue::Null),
             _ => None,
         },
-        ast::ExprP::List(elts) | ast::ExprP::Tuple(elts) => Some(JsonValue::Array(
-            elts.iter()
-                .take(MAX_ITERATION_COUNT)
-                .filter_map(|e| expr_to_json(e, guard))
-                .collect(),
-        )),
+        ast::ExprP::List(elts) | ast::ExprP::Tuple(elts) => {
+            let limit = capped_iteration_limit(elts.len(), "bazel list/tuple elements");
+            Some(JsonValue::Array(
+                elts.iter()
+                    .take(limit)
+                    .filter_map(|e| expr_to_json(e, guard))
+                    .collect(),
+            ))
+        }
         ast::ExprP::Dict(items) => {
             let mut map = JsonMap::new();
-            for (key, value) in items.iter().take(MAX_ITERATION_COUNT) {
+            let limit = capped_iteration_limit(items.len(), "bazel dict entries");
+            for (key, value) in items.iter().take(limit) {
                 let Some(key) = expr_as_string(key) else {
                     continue;
                 };

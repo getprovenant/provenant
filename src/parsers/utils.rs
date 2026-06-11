@@ -24,6 +24,101 @@ pub const MAX_FIELD_LENGTH: usize = 10 * 1024 * 1024;
 /// Default maximum iteration count for loops processing items (100,000).
 pub const MAX_ITERATION_COUNT: usize = 100_000;
 
+/// Returns the number of items to iterate for a collection of `total_len`,
+/// capped at [`MAX_ITERATION_COUNT`], and emits a [`crate::parser_warn!`]
+/// diagnostic when the cap actually truncates the input.
+///
+/// Use this in place of a bare `.take(MAX_ITERATION_COUNT)` when iterating a
+/// collection whose length is cheaply known, so silently-dropped entries
+/// become diagnosable in structured scan output. The warning fires only when
+/// `total_len` exceeds the cap, so normal (under-cap) files stay quiet.
+///
+/// `context` should name the file or section being truncated (for example
+/// `"pnpm lockfile packages"`) so the diagnostic identifies what was dropped.
+pub fn capped_iteration_limit(total_len: usize, context: &str) -> usize {
+    if total_len > MAX_ITERATION_COUNT {
+        crate::parser_warn!(
+            "Truncated {} from {} to {} entries (MAX_ITERATION_COUNT); {} entries dropped",
+            context,
+            total_len,
+            MAX_ITERATION_COUNT,
+            total_len - MAX_ITERATION_COUNT
+        );
+    }
+    total_len.min(MAX_ITERATION_COUNT)
+}
+
+/// Iterator adapter that yields at most [`MAX_ITERATION_COUNT`] items and emits
+/// a [`crate::parser_warn!`] diagnostic, naming `context`, if the underlying
+/// iterator actually had more items than the cap.
+///
+/// Created by [`CappedIterExt::capped`]. Use this for the lazy-iterator case
+/// where a collection length is not cheaply known, so truncation stays bounded
+/// and lazy yet becomes diagnosable. The warning fires once, when the cap is
+/// first exceeded; under-cap iterators stay quiet.
+pub struct CappedIter<I: Iterator> {
+    inner: I,
+    context: &'static str,
+    yielded: usize,
+    warned: bool,
+}
+
+impl<I: Iterator> Iterator for CappedIter<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.yielded >= MAX_ITERATION_COUNT {
+            // Probe a single item beyond the cap to detect (and report) real
+            // truncation without consuming the rest of the iterator.
+            if !self.warned && self.inner.next().is_some() {
+                self.warned = true;
+                crate::parser_warn!(
+                    "Truncated {} at {} entries (MAX_ITERATION_COUNT); additional entries dropped",
+                    self.context,
+                    MAX_ITERATION_COUNT
+                );
+            }
+            return None;
+        }
+        let item = self.inner.next();
+        if item.is_some() {
+            self.yielded += 1;
+        }
+        item
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // We yield at most the cap, minus what we've already yielded; clamp the
+        // inner hint so `collect()` callers don't over-allocate.
+        let remaining_cap = MAX_ITERATION_COUNT.saturating_sub(self.yielded);
+        let (lower, upper) = self.inner.size_hint();
+        let upper = match upper {
+            Some(upper) => upper.min(remaining_cap),
+            None => remaining_cap,
+        };
+        (lower.min(remaining_cap), Some(upper))
+    }
+}
+
+/// Extension trait providing [`capped`](CappedIterExt::capped) on any iterator.
+pub trait CappedIterExt: Iterator + Sized {
+    /// Caps iteration at [`MAX_ITERATION_COUNT`], warning (via
+    /// [`crate::parser_warn!`]) only if the source actually had more items.
+    ///
+    /// Prefer [`capped_iteration_limit`] when the collection length is cheaply
+    /// known; use this for lazy iterators where it is not.
+    fn capped(self, context: &'static str) -> CappedIter<Self> {
+        CappedIter {
+            inner: self,
+            context,
+            yielded: 0,
+            warned: false,
+        }
+    }
+}
+
+impl<I: Iterator> CappedIterExt for I {}
+
 /// Default maximum recursion depth for recursive parsing functions (50 levels).
 pub const MAX_RECURSION_DEPTH: usize = 50;
 
@@ -520,5 +615,119 @@ mod tests {
         let long = "x".repeat(MAX_FIELD_LENGTH + 100);
         let truncated = truncate_field(long);
         assert!(truncated.len() <= MAX_FIELD_LENGTH);
+    }
+
+    #[test]
+    fn test_capped_iteration_limit_under_cap() {
+        assert_eq!(capped_iteration_limit(0, "test"), 0);
+        assert_eq!(capped_iteration_limit(10, "test"), 10);
+        assert_eq!(
+            capped_iteration_limit(MAX_ITERATION_COUNT, "test"),
+            MAX_ITERATION_COUNT
+        );
+    }
+
+    #[test]
+    fn test_capped_iteration_limit_truncates() {
+        assert_eq!(
+            capped_iteration_limit(MAX_ITERATION_COUNT + 1, "test"),
+            MAX_ITERATION_COUNT
+        );
+        assert_eq!(
+            capped_iteration_limit(MAX_ITERATION_COUNT * 2, "test"),
+            MAX_ITERATION_COUNT
+        );
+    }
+
+    #[test]
+    fn test_capped_iteration_limit_warns_only_when_truncating() {
+        use crate::models::DiagnosticSeverity;
+        use crate::parsers::capture_parser_diagnostics;
+        use std::path::Path;
+
+        // Under the cap: no diagnostic.
+        let quiet = capture_parser_diagnostics(
+            || {
+                let _ = capped_iteration_limit(10, "under-cap context");
+                Vec::new()
+            },
+            "test",
+            Path::new("test"),
+            None,
+        );
+        assert!(
+            quiet.scan_diagnostics.is_empty(),
+            "expected no diagnostic under the cap, got: {:?}",
+            quiet.scan_diagnostics
+        );
+
+        // Over the cap: a warning naming the context and the cap.
+        let noisy = capture_parser_diagnostics(
+            || {
+                let _ = capped_iteration_limit(MAX_ITERATION_COUNT + 7, "over-cap context");
+                Vec::new()
+            },
+            "test",
+            Path::new("test"),
+            None,
+        );
+        assert!(
+            noisy.scan_diagnostics.iter().any(|diagnostic| {
+                diagnostic.severity == DiagnosticSeverity::Warning
+                    && diagnostic.message.contains("over-cap context")
+                    && diagnostic.message.contains("MAX_ITERATION_COUNT")
+            }),
+            "expected a truncation warning naming the context, got: {:?}",
+            noisy.scan_diagnostics
+        );
+    }
+
+    #[test]
+    fn test_capped_iter_under_cap_is_quiet_and_complete() {
+        use crate::parsers::capture_parser_diagnostics;
+        use std::path::Path;
+
+        let result = capture_parser_diagnostics(
+            || {
+                let collected: Vec<usize> = (0..10).capped("under-cap iter").collect();
+                assert_eq!(collected, (0..10).collect::<Vec<_>>());
+                Vec::new()
+            },
+            "test",
+            Path::new("test"),
+            None,
+        );
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "expected no diagnostic under the cap, got: {:?}",
+            result.scan_diagnostics
+        );
+    }
+
+    #[test]
+    fn test_capped_iter_truncates_and_warns() {
+        use crate::models::DiagnosticSeverity;
+        use crate::parsers::capture_parser_diagnostics;
+        use std::path::Path;
+
+        let result = capture_parser_diagnostics(
+            || {
+                let count = (0..MAX_ITERATION_COUNT + 5).capped("over-cap iter").count();
+                assert_eq!(count, MAX_ITERATION_COUNT);
+                Vec::new()
+            },
+            "test",
+            Path::new("test"),
+            None,
+        );
+        assert!(
+            result.scan_diagnostics.iter().any(|diagnostic| {
+                diagnostic.severity == DiagnosticSeverity::Warning
+                    && diagnostic.message.contains("over-cap iter")
+                    && diagnostic.message.contains("MAX_ITERATION_COUNT")
+            }),
+            "expected a truncation warning naming the context, got: {:?}",
+            result.scan_diagnostics
+        );
     }
 }

@@ -32,7 +32,8 @@
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, capped_iteration_limit, read_file_to_string,
+    split_name_email, truncate_field,
 };
 use flate2::read::GzDecoder;
 use packageurl::PackageUrl;
@@ -178,7 +179,7 @@ fn parse_gemfile(content: &str) -> PackageData {
         }
     };
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("Gemfile lines") {
         let trimmed = line.trim();
 
         // Skip comments and empty lines
@@ -558,7 +559,7 @@ fn parse_gemfile_lock(content: &str) -> PackageData {
         }
     };
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("Gemfile.lock lines") {
         let trimmed = line.trim_end();
 
         // Empty line resets state
@@ -1343,7 +1344,7 @@ fn resolve_joined_constant_string(expression: &str, contexts: &[String]) -> Opti
     let separator = extract_first_ruby_value(separator_expr)?;
 
     let mut parts = Vec::new();
-    for item in body.split(',').take(MAX_ITERATION_COUNT) {
+    for item in body.split(',').capped("gemspec join expression parts") {
         let resolved = resolve_scalar_expression(item.trim(), None, contexts)?;
         parts.push(resolved);
     }
@@ -1535,7 +1536,7 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
     let mut dependencies: Vec<Dependency> = Vec::new();
 
     // Extract basic fields
-    for caps in field_re.captures_iter(content).take(MAX_ITERATION_COUNT) {
+    for caps in field_re.captures_iter(content).capped("gemspec fields") {
         let field_name = match caps.get(1) {
             Some(m) => m.as_str(),
             None => continue,
@@ -1563,14 +1564,17 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
     }
 
     // Extract licenses (plural)
-    for caps in licenses_re.captures_iter(content).take(MAX_ITERATION_COUNT) {
+    for caps in licenses_re
+        .captures_iter(content)
+        .capped("gemspec licenses")
+    {
         if let Some(raw) = caps.get(1) {
             licenses = extract_ruby_array(raw.as_str());
         }
     }
 
     // Extract authors
-    for caps in authors_re.captures_iter(content).take(MAX_ITERATION_COUNT) {
+    for caps in authors_re.captures_iter(content).capped("gemspec authors") {
         if let Some(raw) = caps.get(1) {
             let raw_str = raw.as_str().trim();
             if raw_str.starts_with('[') {
@@ -1585,7 +1589,7 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
     }
 
     // Extract emails
-    for caps in email_re.captures_iter(content).take(MAX_ITERATION_COUNT) {
+    for caps in email_re.captures_iter(content).capped("gemspec emails") {
         if let Some(raw) = caps.get(1) {
             let raw_str = raw.as_str().trim();
             if raw_str.starts_with('[') {
@@ -1658,7 +1662,7 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
 
     for caps in dependency_call_re
         .captures_iter(content)
-        .take(MAX_ITERATION_COUNT)
+        .capped("gemspec dependency calls")
     {
         let method = match caps.get(1) {
             Some(m) => m.as_str(),
@@ -2111,7 +2115,8 @@ fn parse_gem_yaml_dependencies(yaml: &yaml_serde::Value) -> Vec<Dependency> {
         None => return dependencies,
     };
 
-    for dep_value in deps_seq.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(deps_seq.len(), "gem metadata YAML dependencies");
+    for dep_value in deps_seq.iter().take(limit) {
         let dep_name = match yaml_string(dep_value, "name").map(truncate_field) {
             Some(n) => n,
             None => continue,

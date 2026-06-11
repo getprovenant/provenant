@@ -10,7 +10,8 @@ use serde_json::Value as JsonValue;
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
 };
 
 use super::PackageParser;
@@ -924,9 +925,11 @@ fn parse_flake_lock(path: &Path, json: &JsonValue) -> Result<PackageData, String
     extra_data.insert("root".to_string(), JsonValue::String(root.to_string()));
     package.extra_data = Some(extra_data);
 
+    let root_inputs_limit =
+        capped_iteration_limit(root_inputs.len(), "nix: flake.lock root inputs");
     package.dependencies = root_inputs
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(root_inputs_limit)
         .filter_map(|(input_name, node_ref)| build_lock_dependency(input_name, node_ref, nodes))
         .collect();
     package
@@ -1194,9 +1197,10 @@ fn build_list_dependencies(
         return Vec::new();
     };
 
+    let items_limit = capped_iteration_limit(items.len(), "nix: dependency list items");
     items
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(items_limit)
         .flat_map(|expr| {
             expr_to_dependency_symbols_with_scopes(expr, scopes, &mut RecursionGuard::depth_only())
         })

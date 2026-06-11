@@ -7,7 +7,7 @@ use super::coordinates::{build_maven_purl, infer_meta_inf_maven_coordinates};
 use super::default_package_data;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -265,10 +265,12 @@ pub(crate) fn interpret_manifest_mf(content: &str, path: &Path) -> PackageData {
 pub(super) fn parse_osgi_package_list(package_list: &str, scope: &str) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for package_entry in split_osgi_list(package_list)
-        .into_iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let package_entries = split_osgi_list(package_list);
+    let limit = capped_iteration_limit(
+        package_entries.len(),
+        "maven manifest: OSGi Import-Package entries",
+    );
+    for package_entry in package_entries.into_iter().take(limit) {
         let package_entry = package_entry.trim();
         if package_entry.is_empty() {
             continue;
@@ -307,10 +309,12 @@ pub(super) fn parse_osgi_package_list(package_list: &str, scope: &str) -> Vec<De
 pub(super) fn parse_osgi_bundle_list(bundle_list: &str, scope: &str) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
-    for bundle_entry in split_osgi_list(bundle_list)
-        .into_iter()
-        .take(MAX_ITERATION_COUNT)
-    {
+    let bundle_entries = split_osgi_list(bundle_list);
+    let limit = capped_iteration_limit(
+        bundle_entries.len(),
+        "maven manifest: OSGi Require-Bundle entries",
+    );
+    for bundle_entry in bundle_entries.into_iter().take(limit) {
         let bundle_entry = bundle_entry.trim();
         if bundle_entry.is_empty() {
             continue;

@@ -29,7 +29,7 @@ use crate::models::{
 };
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, MAX_RECURSION_DEPTH, RecursionGuard, npm_purl, parse_sri,
+    MAX_RECURSION_DEPTH, RecursionGuard, capped_iteration_limit, npm_purl, parse_sri,
     read_file_to_string, truncate_field,
 };
 use serde_json::Value;
@@ -178,12 +178,15 @@ fn parse_lockfile_v2_plus(
 
     // Root dependencies are in top-level "dependencies" and "devDependencies"
     if let Some(root_deps_obj) = json.get(FIELD_DEPENDENCIES).and_then(|v| v.as_object()) {
-        for key in root_deps_obj.keys().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(root_deps_obj.len(), "npm lock: root dependencies");
+        for key in root_deps_obj.keys().take(limit) {
             root_deps.insert(key.clone());
         }
     }
     if let Some(root_dev_deps_obj) = json.get("devDependencies").and_then(|v| v.as_object()) {
-        for key in root_dev_deps_obj.keys().take(MAX_ITERATION_COUNT) {
+        let limit =
+            capped_iteration_limit(root_dev_deps_obj.len(), "npm lock: root devDependencies");
+        for key in root_dev_deps_obj.keys().take(limit) {
             root_deps.insert(key.clone());
         }
     }
@@ -195,7 +198,9 @@ fn parse_lockfile_v2_plus(
 
     let mut dependencies = Vec::new();
 
-    for (key, value) in packages.iter().take(MAX_ITERATION_COUNT) {
+    let packages_limit =
+        capped_iteration_limit(packages.len(), "npm lock: lockfile v2/v3 packages");
+    for (key, value) in packages.iter().take(packages_limit) {
         // Skip the root package (empty string key)
         if key.is_empty() {
             continue;
@@ -336,7 +341,9 @@ fn collect_linked_workspace_names(
 ) -> HashMap<String, String> {
     let mut linked_names = HashMap::new();
 
-    for (key, value) in packages.iter().take(MAX_ITERATION_COUNT) {
+    let packages_limit =
+        capped_iteration_limit(packages.len(), "npm lock: linked workspace packages");
+    for (key, value) in packages.iter().take(packages_limit) {
         let is_link = value
             .get(FIELD_LINK)
             .and_then(|v| v.as_bool())
@@ -450,7 +457,8 @@ fn parse_dependencies_v1_with_depth(
 
     let mut dependencies = Vec::new();
 
-    for (package_name, dep_data) in dependencies_obj.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(dependencies_obj.len(), "npm lock: v1 dependencies");
+    for (package_name, dep_data) in dependencies_obj.iter().take(limit) {
         let version = match dep_data.get(FIELD_VERSION).and_then(|v| v.as_str()) {
             Some(v) => truncate_field(v.to_string()),
             None => continue,
@@ -646,9 +654,10 @@ fn extract_package_license(value: &Value) -> Option<String> {
     }
 
     if let Some(licenses) = value.get(FIELD_LICENSES).and_then(|v| v.as_array()) {
+        let limit = capped_iteration_limit(licenses.len(), "npm lock: package licenses array");
         let types: Vec<String> = licenses
             .iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(limit)
             .filter_map(|entry| entry.get("type").and_then(|v| v.as_str()))
             .filter_map(non_empty_string)
             .collect();
@@ -680,7 +689,8 @@ fn collect_root_dependency_names(
     root_deps: &mut std::collections::HashSet<String>,
 ) {
     if let Some(entries) = value.and_then(|value| value.as_object()) {
-        for key in entries.keys().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(entries.len(), "npm lock: root dependency name section");
+        for key in entries.keys().take(limit) {
             root_deps.insert(key.clone());
         }
     }

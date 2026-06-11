@@ -35,7 +35,7 @@ use crate::models::PackageData;
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
-use super::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use super::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 const PACKAGE_TYPE: PackageType = PackageType::LinuxDistro;
 
@@ -149,7 +149,7 @@ fn determine_namespace_and_name<'a>(
 fn parse_key_value_pairs(content: &str) -> HashMap<String, String> {
     let mut fields = HashMap::new();
 
-    for line in content.lines().take(MAX_ITERATION_COUNT) {
+    for line in content.lines().capped("os-release lines") {
         let line = line.trim();
 
         // Skip empty lines and comments

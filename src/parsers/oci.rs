@@ -31,7 +31,9 @@ use serde_json::json;
 
 use crate::models::{DatasourceId, PackageData, PackageType};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{
+    MAX_ITERATION_COUNT, capped_iteration_limit, read_file_to_string, truncate_field,
+};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -217,7 +219,8 @@ fn collect_index_packages(
     depth: usize,
     packages: &mut Vec<PackageData>,
 ) {
-    for descriptor in index.manifests.into_iter().take(MAX_ITERATION_COUNT) {
+    let manifest_limit = capped_iteration_limit(index.manifests.len(), "OCI image index manifests");
+    for descriptor in index.manifests.into_iter().take(manifest_limit) {
         if packages.len() >= MAX_ITERATION_COUNT {
             break;
         }
@@ -453,9 +456,10 @@ fn parse_docker_save_manifest(content: &str) -> Vec<PackageData> {
         }
     };
 
+    let entry_limit = capped_iteration_limit(entries.len(), "docker save manifest entries");
     entries
         .into_iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(entry_limit)
         .filter_map(package_from_docker_save_entry)
         .collect()
 }

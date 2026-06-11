@@ -28,7 +28,9 @@ use crate::models::{
     Sha512Digest,
 };
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, npm_purl, parse_sri, truncate_field};
+use crate::parsers::utils::{
+    CappedIterExt, capped_iteration_limit, npm_purl, parse_sri, truncate_field,
+};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
@@ -255,7 +257,11 @@ fn read_and_parse_json_with_lines(path: &Path) -> Result<(Value, HashMap<String,
 
     // Track line numbers for each field by iterating over lines
     let mut field_lines = HashMap::new();
-    for (line_num, line) in content.lines().enumerate().take(MAX_ITERATION_COUNT) {
+    for (line_num, line) in content
+        .lines()
+        .enumerate()
+        .capped("npm: package.json field line tracking")
+    {
         let trimmed = line.trim();
         if let Some(field_name) = extract_field_name(trimmed) {
             field_lines.insert(field_name, line_num + 1);
@@ -340,7 +346,8 @@ fn extract_license_statement(json: &Value) -> Option<String> {
     }
 
     if let Some(licenses) = json.get(FIELD_LICENSES).and_then(|v| v.as_array()) {
-        for license in licenses.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(licenses.len(), "npm: licenses array");
+        for license in licenses.iter().take(limit) {
             if let Some(license_obj) = license.as_object()
                 && let Some(type_val) = license_obj.get("type").and_then(|v| v.as_str())
             {
@@ -595,9 +602,10 @@ fn extract_party_from_field(field: &Value) -> Option<Party> {
 /// Extracts multiple parties from a JSON array.
 fn extract_parties_from_array(array: &Value) -> Option<Vec<Party>> {
     if let Value::Array(items) = array {
+        let limit = capped_iteration_limit(items.len(), "npm: parties array");
         let parties = items
             .iter()
-            .take(MAX_ITERATION_COUNT)
+            .take(limit)
             .filter_map(extract_party_from_field)
             .collect::<Vec<_>>();
         if !parties.is_empty() {
@@ -736,8 +744,9 @@ fn extract_dependency_group(
     json.get(field)
         .and_then(|deps| deps.as_object())
         .map_or_else(Vec::new, |deps| {
+            let limit = capped_iteration_limit(deps.len(), "npm: dependency group");
             deps.iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|(name, version)| {
                     let version_str = version.as_str()?;
 
@@ -847,9 +856,10 @@ fn extract_bundled_dependencies(json: &Value) -> Vec<Dependency> {
 
 /// Helper function to extract bundled dependencies from an array of package names.
 fn extract_bundled_list(bundled_array: &[Value]) -> Vec<Dependency> {
+    let limit = capped_iteration_limit(bundled_array.len(), "npm: bundled dependencies");
     bundled_array
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|value| {
             let name = value.as_str()?;
             // Create PURL without version for bundled dependencies
@@ -889,9 +899,10 @@ fn extract_peer_dependencies_meta(json: &Value) -> HashMap<String, bool> {
     json.get(FIELD_PEER_DEPENDENCIES_META)
         .and_then(|meta| meta.as_object())
         .map_or_else(HashMap::new, |meta_obj| {
+            let limit = capped_iteration_limit(meta_obj.len(), "npm: peerDependenciesMeta");
             meta_obj
                 .iter()
-                .take(MAX_ITERATION_COUNT)
+                .take(limit)
                 .filter_map(|(package_name, meta_value)| {
                     meta_value.as_object().and_then(|obj| {
                         obj.get("optional")
@@ -949,9 +960,10 @@ fn extract_keywords_as_vec(json: &Value) -> Vec<String> {
             if let Some(str) = v.as_str() {
                 Some(vec![str.to_string()])
             } else if let Some(arr) = v.as_array() {
+                let limit = capped_iteration_limit(arr.len(), "npm: keywords array");
                 let keywords: Vec<String> = arr
                     .iter()
-                    .take(MAX_ITERATION_COUNT)
+                    .take(limit)
                     .filter_map(|kw| kw.as_str())
                     .map(|s| truncate_field(s.to_string()))
                     .collect();

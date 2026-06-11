@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, truncate_field};
+use crate::parsers::utils::{CappedIterExt, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::Value;
 use url::Url;
@@ -139,7 +139,7 @@ fn extract_import_dependencies(json: &Value) -> Vec<Dependency> {
         .and_then(Value::as_object)
         .into_iter()
         .flatten()
-        .take(MAX_ITERATION_COUNT)
+        .capped("deno.json imports")
         .filter_map(|(alias, value)| {
             value
                 .as_str()

@@ -25,7 +25,7 @@
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field,
+    RecursionGuard, capped_iteration_limit, read_file_to_string, truncate_field,
 };
 use packageurl::PackageUrl;
 use std::path::Path;
@@ -269,7 +269,8 @@ fn extract_parties(toml_content: &Value) -> Vec<Party> {
     let mut seen = HashSet::new();
 
     if let Some(authors) = toml_content.get(FIELD_AUTHORS).and_then(|v| v.as_array()) {
-        for author in authors.iter().take(MAX_ITERATION_COUNT) {
+        let limit = capped_iteration_limit(authors.len(), "Julia authors field");
+        for author in authors.iter().take(limit) {
             push_author_party(author, &mut parties, &mut seen);
         }
     }
@@ -277,7 +278,8 @@ fn extract_parties(toml_content: &Value) -> Vec<Party> {
     if let Some(author_value) = toml_content.get(FIELD_AUTHOR) {
         match author_value {
             Value::Array(authors) => {
-                for author in authors.iter().take(MAX_ITERATION_COUNT) {
+                let limit = capped_iteration_limit(authors.len(), "Julia author field");
+                for author in authors.iter().take(limit) {
                     push_author_party(author, &mut parties, &mut seen);
                 }
             }
@@ -324,7 +326,8 @@ fn extract_project_dependencies(toml_content: &Value) -> Vec<Dependency> {
 
     let compat_table = toml_content.get(FIELD_COMPAT).and_then(|v| v.as_table());
 
-    for (dep_name, dep_value) in deps_table.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(deps_table.len(), "Project.toml deps");
+    for (dep_name, dep_value) in deps_table.iter().take(limit) {
         let uuid = dep_value.as_str().map(String::from);
 
         let extracted_requirement = compat_table
@@ -381,13 +384,15 @@ fn extract_manifest_packages(toml_content: &Value) -> Vec<PackageData> {
         },
     };
 
-    for (dep_name, dep_value) in deps_table.iter().take(MAX_ITERATION_COUNT) {
+    let table_limit = capped_iteration_limit(deps_table.len(), "Manifest.toml deps");
+    for (dep_name, dep_value) in deps_table.iter().take(table_limit) {
         let dep_entries = match dep_value.as_array() {
             Some(entries) => entries,
             None => continue,
         };
 
-        for dep_entry in dep_entries.iter().take(MAX_ITERATION_COUNT) {
+        let entry_limit = capped_iteration_limit(dep_entries.len(), "Manifest.toml dep entries");
+        for dep_entry in dep_entries.iter().take(entry_limit) {
             let name = Some(truncate_field(dep_name.clone()));
 
             let uuid = dep_entry

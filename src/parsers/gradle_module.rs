@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::{Map as JsonMap, Value};
 
@@ -267,7 +267,7 @@ fn extract_variant_data(
         .into_iter()
         .flatten()
         .filter_map(Value::as_object)
-        .take(MAX_ITERATION_COUNT)
+        .capped(".module variants")
     {
         let category = variant
             .get(FIELD_ATTRIBUTES)
@@ -311,7 +311,7 @@ fn extract_variant_data(
             for file in files
                 .iter()
                 .filter_map(Value::as_object)
-                .take(MAX_ITERATION_COUNT)
+                .capped(".module variant files")
             {
                 let artifact_score =
                     score_top_level_artifact(file, module_name, version, scope.as_deref());
@@ -362,7 +362,7 @@ fn extract_variant_data(
             .into_iter()
             .flatten()
             .filter_map(Value::as_object)
-            .take(MAX_ITERATION_COUNT)
+            .capped(".module variant dependencies")
         {
             let Some(group) = dependency.get("group").and_then(Value::as_str) else {
                 continue;

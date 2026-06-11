@@ -8,7 +8,7 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 
 use crate::models::{DatasourceId, PackageData, PackageType};
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 use super::PackageParser;
 
@@ -100,7 +100,10 @@ impl PackageParser for RpmYumdbParser {
             }
         };
 
-        let entries: Vec<_> = entries.flatten().take(MAX_ITERATION_COUNT).collect();
+        let entries: Vec<_> = entries
+            .flatten()
+            .capped("rpm yumdb package directory entries")
+            .collect();
 
         for entry in entries {
             let key_path = entry.path();

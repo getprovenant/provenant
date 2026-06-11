@@ -25,7 +25,7 @@
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Sha256Digest};
 use crate::parser_warn as warn;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, read_file_to_string, truncate_field};
+use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
 use serde_json::json;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
@@ -257,14 +257,17 @@ fn extract_all_dependencies(
     let package_versions = build_package_versions(packages);
     let package_provenance = build_package_provenance(packages);
     let root_package_key = root_package.and_then(package_key_from_table);
-    for package in packages.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(packages.len(), "Cargo.lock packages");
+    for package in packages.iter().take(limit) {
         if let Some(pkg_table) = package.as_table() {
             let is_root_package = package_key_from_table(pkg_table)
                 .zip(root_package_key)
                 .is_some_and(|(package_key, root_key)| package_key == root_key);
 
             if let Some(deps) = pkg_table.get("dependencies").and_then(|v| v.as_array()) {
-                for dep in deps.iter().take(MAX_ITERATION_COUNT) {
+                let dep_limit =
+                    capped_iteration_limit(deps.len(), "Cargo.lock package dependencies");
+                for dep in deps.iter().take(dep_limit) {
                     if let Some(dep_str) = dep.as_str() {
                         let parsed_dependency = parse_dependency_string(dep_str);
                         let name = parsed_dependency.name;
@@ -330,9 +333,10 @@ fn extract_all_dependencies(
         }
     }
 
+    let provenance_limit = capped_iteration_limit(packages.len(), "Cargo.lock provenance packages");
     for package in packages
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(provenance_limit)
         .filter_map(|package| package.as_table())
     {
         let Some((name, version)) = package_key_from_table(package) else {

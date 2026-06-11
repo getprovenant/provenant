@@ -11,7 +11,10 @@ use serde_json::json;
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 
 use super::PackageParser;
-use super::utils::{MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, truncate_field};
+use super::utils::{
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, read_file_to_string,
+    truncate_field,
+};
 
 pub struct SbtParser;
 
@@ -412,7 +415,8 @@ fn matches_chars(chars: &[char], index: usize, expected: &[char]) -> bool {
 fn resolve_string_aliases(statements: &[String]) -> HashMap<String, String> {
     let mut raw_aliases = HashMap::new();
 
-    for statement in statements.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(statements.len(), "sbt alias statements");
+    for statement in statements.iter().take(limit) {
         let tokens = tokenize(statement);
         if let Some((name, expr)) = parse_alias_declaration(&tokens) {
             raw_aliases.insert(name, expr);
@@ -534,7 +538,8 @@ fn parse_statements(statements: &[String], aliases: &HashMap<String, String>) ->
     let bundle_aliases = resolve_seq_aliases(statements);
     let mut state = SbtParseAccumulator::default();
 
-    for statement in statements.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(statements.len(), "sbt statements");
+    for statement in statements.iter().take(limit) {
         let tokens = tokenize(statement);
         process_statement_tokens(&tokens, aliases, &bundle_aliases, &mut state);
     }
@@ -740,7 +745,8 @@ fn parse_dependency_seq(
     };
 
     let mut dependencies = Vec::new();
-    for item in items.iter().take(MAX_ITERATION_COUNT) {
+    let limit = capped_iteration_limit(items.len(), "sbt dependency seq items");
+    for item in items.iter().take(limit) {
         if let Some(dependency) = parse_dependency_expr(item, aliases, inherited_scope) {
             dependencies.push(dependency);
         }

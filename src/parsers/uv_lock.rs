@@ -16,7 +16,9 @@ use crate::models::{
     DatasourceId, Dependency, PackageData, PackageType, ResolvedPackage, Sha256Digest,
 };
 use crate::parsers::python::read_toml_file;
-use crate::parsers::utils::{MAX_ITERATION_COUNT, RecursionGuard, truncate_field};
+use crate::parsers::utils::{
+    MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit, truncate_field,
+};
 
 use super::PackageParser;
 
@@ -105,9 +107,10 @@ fn parse_uv_lock(toml_content: &TomlValue) -> PackageData {
         return default_package_data();
     }
 
+    let packages_limit = capped_iteration_limit(packages.len(), "uv.lock package tables");
     let package_tables: Vec<&TomlMap<String, TomlValue>> = packages
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(packages_limit)
         .filter_map(TomlValue::as_table)
         .collect();
 
@@ -344,18 +347,22 @@ fn collect_root_direct_dependencies(
         .get(FIELD_OPTIONAL_DEPENDENCIES)
         .and_then(TomlValue::as_table)
     {
-        for (group, value) in optional_table.iter().take(MAX_ITERATION_COUNT) {
+        let optional_limit = capped_iteration_limit(
+            optional_table.len(),
+            "uv.lock root optional-dependency groups",
+        );
+        for (group, value) in optional_table.iter().take(optional_limit) {
             let requirement_map = optional_requirements.get(group);
-            for edge in collect_dependency_edges_from_array(
+            let edges = collect_dependency_edges_from_array(
                 value.as_array(),
                 Some(group.to_string()),
                 false,
                 true,
                 requirement_map,
-            )
-            .into_iter()
-            .take(MAX_ITERATION_COUNT)
-            {
+            );
+            let edges_limit =
+                capped_iteration_limit(edges.len(), "uv.lock root optional-dependency edges");
+            for edge in edges.into_iter().take(edges_limit) {
                 merge_direct_dependency_info(&mut infos, edge);
             }
         }
@@ -365,18 +372,20 @@ fn collect_root_direct_dependencies(
         .get(FIELD_DEV_DEPENDENCIES)
         .and_then(TomlValue::as_table)
     {
-        for (group, value) in dev_table.iter().take(MAX_ITERATION_COUNT) {
+        let dev_limit =
+            capped_iteration_limit(dev_table.len(), "uv.lock root dev-dependency groups");
+        for (group, value) in dev_table.iter().take(dev_limit) {
             let requirement_map = dev_requirements.get(group);
-            for edge in collect_dependency_edges_from_array(
+            let edges = collect_dependency_edges_from_array(
                 value.as_array(),
                 Some(group.to_string()),
                 false,
                 false,
                 requirement_map,
-            )
-            .into_iter()
-            .take(MAX_ITERATION_COUNT)
-            {
+            );
+            let edges_limit =
+                capped_iteration_limit(edges.len(), "uv.lock root dev-dependency edges");
+            for edge in edges.into_iter().take(edges_limit) {
                 merge_direct_dependency_info(&mut infos, edge);
             }
         }
@@ -467,18 +476,23 @@ fn collect_package_dependency_edges(
         .get(FIELD_OPTIONAL_DEPENDENCIES)
         .and_then(TomlValue::as_table)
     {
-        for (group, value) in optional_table.iter().take(MAX_ITERATION_COUNT) {
-            edges.extend(
-                collect_dependency_edges_from_array(
-                    value.as_array(),
-                    Some(group.to_string()),
-                    false,
-                    true,
-                    None,
-                )
-                .into_iter()
-                .take(MAX_ITERATION_COUNT),
+        let optional_limit = capped_iteration_limit(
+            optional_table.len(),
+            "uv.lock package optional-dependency groups",
+        );
+        for (group, value) in optional_table.iter().take(optional_limit) {
+            let group_edges = collect_dependency_edges_from_array(
+                value.as_array(),
+                Some(group.to_string()),
+                false,
+                true,
+                None,
             );
+            let edges_limit = capped_iteration_limit(
+                group_edges.len(),
+                "uv.lock package optional-dependency edges",
+            );
+            edges.extend(group_edges.into_iter().take(edges_limit));
         }
     }
 
@@ -486,18 +500,19 @@ fn collect_package_dependency_edges(
         .get(FIELD_DEV_DEPENDENCIES)
         .and_then(TomlValue::as_table)
     {
-        for (group, value) in dev_table.iter().take(MAX_ITERATION_COUNT) {
-            edges.extend(
-                collect_dependency_edges_from_array(
-                    value.as_array(),
-                    Some(group.to_string()),
-                    false,
-                    false,
-                    None,
-                )
-                .into_iter()
-                .take(MAX_ITERATION_COUNT),
+        let dev_limit =
+            capped_iteration_limit(dev_table.len(), "uv.lock package dev-dependency groups");
+        for (group, value) in dev_table.iter().take(dev_limit) {
+            let group_edges = collect_dependency_edges_from_array(
+                value.as_array(),
+                Some(group.to_string()),
+                false,
+                false,
+                None,
             );
+            let edges_limit =
+                capped_iteration_limit(group_edges.len(), "uv.lock package dev-dependency edges");
+            edges.extend(group_edges.into_iter().take(edges_limit));
         }
     }
 
@@ -607,9 +622,10 @@ fn parse_requirement_metadata_table(
 }
 
 fn parse_requirement_entries(values: &[TomlValue]) -> HashMap<String, String> {
+    let limit = capped_iteration_limit(values.len(), "uv.lock requirement entries");
     values
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .take(limit)
         .filter_map(|value| {
             let table = value.as_table()?;
             let name = table

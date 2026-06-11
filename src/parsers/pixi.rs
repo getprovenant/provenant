@@ -13,9 +13,7 @@ use toml::map::Map as TomlMap;
 use crate::models::{DatasourceId, Dependency, FileReference, PackageData, PackageType, Party};
 use crate::parsers::conda::build_purl as build_conda_purl;
 use crate::parsers::python::read_toml_file;
-use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, read_file_to_string, split_name_email, truncate_field,
-};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, split_name_email, truncate_field};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
@@ -213,7 +211,7 @@ fn extract_authors(identity: Option<&TomlMap<String, TomlValue>>) -> Vec<Party> 
         .and_then(TomlValue::as_array)
         .into_iter()
         .flatten()
-        .take(MAX_ITERATION_COUNT)
+        .capped("pixi authors")
         .filter_map(TomlValue::as_str)
         .map(|author| {
             let (name, email) = split_name_email(author);
@@ -296,7 +294,7 @@ fn extract_manifest_dependencies(toml_content: &TomlValue) -> Vec<Dependency> {
         .get(FIELD_FEATURE)
         .and_then(TomlValue::as_table)
     {
-        for (feature_name, value) in feature_table.iter().take(MAX_ITERATION_COUNT) {
+        for (feature_name, value) in feature_table.iter().capped("pixi features") {
             let Some(feature) = value.as_table() else {
                 continue;
             };
@@ -325,7 +323,7 @@ fn extract_conda_dependencies(
 ) -> Vec<Dependency> {
     table
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("pixi conda dependencies")
         .filter_map(|(name, value)| build_conda_dependency(name, value, scope, optional))
         .collect()
 }
@@ -406,7 +404,7 @@ fn extract_pypi_dependencies(
 ) -> Vec<Dependency> {
     table
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("pixi pypi dependencies")
         .filter_map(|(name, value)| build_pypi_dependency(name, value, scope, optional))
         .collect()
 }
@@ -531,7 +529,7 @@ fn extract_v6_lock_dependencies(lock_content: &JsonValue) -> Vec<Dependency> {
 
     packages
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("pixi v6 lock packages")
         .filter_map(JsonValue::as_object)
         .filter_map(|table| build_v6_lock_dependency(table, &environment_refs))
         .collect()
@@ -546,7 +544,7 @@ fn collect_v6_package_refs(lock_content: &JsonValue) -> HashMap<String, Vec<Json
         return refs;
     };
 
-    for (env_name, env_value) in environments.iter().take(MAX_ITERATION_COUNT) {
+    for (env_name, env_value) in environments.iter().capped("pixi v6 lock environments") {
         let Some(env_table) = env_value.as_object() else {
             continue;
         };
@@ -556,11 +554,11 @@ fn collect_v6_package_refs(lock_content: &JsonValue) -> HashMap<String, Vec<Json
         else {
             continue;
         };
-        for (platform, values) in package_platforms.iter().take(MAX_ITERATION_COUNT) {
+        for (platform, values) in package_platforms.iter().capped("pixi v6 lock platforms") {
             let Some(entries) = values.as_array() else {
                 continue;
             };
-            for entry in entries.iter().take(MAX_ITERATION_COUNT) {
+            for entry in entries.iter().capped("pixi v6 lock platform entries") {
                 let Some(table) = entry.as_object() else {
                     continue;
                 };
@@ -699,7 +697,7 @@ fn extract_v4_lock_dependencies(lock_content: &JsonValue) -> Vec<Dependency> {
 
     packages
         .iter()
-        .take(MAX_ITERATION_COUNT)
+        .capped("pixi v4 lock packages")
         .filter_map(JsonValue::as_object)
         .filter_map(build_v4_lock_dependency)
         .collect()
