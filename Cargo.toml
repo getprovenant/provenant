@@ -100,7 +100,7 @@ golden-tests = []
 rpm-sqlite = ["dep:rusqlite"]
 
 [dependencies]
-allsorts = { version = "0.16.1", default-features = false, features = [
+allsorts = { version = "0.17.0", default-features = false, features = [
     "flate2_rust",
 ] }
 anyhow = { workspace = true }
