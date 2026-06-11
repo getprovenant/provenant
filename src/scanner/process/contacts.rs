@@ -9,6 +9,15 @@ use crate::scanner::TextDetectionOptions;
 use crate::utils::font::is_supported_font_path;
 use std::collections::HashSet;
 use std::path::Path;
+use std::time::Instant;
+
+/// Per-detection durations so the caller can attribute them to the matching
+/// `scan:*` progress phases; `None` means the detection did not run.
+#[derive(Default)]
+pub(super) struct ContactDetectionTimings {
+    pub emails_seconds: Option<f64>,
+    pub urls_seconds: Option<f64>,
+}
 
 pub(super) fn extract_email_url_information(
     file_info_builder: &mut FileInfoBuilder,
@@ -16,9 +25,10 @@ pub(super) fn extract_email_url_information(
     text_content: &str,
     text_options: &TextDetectionOptions,
     from_binary_strings: bool,
-) {
+) -> ContactDetectionTimings {
+    let mut timings = ContactDetectionTimings::default();
     if !text_options.detect_emails && !text_options.detect_urls {
-        return;
+        return timings;
     }
 
     let applies_gettext_exception = is_gettext_mo_path(path);
@@ -29,6 +39,7 @@ pub(super) fn extract_email_url_information(
         is_font_metadata_path.then(|| text_content.lines().collect::<Vec<_>>());
 
     if text_options.detect_emails {
+        let started = Instant::now();
         let config = DetectionConfig {
             max_emails: text_options.max_emails,
             max_urls: text_options.max_urls,
@@ -54,9 +65,11 @@ pub(super) fn extract_email_url_information(
             })
             .collect::<Vec<_>>();
         file_info_builder.emails(emails);
+        timings.emails_seconds = Some(started.elapsed().as_secs_f64());
     }
 
     if text_options.detect_urls {
+        let started = Instant::now();
         let config = DetectionConfig {
             max_emails: text_options.max_emails,
             max_urls: if apply_binary_contact_filters {
@@ -90,7 +103,10 @@ pub(super) fn extract_email_url_information(
             }
         }
         file_info_builder.urls(urls);
+        timings.urls_seconds = Some(started.elapsed().as_secs_f64());
     }
+
+    timings
 }
 
 fn is_gettext_mo_path(path: &Path) -> bool {

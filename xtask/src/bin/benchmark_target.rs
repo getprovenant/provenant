@@ -22,6 +22,17 @@ use provenant_xtask::repo_cache::{
 };
 use regex::Regex;
 
+/// Per-detection scan phases reported by the Provenant progress summary as
+/// cumulative worker time; phases for detections that did not run are empty.
+const SCAN_DETECTION_PHASES: [&str; 6] = [
+    "scan:packages",
+    "scan:licenses",
+    "scan:copyrights",
+    "scan:emails",
+    "scan:urls",
+    "scan:info",
+];
+
 #[derive(Parser, Debug)]
 #[command(name = "benchmark-target", trailing_var_arg = true)]
 struct Args {
@@ -84,6 +95,12 @@ fn main() -> Result<()> {
             "elapsed_seconds",
             "engine_seconds",
             "scan_seconds",
+            "scan_packages_seconds",
+            "scan_licenses_seconds",
+            "scan_copyrights_seconds",
+            "scan_emails_seconds",
+            "scan_urls_seconds",
+            "scan_info_seconds",
             "total_seconds",
             "peak_memory_kb",
             "files_scanned",
@@ -438,22 +455,27 @@ fn run_case(
         ],
     );
     let scan_seconds = extract_phase_seconds(&combined, "scan");
+    let scan_phase_seconds: Vec<(&str, String)> = SCAN_DETECTION_PHASES
+        .iter()
+        .map(|phase| (*phase, extract_phase_seconds(&combined, phase)))
+        .collect();
     let total_seconds = extract_phase_seconds(&combined, "total");
     let incremental_summary = extract_summary_line(&combined, "Incremental");
-    append_tsv_row(
-        &context.summary_file,
-        &[
-            scenario.to_string(),
-            format!("{elapsed_seconds:.3}"),
-            engine_seconds.clone(),
-            scan_seconds.clone(),
-            total_seconds.clone(),
-            peak_memory_kb.clone(),
-            files_scanned.clone(),
-            packages_detected.clone(),
-            incremental_summary.clone(),
-        ],
-    )?;
+    let mut row = vec![
+        scenario.to_string(),
+        format!("{elapsed_seconds:.3}"),
+        engine_seconds.clone(),
+        scan_seconds.clone(),
+    ];
+    row.extend(scan_phase_seconds.iter().map(|(_, value)| value.clone()));
+    row.extend([
+        total_seconds.clone(),
+        peak_memory_kb.clone(),
+        files_scanned.clone(),
+        packages_detected.clone(),
+        incremental_summary.clone(),
+    ]);
+    append_tsv_row(&context.summary_file, &row)?;
 
     println!();
     println!("  Wall clock time: {:.3} seconds", elapsed_seconds);
@@ -462,6 +484,11 @@ fn run_case(
     }
     if !scan_seconds.is_empty() {
         println!("  Scan time:       {scan_seconds} seconds");
+    }
+    for (phase, value) in &scan_phase_seconds {
+        if !value.is_empty() {
+            println!("    {phase}: {value} seconds (cumulative worker time)");
+        }
     }
     println!("  Files scanned:   {files_scanned}");
     println!("  Packages:        {packages_detected}");
@@ -565,6 +592,12 @@ fn print_summary_table(summary_file: &Path) -> Result<()> {
         "Seconds",
         "Engine s",
         "Scan s",
+        "Pkgs s",
+        "Lics s",
+        "Copyr s",
+        "Emails s",
+        "Urls s",
+        "Info s",
         "Total s",
         "Peak KB",
         "Files",
@@ -586,6 +619,12 @@ fn print_summary_table(summary_file: &Path) -> Result<()> {
                     "elapsed_seconds",
                     "engine_seconds",
                     "scan_seconds",
+                    "scan_packages_seconds",
+                    "scan_licenses_seconds",
+                    "scan_copyrights_seconds",
+                    "scan_emails_seconds",
+                    "scan_urls_seconds",
+                    "scan_info_seconds",
                     "total_seconds",
                     "peak_memory_kb",
                     "files_scanned",

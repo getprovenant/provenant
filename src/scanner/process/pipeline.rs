@@ -187,6 +187,7 @@ fn extract_information_from_content(
     let classification = classify_file_info(&filesystem_path, &buffer);
 
     if text_options.collect_info {
+        let info_started = Instant::now();
         file_info_builder
             .sha1(Some(calculate_sha1(&buffer)))
             .md5(Some(calculate_md5(&buffer)))
@@ -204,6 +205,7 @@ fn extract_information_from_content(
             .files_count(Some(0))
             .dirs_count(Some(0))
             .size_count(Some(0));
+        progress.record_detail_timing("scan:info", info_started.elapsed().as_secs_f64());
     }
 
     if should_skip_text_detection(&filesystem_path, &buffer) {
@@ -284,6 +286,7 @@ fn extract_information_from_content(
     }
 
     if text_options.detect_copyrights {
+        let copyrights_started = Instant::now();
         extract_copyright_information(
             file_info_builder,
             path,
@@ -291,14 +294,24 @@ fn extract_information_from_content(
             text_options.timeout_seconds,
             from_binary_strings,
         );
+        progress.record_detail_timing(
+            "scan:copyrights",
+            copyrights_started.elapsed().as_secs_f64(),
+        );
     }
-    extract_email_url_information(
+    let contact_timings = extract_email_url_information(
         file_info_builder,
         path,
         &text_content,
         text_options,
         from_binary_strings,
     );
+    if let Some(seconds) = contact_timings.emails_seconds {
+        progress.record_detail_timing("scan:emails", seconds);
+    }
+    if let Some(seconds) = contact_timings.urls_seconds {
+        progress.record_detail_timing("scan:urls", seconds);
+    }
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
         return Err(FileScanError::Timeout(FileScanTimeout {

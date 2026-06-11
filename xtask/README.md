@@ -91,6 +91,12 @@ It also writes a tab-separated summary file at:
 
 - `results/summary.tsv`
 
+Besides wall, engine, scan, and total times, the summary table and
+`results/summary.tsv` record cumulative worker time for each per-detection
+scan phase reported by the Provenant progress summary: `scan:packages`,
+`scan:licenses`, `scan:copyrights`, `scan:emails`, `scan:urls`, and
+`scan:info`. Phases for detections the scan flags did not enable stay empty.
+
 ### Notes
 
 - The command uses an explicit per-scenario `--cache-dir` so incremental manifest results do not leak across scenarios.
