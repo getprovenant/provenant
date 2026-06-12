@@ -1463,6 +1463,67 @@ fn test_filter_redundant_low_coverage_composite_seq_wrappers_drops_tiny_composit
     assert!(filtered.is_empty());
 }
 
+// Pins the 30.0 coverage exemption (Provenant-specific tuning) for the redundant
+// low-coverage composite seq-wrapper filter. The children are identical to the test above;
+// only the wrapper's coverage moves across the boundary. Below 30.0 the wrapper is dropped;
+// at or above 30.0 it is exempt and kept.
+#[test]
+fn test_filter_redundant_low_coverage_composite_seq_wrappers_pins_coverage_exemption_at_30() {
+    let make_container = |coverage: f32| {
+        let mut seq_container = make_test_match(
+            crate::license_detection::seq_match::MATCH_SEQ,
+            "composite-wrapper",
+            "epl-2.0_or_apache-2.0_or_gpl-2.0_with_openjdk-exception_and_others4.RULE",
+            55,
+            60,
+            Some(vec![55, 56, 57, 58, 59]),
+        );
+        seq_container.match_coverage = coverage;
+        seq_container
+    };
+    let make_children = || {
+        let aho_first = make_test_match(
+            crate::license_detection::aho_match::MATCH_AHO,
+            "gpl-3.0 WITH autoconf-simple-exception-2.0",
+            "gpl-3.0_with_autoconf-simple-exception-2.0_1.RULE",
+            55,
+            56,
+            None,
+        );
+        let aho_second = make_test_match(
+            crate::license_detection::aho_match::MATCH_AHO,
+            "epl-2.0 OR apache-2.0",
+            "epl-2.0_or_apache-2.0_3.RULE",
+            57,
+            60,
+            None,
+        );
+        [aho_first, aho_second]
+    };
+
+    // 29.99 (< 30.0) -> redundant -> dropped.
+    let below = make_children();
+    assert!(
+        filter_redundant_low_coverage_composite_seq_wrappers(vec![make_container(29.99)], &below)
+            .is_empty()
+    );
+
+    // Exactly 30.0 -> exempt (`>= 30.0`) -> kept.
+    let at = make_children();
+    assert_eq!(
+        filter_redundant_low_coverage_composite_seq_wrappers(vec![make_container(30.0)], &at).len(),
+        1
+    );
+
+    // 30.01 (> 30.0) -> exempt -> kept.
+    let above = make_children();
+    assert_eq!(
+        filter_redundant_low_coverage_composite_seq_wrappers(vec![make_container(30.01)], &above)
+            .len(),
+        1
+    );
+}
+
 #[test]
 fn test_hash_exact_mit() {
     let engine = get_engine();

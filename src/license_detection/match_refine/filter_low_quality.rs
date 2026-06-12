@@ -41,6 +41,8 @@ pub(crate) fn filter_spurious_matches(
             let mlen = m.matched_length;
             let hilen = m.hilen();
 
+            // ScanCode parity: the five density/length tiers below mirror upstream
+            // `filter_spurious_matches()` (match.py, Spurious1..Spurious5) verbatim.
             if mlen < 10 && (qdens < 0.1 || idens < 0.1) {
                 return false;
             }
@@ -862,6 +864,72 @@ mod tests {
         let matches: Vec<LicenseMatch> = vec![];
         let filtered = filter_spurious_matches(&matches, &query);
         assert_eq!(filtered.len(), 0);
+    }
+
+    // Build a seq match whose query span is dense and contiguous (qdensity == 1.0, well above
+    // every cascade threshold) so the idensity operand alone decides the outcome. The ispan is
+    // a contiguous block of `ispan_len` positions plus one far position at `ispan_max`, giving
+    // idensity == ispan_len / (ispan_max + 1).
+    fn spurious_test_match(
+        matched_length: usize,
+        ispan_len: usize,
+        ispan_max: usize,
+    ) -> LicenseMatch {
+        let mut positions: Vec<usize> = (0..ispan_len.saturating_sub(1)).collect();
+        positions.push(ispan_max);
+        let qspan = PositionSpan::range(0, 9);
+        let mut m = create_test_match("#1", 1, 10, MatchScore::MAX, 100.0, 100);
+        m.matcher = crate::license_detection::models::MatcherKind::Seq;
+        m.matched_length = matched_length;
+        m.coordinates = MatchCoordinates::rule_aligned(
+            qspan,
+            PositionSpan::from_positions(positions),
+            PositionSpan::range(0, 10),
+        );
+        m
+    }
+
+    // Pins the universal 0.4 density floor (the final cascade tier, ScanCode Spurious5). With a
+    // long match (no earlier tier applies) and qdensity == 1.0, idensity just below 0.4 is
+    // dropped while exactly 0.4 (and above) is kept.
+    #[test]
+    fn test_filter_spurious_matches_pins_final_density_floor_at_0_4() {
+        let index = LicenseIndex::with_legalese_count(10);
+        let query = Query::from_extracted_text("test text", &index, false).unwrap();
+
+        // idensity == 10 / 26 ≈ 0.385 (< 0.4) -> dropped.
+        let below = spurious_test_match(50, 10, 25);
+        assert_eq!(filter_spurious_matches(&[below], &query).len(), 0);
+
+        // idensity == 10 / 25 == 0.4 (not < 0.4) -> kept.
+        let at = spurious_test_match(50, 10, 24);
+        assert_eq!(filter_spurious_matches(&[at], &query).len(), 1);
+
+        // idensity == 10 / 24 ≈ 0.417 (> 0.4) -> kept.
+        let above = spurious_test_match(50, 10, 23);
+        assert_eq!(filter_spurious_matches(&[above], &query).len(), 1);
+    }
+
+    // Pins the cascade's monotonicity around the tier-1 length boundary, NOT the `mlen < 10`
+    // constant itself. Tier-1's drop condition (`mlen < 10 && density < 0.1`) is a strict subset
+    // of tier-2's (`mlen < 15 && density < 0.2`) and of the universal 0.4 floor, so no input can
+    // produce "dropped at mlen 9, kept at mlen 10": changing `< 10` to `< 9` or deleting tier-1
+    // would leave both assertions below unchanged. The constant is retained for ScanCode parity
+    // (Spurious1) and the universal 0.4 floor is what observably governs short low-density
+    // matches; that floor is pinned by the test above. This test guards the invariant that a
+    // short, very-low-density seq match drops on both sides of the boundary.
+    #[test]
+    fn test_filter_spurious_matches_short_low_density_drops_across_tier1_boundary() {
+        let index = LicenseIndex::with_legalese_count(10);
+        let query = Query::from_extracted_text("test text", &index, false).unwrap();
+
+        // idensity == 10 / 101 ≈ 0.099: length 9 (inside the tier-1 band) -> dropped.
+        let short = spurious_test_match(9, 10, 100);
+        assert_eq!(filter_spurious_matches(&[short], &query).len(), 0);
+
+        // Same low density at length 10 is still below the 0.4 floor -> also dropped.
+        let at_ten = spurious_test_match(10, 10, 100);
+        assert_eq!(filter_spurious_matches(&[at_ten], &query).len(), 0);
     }
 
     #[test]
