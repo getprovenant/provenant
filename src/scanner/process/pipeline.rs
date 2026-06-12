@@ -8,7 +8,7 @@ use super::license::{LicenseExtractionInput, extract_license_information};
 use super::special_cases::{is_go_non_production_source, should_skip_text_detection};
 use crate::license_detection::LicenseDetectionEngine;
 use crate::models::{
-    DatasourceId, FileInfo, FileInfoBuilder, FileType, PackageData, ScanDiagnostic, Sha256Digest,
+    DatasourceId, FileInfo, FileInfoBuilder, FileType, PackageData, ScanDiagnostic,
 };
 use crate::parsers::compiled_binary::{
     is_supported_compiled_binary_format, try_parse_compiled_bytes,
@@ -26,9 +26,7 @@ use crate::utils::file::{
     extract_text_for_detection_with_diagnostics, get_creation_date,
 };
 use crate::utils::generated::generated_code_hints_from_bytes;
-use crate::utils::hash::{
-    calculate_file_hashes, calculate_md5, calculate_sha1, calculate_sha1_git, calculate_sha256,
-};
+use crate::utils::hash::{calculate_buffer_hashes, calculate_file_hashes};
 use crate::utils::text::{
     remove_verbatim_escape_sequences, should_remove_verbatim_escape_sequences,
 };
@@ -66,10 +64,9 @@ pub(super) fn process_file(
         license_options,
         text_options,
     ) {
-        Ok((is_generated, sha256, is_source)) => {
+        Ok((is_generated, is_source)) => {
             generated_flag = is_generated;
             is_source_file = is_source;
-            let _ = sha256;
         }
         Err(FileScanError::Timeout(timeout)) => {
             scan_diagnostics.push(ScanDiagnostic::timeout(timeout.to_string()))
@@ -133,7 +130,7 @@ fn extract_information_from_content(
     license_engine: Option<Arc<LicenseDetectionEngine>>,
     license_options: LicenseScanOptions,
     text_options: &TextDetectionOptions,
-) -> Result<(Option<bool>, Sha256Digest, bool), FileScanError> {
+) -> Result<(Option<bool>, bool), FileScanError> {
     let started = Instant::now();
     let filesystem_path = absolute_filesystem_path(path);
     let license_enabled = license_engine.is_some();
@@ -167,7 +164,7 @@ fn extract_information_from_content(
                 populate_oversized_rpm_info(file_info_builder, &filesystem_path, text_options)?;
             }
             progress.record_detail_timing("scan:packages", rpm_fast_path_timing_seconds);
-            return Ok((None, Sha256Digest::EMPTY, false));
+            return Ok((None, false));
         }
     }
 
@@ -180,7 +177,6 @@ fn extract_information_from_content(
         }));
     }
 
-    let sha256 = calculate_sha256(&buffer);
     let is_generated = text_options
         .detect_generated
         .then(|| !generated_code_hints_from_bytes(&buffer).is_empty());
@@ -188,14 +184,15 @@ fn extract_information_from_content(
 
     if text_options.collect_info {
         let info_started = Instant::now();
+        let (sha1, md5, sha256, sha1_git) = calculate_buffer_hashes(&buffer);
         file_info_builder
-            .sha1(Some(calculate_sha1(&buffer)))
-            .md5(Some(calculate_md5(&buffer)))
+            .sha1(Some(sha1))
+            .md5(Some(md5))
             .sha256(Some(sha256))
             .programming_language(classification.programming_language.clone())
             .mime_type(Some(classification.mime_type.clone()))
             .file_type_label(Some(classification.file_type.clone()))
-            .sha1_git(Some(calculate_sha1_git(&buffer)))
+            .sha1_git(Some(sha1_git))
             .is_binary(Some(classification.is_binary))
             .is_text(Some(classification.is_text))
             .is_archive(Some(classification.is_archive))
@@ -209,7 +206,7 @@ fn extract_information_from_content(
     }
 
     if should_skip_text_detection(&filesystem_path, &buffer) {
-        return Ok((is_generated, sha256, classification.is_source));
+        return Ok((is_generated, classification.is_source));
     }
 
     if text_options.detect_packages {
@@ -282,7 +279,7 @@ fn extract_information_from_content(
     }
 
     if text_content.is_empty() {
-        return Ok((is_generated, sha256, classification.is_source));
+        return Ok((is_generated, classification.is_source));
     }
 
     if text_options.detect_copyrights {
@@ -371,7 +368,7 @@ fn extract_information_from_content(
         }));
     }
 
-    Ok((is_generated, sha256, classification.is_source))
+    Ok((is_generated, classification.is_source))
 }
 
 fn prepare_license_detection_text(
