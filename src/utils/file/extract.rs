@@ -17,7 +17,9 @@ use crate::parsers::windows_executable::extract_windows_executable_metadata_text
 use crate::utils::font::extract_font_metadata_text;
 use crate::utils::language::detect_language;
 
-use super::encoding::{decode_bytes_to_string, looks_like_decoded_text, looks_like_textual_bytes};
+use super::encoding::{
+    decode_bytes_to_string_with_diagnostic, looks_like_decoded_text, looks_like_textual_bytes,
+};
 use super::format_sniff::{
     detect_file_format, is_supported_image_container, is_textual_format, is_zip_archive,
     looks_like_bzip2, looks_like_deb, looks_like_gzip, looks_like_pdf, looks_like_rpm,
@@ -205,9 +207,9 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
             if is_supported_image_container(bytes, format) {
                 (String::new(), ExtractedTextKind::None, None)
             } else {
-                let decoded = decode_bytes_to_string(bytes);
+                let (decoded, decode_diagnostic) = decode_bytes_to_string_with_diagnostic(bytes);
                 if decoded.is_empty() {
-                    (String::new(), ExtractedTextKind::None, None)
+                    (String::new(), ExtractedTextKind::None, decode_diagnostic)
                 } else {
                     (decoded, ExtractedTextKind::Decoded, None)
                 }
@@ -264,8 +266,10 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
         PLAIN_TEXT_EXTENSIONS.contains(&extension) || detect_language(path, bytes).is_some()
     });
 
+    let mut decode_diagnostic = None;
     if !large_opaque_binary && should_try_decoded_text {
-        let decoded = decode_bytes_to_string(bytes);
+        let (decoded, diagnostic) = decode_bytes_to_string_with_diagnostic(bytes);
+        decode_diagnostic = diagnostic;
         if !decoded.is_empty()
             && (is_svg_text
                 || decoded_is_utf8
@@ -289,7 +293,16 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
         extract_printable_strings(bytes)
     };
     if text.is_empty() {
-        windows_metadata_or_empty_result(windows_executable_metadata_text)
+        let (result_text, result_kind, result_diagnostic) =
+            windows_metadata_or_empty_result(windows_executable_metadata_text);
+        // Only surface the near-binary skip when nothing else recovered text and
+        // the file truly drops out of detection.
+        let result_diagnostic = if result_text.is_empty() {
+            result_diagnostic.or(decode_diagnostic)
+        } else {
+            result_diagnostic
+        };
+        (result_text, result_kind, result_diagnostic)
     } else {
         (
             combine_extracted_text_fragments(windows_executable_metadata_text, text),

@@ -39,7 +39,10 @@ mod tests {
     use crate::copyright::detect_copyrights;
 
     use super::classify::classify_file_info;
-    use super::encoding::CORRUPTED_UTF16_BOM_PREFIX;
+    use super::encoding::{
+        CORRUPTED_UTF16_BOM_PREFIX, NEAR_BINARY_SKIP_DIAGNOSTIC, decode_bytes_to_string,
+        decode_bytes_to_string_with_diagnostic,
+    };
     use super::extract::{
         ExtractedTextKind, LARGE_OPAQUE_BINARY_SKIP_BYTES, extract_printable_strings,
         extract_text_for_detection, extract_text_for_detection_with_diagnostics,
@@ -913,5 +916,200 @@ mod tests {
                 path.display()
             );
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // Encoding and line-ending edge cases (issue #1030).
+    //
+    // These tests PIN the current decoding/line-ending contract. Several of
+    // them document behavior that is intentionally accepted ScanCode /
+    // UnicodeDammit parity (mojibake from Latin-1 fallback) or known sharp
+    // edges (lone-CR line endings, the 10% control-byte cliff). They are not
+    // assertions that the current behavior is ideal; they exist so any future
+    // change to it is deliberate and reviewed.
+    //
+    // Fixtures are built from explicit byte literals (e.g. `b"...\r..."`) so
+    // editor/source normalization can never silently change the line endings
+    // under test.
+    // ----------------------------------------------------------------------
+
+    /// Builds invalid-UTF-8 bytes with a controllable ratio of control bytes
+    /// to printable bytes, so threshold behavior can be pinned precisely.
+    ///
+    /// Each entry contributes one printable byte (`A`, valid ASCII) and a 0x80
+    /// high byte makes the buffer invalid UTF-8 so it takes the Latin-1 path.
+    /// Control bytes use 0x01 (counted by `has_binary_control_chars`).
+    fn invalid_utf8_with_control_ratio(printable: usize, control: usize) -> Vec<u8> {
+        let mut bytes = vec![0x80]; // forces invalid UTF-8
+        bytes.extend(std::iter::repeat_n(b'A', printable));
+        bytes.extend(std::iter::repeat_n(0x01, control));
+        bytes
+    }
+
+    #[test]
+    fn decode_bytes_control_char_threshold_just_under_decodes_as_latin1() {
+        // Total 100 bytes, exactly 10 control bytes => 10%. The threshold is
+        // `control > len / 10`, so 10 is NOT over the cliff: decoded as Latin-1.
+        let bytes = invalid_utf8_with_control_ratio(89, 10);
+        assert_eq!(bytes.len(), 100);
+
+        let (decoded, diagnostic) = decode_bytes_to_string_with_diagnostic(&bytes);
+
+        assert!(
+            !decoded.is_empty(),
+            "input at the 10% boundary must still decode (Latin-1 fallback)"
+        );
+        assert!(decoded.contains('A'));
+        assert!(diagnostic.is_none());
+    }
+
+    #[test]
+    fn decode_bytes_control_char_threshold_just_over_returns_empty_with_diagnostic() {
+        // Total 100 bytes, 11 control bytes => 11% > 10%, over the cliff:
+        // empty string plus a structured diagnostic.
+        let bytes = invalid_utf8_with_control_ratio(88, 11);
+        assert_eq!(bytes.len(), 100);
+
+        let (decoded, diagnostic) = decode_bytes_to_string_with_diagnostic(&bytes);
+
+        assert!(
+            decoded.is_empty(),
+            "input over the 10% control-byte threshold must decode to empty"
+        );
+        assert_eq!(diagnostic.as_deref(), Some(NEAR_BINARY_SKIP_DIAGNOSTIC));
+        // The thin public wrapper preserves the empty-string result contract.
+        assert!(decode_bytes_to_string(&bytes).is_empty());
+    }
+
+    #[test]
+    fn decode_bytes_latin1_high_bytes_produce_mojibake_parity() {
+        // Windows-1252 "café" (é = 0xE9) and Shift-JIS "日" (0x93 0xFA) are not
+        // valid UTF-8; the Latin-1 fallback maps each byte to U+0000..=U+00FF,
+        // producing mojibake. This is accepted ScanCode/UnicodeDammit parity.
+        let windows_1252 = b"caf\xE9";
+        let decoded = decode_bytes_to_string(windows_1252);
+        // 0xE9 -> U+00E9 (é). Latin-1 happens to agree with Windows-1252 here.
+        assert_eq!(decoded, "caf\u{00E9}");
+
+        let shift_jis = b"\x93\xFA"; // Shift-JIS for "日"
+        let decoded = decode_bytes_to_string(shift_jis);
+        // Mojibake: bytes mapped directly, NOT decoded to "日".
+        assert_eq!(decoded, "\u{0093}\u{00FA}");
+        assert!(!decoded.contains('日'));
+    }
+
+    #[test]
+    fn decode_bytes_utf8_bom_is_preserved_as_leading_codepoint() {
+        // UTF-8 BOM (EF BB BF) is valid UTF-8: it decodes to U+FEFF and is NOT
+        // stripped by the decoder. Pin that contract here.
+        let bytes = b"\xEF\xBB\xBFhello";
+        let decoded = decode_bytes_to_string(bytes);
+        assert_eq!(decoded, "\u{FEFF}hello");
+    }
+
+    /// Encodes an ASCII string as UTF-16 with the given endianness, prefixed by
+    /// the matching BOM. Only ASCII codepoints are used in the fixtures.
+    fn utf16_with_bom(text: &str, little_endian: bool) -> Vec<u8> {
+        let mut bytes = if little_endian {
+            vec![0xFF, 0xFE]
+        } else {
+            vec![0xFE, 0xFF]
+        };
+        for ch in text.chars() {
+            let unit = ch as u16;
+            if little_endian {
+                bytes.extend_from_slice(&unit.to_le_bytes());
+            } else {
+                bytes.extend_from_slice(&unit.to_be_bytes());
+            }
+        }
+        bytes
+    }
+
+    #[test]
+    fn decode_bytes_utf16_le_bom_is_decoded_and_bom_stripped() {
+        // UTF-16 LE BOM (FF FE) followed by text: the UTF-16 path consumes the
+        // BOM and returns the text without a leading U+FEFF. The body must be
+        // long enough to pass the text-shape gate (>= 3 visible chars).
+        let bytes = utf16_with_bom("hello world", true);
+        let decoded = decode_bytes_to_string(&bytes);
+        assert_eq!(decoded, "hello world");
+        assert!(!decoded.starts_with('\u{FEFF}'));
+    }
+
+    #[test]
+    fn decode_bytes_utf16_be_bom_is_decoded_and_bom_stripped() {
+        let bytes = utf16_with_bom("hello world", false);
+        let decoded = decode_bytes_to_string(&bytes);
+        assert_eq!(decoded, "hello world");
+        assert!(!decoded.starts_with('\u{FEFF}'));
+    }
+
+    #[test]
+    fn decode_bytes_short_utf16_bom_text_fails_text_shape_gate() {
+        // Very short UTF-16 BOM bodies (< 3 visible chars) do NOT pass the
+        // text-shape heuristic and decode to empty. Pinned so any change to the
+        // minimum-visible threshold is deliberate.
+        let bytes = utf16_with_bom("hi", true);
+        assert_eq!(decode_bytes_to_string(&bytes), "");
+    }
+
+    #[test]
+    fn decode_bytes_corrupted_utf16_bom_prefix_is_stripped() {
+        // The hardcoded "corrupted UTF-16 BOM" prefix (EF BF BD repeated, i.e.
+        // two U+FFFD replacement chars) is stripped before UTF-16 detection.
+        // Body is UTF-16 LE for "hello world test text long enough".
+        let mut bytes = CORRUPTED_UTF16_BOM_PREFIX.to_vec();
+        for ch in "hello world test text long enough".chars() {
+            bytes.push(ch as u8);
+            bytes.push(0x00);
+        }
+        let decoded = decode_bytes_to_string(&bytes);
+        assert_eq!(decoded, "hello world test text long enough");
+        // The corrupted-BOM marker must not survive in the decoded output.
+        assert!(!decoded.contains('\u{FFFD}'));
+    }
+
+    #[test]
+    fn decoded_text_lone_cr_line_endings_are_not_split_by_lines() {
+        // Classic-Mac (CR-only) line endings: `str::lines()` splits on `\n` and
+        // `\r\n`, but NOT a lone `\r`. So three logical lines collapse into one
+        // `lines()` element. This is a known sharp edge that can misattribute
+        // email/url/copyright line numbers; pinned here rather than changed,
+        // since fixing line-splitting would shift detection line numbers
+        // broadly. Flagged as a follow-up in the issue.
+        let bytes = b"first line\rsecond line\rthird line";
+        let decoded = decode_bytes_to_string(bytes);
+        assert_eq!(decoded, "first line\rsecond line\rthird line");
+
+        let line_count = decoded.lines().count();
+        assert_eq!(
+            line_count, 1,
+            "lone-CR line endings are currently NOT split by str::lines()"
+        );
+
+        // For contrast, LF and CRLF DO split into separate lines.
+        let lf = decode_bytes_to_string(b"a\nb\nc");
+        assert_eq!(lf.lines().count(), 3);
+        let crlf = decode_bytes_to_string(b"a\r\nb\r\nc");
+        assert_eq!(crlf.lines().count(), 3);
+    }
+
+    #[test]
+    fn extract_text_near_binary_invalid_utf8_surfaces_skip_diagnostic() {
+        // End-to-end through the extraction entry point. An `.svg` path forces
+        // the decoded-text branch (`should_try_decoded_text`) even for
+        // near-binary bytes, so the diagnostic threading is exercised. The
+        // bytes are invalid UTF-8 with a high control-byte ratio and no
+        // recoverable printable strings, so the file drops from detection AND
+        // surfaces the structured near-binary skip diagnostic.
+        let path = Path::new("garbled.svg");
+        let bytes = invalid_utf8_with_control_ratio(1, 60);
+
+        let (text, kind, diagnostic) = extract_text_for_detection_with_diagnostics(path, &bytes);
+
+        assert!(text.is_empty());
+        assert_eq!(kind, ExtractedTextKind::None);
+        assert_eq!(diagnostic.as_deref(), Some(NEAR_BINARY_SKIP_DIAGNOSTIC));
     }
 }
