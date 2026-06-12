@@ -525,6 +525,67 @@ fn test_is_false_positive_copyright_empty_string() {
     assert!(is_false_positive(&matches));
 }
 
+// Pins the `rule_length == 1` key for the GPL false-positive rule. A two-token GPL rule is
+// just outside the key, so the GPL FP path must not fire (rule_length below also pins the
+// boundary from the FP side).
+#[test]
+fn test_is_false_positive_gpl_rule_length_two_not_filtered() {
+    let m = create_test_match_full(
+        "gpl-2.0",
+        "2-aho",
+        1,
+        10,
+        MatchScore::from_percentage(50.0),
+        5,
+        2,
+        50.0,
+        50,
+        "gpl-2.0.LICENSE",
+    );
+    let matches = vec![m];
+    assert!(!is_false_positive(&matches));
+}
+
+// Companion to the above: rule_length == 1 GPL is exactly on the key and is a false positive.
+#[test]
+fn test_is_false_positive_gpl_rule_length_one_filtered() {
+    let m = create_test_match_full(
+        "gpl-2.0",
+        "2-aho",
+        1,
+        10,
+        MatchScore::from_percentage(50.0),
+        5,
+        1,
+        50.0,
+        50,
+        "gpl-2.0.LICENSE",
+    );
+    let matches = vec![m];
+    assert!(is_false_positive(&matches));
+}
+
+// Pins the copyright-substring exemption boundary: matched text whose only near-marker is
+// "copyrigh" (one char short of "copyright") does not exempt, so the GPL FP path still fires.
+#[test]
+fn test_is_false_positive_near_copyright_substring_not_exempt() {
+    let mut m = create_test_match_full(
+        "gpl-2.0",
+        "2-aho",
+        1,
+        10,
+        MatchScore::from_percentage(50.0),
+        5,
+        1,
+        50.0,
+        50,
+        "gpl-2.0.LICENSE",
+    );
+    m.matched_text = Some("copyrigh GPL".to_string());
+    let matches = vec![m];
+    assert!(is_false_positive(&matches));
+}
+
 #[test]
 fn test_is_low_quality_matches_low_coverage() {
     let matches = vec![create_test_match_full(

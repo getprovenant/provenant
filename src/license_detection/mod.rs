@@ -288,6 +288,10 @@ fn is_redundant_low_coverage_composite_seq_wrapper(
     container: &LicenseMatch,
     candidate_contained_matches: &[LicenseMatch],
 ) -> bool {
+    // Provenant-specific tuning (no ScanCode equivalent): only very-low-coverage seq
+    // wrappers are eligible for redundant-composite dropping. A seq match at or above
+    // 30.0 coverage carries enough of its own signal to keep regardless of the contained
+    // exact matches it spans.
     if container.matcher != seq_match::MATCH_SEQ || container.coverage() >= 30.0 {
         return false;
     }

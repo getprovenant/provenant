@@ -22,8 +22,13 @@ use crate::models::MatchScore;
 
 pub const MATCH_UNKNOWN: MatcherKind = MatcherKind::Unknown;
 
+// ScanCode parity: 6-token ngram window, from upstream `UNKNOWN_NGRAM_LENGTH`
+// (match_unknown.py).
 const UNKNOWN_NGRAM_LENGTH: usize = 6;
 
+// Provenant-specific tuning: ScanCode runs unknown matching per query_run and has no
+// explicit ngram-count or region-length pre-gate. Provenant scans self-discovered
+// unmatched regions, so these two pre-gates bound that scan before attempting a match.
 const MIN_NGRAM_MATCHES: usize = 3;
 
 const MIN_REGION_LENGTH: usize = 5;
@@ -101,6 +106,9 @@ pub fn unknown_match(
             );
         }
 
+        // ScanCode parity: minimum qspan and hispan gates from upstream
+        // `match_unknowns()` (match_unknown.py: `len(qspan) < unknown_ngram_length * 4 or
+        // len(hispan) < 5`).
         if qspan_length < UNKNOWN_NGRAM_LENGTH * 4 {
             continue;
         }
@@ -1053,5 +1061,111 @@ mod tests {
 
         let matches = get_matched_ngrams(&tokens, 2, 1, &automaton);
         assert!(matches.is_empty(), "Invalid range should return empty");
+    }
+
+    // Build an index whose dictionary marks token ids `0..legalese_count` as legalese, plus an
+    // unknown automaton containing one 6-gram pattern per window start in `window_starts`. With
+    // all-distinct tokens each pattern matches exactly once, so the matched-ngram windows are
+    // deterministic. Returns (index, tokens) for driving `unknown_match` end to end.
+    fn unknown_index_with_windows(
+        token_count: usize,
+        legalese_count: u16,
+        window_starts: &[usize],
+    ) -> (LicenseIndex, Vec<u16>) {
+        use crate::license_detection::automaton::AutomatonBuilder;
+
+        let legalese_entries: Vec<(String, u16)> = (0u16..legalese_count)
+            .map(|i| (format!("legalese-{i}"), i))
+            .collect();
+        let mut index = LicenseIndex::with_legalese_count(0);
+        index.dictionary =
+            crate::license_detection::index::dictionary::TokenDictionary::new_with_legalese_pairs(
+                &legalese_entries
+                    .iter()
+                    .map(|(token, id)| (token.as_str(), *id))
+                    .collect::<Vec<_>>(),
+            );
+
+        let token_ids: Vec<TokenId> = (0..token_count as u16).map(TokenId::new).collect();
+
+        let mut builder = AutomatonBuilder::new();
+        for &start in window_starts {
+            let window = &token_ids[start..start + UNKNOWN_NGRAM_LENGTH];
+            let pattern: Vec<u8> = window.iter().flat_map(|tid| tid.to_le_bytes()).collect();
+            builder.add_pattern(&pattern);
+        }
+        index.unknown_automaton = builder.build();
+
+        let tokens: Vec<u16> = (0..token_count as u16).collect();
+        (index, tokens)
+    }
+
+    // Pins the minimum-qspan gate (`qspan_length < UNKNOWN_NGRAM_LENGTH * 4`, i.e. 24; ScanCode
+    // parity). Four non-overlapping 6-gram windows cover exactly 24 positions (kept); three
+    // cover only 18 (dropped). All tokens are legalese here so the hispan gate is satisfied.
+    #[test]
+    fn test_unknown_match_pins_min_qspan_at_24() {
+        use crate::license_detection::test_utils::create_mock_query_with_tokens;
+
+        // Three windows -> qspan == 18 (< 24) -> no match.
+        let (index, tokens) = unknown_index_with_windows(30, 30, &[0, 6, 12]);
+        let query = create_mock_query_with_tokens(&tokens, &index);
+        assert!(unknown_match(&index, &query, &[]).is_empty());
+
+        // Four windows -> qspan == 24 (== 24, not < 24) -> match produced.
+        let (index, tokens) = unknown_index_with_windows(30, 30, &[0, 6, 12, 18]);
+        let query = create_mock_query_with_tokens(&tokens, &index);
+        assert_eq!(unknown_match(&index, &query, &[]).len(), 1);
+    }
+
+    // Pins the minimum-hispan gate (`hispan < 5`; ScanCode parity). Four windows give a qspan of
+    // 24 positions; hispan counts how many of those are legalese. With 5 legalese tokens (ids
+    // 0..4) hispan == 5 and the match is kept; with 4 (ids 0..3) hispan == 4 and it is dropped.
+    #[test]
+    fn test_unknown_match_pins_min_hispan_at_5() {
+        use crate::license_detection::test_utils::create_mock_query_with_tokens;
+
+        // Only 4 legalese tokens within the qspan -> hispan == 4 (< 5) -> dropped.
+        let (index, tokens) = unknown_index_with_windows(30, 4, &[0, 6, 12, 18]);
+        let query = create_mock_query_with_tokens(&tokens, &index);
+        assert!(unknown_match(&index, &query, &[]).is_empty());
+
+        // 5 legalese tokens within the qspan -> hispan == 5 (not < 5) -> kept.
+        let (index, tokens) = unknown_index_with_windows(30, 5, &[0, 6, 12, 18]);
+        let query = create_mock_query_with_tokens(&tokens, &index);
+        assert_eq!(unknown_match(&index, &query, &[]).len(), 1);
+    }
+
+    // Pins the MIN_REGION_LENGTH=5 early-out. A region of length 4 (one shorter than the gate)
+    // yields no unknown match. The constant is a fast-path guard below the 6-token ngram window,
+    // so any region this short cannot contain an ngram regardless.
+    #[test]
+    fn test_unknown_match_pins_min_region_length_early_out() {
+        use crate::license_detection::test_utils::create_mock_query_with_tokens;
+
+        let (index, tokens) = unknown_index_with_windows(30, 30, &[0, 6, 12, 18]);
+        let query = create_mock_query_with_tokens(&tokens, &index);
+
+        // Cover everything except a 4-token region [0,4); below MIN_REGION_LENGTH so it is
+        // skipped before any ngram scan.
+        let known = vec![LicenseMatch {
+            matcher: MatcherKind::Aho,
+            coordinates: MatchCoordinates::query_region(PositionSpan::range(4, 30)),
+            ..Default::default()
+        }];
+        assert!(unknown_match(&index, &query, &known).is_empty());
+    }
+
+    // Pins the MIN_NGRAM_MATCHES=3 early-out. A region long enough to clear MIN_REGION_LENGTH but
+    // containing only two matched ngrams produces no unknown match. Like the region guard this is
+    // a cheap pre-gate: two 6-grams can cover at most 12 positions, below the 24-position qspan
+    // floor, so it cannot reach a match anyway.
+    #[test]
+    fn test_unknown_match_pins_min_ngram_matches_early_out() {
+        use crate::license_detection::test_utils::create_mock_query_with_tokens;
+
+        let (index, tokens) = unknown_index_with_windows(30, 30, &[0, 6]);
+        let query = create_mock_query_with_tokens(&tokens, &index);
+        assert!(unknown_match(&index, &query, &[]).is_empty());
     }
 }

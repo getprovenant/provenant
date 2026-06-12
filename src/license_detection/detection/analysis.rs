@@ -84,6 +84,9 @@ pub(super) fn is_false_positive(matches: &[LicenseMatch]) -> bool {
 
     let has_full_relevance = matches.iter().all(|m| m.rule_relevance == 100);
 
+    // ScanCode parity: any matched text containing a copyright marker exempts the group
+    // from false-positive classification (detection.py `is_false_positive`: `copyright_words`
+    // substring check). The `(c)` marker and case-insensitivity also follow upstream.
     let copyright_words = ["copyright", "(c)"];
     let has_copyrights = matches.iter().all(|m| {
         m.matched_text
@@ -113,6 +116,9 @@ pub(super) fn is_false_positive(matches: &[LicenseMatch]) -> bool {
             .any(|bare| m.rule_identifier.to_lowercase().contains(bare))
     });
 
+    // ScanCode keys this on bare `'gpl' in identifier` (detection.py `is_false_positive`).
+    // Provenant additionally excludes `lgpl` to avoid misclassifying LGPL references as GPL
+    // false positives.
     let is_gpl = matches.iter().all(|m| {
         let id = m.rule_identifier.to_lowercase();
         id.contains("gpl") && !id.contains("lgpl")

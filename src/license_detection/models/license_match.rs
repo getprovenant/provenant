@@ -425,6 +425,10 @@ impl LicenseMatch {
         if self.matched_length < min_matched_len || self.hilen() < min_high_matched_len {
             return true;
         }
+        // ScanCode parity: the 80.0 small-rule coverage floor is a flat constant in
+        // upstream `LicenseMatch.is_small()` (match.py: `self.coverage() < 80`). It does
+        // not consult the rule's curated `minimum_coverage`; only the
+        // `min_matched_length` / `min_high_matched_length` checks above are rule-derived.
         if rule_is_small && self.coverage() < 80.0 {
             return true;
         }
@@ -621,5 +625,47 @@ impl LicenseMatch {
 
     pub fn has_unknown(&self) -> bool {
         self.license_expression.contains("unknown")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Build a match that clears the first `is_small` branch (matched_length and hilen both
+    // above the mins below) so the test isolates the small-rule coverage floor.
+    fn match_with_coverage(coverage: f32) -> LicenseMatch {
+        LicenseMatch {
+            matched_length: 10,
+            rule_length: 10,
+            match_coverage: coverage,
+            coordinates: MatchCoordinates::rule_aligned(
+                PositionSpan::range(0, 10),
+                PositionSpan::range(0, 10),
+                PositionSpan::range(0, 10),
+            ),
+            ..Default::default()
+        }
+    }
+
+    // Pins the small-rule 80.0 coverage floor in `is_small` (ScanCode parity). min lengths
+    // are kept below the match so only the coverage branch can flip the result.
+    #[test]
+    fn is_small_pins_small_rule_coverage_floor_at_80() {
+        let min_matched_len = 1;
+        let min_high_matched_len = 1;
+
+        // Just below 80.0 -> small.
+        assert!(match_with_coverage(79.99).is_small(min_matched_len, min_high_matched_len, true));
+        // Exactly 80.0 -> not small (strict `< 80.0`).
+        assert!(!match_with_coverage(80.0).is_small(min_matched_len, min_high_matched_len, true));
+        // Just above 80.0 -> not small.
+        assert!(!match_with_coverage(80.01).is_small(min_matched_len, min_high_matched_len, true));
+    }
+
+    // The 80.0 floor only applies to small rules; a non-small rule below 80.0 is not small.
+    #[test]
+    fn is_small_coverage_floor_only_applies_to_small_rules() {
+        assert!(!match_with_coverage(79.99).is_small(1, 1, false));
     }
 }
