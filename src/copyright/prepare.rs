@@ -42,6 +42,115 @@ fn normalize_replacement_chars(s: &str) -> String {
     out
 }
 
+/// Copyright-symbol substitution table for the single-pass normalizer.
+///
+/// Each entry maps a trigger byte sequence to its replacement. The list is the
+/// exact behavioral equivalent of the former sequential `String::replace` chain
+/// that converted copyright-sign variants (`(C)`, `©`, `&#169;`, `\XA9`, …) into
+/// a normalized `(c)` token. Reproducing the chain faithfully requires two
+/// things the table encodes:
+///
+/// - **Longest-/priority-match ordering.** Entries are scanned in order at each
+///   position, so longer or higher-priority patterns (e.g. `( C)` before `(C)`)
+///   win, matching how the chain's earlier `replace` calls consumed text first.
+/// - **The cascade.** In the chain, `(C)` and `( C)` produced `(c)` *before* the
+///   later `.replace("(c)", " (c) ")` ran, so their output was re-expanded to
+///   `  (c)  ` (double-spaced). Patterns emitted *after* the `(c)` rule (`[C]`,
+///   `©`, the HTML/escape forms) were not re-expanded and stay ` (c) `. The
+///   table bakes that net result in so a single non-rescanning pass is identical.
+///
+/// The bare-pipe rules (`|copy|`, `|`) and the trailing `\u{00C2}` / `\xc2`
+/// removals are intentionally NOT in this table: their chain position lets them
+/// create or destroy matches for the rules here, so they run as separate guarded
+/// steps before/after the scan to preserve byte-identical output.
+const COPYRIGHT_SYMBOL_SUBSTITUTIONS: &[(&str, &str)] = &[
+    ("\"Copyright", "\" Copyright"),
+    ("( C)", "  (c)  "),
+    ("(C)", "  (c)  "),
+    ("(c)", " (c) "),
+    ("[C]", " (c) "),
+    ("[c]", " (c) "),
+    ("( © )", " (c) "),
+    ("(©)", " (c) "),
+    ("(© )", " (c) "),
+    ("( ©)", " (c) "),
+    ("©", " (c) "),
+    ("&copy;", " (c) "),
+    ("&copy", " (c) "),
+    ("&#169;", " (c) "),
+    ("&#xa9;", " (c) "),
+    ("&#xA9;", " (c) "),
+    ("&#Xa9;", " (c) "),
+    ("&#XA9;", " (c) "),
+    ("u00A9", " (c) "),
+    ("u00a9", " (c) "),
+    ("\\XA9", " (c) "),
+    ("\\A9", " (c) "),
+    ("\\a9", " (c) "),
+    ("<A9>", " (c) "),
+    ("XA9;", " (c) "),
+    ("Xa9;", " (c) "),
+    ("xA9;", " (c) "),
+    ("xa9;", " (c) "),
+];
+
+/// Lookup table marking the first byte of every entry in
+/// [`COPYRIGHT_SYMBOL_SUBSTITUTIONS`]. Bytes not flagged here can never start a
+/// substitution, so the scan copies long runs of them in bulk and only consults
+/// the (small, ordered) pattern list at the few candidate positions. `©` begins
+/// with its UTF-8 lead byte `0xC2`, which is what gets flagged for that entry.
+static SYMBOL_TRIGGER_FIRST_BYTE: [bool; 256] = build_symbol_trigger_table();
+
+const fn build_symbol_trigger_table() -> [bool; 256] {
+    let mut table = [false; 256];
+    let mut p = 0;
+    while p < COPYRIGHT_SYMBOL_SUBSTITUTIONS.len() {
+        let pat = COPYRIGHT_SYMBOL_SUBSTITUTIONS[p].0.as_bytes();
+        table[pat[0] as usize] = true;
+        p += 1;
+    }
+    table
+}
+
+/// Apply the copyright-symbol substitution table in a single forward pass over
+/// `s`, emitting into a fresh buffer instead of reallocating per substitution.
+///
+/// Most bytes cannot begin any substitution; those runs are copied in bulk and
+/// only [`SYMBOL_TRIGGER_FIRST_BYTE`] candidates consult the pattern list. At a
+/// candidate the first matching table entry wins and the scan advances past the
+/// matched input (the emitted replacement is never rescanned), which is what
+/// makes this equivalent to the ordered chain. See
+/// [`COPYRIGHT_SYMBOL_SUBSTITUTIONS`] for the cascade/ordering contract.
+fn normalize_copyright_symbols(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = String::with_capacity(s.len() + 16);
+    let mut i = 0;
+    let mut run_start = 0;
+    'scan: while i < bytes.len() {
+        if SYMBOL_TRIGGER_FIRST_BYTE[bytes[i] as usize] {
+            for (pat, rep) in COPYRIGHT_SYMBOL_SUBSTITUTIONS {
+                let pb = pat.as_bytes();
+                if bytes.len() - i >= pb.len() && &bytes[i..i + pb.len()] == pb {
+                    // Flush the pending run of copied-through bytes, then emit the
+                    // replacement and skip past the matched input.
+                    if run_start < i {
+                        out.push_str(&s[run_start..i]);
+                    }
+                    out.push_str(rep);
+                    i += pb.len();
+                    run_start = i;
+                    continue 'scan;
+                }
+            }
+        }
+        i += 1;
+    }
+    if run_start < bytes.len() {
+        out.push_str(&s[run_start..]);
+    }
+    out
+}
+
 /// Regex to remove C-style printf format codes like ` %s ` or ` #d `.
 static PRINTF_FORMAT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" [#%][a-zA-Z] ").unwrap());
 
@@ -311,47 +420,30 @@ pub fn prepare_text_line(line: &str) -> String {
     // Must happen BEFORE aggressive # and % removal so that HTML numeric
     // entities (&#169;, &#xa9;, etc.) and backslash escapes (\\XA9) are
     // recognized and converted first.
-    s = s
-        // RST |copy| directive
-        .replace("|copy|", " (c) ")
-        // Uncommon pipe chars in ASCII art
-        .replace('|', " ")
-        // Normalize spacing around "Copyright
-        .replace("\"Copyright", "\" Copyright")
-        // All copyright sign variants → (c)
-        .replace("( C)", " (c) ")
-        .replace("(C)", " (c) ")
-        .replace("(c)", " (c) ")
-        .replace("[C]", " (c) ")
-        .replace("[c]", " (c) ")
-        .replace("( © )", " (c) ")
-        .replace("(©)", " (c) ")
-        .replace("(© )", " (c) ")
-        .replace("( ©)", " (c) ")
-        .replace(['©', '\u{00A9}'], " (c) ")
-        // HTML entities
-        .replace("&copy;", " (c) ")
-        .replace("&copy", " (c) ")
-        .replace("&#169;", " (c) ")
-        .replace("&#xa9;", " (c) ")
-        .replace("&#xA9;", " (c) ")
-        .replace("&#Xa9;", " (c) ")
-        .replace("&#XA9;", " (c) ")
-        // Unicode escape forms
-        .replace("u00A9", " (c) ")
-        .replace("u00a9", " (c) ")
-        // Backslash hex escapes
-        .replace("\\XA9", " (c) ")
-        .replace("\\A9", " (c) ")
-        .replace("\\a9", " (c) ")
-        .replace("<A9>", " (c) ")
-        .replace("XA9;", " (c) ")
-        .replace("Xa9;", " (c) ")
-        .replace("xA9;", " (c) ")
-        .replace("xa9;", " (c) ")
-        // \xc2 is UTF-8 prefix for © — remove it
-        .replace('\u{00C2}', "")
-        .replace("\\xc2", "");
+    // Pipe rules run first (chain order): `|copy|` → (c), then bare `|` → space.
+    // Removing a bare `|` can expose `( C)`/`(©)` patterns for the scan below,
+    // so this must happen before `normalize_copyright_symbols`. Pipes are rare in
+    // source, so the `contains` guard skips the allocation for most lines.
+    if s.contains('|') {
+        s = s.replace("|copy|", " (c) ").replace('|', " ");
+    }
+
+    // All copyright-sign variants → `(c)` in a single forward pass instead of a
+    // chain of ~25 allocating `String::replace` calls. See
+    // `normalize_copyright_symbols` / `COPYRIGHT_SYMBOL_SUBSTITUTIONS`.
+    s = normalize_copyright_symbols(&s);
+
+    // `\xc2` is the UTF-8 lead byte for ©. These removals run last (chain order):
+    // dropping a U+00C2 can join surrounding bytes into a literal `\xc2`, so the
+    // U+00C2 removal must precede the `\xc2` removal, and both must follow the
+    // symbol scan above to avoid creating/destroying its matches.
+    if s.contains('\u{00C2}') {
+        s = s.replace('\u{00C2}', "");
+    }
+    if s.contains("\\xc2") {
+        s = s.replace("\\xc2", "");
+    }
+
     s = REGISTERED_SIGN_AFTER_ASCII_RE
         .replace_all(&s, "${head} (r) ")
         .into_owned();
@@ -600,6 +692,125 @@ pub fn prepare_text_line(line: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Reference implementation: the original sequential `String::replace` chain
+    /// that `normalize_copyright_symbols` (plus the pipe/`\xc2` guards in
+    /// `prepare_text_line`) replaced. Kept here ONLY to pin byte-identical
+    /// behavior of the single-pass rewrite; production no longer uses it.
+    fn legacy_symbol_chain(line: &str) -> String {
+        line.to_string()
+            .replace("|copy|", " (c) ")
+            .replace('|', " ")
+            .replace("\"Copyright", "\" Copyright")
+            .replace("( C)", " (c) ")
+            .replace("(C)", " (c) ")
+            .replace("(c)", " (c) ")
+            .replace("[C]", " (c) ")
+            .replace("[c]", " (c) ")
+            .replace("( © )", " (c) ")
+            .replace("(©)", " (c) ")
+            .replace("(© )", " (c) ")
+            .replace("( ©)", " (c) ")
+            .replace(['©', '\u{00A9}'], " (c) ")
+            .replace("&copy;", " (c) ")
+            .replace("&copy", " (c) ")
+            .replace("&#169;", " (c) ")
+            .replace("&#xa9;", " (c) ")
+            .replace("&#xA9;", " (c) ")
+            .replace("&#Xa9;", " (c) ")
+            .replace("&#XA9;", " (c) ")
+            .replace("u00A9", " (c) ")
+            .replace("u00a9", " (c) ")
+            .replace("\\XA9", " (c) ")
+            .replace("\\A9", " (c) ")
+            .replace("\\a9", " (c) ")
+            .replace("<A9>", " (c) ")
+            .replace("XA9;", " (c) ")
+            .replace("Xa9;", " (c) ")
+            .replace("xA9;", " (c) ")
+            .replace("xa9;", " (c) ")
+            .replace('\u{00C2}', "")
+            .replace("\\xc2", "")
+    }
+
+    /// The production decomposition: pipe pre-pass, single-pass symbol scan, then
+    /// the guarded `\xc2` removals. Mirrors the relevant slice of
+    /// `prepare_text_line` so the differential test exercises the real path.
+    fn new_symbol_transform(line: &str) -> String {
+        let mut s = line.to_string();
+        if s.contains('|') {
+            s = s.replace("|copy|", " (c) ").replace('|', " ");
+        }
+        s = normalize_copyright_symbols(&s);
+        if s.contains('\u{00C2}') {
+            s = s.replace('\u{00C2}', "");
+        }
+        if s.contains("\\xc2") {
+            s = s.replace("\\xc2", "");
+        }
+        s
+    }
+
+    #[test]
+    fn test_symbol_single_pass_matches_legacy_chain_exhaustive() {
+        // Byte-level alphabet covering every trigger fragment, so 4-token
+        // combinations assemble and cross every pattern boundary, including the
+        // cascade (`(C)`→`  (c)  `) and the order-sensitive `|`/`\xc2` joins.
+        let tokens = [
+            "(",
+            ")",
+            "C",
+            "c",
+            "[",
+            "]",
+            "©",
+            "|",
+            "\u{00C2}",
+            "\\",
+            "x",
+            "X",
+            "a",
+            "A",
+            "9",
+            "2",
+            ";",
+            "&",
+            "#",
+            "u",
+            "0",
+            "6",
+            "1",
+            " ",
+            "copy",
+            "Copyright",
+            "\"",
+        ];
+        for &a in &tokens {
+            for &b in &tokens {
+                for &c in &tokens {
+                    for &d in &tokens {
+                        let s = format!("{a}{b}{c}{d}");
+                        assert_eq!(
+                            legacy_symbol_chain(&s),
+                            new_symbol_transform(&s),
+                            "single-pass diverged from legacy chain on input {s:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_symbol_single_pass_cascade_double_space() {
+        // (C)/( C) re-expand through the later (c) rule → double-spaced; the rest
+        // stay single-spaced. Pins the cascade so a future edit can't flatten it.
+        assert_eq!(normalize_copyright_symbols("(C)"), "  (c)  ");
+        assert_eq!(normalize_copyright_symbols("( C)"), "  (c)  ");
+        assert_eq!(normalize_copyright_symbols("(c)"), " (c) ");
+        assert_eq!(normalize_copyright_symbols("[C]"), " (c) ");
+        assert_eq!(normalize_copyright_symbols("©"), " (c) ");
+    }
 
     #[test]
     fn test_prepare_strips_unicode_replacement_char() {
