@@ -10,6 +10,12 @@ const BINARY_CONTROL_CHAR_THRESHOLD_DIVISOR: usize = 10;
 
 pub(super) const CORRUPTED_UTF16_BOM_PREFIX: &[u8] = &[0xEF, 0xBF, 0xBD, 0xEF, 0xBF, 0xBD];
 
+/// Diagnostic message emitted when invalid-UTF-8 input is dropped from
+/// detection because it exceeds the binary-control-char threshold. Surfaced via
+/// the scanner's structured `scan_diagnostics` channel so the skip is
+/// observable rather than silent.
+pub(super) const NEAR_BINARY_SKIP_DIAGNOSTIC: &str = "Text skipped from license/copyright detection: invalid UTF-8 with too many control bytes (likely binary)";
+
 /// Decode a byte buffer to a String, trying UTF-16 first when the byte shape
 /// strongly suggests it, then UTF-8, then Latin-1.
 ///
@@ -17,18 +23,27 @@ pub(super) const CORRUPTED_UTF16_BOM_PREFIX: &[u8] = &[0xEF, 0xBF, 0xBD, 0xEF, 0
 /// so it can decode any byte sequence. This matches Python ScanCode's use of
 /// `UnicodeDammit` which auto-detects encoding with Latin-1 as fallback.
 pub fn decode_bytes_to_string(bytes: &[u8]) -> String {
+    decode_bytes_to_string_with_diagnostic(bytes).0
+}
+
+/// Like [`decode_bytes_to_string`], but also returns a structured diagnostic
+/// when the result is the empty string because the input looked like binary
+/// (invalid UTF-8 with a high control-byte ratio). The decoded result is
+/// unchanged; only the optional diagnostic is added so the silent skip becomes
+/// observable in scan output.
+pub(super) fn decode_bytes_to_string_with_diagnostic(bytes: &[u8]) -> (String, Option<String>) {
     if let Some(decoded) = decode_utf16_text(bytes) {
-        return decoded;
+        return (decoded, None);
     }
 
     match String::from_utf8(bytes.to_vec()) {
-        Ok(s) => s,
+        Ok(s) => (s, None),
         Err(e) => {
             let bytes = e.into_bytes();
             if has_binary_control_chars(&bytes) {
-                return String::new();
+                return (String::new(), Some(NEAR_BINARY_SKIP_DIAGNOSTIC.to_string()));
             }
-            bytes.iter().map(|&b| b as char).collect()
+            (bytes.iter().map(|&b| b as char).collect(), None)
         }
     }
 }
