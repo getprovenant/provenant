@@ -283,7 +283,7 @@ CLI arguments:
 - `--repo-ref REF`: required with `--repo-url`; commit SHA, tag, or branch of the target repo.
 - `--rounds N`: number of interleaved timed rounds per side after the discarded warmup. Default `5`.
 - `--base-bin PATH` / `--head-bin PATH`: use a prebuilt binary for that side and skip building the ref.
-- `--check-output`: scan with both binaries to JSON and assert byte-identical output after normalizing the volatile header. The correctness gate for pure-refactor perf changes.
+- `--check-output`: scan with both binaries to JSON and assert byte-identical output after normalizing the volatile header and randomly-generated package UIDs. The correctness gate for pure-refactor perf changes.
 - `--profile common|common-with-compiled|licenses|packages`: scan-flag shorthand shared by both sides. Mutually exclusive with explicit flags after `--`.
 - Pass either a supported `--profile` or explicit scan flags after `--` (for example `-- -c -n 1`). The same flags are forwarded to both binaries.
 
@@ -308,7 +308,7 @@ Each run writes artifacts under:
 - Both sides always run with `--no-license-index-cache` so a warmed license index from one round does not skew the next, matching `benchmark-target` fairness.
 - The warmup run is discarded; only the `--rounds` interleaved timed runs feed the median.
 - Build each ref in release on a stable checkout; do not point `--base-bin`/`--head-bin` at debug or differently-profiled binaries, which would make the comparison meaningless.
-- `--check-output` normalizes only the volatile top-level `headers` block (version, timestamps, duration) before comparing; any remaining diff fails the run, because a behavior-preserving perf change must be byte-identical.
+- `--check-output` normalizes the volatile top-level `headers` block (version, timestamps, duration) and randomly-generated package `uuid=` UIDs (which differ on every run, so without this `--package`/`-clupe` profiles could never pass) before comparing; any remaining diff fails the run, because a behavior-preserving perf change must be byte-identical.
 - Building two release binaries is slow. Use `--base-bin`/`--head-bin` when you already have both binaries, or `--repo-ref`/refs that share most compiled artifacts.
 
 ## `update-parser-golden`
