@@ -230,3 +230,9 @@ strip = false
 inherits = "release"
 strip = false
 debug = true
+# Profiling builds are for iteration, not shipping: skip the slow fat-LTO +
+# single-codegen-unit link inherited from `release`. Thin LTO with parallel
+# codegen units builds ~3.5x faster (measured: 310s -> 88s clean) for a small
+# runtime cost that does not change which functions dominate a profile.
+lto = "thin"
+codegen-units = 16
