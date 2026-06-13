@@ -13,7 +13,7 @@ use crate::license_detection::index::dictionary::TokenId;
 use crate::license_detection::models::Rule;
 use crate::license_detection::models::RuleId;
 use crate::license_detection::query::QueryRun;
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::time::Instant;
 
 use super::HIGH_RESEMBLANCE_THRESHOLD_TENTHS;
@@ -366,7 +366,7 @@ fn find_set_candidates<'a>(
     high_resemblance: bool,
     deadline: Option<Instant>,
 ) -> Vec<Candidate<'a>> {
-    let candidate_rid_set: HashSet<RuleId> = query_data
+    let candidate_rid_set: FxHashSet<RuleId> = query_data
         .query_high_set
         .iter()
         .filter_map(|tid| index.rids_by_high_tid.get(&TokenId::new(tid)))
@@ -374,7 +374,9 @@ fn find_set_candidates<'a>(
         .collect();
 
     // Sort so a deadline-truncated run returns a deterministic prefix rather
-    // than an arbitrary `HashSet`-ordered subset (issue #1017).
+    // than an arbitrary hash-ordered subset (issue #1017). The hasher only
+    // affects intermediate slot placement; this total sort fully determines
+    // the visited order, so swapping SipHash for FxHash cannot change output.
     let mut candidate_rids: Vec<RuleId> = candidate_rid_set.into_iter().collect();
     candidate_rids.sort_unstable();
 
@@ -532,7 +534,7 @@ impl DupeGroupKey {
 ///
 /// Corresponds to Python: `filter_dupes()` in match_set.py (line 461-498)
 pub(super) fn filter_dupes(candidates: Vec<Candidate<'_>>) -> Vec<Candidate<'_>> {
-    let mut groups: HashMap<DupeGroupKey, Vec<Candidate>> = HashMap::new();
+    let mut groups: FxHashMap<DupeGroupKey, Vec<Candidate>> = FxHashMap::default();
 
     for candidate in candidates {
         let key = DupeGroupKey::from_candidate(&candidate);
