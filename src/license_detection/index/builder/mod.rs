@@ -535,19 +535,28 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
 
     add_deprecated_spdx_aliases(&mut rid_by_spdx_key);
 
-    let rules_automaton = rules_builder.build();
-
-    let unknown_automaton = if unknown_automaton_patterns.is_empty() {
-        AutomatonBuilder::new().build()
-    } else {
-        let mut unique_patterns: Vec<Vec<u8>> = unknown_automaton_patterns.into_iter().collect();
-        unique_patterns.sort();
-        let mut builder = AutomatonBuilder::new();
-        for pattern in &unique_patterns {
-            builder.add_pattern(pattern);
-        }
-        builder.build()
-    };
+    // The two automata are independent (disjoint pattern sets, separate outputs)
+    // and each build is a single-threaded daachorse construction that together
+    // dominate the cold index build. Overlap them so wall time is the longer of
+    // the two instead of their sum. Each automaton is deterministic, so the
+    // result is byte-identical to building them sequentially.
+    let (rules_automaton, unknown_automaton) = rayon::join(
+        || rules_builder.build(),
+        || {
+            if unknown_automaton_patterns.is_empty() {
+                AutomatonBuilder::new().build()
+            } else {
+                let mut unique_patterns: Vec<Vec<u8>> =
+                    unknown_automaton_patterns.into_iter().collect();
+                unique_patterns.sort();
+                let mut builder = AutomatonBuilder::new();
+                for pattern in &unique_patterns {
+                    builder.add_pattern(pattern);
+                }
+                builder.build()
+            }
+        },
+    );
 
     let mut index = LicenseIndex {
         dictionary,
