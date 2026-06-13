@@ -399,21 +399,27 @@ fn find_set_candidates<'a>(
         if high_intersection_size < rule.min_high_matched_length_unique {
             continue;
         }
-
-        let high_set_intersection = query_data.query_high_set.intersection(rule_high_set);
-        if high_set_intersection.is_empty() {
+        // Require at least one shared high token.
+        if high_intersection_size == 0 {
             continue;
         }
 
-        let intersection = query_data.query_set.intersection(rule_set);
-        if intersection.is_empty() {
+        // A rule needing more unique tokens than the query holds in total can never
+        // pass the match-length gate below, so skip its O(n+m) merge walk.
+        if query_data.query_set_len < rule.min_matched_length_unique {
             continue;
         }
 
-        let matched_length = intersection.len();
+        let matched_length = query_data.query_set.intersection_count(rule_set);
+        if matched_length == 0 {
+            continue;
+        }
         if matched_length < rule.min_matched_length_unique {
             continue;
         }
+
+        // Allocate the high-token intersection only for surviving candidates.
+        let high_set_intersection = query_data.query_high_set.intersection(rule_high_set);
 
         let Some(candidate) = build_ranked_candidate(
             rid,
