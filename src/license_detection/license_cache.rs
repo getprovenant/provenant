@@ -273,6 +273,7 @@ mod tests {
             rule_metadata_by_identifier: Default::default(),
             msets_by_rid: Default::default(),
             high_sets_by_rid: Default::default(),
+            high_bitsets_by_rid: Default::default(),
             high_postings_by_rid: Default::default(),
             licenses_by_key: Default::default(),
             rid_by_spdx_key: Default::default(),

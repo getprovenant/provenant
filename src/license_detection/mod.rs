@@ -106,7 +106,7 @@ pub use match_refine::{
 pub use position_set::PositionSet;
 pub use spdx_lid::spdx_lid_match;
 pub use token_multiset::TokenMultiset;
-pub use token_set::TokenSet;
+pub use token_set::{HighBitset, TokenSet};
 pub use unknown_match::unknown_match;
 
 use self::seq_match::{

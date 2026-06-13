@@ -211,9 +211,9 @@ mod test_cases {
         let index = build_index(rules, vec![]);
 
         let rid = find_rid_by_identifier(&index, "sets.RULE").expect("rule should exist");
-        assert!(index.sets_by_rid.contains_key(&rid));
-        assert!(index.msets_by_rid.contains_key(&rid));
-        assert!(!index.sets_by_rid[&rid].is_empty());
+        assert!(index.set_for_rid(rid).is_some());
+        assert!(index.mset_for_rid(rid).is_some());
+        assert!(!index.set_for_rid(rid).unwrap().is_empty());
     }
 
     #[test]
@@ -419,12 +419,12 @@ mod test_cases {
                 rules_with_empty_tokens += 1;
             }
             assert!(
-                index.sets_by_rid.contains_key(&rid),
+                index.set_for_rid(rid).is_some(),
                 "Rule {} should have token set",
                 rid
             );
             assert!(
-                index.msets_by_rid.contains_key(&rid),
+                index.mset_for_rid(rid).is_some(),
                 "Rule {} should have token multiset",
                 rid
             );
@@ -941,10 +941,7 @@ SOFTWARE."#;
             eprintln!("\nRule token count: {}", rule_tokens.len());
 
             // Use the indexed set from the index
-            let indexed_set = index
-                .sets_by_rid
-                .get(&rid)
-                .expect("Should have indexed set");
+            let indexed_set = index.set_for_rid(rid).expect("Should have indexed set");
             eprintln!(
                 "Rule unique tokens (from indexed set): {}",
                 indexed_set.len()
