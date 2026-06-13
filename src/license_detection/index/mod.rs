@@ -16,7 +16,7 @@ pub use builder::{
 use crate::license_detection::automaton::{AsBytes, Automaton};
 use crate::license_detection::index::dictionary::{TokenDictionary, TokenId};
 use crate::license_detection::models::RuleId;
-use crate::license_detection::{TokenMultiset, TokenSet};
+use crate::license_detection::{HighBitset, TokenMultiset, TokenSet};
 use rkyv::Archive;
 use std::collections::{HashMap, HashSet};
 
@@ -127,6 +127,13 @@ pub struct LicenseIndex {
     /// tokens. Use [`LicenseIndex::high_set_for_rid`].
     pub high_sets_by_rid: Vec<Option<TokenSet>>,
 
+    /// High-value token sets as fixed-width bitsets (width = `len_legalese`),
+    /// densely indexed by `RuleId::raw()` and aligned with `high_sets_by_rid`
+    /// (`Some` exactly where that is `Some`). Used by the candidate-selection
+    /// high-token gate, where `AND`+`popcount` replaces the sorted-set merge
+    /// walk. Use [`LicenseIndex::high_bitset_for_rid`].
+    pub high_bitsets_by_rid: Vec<Option<HighBitset>>,
+
     /// Inverted index of high-value token positions per rule.
     ///
     /// Maps rule IDs to a mapping from high-value token IDs to their positions
@@ -228,6 +235,7 @@ impl LicenseIndex {
             rule_metadata_by_identifier: HashMap::new(),
             msets_by_rid: Vec::new(),
             high_sets_by_rid: Vec::new(),
+            high_bitsets_by_rid: Vec::new(),
             high_postings_by_rid: HashMap::new(),
             licenses_by_key: HashMap::new(),
             rid_by_spdx_key: HashMap::new(),
@@ -258,6 +266,15 @@ impl LicenseIndex {
     #[inline]
     pub fn mset_for_rid(&self, rid: RuleId) -> Option<&TokenMultiset> {
         self.msets_by_rid.get(rid.raw()).and_then(Option::as_ref)
+    }
+
+    /// High-value token bitset for a rule, or `None` if the rule has no
+    /// high-value tokens. Dense `Vec` lookup by `RuleId`.
+    #[inline]
+    pub fn high_bitset_for_rid(&self, rid: RuleId) -> Option<&HighBitset> {
+        self.high_bitsets_by_rid
+            .get(rid.raw())
+            .and_then(Option::as_ref)
     }
 
     /// Create a new empty license index with the specified legalese count.

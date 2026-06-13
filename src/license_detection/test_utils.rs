@@ -8,6 +8,7 @@
 
 use std::collections::HashMap;
 
+use crate::license_detection::HighBitset;
 use crate::license_detection::TokenMultiset;
 use crate::license_detection::TokenSet;
 use crate::license_detection::index::LicenseIndex;
@@ -80,6 +81,8 @@ pub fn add_text_rule(
             .filter(|&tid| index.dictionary.token_kind(TokenId::new(tid)) == TokenKind::Legalese),
     );
     if !high_set.is_empty() {
+        let high_bits = HighBitset::from_token_set(&high_set, index.len_legalese);
+        assign_rid_slot(&mut index.high_bitsets_by_rid, rid, high_bits);
         assign_rid_slot(&mut index.high_sets_by_rid, rid, high_set);
     }
 

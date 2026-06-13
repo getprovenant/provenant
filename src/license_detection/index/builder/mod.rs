@@ -28,7 +28,7 @@ use crate::license_detection::spdx_mapping::build_spdx_mapping;
 use crate::license_detection::tokenize::{
     parse_required_phrase_spans, tokenize, tokenize_with_stopwords,
 };
-use crate::license_detection::{TokenMultiset, TokenSet};
+use crate::license_detection::{HighBitset, TokenMultiset, TokenSet};
 
 const UNKNOWN_NGRAM_LENGTH: usize = 6;
 const LICENSE_TOKEN_STRINGS: &[&str] = &["license", "licence", "licensed"];
@@ -363,6 +363,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
     let mut sets_by_rid: Vec<Option<TokenSet>> = Vec::new();
     let mut msets_by_rid: Vec<Option<TokenMultiset>> = Vec::new();
     let mut high_sets_by_rid: Vec<Option<TokenSet>> = Vec::new();
+    let mut high_bitsets_by_rid: Vec<Option<HighBitset>> = Vec::new();
     let mut high_postings_by_rid: HashMap<RuleId, HashMap<TokenId, Vec<usize>>> = HashMap::new();
     let mut rids_by_high_tid: HashMap<TokenId, HashSet<RuleId>> = HashMap::new();
 
@@ -389,6 +390,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
     sets_by_rid.resize_with(rule_count, || None);
     msets_by_rid.resize_with(rule_count, || None);
     high_sets_by_rid.resize_with(rule_count, || None);
+    high_bitsets_by_rid.resize_with(rule_count, || None);
 
     let mut rid_by_spdx_key: HashMap<String, RuleId> = HashMap::new();
     let mut unknown_spdx_rid: Option<RuleId> = None;
@@ -478,6 +480,8 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         let mset_high = mset.high_subset(&dictionary);
 
         if !tids_set_high.is_empty() {
+            high_bitsets_by_rid[rid] =
+                Some(HighBitset::from_token_set(&tids_set_high, len_legalese));
             high_sets_by_rid[rid] = Some(tids_set_high.clone());
         }
 
@@ -557,6 +561,7 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         rule_metadata_by_identifier: HashMap::new(),
         msets_by_rid,
         high_sets_by_rid,
+        high_bitsets_by_rid,
         high_postings_by_rid,
         licenses_by_key,
         rid_by_spdx_key,

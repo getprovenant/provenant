@@ -5,6 +5,7 @@
 
 //! Candidate selection using set and multiset similarity.
 
+use crate::license_detection::HighBitset;
 use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::TokenMultiset;
 use crate::license_detection::TokenSet;
@@ -199,6 +200,7 @@ struct QueryData {
     query_set: TokenSet,
     query_mset: TokenMultiset,
     query_high_set: TokenSet,
+    query_high_bits: HighBitset,
     query_high_mset: TokenMultiset,
     query_set_len: usize,
     query_mset_len: usize,
@@ -230,6 +232,7 @@ impl QueryData {
             return None;
         }
 
+        let query_high_bits = HighBitset::from_token_set(&query_high_set, index.len_legalese);
         let query_high_mset = query_mset.high_subset(&index.dictionary);
         let query_set_len = query_set.len();
         let query_mset_len = query_mset.total_count();
@@ -238,6 +241,7 @@ impl QueryData {
             query_set,
             query_mset,
             query_high_set,
+            query_high_bits,
             query_high_mset,
             query_set_len,
             query_mset_len,
@@ -396,12 +400,20 @@ fn find_set_candidates<'a>(
         let Some(rule_high_set) = index.high_set_for_rid(rid) else {
             continue;
         };
+        let Some(rule_high_bits) = index.high_bitset_for_rid(rid) else {
+            continue;
+        };
 
-        let high_intersection_size = query_data.query_high_set.intersection_count(rule_high_set);
+        let high_intersection_size = query_data
+            .query_high_bits
+            .intersection_count(rule_high_bits);
         if high_intersection_size < rule.min_high_matched_length_unique {
             continue;
         }
-        // Require at least one shared high token.
+        // Defensive: require at least one shared high token. Every candidate rid
+        // comes from `rids_by_high_tid` (rules sharing a query high token), so
+        // `high_intersection_size >= 1` is currently guaranteed and this never
+        // fires; it guards correctness if candidate sourcing ever changes.
         if high_intersection_size == 0 {
             continue;
         }
