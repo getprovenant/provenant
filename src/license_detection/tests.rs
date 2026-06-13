@@ -899,12 +899,9 @@ fn test_engine_index_sets_by_rid() {
     let index = engine.index();
 
     for &rid in index.rid_by_hash.values().take(5) {
-        assert!(
-            index.sets_by_rid.contains_key(&rid),
-            "Rule {} should have token set",
-            rid
-        );
-        let set = &index.sets_by_rid[&rid];
+        let set = index.set_for_rid(rid).unwrap_or_else(|| {
+            panic!("Rule {} should have token set", rid);
+        });
         assert!(
             !set.is_empty(),
             "Rule {} token set should not be empty",
@@ -919,12 +916,9 @@ fn test_engine_index_msets_by_rid() {
     let index = engine.index();
 
     for &rid in index.rid_by_hash.values().take(5) {
-        assert!(
-            index.msets_by_rid.contains_key(&rid),
-            "Rule {} should have token multiset",
-            rid
-        );
-        let mset = &index.msets_by_rid[&rid];
+        let mset = index.mset_for_rid(rid).unwrap_or_else(|| {
+            panic!("Rule {} should have token multiset", rid);
+        });
         assert!(
             !mset.is_empty(),
             "Rule {} token multiset should not be empty",

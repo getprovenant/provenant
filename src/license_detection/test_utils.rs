@@ -43,6 +43,16 @@ pub fn create_test_index_default() -> LicenseIndex {
     create_test_index(&[("mit", 0), ("license", 1), ("apache", 2), ("2.0", 3)], 2)
 }
 
+/// Grow a dense `RuleId`-indexed slot vector as needed and assign `value` at
+/// `rid`. Mirrors the builder's pre-sized layout for ad-hoc test rules.
+fn assign_rid_slot<T>(slots: &mut Vec<Option<T>>, rid: RuleId, value: T) {
+    let idx = rid.raw();
+    if slots.len() <= idx {
+        slots.resize_with(idx + 1, || None);
+    }
+    slots[idx] = Some(value);
+}
+
 /// Inserts a whitespace-tokenized rule into a test index and wires up the set,
 /// multiset, high-set, postings, and inverted-index structures needed by
 /// candidate selection and sequence matching.
@@ -62,15 +72,15 @@ pub fn add_text_rule(
 
     let set = TokenSet::from_token_ids(tokens.iter().copied());
     let mset = TokenMultiset::from_token_ids(&tokens);
-    let _ = index.sets_by_rid.insert(rid, set.clone());
-    let _ = index.msets_by_rid.insert(rid, mset);
+    assign_rid_slot(&mut index.sets_by_rid, rid, set.clone());
+    assign_rid_slot(&mut index.msets_by_rid, rid, mset);
 
     let high_set: TokenSet = TokenSet::from_u16_iter(
         set.iter()
             .filter(|&tid| index.dictionary.token_kind(TokenId::new(tid)) == TokenKind::Legalese),
     );
     if !high_set.is_empty() {
-        let _ = index.high_sets_by_rid.insert(rid, high_set);
+        assign_rid_slot(&mut index.high_sets_by_rid, rid, high_set);
     }
 
     let mut high_postings: HashMap<TokenId, Vec<usize>> = HashMap::new();

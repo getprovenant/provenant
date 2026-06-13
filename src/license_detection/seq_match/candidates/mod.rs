@@ -390,10 +390,10 @@ fn find_set_candidates<'a>(
         let Some(rule) = index.rule(rid) else {
             continue;
         };
-        let Some(rule_set) = index.sets_by_rid.get(&rid) else {
+        let Some(rule_set) = index.set_for_rid(rid) else {
             continue;
         };
-        let Some(rule_high_set) = index.high_sets_by_rid.get(&rid) else {
+        let Some(rule_high_set) = index.high_set_for_rid(rid) else {
             continue;
         };
 
@@ -455,7 +455,7 @@ fn rescore_candidates_with_multisets<'a>(
             return candidates;
         }
 
-        let Some(rule_mset) = index.msets_by_rid.get(&candidate.rid) else {
+        let Some(rule_mset) = index.mset_for_rid(candidate.rid) else {
             continue;
         };
 

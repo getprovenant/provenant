@@ -105,30 +105,27 @@ pub struct LicenseIndex {
 
     /// Token ID sets per rule for candidate selection.
     ///
-    /// Maps rule IDs to sets of unique token IDs present in that rule.
-    /// Used for efficient candidate selection based on token overlap.
-    ///
-    /// Corresponds to Python: `self.sets_by_rid = []` (line 212)
-    pub sets_by_rid: HashMap<RuleId, TokenSet>,
+    /// Indexed densely by `RuleId::raw()` (mirroring Python's `sets_by_rid = []`
+    /// list). Entries are `None` for rule IDs that hold no set (e.g. false-positive
+    /// rules), so the candidate-selection hot loop reads a `Vec` slot instead of a
+    /// hashed lookup. Use [`LicenseIndex::set_for_rid`] to access.
+    pub sets_by_rid: Vec<Option<TokenSet>>,
 
     pub rule_metadata_by_identifier: HashMap<String, IndexedRuleMetadata>,
 
     /// Token ID multisets per rule for candidate ranking.
     ///
-    /// Maps rule IDs to multisets (bags) of token IDs with their frequencies.
-    /// Used for ranking candidates by token frequency overlap.
-    ///
-    /// Corresponds to Python: `self.msets_by_rid = []` (line 213)
-    pub msets_by_rid: HashMap<RuleId, TokenMultiset>,
+    /// Indexed densely by `RuleId::raw()` (mirroring Python's `msets_by_rid = []`).
+    /// `None` where no multiset exists. Use [`LicenseIndex::mset_for_rid`].
+    pub msets_by_rid: Vec<Option<TokenMultiset>>,
 
     /// High-value token sets per rule for early candidate rejection.
     ///
-    /// Maps rule IDs to sets containing only high-value (legalese) token IDs.
-    /// This is a subset of `sets_by_rid` for faster intersection computation
-    /// and early rejection of candidates that won't pass the high-token threshold.
-    ///
-    /// Precomputed during index building to avoid redundant filtering at runtime.
-    pub high_sets_by_rid: HashMap<RuleId, TokenSet>,
+    /// Indexed densely by `RuleId::raw()`. A subset of `sets_by_rid` containing
+    /// only high-value (legalese) token IDs, for early rejection of candidates that
+    /// won't pass the high-token threshold. `None` where the rule has no high-value
+    /// tokens. Use [`LicenseIndex::high_set_for_rid`].
+    pub high_sets_by_rid: Vec<Option<TokenSet>>,
 
     /// Inverted index of high-value token positions per rule.
     ///
@@ -227,10 +224,10 @@ impl LicenseIndex {
             tids_by_rid: Vec::new(),
             rules_automaton: AutomatonBuilder::new().build(),
             unknown_automaton: AutomatonBuilder::new().build(),
-            sets_by_rid: HashMap::new(),
+            sets_by_rid: Vec::new(),
             rule_metadata_by_identifier: HashMap::new(),
-            msets_by_rid: HashMap::new(),
-            high_sets_by_rid: HashMap::new(),
+            msets_by_rid: Vec::new(),
+            high_sets_by_rid: Vec::new(),
             high_postings_by_rid: HashMap::new(),
             licenses_by_key: HashMap::new(),
             rid_by_spdx_key: HashMap::new(),
@@ -238,6 +235,29 @@ impl LicenseIndex {
             rids_by_high_tid: HashMap::new(),
             spdx_license_list_version: None,
         }
+    }
+
+    /// Unique-token set for a rule, or `None` if the rule holds no set
+    /// (e.g. a false-positive rule). Dense `Vec` lookup by `RuleId`.
+    #[inline]
+    pub fn set_for_rid(&self, rid: RuleId) -> Option<&TokenSet> {
+        self.sets_by_rid.get(rid.raw()).and_then(Option::as_ref)
+    }
+
+    /// High-value (legalese) token set for a rule, or `None` if the rule has no
+    /// high-value tokens. Dense `Vec` lookup by `RuleId`.
+    #[inline]
+    pub fn high_set_for_rid(&self, rid: RuleId) -> Option<&TokenSet> {
+        self.high_sets_by_rid
+            .get(rid.raw())
+            .and_then(Option::as_ref)
+    }
+
+    /// Token multiset for a rule, or `None` if the rule holds no multiset.
+    /// Dense `Vec` lookup by `RuleId`.
+    #[inline]
+    pub fn mset_for_rid(&self, rid: RuleId) -> Option<&TokenMultiset> {
+        self.msets_by_rid.get(rid.raw()).and_then(Option::as_ref)
     }
 
     /// Create a new empty license index with the specified legalese count.

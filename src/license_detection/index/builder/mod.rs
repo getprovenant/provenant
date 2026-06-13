@@ -358,9 +358,11 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
     let mut rid_by_hash: HashMap<[u8; 20], RuleId> = HashMap::new();
     let mut rules_by_rid: Vec<Rule> = Vec::with_capacity(rules.len());
     let mut tids_by_rid: Vec<Vec<TokenId>> = Vec::with_capacity(rules.len());
-    let mut sets_by_rid: HashMap<RuleId, TokenSet> = HashMap::new();
-    let mut msets_by_rid: HashMap<RuleId, TokenMultiset> = HashMap::new();
-    let mut high_sets_by_rid: HashMap<RuleId, TokenSet> = HashMap::new();
+    // Dense, RuleId-indexed slots (mirroring Python's list layout). Sized to the
+    // total rule count below; `None` for rule IDs that hold no set.
+    let mut sets_by_rid: Vec<Option<TokenSet>> = Vec::new();
+    let mut msets_by_rid: Vec<Option<TokenMultiset>> = Vec::new();
+    let mut high_sets_by_rid: Vec<Option<TokenSet>> = Vec::new();
     let mut high_postings_by_rid: HashMap<RuleId, HashMap<TokenId, Vec<usize>>> = HashMap::new();
     let mut rids_by_high_tid: HashMap<TokenId, HashSet<RuleId>> = HashMap::new();
 
@@ -380,6 +382,13 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
 
     let mut all_rules: Vec<Rule> = license_rules.into_iter().chain(rules).collect();
     all_rules.sort();
+
+    // RuleId is dense (0..all_rules.len()); pre-size the per-rule slot vectors so
+    // each rule writes its own index. Slots stay `None` where no set is produced.
+    let rule_count = all_rules.len();
+    sets_by_rid.resize_with(rule_count, || None);
+    msets_by_rid.resize_with(rule_count, || None);
+    high_sets_by_rid.resize_with(rule_count, || None);
 
     let mut rid_by_spdx_key: HashMap<String, RuleId> = HashMap::new();
     let mut unknown_spdx_rid: Option<RuleId> = None;
@@ -462,14 +471,14 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
         let tids_set = TokenSet::from_token_ids(rule_token_ids.iter().copied());
         let mset = TokenMultiset::from_token_ids(&rule_token_ids);
 
-        sets_by_rid.insert(rule_id, tids_set.clone());
-        msets_by_rid.insert(rule_id, mset.clone());
+        sets_by_rid[rid] = Some(tids_set.clone());
+        msets_by_rid[rid] = Some(mset.clone());
 
         let tids_set_high = tids_set.high_subset(&dictionary);
         let mset_high = mset.high_subset(&dictionary);
 
         if !tids_set_high.is_empty() {
-            high_sets_by_rid.insert(rule_id, tids_set_high.clone());
+            high_sets_by_rid[rid] = Some(tids_set_high.clone());
         }
 
         // Build inverted index: map high-value tokens to rules containing them
