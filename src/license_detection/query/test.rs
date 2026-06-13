@@ -411,6 +411,35 @@ mod tests {
     }
 
     #[test]
+    fn test_query_matched_text_byte_identical_to_lines_scan() {
+        // The cached line-index implementation must match the previous
+        // `text.lines()`-per-call behavior exactly, including `\r\n` handling
+        // and the absence of a trailing empty line after a final `\n`.
+        let index = create_query_test_index();
+        let cases = [
+            "license copyright permission",
+            "license\ncopyright\npermission\nlicense",
+            "license\r\ncopyright\r\npermission",
+            "license\ncopyright\n",
+            "license\n\ncopyright",
+            "license\r\n\r\ncopyright\r\n",
+        ];
+        for text in cases {
+            let query = build_query(text, &index)
+                .unwrap_or_else(|_| panic!("query should build for {text:?}"));
+            for start in 0..=6 {
+                for end in 0..=6 {
+                    assert_eq!(
+                        query.matched_text(start, end),
+                        crate::license_detection::query::matched_text_from_text(text, start, end),
+                        "matched_text mismatch for text={text:?} start={start} end={end}",
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn test_query_run_get_index() {
         let index = create_query_test_index();
         let query = build_query("license copyright", &index).unwrap();

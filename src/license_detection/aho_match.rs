@@ -342,6 +342,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -384,6 +385,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -429,6 +431,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -470,6 +473,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -510,6 +514,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -566,6 +571,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -610,6 +616,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -691,6 +698,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -728,6 +736,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -771,6 +780,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -815,6 +825,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -869,6 +880,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
@@ -915,6 +927,7 @@ mod tests {
             is_binary: false,
             query_run_ranges: Vec::new(),
             spdx_lines: Vec::new(),
+            line_content_ranges: Default::default(),
             index: &index,
         };
 
