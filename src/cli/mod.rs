@@ -350,8 +350,12 @@ pub struct ScanArgs {
     #[arg(long = "cache-trust-mtime", requires = "incremental")]
     pub cache_trust_mtime: bool,
 
-    /// Maximum number of file and directory scan details kept in memory.
+    /// Maximum number of file and directory scan details kept in memory during
+    /// the in-scan file-processing window before the rest spill to disk.
     /// Use 0 for unlimited memory or -1 for disk-only spill during the scan.
+    /// This bounds only the in-scan working set, NOT total or peak process
+    /// memory: assembly, summary, and output reconstitute the full result set
+    /// after the scan, so peak RSS is not bounded by this flag.
     #[arg(
         long = "max-in-memory",
         value_name = "INT",

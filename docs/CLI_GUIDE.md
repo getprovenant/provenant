@@ -610,6 +610,33 @@ These are worth learning early because they change what the output means:
 - `--reindex` only matters when the license engine is initialized (`--license` and some `--from-json` reference-recompute flows)
 - `--no-license-index-cache` only matters when the license engine is initialized
 
+## Memory Use and What `--max-in-memory` Actually Bounds
+
+`--max-in-memory <INT>` caps how many per-file/per-directory scan details
+(`FileInfo` records) Provenant keeps in memory during the in-scan
+file-processing window. Once that limit is reached, the remaining records spill
+to a temporary on-disk store instead of staying resident. `0` disables the cap
+(unlimited in-memory collection) and `-1` forces disk-only spill during the scan.
+
+Important: this flag bounds only the in-scan working set, not total or peak
+process memory (peak RSS). After file processing finishes, assembly, summary
+indexing, tallies, top-level license collection, and output all reconstitute the
+full result set (`load_all()` rebuilds the complete record vector before
+assembly) and operate over it as whole-set, random-access work. The peak RSS
+high-water mark is set in that post-scan span, not in the bounded in-scan window
+this flag controls.
+
+Concretely, on a 100k-file synthetic tree the spike in #1034 measured the
+default (`10000`, spills) at ~1124 MB peak RSS, `0` (no spill) at ~1023 MB, and
+`-1` (spill everything) at ~1032 MB — spilling does not lower peak RSS, and the
+default spilling mode is slightly higher because of chunk serialization overhead
+layered on top of the same full reconstitution. Use this flag to bound the
+in-scan retained set (for example, to keep the scan phase from growing without
+limit on very large trees); do not rely on it to bound the whole process's peak
+memory. Truly bounding peak RSS would require redesigning assembly and
+post-processing into a windowed/external-sort pipeline, which was explored and
+deferred as disproportionate in #1034.
+
 ## A Simple Decision Guide
 
 If you are not sure where to start, use this rule of thumb:
