@@ -22,6 +22,7 @@ use provenant_xtask::repo_cache::{
     cleanup_repo_worktree, ensure_repo_mirror, prepare_repo_worktree, repo_cache_path,
     resolve_repo_ref_to_sha,
 };
+use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 
@@ -59,7 +60,8 @@ struct Args {
     #[arg(long)]
     head_bin: Option<PathBuf>,
     /// Scan against this target with both binaries to JSON and require
-    /// byte-identical output after normalizing the volatile header.
+    /// byte-identical output after normalizing the volatile header and
+    /// randomly-generated package UIDs.
     #[arg(long)]
     check_output: bool,
     /// Scan profile shorthand. Mutually exclusive with explicit scan flags after `--`.
@@ -513,8 +515,14 @@ fn scan_to_json(
     fs::read_to_string(&out_file).with_context(|| format!("failed to read {}", out_file.display()))
 }
 
-/// Replace the volatile top-level `headers` array with a placeholder so that
-/// version, timestamp, and duration churn does not mask a real output diff.
+/// Normalize the volatile parts of scan output so that only behavioral diffs
+/// remain:
+///
+/// - the top-level `headers` array (version, timestamps, duration), and
+/// - randomly-generated package UIDs (`uuid=<uuid>` in `package_uid`,
+///   `dependency_uid`, `for_package_uid`, and the PURLs that reference them),
+///   which differ on every scan run and would otherwise make `--check-output`
+///   fail on any `--package` profile regardless of the code change.
 fn normalize_scan_json(raw: &str) -> Result<String> {
     let mut value: Value = serde_json::from_str(raw).context("scan output was not valid JSON")?;
     if let Some(object) = value.as_object_mut()
@@ -525,7 +533,23 @@ fn normalize_scan_json(raw: &str) -> Result<String> {
             Value::String("<normalized>".to_string()),
         );
     }
-    serde_json::to_string(&value).context("failed to re-serialize normalized scan output")
+    let serialized =
+        serde_json::to_string(&value).context("failed to re-serialize normalized scan output")?;
+    Ok(normalize_package_uids(&serialized))
+}
+
+/// Replace each random `uuid=<uuid>` (as emitted in package UID fields and the
+/// PURLs that reference them) with a stable placeholder. Matches the canonical
+/// 8-4-4-4-12 hex UUID form so non-UID content is left untouched.
+fn normalize_package_uids(input: &str) -> String {
+    static UID_RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    let re = UID_RE.get_or_init(|| {
+        // Case-insensitive so uppercase-hex UUIDs (some `Display` impls) are also
+        // normalized rather than slipping through and causing spurious failures.
+        Regex::new(r"(?i)uuid=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+            .expect("static UID regex is valid")
+    });
+    re.replace_all(input, "uuid=<normalized>").into_owned()
 }
 
 fn side_manifest(side: &Side, median_seconds: f64, rounds: &[f64]) -> SideManifest {
@@ -717,6 +741,40 @@ mod tests {
     fn normalize_scan_json_detects_real_diffs() {
         let a = r#"{"headers":[{"tool_version":"1.0"}],"files":[{"path":"a"}]}"#;
         let b = r#"{"headers":[{"tool_version":"1.0"}],"files":[{"path":"b"}]}"#;
+        assert_ne!(
+            normalize_scan_json(a).unwrap(),
+            normalize_scan_json(b).unwrap()
+        );
+    }
+
+    #[test]
+    fn normalize_scan_json_ignores_random_package_uids() {
+        // Two runs of the same code differ only by randomly-generated package UIDs.
+        let a = r#"{"headers":[],"packages":[{"package_uid":"pkg:golang/x@1?uuid=7d2f562e-87fa-4423-9951-aac2ca7f521f"}]}"#;
+        let b = r#"{"headers":[],"packages":[{"package_uid":"pkg:golang/x@1?uuid=6ce89029-256e-4642-8bbd-8a45b15a771d"}]}"#;
+        assert_eq!(
+            normalize_scan_json(a).unwrap(),
+            normalize_scan_json(b).unwrap()
+        );
+    }
+
+    #[test]
+    fn normalize_scan_json_normalizes_uppercase_uuids() {
+        // Lowercase vs uppercase hex for the same logical (random) UID must both
+        // normalize to the placeholder, so case never causes a spurious failure.
+        let a = r#"{"headers":[],"packages":[{"package_uid":"pkg:x@1?uuid=7d2f562e-87fa-4423-9951-aac2ca7f521f"}]}"#;
+        let b = r#"{"headers":[],"packages":[{"package_uid":"pkg:x@1?uuid=6CE89029-256E-4642-8BBD-8A45B15A771D"}]}"#;
+        assert_eq!(
+            normalize_scan_json(a).unwrap(),
+            normalize_scan_json(b).unwrap()
+        );
+    }
+
+    #[test]
+    fn normalize_scan_json_keeps_real_diffs_under_uid_normalization() {
+        // Same UID shape, but a genuine content difference (the PURL itself) must survive.
+        let a = r#"{"headers":[],"packages":[{"package_uid":"pkg:golang/x@1?uuid=7d2f562e-87fa-4423-9951-aac2ca7f521f"}]}"#;
+        let b = r#"{"headers":[],"packages":[{"package_uid":"pkg:golang/y@2?uuid=6ce89029-256e-4642-8bbd-8a45b15a771d"}]}"#;
         assert_ne!(
             normalize_scan_json(a).unwrap(),
             normalize_scan_json(b).unwrap()
