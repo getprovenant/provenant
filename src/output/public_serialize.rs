@@ -680,6 +680,10 @@ impl Serialize for PublicFileInfo<'_> {
 
         map.serialize_entry("package_data", &PublicPackageDataSeq(&file.package_data))?;
         map.serialize_entry(
+            "detected_license_expression",
+            &file.detected_license_expression(),
+        )?;
+        map.serialize_entry(
             "detected_license_expression_spdx",
             &file.detected_license_expression_spdx(),
         )?;

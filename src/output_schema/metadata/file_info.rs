@@ -175,6 +175,13 @@ pub(super) const FILE_INFO_FIELDS: &[OutputFieldDoc] = &[
         meaning: "Raw parser-emitted package rows attached to this file record.",
     },
     OutputFieldDoc {
+        json_name: "detected_license_expression",
+        rust_field: "license_expression",
+        value_shape: "string | null",
+        presence: "Always emitted.",
+        meaning: "Primary file-level license expression in ScanCode license keys after grouping detections; the scancode-key counterpart of detected_license_expression_spdx.",
+    },
+    OutputFieldDoc {
         json_name: "detected_license_expression_spdx",
         rust_field: "license_expression",
         value_shape: "string | null",
