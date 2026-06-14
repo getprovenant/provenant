@@ -172,21 +172,73 @@ pub(crate) fn detect_declared_license_from_text(
             .filter_map(|detection| detection.license_expression_spdx.clone()),
     );
 
-    match (
+    let (declared, declared_spdx) = match (
         declared_license_expression,
         declared_license_expression_spdx,
     ) {
-        (Some(declared), Some(declared_spdx)) => {
-            let references: Vec<&str> = referenced_filename.into_iter().collect();
-            build_declared_license_data_from_pair(
-                declared,
-                declared_spdx,
-                DeclaredLicenseMatchMetadata::single_line(text)
-                    .with_referenced_filenames(&references),
-            )
-        }
-        _ => empty_declared_license_data(),
+        (Some(declared), Some(declared_spdx)) => (declared, declared_spdx),
+        // Free-text detection produced no public expression. A bare ambiguous
+        // license name (e.g. "BSD", "GPL") only matches a clue-only rule, which
+        // detection deliberately keeps expression-less for arbitrary file text.
+        // For a declared manifest statement that *is* the whole bounded license
+        // field, promote that clue to a confident declared expression.
+        _ => match promote_whole_statement_clue(&detections) {
+            Some(normalized) => (
+                normalized.declared_license_expression,
+                normalized.declared_license_expression_spdx,
+            ),
+            None => return empty_declared_license_data(),
+        },
+    };
+
+    let references: Vec<&str> = referenced_filename.into_iter().collect();
+    build_declared_license_data_from_pair(
+        declared,
+        declared_spdx,
+        DeclaredLicenseMatchMetadata::single_line(text).with_referenced_filenames(&references),
+    )
+}
+
+/// Promotes a clue-only whole-statement detection into a confident declared
+/// expression.
+///
+/// Free-text detection keeps bare ambiguous license names (e.g. "BSD", "GPL",
+/// "BSD-style") as expression-less *clues* so they never become hard detections
+/// in arbitrary file text. A declared manifest statement is a bounded,
+/// trustworthy license field, so when the statement is exactly such a name we
+/// honor the clue's license expression — the declared-context analog of
+/// ScanCode's `package_license` handling.
+///
+/// Stays conservative: requires a single detection whose single match is a
+/// whole-statement *hash* match (the statement's tokens are exactly a rule's
+/// tokens). This is what distinguishes a true bare name such as "BSD" or
+/// "BSD-style" from a fragment match where the bare name is only part of a
+/// longer statement (e.g. "BSD with advertising", which means BSD-4-Clause, must
+/// NOT collapse to bsd-new). A statement with no clue match, or whose clue match
+/// only covers a fragment, yields `None` so the declared expression stays an
+/// honest `null`.
+fn promote_whole_statement_clue(
+    detections: &[crate::license_detection::detection::LicenseDetection],
+) -> Option<NormalizedDeclaredLicense> {
+    let [detection] = detections else {
+        return None;
+    };
+    if detection.license_expression.is_some() {
+        return None;
     }
+    let [match_item] = detection.matches.as_slice() else {
+        return None;
+    };
+    if match_item.matcher != crate::license_detection::models::MatcherKind::Hash {
+        return None;
+    }
+    if match_item.license_expression.trim().is_empty() {
+        return None;
+    }
+
+    // Re-normalize through the index so both the ScanCode and SPDX forms are
+    // canonical, rather than trusting whatever the clue match happened to carry.
+    normalize_spdx_expression(&match_item.license_expression)
 }
 
 pub(crate) fn normalize_spdx_expression(statement: &str) -> Option<NormalizedDeclaredLicense> {
@@ -1330,6 +1382,94 @@ mod tests {
             Some("Apache-2.0")
         );
         assert!(!package.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_populate_declared_license_ambiguous_bare_bsd() {
+        // Bare "BSD" fails strict SPDX parsing and only matches a clue-only
+        // rule; on a declared manifest statement it must normalize to bsd-new
+        // (BSD-3-Clause), matching ScanCode.
+        let mut package = package_with(Some("BSD"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(
+            package.declared_license_expression.as_deref(),
+            Some("bsd-new")
+        );
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("BSD-3-Clause")
+        );
+        assert_eq!(package.license_detections.len(), 1);
+    }
+
+    #[test]
+    fn test_populate_declared_license_ambiguous_bare_gpl_and_lgpl() {
+        // Bare GPL/LGPL shorthand should also resolve via the clue-promotion
+        // path (GPL is clue-only; LGPL has a non-clue bare rule).
+        let mut gpl = package_with(Some("GPL"), None, None);
+        populate_declared_license_and_holder(&mut gpl);
+        assert_eq!(
+            gpl.declared_license_expression.as_deref(),
+            Some("gpl-1.0-plus")
+        );
+
+        let mut lgpl = package_with(Some("LGPL"), None, None);
+        populate_declared_license_and_holder(&mut lgpl);
+        assert_eq!(
+            lgpl.declared_license_expression.as_deref(),
+            Some("lgpl-2.0-plus")
+        );
+    }
+
+    #[test]
+    fn test_populate_declared_license_unambiguous_bare_names_unchanged() {
+        // Names that already normalize via strict SPDX parsing must be
+        // unaffected by the clue-promotion fallback.
+        let mut mit = package_with(Some("MIT"), None, None);
+        populate_declared_license_and_holder(&mut mit);
+        assert_eq!(mit.declared_license_expression.as_deref(), Some("mit"));
+
+        let mut apache = package_with(Some("Apache-2.0"), None, None);
+        populate_declared_license_and_holder(&mut apache);
+        assert_eq!(
+            apache.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+
+        let mut dual = package_with(Some("MIT OR Apache-2.0"), None, None);
+        populate_declared_license_and_holder(&mut dual);
+        assert_eq!(
+            dual.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+    }
+
+    #[test]
+    fn test_populate_declared_license_bare_name_fragment_stays_null() {
+        // "BSD with advertising" means BSD-4-Clause; the bare-BSD clue rule only
+        // matches the "BSD" fragment (an Aho match, not a whole-statement hash
+        // match), so the clue-promotion path must NOT collapse it to bsd-new.
+        let mut package = package_with(Some("BSD with advertising"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_ne!(
+            package.declared_license_expression.as_deref(),
+            Some("bsd-new"),
+            "a bare-name fragment must not be promoted to the bare-name expression"
+        );
+    }
+
+    #[test]
+    fn test_populate_declared_license_unmatchable_short_stays_null() {
+        // A short statement that matches no license rule must stay an honest
+        // null rather than guessing.
+        let mut package = package_with(Some("zzgarbage"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert!(package.declared_license_expression.is_none());
+        assert!(package.declared_license_expression_spdx.is_none());
+        assert!(package.license_detections.is_empty());
     }
 
     #[test]

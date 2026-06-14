@@ -33,9 +33,33 @@
   "vcs_url": null,
   "copyright": null,
   "holder": null,
-  "declared_license_expression": null,
-  "declared_license_expression_spdx": null,
-  "license_detections": [],
+  "declared_license_expression": "bsd-new",
+  "declared_license_expression_spdx": "BSD-3-Clause",
+  "license_detections": [
+    {
+      "license_expression": "bsd-new",
+      "license_expression_spdx": "BSD-3-Clause",
+      "matches": [
+        {
+          "license_expression": "bsd-new",
+          "license_expression_spdx": "BSD-3-Clause",
+          "from_file": null,
+          "start_line": 1,
+          "end_line": 1,
+          "matcher": "parser-declared-license",
+          "score": 100.0,
+          "matched_length": 1,
+          "match_coverage": 100.0,
+          "rule_relevance": 100,
+          "rule_identifier": "parser-declared-license",
+          "rule_url": null,
+          "matched_text": "BSD",
+          "referenced_filenames": []
+        }
+      ],
+      "identifier": null
+    }
+  ],
   "other_license_expression": null,
   "other_license_expression_spdx": null,
   "other_license_detections": [],
