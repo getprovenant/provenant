@@ -764,8 +764,17 @@ fn sync_packages_from_followed_package_data(
             // co-located files.
             if package.datafile_paths.len() == 1
                 && next_license_detections.is_empty()
-                && let Some(manifest_file) =
-                    manifest_file.filter(|file| !file.license_detections.is_empty())
+                && let Some(manifest_file) = manifest_file.filter(|file| {
+                    // Only adopt a manifest file's own file-level detection when the
+                    // file describes exactly one package. A multi-package installed
+                    // database (e.g. `var/lib/dpkg/status`) carries many `package_data`
+                    // entries sharing one file; its whole-file detection — such as a
+                    // bare "LGPL" mention in some package's `Description` — does not
+                    // belong to any single package and must not be smeared across all
+                    // of them. Per-package licenses still arrive via the package's own
+                    // referenced copyright file.
+                    !file.license_detections.is_empty() && file.package_data.len() == 1
+                })
             {
                 next_license_detections = manifest_file.license_detections.clone();
                 if next_declared_license_expression.is_none() {
