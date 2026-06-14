@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **12.7× median speedup** and **12.6× geometric-mean speedup** overall; the median gap grows from **7.2×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **13.2× median speedup** and **13.0× geometric-mean speedup** overall; the median gap grows from **7.3×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -464,11 +464,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `41.11s`; ScanCode `850.20s`
 - Broader monorepo package and dependency extraction (`464` vs `249` packages, `13787` vs `12017` dependencies) from the root `pnpm-lock.yaml`, many workspace fixture subtrees, and embedded Cargo/npm metadata, plus zero scan errors where ScanCode crashes on workspace `package.json` and `pnpm-lock.yaml` inputs
 
-##### [yarnpkg/berry @ c0274d6](https://github.com/yarnpkg/berry/tree/c0274d6d7ba5939f447e78aaf16e456a00cf0bd1) — **8.20× faster**
+##### [yarnpkg/berry @ c0274d6](https://github.com/yarnpkg/berry/tree/c0274d6d7ba5939f447e78aaf16e456a00cf0bd1) — **24.12× faster**
 
-- Files: 3,552
-- Run context: 2026-04-12 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `23.75s`; ScanCode `194.82s`
+- Files: 3,790
+- Run context: 2026-06-14 · berry-13260 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.65s`; ScanCode `208.66s`
 - Broader dependency extraction (`2835` vs `1301`) from Berry `yarn.lock`, workspace manifests, and `.pnp.cjs`, plus cleaner workspace package assembly that avoids ScanCode's duplicated npm package rows (`204` vs `395`) and `package.json` / `yarn.lock` assembly crashes while still surfacing extra Docker and Windows package inputs committed in the tree
 
 #### JVM / Java / Scala / Clojure
@@ -832,12 +832,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `313.61s`; ScanCode `4363.53s`
 - Broader package/dependency extraction (`40` vs `1` packages, `618` vs `7` dependencies) from vendored gRPC Bazel BUILD files plus `poetry.lock`, `pnpm-lock.yaml`, and RPM spec metadata, richer Debian namespace/PURL identity on package metadata, and cleaner SBOM author recovery with score-fusion code examples left as code data instead of people
 
-##### [nmap/nmap @ d9199d7](https://github.com/nmap/nmap/tree/d9199d7cd5e99f54fc4b67d592a30fa597a94c40) — **8.46× faster**
+##### [nmap/nmap @ d9199d7](https://github.com/nmap/nmap/tree/d9199d7cd5e99f54fc4b67d592a30fa597a94c40) — **26.96× faster**
 
-- Files: 2,587
-- Run context: 2026-04-08 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `52.87s`; ScanCode `447.07s`
-- Broader package/dependency extraction (`18` vs `2` packages, `13` vs `2` dependencies), preserved NPSL/source-available handling across core Nmap and Zenmap reference-notice files, and cleaner rejection of weak translated-manpage GPL bare-word and placeholder noise
+- Files: 2,595
+- Run context: 2026-06-14 · nmap-7251 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `25.48s`; ScanCode `686.99s`
+- Broader package/dependency extraction (`19` vs `2` packages, `13` vs `2` dependencies), preserved NPSL/source-available handling across core Nmap and Zenmap reference-notice files, and cleaner rejection of weak translated-manpage GPL bare-word and placeholder noise
 
 ##### [nginx/nginx @ 6e14e95](https://github.com/nginx/nginx/tree/6e14e954aaacce9a433d9b07b4653809c7594ab8) — **17.78× faster**
 
@@ -923,11 +923,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `61.49s`; ScanCode `1879.48s`
 - Largely matched native-tree package and dependency extraction (`341` vs `344` packages, `5771` vs `5921` dependencies) with better nested Cargo lock dependency visibility across mixed workspaces, additional Nix package visibility, and more specific versioned Cargo package identities where ScanCode emits generic lockfile rows or versionless crate names
 
-##### [rustcrypto/aeads @ 9d05d81](https://github.com/rustcrypto/aeads/tree/9d05d810c81719a8859d960220a637da8a2cdcd1) — **8.16× faster**
+##### [rustcrypto/aeads @ 9d05d81](https://github.com/rustcrypto/aeads/tree/9d05d810c81719a8859d960220a637da8a2cdcd1) — **10.53× faster**
 
 - Files: 268
-- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.06s`; ScanCode `82.06s`
+- Run context: 2026-06-14 · AEADs-10990 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.88s`; ScanCode `51.37s`
 - Matched Cargo workspace package and dependency coverage (`14` vs `14` packages, `209` vs `209` dependencies) while preserving the member-crate `Apache-2.0 OR MIT` README semantics, keeping archived NCC Group review URLs intact in `aes-gcm` and `chacha20poly1305`, surfacing a concrete `mgm` lockfile package identity where ScanCode stays anonymous, and filtering weak `team of volunteers` SECURITY.md maintainer prose out of author output
 
 ##### [systemd/systemd @ 89d705a](https://github.com/systemd/systemd/tree/89d705a892b3476de14e548f3f9b0af96207d4b0) — **23.26× faster**
@@ -1181,18 +1181,18 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `243.06s`; ScanCode `5798.22s`
 - Far broader dependency extraction (`9383` vs `6764`) across the repo-root `Gemfile`, the nested gemspec and `Gemfile.lock` tree, and mixed Go or npm sidecar manifests, with real gem versions resolved from local Ruby constants where ScanCode leaves placeholder `::VERSION` literals and with GitLab export `project.json` fixtures kept out of NuGet output
 
-##### [laravel/framework @ a3960e8](https://github.com/laravel/framework/tree/a3960e8ff8ae2daa7ff609a245c51d9fe0aca684) — **7.34× faster**
+##### [laravel/framework @ a3960e8](https://github.com/laravel/framework/tree/a3960e8ff8ae2daa7ff609a245c51d9fe0aca684) — **34.46× faster**
 
-- Files: 3,086
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `22.16s`; ScanCode `162.58s`
+- Files: 3,139
+- Run context: 2026-06-14 · framework-5973 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.06s`; ScanCode `243.30s`
 - Matched Composer package coverage (`37` vs `37`) with broader dependency extraction (`656` vs `498`) from the committed exception-renderer `package-lock.json`, plus cleaner rejection of Blade-template pseudo-copyrights and author false positives such as `extends Model`
 
-##### [libwww-perl/libwww-perl @ 7420d1b](https://github.com/libwww-perl/libwww-perl/tree/7420d1bfff7cd5369ca24e87c37edf97b2cbb0c1) — **7.40× faster**
+##### [libwww-perl/libwww-perl @ 7420d1b](https://github.com/libwww-perl/libwww-perl/tree/7420d1bfff7cd5369ca24e87c37edf97b2cbb0c1) — **9.49× faster**
 
 - Files: 98
-- Run context: 2026-04-18 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.94s`; ScanCode `80.95s`
+- Run context: 2026-06-14 · libwww-perl-9768 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.01s`; ScanCode `47.52s`
 - Direct CPAN package identity and broader dependency extraction (`1` vs `0` packages, `44` vs `0` dependencies) from `META.json` prereq scopes, with repository and homepage metadata preserved from CPAN resources
 
 ##### [PerlDancer/Dancer2 @ a1faa22](https://github.com/PerlDancer/Dancer2/tree/a1faa22a78ff6f3c40ef5b71424dbe3f2c4a13a8) — **10.44× faster**
@@ -1274,12 +1274,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `25.28s`; ScanCode `549.75s`
 - Direct Julia package visibility and much broader dependency extraction (`115` vs `0` packages, `240` vs `0` dependencies) from stdlib, test, and nested `Project.toml` / `Manifest.toml` pairs across the tree, with richer author recovery on Julia metadata and cleaner rejection of prose-only copyright or holder noise
 
-##### [JuliaLang/Pkg.jl @ c96cfdf](https://github.com/JuliaLang/Pkg.jl/tree/c96cfdf70976e8a5cc21fcef53c0ba137f6b2f64) — **7.29× faster**
+##### [JuliaLang/Pkg.jl @ c96cfdf](https://github.com/JuliaLang/Pkg.jl/tree/c96cfdf70976e8a5cc21fcef53c0ba137f6b2f64) — **11.47× faster**
 
-- Files: 486
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `13.20s`; ScanCode `96.27s`
-- Direct Julia package visibility and much broader dependency extraction (`98` vs `0` packages, `150` vs `0` dependencies) from `Project.toml`, `Manifest.toml`, and sibling project-plus-manifest assembly across root, docs, and test fixture trees, with safer URL credential stripping in Julia metadata examples
+- Files: 475
+- Run context: 2026-06-14 · Pkg.jl-10428 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.21s`; ScanCode `59.75s`
+- Direct Julia package visibility and much broader dependency extraction (`110` vs `0` packages, `150` vs `0` dependencies) from `Project.toml`, `Manifest.toml`, and sibling project-plus-manifest assembly across root, docs, and test fixture trees, with safer URL credential stripping in Julia metadata examples
 
 ##### [JuliaPlots/Plots.jl @ 70f0cd7](https://github.com/JuliaPlots/Plots.jl/tree/70f0cd7a59dc667791503eaf0ab14190069a9be4) — **9.58× faster**
 
@@ -1392,12 +1392,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `17.19s`; ScanCode `316.25s`
 - Broader Amazon Linux 2 RPM rootfs inventory (`45` vs `0` packages, `590` vs `0` dependencies) from the real Berkeley rpmdb, with YumDB sidecar provenance merged onto matching installed RPM packages under `extra_data.yumdb` for repository, checksum, origin, and install-reason metadata while ScanCode reports one rpmdb assembly error and leaves top-level package/dependency output empty
 
-##### [debian:bookworm-slim @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **7.47× faster**
+##### [debian:bookworm-slim @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **18.14× faster**
 
-- Files: 3,267
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `77.04s`; ScanCode `575.28s`
-- More correct Linux-distro identity on `usr/lib/os-release` (`debian` instead of ScanCode's incorrect `distroless`) with homepage, support, and bug-report URLs preserved, plus broader dependency extraction (`536` vs `0`) from the real `dpkg/status` relation fields while preserving top-level package count parity
+- Files: 3,268
+- Run context: 2026-06-14 · rootfs-16242 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `13.31s`; ScanCode `241.45s`
+- More correct Linux-distro identity on `usr/lib/os-release` (`debian` instead of ScanCode's incorrect `distroless`) with homepage, support, and bug-report URLs preserved, plus broader dependency extraction (`534` vs `0`) from the real `dpkg/status` relation fields while preserving top-level package count parity (`88` vs `88`)
 
 ##### [distroless base-debian12 @ sha256:9dce90e](https://github.com/GoogleContainerTools/distroless/blob/main/PACKAGE_METADATA.md) — **9.17× faster**
 
@@ -1480,11 +1480,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.81s`; ScanCode `70.01s`
 - Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `MIT` declared-license reporting instead of a raw manifest-license structure
 
-##### [Humanizer.Core 3.0.10 .nupkg @ sha256:99f9521](https://api.nuget.org/v3-flatcontainer/humanizer.core/3.0.10/humanizer.core.3.0.10.nupkg) — **7.24× faster**
+##### [Humanizer.Core 3.0.10 .nupkg @ sha256:99f9521](https://api.nuget.org/v3-flatcontainer/humanizer.core/3.0.10/humanizer.core.3.0.10.nupkg) — **8.91× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.66s`; ScanCode `69.97s`
+- Run context: 2026-06-14 · humanizer.nupkg-15454 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.45s`; ScanCode `39.63s`
 - Real NuGet package-archive extraction on the shipped `.nupkg` (`1` vs `0` packages, `6` vs `0` dependencies), with a named `pkg:nuget/Humanizer.Core@3.0.10` identity instead of ScanCode's generic unnamed archive row, plus an `MIT` license detection from modern package metadata
 
 ##### [pkg 2.7.4 .pkg +COMPACT_MANIFEST sample @ sha256:4128dba](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/Latest/pkg.pkg) — **7.72× faster**
@@ -1508,11 +1508,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.66s`; ScanCode `40.20s`
 - Matched shipped gem package and dependency coverage (`1` vs `1` packages, `10` vs `10` dependencies), with semantically combined author/email party data and an extra parser-declared `MIT` license detection on the archive file itself
 
-##### [sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba](https://download.fedoraproject.org/pub/fedora/linux/releases/42/Everything/source/tree/Packages/s/sudo-1.9.15-7.p5.fc42.src.rpm) — **7.20× faster**
+##### [sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba](https://download.fedoraproject.org/pub/fedora/linux/releases/42/Everything/source/tree/Packages/s/sudo-1.9.15-7.p5.fc42.src.rpm) — **9.42× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.43s`; ScanCode `67.87s`
+- Run context: 2026-06-14 · sudo.src.rpm-14693 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.17s`; ScanCode `39.29s`
 - Matched shipped source-RPM package visibility (`1` vs `1`) with broader dependency extraction (`17` vs `0`) from the archive header metadata, plus an RPM namespace-qualified source package identity and an extra `ISC` license detection where ScanCode stays generic
 
 #### Mobile app artifacts
@@ -1575,11 +1575,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `24.22s`; ScanCode `89.38s`
 - Cargo-auditable dependency visibility on the shipped `fishnet` binary (`406` file-level dependencies vs `0`), plus cleaner normalization of weak binary-text author/email noise around OpenSSL fragments such as `<appro@openssl.org>`
 
-##### [NSIS 3.12 setup.exe](https://prdownloads.sourceforge.net/nsis/nsis-3.12-setup.exe?download) — **3.87× faster**
+##### [NSIS 3.12 setup.exe](https://prdownloads.sourceforge.net/nsis/nsis-3.12-setup.exe?download) — **4.90× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `20.04s`; ScanCode `77.60s`
+- Run context: 2026-06-14 · nsis-3.12-setup.exe-15839 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.76s`; ScanCode `42.90s`
 - Matched NSIS installer plus Windows PE package visibility (`2` vs `2` file-level package records), with a concrete `pkg:winexe/nsis-3.12-setup@3.12` identity on the executable metadata record and cleaner rejection of ScanCode's spurious `LicenseRef-scancode-unknown` license inferred only from the `LegalCopyright` URL
 
 ##### [Windows 10 KB5049993 cumulative update extracted snapshot](https://support.microsoft.com/help/5049993) — **4.32× faster**
