@@ -121,6 +121,51 @@ impl OutputFileInfo {
             || self.percentage_of_license_text.is_some()
     }
 
+    /// The scancode-key counterpart of [`Self::detected_license_expression_spdx`].
+    /// Mirrors the same three-tier fallback (file detections, then package-data
+    /// detections, then the carried expression) but on the non-SPDX
+    /// `license_expression` and with the non-strict combiner, since scancode keys
+    /// such as `proprietary-license` are not valid SPDX tokens.
+    pub(crate) fn detected_license_expression(&self) -> Option<String> {
+        let combine = |expressions: Vec<String>| -> Option<String> {
+            let expressions: Vec<String> = expressions
+                .into_iter()
+                .filter(|expression| !expression.is_empty())
+                .collect();
+            if expressions.is_empty() {
+                return None;
+            }
+            crate::utils::spdx::select_primary_license_expression(expressions.clone()).or_else(
+                || {
+                    crate::utils::spdx::combine_license_expressions_preserving_structure(
+                        expressions,
+                    )
+                },
+            )
+        };
+
+        combine(
+            self.license_detections
+                .iter()
+                .map(|detection| detection.license_expression.clone())
+                .collect(),
+        )
+        .or_else(|| {
+            combine(
+                self.package_data
+                    .iter()
+                    .flat_map(|package_data| package_data.license_detections.iter())
+                    .map(|detection| detection.license_expression.clone())
+                    .collect(),
+            )
+        })
+        .or_else(|| {
+            self.license_expression
+                .clone()
+                .filter(|expression| !expression.is_empty())
+        })
+    }
+
     pub(crate) fn detected_license_expression_spdx(&self) -> Option<String> {
         {
             let expressions: Option<Vec<String>> = self
@@ -206,6 +251,11 @@ impl Serialize for OutputFileInfo {
         }
 
         insert_json(&mut map, "package_data", &self.package_data)?;
+        insert_json(
+            &mut map,
+            "detected_license_expression",
+            self.detected_license_expression(),
+        )?;
         insert_json(
             &mut map,
             "detected_license_expression_spdx",
@@ -592,6 +642,7 @@ mod tests {
                 "extension": ".rs",
                 "size": 0,
                 "package_data": [],
+                "detected_license_expression": null,
                 "detected_license_expression_spdx": null,
                 "license_detections": [],
                 "copyrights": [],

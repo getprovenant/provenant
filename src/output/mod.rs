@@ -446,6 +446,59 @@ mod tests {
     }
 
     #[test]
+    fn test_detected_license_expression_prefers_detection_values() {
+        // The scancode-key field reports the detection's `license_expression`
+        // (e.g. `bsd-new`), not the SPDX form, parallel to the SPDX accessor.
+        let mut internal = sample_internal_output();
+        internal.files[0].license_detections = vec![crate::models::LicenseDetection {
+            license_expression: "bsd-new".to_string(),
+            license_expression_spdx: "BSD-3-Clause".to_string(),
+            matches: vec![],
+            detection_log: vec![],
+            identifier: String::new(),
+        }];
+        internal.files[0].detected_license_expression = None;
+
+        let schema_file = OutputFileInfo::from(&internal.files[0]);
+        let schema_value = serde_json::to_value(&schema_file).expect("file info serializes");
+        assert_eq!(schema_value["detected_license_expression"], "bsd-new");
+        assert_eq!(
+            schema_value["detected_license_expression_spdx"],
+            "BSD-3-Clause"
+        );
+    }
+
+    #[test]
+    fn test_detected_license_expression_falls_back_to_package_data_detections() {
+        // With no file-level detections, the scancode-key field falls back to
+        // package-data detections, mirroring the SPDX accessor's second tier.
+        let mut internal = sample_internal_output();
+        internal.files[0].license_detections = vec![];
+        internal.files[0].detected_license_expression = None;
+        internal.files[0].package_data = vec![crate::models::PackageData {
+            license_detections: vec![crate::models::LicenseDetection {
+                license_expression: "bsd-simplified".to_string(),
+                license_expression_spdx: "BSD-2-Clause".to_string(),
+                matches: vec![],
+                detection_log: vec![],
+                identifier: String::new(),
+            }],
+            ..Default::default()
+        }];
+
+        let schema_file = OutputFileInfo::from(&internal.files[0]);
+        let schema_value = serde_json::to_value(&schema_file).expect("file info serializes");
+        assert_eq!(
+            schema_value["detected_license_expression"],
+            "bsd-simplified"
+        );
+        assert_eq!(
+            schema_value["detected_license_expression_spdx"],
+            "BSD-2-Clause"
+        );
+    }
+
+    #[test]
     fn test_json_lines_writer_sorts_files_by_path_for_reproducibility() {
         let mut internal = sample_internal_output();
         internal.files.reverse();

@@ -215,7 +215,7 @@
       "is_top_level": true,
       "is_key_file": true,
       "is_manifest": true,
-      "detected_license_expression": null,
+      "detected_license_expression": "bsd-new",
       "detected_license_expression_spdx": "BSD-3-Clause",
       "license_detections": [
         {
@@ -272,7 +272,7 @@
       "is_top_level": false,
       "is_key_file": false,
       "is_manifest": false,
-      "detected_license_expression": null,
+      "detected_license_expression": "bsd-new",
       "detected_license_expression_spdx": "BSD-3-Clause",
       "license_detections": [
         {

@@ -218,7 +218,7 @@
       "is_top_level": true,
       "is_key_file": true,
       "is_manifest": true,
-      "detected_license_expression": null,
+      "detected_license_expression": "mit",
       "detected_license_expression_spdx": "MIT",
       "license_detections": [
         {
@@ -273,7 +273,7 @@
       "is_top_level": true,
       "is_key_file": true,
       "is_manifest": false,
-      "detected_license_expression": null,
+      "detected_license_expression": "mit",
       "detected_license_expression_spdx": "MIT",
       "license_detections": [
         {
