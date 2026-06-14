@@ -14,6 +14,7 @@ use crate::license_detection::query::QueryRun;
 use crate::models::LineNumber;
 use crate::models::MatchScore;
 use bit_set::BitSet;
+use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -63,14 +64,20 @@ fn find_longest_match_impl(
     let mut best_j = rule_lo;
     let mut best_size = 0;
 
-    let mut j2len: HashMap<usize, usize> = HashMap::new();
+    // `j2len` is a pure keyed lookup table (difflib's rolling longest-run map),
+    // never iterated, so FxHash (vs SipHash on `usize` keys) is byte-identical
+    // and much cheaper. The two maps are reused across iterations via clear+swap
+    // to avoid a per-query-position allocation. This loop dominates license
+    // detection on large-file repos (e.g. uv's big lockfiles); see #1061.
+    let mut j2len: FxHashMap<usize, usize> = FxHashMap::default();
+    let mut new_j2len: FxHashMap<usize, usize> = FxHashMap::default();
 
     for (offset, i) in (query_lo..query_hi).enumerate() {
         if offset.is_multiple_of(256) {
             crate::license_detection::ensure_within_deadline(context.deadline)?;
         }
 
-        let mut new_j2len: HashMap<usize, usize> = HashMap::new();
+        new_j2len.clear();
         let cur_a = context.query_tokens[i];
 
         if cur_a.as_usize() < context.len_legalese
@@ -100,7 +107,9 @@ fn find_longest_match_impl(
                 }
             }
         }
-        j2len = new_j2len;
+        // `new_j2len` holds this position's runs; it becomes `j2len` for the next
+        // iteration, and the old `j2len` becomes the reused (cleared) buffer.
+        std::mem::swap(&mut j2len, &mut new_j2len);
     }
 
     if best_size > 0 {
