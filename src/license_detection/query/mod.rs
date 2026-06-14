@@ -123,6 +123,15 @@ pub struct Query<'a> {
     /// Corresponds to Python: `self.spdx_lines = []` (line 507)
     pub spdx_lines: Vec<(String, usize, usize)>,
 
+    /// Lazily-computed byte ranges (into `text`) of each line's content, in the
+    /// exact form `str::lines()` yields (line terminators and a preceding `\r`
+    /// excluded, no trailing empty line after a final `\n`). Built once on first
+    /// `matched_text` call so per-match extraction is O(lines-in-range) instead
+    /// of re-scanning the whole file via `text.lines()` on every call.
+    ///
+    /// `OnceLock` (not `OnceCell`) so `Query` stays `Sync`.
+    pub(crate) line_content_ranges: std::sync::OnceLock<Vec<std::ops::Range<usize>>>,
+
     /// Reference to the license index for dictionary access and metadata
     pub index: &'a LicenseIndex,
 }
@@ -658,6 +667,7 @@ impl<'a> Query<'a> {
             is_binary,
             query_run_ranges: query_runs,
             spdx_lines,
+            line_content_ranges: std::sync::OnceLock::new(),
             index,
         })
     }
@@ -857,7 +867,61 @@ impl<'a> Query<'a> {
     ///
     /// Corresponds to Python: `matched_text()` method in match.py (lines 757-795)
     pub fn matched_text(&self, start_line: usize, end_line: usize) -> String {
-        matched_text_from_text(&self.text, start_line, end_line)
+        if start_line == 0 || end_line == 0 || start_line > end_line {
+            return String::new();
+        }
+        let ranges = self.line_content_ranges();
+        let from = start_line - 1;
+        if from >= ranges.len() {
+            return String::new();
+        }
+        // `end_line` is an inclusive 1-indexed bound, so `end_line` (not +1) is
+        // the exclusive 0-indexed end; clamp to the available line count.
+        let to = end_line.min(ranges.len());
+        ranges[from..to]
+            .iter()
+            .map(|r| &self.text[r.clone()])
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// True if any line in the inclusive 1-indexed `[start_line, end_line]`
+    /// range has content longer than `max_line_length`. Uses the cached line
+    /// ranges; byte-identical to checking `line.len()` over `text.lines()`.
+    pub(crate) fn line_range_has_oversized_line(
+        &self,
+        start_line: usize,
+        end_line: usize,
+        max_line_length: usize,
+    ) -> bool {
+        if start_line == 0 || end_line == 0 || start_line > end_line {
+            return false;
+        }
+        let ranges = self.line_content_ranges();
+        let from = start_line - 1;
+        if from >= ranges.len() {
+            return false;
+        }
+        let to = end_line.min(ranges.len());
+        ranges[from..to].iter().any(|r| r.len() > max_line_length)
+    }
+
+    /// Byte ranges of each line's content within `text`, computed once and
+    /// cached. Built directly from `str::lines()` so the slices reproduce its
+    /// semantics exactly (terminators / leading `\r` excluded, no trailing empty
+    /// line after a final `\n`), keeping [`Query::matched_text`] byte-identical
+    /// to the previous `text.lines()`-per-call implementation.
+    fn line_content_ranges(&self) -> &[std::ops::Range<usize>] {
+        self.line_content_ranges.get_or_init(|| {
+            let base = self.text.as_ptr() as usize;
+            self.text
+                .lines()
+                .map(|line| {
+                    let start = line.as_ptr() as usize - base;
+                    start..start + line.len()
+                })
+                .collect()
+        })
     }
 }
 

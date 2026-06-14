@@ -1125,12 +1125,24 @@ fn extract_output_matched_text(
     let start_line = license_match.start_line.get();
     let end_line = license_match.end_line.get();
 
-    if line_range_has_oversized_line(
-        text_content,
-        start_line,
-        end_line,
-        MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH,
-    ) {
+    // When the query is available, `text_content` is the same string the query
+    // was built from, so reuse its cached line index (O(lines-in-range)) instead
+    // of re-scanning the whole file. Falls back to the free functions otherwise.
+    let has_oversized_line = match query {
+        Some(q) => q.line_range_has_oversized_line(
+            start_line,
+            end_line,
+            MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH,
+        ),
+        None => line_range_has_oversized_line(
+            text_content,
+            start_line,
+            end_line,
+            MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH,
+        ),
+    };
+
+    if has_oversized_line {
         if let Some(compact_text) = compact_matched_text_from_query(query, license_match) {
             return cap_output_matched_text(compact_text);
         }
@@ -1142,8 +1154,14 @@ fn extract_output_matched_text(
         ));
     }
 
-    let whole_line =
-        crate::license_detection::query::matched_text_from_text(text_content, start_line, end_line);
+    let whole_line = match query {
+        Some(q) => q.matched_text(start_line, end_line),
+        None => crate::license_detection::query::matched_text_from_text(
+            text_content,
+            start_line,
+            end_line,
+        ),
+    };
 
     if whole_line.len() > MAX_OUTPUT_MATCHED_TEXT_BYTES
         && let Some(compact_text) = compact_matched_text_from_query(query, license_match)
