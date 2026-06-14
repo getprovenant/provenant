@@ -223,7 +223,12 @@ fn promote_whole_statement_clue(
     let [detection] = detections else {
         return None;
     };
-    if detection.license_expression.is_some() {
+    // Only a fully expression-less clue detection is the bare-name case this
+    // promotes. A detection that already carries a public expression in either the
+    // scancode or SPDX form is a real detection and must not be re-derived here
+    // (the `(None, Some)` combination is not produced by the current rule set, but
+    // the symmetric guard keeps the invariant explicit).
+    if detection.license_expression.is_some() || detection.license_expression_spdx.is_some() {
         return None;
     }
     let [match_item] = detection.matches.as_slice() else {
@@ -1485,11 +1490,16 @@ mod tests {
         let mut package = package_with(Some("BSD with advertising"), None, None);
         populate_declared_license_and_holder(&mut package);
 
+        // Bidirectional guard: the fragment is neither collapsed to the bare-name
+        // expression nor mapped to anything else — it stays an honest null.
         assert_ne!(
             package.declared_license_expression.as_deref(),
             Some("bsd-new"),
             "a bare-name fragment must not be promoted to the bare-name expression"
         );
+        assert_eq!(package.declared_license_expression, None);
+        assert_eq!(package.declared_license_expression_spdx, None);
+        assert!(package.license_detections.is_empty());
     }
 
     #[test]
