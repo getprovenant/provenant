@@ -30,6 +30,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     }
     let mut c = original.clone();
     c = strip_known_copyright_wrappers(&c);
+    c = trim_separator_rule_runs(&c);
     c = strip_trailing_quote_before_email(&c);
     c = normalize_b_dot_angle_emails(&c);
     c = strip_nickname_quotes(&c);
@@ -229,8 +230,36 @@ pub(super) fn strip_known_copyright_wrappers(s: &str) -> String {
             "#,
         )
     });
+    // PE / Windows version-info field labels (e.g. `LegalCopyright:`,
+    // `LegalTrademarks:`) extracted from compiled binaries are emitted as
+    // `Label: <value>` lines. When the value is itself a copyright statement,
+    // the bare label leaks into the detected copyright/holder. Strip a single
+    // leading `Word:` / `WordWord:`-style label that immediately precedes a
+    // `Copyright` / `(c)` / `©` token so the statement starts at the actual
+    // copyright. Kept conservative: only one alphabetic label token, and the
+    // remainder must begin with a copyright marker.
+    static VERSION_INFO_LABEL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?x)
+            ^[A-Za-z][A-Za-z0-9]*\s*:\s*
+            (?P<value>
+                (?i:(?:copyright|copr\.?|\u{0040}copyright)\b | \(c\) | \u{00a9})
+                .*
+            )$",
+        )
+    });
 
     let trimmed = s.trim();
+    if let Some(captures) = VERSION_INFO_LABEL_RE.captures(trimmed) {
+        let value = captures
+            .name("value")
+            .map(|m| m.as_str())
+            .unwrap_or("")
+            .trim();
+        if !value.is_empty() {
+            return value.to_string();
+        }
+    }
     if let Some(captures) = VALUE_LEGALCOPYRIGHT_RE.captures(trimmed) {
         let value = captures
             .name("value")
@@ -281,6 +310,23 @@ pub(super) fn strip_known_copyright_wrappers(s: &str) -> String {
     }
 
     s.to_string()
+}
+
+/// Trim ASCII separator/rule runs (e.g. `====`, `----`, `____`, long `***`
+/// runs) that bleed into a detected copyright statement from adjacent layout
+/// in compiled-binary version-info blobs.
+///
+/// Such a run is decorative, never part of a holder name, so it is collapsed
+/// to a single space and the result re-squeezed. Conservative: only runs of
+/// three or more identical separator characters are touched, leaving ordinary
+/// punctuation (single/double dashes, `(c)`, etc.) intact.
+pub(super) fn trim_separator_rule_runs(s: &str) -> String {
+    static SEPARATOR_RUN_RE: LazyLock<Regex> =
+        LazyLock::new(|| compile_static_regex(r"={3,}|_{3,}|\*{3,}|-{3,}"));
+    if !SEPARATOR_RUN_RE.is_match(s) {
+        return s.to_string();
+    }
+    normalize_whitespace(&SEPARATOR_RUN_RE.replace_all(s, " "))
 }
 
 pub(super) fn strip_trailing_all_rights_reserved_clause(s: &str) -> String {

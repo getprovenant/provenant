@@ -80,7 +80,7 @@ pub(super) fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<
         &*HOLDERS_PREFIXES
     };
 
-    let mut h = s.replace("build.year", " ");
+    let mut h = trim_separator_rule_runs(&s.replace("build.year", " "));
     let had_lowercase_handle_angle_email = is_lowercase_handle_angle_email(&h);
     h = strip_trailing_lowercase_handle_angle_email(&h);
     h = strip_trailing_quote_before_email(&h);
