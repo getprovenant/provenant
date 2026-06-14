@@ -70,6 +70,24 @@ mod tests {
     }
 
     #[test]
+    fn test_lock_package_extracts_declared_license() {
+        // composer.lock entries carry their own `license` field; the lockfile
+        // parser must surface it as declared-license data (parity with ScanCode).
+        let content = r#"{"packages":[{"name":"acme/lib","version":"1.0.0","license":["MIT"]}]}"#;
+        let (_temp_dir, path) = create_temp_file("composer.lock", content);
+        let packages = ComposerLockParser::extract_packages(&path);
+
+        let pkg = packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("lib"))
+            .expect("acme/lib lock package should be extracted");
+        assert_eq!(pkg.declared_license_expression.as_deref(), Some("mit"));
+        assert_eq!(pkg.declared_license_expression_spdx.as_deref(), Some("MIT"));
+        assert_eq!(pkg.extracted_license_statement.as_deref(), Some("MIT"));
+        assert_eq!(pkg.license_detections.len(), 1);
+    }
+
+    #[test]
     fn test_composer_json_is_match() {
         let valid_path = PathBuf::from("/some/path/composer.json");
         let alternate_prefix = PathBuf::from("/some/path/symfony.composer.json");
