@@ -251,9 +251,9 @@ ScanCode: 151.70s</title></rect>
     <rect x="471.36" y="416.81" width="8" height="8" fill="#d97706" rx="1.5"><title>sous-chefs/apache2 @ 420d824
 Files: 246
 ScanCode: 87.31s</title></rect>
-    <rect x="475.18" y="444.77" width="8" height="8" fill="#d97706" rx="1.5"><title>libevent/libevent @ 4829651
+    <rect x="475.18" y="418.07" width="8" height="8" fill="#d97706" rx="1.5"><title>libevent/libevent @ 4829651
 Files: 260
-ScanCode: 48.32s</title></rect>
+ScanCode: 85.01s</title></rect>
     <rect x="475.44" y="397.66" width="8" height="8" fill="#d97706" rx="1.5"><title>madler/zlib @ f9dd600
 Files: 261
 ScanCode: 130.94s</title></rect>
@@ -281,9 +281,9 @@ ScanCode: 99.03s</title></rect>
     <rect x="490.97" y="409.34" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaPlots/Plots.jl @ 70f0cd7
 Files: 327
 ScanCode: 102.27s</title></rect>
-    <rect x="498.55" y="419.64" width="8" height="8" fill="#d97706" rx="1.5"><title>docker-library/official-images @ 71567fb
+    <rect x="498.55" y="443.94" width="8" height="8" fill="#d97706" rx="1.5"><title>docker-library/official-images @ 71567fb
 Files: 365
-ScanCode: 82.24s</title></rect>
+ScanCode: 49.17s</title></rect>
     <rect x="499.67" y="398.49" width="8" height="8" fill="#d97706" rx="1.5"><title>SDWebImage/SDWebImage @ c3ad5e1
 Files: 371
 ScanCode: 128.67s</title></rect>
@@ -314,9 +314,9 @@ ScanCode: 149.17s</title></rect>
     <rect x="518.28" y="412.20" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaLang/Pkg.jl @ c96cfdf
 Files: 486
 ScanCode: 96.27s</title></rect>
-    <rect x="522.27" y="462.08" width="8" height="8" fill="#d97706" rx="1.5"><title>nix-community/dream2nix @ 69eb01f
+    <rect x="522.27" y="434.69" width="8" height="8" fill="#d97706" rx="1.5"><title>nix-community/dream2nix @ 69eb01f
 Files: 515
-ScanCode: 33.50s</title></rect>
+ScanCode: 59.81s</title></rect>
     <rect x="523.07" y="374.90" width="8" height="8" fill="#d97706" rx="1.5"><title>nginx/nginx @ 6e14e95
 Files: 521
 ScanCode: 211.97s</title></rect>
@@ -371,9 +371,9 @@ ScanCode: 188.27s</title></rect>
     <rect x="549.45" y="345.68" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/scancode.io @ 904373a
 Files: 764
 ScanCode: 393.40s</title></rect>
-    <rect x="555.41" y="432.81" width="8" height="8" fill="#d97706" rx="1.5"><title>tokio-rs/tokio @ 5db10f5
+    <rect x="555.41" y="408.67" width="8" height="8" fill="#d97706" rx="1.5"><title>tokio-rs/tokio @ 5db10f5
 Files: 833
-ScanCode: 62.23s</title></rect>
+ScanCode: 103.73s</title></rect>
     <rect x="555.57" y="409.04" width="8" height="8" fill="#d97706" rx="1.5"><title>conda/conda-build @ 5da509d
 Files: 835
 ScanCode: 102.91s</title></rect>
@@ -383,24 +383,24 @@ ScanCode: 398.45s</title></rect>
     <rect x="559.89" y="364.30" width="8" height="8" fill="#d97706" rx="1.5"><title>Debian/apt @ 6b12812
 Files: 889
 ScanCode: 265.28s</title></rect>
-    <rect x="560.43" y="407.11" width="8" height="8" fill="#d97706" rx="1.5"><title>facebook/watchman @ 426a7b7
+    <rect x="560.43" y="391.49" width="8" height="8" fill="#d97706" rx="1.5"><title>facebook/watchman @ 426a7b7
 Files: 896
-ScanCode: 107.21s</title></rect>
+ScanCode: 149.22s</title></rect>
     <rect x="566.54" y="319.22" width="8" height="8" fill="#d97706" rx="1.5"><title>KhronosGroup/Vulkan-ValidationLayers @ d72c5f5
 Files: 979
 ScanCode: 688.72s</title></rect>
-    <rect x="567.10" y="418.44" width="8" height="8" fill="#d97706" rx="1.5"><title>python-poetry/poetry @ bfce511
+    <rect x="567.10" y="402.22" width="8" height="8" fill="#d97706" rx="1.5"><title>python-poetry/poetry @ bfce511
 Files: 987
-ScanCode: 84.36s</title></rect>
-    <rect x="570.04" y="418.11" width="8" height="8" fill="#d97706" rx="1.5"><title>composer/composer @ a2bf8cb
+ScanCode: 118.91s</title></rect>
+    <rect x="570.04" y="404.47" width="8" height="8" fill="#d97706" rx="1.5"><title>composer/composer @ a2bf8cb
 Files: 1030
-ScanCode: 84.94s</title></rect>
+ScanCode: 113.37s</title></rect>
     <rect x="573.49" y="357.97" width="8" height="8" fill="#d97706" rx="1.5"><title>jquery/jquery-ui @ eda7aa3
 Files: 1083
 ScanCode: 303.29s</title></rect>
-    <rect x="574.44" y="398.92" width="8" height="8" fill="#d97706" rx="1.5"><title>pointfreeco/swift-composable-architecture @ 7517cc3
+    <rect x="574.44" y="417.69" width="8" height="8" fill="#d97706" rx="1.5"><title>pointfreeco/swift-composable-architecture @ 7517cc3
 Files: 1098
-ScanCode: 127.50s</title></rect>
+ScanCode: 85.71s</title></rect>
     <rect x="575.19" y="386.04" width="8" height="8" fill="#d97706" rx="1.5"><title>commercialhaskell/stack @ cb6070f
 Files: 1110
 ScanCode: 167.47s</title></rect>
@@ -464,9 +464,9 @@ ScanCode: 534.66s</title></rect>
     <rect x="615.38" y="337.97" width="8" height="8" fill="#d97706" rx="1.5"><title>Fedora Minimal 42 container rootfs @ sha256:c30f069
 Files: 1989
 ScanCode: 463.11s</title></rect>
-    <rect x="618.50" y="382.03" width="8" height="8" fill="#d97706" rx="1.5"><title>rubocop/rubocop @ 4e0d642
+    <rect x="618.50" y="383.74" width="8" height="8" fill="#d97706" rx="1.5"><title>rubocop/rubocop @ 4e0d642
 Files: 2081
-ScanCode: 182.30s</title></rect>
+ScanCode: 175.80s</title></rect>
     <rect x="619.68" y="377.56" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/graph @ ae8e08d
 Files: 2117
 ScanCode: 200.37s</title></rect>
@@ -485,18 +485,18 @@ ScanCode: 272.30s</title></rect>
     <rect x="633.50" y="339.64" width="8" height="8" fill="#d97706" rx="1.5"><title>nmap/nmap @ d9199d7
 Files: 2587
 ScanCode: 447.07s</title></rect>
-    <rect x="634.05" y="363.36" width="8" height="8" fill="#d97706" rx="1.5"><title>pandas-dev/pandas @ c385d01
+    <rect x="634.05" y="342.72" width="8" height="8" fill="#d97706" rx="1.5"><title>pandas-dev/pandas @ c385d01
 Files: 2608
-ScanCode: 270.61s</title></rect>
+ScanCode: 418.88s</title></rect>
     <rect x="638.16" y="353.58" width="8" height="8" fill="#d97706" rx="1.5"><title>jgm/pandoc @ d9838eb
 Files: 2768
 ScanCode: 332.82s</title></rect>
     <rect x="639.24" y="345.52" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/std @ a864f62
 Files: 2812
 ScanCode: 394.76s</title></rect>
-    <rect x="640.96" y="398.96" width="8" height="8" fill="#d97706" rx="1.5"><title>rust-lang/cargo @ b54fe55
+    <rect x="640.96" y="376.44" width="8" height="8" fill="#d97706" rx="1.5"><title>rust-lang/cargo @ b54fe55
 Files: 2883
-ScanCode: 127.38s</title></rect>
+ScanCode: 205.19s</title></rect>
     <rect x="641.06" y="351.33" width="8" height="8" fill="#d97706" rx="1.5"><title>pnpm/pnpm @ 2a1ffe1
 Files: 2887
 ScanCode: 349.11s</title></rect>
@@ -560,12 +560,12 @@ ScanCode: 452.09s</title></rect>
     <rect x="677.07" y="355.67" width="8" height="8" fill="#d97706" rx="1.5"><title>rails/rails @ 27fb2a9
 Files: 4869
 ScanCode: 318.46s</title></rect>
-    <rect x="681.62" y="364.16" width="8" height="8" fill="#d97706" rx="1.5"><title>go-gitea/gitea @ 47fdf3e2
+    <rect x="681.62" y="343.50" width="8" height="8" fill="#d97706" rx="1.5"><title>go-gitea/gitea @ 47fdf3e2
 Files: 5201
-ScanCode: 266.07s</title></rect>
-    <rect x="682.57" y="347.38" width="8" height="8" fill="#d97706" rx="1.5"><title>AvaloniaUI/Avalonia @ b7e95c2
+ScanCode: 412.03s</title></rect>
+    <rect x="682.57" y="336.59" width="8" height="8" fill="#d97706" rx="1.5"><title>AvaloniaUI/Avalonia @ b7e95c2
 Files: 5273
-ScanCode: 379.55s</title></rect>
+ScanCode: 476.87s</title></rect>
     <rect x="683.62" y="336.32" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/felix-dev @ 20aee77
 Files: 5354
 ScanCode: 479.56s</title></rect>
@@ -919,9 +919,9 @@ Provenant: 12.34s</title></circle>
     <circle cx="475.36" cy="514.55" r="4.5" fill="#2563eb"><title>sous-chefs/apache2 @ 420d824
 Files: 246
 Provenant: 12.01s</title></circle>
-    <circle cx="479.18" cy="515.90" r="4.5" fill="#2563eb"><title>libevent/libevent @ 4829651
+    <circle cx="479.18" cy="550.34" r="4.5" fill="#2563eb"><title>libevent/libevent @ 4829651
 Files: 260
-Provenant: 11.67s</title></circle>
+Provenant: 5.63s</title></circle>
     <circle cx="479.44" cy="519.30" r="4.5" fill="#2563eb"><title>madler/zlib @ f9dd600
 Files: 261
 Provenant: 10.86s</title></circle>
@@ -949,9 +949,9 @@ Provenant: 10.62s</title></circle>
     <circle cx="494.97" cy="520.14" r="4.5" fill="#2563eb"><title>JuliaPlots/Plots.jl @ 70f0cd7
 Files: 327
 Provenant: 10.67s</title></circle>
-    <circle cx="502.55" cy="484.90" r="4.5" fill="#2563eb"><title>docker-library/official-images @ 71567fb
+    <circle cx="502.55" cy="557.98" r="4.5" fill="#2563eb"><title>docker-library/official-images @ 71567fb
 Files: 365
-Provenant: 22.49s</title></circle>
+Provenant: 4.79s</title></circle>
     <circle cx="503.67" cy="512.24" r="4.5" fill="#2563eb"><title>SDWebImage/SDWebImage @ c3ad5e1
 Files: 371
 Provenant: 12.61s</title></circle>
@@ -982,9 +982,9 @@ Provenant: 12.80s</title></circle>
     <circle cx="522.28" cy="510.08" r="4.5" fill="#2563eb"><title>JuliaLang/Pkg.jl @ c96cfdf
 Files: 486
 Provenant: 13.20s</title></circle>
-    <circle cx="526.27" cy="490.66" r="4.5" fill="#2563eb"><title>nix-community/dream2nix @ 69eb01f
+    <circle cx="526.27" cy="527.92" r="4.5" fill="#2563eb"><title>nix-community/dream2nix @ 69eb01f
 Files: 515
-Provenant: 19.91s</title></circle>
+Provenant: 9.05s</title></circle>
     <circle cx="527.07" cy="514.90" r="4.5" fill="#2563eb"><title>nginx/nginx @ 6e14e95
 Files: 521
 Provenant: 11.92s</title></circle>
@@ -1039,9 +1039,9 @@ Provenant: 16.39s</title></circle>
     <circle cx="553.45" cy="454.32" r="4.5" fill="#2563eb"><title>aboutcode-org/scancode.io @ 904373a
 Files: 764
 Provenant: 42.96s</title></circle>
-    <circle cx="559.41" cy="493.35" r="4.5" fill="#2563eb"><title>tokio-rs/tokio @ 5db10f5
+    <circle cx="559.41" cy="551.02" r="4.5" fill="#2563eb"><title>tokio-rs/tokio @ 5db10f5
 Files: 833
-Provenant: 18.81s</title></circle>
+Provenant: 5.55s</title></circle>
     <circle cx="559.57" cy="495.53" r="4.5" fill="#2563eb"><title>conda/conda-build @ 5da509d
 Files: 835
 Provenant: 17.96s</title></circle>
@@ -1051,24 +1051,24 @@ Provenant: 20.79s</title></circle>
     <circle cx="563.89" cy="496.60" r="4.5" fill="#2563eb"><title>Debian/apt @ 6b12812
 Files: 889
 Provenant: 17.56s</title></circle>
-    <circle cx="564.43" cy="492.80" r="4.5" fill="#2563eb"><title>facebook/watchman @ 426a7b7
+    <circle cx="564.43" cy="532.35" r="4.5" fill="#2563eb"><title>facebook/watchman @ 426a7b7
 Files: 896
-Provenant: 19.03s</title></circle>
+Provenant: 8.24s</title></circle>
     <circle cx="570.54" cy="459.72" r="4.5" fill="#2563eb"><title>KhronosGroup/Vulkan-ValidationLayers @ d72c5f5
 Files: 979
 Provenant: 38.32s</title></circle>
-    <circle cx="571.10" cy="490.24" r="4.5" fill="#2563eb"><title>python-poetry/poetry @ bfce511
+    <circle cx="571.10" cy="533.68" r="4.5" fill="#2563eb"><title>python-poetry/poetry @ bfce511
 Files: 987
-Provenant: 20.09s</title></circle>
-    <circle cx="574.04" cy="487.63" r="4.5" fill="#2563eb"><title>composer/composer @ a2bf8cb
+Provenant: 8.01s</title></circle>
+    <circle cx="574.04" cy="544.29" r="4.5" fill="#2563eb"><title>composer/composer @ a2bf8cb
 Files: 1030
-Provenant: 21.23s</title></circle>
+Provenant: 6.40s</title></circle>
     <circle cx="577.49" cy="502.31" r="4.5" fill="#2563eb"><title>jquery/jquery-ui @ eda7aa3
 Files: 1083
 Provenant: 15.56s</title></circle>
-    <circle cx="578.44" cy="521.35" r="4.5" fill="#2563eb"><title>pointfreeco/swift-composable-architecture @ 7517cc3
+    <circle cx="578.44" cy="554.37" r="4.5" fill="#2563eb"><title>pointfreeco/swift-composable-architecture @ 7517cc3
 Files: 1098
-Provenant: 10.40s</title></circle>
+Provenant: 5.17s</title></circle>
     <circle cx="579.19" cy="502.52" r="4.5" fill="#2563eb"><title>commercialhaskell/stack @ cb6070f
 Files: 1110
 Provenant: 15.49s</title></circle>
@@ -1132,9 +1132,9 @@ Provenant: 24.26s</title></circle>
     <circle cx="619.38" cy="464.43" r="4.5" fill="#2563eb"><title>Fedora Minimal 42 container rootfs @ sha256:c30f069
 Files: 1989
 Provenant: 34.69s</title></circle>
-    <circle cx="622.50" cy="481.54" r="4.5" fill="#2563eb"><title>rubocop/rubocop @ 4e0d642
+    <circle cx="622.50" cy="536.73" r="4.5" fill="#2563eb"><title>rubocop/rubocop @ 4e0d642
 Files: 2081
-Provenant: 24.15s</title></circle>
+Provenant: 7.51s</title></circle>
     <circle cx="623.68" cy="502.89" r="4.5" fill="#2563eb"><title>boostorg/graph @ ae8e08d
 Files: 2117
 Provenant: 15.37s</title></circle>
@@ -1153,18 +1153,18 @@ Provenant: 14.94s</title></circle>
     <circle cx="637.50" cy="444.51" r="4.5" fill="#2563eb"><title>nmap/nmap @ d9199d7
 Files: 2587
 Provenant: 52.87s</title></circle>
-    <circle cx="638.05" cy="463.12" r="4.5" fill="#2563eb"><title>pandas-dev/pandas @ c385d01
+    <circle cx="638.05" cy="510.48" r="4.5" fill="#2563eb"><title>pandas-dev/pandas @ c385d01
 Files: 2608
-Provenant: 35.66s</title></circle>
+Provenant: 13.09s</title></circle>
     <circle cx="642.16" cy="484.30" r="4.5" fill="#2563eb"><title>jgm/pandoc @ d9838eb
 Files: 2768
 Provenant: 22.78s</title></circle>
     <circle cx="643.24" cy="500.11" r="4.5" fill="#2563eb"><title>denoland/std @ a864f62
 Files: 2812
 Provenant: 16.30s</title></circle>
-    <circle cx="644.96" cy="503.26" r="4.5" fill="#2563eb"><title>rust-lang/cargo @ b54fe55
+    <circle cx="644.96" cy="531.78" r="4.5" fill="#2563eb"><title>rust-lang/cargo @ b54fe55
 Files: 2883
-Provenant: 15.25s</title></circle>
+Provenant: 8.34s</title></circle>
     <circle cx="645.06" cy="499.42" r="4.5" fill="#2563eb"><title>pnpm/pnpm @ 2a1ffe1
 Files: 2887
 Provenant: 16.54s</title></circle>
@@ -1228,12 +1228,12 @@ Provenant: 24.70s</title></circle>
     <circle cx="681.07" cy="483.29" r="4.5" fill="#2563eb"><title>rails/rails @ 27fb2a9
 Files: 4869
 Provenant: 23.27s</title></circle>
-    <circle cx="685.62" cy="477.67" r="4.5" fill="#2563eb"><title>go-gitea/gitea @ 47fdf3e2
+    <circle cx="685.62" cy="502.01" r="4.5" fill="#2563eb"><title>go-gitea/gitea @ 47fdf3e2
 Files: 5201
-Provenant: 26.21s</title></circle>
-    <circle cx="686.57" cy="459.93" r="4.5" fill="#2563eb"><title>AvaloniaUI/Avalonia @ b7e95c2
+Provenant: 15.66s</title></circle>
+    <circle cx="686.57" cy="518.44" r="4.5" fill="#2563eb"><title>AvaloniaUI/Avalonia @ b7e95c2
 Files: 5273
-Provenant: 38.15s</title></circle>
+Provenant: 11.06s</title></circle>
     <circle cx="687.62" cy="444.62" r="4.5" fill="#2563eb"><title>apache/felix-dev @ 20aee77
 Files: 5354
 Provenant: 52.75s</title></circle>
