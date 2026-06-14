@@ -21,6 +21,8 @@ fn test_parse_buck_with_rules() {
 
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("app".to_string()));
+    // BUCK targets carry no version, so the synthesized purl is name-only.
+    assert_eq!(pkg.purl, Some("pkg:buck/app".to_string()));
 }
 
 #[test]
@@ -30,6 +32,8 @@ fn test_parse_empty_buck_fallback() {
 
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("end2end".to_string()));
+    // Directory-name fallback still synthesizes a purl from the package name.
+    assert_eq!(pkg.purl, Some("pkg:buck/end2end".to_string()));
 }
 
 #[test]
@@ -68,6 +72,7 @@ android_binary(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("my-app".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/my-app".to_string()));
 }
 
 #[test]
@@ -85,6 +90,7 @@ android_library(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("my-lib".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/my-lib".to_string()));
 }
 
 #[test]
@@ -102,6 +108,7 @@ java_binary(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("my-app".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/my-app".to_string()));
 }
 
 #[test]
@@ -124,6 +131,7 @@ android_binary(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("app".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/app".to_string()));
 }
 
 #[test]
@@ -147,6 +155,7 @@ android_binary(
     // Should return first rule
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("app1".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/app1".to_string()));
 }
 
 // ============================================================================
@@ -162,6 +171,8 @@ fn test_parse_metadata_bzl_basic() {
     assert_eq!(pkg.datasource_id, Some(DatasourceId::BuckMetadata));
     assert_eq!(pkg.name, Some("example".to_string()));
     assert_eq!(pkg.version, Some("0.0.1".to_string()));
+    // No explicit `package_url`, so the purl is synthesized from name and version.
+    assert_eq!(pkg.purl, Some("pkg:buck/example@0.0.1".to_string()));
     assert_eq!(
         pkg.extracted_license_statement,
         Some("BSD-3-Clause".to_string())
@@ -422,6 +433,9 @@ METADATA = {
     assert_eq!(pkg.namespace, Some("com.example".to_string()));
     assert_eq!(pkg.name, Some("artifact".to_string()));
     assert_eq!(pkg.version, Some("1.2.3".to_string()));
+    // A non-Buck ecosystem without an explicit `package_url` must not get a synthesized
+    // `pkg:buck/...` purl that contradicts `package_type`.
+    assert_eq!(pkg.purl, None);
     assert_eq!(
         pkg.homepage_url,
         Some("https://github.com/example/artifact".to_string())

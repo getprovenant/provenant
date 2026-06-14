@@ -317,6 +317,49 @@ fn insert_license_reference_extra_data(
     }
 }
 
+/// Synthesize a `pkg:buck/<name>` purl from extracted fields, mirroring ScanCode's
+/// behavior of always emitting a Buck purl when a target name is known. Returns
+/// `None` when the name is missing or the purl cannot be constructed.
+fn build_buck_purl(
+    namespace: Option<&str>,
+    name: Option<&str>,
+    version: Option<&str>,
+) -> Option<String> {
+    let name = name.filter(|value| !value.is_empty())?;
+    let mut package_url = match PackageUrl::new(PackageType::Buck.as_str(), name) {
+        Ok(purl) => purl,
+        Err(e) => {
+            warn!(
+                "Failed to create PackageUrl for buck package '{}': {}",
+                name, e
+            );
+            return None;
+        }
+    };
+
+    if let Some(namespace) = namespace.filter(|value| !value.is_empty())
+        && let Err(e) = package_url.with_namespace(namespace)
+    {
+        warn!(
+            "Failed to set namespace '{}' for buck package '{}': {}",
+            namespace, name, e
+        );
+        return None;
+    }
+
+    if let Some(version) = version.filter(|value| !value.is_empty())
+        && let Err(e) = package_url.with_version(version)
+    {
+        warn!(
+            "Failed to set version '{}' for buck package '{}': {}",
+            version, name, e
+        );
+        return None;
+    }
+
+    Some(truncate_field(package_url.to_string()))
+}
+
 /// Build PackageData from extracted metadata fields
 fn build_package_from_metadata(fields: HashMap<String, MetadataValue>) -> PackageData {
     let mut pkg = PackageData {
@@ -480,6 +523,19 @@ fn build_package_from_metadata(fields: HashMap<String, MetadataValue>) -> Packag
         }
     }
 
+    // Fall back to a synthesized `pkg:buck/<name>` purl when no explicit
+    // `package_url` field provided one. Only do this for Buck-typed metadata: when an
+    // `ecosystem` field set a non-Buck `package_type` (e.g. Maven) without a
+    // `package_url`, synthesizing a `pkg:buck/...` purl would contradict the
+    // `package_type`, so leave the purl unset in that case.
+    if pkg.purl.is_none() && matches!(pkg.package_type, None | Some(PackageType::Buck)) {
+        pkg.purl = build_buck_purl(
+            pkg.namespace.as_deref(),
+            pkg.name.as_deref(),
+            pkg.version.as_deref(),
+        );
+    }
+
     pkg
 }
 
@@ -531,9 +587,12 @@ fn extract_build_package_from_statement(statement: &ast::AstStmt) -> Option<Pack
     let mut extra_data = HashMap::new();
     insert_license_reference_extra_data(&mut extra_data, &license_references);
 
+    let purl = build_buck_purl(None, Some(&package_name), None);
+
     Some(PackageData {
         package_type: Some(BuckBuildParser::PACKAGE_TYPE),
         name: Some(truncate_field(package_name)),
+        purl,
         extracted_license_statement,
         extra_data: (!extra_data.is_empty()).then_some(extra_data),
         datasource_id: Some(DatasourceId::BuckFile),
@@ -605,9 +664,12 @@ fn fallback_package_data(path: &Path) -> PackageData {
         .and_then(|n| n.to_str())
         .map(|s| s.to_string());
 
+    let purl = build_buck_purl(None, name.as_deref(), None);
+
     PackageData {
         package_type: Some(BuckBuildParser::PACKAGE_TYPE),
         name,
+        purl,
         datasource_id: Some(DatasourceId::BuckFile),
         ..Default::default()
     }

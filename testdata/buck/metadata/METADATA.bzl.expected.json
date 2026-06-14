@@ -15,6 +15,7 @@
       "upstream_hash": "deadbeef"
     },
     "datasource_id": "buck_metadata",
+    "purl": "pkg:buck/example@0.0.1",
     "declared_license_expression": "bsd-3-clause",
     "declared_license_expression_spdx": "BSD-3-Clause",
     "license_detections": [

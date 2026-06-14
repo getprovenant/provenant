@@ -32,6 +32,7 @@
       "license_file": "LICENSE"
     },
     "dependencies": [],
-    "datasource_id": "buck_file"
+    "datasource_id": "buck_file",
+    "purl": "pkg:buck/bin"
   }
 ]
