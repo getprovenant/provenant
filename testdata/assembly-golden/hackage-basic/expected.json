@@ -39,15 +39,15 @@
       "vcs_url": "https://github.com/example/aaa-example-hackage.git",
       "copyright": null,
       "holder": null,
-      "declared_license_expression": "bsd-3-clause",
+      "declared_license_expression": "bsd-new",
       "declared_license_expression_spdx": "BSD-3-Clause",
       "license_detections": [
         {
-          "license_expression": "bsd-3-clause",
+          "license_expression": "bsd-new",
           "license_expression_spdx": "BSD-3-Clause",
           "matches": [
             {
-              "license_expression": "bsd-3-clause",
+              "license_expression": "bsd-new",
               "license_expression_spdx": "BSD-3-Clause",
               "from_file": "aaa-example-hackage.cabal",
               "start_line": 1,
@@ -62,7 +62,7 @@
               "matched_text": "BSD-3-Clause"
             }
           ],
-          "identifier": "bsd_3_clause-46908728-c7df-fed1-c2b9-7696dce85622"
+          "identifier": "bsd_new-46908728-c7df-fed1-c2b9-7696dce85622"
         }
       ],
       "other_license_expression": null,

@@ -40,15 +40,15 @@
     },
     "datasource_id": "conda_meta_json",
     "purl": "pkg:conda/tzdata@2024b",
-    "declared_license_expression": "bsd-3-clause OR cc-pddc",
+    "declared_license_expression": "bsd-new OR cc-pd",
     "declared_license_expression_spdx": "BSD-3-Clause OR CC-PDDC",
     "license_detections": [
       {
-        "license_expression": "bsd-3-clause OR cc-pddc",
+        "license_expression": "bsd-new OR cc-pd",
         "license_expression_spdx": "BSD-3-Clause OR CC-PDDC",
         "matches": [
           {
-            "license_expression": "bsd-3-clause OR cc-pddc",
+            "license_expression": "bsd-new OR cc-pd",
             "license_expression_spdx": "BSD-3-Clause OR CC-PDDC",
             "from_file": null,
             "start_line": 1,

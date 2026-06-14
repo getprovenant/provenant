@@ -49,15 +49,15 @@
         }
       ],
       "homepage_url": "https://busybox.net/",
-      "declared_license_expression": "gpl-2.0-only",
+      "declared_license_expression": "gpl-2.0",
       "declared_license_expression_spdx": "GPL-2.0-only",
       "license_detections": [
         {
-          "license_expression": "gpl-2.0-only",
+          "license_expression": "gpl-2.0",
           "license_expression_spdx": "GPL-2.0-only",
           "matches": [
             {
-              "license_expression": "gpl-2.0-only",
+              "license_expression": "gpl-2.0",
               "license_expression_spdx": "GPL-2.0-only",
               "from_file": "lib/apk/db/installed",
               "start_line": 1,
@@ -72,7 +72,7 @@
               "matched_text": "GPL-2.0-only"
             }
           ],
-          "identifier": "gpl_2_0_only-e6dc0f78-f9bd-2b91-5dff-1cf257f19a41"
+          "identifier": "gpl_2_0-e6dc0f78-f9bd-2b91-5dff-1cf257f19a41"
         }
       ],
       "extracted_license_statement": "GPL-2.0-only",

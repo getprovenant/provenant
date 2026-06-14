@@ -1021,27 +1021,20 @@ fn normalize_license_key(key: &str, index: &LicenseIndex) -> Option<NormalizedDe
             return None;
         }
 
-        let canonical_spdx_key = index
+        // The canonical ScanCode key for this license is the rule's own
+        // `license_expression` (e.g. `bsd-new` for SPDX `BSD-3-Clause`,
+        // `bsd-simplified` for `BSD-2-Clause`). Lowercasing the SPDX id only
+        // coincides with the ScanCode key for licenses like `mit`/`apache-2.0`;
+        // for others it fabricated a key absent from the index, diverging from
+        // both ScanCode output and Provenant's own file-level detections.
+        let declared_license_expression_spdx = index
             .licenses_by_key
             .get(&rule_license_expression)
             .and_then(|license| license.spdx_license_key.clone())
             .unwrap_or_else(|| normalized_key.to_string());
 
-        let declared_license_expression =
-            if normalized_key.eq_ignore_ascii_case(&canonical_spdx_key) {
-                normalized_key.to_ascii_lowercase()
-            } else {
-                rule_license_expression
-            };
-
-        let declared_license_expression_spdx = index
-            .licenses_by_key
-            .get(&declared_license_expression)
-            .and_then(|license| license.spdx_license_key.clone())
-            .unwrap_or(canonical_spdx_key);
-
         return Some(NormalizedDeclaredLicense::new(
-            declared_license_expression,
+            rule_license_expression,
             declared_license_expression_spdx,
         ));
     }
@@ -1748,9 +1741,12 @@ mod tests {
             ("GPLv2", "gpl-2.0", "GPL-2.0-only"),
             ("MIT", "mit", "MIT"),
             ("Apache License 2.0", "apache-2.0", "Apache-2.0"),
-            ("BSD-3-Clause", "bsd-3-clause", "BSD-3-Clause"),
+            // SPDX ids whose canonical ScanCode key is not the lowercased SPDX
+            // id must resolve to the real index key, not a fabricated one.
+            ("BSD-3-Clause", "bsd-new", "BSD-3-Clause"),
+            ("BSD-2-Clause", "bsd-simplified", "BSD-2-Clause"),
             ("Artistic-2.0", "artistic-2.0", "Artistic-2.0"),
-            ("WTFPL", "wtfpl", "WTFPL"),
+            ("WTFPL", "wtfpl-2.0", "WTFPL"),
             ("MPL-2.0", "mpl-2.0", "MPL-2.0"),
             ("EPL-2.0", "epl-2.0", "EPL-2.0"),
         ] {
@@ -1766,6 +1762,57 @@ mod tests {
                 "declared spdx for {statement:?}"
             );
         }
+    }
+
+    /// Invariant guard for the whole license set, not a hand-maintained sample:
+    /// for every SPDX id the bundled index knows, declared-license normalization
+    /// must resolve to a ScanCode key that actually exists in the index. This is
+    /// what `normalize_license_key` should do by consulting the authoritative
+    /// index; the earlier lowercase-the-SPDX-id shortcut fabricated keys absent
+    /// from the index (e.g. `bsd-3-clause`, `wtfpl`) for the ~246 licenses whose
+    /// canonical key is not simply the lowercased SPDX id.
+    #[test]
+    fn test_every_indexed_spdx_key_normalizes_to_a_real_index_key() {
+        let engine = parser_license_engine().expect("embedded parser license engine");
+        let index = engine.index();
+
+        let mut checked = 0usize;
+        for license in index.licenses_by_key.values() {
+            let Some(spdx_key) = license.spdx_license_key.as_deref() else {
+                continue;
+            };
+            // LicenseRef-* ids round-trip as themselves; they are not part of the
+            // indexed-key invariant under test here.
+            if spdx_key.starts_with("LicenseRef-") {
+                continue;
+            }
+
+            let Some(normalized) = normalize_license_key(spdx_key, index) else {
+                continue;
+            };
+
+            for token in normalized
+                .declared_license_expression
+                .split([' ', '(', ')'])
+                .filter(|token| !token.is_empty())
+            {
+                if matches!(token, "AND" | "OR" | "WITH" | "and" | "or" | "with")
+                    || token.contains("licenseref-")
+                {
+                    continue;
+                }
+                assert!(
+                    index.licenses_by_key.contains_key(token),
+                    "declared key {token:?} for SPDX {spdx_key:?} is absent from the index"
+                );
+            }
+            checked += 1;
+        }
+
+        assert!(
+            checked > 100,
+            "expected to validate many indexed SPDX keys, only checked {checked}"
+        );
     }
 
     #[test]

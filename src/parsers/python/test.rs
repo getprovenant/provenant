@@ -2312,7 +2312,7 @@ Test package description.
 
         assert_eq!(
             package_data.declared_license_expression.as_deref(),
-            Some("apache-2.0 AND bsd-3-clause AND mit")
+            Some("apache-2.0 AND bsd-new AND mit")
         );
         assert_eq!(
             package_data.declared_license_expression_spdx.as_deref(),

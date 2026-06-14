@@ -8,15 +8,15 @@
     "keywords": ["gettext", "intl", "libintl", "i18n"],
     "homepage_url": "https://www.gnu.org/software/gettext",
     "vcs_url": "https://github.com/conan-io/conan-center-index",
-    "declared_license_expression": "lgpl-2.1-or-later",
+    "declared_license_expression": "lgpl-2.1-plus",
     "declared_license_expression_spdx": "LGPL-2.1-or-later",
     "license_detections": [
       {
-        "license_expression": "lgpl-2.1-or-later",
+        "license_expression": "lgpl-2.1-plus",
         "license_expression_spdx": "LGPL-2.1-or-later",
         "matches": [
           {
-            "license_expression": "lgpl-2.1-or-later",
+            "license_expression": "lgpl-2.1-plus",
             "license_expression_spdx": "LGPL-2.1-or-later",
             "matcher": "parser-declared-license",
             "score": 100.0,

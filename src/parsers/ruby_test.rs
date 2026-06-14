@@ -1103,7 +1103,7 @@ gem "specific-range", ">= 1.0.0", "< 1.5.0", "!= 1.2.3"
 
         assert_eq!(
             package_data.declared_license_expression.as_deref(),
-            Some("bsd-2-clause AND ruby")
+            Some("bsd-simplified AND ruby")
         );
         assert_eq!(
             package_data.declared_license_expression_spdx.as_deref(),
@@ -1268,7 +1268,7 @@ gem "specific-range", ">= 1.0.0", "< 1.5.0", "!= 1.2.3"
         assert_eq!(package_data.name, Some("multi-license-gem".to_string()));
         assert_eq!(
             package_data.declared_license_expression.as_deref(),
-            Some("apache-2.0 AND bsd-2-clause AND mit")
+            Some("apache-2.0 AND bsd-simplified AND mit")
         );
         assert_eq!(
             package_data.declared_license_expression_spdx.as_deref(),

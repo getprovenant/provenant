@@ -390,7 +390,7 @@ mod tests {
         );
         assert_eq!(
             package_data.declared_license_expression.as_deref(),
-            Some("gpl-2.0-only WITH classpath-exception-2.0")
+            Some("gpl-2.0 WITH classpath-exception-2.0")
         );
         assert_eq!(
             package_data.declared_license_expression_spdx.as_deref(),
