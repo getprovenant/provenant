@@ -2517,3 +2517,85 @@ fn test_refine_holder_keeps_holders_after_long_url() {
         Some("securityhub-enabled The AWS Account".to_string())
     );
 }
+
+// ── PE / Windows version-info field-label + separator-run cleanup ─────
+
+#[test]
+fn test_refine_copyright_strips_pe_version_info_field_label() {
+    // A `LegalCopyright:` field label extracted from a compiled PE binary must
+    // not leak into the detected copyright (issue #1073).
+    assert_eq!(
+        refine_copyright("LegalCopyright: Copyright \u{a9} Nate McMaster"),
+        Some("Copyright \u{a9} Nate McMaster".to_string())
+    );
+    // The generic `Word:` label strip works for any leaked field label. The
+    // `refine_copyright` junk gate already drops `LegalTrademarks`-bearing text
+    // entirely, so exercise the label strip directly through the wrapper.
+    assert_eq!(
+        strip_known_copyright_wrappers("ProductCopyright: Copyright (c) 2020 Acme Inc."),
+        "Copyright (c) 2020 Acme Inc."
+    );
+    // The value may start at a `(c)` or `©` marker rather than the word.
+    assert_eq!(
+        strip_known_copyright_wrappers("LegalCopyright: (c) 2020 Acme Inc."),
+        "(c) 2020 Acme Inc."
+    );
+    assert_eq!(
+        strip_known_copyright_wrappers("LegalCopyright: \u{a9} 2020 Acme Inc."),
+        "\u{a9} 2020 Acme Inc."
+    );
+}
+
+#[test]
+fn test_refine_copyright_field_label_strip_is_conservative() {
+    // A `Word:` prefix that is not immediately followed by a copyright marker is
+    // left untouched, so ordinary copyrights and prose are unaffected.
+    assert_eq!(
+        refine_copyright("Copyright (c) 2020 Acme Inc."),
+        Some("Copyright (c) 2020 Acme Inc.".to_string())
+    );
+    // No copyright marker after the label: not treated as a leaked field label.
+    assert_eq!(
+        strip_known_copyright_wrappers("Foo: Acme Inc."),
+        "Foo: Acme Inc."
+    );
+    // A word boundary is required: `copyrightable` is not a leaked marker.
+    assert_eq!(
+        strip_known_copyright_wrappers("Foo: copyrightable works"),
+        "Foo: copyrightable works"
+    );
+}
+
+#[test]
+fn test_trim_separator_rule_runs_in_copyright() {
+    // An ASCII rule run bleeding into the statement is collapsed away while the
+    // surrounding holder/URL text is preserved (issue #1073).
+    assert_eq!(
+        refine_copyright(
+            "Copyright (c) 2013 Scott Kirkland ============== ByteSize (https://github.com/omar/ByteSize)"
+        ),
+        Some(
+            "Copyright (c) 2013 Scott Kirkland ByteSize (https://github.com/omar/ByteSize)"
+                .to_string()
+        )
+    );
+}
+
+#[test]
+fn test_trim_separator_rule_runs_unit() {
+    assert_eq!(trim_separator_rule_runs("a ==== b"), "a b");
+    assert_eq!(trim_separator_rule_runs("a ---- b"), "a b");
+    assert_eq!(trim_separator_rule_runs("a ____ b"), "a b");
+    assert_eq!(trim_separator_rule_runs("a **** b"), "a b");
+    // Short punctuation runs and ordinary text are left intact.
+    assert_eq!(trim_separator_rule_runs("a -- b"), "a -- b");
+    assert_eq!(trim_separator_rule_runs("Acme Corp"), "Acme Corp");
+}
+
+#[test]
+fn test_refine_holder_trims_separator_rule_runs() {
+    assert_eq!(
+        refine_holder("Scott Kirkland ============== ByteSize"),
+        Some("Scott Kirkland ByteSize".to_string())
+    );
+}
