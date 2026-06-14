@@ -247,6 +247,21 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
 ) -> Result<Vec<LicenseMatch>, LicenseDetectionError> {
     let mut matches = Vec::new();
 
+    // Candidate-independent query-run setup, hoisted out of the per-candidate
+    // loop: uv-class inputs produce many candidates against one huge query run,
+    // and none of this depends on the candidate.
+    let query_tokens = query_run.tokens();
+    let len_legalese = index.len_legalese;
+    let qfinish = query_tokens.len().saturating_sub(1);
+    let matchables: BitSet = query_run
+        .matchables(true)
+        .iter()
+        .map(|pos| pos - query_run.start)
+        .collect();
+    // `qstart <= max_matchable` is an O(1) equivalent of
+    // `matchables.iter().any(|p| p >= qstart)`, avoiding an O(N) scan per round.
+    let max_matchable = matchables.iter().max();
+
     for (candidate_index, candidate) in candidates.iter().enumerate() {
         if candidate_index.is_multiple_of(8) {
             crate::license_detection::ensure_within_deadline(deadline)?;
@@ -266,17 +281,6 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
             .unwrap_or_default();
 
         if let Some(rule_tokens) = rule_tokens {
-            let query_tokens = query_run.tokens();
-            let len_legalese = index.len_legalese;
-
-            let qbegin = 0usize;
-            let qfinish = query_tokens.len().saturating_sub(1);
-
-            let matchables: BitSet = query_run
-                .matchables(true)
-                .iter()
-                .map(|pos| pos - query_run.start)
-                .collect();
             let context = MatchSearchContext {
                 query_tokens,
                 rule_tokens,
@@ -286,7 +290,7 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
                 deadline,
             };
 
-            let mut qstart = qbegin;
+            let mut qstart = 0usize;
             let mut loop_count = 0usize;
 
             while qstart <= qfinish {
@@ -295,7 +299,7 @@ pub(crate) fn seq_match_with_candidates_and_deadline(
                 }
                 loop_count += 1;
 
-                let has_remaining_matchables = matchables.iter().any(|pos| pos >= qstart);
+                let has_remaining_matchables = max_matchable.is_some_and(|m| m >= qstart);
                 if !has_remaining_matchables {
                     break;
                 }
