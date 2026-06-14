@@ -33,6 +33,7 @@ ignored_licenses = []
 "apache-2.0_and_lgpl-2.1_4.RULE" = "Cover the GNU/Linux wording variant of the typoed mixed Apache-2.0/LGPL-2.1 notice while keeping it tight enough to avoid loose partial matches."
 "bsd-new_1319.RULE" = "Prevent two-clause BSD headers from being mislabeled as BSD-3-Clause when this upstream rule matches text that lacks the endorsement clause; keep the fix in rule curation instead of matcher logic."
 "bsd-new_99.RULE" = "Require a full continuous match for this BSD-3 endorsement-clause rule so BSD-2-style headers such as the Opus and GLC fixtures do not partially overmatch it."
+"bsd_bare_word_only.RULE" = "Treat bare versionless BSD shorthand as clue-only evidence so a declared license=\"BSD\" manifest statement can normalize to bsd-new without bare BSD becoming a hard file-content detection."
 "gpl-1.0-plus_351.RULE" = "Keep the weak phrase 'the GPL' as clue-only GPL evidence without turning acronym collisions such as Graphics Pipeline Library into hard detections."
 "gpl-1.0-plus_461.RULE" = "Require the explicit 'version 1, or (at your option) any later version' wording so split-string GPLv2+ notices do not overmatch as GPL-1.0-or-later."
 "gpl-1.0-plus_568.RULE" = "Treat the unversioned GPL boilerplate prefixed by a bare 'License' label as a false-positive fragment so explicit later versioned notices are not polluted by GPL-1.0-or-later noise."
