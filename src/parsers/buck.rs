@@ -524,8 +524,11 @@ fn build_package_from_metadata(fields: HashMap<String, MetadataValue>) -> Packag
     }
 
     // Fall back to a synthesized `pkg:buck/<name>` purl when no explicit
-    // `package_url` field provided one.
-    if pkg.purl.is_none() {
+    // `package_url` field provided one. Only do this for Buck-typed metadata: when an
+    // `ecosystem` field set a non-Buck `package_type` (e.g. Maven) without a
+    // `package_url`, synthesizing a `pkg:buck/...` purl would contradict the
+    // `package_type`, so leave the purl unset in that case.
+    if pkg.purl.is_none() && matches!(pkg.package_type, None | Some(PackageType::Buck)) {
         pkg.purl = build_buck_purl(
             pkg.namespace.as_deref(),
             pkg.name.as_deref(),

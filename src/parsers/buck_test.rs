@@ -433,6 +433,9 @@ METADATA = {
     assert_eq!(pkg.namespace, Some("com.example".to_string()));
     assert_eq!(pkg.name, Some("artifact".to_string()));
     assert_eq!(pkg.version, Some("1.2.3".to_string()));
+    // A non-Buck ecosystem without an explicit `package_url` must not get a synthesized
+    // `pkg:buck/...` purl that contradicts `package_type`.
+    assert_eq!(pkg.purl, None);
     assert_eq!(
         pkg.homepage_url,
         Some("https://github.com/example/artifact".to_string())
