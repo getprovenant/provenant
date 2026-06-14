@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **12.6× median speedup** and **12.1× geometric-mean speedup** overall; the median gap grows from **7.1×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **12.7× median speedup** and **12.6× geometric-mean speedup** overall; the median gap grows from **7.2×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -150,11 +150,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `10.05s`; ScanCode `117.64s`
 - Broader Conda and Python package coverage (`5` vs `2` packages, `73` vs `26` dependencies) from `conda.recipe/meta.yaml`, multiple `environment.yml` fixtures, and the root `setup.py`, with safer URL credential stripping across authentication test fixtures
 
-##### [conda/conda-build @ 5da509d](https://github.com/conda/conda-build/tree/5da509d13764d96c02c80f24b54ab87d652b2538) — **5.73× faster**
+##### [conda/conda-build @ 5da509d](https://github.com/conda/conda-build/tree/5da509d13764d96c02c80f24b54ab87d652b2538) — **7.61× faster**
 
 - Files: 835
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `17.96s`; ScanCode `102.91s`
+- Run context: 2026-06-14 · conda-build-53275 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.24s`; ScanCode `70.31s`
 - Far broader Conda recipe and dependency extraction (`257` vs `1` packages, `164` vs `13` dependencies) across committed `meta.yaml` recipe fixtures, split-package test recipes, and sidecar Python manifests, with explicit malformed-recipe scan errors on duplicate-key negative fixtures instead of silently treating them as ordinary package metadata
 
 ##### [conda-forge/pandas-feedstock @ 4063b72](https://github.com/conda-forge/pandas-feedstock/tree/4063b725cd252c02b0cebe935a8859a6b540fe00) — **7.59× faster**
@@ -359,11 +359,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `16.30s`; ScanCode `394.76s`
 - Broader Deno package visibility (`45` vs `3` packages) from the root and leaf `*/deno.json` manifests across the standard-library tree, plus concrete Cargo lock package identities on embedded Rust fixtures instead of anonymous `cargo_lock` rows, with zero top-level license-expression deltas under the shared profile
 
-##### [getsentry/self-hosted @ 8728919](https://github.com/getsentry/self-hosted/tree/8728919e080836c53724f277d4d36cc310fc5011) — **6.50× faster**
+##### [getsentry/self-hosted @ 8728919](https://github.com/getsentry/self-hosted/tree/8728919e080836c53724f277d4d36cc310fc5011) — **9.54× faster**
 
 - Files: 129
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `12.14s`; ScanCode `78.89s`
+- Run context: 2026-06-14 · self-hosted-59300 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.74s`; ScanCode `45.20s`
 - Broader mixed Docker/npm/Python package extraction (`2` vs `1` packages, `111` vs `0` dependencies) from the integration-test `package-lock.json`, `uv.lock`, and committed service Dockerfiles, plus the more specific `Apache-2.0 AND FSL-1.1-ALv2` license classification on `LICENSE.md` where ScanCode reports only `FSL-1.1-ALv2`
 
 ##### [iTowns/itowns @ 08e08f5](https://github.com/iTowns/itowns/tree/08e08f512983b6f3d60d04d431b67b3c5e2e1584) — **13.58× faster**
@@ -580,11 +580,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `10.27s`; ScanCode `73.20s`
 - Direct Arch source-package visibility on committed `.SRCINFO` (`1` vs `0` file-level package records) with broader dependency extraction (`9` vs `0`) across runtime, make, and check edges, plus Unicode-preserving maintainer recovery and exact trailing-slash URL normalization on `PKGBUILD` while avoiding ScanCode's low-coverage `LGPL-2.0-or-later` false positive
 
-##### [archlinux/packaging/packages/pacman @ 4ee8983](https://gitlab.archlinux.org/archlinux/packaging/packages/pacman/-/tree/4ee8983653633d6fad7b2b9d6c35027c9705de5d) — **6.64× faster**
+##### [archlinux/packaging/packages/pacman @ 4ee8983](https://gitlab.archlinux.org/archlinux/packaging/packages/pacman/-/tree/4ee8983653633d6fad7b2b9d6c35027c9705de5d) — **8.66× faster**
 
 - Files: 12
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `11.49s`; ScanCode `76.28s`
+- Run context: 2026-06-14 · pacman-58826 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.65s`; ScanCode `40.26s`
 - Direct Arch source-package visibility on committed `.SRCINFO` (`1` vs `0` file-level package records) with broader dependency extraction (`26` vs `0`) across runtime, make, check, and optional package metadata, plus copyright and holder recovery on the repo-owned `LICENSE` and `REUSE.toml` surfaces that ScanCode leaves empty
 
 ##### [Amanieu/atomic-rs @ 44c213a](https://github.com/Amanieu/atomic-rs/tree/44c213a73cb4e5c4cf04fd6fd6f76dc95092aebf) — **7.24× faster**
@@ -615,11 +615,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `15.37s`; ScanCode `200.37s`
 - Cleaner URL and copyright normalization across Boost metadata files, preserving the real `http://www.boost.org/` target while dropping ScanCode's broken pseudo-URL variant in `example/boost_web.dat`, plus Unicode-preserving `René Ferdinand Rivera Morell` handling on `build.jam` and top-level `.gitattributes` visibility in the final output
 
-##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **6.02× faster**
+##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **11.09× faster**
 
 - Files: 705
-- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `35.76s`; ScanCode `215.32s`
+- Run context: 2026-06-14 · json-54573 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `14.54s`; ScanCode `161.21s`
 - Cleaner benchmark-corpus author extraction in `bench/data/gsoc-2018.json` and `bench/data/github_events.json`, replacing ScanCode junk such as `type' Person name' AadityaNair` and prose fragments with actual participant names while preserving Unicode identities like `Nils Jørgen Mittet`, plus Unicode-preserving holder normalization for `René Ferdinand Rivera Morell` on build metadata
 
 ##### [boostorg/serialization @ 097a6c6](https://github.com/boostorg/serialization/tree/097a6c63a137be836d663cdb27f2e6c803a4100b) — **10.06× faster**
@@ -692,11 +692,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.79s`; ScanCode `49.17s`
 - Matched top-level package coverage (`1` vs `1`) with broader dependency extraction (`9` vs `2`) from the repo-root `Dockerfile` and committed Ruby test `Gemfile`s, plus Docker-library `Maintainers` author recovery across `library/*` definitions with cleaner Unicode-preserving normalization and `GitRepo` trailers left out of author values
 
-##### [docker-library/python @ ced4ac7](https://github.com/docker-library/python/tree/ced4ac7ca9f8f8bdbb113f06fe02c42895875aa4) — **6.42× faster**
+##### [docker-library/python @ ced4ac7](https://github.com/docker-library/python/tree/ced4ac7ca9f8f8bdbb113f06fe02c42895875aa4) — **9.49× faster**
 
 - Files: 53
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `11.96s`; ScanCode `76.81s`
+- Run context: 2026-06-14 · python-58325 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.65s`; ScanCode `44.14s`
 - Broader Docker package visibility across 42 generated image Dockerfiles where ScanCode reports none, plus maintainer-line author recovery on `generate-stackbrew-library.sh`, with exact top-level package, dependency, and license parity elsewhere
 
 ##### [e-ale/meta-pocketbeagle @ 7cb4956](https://github.com/e-ale/meta-pocketbeagle/tree/7cb4956d206728af96833e513594693dec98e163) — **6.69× faster**
@@ -797,18 +797,18 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.63s`; ScanCode `85.01s`
 - Matched ScanCode's file-level Autotools `configure.ac` coverage while promoting one top-level Autotools package (`1` vs `0`) with the real `pkg:autotools/libevent` identity, and avoids ScanCode's prose-fragment author noise such as `Hagne Mahre and then Hannah` and `team of volunteers`
 
-##### [libgit2/libgit2 @ 1f34e2a](https://github.com/libgit2/libgit2/tree/1f34e2a57a3d03f174771203b64aed2b17e8522c) — **7.75× faster**
+##### [libgit2/libgit2 @ 1f34e2a](https://github.com/libgit2/libgit2/tree/1f34e2a57a3d03f174771203b64aed2b17e8522c) — **25.62× faster**
 
 - Files: 8,406
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `22.61s`; ScanCode `175.31s`
+- Run context: 2026-06-14 · libgit2-59805 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.93s`; ScanCode `254.45s`
 - Broader mixed-repository dependency extraction (`12` vs `0`) from committed `script/api-docs/package.json` and `script/api-docs/package-lock.json`, while preserving top-level Autotools package parity (`1` vs `1`)
 
-##### [LinuxCNC/linuxcnc @ cd534c9](https://github.com/LinuxCNC/linuxcnc/tree/cd534c951aefa3c57ced93d84d1eec5aa5596672) — **6.21× faster**
+##### [LinuxCNC/linuxcnc @ cd534c9](https://github.com/LinuxCNC/linuxcnc/tree/cd534c951aefa3c57ced93d84d1eec5aa5596672) — **10.15× faster**
 
 - Files: 9,078
-- Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `419.63s`; ScanCode `2606.91s`
+- Run context: 2026-06-14 · linuxcnc-55282 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `163.61s`; ScanCode `1659.92s`
 - Direct Meson package visibility on the root `meson.build` plus declared dependency extraction (`2` vs `0` packages, `2` vs `0` dependencies) for `boost` and `python2`, with Debian copyright metadata carrying a Debian namespace instead of an unqualified source-package row
 
 ##### [madler/zlib @ f9dd600](https://github.com/madler/zlib/tree/f9dd6009be3ed32415edf1e89d1bc38380ecb95d) — **12.06× faster**
@@ -1371,12 +1371,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Linux rootfs images
 
-##### [Alpine 3.23.3 minirootfs @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **1.22× faster**
+##### [Alpine 3.23.3 minirootfs @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **11.59× faster**
 
 - Files: 84
-- Run context: 2026-04-05 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `19.47s`; ScanCode `23.84s`
-- Equal top-level Alpine package count with Alpine-native installed-db dependency requirements and virtual providers preserved, plus cleaner BusyBox/OpenSSL binary-text normalization and richer `os-release` package identity
+- Run context: 2026-06-14 · rootfs-60685 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.67s`; ScanCode `54.13s`
+- Equal top-level Alpine package coverage emitted with PURL-spec-correct `pkg:apk/alpine/<name>` identities (type `apk`, distro namespace) where ScanCode uses the non-standard `pkg:alpine/<name>` type, with Alpine-native installed-db dependency requirements and virtual providers preserved and cleaner BusyBox/OpenSSL binary-text normalization
 
 ##### [Azure Linux distroless/minimal 3.0 linux/amd64 @ sha256:0c64ab9](https://mcr.microsoft.com/product/azurelinux/distroless/minimal/about) — **8.62× faster**
 
@@ -1501,11 +1501,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.89s`; ScanCode `69.35s`
 - Direct Arch built-package visibility on real `.PKGINFO` metadata (`1` vs `0` file-level package records) with twenty structured dependency edges across `depend`, `makedepend`, `checkdepend`, and `optdepend`, plus an arch-qualified `pkg:alpm/arch/python-construct@2.10.70-6?arch=any` identity instead of a scanner-silent package file
 
-##### [rubocop 1.86.1 .gem @ sha256:44415f3](https://rubygems.org/gems/rubocop/versions/1.86.1) — **3.71× faster**
+##### [rubocop 1.86.1 .gem @ sha256:44415f3](https://rubygems.org/gems/rubocop/versions/1.86.1) — **8.63× faster**
 
 - Files: 1
-- Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `19.82s`; ScanCode `73.62s`
+- Run context: 2026-06-14 · rubocop-1.86.1.gem-61533 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.66s`; ScanCode `40.20s`
 - Matched shipped gem package and dependency coverage (`1` vs `1` packages, `10` vs `10` dependencies), with semantically combined author/email party data and an extra parser-declared `MIT` license detection on the archive file itself
 
 ##### [sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba](https://download.fedoraproject.org/pub/fedora/linux/releases/42/Everything/source/tree/Packages/s/sudo-1.9.15-7.p5.fc42.src.rpm) — **7.20× faster**
@@ -1554,11 +1554,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `24.89s`; ScanCode `68.91s`
 - Richer executable metadata extraction on `glazewm-v3.10.1.exe` (`3` vs `1` copyrights, `3` vs `1` holders), plus matched shipped package identity and declared license (`pkg:winexe/GlazeWM@3.10.1`, `GPL-3.0-only`) and cleaner rejection of ScanCode's bogus installer author fragments such as `uri. Failed` and `elements. Failed`
 
-##### [ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4](https://github.com/icsharpcode/ILSpy/releases/download/v9.1/ILSpy_binaries_9.1.0.7988-x64.zip) — **1.71× faster**
+##### [ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4](https://github.com/icsharpcode/ILSpy/releases/download/v9.1/ILSpy_binaries_9.1.0.7988-x64.zip) — **11.14× faster**
 
 - Files: 40
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.50s`; ScanCode `17.97s`
+- Run context: 2026-06-14 · extracted-61095 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.12s`; ScanCode `57.03s`
 - Shipped `.deps.json` coverage on the extracted ILSpy release (`3` vs `0` packages, `86` vs `0` dependencies), with file-level NuGet dependency visibility across `ILSpy.deps.json` and plugin manifests plus cleaner rejection of ScanCode's binary-text holder noise such as `LegalTrademarks OriginalFilename`
 
 ##### [itchyny/gojq v0.12.19 darwin arm64 release snapshot @ sha256:40208d4](https://github.com/itchyny/gojq/releases/tag/v0.12.19) — **1.14× faster**

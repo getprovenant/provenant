@@ -107,9 +107,9 @@ ScanCode: 74.17s</title></rect>
     <rect x="92.00" y="427.69" width="8" height="8" fill="#d97706" rx="1.5"><title>python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3
 Files: 1
 ScanCode: 69.35s</title></rect>
-    <rect x="92.00" y="424.87" width="8" height="8" fill="#d97706" rx="1.5"><title>rubocop 1.86.1 .gem @ sha256:44415f3
+    <rect x="92.00" y="453.46" width="8" height="8" fill="#d97706" rx="1.5"><title>rubocop 1.86.1 .gem @ sha256:44415f3
 Files: 1
-ScanCode: 73.62s</title></rect>
+ScanCode: 40.20s</title></rect>
     <rect x="92.00" y="428.71" width="8" height="8" fill="#d97706" rx="1.5"><title>sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba
 Files: 1
 ScanCode: 67.87s</title></rect>
@@ -146,9 +146,9 @@ ScanCode: 70.75s</title></rect>
     <rect x="257.23" y="327.58" width="8" height="8" fill="#d97706" rx="1.5"><title>Windows 10 KB5049993 cumulative update extracted snapshot
 Files: 11
 ScanCode: 577.11s</title></rect>
-    <rect x="263.23" y="423.19" width="8" height="8" fill="#d97706" rx="1.5"><title>archlinux/packaging/packages/pacman @ 4ee8983
+    <rect x="263.23" y="453.39" width="8" height="8" fill="#d97706" rx="1.5"><title>archlinux/packaging/packages/pacman @ 4ee8983
 Files: 12
-ScanCode: 76.28s</title></rect>
+ScanCode: 40.26s</title></rect>
     <rect x="283.05" y="425.90" width="8" height="8" fill="#d97706" rx="1.5"><title>univention/Nubus @ fef2258
 Files: 16
 ScanCode: 72.03s</title></rect>
@@ -170,9 +170,9 @@ ScanCode: 68.76s</title></rect>
     <rect x="328.63" y="424.63" width="8" height="8" fill="#d97706" rx="1.5"><title>e-ale/meta-pocketbeagle @ 7cb4956
 Files: 31
 ScanCode: 73.99s</title></rect>
-    <rect x="346.19" y="491.51" width="8" height="8" fill="#d97706" rx="1.5"><title>ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4
+    <rect x="346.19" y="436.94" width="8" height="8" fill="#d97706" rx="1.5"><title>ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4
 Files: 40
-ScanCode: 17.97s</title></rect>
+ScanCode: 57.03s</title></rect>
     <rect x="349.56" y="424.02" width="8" height="8" fill="#d97706" rx="1.5"><title>marshallpierce/rust-base64 @ 13f4fe8
 Files: 42
 ScanCode: 74.96s</title></rect>
@@ -185,9 +185,9 @@ ScanCode: 235.99s</title></rect>
     <rect x="362.93" y="430.28" width="8" height="8" fill="#d97706" rx="1.5"><title>conda-forge/pandas-feedstock @ 4063b72
 Files: 51
 ScanCode: 65.66s</title></rect>
-    <rect x="365.59" y="422.87" width="8" height="8" fill="#d97706" rx="1.5"><title>docker-library/python @ ced4ac7
+    <rect x="365.59" y="449.04" width="8" height="8" fill="#d97706" rx="1.5"><title>docker-library/python @ ced4ac7
 Files: 53
-ScanCode: 76.81s</title></rect>
+ScanCode: 44.14s</title></rect>
     <rect x="387.65" y="448.50" width="8" height="8" fill="#d97706" rx="1.5"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
 Files: 73
 ScanCode: 44.65s</title></rect>
@@ -197,9 +197,9 @@ ScanCode: 627.66s</title></rect>
     <rect x="393.09" y="400.80" width="8" height="8" fill="#d97706" rx="1.5"><title>Mantle/Mantle @ 2a8e212
 Files: 79
 ScanCode: 122.53s</title></rect>
-    <rect x="397.32" y="478.15" width="8" height="8" fill="#d97706" rx="1.5"><title>Alpine 3.23.3 minirootfs @ sha256:42d0e6d
+    <rect x="397.32" y="439.40" width="8" height="8" fill="#d97706" rx="1.5"><title>Alpine 3.23.3 minirootfs @ sha256:42d0e6d
 Files: 84
-ScanCode: 23.84s</title></rect>
+ScanCode: 54.13s</title></rect>
     <rect x="399.74" y="430.21" width="8" height="8" fill="#d97706" rx="1.5"><title>numtide/devshell @ 255a2b1
 Files: 87
 ScanCode: 65.75s</title></rect>
@@ -224,9 +224,9 @@ ScanCode: 84.73s</title></rect>
     <rect x="423.04" y="408.29" width="8" height="8" fill="#d97706" rx="1.5"><title>jashkenas/backbone @ da75718
 Files: 122
 ScanCode: 104.56s</title></rect>
-    <rect x="426.88" y="421.60" width="8" height="8" fill="#d97706" rx="1.5"><title>getsentry/self-hosted @ 8728919
+    <rect x="426.88" y="447.92" width="8" height="8" fill="#d97706" rx="1.5"><title>getsentry/self-hosted @ 8728919
 Files: 129
-ScanCode: 78.89s</title></rect>
+ScanCode: 45.20s</title></rect>
     <rect x="428.98" y="388.90" width="8" height="8" fill="#d97706" rx="1.5"><title>fmtlib/fmt @ 2cb3983
 Files: 133
 ScanCode: 157.63s</title></rect>
@@ -362,9 +362,9 @@ ScanCode: 169.15s</title></rect>
     <rect x="543.81" y="392.44" width="8" height="8" fill="#d97706" rx="1.5"><title>select2/select2 @ 595494a
 Files: 704
 ScanCode: 146.24s</title></rect>
-    <rect x="543.91" y="374.16" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/json @ 70efd4b
+    <rect x="543.91" y="387.84" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/json @ 70efd4b
 Files: 705
-ScanCode: 215.32s</title></rect>
+ScanCode: 161.21s</title></rect>
     <rect x="548.54" y="380.50" width="8" height="8" fill="#d97706" rx="1.5"><title>xiph/opus @ 22244de
 Files: 754
 ScanCode: 188.27s</title></rect>
@@ -374,9 +374,9 @@ ScanCode: 393.40s</title></rect>
     <rect x="555.41" y="408.67" width="8" height="8" fill="#d97706" rx="1.5"><title>tokio-rs/tokio @ 5db10f5
 Files: 833
 ScanCode: 103.73s</title></rect>
-    <rect x="555.57" y="409.04" width="8" height="8" fill="#d97706" rx="1.5"><title>conda/conda-build @ 5da509d
+    <rect x="555.57" y="427.04" width="8" height="8" fill="#d97706" rx="1.5"><title>conda/conda-build @ 5da509d
 Files: 835
-ScanCode: 102.91s</title></rect>
+ScanCode: 70.31s</title></rect>
     <rect x="558.17" y="345.08" width="8" height="8" fill="#d97706" rx="1.5"><title>pulseaudio/pulseaudio @ b096704
 Files: 867
 ScanCode: 398.45s</title></rect>
@@ -608,18 +608,18 @@ ScanCode: 519.01s</title></rect>
     <rect x="709.24" y="331.79" width="8" height="8" fill="#d97706" rx="1.5"><title>facebook/react-native @ 179e0cd
 Files: 7765
 ScanCode: 527.81s</title></rect>
-    <rect x="714.70" y="383.87" width="8" height="8" fill="#d97706" rx="1.5"><title>libgit2/libgit2 @ 1f34e2a
+    <rect x="714.70" y="366.27" width="8" height="8" fill="#d97706" rx="1.5"><title>libgit2/libgit2 @ 1f34e2a
 Files: 8406
-ScanCode: 175.31s</title></rect>
+ScanCode: 254.45s</title></rect>
     <rect x="717.50" y="314.45" width="8" height="8" fill="#d97706" rx="1.5"><title>baserow/baserow @ 18a5fc1
 Files: 8755
 ScanCode: 761.82s</title></rect>
     <rect x="719.28" y="309.28" width="8" height="8" fill="#d97706" rx="1.5"><title>flutter/packages @ 06fee7a
 Files: 8983
 ScanCode: 849.94s</title></rect>
-    <rect x="720.00" y="256.33" width="8" height="8" fill="#d97706" rx="1.5"><title>LinuxCNC/linuxcnc @ cd534c9
+    <rect x="720.00" y="277.65" width="8" height="8" fill="#d97706" rx="1.5"><title>LinuxCNC/linuxcnc @ cd534c9
 Files: 9078
-ScanCode: 2606.91s</title></rect>
+ScanCode: 1659.92s</title></rect>
     <rect x="720.30" y="323.62" width="8" height="8" fill="#d97706" rx="1.5"><title>OrchardCMS/OrchardCore @ 01386f3
 Files: 9118
 ScanCode: 627.46s</title></rect>
@@ -775,9 +775,9 @@ Provenant: 9.60s</title></circle>
     <circle cx="96.00" cy="523.72" r="4.5" fill="#2563eb"><title>python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3
 Files: 1
 Provenant: 9.89s</title></circle>
-    <circle cx="96.00" cy="490.88" r="4.5" fill="#2563eb"><title>rubocop 1.86.1 .gem @ sha256:44415f3
+    <circle cx="96.00" cy="559.28" r="4.5" fill="#2563eb"><title>rubocop 1.86.1 .gem @ sha256:44415f3
 Files: 1
-Provenant: 19.82s</title></circle>
+Provenant: 4.66s</title></circle>
     <circle cx="96.00" cy="525.97" r="4.5" fill="#2563eb"><title>sudo 1.9.15-7.p5.fc42 src.rpm @ sha256:96920ba
 Files: 1
 Provenant: 9.43s</title></circle>
@@ -814,9 +814,9 @@ Provenant: 9.77s</title></circle>
     <circle cx="261.23" cy="400.68" r="4.5" fill="#2563eb"><title>Windows 10 KB5049993 cumulative update extracted snapshot
 Files: 11
 Provenant: 133.69s</title></circle>
-    <circle cx="267.23" cy="516.64" r="4.5" fill="#2563eb"><title>archlinux/packaging/packages/pacman @ 4ee8983
+    <circle cx="267.23" cy="559.38" r="4.5" fill="#2563eb"><title>archlinux/packaging/packages/pacman @ 4ee8983
 Files: 12
-Provenant: 11.49s</title></circle>
+Provenant: 4.65s</title></circle>
     <circle cx="287.05" cy="520.76" r="4.5" fill="#2563eb"><title>univention/Nubus @ fef2258
 Files: 16
 Provenant: 10.53s</title></circle>
@@ -838,9 +838,9 @@ Provenant: 7.05s</title></circle>
     <circle cx="332.63" cy="518.44" r="4.5" fill="#2563eb"><title>e-ale/meta-pocketbeagle @ 7cb4956
 Files: 31
 Provenant: 11.06s</title></circle>
-    <circle cx="350.19" cy="520.89" r="4.5" fill="#2563eb"><title>ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4
+    <circle cx="350.19" cy="554.83" r="4.5" fill="#2563eb"><title>ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4
 Files: 40
-Provenant: 10.50s</title></circle>
+Provenant: 5.12s</title></circle>
     <circle cx="353.56" cy="522.96" r="4.5" fill="#2563eb"><title>marshallpierce/rust-base64 @ 13f4fe8
 Files: 42
 Provenant: 10.05s</title></circle>
@@ -853,9 +853,9 @@ Provenant: 27.50s</title></circle>
     <circle cx="366.93" cy="530.00" r="4.5" fill="#2563eb"><title>conda-forge/pandas-feedstock @ 4063b72
 Files: 51
 Provenant: 8.66s</title></circle>
-    <circle cx="369.59" cy="514.74" r="4.5" fill="#2563eb"><title>docker-library/python @ ced4ac7
+    <circle cx="369.59" cy="559.38" r="4.5" fill="#2563eb"><title>docker-library/python @ ced4ac7
 Files: 53
-Provenant: 11.96s</title></circle>
+Provenant: 4.65s</title></circle>
     <circle cx="391.65" cy="540.73" r="4.5" fill="#2563eb"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
 Files: 73
 Provenant: 6.90s</title></circle>
@@ -865,9 +865,9 @@ Provenant: 62.51s</title></circle>
     <circle cx="397.09" cy="518.23" r="4.5" fill="#2563eb"><title>Mantle/Mantle @ 2a8e212
 Files: 79
 Provenant: 11.11s</title></circle>
-    <circle cx="401.32" cy="491.72" r="4.5" fill="#2563eb"><title>Alpine 3.23.3 minirootfs @ sha256:42d0e6d
+    <circle cx="401.32" cy="559.18" r="4.5" fill="#2563eb"><title>Alpine 3.23.3 minirootfs @ sha256:42d0e6d
 Files: 84
-Provenant: 19.47s</title></circle>
+Provenant: 4.67s</title></circle>
     <circle cx="403.74" cy="529.03" r="4.5" fill="#2563eb"><title>numtide/devshell @ 255a2b1
 Files: 87
 Provenant: 8.84s</title></circle>
@@ -892,9 +892,9 @@ Provenant: 10.21s</title></circle>
     <circle cx="427.04" cy="517.55" r="4.5" fill="#2563eb"><title>jashkenas/backbone @ da75718
 Files: 122
 Provenant: 11.27s</title></circle>
-    <circle cx="430.88" cy="514.04" r="4.5" fill="#2563eb"><title>getsentry/self-hosted @ 8728919
+    <circle cx="430.88" cy="558.48" r="4.5" fill="#2563eb"><title>getsentry/self-hosted @ 8728919
 Files: 129
-Provenant: 12.14s</title></circle>
+Provenant: 4.74s</title></circle>
     <circle cx="432.98" cy="514.62" r="4.5" fill="#2563eb"><title>fmtlib/fmt @ 2cb3983
 Files: 133
 Provenant: 11.99s</title></circle>
@@ -1030,9 +1030,9 @@ Provenant: 10.63s</title></circle>
     <circle cx="547.81" cy="512.39" r="4.5" fill="#2563eb"><title>select2/select2 @ 595494a
 Files: 704
 Provenant: 12.57s</title></circle>
-    <circle cx="547.91" cy="462.99" r="4.5" fill="#2563eb"><title>boostorg/json @ 70efd4b
+    <circle cx="547.91" cy="505.51" r="4.5" fill="#2563eb"><title>boostorg/json @ 70efd4b
 Files: 705
-Provenant: 35.76s</title></circle>
+Provenant: 14.54s</title></circle>
     <circle cx="552.54" cy="499.85" r="4.5" fill="#2563eb"><title>xiph/opus @ 22244de
 Files: 754
 Provenant: 16.39s</title></circle>
@@ -1042,9 +1042,9 @@ Provenant: 42.96s</title></circle>
     <circle cx="559.41" cy="551.02" r="4.5" fill="#2563eb"><title>tokio-rs/tokio @ 5db10f5
 Files: 833
 Provenant: 5.55s</title></circle>
-    <circle cx="559.57" cy="495.53" r="4.5" fill="#2563eb"><title>conda/conda-build @ 5da509d
+    <circle cx="559.57" cy="526.93" r="4.5" fill="#2563eb"><title>conda/conda-build @ 5da509d
 Files: 835
-Provenant: 17.96s</title></circle>
+Provenant: 9.24s</title></circle>
     <circle cx="562.17" cy="488.62" r="4.5" fill="#2563eb"><title>pulseaudio/pulseaudio @ b096704
 Files: 867
 Provenant: 20.79s</title></circle>
@@ -1276,18 +1276,18 @@ Provenant: 20.74s</title></circle>
     <circle cx="713.24" cy="464.02" r="4.5" fill="#2563eb"><title>facebook/react-native @ 179e0cd
 Files: 7765
 Provenant: 34.99s</title></circle>
-    <circle cx="718.70" cy="484.65" r="4.5" fill="#2563eb"><title>libgit2/libgit2 @ 1f34e2a
+    <circle cx="718.70" cy="523.53" r="4.5" fill="#2563eb"><title>libgit2/libgit2 @ 1f34e2a
 Files: 8406
-Provenant: 22.61s</title></circle>
+Provenant: 9.93s</title></circle>
     <circle cx="721.50" cy="482.31" r="4.5" fill="#2563eb"><title>baserow/baserow @ 18a5fc1
 Files: 8755
 Provenant: 23.76s</title></circle>
     <circle cx="723.28" cy="461.24" r="4.5" fill="#2563eb"><title>flutter/packages @ 06fee7a
 Files: 8983
 Provenant: 37.11s</title></circle>
-    <circle cx="724.00" cy="346.63" r="4.5" fill="#2563eb"><title>LinuxCNC/linuxcnc @ cd534c9
+    <circle cx="724.00" cy="391.14" r="4.5" fill="#2563eb"><title>LinuxCNC/linuxcnc @ cd534c9
 Files: 9078
-Provenant: 419.63s</title></circle>
+Provenant: 163.61s</title></circle>
     <circle cx="724.30" cy="462.95" r="4.5" fill="#2563eb"><title>OrchardCMS/OrchardCore @ 01386f3
 Files: 9118
 Provenant: 35.79s</title></circle>
