@@ -3,6 +3,7 @@
     "type": "buck",
     "name": "app",
     "parties": [],
-    "datasource_id": "buck_file"
+    "datasource_id": "buck_file",
+    "purl": "pkg:buck/app"
   }
 ]
