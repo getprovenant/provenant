@@ -487,8 +487,23 @@ fn build_lock_dependency(
         Some(extra_data)
     };
 
+    // Each composer.lock package entry carries its own `license` field (e.g.
+    // `["MIT"]`); extract it so locked packages get declared-license data, the
+    // same way composer.json packages do. (`false`: no proprietary fallback for
+    // lock entries without a license.)
+    let (
+        extracted_license_statement,
+        declared_license_expression,
+        declared_license_expression_spdx,
+        license_detections,
+    ) = extract_license_data(package, false);
+
     let resolved_package = ResolvedPackage {
         primary_language: Some("PHP".to_string()),
+        declared_license_expression,
+        declared_license_expression_spdx,
+        extracted_license_statement,
+        license_detections,
         download_url: dist_url,
         sha1: sha1.and_then(|h| Sha1Digest::from_hex(&h).ok()),
         sha256: sha256.and_then(|h| Sha256Digest::from_hex(&h).ok()),

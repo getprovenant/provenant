@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 
 use provenant::golden_maintenance::run_prettier;
+use provenant::output_schema::OutputPackageData;
 use provenant::parsers;
 
 #[derive(Parser, Debug)]
@@ -68,8 +69,13 @@ fn main() -> Result<()> {
         }
     };
 
-    let json =
-        serde_json::to_string_pretty(&vec![package_data]).context("failed to serialize JSON")?;
+    // Serialize through `OutputPackageData` (the public output schema), which is
+    // exactly what the golden comparators compare against. Serializing the raw
+    // internal `PackageData` instead produced a different shape (e.g. field
+    // `package_type` vs the schema's `type`), generating fixtures that did not
+    // match how the goldens are actually checked.
+    let output: OutputPackageData = (&package_data).into();
+    let json = serde_json::to_string_pretty(&vec![output]).context("failed to serialize JSON")?;
     fs::write(output_file, json)
         .with_context(|| format!("failed to write output file: {}", output_file.display()))?;
 
