@@ -232,13 +232,27 @@ fn promote_whole_statement_clue(
     if match_item.matcher != crate::license_detection::models::MatcherKind::Hash {
         return None;
     }
-    if match_item.license_expression.trim().is_empty() {
+    let expression = match_item.license_expression.trim();
+    if expression.is_empty() {
+        return None;
+    }
+
+    // Do not promote a generic/unknown catch-all license (e.g. `commercial-license`,
+    // `proprietary-license`, `free-unknown`). A non-specific match means the declared
+    // statement is a custom/unstated license — for example `"Acme Commercial License"`,
+    // where the custom token is dropped during tokenization and only `"Commercial
+    // License"` matches the generic rule. Such statements must stay an extracted-only
+    // raw value; only a specific license (e.g. `bsd-new`) is promoted to declared.
+    if let Some(engine) = parser_license_engine()
+        && let Some(license) = engine.index().licenses_by_key.get(expression)
+        && (license.is_generic || license.is_unknown)
+    {
         return None;
     }
 
     // Re-normalize through the index so both the ScanCode and SPDX forms are
     // canonical, rather than trusting whatever the clue match happened to carry.
-    normalize_spdx_expression(&match_item.license_expression)
+    normalize_spdx_expression(expression)
 }
 
 pub(crate) fn normalize_spdx_expression(statement: &str) -> Option<NormalizedDeclaredLicense> {
@@ -1420,6 +1434,24 @@ mod tests {
             lgpl.declared_license_expression.as_deref(),
             Some("lgpl-2.0-plus")
         );
+    }
+
+    #[test]
+    fn test_populate_declared_license_custom_generic_stays_extracted_only() {
+        // A custom/proprietary statement whose only match resolves to a generic
+        // catch-all license (here `commercial-license`, with the custom `Acme`
+        // token dropped during tokenization) must NOT be promoted to declared; it
+        // stays an extracted-only raw value.
+        let mut package = package_with(Some("Acme Commercial License"), None, None);
+        populate_declared_license_and_holder(&mut package);
+
+        assert_eq!(
+            package.extracted_license_statement.as_deref(),
+            Some("Acme Commercial License")
+        );
+        assert_eq!(package.declared_license_expression, None);
+        assert_eq!(package.declared_license_expression_spdx, None);
+        assert!(package.license_detections.is_empty());
     }
 
     #[test]
