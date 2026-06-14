@@ -206,6 +206,7 @@ pub(super) fn apply_cargo_workspace_domain(
         .collect();
     manifest_indices.push(workspace_root.root_cargo_toml_idx);
     for idx in manifest_indices {
+        let datafile_path = files[idx].path.clone();
         if let Some(pkg_data) = files[idx]
             .package_data
             .iter_mut()
@@ -216,6 +217,14 @@ pub(super) fn apply_cargo_workspace_domain(
                 &workspace_root.workspace_data,
                 resolved_license.as_ref(),
             );
+            // Inherited detections are cloned in with `from_file: None`; backfill the
+            // manifest path here since parser-time provenance enrichment has already run.
+            for detection in &mut pkg_data.license_detections {
+                crate::models::file_info::enrich_license_detection_provenance(
+                    detection,
+                    &datafile_path,
+                );
+            }
         }
     }
 

@@ -2527,6 +2527,13 @@ mod tests {
             None,
             "workspace license marker should be consumed once resolved"
         );
+        // File-level detections must carry the manifest path as `from_file`; the inherited
+        // detection is cloned in with `from_file: None` and backfilled during assembly.
+        let file_match = &member_file_pkg.license_detections[0].matches[0];
+        assert_eq!(
+            file_match.from_file.as_deref(),
+            Some("workspace/crates/app/Cargo.toml")
+        );
     }
 
     #[test]
