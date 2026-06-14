@@ -834,7 +834,7 @@ mod tests {
 
         assert_eq!(
             package.declared_license_expression.as_deref(),
-            Some("lgpl-2.0-only")
+            Some("lgpl-2.0")
         );
         assert_eq!(
             package.declared_license_expression_spdx.as_deref(),

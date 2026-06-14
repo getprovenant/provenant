@@ -193,15 +193,15 @@
           "primary_language": "JavaScript",
           "download_url": "https://registry.npmjs.org/xtend/-/xtend-4.0.2.tgz",
           "sha512": "2ca614d620172575200179fd5118e2bbe3168725171ecbdfa7b99cb989bd75250a2b4fc28edad4c050310fcdbf98259bb4bb068c521a774c08b28778ceb4c011",
-          "declared_license_expression": "bsd-2-clause",
+          "declared_license_expression": "bsd-simplified",
           "declared_license_expression_spdx": "BSD-2-Clause",
           "license_detections": [
             {
-              "license_expression": "bsd-2-clause",
+              "license_expression": "bsd-simplified",
               "license_expression_spdx": "BSD-2-Clause",
               "matches": [
                 {
-                  "license_expression": "bsd-2-clause",
+                  "license_expression": "bsd-simplified",
                   "license_expression_spdx": "BSD-2-Clause",
                   "from_file": null,
                   "start_line": 1,

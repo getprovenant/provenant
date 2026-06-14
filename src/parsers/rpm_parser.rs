@@ -1424,10 +1424,7 @@ mod tests {
         let pkg = RpmParser::extract_first_package(temp_file.path());
 
         assert_eq!(pkg.extracted_license_statement.as_deref(), Some("LGPLv2"));
-        assert_eq!(
-            pkg.declared_license_expression.as_deref(),
-            Some("lgpl-2.0-only")
-        );
+        assert_eq!(pkg.declared_license_expression.as_deref(), Some("lgpl-2.0"));
         assert_eq!(
             pkg.declared_license_expression_spdx.as_deref(),
             Some("LGPL-2.0-only")

@@ -14,15 +14,15 @@
     ],
     "homepage_url": "https://git.alpinelinux.org/cgit/aports/tree/main/alpine-baselayout",
     "vcs_url": "git+https://git.alpinelinux.org/aports/commit/?id=cb70ca5c6d6db0399d2dd09189c5d57827bce5cd",
-    "declared_license_expression": "gpl-2.0-only",
+    "declared_license_expression": "gpl-2.0",
     "declared_license_expression_spdx": "GPL-2.0-only",
     "license_detections": [
       {
-        "license_expression": "gpl-2.0-only",
+        "license_expression": "gpl-2.0",
         "license_expression_spdx": "GPL-2.0-only",
         "matches": [
           {
-            "license_expression": "gpl-2.0-only",
+            "license_expression": "gpl-2.0",
             "license_expression_spdx": "GPL-2.0-only",
             "score": 100.0
           }
