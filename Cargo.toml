@@ -108,7 +108,7 @@ ar = "0.9" # Unix ar archive format (for .deb)
 base64 = "0.22.1"
 bit-set = "0.10.0"
 bzip2 = "0.6.1"
-chrono = "0.4.44"
+chrono = "0.4.45"
 clap = { workspace = true }
 csv = "1.4.0"
 daachorse = "3.0.2"
