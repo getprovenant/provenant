@@ -32,6 +32,8 @@ fn test_parse_empty_buck_fallback() {
 
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("end2end".to_string()));
+    // Directory-name fallback still synthesizes a purl from the package name.
+    assert_eq!(pkg.purl, Some("pkg:buck/end2end".to_string()));
 }
 
 #[test]
@@ -70,6 +72,7 @@ android_binary(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("my-app".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/my-app".to_string()));
 }
 
 #[test]
@@ -87,6 +90,7 @@ android_library(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("my-lib".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/my-lib".to_string()));
 }
 
 #[test]
@@ -104,6 +108,7 @@ java_binary(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("my-app".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/my-app".to_string()));
 }
 
 #[test]
@@ -126,6 +131,7 @@ android_binary(
     let pkg = BuckBuildParser::extract_first_package(&buck_path);
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("app".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/app".to_string()));
 }
 
 #[test]
@@ -149,6 +155,7 @@ android_binary(
     // Should return first rule
     assert_eq!(pkg.package_type, Some(PackageType::Buck));
     assert_eq!(pkg.name, Some("app1".to_string()));
+    assert_eq!(pkg.purl, Some("pkg:buck/app1".to_string()));
 }
 
 // ============================================================================

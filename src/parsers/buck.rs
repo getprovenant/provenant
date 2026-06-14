@@ -661,9 +661,12 @@ fn fallback_package_data(path: &Path) -> PackageData {
         .and_then(|n| n.to_str())
         .map(|s| s.to_string());
 
+    let purl = build_buck_purl(None, name.as_deref(), None);
+
     PackageData {
         package_type: Some(BuckBuildParser::PACKAGE_TYPE),
         name,
+        purl,
         datasource_id: Some(DatasourceId::BuckFile),
         ..Default::default()
     }
