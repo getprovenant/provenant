@@ -2590,6 +2590,9 @@ fn test_trim_separator_rule_runs_unit() {
     // Short punctuation runs and ordinary text are left intact.
     assert_eq!(trim_separator_rule_runs("a -- b"), "a -- b");
     assert_eq!(trim_separator_rule_runs("Acme Corp"), "Acme Corp");
+    // Only runs of one identical separator are collapsed; mixed runs are left intact.
+    assert_eq!(trim_separator_rule_runs("a =*= b"), "a =*= b");
+    assert_eq!(trim_separator_rule_runs("a *=* b"), "a *=* b");
 }
 
 #[test]

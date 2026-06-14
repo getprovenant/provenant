@@ -322,7 +322,7 @@ pub(super) fn strip_known_copyright_wrappers(s: &str) -> String {
 /// punctuation (single/double dashes, `(c)`, etc.) intact.
 pub(super) fn trim_separator_rule_runs(s: &str) -> String {
     static SEPARATOR_RUN_RE: LazyLock<Regex> =
-        LazyLock::new(|| compile_static_regex(r"[=_*]{3,}|-{3,}"));
+        LazyLock::new(|| compile_static_regex(r"={3,}|_{3,}|\*{3,}|-{3,}"));
     if !SEPARATOR_RUN_RE.is_match(s) {
         return s.to_string();
     }
