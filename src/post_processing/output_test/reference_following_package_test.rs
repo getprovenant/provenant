@@ -822,3 +822,67 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
     assert_eq!(shared_file.license_detections[0].matches.len(), 1);
     assert!(shared_file.license_detections[0].detection_log.is_empty());
 }
+
+#[test]
+fn apply_package_reference_following_does_not_smear_multi_package_db_file_detection() {
+    // A multi-package installed database (e.g. `var/lib/dpkg/status`) carries many
+    // `package_data` entries sharing one file. A bare license mention anywhere in
+    // that file yields a single whole-file detection that belongs to no single
+    // package and must not be smeared onto every package built from the database.
+    let status_path = "var/lib/dpkg/status";
+
+    let pkg_uid = "pkg:deb/debian/pkga?uuid=test".to_string();
+    let mut package = super::test_utils::package(&pkg_uid, status_path);
+    package.datafile_paths = vec![status_path.to_string()];
+
+    // Two package_data entries on the shared status file, neither with a declared
+    // license (dpkg status has no per-package license field).
+    let pkg_a_data = PackageData {
+        package_type: Some(PackageType::Deb),
+        name: Some("inspec-bin".to_string()),
+        version: Some("6.8.2".to_string()),
+        ..Default::default()
+    };
+    let pkg_b_data = PackageData {
+        package_type: Some(PackageType::Deb),
+        name: Some("other".to_string()),
+        version: Some("1.0".to_string()),
+        ..Default::default()
+    };
+
+    let mut status = file(status_path);
+    status.for_packages = vec![PackageUid::from_raw(pkg_uid.clone())];
+    status.package_data = vec![pkg_a_data, pkg_b_data];
+    status.detected_license_expression = Some("lgpl-2.0-plus".to_string());
+    status.license_detections = vec![crate::models::LicenseDetection {
+        license_expression: "lgpl-2.0-plus".to_string(),
+        license_expression_spdx: "LGPL-2.0-or-later".to_string(),
+        matches: vec![Match {
+            license_expression: "lgpl-2.0-plus".to_string(),
+            license_expression_spdx: "LGPL-2.0-or-later".to_string(),
+            from_file: Some(status_path.to_string()),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::ONE,
+            matcher: MatcherKind::Hash,
+            score: MatchScore::MAX,
+            matched_length: Some(1),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: "lgpl_bare_single_word.RULE".to_string(),
+            rule_url: None,
+            matched_text: Some("LGPL".to_string()),
+            referenced_filenames: None,
+            matched_text_diagnostics: None,
+        }],
+        detection_log: vec![],
+        identifier: "lgpl".to_string(),
+    }];
+
+    let mut files = vec![dir("var/lib/dpkg"), status];
+    let mut packages = vec![package];
+    apply_package_reference_following(&mut files, &mut packages);
+
+    // The whole-file detection must not become the package's declared license.
+    assert_eq!(packages[0].declared_license_expression, None);
+    assert!(packages[0].license_detections.is_empty());
+}
