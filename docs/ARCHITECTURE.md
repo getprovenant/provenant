@@ -45,6 +45,8 @@ Parsers still MUST NOT:
 
 Parsers MAY populate `declared_license_expression`, `declared_license_expression_spdx`, and deterministic parser-side `license_detections` when the source field is a bounded, trustworthy declared-license surface such as an SPDX-expression-compatible manifest field.
 
+The "backfill" prohibition above is on **parsers**. Reconciling a declared license with a file the manifest **references** is handled later by the post-assembly `apply_package_reference_following` pass (`src/post_processing/reference_following.rs`): it resolves a manifest-declared reference (e.g. a `license-file` / "see LICENSE" pointer) to the referenced file's license. That pass never adopts arbitrary co-located files — an unreferenced sibling `LICENSE`/`README` stays a file-level detection and feeds the clarity score, but is not promoted into a package's declared license (and co-located key-file promotion carries only copyright/holder). See [`adr/0002-extraction-vs-detection.md`](adr/0002-extraction-vs-detection.md).
+
 For file-level copyright detection specifically, Provenant now keeps two internal views once a finding is materialized:
 
 - a **less-normalized rendered value** used for default file-level output

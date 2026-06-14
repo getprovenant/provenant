@@ -752,6 +752,16 @@ fn sync_packages_from_followed_package_data(
                     .and_then(|package_data| package_data.other_license_expression_spdx.clone())
             });
 
+            // Reference-following enrichment (NOT a parser backfill). For a single-datafile
+            // package whose package_data carried no detections, adopt the detections found
+            // on the package's own manifest file — including a declared license the manifest
+            // *references* in a sibling file (e.g. a `license-file`/"see LICENSE" pointer that
+            // resolves to the referenced file's license). This is the sanctioned enrichment
+            // stage anticipated by docs/adr/0002-extraction-vs-detection.md; the parser
+            // prohibition in ARCHITECTURE.md §3 ("never backfill declared from sibling files")
+            // applies to *parsers*, not to this post-assembly reference-resolution pass, which
+            // only follows references the manifest itself declares and never adopts arbitrary
+            // co-located files.
             if package.datafile_paths.len() == 1
                 && next_license_detections.is_empty()
                 && let Some(manifest_file) =

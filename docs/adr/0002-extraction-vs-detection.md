@@ -43,15 +43,17 @@ In the Python reference implementation, these responsibilities are mixed within 
 
 ### Parser Prohibitions (❌ FORBIDDEN)
 
-| Operation                                        | Why Forbidden                                           | Handled By / Alternative           |
-| ------------------------------------------------ | ------------------------------------------------------- | ---------------------------------- |
-| **Run fuzzy file-content license matching**      | Content scanning, confidence scoring, heavy rule search | License detection engine           |
-| **Resolve arbitrary license URLs automatically** | Requires broader URL → identifier policy                | Future enrichment / detection flow |
-| **Partially normalize mixed ambiguous inputs**   | Produces misleading declared package licenses           | Keep raw-only in parser            |
-| **Backfill declared licenses from file scans**   | Conflates declared and discovered sources               | Separate enrichment stage          |
-| **Extract copyright holders**                    | Requires grammar-based pattern matching                 | Copyright detection engine         |
-| **Populate `holder` field**                      | Requires ClueCODE-style analysis                        | Copyright detection engine         |
-| **Parse emails from file content**               | Requires regex patterns and scanning                    | Email detection engine             |
+| Operation                                        | Why Forbidden                                           | Handled By / Alternative             |
+| ------------------------------------------------ | ------------------------------------------------------- | ------------------------------------ |
+| **Run fuzzy file-content license matching**      | Content scanning, confidence scoring, heavy rule search | License detection engine             |
+| **Resolve arbitrary license URLs automatically** | Requires broader URL → identifier policy                | Future enrichment / detection flow   |
+| **Partially normalize mixed ambiguous inputs**   | Produces misleading declared package licenses           | Keep raw-only in parser              |
+| **Backfill declared licenses from file scans**   | Conflates declared and discovered sources               | Reference-following enrichment stage |
+| **Extract copyright holders**                    | Requires grammar-based pattern matching                 | Copyright detection engine           |
+| **Populate `holder` field**                      | Requires ClueCODE-style analysis                        | Copyright detection engine           |
+| **Parse emails from file content**               | Requires regex patterns and scanning                    | Email detection engine               |
+
+> **Where the "separate enrichment stage" lives.** The prohibition above is on **parsers**. The sanctioned place to reconcile a declared license with a referenced file is the post-assembly pass `apply_package_reference_following` (`src/post_processing/reference_following.rs`): it resolves a license the manifest **itself references** (e.g. a `license-file` / "see LICENSE" pointer) to the referenced file's detected license, and assigns it to the package's declared expression. It does **not** adopt arbitrary co-located files — a sibling `LICENSE`/`README` that the manifest does not reference is surfaced only as a file-level detection (and feeds the clarity score), never promoted into a package's declared license. Co-located key-file promotion (`promote_package_metadata_from_key_files`) likewise promotes only copyright/holder, never the declared license.
 
 ### Responsibility Matrix
 
