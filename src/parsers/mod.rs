@@ -438,6 +438,23 @@ pub(crate) fn with_parser_scan_root<T>(scan_root: Option<&Path>, f: impl FnOnce(
     result
 }
 
+/// Make a license-detection engine the active one for parser-level declared-license
+/// normalization within `f`. Used to share the scan's already-built engine with the
+/// assembly phase so cross-file resolution does not rebuild a redundant engine.
+pub(crate) fn with_parser_license_engine<T>(
+    engine: Option<Arc<LicenseDetectionEngine>>,
+    f: impl FnOnce() -> T,
+) -> T {
+    PARSER_LICENSE_ENGINE_STACK.with(|stack| {
+        stack.borrow_mut().push(engine);
+    });
+    let result = f();
+    PARSER_LICENSE_ENGINE_STACK.with(|stack| {
+        stack.borrow_mut().pop();
+    });
+    result
+}
+
 pub(crate) fn record_parser_diagnostic(message: String, severity: DiagnosticSeverity) -> bool {
     PARSER_DIAGNOSTIC_STACK.with(|stack| {
         let mut stack = stack.borrow_mut();
