@@ -191,6 +191,43 @@ pub(super) fn apply_cargo_workspace_domain(
     packages: &mut Vec<Package>,
     dependencies: &mut Vec<TopLevelDependency>,
 ) {
+    // Normalize the workspace license once; every member shares the same license
+    // string, so per-member SPDX normalization would be wasteful on large workspaces.
+    let resolved_license = resolve_workspace_license(&workspace_root.workspace_data);
+
+    // Resolve workspace inheritance onto the file-level member and root manifests so
+    // the declared license (and other inherited fields) appear in file output and
+    // survive the later package/file license resync, matching ScanCode's
+    // per-manifest resolution.
+    let mut manifest_indices: Vec<usize> = workspace_root
+        .members
+        .iter()
+        .map(|member| member.manifest_idx)
+        .collect();
+    manifest_indices.push(workspace_root.root_cargo_toml_idx);
+    for idx in manifest_indices {
+        let datafile_path = files[idx].path.clone();
+        if let Some(pkg_data) = files[idx]
+            .package_data
+            .iter_mut()
+            .find(|pkg| pkg.datasource_id == Some(DatasourceId::CargoToml))
+        {
+            apply_workspace_inheritance(
+                pkg_data,
+                &workspace_root.workspace_data,
+                resolved_license.as_ref(),
+            );
+            // Inherited detections are cloned in with `from_file: None`; backfill the
+            // manifest path here since parser-time provenance enrichment has already run.
+            for detection in &mut pkg_data.license_detections {
+                crate::models::file_info::enrich_license_detection_provenance(
+                    detection,
+                    &datafile_path,
+                );
+            }
+        }
+    }
+
     let keep_root_package = root_workspace_manifest_is_package(files, workspace_root);
     let mut root_package_uid = None;
     if !keep_root_package {
@@ -200,7 +237,9 @@ pub(super) fn apply_cargo_workspace_domain(
             packages,
             dependencies,
         );
-    } else if let Some((pkg, deps)) = create_root_package(files, workspace_root) {
+    } else if let Some((pkg, deps)) =
+        create_root_package(files, workspace_root, resolved_license.as_ref())
+    {
         root_package_uid = Some(pkg.package_uid.clone());
         packages.push(pkg);
         dependencies.extend(deps);
@@ -220,6 +259,7 @@ pub(super) fn apply_cargo_workspace_domain(
         files,
         &workspace_root.members,
         &workspace_root.workspace_data,
+        resolved_license.as_ref(),
     );
 
     let mut member_uids: Vec<PackageUid> = member_packages
@@ -393,6 +433,7 @@ fn create_member_packages(
     files: &[FileInfo],
     members: &[CargoWorkspaceMemberDomain],
     workspace_data: &WorkspaceData,
+    resolved_license: Option<&ResolvedWorkspaceLicense>,
 ) -> Vec<(Package, Vec<TopLevelDependency>)> {
     let mut results = Vec::new();
 
@@ -409,7 +450,7 @@ fn create_member_packages(
             };
 
         let mut resolved_pkg_data = pkg_data.clone();
-        apply_workspace_inheritance(&mut resolved_pkg_data, workspace_data);
+        apply_workspace_inheritance(&mut resolved_pkg_data, workspace_data, resolved_license);
 
         let datafile_path = file.path.clone();
         let datasource_id = DatasourceId::CargoToml;
@@ -476,6 +517,7 @@ fn create_member_packages(
 fn create_root_package(
     files: &[FileInfo],
     workspace_root: &CargoWorkspaceDomain,
+    resolved_license: Option<&ResolvedWorkspaceLicense>,
 ) -> Option<(Package, Vec<TopLevelDependency>)> {
     let file = &files[workspace_root.root_cargo_toml_idx];
     let pkg_data = file
@@ -484,7 +526,11 @@ fn create_root_package(
         .find(|pkg| pkg.datasource_id == Some(DatasourceId::CargoToml) && pkg.purl.is_some())?;
 
     let mut resolved_pkg_data = pkg_data.clone();
-    apply_workspace_inheritance(&mut resolved_pkg_data, &workspace_root.workspace_data);
+    apply_workspace_inheritance(
+        &mut resolved_pkg_data,
+        &workspace_root.workspace_data,
+        resolved_license,
+    );
 
     let datafile_path = file.path.clone();
     let datasource_id = DatasourceId::CargoToml;
@@ -595,7 +641,46 @@ fn hoist_root_lock_dependencies(
     }
 }
 
-fn apply_workspace_inheritance(pkg_data: &mut PackageData, workspace_data: &WorkspaceData) {
+/// Workspace-inherited license normalized once so it can be cloned onto every
+/// member without re-running SPDX normalization per manifest.
+struct ResolvedWorkspaceLicense {
+    statement: String,
+    declared_expression: Option<String>,
+    declared_expression_spdx: Option<String>,
+    detections: Vec<crate::models::LicenseDetection>,
+}
+
+/// Normalize the workspace `[workspace.package].license`, if any, a single time.
+fn resolve_workspace_license(workspace_data: &WorkspaceData) -> Option<ResolvedWorkspaceLicense> {
+    use crate::parsers::license_normalization::{
+        DeclaredLicenseMatchMetadata, build_declared_license_data, empty_declared_license_data,
+        normalize_spdx_expression,
+    };
+
+    let license_str = workspace_data.package.get("license")?.as_str()?;
+    let (declared_expression, declared_expression_spdx, detections) =
+        normalize_spdx_expression(license_str)
+            .map(|normalized| {
+                build_declared_license_data(
+                    normalized,
+                    DeclaredLicenseMatchMetadata::single_line(license_str),
+                )
+            })
+            .unwrap_or_else(empty_declared_license_data);
+
+    Some(ResolvedWorkspaceLicense {
+        statement: license_str.to_string(),
+        declared_expression,
+        declared_expression_spdx,
+        detections,
+    })
+}
+
+fn apply_workspace_inheritance(
+    pkg_data: &mut PackageData,
+    workspace_data: &WorkspaceData,
+    resolved_license: Option<&ResolvedWorkspaceLicense>,
+) {
     use packageurl::PackageUrl;
 
     let extra_data = if let Some(ed) = &mut pkg_data.extra_data {
@@ -613,10 +698,12 @@ fn apply_workspace_inheritance(pkg_data: &mut PackageData, workspace_data: &Work
     }
 
     if extra_data.get("license").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(license_value) = workspace_data.package.get("license")
-        && let Some(license_str) = license_value.as_str()
+        && let Some(resolved) = resolved_license
     {
-        pkg_data.extracted_license_statement = Some(license_str.to_string());
+        pkg_data.extracted_license_statement = Some(resolved.statement.clone());
+        pkg_data.declared_license_expression = resolved.declared_expression.clone();
+        pkg_data.declared_license_expression_spdx = resolved.declared_expression_spdx.clone();
+        pkg_data.license_detections = resolved.detections.clone();
         extra_data.remove("license");
     }
 

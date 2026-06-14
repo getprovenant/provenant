@@ -2457,6 +2457,86 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_cargo_workspace_resolves_member_inherited_license() {
+        let mut root = create_test_file_info(
+            "workspace/Cargo.toml",
+            DatasourceId::CargoToml,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Cargo);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace".to_string(),
+            json!({
+                "members": ["crates/app"],
+                "package": { "license": "MIT OR Apache-2.0" },
+            }),
+        )]));
+
+        let mut member_manifest = create_test_file_info(
+            "workspace/crates/app/Cargo.toml",
+            DatasourceId::CargoToml,
+            Some("pkg:cargo/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member_manifest.package_data[0].package_type = Some(PackageType::Cargo);
+        // Member declares `license.workspace = true`, recorded as a marker by the parser.
+        member_manifest.package_data[0].extra_data =
+            Some(HashMap::from([("license".to_string(), json!("workspace"))]));
+
+        let mut files = vec![root, member_manifest];
+        let result = assemble(&mut files);
+
+        let member = result
+            .packages
+            .iter()
+            .find(|pkg| pkg.purl.as_deref() == Some("pkg:cargo/app@0.1.0"))
+            .expect("member package should be assembled");
+        // Inherited license is both captured as a statement and normalized into the
+        // declared expression / SPDX fields with a backing detection.
+        assert_eq!(
+            member.extracted_license_statement.as_deref(),
+            Some("MIT OR Apache-2.0")
+        );
+        assert_eq!(
+            member.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            member.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT")
+        );
+        assert!(!member.license_detections.is_empty());
+
+        // The inherited license must also land on the member's file-level package
+        // data, so the later license resync from file data does not clear it.
+        let member_file_pkg = &files[1].package_data[0];
+        assert_eq!(
+            member_file_pkg.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            member_file_pkg
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("license")),
+            None,
+            "workspace license marker should be consumed once resolved"
+        );
+        // File-level detections must carry the manifest path as `from_file`; the inherited
+        // detection is cloned in with `from_file: None` and backfilled during assembly.
+        let file_match = &member_file_pkg.license_detections[0].matches[0];
+        assert_eq!(
+            file_match.from_file.as_deref(),
+            Some("workspace/crates/app/Cargo.toml")
+        );
+    }
+
+    #[test]
     fn test_assemble_cargo_workspace_keeps_root_package_when_root_is_real_member() {
         let mut root = create_test_file_info(
             "workspace/Cargo.toml",

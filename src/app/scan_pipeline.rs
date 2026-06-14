@@ -311,7 +311,18 @@ pub(crate) fn build_output_model(
             progress.assembly_step("Using preloaded assembly...");
             session.preloaded_assembly
         } else {
-            assembly::assemble(&mut session.scan_result.files)
+            // Share the scan's already-built license engine with assembly so cross-file
+            // declared-license resolution (e.g. Cargo workspace inheritance) reuses it
+            // instead of triggering a redundant engine build.
+            //
+            // `with_parser_license_engine` pushes onto a thread-local stack, so the shared
+            // engine is only visible on this thread. That is sufficient because assembly is
+            // single-threaded; if assembly is ever parallelized, the engine must also be made
+            // available on the worker threads (otherwise they rebuild a per-thread engine).
+            let engine = session.active_license_engine.clone();
+            crate::parsers::with_parser_license_engine(engine, || {
+                assembly::assemble(&mut session.scan_result.files)
+            })
         };
 
         progress.assembly_step("Backfilling package license provenance...");
