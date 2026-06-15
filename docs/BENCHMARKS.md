@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **13.4× median speedup** and **13.2× geometric-mean speedup** overall; the median gap grows from **7.3×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **13.4× median speedup** and **13.4× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -85,11 +85,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `30.70s`; ScanCode `370.51s`
 - Richer mixed-surface package identity with fewer placeholder-only Debian rows and far broader dependency extraction (`351` vs `278`) across `Gemfile`, `Gemfile.lock`, `chef-*/Gemfile`, gemspec, Dockerfile, and fixture archive/control surfaces, plus email-preserving author normalization and cleaner placeholder-holder filtering
 
-##### [sous-chefs/apache2 @ 420d824](https://github.com/sous-chefs/apache2/tree/420d82402811a131729a6bcc80aaac08d307ac87) — **7.27× faster**
+##### [sous-chefs/apache2 @ 420d824](https://github.com/sous-chefs/apache2/tree/420d82402811a131729a6bcc80aaac08d307ac87) — **10.22× faster**
 
-- Files: 246
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `12.01s`; ScanCode `87.31s`
+- Files: 245
+- Run context: 2026-06-15 · apache2-8552 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.83s`; ScanCode `49.37s`
 - Matched Chef package and dependency coverage on committed `metadata.rb` surfaces, with fuller Debian-style script-header author capture and cleaner rejection of weak README maintainer prose as an author
 
 ##### [sous-chefs/mysql @ 6b7110b](https://github.com/sous-chefs/mysql/tree/6b7110bee2bc64c9149f24d524cbb740387e527a) — **9.60× faster**
@@ -587,11 +587,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.65s`; ScanCode `40.26s`
 - Direct Arch source-package visibility on committed `.SRCINFO` (`1` vs `0` file-level package records) with broader dependency extraction (`26` vs `0`) across runtime, make, check, and optional package metadata, plus copyright and holder recovery on the repo-owned `LICENSE` and `REUSE.toml` surfaces that ScanCode leaves empty
 
-##### [Amanieu/atomic-rs @ 44c213a](https://github.com/Amanieu/atomic-rs/tree/44c213a73cb4e5c4cf04fd6fd6f76dc95092aebf) — **7.24× faster**
+##### [Amanieu/atomic-rs @ 44c213a](https://github.com/Amanieu/atomic-rs/tree/44c213a73cb4e5c4cf04fd6fd6f76dc95092aebf) — **9.31× faster**
 
 - Files: 11
-- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.77s`; ScanCode `70.75s`
+- Run context: 2026-06-15 · atomic-rs-5496 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.71s`; ScanCode `43.86s`
 - Matched Cargo package and dependency coverage (`1` vs `1` packages, `5` vs `5` dependencies) while preserving the repository's `Apache-2.0 OR MIT` README license semantics and normalizing docs.rs and Keep a Changelog links without trailing-slash drift
 
 ##### [bazelbuild/bazel @ eb5aeaa](https://github.com/bazelbuild/bazel/tree/eb5aeaaa23d52601a2aca11ff6fd1a74ea97f0d6) — **9.83× faster**
@@ -699,11 +699,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.65s`; ScanCode `44.14s`
 - Broader Docker package visibility across 42 generated image Dockerfiles where ScanCode reports none, plus maintainer-line author recovery on `generate-stackbrew-library.sh`, with exact top-level package, dependency, and license parity elsewhere
 
-##### [e-ale/meta-pocketbeagle @ 7cb4956](https://github.com/e-ale/meta-pocketbeagle/tree/7cb4956d206728af96833e513594693dec98e163) — **6.69× faster**
+##### [e-ale/meta-pocketbeagle @ 7cb4956](https://github.com/e-ale/meta-pocketbeagle/tree/7cb4956d206728af96833e513594693dec98e163) — **8.64× faster**
 
 - Files: 31
-- Run context: 2026-04-21 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `11.06s`; ScanCode `73.99s`
+- Run context: 2026-06-15 · meta-pocketbeagle-92393 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.21s`; ScanCode `45.03s`
 - Broader BitBake package visibility (`4` vs `0` packages) from committed `.bb` and `.bbappend` metadata, with `linuxconsoletools_1.6.0.bb` carrying source URL/checksum plus local file-reference evidence and wildcard append manifests such as `u-boot%.bbappend` and `linux-yocto_%.bbappend` retained as package records instead of scanner-silent inputs
 
 ##### [facebook/buck2 @ 3359f75](https://github.com/facebook/buck2/tree/3359f75abe3c7b6f543fdb2c7a775d47347b8897) — **15.27× faster**
@@ -902,11 +902,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `13.65s`; ScanCode `168.27s`
 - Broader RPM package and dependency extraction (`352` vs `327` packages, `1441` vs `0` dependencies) from committed `.rpm` fixture trees and sibling `.spec` metadata, with normalized RPM header license expressions and cleaner rejection of config or doc false positives such as `baseurl` and `doxygen. Using` as holder or author data
 
-##### [marshallpierce/rust-base64 @ 13f4fe8](https://github.com/marshallpierce/rust-base64/tree/13f4fe86e565b3a8ed9402d3b8b1bcf83ab9817c) — **7.46× faster**
+##### [marshallpierce/rust-base64 @ 13f4fe8](https://github.com/marshallpierce/rust-base64/tree/13f4fe86e565b3a8ed9402d3b8b1bcf83ab9817c) — **8.98× faster**
 
 - Files: 42
-- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.05s`; ScanCode `74.96s`
+- Run context: 2026-06-15 · rust-base64-14805 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.00s`; ScanCode `44.92s`
 - Matched Cargo workspace package and dependency coverage (`2` vs `2` packages, `190` vs `190` dependencies) while preserving the repository's dual-license README and manifest semantics, recovering SVG-linked URL evidence, and avoiding trailing-slash URL drift across the docs surfaces
 
 ##### [rust-lang/cargo @ b54fe55](https://github.com/rust-lang/cargo/tree/b54fe551a982d75d299e0d54daeac70cb854eef0) — **24.6× faster**
@@ -988,11 +988,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Apple / Swift / Flutter / mobile
 
-##### [AFNetworking/AFNetworking @ d9f589c](https://github.com/AFNetworking/AFNetworking/tree/d9f589cc2c1fe9d55eb5eea00558010afea7a41e) — **8.07× faster**
+##### [AFNetworking/AFNetworking @ d9f589c](https://github.com/AFNetworking/AFNetworking/tree/d9f589cc2c1fe9d55eb5eea00558010afea7a41e) — **10.49× faster**
 
-- Files: 211
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.94s`; ScanCode `88.26s`
+- Files: 210
+- Run context: 2026-06-15 · AFNetworking-17973 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.17s`; ScanCode `54.22s`
 - Matched top-level CocoaPods package coverage (`1` vs `1`) with broader dependency extraction (`124` vs `115`) from `AFNetworking.podspec` subspec edges and the root `Gemfile`
 
 ##### [Alamofire/Alamofire @ ac01666](https://github.com/Alamofire/Alamofire/tree/ac016668a19532686e320edf447f79a5cf5bd057) — **11.91× faster**
@@ -1016,12 +1016,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `34.99s`; ScanCode `527.81s`
 - Far broader CocoaPods and sidecar package extraction (`111` vs `34` packages, `2134` vs `1572` dependencies) from many committed `.podspec` files plus the root `Gemfile` and Kotlin `build.gradle.kts` plugin manifests, with richer package author visibility across React Native podspecs
 
-##### [firebase/flutterfire @ 90d2e1f](https://github.com/firebase/flutterfire/tree/90d2e1f70b23fdad8f2fa4ca0c5e5d744d4e4f69) — **8.77× faster**
+##### [firebase/flutterfire @ 90d2e1f](https://github.com/firebase/flutterfire/tree/90d2e1f70b23fdad8f2fa4ca0c5e5d744d4e4f69) — **22.74× faster**
 
-- Files: 3,544
-- Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `25.02s`; ScanCode `219.35s`
-- Broader Flutter/Firebase package and dependency extraction (`102` vs `100` packages, `964` vs `803` dependencies) from many committed `pubspec.yaml`, CocoaPods `podspec` / `Podfile`, and Android Gradle inputs, plus contributor-roster visibility from `AUTHORS` where ScanCode stays silent
+- Files: 3,615
+- Run context: 2026-06-15 · flutterfire-25986 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `10.56s`; ScanCode `240.18s`
+- Spec-correct, internally consistent `pkg:pub` PURLs for the Flutter/Firebase graph (`65` Dart packages, `690` Dart dependencies) from many committed `pubspec.yaml`, CocoaPods `podspec` / `Podfile`, and Android Gradle inputs, where ScanCode emits non-standard `pkg:dart` packages alongside `pkg:pubspec` dependencies, with more complete copyright-holder capture (e.g. `Chromium project authors`) and contributor-roster visibility from `AUTHORS` where ScanCode stays silent
 
 ##### [flutter/flutter @ 238d79a](https://github.com/flutter/flutter/tree/238d79aba784bc75c87f226ca7e7e7015b12bfd6) — **20.54× faster**
 
@@ -1086,11 +1086,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `12.61s`; ScanCode `128.67s`
 - Matched top-level CocoaPods package coverage (`3` vs `3`) with broader dependency extraction (`10` vs `0`) from `Podfile`-declared pod relationships, while preserving separate package identities for the sibling test podspecs
 
-##### [SwiftFiddle/swiftfiddle-web @ df09b80](https://github.com/SwiftFiddle/swiftfiddle-web/tree/df09b80) — **8.30× faster**
+##### [SwiftFiddle/swiftfiddle-web @ df09b80](https://github.com/SwiftFiddle/swiftfiddle-web/tree/df09b80) — **9.88× faster**
 
-- Files: 109
-- Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.21s`; ScanCode `84.73s`
+- Files: 114
+- Run context: 2026-06-15 · swiftfiddle-web-20663 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.24s`; ScanCode `51.75s`
 - Much richer dependency extraction (`297` vs `36`) from committed `Resources/Package.swift.json`, `Package.resolved`, and `package-lock.json`, matched Swift package coverage (`32` vs `32`), and extra Docker package visibility
 
 #### .NET / NuGet / Windows / vcpkg
@@ -1202,11 +1202,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.33s`; ScanCode `97.37s`
 - Direct CPAN package identity on the root `dist.ini`, extra dependency visibility from the shipped skeleton `Makefile.PL`, plus Docker package visibility on `share/docker/Dockerfile`, with unresolved template placeholders kept out of CPAN names and PURLs
 
-##### [Plack/Plack @ b3984f1](https://github.com/Plack/Plack/tree/b3984f1c59de36903bb924c9da1273f3e11d4d2b) — **8.67× faster**
+##### [Plack/Plack @ b3984f1](https://github.com/Plack/Plack/tree/b3984f1c59de36903bb924c9da1273f3e11d4d2b) — **9.96× faster**
 
 - Files: 275
-- Run context: 2026-04-18 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.04s`; ScanCode `87.06s`
+- Run context: 2026-06-15 · Plack-23341 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.22s`; ScanCode `51.98s`
 - Direct CPAN package identity and broader dependency extraction (`1` vs `0` packages, `22` vs `0` dependencies) from `META.json`, `dist.ini`, and `Makefile.PL`, with CPAN resource metadata preserved from the distribution manifest
 
 ##### [rails/rails @ 27fb2a9](https://github.com/rails/rails/tree/27fb2a9192b2492791528fc7c3afb53736696bc5) — **13.69× faster**
@@ -1309,11 +1309,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `312.87s`; ScanCode `4641.96s`
 - Broader Nix package visibility (`1340` vs `737` packages) across committed Nix manifests, provider metadata, and lockfile-adjacent package surfaces, plus zero scan-file errors where ScanCode times out on huge metadata captures such as `hackage-packages.nix` and `typst-packages-from-universe.toml`
 
-##### [numtide/devshell @ 255a2b1](https://github.com/numtide/devshell/tree/255a2b1725a20d060f566e4755dbf571bbbb5f76) — **7.44× faster**
+##### [numtide/devshell @ 255a2b1](https://github.com/numtide/devshell/tree/255a2b1725a20d060f566e4755dbf571bbbb5f76) — **10.23× faster**
 
 - Files: 87
-- Run context: 2026-04-27 · devshell-25970 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `8.84s`; ScanCode `65.75s`
+- Run context: 2026-06-15 · devshell-12112 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.68s`; ScanCode `47.86s`
 - Broader Nix package and dependency extraction (`5` vs `0` packages, `17` vs `0` dependencies) from committed `flake.lock`, root `default.nix`, and template flake surfaces, with cleaner structured author, copyright, and URL recovery
 
 ##### [ocaml/dune @ b13ab94](https://github.com/ocaml/dune/tree/b13ab949e185a205a39eb6163eea050b7d60a047) — **25.02× faster**
@@ -1344,11 +1344,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `12.77s`; ScanCode `216.36s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with richer bundled Windows executable identity on `assets/templates/bin/openfl.exe`, extra Docker package visibility on `Dockerfile`, and cleaner URL normalization across shipped font metadata
 
-##### [univention/Nubus @ fef2258](https://github.com/univention/Nubus/tree/fef2258483c56cce0e1f14e4c8d8fce24d26b891) — **6.84× faster**
+##### [univention/Nubus @ fef2258](https://github.com/univention/Nubus/tree/fef2258483c56cce0e1f14e4c8d8fce24d26b891) — **8.64× faster**
 
 - Files: 16
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `10.53s`; ScanCode `72.03s`
+- Run context: 2026-06-15 · Nubus-3100 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.94s`; ScanCode `42.68s`
 - Direct `publiccode.yml` package visibility on the root metadata file (`1` vs `0` on that file), with cleaner SPDX copyright placeholder normalization for `Univention GmbH` and the same zero-scan-error behavior under the shared profile
 
 ##### [yesodweb/yesod @ 1b033c7](https://github.com/yesodweb/yesod/tree/1b033c741ce81d01070de993b285a17e71178156) — **9.32× faster**
