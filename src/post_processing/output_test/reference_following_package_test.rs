@@ -886,3 +886,66 @@ fn apply_package_reference_following_does_not_smear_multi_package_db_file_detect
     assert_eq!(packages[0].declared_license_expression, None);
     assert!(packages[0].license_detections.is_empty());
 }
+
+#[test]
+fn apply_package_reference_following_adopts_own_license_for_coordinateless_manifest() {
+    // A coordinate-less manifest (e.g. an ASF-header `build.gradle` with no
+    // group/artifact) never assembles into a top-level package, so the top-level
+    // manifest-adopt never runs. Its declared license must instead be enriched
+    // from the manifest file's own detection, matching how ScanCode promotes the
+    // file header. The single-package guard keeps this distinct from the
+    // multi-package smear case.
+    let gradle_path = "dependencymanager/build.gradle";
+    let mut manifest = file(gradle_path);
+    manifest.detected_license_expression = Some("apache-2.0".to_string());
+    manifest.license_detections = vec![crate::models::LicenseDetection {
+        license_expression: "apache-2.0".to_string(),
+        license_expression_spdx: "Apache-2.0".to_string(),
+        matches: vec![Match {
+            license_expression: "apache-2.0".to_string(),
+            license_expression_spdx: "Apache-2.0".to_string(),
+            from_file: Some(gradle_path.to_string()),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::new(10).unwrap(),
+            matcher: MatcherKind::Hash,
+            score: MatchScore::MAX,
+            matched_length: Some(50),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: "apache-2.0.LICENSE".to_string(),
+            rule_url: None,
+            matched_text: None,
+            referenced_filenames: None,
+            matched_text_diagnostics: None,
+        }],
+        detection_log: vec![],
+        identifier: "apache".to_string(),
+    }];
+    // Coordinate-less package_data (no purl): the gradle parser found no
+    // group/artifact, and the parser extracted no declared license.
+    manifest.package_data = vec![PackageData {
+        package_type: Some(PackageType::Maven),
+        ..Default::default()
+    }];
+
+    let mut files = vec![dir("dependencymanager"), manifest];
+    let mut packages = vec![];
+    apply_package_reference_following(&mut files, &mut packages);
+
+    let package_data = &files[1].package_data[0];
+    assert_eq!(
+        package_data.declared_license_expression.as_deref(),
+        Some("apache-2.0")
+    );
+    assert_eq!(
+        package_data.declared_license_expression_spdx.as_deref(),
+        Some("Apache-2.0")
+    );
+    // The adopted detections must back the declared expression, so the package
+    // does not end up with a declared license but an empty detection list.
+    assert_eq!(package_data.license_detections.len(), 1);
+    assert_eq!(
+        package_data.license_detections[0].license_expression,
+        "apache-2.0"
+    );
+}

@@ -585,6 +585,37 @@ fn follow_references_for_file(file: &mut FileInfo, snapshot: &ReferenceFollowSna
         }
     }
 
+    // File-level analog of the post-assembly manifest-adopt enrichment
+    // (sync_packages_from_followed_package_data): a manifest file's own detected
+    // license enriches its sole package_data's declared license when the parser
+    // extracted none and the package carries no coordinates of its own to be
+    // assembled into a top-level package (e.g. an ASF-header `build.gradle` with
+    // no group/artifact, where the top-level manifest-adopt never runs). Guarded
+    // to single-package manifest files so a multi-package database's whole-file
+    // detection is never smeared across its entries (see #1077).
+    if file.package_data.len() == 1 && !file.license_detections.is_empty() {
+        let own_detections = file.license_detections.clone();
+        let package_data = &mut file.package_data[0];
+        if package_data.purl.is_none()
+            && package_data.license_detections.is_empty()
+            && package_data.declared_license_expression.is_none()
+        {
+            package_data.declared_license_expression = combine_license_expressions(
+                own_detections
+                    .iter()
+                    .map(|detection| detection.license_expression.clone()),
+            );
+            package_data.declared_license_expression_spdx = combine_license_expressions(
+                own_detections
+                    .iter()
+                    .filter(|detection| !detection.license_expression_spdx.is_empty())
+                    .map(|detection| detection.license_expression_spdx.clone()),
+            );
+            package_data.license_detections = own_detections;
+            modified = true;
+        }
+    }
+
     if modified {
         file.detected_license_expression = combine_license_expressions(
             file.license_detections
