@@ -155,9 +155,9 @@ ScanCode: 42.68s</title></rect>
     <rect x="291.17" y="427.52" width="8" height="8" fill="#d97706" rx="1.5"><title>distroless base-debian13 status.d @ sha256:c83f022
 Files: 18
 ScanCode: 69.61s</title></rect>
-    <rect x="294.90" y="411.70" width="8" height="8" fill="#d97706" rx="1.5"><title>ocetnik/react-native-background-timer @ 244ea3e
+    <rect x="294.90" y="447.79" width="8" height="8" fill="#d97706" rx="1.5"><title>ocetnik/react-native-background-timer @ 244ea3e
 Files: 19
-ScanCode: 97.28s</title></rect>
+ScanCode: 45.33s</title></rect>
     <rect x="305.00" y="436.72" width="8" height="8" fill="#d97706" rx="1.5"><title>Apress pro-html5-vs2015 legacy NuGet manifests @ 3599d94
 Files: 22
 ScanCode: 57.29s</title></rect>
@@ -230,9 +230,9 @@ ScanCode: 45.20s</title></rect>
     <rect x="428.98" y="388.90" width="8" height="8" fill="#d97706" rx="1.5"><title>fmtlib/fmt @ 2cb3983
 Files: 133
 ScanCode: 157.63s</title></rect>
-    <rect x="439.98" y="396.02" width="8" height="8" fill="#d97706" rx="1.5"><title>elixir-ecto/ecto @ 28d9282
+    <rect x="439.98" y="430.21" width="8" height="8" fill="#d97706" rx="1.5"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
-ScanCode: 135.56s</title></rect>
+ScanCode: 65.75s</title></rect>
     <rect x="441.29" y="385.10" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
 Files: 159
 ScanCode: 170.82s</title></rect>
@@ -275,30 +275,30 @@ ScanCode: 54.67s</title></rect>
     <rect x="486.18" y="436.80" width="8" height="8" fill="#d97706" rx="1.5"><title>bitwalker/distillery @ 3ab4d61
 Files: 305
 ScanCode: 57.19s</title></rect>
-    <rect x="490.34" y="410.86" width="8" height="8" fill="#d97706" rx="1.5"><title>yesodweb/yesod @ 1b033c7
+    <rect x="489.05" y="435.88" width="8" height="8" fill="#d97706" rx="1.5"><title>yesodweb/yesod @ 1b033c7
+Files: 318
+ScanCode: 58.32s</title></rect>
+    <rect x="490.34" y="432.10" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaPlots/Plots.jl @ 70f0cd7
 Files: 324
-ScanCode: 99.03s</title></rect>
-    <rect x="490.97" y="409.34" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaPlots/Plots.jl @ 70f0cd7
-Files: 327
-ScanCode: 102.27s</title></rect>
+ScanCode: 63.17s</title></rect>
     <rect x="498.55" y="443.94" width="8" height="8" fill="#d97706" rx="1.5"><title>docker-library/official-images @ 71567fb
 Files: 365
 ScanCode: 49.17s</title></rect>
-    <rect x="499.67" y="398.49" width="8" height="8" fill="#d97706" rx="1.5"><title>SDWebImage/SDWebImage @ c3ad5e1
-Files: 371
-ScanCode: 128.67s</title></rect>
+    <rect x="499.30" y="414.21" width="8" height="8" fill="#d97706" rx="1.5"><title>SDWebImage/SDWebImage @ c3ad5e1
+Files: 369
+ScanCode: 92.26s</title></rect>
     <rect x="508.39" y="412.34" width="8" height="8" fill="#d97706" rx="1.5"><title>debian:bookworm-slim dpkg DB snapshot @ sha256:f065376
 Files: 421
 ScanCode: 95.97s</title></rect>
     <rect x="509.68" y="380.92" width="8" height="8" fill="#d97706" rx="1.5"><title>pydata/xarray @ f7e47a1
 Files: 429
 ScanCode: 186.62s</title></rect>
-    <rect x="510.80" y="411.66" width="8" height="8" fill="#d97706" rx="1.5"><title>PerlDancer/Dancer2 @ a1faa22
+    <rect x="510.80" y="432.47" width="8" height="8" fill="#d97706" rx="1.5"><title>PerlDancer/Dancer2 @ a1faa22
 Files: 436
-ScanCode: 97.37s</title></rect>
-    <rect x="511.58" y="391.47" width="8" height="8" fill="#d97706" rx="1.5"><title>vernemq/vernemq @ 4681e54
+ScanCode: 62.68s</title></rect>
+    <rect x="511.58" y="417.47" width="8" height="8" fill="#d97706" rx="1.5"><title>vernemq/vernemq @ 4681e54
 Files: 441
-ScanCode: 149.29s</title></rect>
+ScanCode: 86.10s</title></rect>
     <rect x="512.36" y="396.07" width="8" height="8" fill="#d97706" rx="1.5"><title>HaxeFlixel/flixel @ ec54c5a
 Files: 446
 ScanCode: 135.43s</title></rect>
@@ -323,9 +323,9 @@ ScanCode: 211.97s</title></rect>
     <rect x="525.54" y="396.10" width="8" height="8" fill="#d97706" rx="1.5"><title>pyodide/pyodide @ 86e27b0
 Files: 540
 ScanCode: 135.33s</title></rect>
-    <rect x="525.79" y="397.16" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/serialization @ 097a6c6
-Files: 542
-ScanCode: 132.33s</title></rect>
+    <rect x="525.67" y="418.82" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/serialization @ 097a6c6
+Files: 541
+ScanCode: 83.67s</title></rect>
     <rect x="526.30" y="381.25" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
 ScanCode: 185.33s</title></rect>
@@ -368,9 +368,9 @@ ScanCode: 161.21s</title></rect>
     <rect x="548.54" y="380.50" width="8" height="8" fill="#d97706" rx="1.5"><title>xiph/opus @ 22244de
 Files: 754
 ScanCode: 188.27s</title></rect>
-    <rect x="549.45" y="345.68" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/scancode.io @ 904373a
-Files: 764
-ScanCode: 393.40s</title></rect>
+    <rect x="549.36" y="359.65" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/scancode.io @ 904373a
+Files: 763
+ScanCode: 292.75s</title></rect>
     <rect x="555.41" y="408.67" width="8" height="8" fill="#d97706" rx="1.5"><title>tokio-rs/tokio @ 5db10f5
 Files: 833
 ScanCode: 103.73s</title></rect>
@@ -644,9 +644,9 @@ ScanCode: 694.17s</title></rect>
     <rect x="733.17" y="258.43" width="8" height="8" fill="#d97706" rx="1.5"><title>qemu/qemu @ da6c4fe
 Files: 10989
 ScanCode: 2493.21s</title></rect>
-    <rect x="736.27" y="269.45" width="8" height="8" fill="#d97706" rx="1.5"><title>bazelbuild/bazel @ eb5aeaa
-Files: 11496
-ScanCode: 1974.56s</title></rect>
+    <rect x="736.27" y="285.81" width="8" height="8" fill="#d97706" rx="1.5"><title>bazelbuild/bazel @ eb5aeaa
+Files: 11495
+ScanCode: 1396.87s</title></rect>
     <rect x="736.95" y="313.57" width="8" height="8" fill="#d97706" rx="1.5"><title>spring-projects/spring-boot @ 53827d4
 Files: 11610
 ScanCode: 776.24s</title></rect>
@@ -823,9 +823,9 @@ Provenant: 4.94s</title></circle>
     <circle cx="295.17" cy="521.76" r="4.5" fill="#2563eb"><title>distroless base-debian13 status.d @ sha256:c83f022
 Files: 18
 Provenant: 10.31s</title></circle>
-    <circle cx="298.90" cy="526.07" r="4.5" fill="#2563eb"><title>ocetnik/react-native-background-timer @ 244ea3e
+    <circle cx="298.90" cy="557.98" r="4.5" fill="#2563eb"><title>ocetnik/react-native-background-timer @ 244ea3e
 Files: 19
-Provenant: 9.41s</title></circle>
+Provenant: 4.79s</title></circle>
     <circle cx="309.00" cy="542.62" r="4.5" fill="#2563eb"><title>Apress pro-html5-vs2015 legacy NuGet manifests @ 3599d94
 Files: 22
 Provenant: 6.63s</title></circle>
@@ -898,9 +898,9 @@ Provenant: 4.74s</title></circle>
     <circle cx="432.98" cy="514.62" r="4.5" fill="#2563eb"><title>fmtlib/fmt @ 2cb3983
 Files: 133
 Provenant: 11.99s</title></circle>
-    <circle cx="443.98" cy="507.20" r="4.5" fill="#2563eb"><title>elixir-ecto/ecto @ 28d9282
+    <circle cx="443.98" cy="557.39" r="4.5" fill="#2563eb"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
-Provenant: 14.03s</title></circle>
+Provenant: 4.85s</title></circle>
     <circle cx="445.29" cy="519.13" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
 Files: 159
 Provenant: 10.90s</title></circle>
@@ -943,30 +943,30 @@ Provenant: 5.06s</title></circle>
     <circle cx="490.18" cy="543.34" r="4.5" fill="#2563eb"><title>bitwalker/distillery @ 3ab4d61
 Files: 305
 Provenant: 6.53s</title></circle>
-    <circle cx="494.34" cy="520.36" r="4.5" fill="#2563eb"><title>yesodweb/yesod @ 1b033c7
+    <circle cx="493.05" cy="557.29" r="4.5" fill="#2563eb"><title>yesodweb/yesod @ 1b033c7
+Files: 318
+Provenant: 4.86s</title></circle>
+    <circle cx="494.34" cy="557.88" r="4.5" fill="#2563eb"><title>JuliaPlots/Plots.jl @ 70f0cd7
 Files: 324
-Provenant: 10.62s</title></circle>
-    <circle cx="494.97" cy="520.14" r="4.5" fill="#2563eb"><title>JuliaPlots/Plots.jl @ 70f0cd7
-Files: 327
-Provenant: 10.67s</title></circle>
+Provenant: 4.80s</title></circle>
     <circle cx="502.55" cy="557.98" r="4.5" fill="#2563eb"><title>docker-library/official-images @ 71567fb
 Files: 365
 Provenant: 4.79s</title></circle>
-    <circle cx="503.67" cy="512.24" r="4.5" fill="#2563eb"><title>SDWebImage/SDWebImage @ c3ad5e1
-Files: 371
-Provenant: 12.61s</title></circle>
+    <circle cx="503.30" cy="550.51" r="4.5" fill="#2563eb"><title>SDWebImage/SDWebImage @ c3ad5e1
+Files: 369
+Provenant: 5.61s</title></circle>
     <circle cx="512.39" cy="517.17" r="4.5" fill="#2563eb"><title>debian:bookworm-slim dpkg DB snapshot @ sha256:f065376
 Files: 421
 Provenant: 11.36s</title></circle>
     <circle cx="513.68" cy="511.20" r="4.5" fill="#2563eb"><title>pydata/xarray @ f7e47a1
 Files: 429
 Provenant: 12.89s</title></circle>
-    <circle cx="514.80" cy="526.48" r="4.5" fill="#2563eb"><title>PerlDancer/Dancer2 @ a1faa22
+    <circle cx="514.80" cy="557.10" r="4.5" fill="#2563eb"><title>PerlDancer/Dancer2 @ a1faa22
 Files: 436
-Provenant: 9.33s</title></circle>
-    <circle cx="515.58" cy="507.64" r="4.5" fill="#2563eb"><title>vernemq/vernemq @ 4681e54
+Provenant: 4.88s</title></circle>
+    <circle cx="515.58" cy="546.40" r="4.5" fill="#2563eb"><title>vernemq/vernemq @ 4681e54
 Files: 441
-Provenant: 13.90s</title></circle>
+Provenant: 6.12s</title></circle>
     <circle cx="516.36" cy="520.00" r="4.5" fill="#2563eb"><title>HaxeFlixel/flixel @ ec54c5a
 Files: 446
 Provenant: 10.70s</title></circle>
@@ -991,9 +991,9 @@ Provenant: 11.92s</title></circle>
     <circle cx="529.54" cy="519.69" r="4.5" fill="#2563eb"><title>pyodide/pyodide @ 86e27b0
 Files: 540
 Provenant: 10.77s</title></circle>
-    <circle cx="529.79" cy="510.26" r="4.5" fill="#2563eb"><title>boostorg/serialization @ 097a6c6
-Files: 542
-Provenant: 13.15s</title></circle>
+    <circle cx="529.67" cy="548.53" r="4.5" fill="#2563eb"><title>boostorg/serialization @ 097a6c6
+Files: 541
+Provenant: 5.85s</title></circle>
     <circle cx="530.30" cy="507.88" r="4.5" fill="#2563eb"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
 Provenant: 13.83s</title></circle>
@@ -1036,9 +1036,9 @@ Provenant: 14.54s</title></circle>
     <circle cx="552.54" cy="499.85" r="4.5" fill="#2563eb"><title>xiph/opus @ 22244de
 Files: 754
 Provenant: 16.39s</title></circle>
-    <circle cx="553.45" cy="454.32" r="4.5" fill="#2563eb"><title>aboutcode-org/scancode.io @ 904373a
-Files: 764
-Provenant: 42.96s</title></circle>
+    <circle cx="553.36" cy="484.22" r="4.5" fill="#2563eb"><title>aboutcode-org/scancode.io @ 904373a
+Files: 763
+Provenant: 22.82s</title></circle>
     <circle cx="559.41" cy="551.02" r="4.5" fill="#2563eb"><title>tokio-rs/tokio @ 5db10f5
 Files: 833
 Provenant: 5.55s</title></circle>
@@ -1312,9 +1312,9 @@ Provenant: 48.11s</title></circle>
     <circle cx="737.17" cy="425.83" r="4.5" fill="#2563eb"><title>qemu/qemu @ da6c4fe
 Files: 10989
 Provenant: 78.51s</title></circle>
-    <circle cx="740.27" cy="381.46" r="4.5" fill="#2563eb"><title>bazelbuild/bazel @ eb5aeaa
-Files: 11496
-Provenant: 200.80s</title></circle>
+    <circle cx="740.27" cy="416.20" r="4.5" fill="#2563eb"><title>bazelbuild/bazel @ eb5aeaa
+Files: 11495
+Provenant: 96.27s</title></circle>
     <circle cx="740.95" cy="432.92" r="4.5" fill="#2563eb"><title>spring-projects/spring-boot @ 53827d4
 Files: 11610
 Provenant: 67.58s</title></circle>
