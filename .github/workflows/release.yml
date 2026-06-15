@@ -133,7 +133,8 @@ jobs:
         if: matrix.archive_format == 'tar.gz'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ${{ matrix.asset_name }}.tar.gz provenant${{ matrix.ext }}
+          cp "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" .
+          tar czf ${{ matrix.asset_name }}.tar.gz provenant${{ matrix.ext }} LICENSE NOTICE
           if command -v sha256sum > /dev/null; then
             sha256sum ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
           else
@@ -145,7 +146,9 @@ jobs:
         if: matrix.archive_format == 'zip'
         run: |
           cd target/${{ matrix.target }}/release
-          7z a ${{ matrix.asset_name }}.zip provenant${{ matrix.ext }}
+          Copy-Item "$env:GITHUB_WORKSPACE\LICENSE" .
+          Copy-Item "$env:GITHUB_WORKSPACE\NOTICE" .
+          7z a ${{ matrix.asset_name }}.zip provenant${{ matrix.ext }} LICENSE NOTICE
           $hash = (Get-FileHash "${{ matrix.asset_name }}.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  ${{ matrix.asset_name }}.zip" | Out-File -FilePath "${{ matrix.asset_name }}.zip.sha256" -Encoding ascii
         shell: pwsh
