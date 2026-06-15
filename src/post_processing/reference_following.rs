@@ -1383,13 +1383,46 @@ fn path_is_within_root(path: &str, root: &str) -> bool {
 }
 
 fn join_reference_candidate(base: &str, referenced_filename: &str) -> String {
-    if base.is_empty() {
-        referenced_filename.to_string()
+    let joined = if base.is_empty() {
+        referenced_filename.replace('\\', "/")
     } else {
-        Path::new(base)
-            .join(referenced_filename)
-            .to_string_lossy()
-            .replace('\\', "/")
+        format!("{}/{}", base, referenced_filename.replace('\\', "/"))
+    };
+    normalize_relative_path(&joined)
+}
+
+/// Lexically collapse `.` and `..` segments in a scan-relative path so a
+/// manifest reference like `../LICENSE` from a `pkg/ios/foo.podspec` resolves to
+/// `pkg/LICENSE`. Operates purely on the string (no filesystem access), matching
+/// the way scan-relative paths are compared elsewhere. A leading `..` that cannot
+/// be collapsed is preserved so it simply fails to match any real file.
+fn normalize_relative_path(path: &str) -> String {
+    let is_absolute = path.starts_with('/');
+    // Preserve a leading `./` so candidates keep the same path style as the
+    // scan-relative keys they are matched against (some scans prefix paths with
+    // `./`); only the `..`/`.` traversal is collapsed.
+    let has_dot_prefix = path.starts_with("./");
+    let mut segments: Vec<&str> = Vec::new();
+    for segment in path.split('/') {
+        match segment {
+            "" | "." => continue,
+            ".." => {
+                if matches!(segments.last(), Some(&last) if last != "..") {
+                    segments.pop();
+                } else {
+                    segments.push("..");
+                }
+            }
+            other => segments.push(other),
+        }
+    }
+    let joined = segments.join("/");
+    if is_absolute {
+        format!("/{joined}")
+    } else if has_dot_prefix && !joined.is_empty() {
+        format!("./{joined}")
+    } else {
+        joined
     }
 }
 

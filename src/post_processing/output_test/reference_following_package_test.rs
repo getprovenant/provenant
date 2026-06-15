@@ -949,3 +949,81 @@ fn apply_package_reference_following_adopts_own_license_for_coordinateless_manif
         "apache-2.0"
     );
 }
+
+#[test]
+fn apply_package_reference_following_resolves_parent_relative_license_file_reference() {
+    // A CocoaPods podspec in an `ios/` subdirectory declares its license via a
+    // parent-relative file reference (`s.license = { :file => '../LICENSE' }`).
+    // Reference-following must collapse the `../` and resolve it to the package's
+    // root LICENSE, not leave it as `unknown-license-reference`. (See #1085.)
+    let podspec_path = "pkg/ios/pkg.podspec";
+    let package_uid = "pkg:cocoapods/pkg@1.0.0?uuid=test".to_string();
+    let mut package = super::test_utils::package(&package_uid, podspec_path);
+    package.datafile_paths = vec![podspec_path.to_string()];
+    package.license_detections = vec![crate::models::LicenseDetection {
+        license_expression: "unknown-license-reference".to_string(),
+        license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
+        matches: vec![Match {
+            license_expression: "unknown-license-reference".to_string(),
+            license_expression_spdx: "LicenseRef-scancode-unknown-license-reference".to_string(),
+            from_file: Some(podspec_path.to_string()),
+            start_line: LineNumber::new(4).unwrap(),
+            end_line: LineNumber::new(4).unwrap(),
+            matcher: MatcherKind::Declared,
+            score: MatchScore::MAX,
+            matched_length: Some(1),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: "parser-declared-license".to_string(),
+            rule_url: None,
+            matched_text: Some("../LICENSE".to_string()),
+            referenced_filenames: Some(vec!["../LICENSE".to_string()]),
+            matched_text_diagnostics: None,
+        }],
+        detection_log: vec![],
+        identifier: "unknown-ref-podspec".to_string(),
+    }];
+
+    let mut podspec = file(podspec_path);
+    podspec.for_packages = vec![PackageUid::from_raw(package_uid.clone())];
+    podspec.package_data = vec![PackageData {
+        package_type: Some(PackageType::Cocoapods),
+        license_detections: package.license_detections.clone(),
+        ..Default::default()
+    }];
+
+    let mut license = file("pkg/LICENSE");
+    license.detected_license_expression = Some("mit".to_string());
+    license.license_detections = vec![crate::models::LicenseDetection {
+        license_expression: "mit".to_string(),
+        license_expression_spdx: "MIT".to_string(),
+        matches: vec![Match {
+            license_expression: "mit".to_string(),
+            license_expression_spdx: "MIT".to_string(),
+            from_file: Some("pkg/LICENSE".to_string()),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::new(20).unwrap(),
+            matcher: MatcherKind::Hash,
+            score: MatchScore::MAX,
+            matched_length: Some(100),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: "mit.LICENSE".to_string(),
+            rule_url: None,
+            matched_text: None,
+            referenced_filenames: None,
+            matched_text_diagnostics: None,
+        }],
+        detection_log: vec![],
+        identifier: "mit-license".to_string(),
+    }];
+
+    let mut files = vec![dir("pkg"), dir("pkg/ios"), podspec, license];
+    let mut packages = vec![package];
+    apply_package_reference_following(&mut files, &mut packages);
+
+    assert_eq!(
+        packages[0].declared_license_expression.as_deref(),
+        Some("mit")
+    );
+}
