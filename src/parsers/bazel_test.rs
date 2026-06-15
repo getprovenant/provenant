@@ -134,6 +134,23 @@ cc_binary(
         pkg.extracted_license_statement,
         Some("notice, reciprocal".to_string())
     );
+    // `licenses` values become declared-license file references.
+    let license_files = pkg
+        .extra_data
+        .as_ref()
+        .and_then(|extra| extra.get("license_files"))
+        .and_then(serde_json::Value::as_array)
+        .expect("license_files reference list should be set");
+    let license_files: Vec<&str> = license_files
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    assert_eq!(license_files, vec!["notice", "reciprocal"]);
+    // No sibling file matches, so the reference resolves to an honest unknown.
+    assert_eq!(
+        pkg.declared_license_expression.as_deref(),
+        Some("unknown-license-reference")
+    );
 }
 
 #[test]
@@ -275,6 +292,13 @@ cc_binary(
     assert_eq!(pkg.package_type, Some(PackageType::Bazel));
     assert_eq!(pkg.name, Some("hello-world".to_string()));
     assert_eq!(pkg.extracted_license_statement, None);
+    // No reference, so no declared license is invented.
+    assert!(
+        pkg.extra_data
+            .as_ref()
+            .is_none_or(|extra| !extra.contains_key("license_files"))
+    );
+    assert_eq!(pkg.declared_license_expression, None);
 }
 
 #[test]
