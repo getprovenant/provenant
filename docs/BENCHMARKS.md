@@ -108,7 +108,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `24.48s`; ScanCode `272.67s`
 - Broader ABOUT, Python, wheel, and Docker package visibility (`126` vs `1` packages, `117` vs `104` dependencies) across committed `.ABOUT` sidecars, bundled `thirdparty/dist/*.whl` artifacts, and product manifests, with real ecosystem PURLs derived from `download_url` metadata instead of fallback `pkg:about/...` identities
 
-##### [aboutcode-org/scancode.io @ 904373a](https://github.com/aboutcode-org/scancode.io/tree/904373abf472e0567a99a3b1b5213e084040b5c1) — **12.82× faster**
+##### [aboutcode-org/scancode.io @ 904373a](https://github.com/aboutcode-org/scancode.io/tree/904373abf472e0567a99a3b1b5213e084040b5c1) — **12.83× faster**
 
 - Files: 763
 - Run context: 2026-06-15 · scancode.io-34771 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
