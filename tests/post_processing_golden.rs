@@ -438,6 +438,14 @@ Copyright - split out libs\0\xff",
     }
 
     #[test]
+    fn test_golden_reference_follow_bazel_build_license_file() {
+        assert_reference_follow_fixture_matches_expected(
+            "testdata/summarycode-golden/reference_following/bazel_build_license_file",
+            "testdata/summarycode-golden/reference_following/bazel_build_license_file/expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_reference_follow_readme_mit_see_license() {
         assert_reference_follow_fixture_matches_expected(
             "testdata/summarycode-golden/reference_following/readme_mit_see_license",

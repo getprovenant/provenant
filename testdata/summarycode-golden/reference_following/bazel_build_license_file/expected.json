@@ -1,0 +1,293 @@
+{
+  "summary": {
+    "declared_license_expression": "apache-2.0",
+    "license_clarity_score": {
+      "score": 90,
+      "declared_license": true,
+      "identification_precision": true,
+      "has_license_text": true,
+      "declared_copyrights": false,
+      "conflicting_license_categories": false,
+      "ambiguous_compound_licensing": false
+    },
+    "declared_holder": null,
+    "primary_language": "Starlark",
+    "other_license_expressions": [],
+    "other_holders": [],
+    "other_languages": []
+  },
+  "tallies": {
+    "detected_license_expression": [
+      {
+        "value": "apache-2.0",
+        "count": 2
+      }
+    ],
+    "copyrights": [],
+    "holders": [],
+    "authors": [],
+    "programming_language": [
+      {
+        "value": "Starlark",
+        "count": 1
+      }
+    ]
+  },
+  "tallies_of_key_files": {
+    "detected_license_expression": [
+      {
+        "value": "apache-2.0",
+        "count": 2
+      }
+    ],
+    "copyrights": [],
+    "holders": [],
+    "authors": [],
+    "programming_language": [
+      {
+        "value": "Starlark",
+        "count": 1
+      }
+    ]
+  },
+  "license_detections": [
+    {
+      "identifier": "apache_2_0-cdcb17de-f01d-73ed-8eda-17263a964487",
+      "license_expression": "apache-2.0",
+      "license_expression_spdx": "Apache-2.0",
+      "detection_count": 1,
+      "detection_log": ["unknown-reference-to-local-file"],
+      "reference_matches": [
+        {
+          "from_file": "codebase/BUILD",
+          "license_expression": "unknown-license-reference",
+          "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
+          "rule_identifier": "parser-declared-license"
+        },
+        {
+          "from_file": "codebase/LICENSE",
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "rule_identifier": "apache-2.0_791.RULE"
+        }
+      ]
+    },
+    {
+      "identifier": "apache_2_0-ea5a2828-6c70-408a-2f20-99577db519fd",
+      "license_expression": "apache-2.0",
+      "license_expression_spdx": "Apache-2.0",
+      "detection_count": 1,
+      "detection_log": [],
+      "reference_matches": [
+        {
+          "from_file": "codebase/LICENSE",
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "rule_identifier": "apache-2.0_791.RULE"
+        }
+      ]
+    }
+  ],
+  "license_references": [
+    {
+      "key": "apache-2.0",
+      "language": "en",
+      "short_name": "Apache 2.0",
+      "name": "Apache License 2.0",
+      "owner": "Apache Software Foundation",
+      "homepage_url": "http://www.apache.org/licenses/",
+      "spdx_license_key": "Apache-2.0",
+      "osi_license_key": "Apache-2.0",
+      "text_urls": ["http://www.apache.org/licenses/LICENSE-2.0"],
+      "osi_url": "http://opensource.org/licenses/apache2.0.php",
+      "faq_url": "http://www.apache.org/foundation/licence-FAQ.html",
+      "other_urls": [
+        "http://www.opensource.org/licenses/Apache-2.0",
+        "https://opensource.org/licenses/Apache-2.0",
+        "https://www.apache.org/licenses/LICENSE-2.0"
+      ],
+      "category": "Permissive",
+      "is_exception": false,
+      "is_unknown": false,
+      "is_generic": false,
+      "minimum_coverage": null,
+      "standard_notice": null
+    }
+  ],
+  "license_rule_references": [
+    {
+      "identifier": "apache-2.0_791.RULE",
+      "license_expression": "apache-2.0",
+      "language": null,
+      "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_791.RULE",
+      "is_synthetic": false,
+      "length": 12,
+      "referenced_filenames": []
+    }
+  ],
+  "packages": [
+    {
+      "type": "bazel",
+      "name": "no_license_attr",
+      "version": null,
+      "declared_license_expression": null,
+      "declared_license_expression_spdx": null,
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "datafile_paths": ["codebase/BUILD"],
+      "license_detections": [],
+      "other_license_detections": []
+    },
+    {
+      "type": "bazel",
+      "name": "with_license_file",
+      "version": null,
+      "declared_license_expression": "apache-2.0",
+      "declared_license_expression_spdx": "Apache-2.0",
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "datafile_paths": ["codebase/BUILD"],
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "detection_log": ["unknown-reference-to-local-file"],
+          "identifier": "apache_2_0-cdcb17de-f01d-73ed-8eda-17263a964487",
+          "matches": [
+            {
+              "from_file": "codebase/BUILD",
+              "matched_text": "LICENSE",
+              "license_expression": "unknown-license-reference",
+              "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
+              "rule_identifier": "parser-declared-license",
+              "referenced_filenames": ["LICENSE"]
+            },
+            {
+              "from_file": "codebase/LICENSE",
+              "matched_text": null,
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "rule_identifier": "apache-2.0_791.RULE",
+              "referenced_filenames": []
+            }
+          ]
+        }
+      ],
+      "other_license_detections": []
+    }
+  ],
+  "files": [
+    {
+      "path": "codebase/BUILD",
+      "type": "file",
+      "is_top_level": true,
+      "is_key_file": true,
+      "is_manifest": true,
+      "detected_license_expression": "apache-2.0",
+      "detected_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "detection_log": ["unknown-reference-to-local-file"],
+          "identifier": "apache_2_0-cdcb17de-f01d-73ed-8eda-17263a964487",
+          "matches": [
+            {
+              "from_file": "codebase/BUILD",
+              "matched_text": "LICENSE",
+              "license_expression": "unknown-license-reference",
+              "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
+              "rule_identifier": "parser-declared-license",
+              "referenced_filenames": ["LICENSE"]
+            },
+            {
+              "from_file": "codebase/LICENSE",
+              "matched_text": null,
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "rule_identifier": "apache-2.0_791.RULE",
+              "referenced_filenames": []
+            }
+          ]
+        }
+      ],
+      "package_data": [
+        {
+          "type": "bazel",
+          "name": "no_license_attr",
+          "version": null,
+          "declared_license_expression": null,
+          "declared_license_expression_spdx": null,
+          "other_license_expression": null,
+          "other_license_expression_spdx": null,
+          "license_detections": [],
+          "other_license_detections": []
+        },
+        {
+          "type": "bazel",
+          "name": "with_license_file",
+          "version": null,
+          "declared_license_expression": "apache-2.0",
+          "declared_license_expression_spdx": "Apache-2.0",
+          "other_license_expression": null,
+          "other_license_expression_spdx": null,
+          "license_detections": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "detection_log": ["unknown-reference-to-local-file"],
+              "identifier": "apache_2_0-cdcb17de-f01d-73ed-8eda-17263a964487",
+              "matches": [
+                {
+                  "from_file": "codebase/BUILD",
+                  "matched_text": "LICENSE",
+                  "license_expression": "unknown-license-reference",
+                  "license_expression_spdx": "LicenseRef-scancode-unknown-license-reference",
+                  "rule_identifier": "parser-declared-license",
+                  "referenced_filenames": ["LICENSE"]
+                },
+                {
+                  "from_file": "codebase/LICENSE",
+                  "matched_text": null,
+                  "license_expression": "apache-2.0",
+                  "license_expression_spdx": "Apache-2.0",
+                  "rule_identifier": "apache-2.0_791.RULE",
+                  "referenced_filenames": []
+                }
+              ]
+            }
+          ],
+          "other_license_detections": []
+        }
+      ]
+    },
+    {
+      "path": "codebase/LICENSE",
+      "type": "file",
+      "is_top_level": true,
+      "is_key_file": true,
+      "is_manifest": false,
+      "detected_license_expression": "apache-2.0",
+      "detected_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "detection_log": [],
+          "identifier": "apache_2_0-ea5a2828-6c70-408a-2f20-99577db519fd",
+          "matches": [
+            {
+              "from_file": "codebase/LICENSE",
+              "matched_text": null,
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "rule_identifier": "apache-2.0_791.RULE",
+              "referenced_filenames": []
+            }
+          ]
+        }
+      ],
+      "package_data": []
+    }
+  ]
+}

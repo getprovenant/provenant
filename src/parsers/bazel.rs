@@ -109,12 +109,27 @@ fn extract_package_from_statement(statement: &ast::AstStmt) -> Option<PackageDat
     let licenses = extract_string_list_kwarg(&call, "licenses");
     let purl = build_bazel_purl(&name, None).map(truncate_field);
 
+    // A Bazel `licenses` attribute lists license *file* references, not a license
+    // expression. Record them as declared-license file references so reference-
+    // following resolves each to the referenced file's license (else
+    // `unknown-license-reference`), rather than free-text detecting the attribute.
+    let extra_data = licenses.as_ref().map(|licenses| {
+        let references = licenses
+            .iter()
+            .map(|license| JsonValue::String(truncate_field(license.clone())))
+            .collect();
+        let mut map = JsonMap::new();
+        map.insert("license_files".to_string(), JsonValue::Array(references));
+        map.into_iter().collect()
+    });
+
     Some(PackageData {
         package_type: Some(BazelBuildParser::PACKAGE_TYPE),
         name: Some(truncate_field(name)),
         extracted_license_statement: licenses.map(|licenses| truncate_field(licenses.join(", "))),
         datasource_id: Some(DatasourceId::BazelBuild),
         purl,
+        extra_data,
         ..Default::default()
     })
 }
