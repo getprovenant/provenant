@@ -214,6 +214,35 @@ my-package = "99999.0.0"
     }
 
     #[test]
+    fn test_legacy_slash_dual_license_normalizes_to_or() {
+        // Cargo's deprecated `/` dual-license separator (still present in older
+        // crates) must normalize to SPDX `OR`, while the extracted statement
+        // stays source-faithful.
+        let content = r#"
+[package]
+name = "atomic"
+version = "0.6.1"
+license = "Apache-2.0/MIT"
+        "#;
+
+        let (_temp_file, cargo_path) = create_temp_cargo_toml(content);
+        let package_data = CargoParser::extract_first_package(&cargo_path);
+
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT")
+        );
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("Apache-2.0/MIT")
+        );
+    }
+
+    #[test]
     fn test_extract_short_composite_declared_license_preserves_mit_zero_and_or() {
         let content = r#"
 [package]
