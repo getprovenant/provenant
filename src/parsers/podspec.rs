@@ -259,6 +259,13 @@ static DEPENDENCY_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 fn extract_license_statement(content: &str) -> Option<String> {
+    let raw_license = extract_raw_field(content, &LICENSE_PATTERN)?;
+    // For Ruby-hash license declarations, capture the `:type` value so the
+    // extracted statement is the license text (e.g. `BSD`) rather than the
+    // malformed `:type = BSD` key/value pair produced by hash flattening.
+    if let Some(license_type) = extract_ruby_hash_type(&raw_license) {
+        return normalize_podspec_dynamic_metadata_value(&license_type);
+    }
     extract_field(content, &LICENSE_PATTERN)
         .map(|value| normalize_ruby_hash_literal(&value))
         .and_then(|value| normalize_podspec_dynamic_metadata_value(&value))
@@ -889,6 +896,50 @@ end
         assert_eq!(declared.as_deref(), Some("mit"));
         assert_eq!(declared_spdx.as_deref(), Some("MIT"));
         assert_eq!(detections.len(), 1);
+    }
+
+    #[test]
+    fn test_extract_license_statement_type_only_hash_uses_clean_value() {
+        let content = r#"
+Pod::Spec.new do |s|
+  s.license = { :type => 'BSD' }
+end
+"#;
+
+        // The extracted statement must be the clean license value, not the
+        // malformed `:type = BSD` flattened hash.
+        assert_eq!(extract_license_statement(content).as_deref(), Some("BSD"));
+    }
+
+    #[test]
+    fn test_podspec_type_only_hash_resolves_declared_license() {
+        let content = r#"
+Pod::Spec.new do |s|
+  s.name    = 'mypod'
+  s.version = '1.0.0'
+  s.license = { :type => 'BSD' }
+  s.summary = 'test'
+end
+"#;
+
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let file_path = temp_dir.path().join("mypod.podspec");
+        std::fs::write(&file_path, content).expect("write podspec");
+
+        let package_data = PodspecParser::extract_first_package(&file_path);
+
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("BSD")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("bsd-new")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("BSD-3-Clause")
+        );
     }
 
     #[test]
