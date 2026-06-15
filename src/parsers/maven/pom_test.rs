@@ -971,6 +971,111 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_declared_license_from_multiple_descriptive_names() {
+        // Multiple `<license>` entries declared by descriptive name (not SPDX id)
+        // must each resolve and AND-combine, matching ScanCode
+        // (lgpl-3.0 AND mpl-2.0 / LGPL-3.0-only AND MPL-2.0).
+        let content = r#"
+            <project>
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>com.github.librepdf</groupId>
+              <artifactId>openpdf-parent</artifactId>
+              <version>1.3.11</version>
+              <licenses>
+                <license>
+                  <name>GNU General Lesser Public License (LGPL) version 3.0</name>
+                  <url>http://www.gnu.org/licenses/lgpl.html</url>
+                </license>
+                <license>
+                  <name>Mozilla Public License Version 2.0</name>
+                  <url>http://www.mozilla.org/MPL/2.0/</url>
+                </license>
+              </licenses>
+            </project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("lgpl-3.0 AND mpl-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("LGPL-3.0-only AND MPL-2.0")
+        );
+        assert!(!package_data.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_extract_declared_license_from_unrecognized_name() {
+        // A single `<license>` whose name resolves to nothing must be preserved
+        // as an explicit `unknown-license-reference`, not silently dropped.
+        let content = r#"
+            <project>
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>com.test</groupId>
+              <artifactId>custom</artifactId>
+              <version>1.0.0</version>
+              <licenses>
+                <license>
+                  <name>Totally Made Up Proprietary Thing 9000</name>
+                </license>
+              </licenses>
+            </project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("unknown-license-reference")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("LicenseRef-scancode-unknown-license-reference")
+        );
+    }
+
+    #[test]
+    fn test_extract_declared_license_resolvable_and_unresolvable_entries() {
+        // One resolvable entry (MIT) plus one that resolves to nothing (a custom
+        // URL-only entry) must AND-combine into `mit AND unknown-license-reference`:
+        // the resolvable sibling is kept and the unresolved entry is preserved as
+        // an explicit unknown operand rather than nulling or dropping anything.
+        let content = r#"
+            <project>
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>com.test</groupId>
+              <artifactId>mixed</artifactId>
+              <version>1.0.0</version>
+              <licenses>
+                <license>
+                  <name>MIT</name>
+                </license>
+                <license>
+                  <url>http://corp.example.com/custom</url>
+                </license>
+              </licenses>
+            </project>
+        "#;
+
+        let (_temp_dir, pom_path) = create_temp_pom_xml(content);
+        let package_data = MavenParser::extract_first_package(&pom_path);
+
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("mit AND unknown-license-reference")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("LicenseRef-scancode-unknown-license-reference AND MIT")
+        );
+    }
+
+    #[test]
     fn test_multiple_placeholders() {
         let content = r#"
 <project>

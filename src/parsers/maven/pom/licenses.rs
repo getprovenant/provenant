@@ -7,7 +7,8 @@ use super::properties::{PropertyResolver, resolve_option};
 use crate::models::LicenseDetection;
 use crate::parsers::license_normalization::{
     DeclaredLicenseMatchMetadata, NormalizedDeclaredLicense, build_declared_license_data,
-    combine_normalized_licenses, empty_declared_license_data, normalize_declared_license_key,
+    combine_normalized_licenses, detect_declared_license_name, empty_declared_license_data,
+    normalize_declared_license_key,
 };
 
 #[derive(Clone, Default)]
@@ -88,17 +89,30 @@ pub(super) fn build_maven_declared_license_data(
     licenses: &[MavenLicenseEntry],
     matched_text: Option<&str>,
 ) -> (Option<String>, Option<String>, Vec<LicenseDetection>) {
-    let normalized: Vec<_> = licenses
+    // Each `<license>` is a distinct declared license; a POM that lists several
+    // means all of them apply, so they AND-combine (matching ScanCode).
+    let declared: Vec<&MavenLicenseEntry> = licenses
         .iter()
-        .filter_map(|license| license.name.as_deref())
-        .filter_map(normalize_maven_license_name)
+        .filter(|license| {
+            entry_field(&license.name).is_some() || entry_field(&license.url).is_some()
+        })
         .collect();
 
-    if normalized.is_empty() {
+    if declared.is_empty() {
         return empty_declared_license_data();
     }
 
-    let Some(combined) = combine_normalized_licenses(normalized, " OR ") else {
+    // Resolve every declared entry, mapping any entry that does not resolve to
+    // `unknown-license-reference` rather than dropping it. Dropping an operand
+    // would silently understate the declared licensing, and nulling the whole
+    // expression would discard the entries that *did* resolve; an explicit
+    // unknown operand keeps the result honest and complete.
+    let normalized: Vec<_> = declared
+        .into_iter()
+        .map(normalize_maven_license_entry)
+        .collect();
+
+    let Some(combined) = combine_normalized_licenses(normalized, " AND ") else {
         return empty_declared_license_data();
     };
 
@@ -108,12 +122,65 @@ pub(super) fn build_maven_declared_license_data(
     )
 }
 
-fn normalize_maven_license_name(name: &str) -> Option<NormalizedDeclaredLicense> {
-    match name.trim() {
-        "Public Domain" | "public domain" => Some(NormalizedDeclaredLicense::new(
-            "public-domain",
-            "LicenseRef-scancode-public-domain",
-        )),
-        other => normalize_declared_license_key(other),
+fn entry_field(value: &Option<String>) -> Option<&str> {
+    value
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+}
+
+/// Resolves a single Maven `<license>` entry into a normalized declared license.
+///
+/// Resolution order, stopping at the first confident match:
+/// 1. exact SPDX-key/identifier lookup on the `<name>`;
+/// 2. free-text detection over the `<name>` alone;
+/// 3. free-text detection over the combined `<name>` and `<url>`.
+///
+/// Step 3 recovers descriptive names that resolve only when paired with their
+/// `<url>`: e.g. "GNU General Lesser Public License (LGPL) version 3.0" with
+/// `http://www.gnu.org/licenses/lgpl.html` resolves to `lgpl-3.0`, where the
+/// name alone matches nothing. It is only used when the name alone fails, so a
+/// name that already resolves (e.g. "GNU Lesser General Public License" ->
+/// `lgpl-2.1-plus`) is not muddied by a second, redundant operand the URL line
+/// would otherwise contribute. The POM `<licenses>` block is trustworthy
+/// declared manifest metadata, so detecting from these bounded fields is
+/// declared normalization, not file-content scanning.
+///
+/// An entry that resolves to nothing maps to `unknown-license-reference` (the
+/// existing convention for an unresolved but declared license reference) so it
+/// is preserved as an explicit operand rather than silently dropped.
+fn normalize_maven_license_entry(license: &MavenLicenseEntry) -> NormalizedDeclaredLicense {
+    let name = entry_field(&license.name);
+
+    if let Some(name) = name {
+        match name {
+            "Public Domain" | "public domain" => {
+                return NormalizedDeclaredLicense::new(
+                    "public-domain",
+                    "LicenseRef-scancode-public-domain",
+                );
+            }
+            other => {
+                if let Some(normalized) = normalize_declared_license_key(other) {
+                    return normalized;
+                }
+                if let Some(normalized) = detect_declared_license_name(other) {
+                    return normalized;
+                }
+            }
+        }
     }
+
+    let detection_text = [name, entry_field(&license.url)]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    detect_declared_license_name(&detection_text).unwrap_or_else(|| {
+        NormalizedDeclaredLicense::new(
+            "unknown-license-reference",
+            "LicenseRef-scancode-unknown-license-reference",
+        )
+    })
 }

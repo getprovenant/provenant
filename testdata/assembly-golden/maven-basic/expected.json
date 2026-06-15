@@ -52,8 +52,7 @@
               "rule_relevance": 100,
               "rule_identifier": "apache-2.0_771.RULE",
               "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_771.RULE",
-              "matched_text": "- license:\n    name: Apache License 2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0",
-              "referenced_filenames": []
+              "matched_text": "- license:\n    name: Apache License 2.0\n    url: https://www.apache.org/licenses/LICENSE-2.0\n"
             }
           ],
           "identifier": "apache_2_0-c6b77120-5aec-1811-2b12-f22e7b75b1bd"

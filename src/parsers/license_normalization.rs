@@ -199,6 +199,26 @@ pub(crate) fn detect_declared_license_from_text(
     )
 }
 
+/// Resolves a single declared-license *name* into a normalized expression by
+/// running free-text detection over it.
+///
+/// This is the per-name analog of [`detect_declared_license_from_text`] for a
+/// bounded, trustworthy manifest license name (e.g. a Maven `<license><name>`
+/// such as "Mozilla Public License Version 2.0"). It shares the same detection
+/// and clue-promotion path but returns just the normalized declared expression,
+/// so a caller with several distinct license entries can resolve each name and
+/// combine the results itself. Returns `None` when the name does not resolve to
+/// a confident declared expression.
+pub(crate) fn detect_declared_license_name(name: &str) -> Option<NormalizedDeclaredLicense> {
+    let (declared, declared_spdx, _detections) = detect_declared_license_from_text(name, None);
+    match (declared, declared_spdx) {
+        (Some(declared), Some(declared_spdx)) => {
+            Some(NormalizedDeclaredLicense::new(declared, declared_spdx))
+        }
+        _ => None,
+    }
+}
+
 /// Promotes a clue-only whole-statement detection into a confident declared
 /// expression.
 ///
