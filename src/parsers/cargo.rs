@@ -93,9 +93,17 @@ impl PackageParser for CargoParser {
             .and_then(|p| p.get(FIELD_LICENSE))
             .and_then(|v| v.as_str())
             .map(|s| truncate_field(s.to_string()));
+        // Cargo's legacy dual-license syntax uses `/` as the OR separator (e.g.
+        // `Apache-2.0/MIT`), deprecated in favour of SPDX `OR` but still present
+        // in older crates. SPDX license ids never contain `/`, so treat it as an
+        // OR separator before SPDX normalization while keeping the raw statement
+        // source-faithful.
+        let normalized_license = raw_license
+            .as_deref()
+            .map(normalize_cargo_legacy_license_separator);
         let file_references = extract_file_references(&toml_content);
         let (declared_license_expression, declared_license_expression_spdx, license_detections) =
-            raw_license
+            normalized_license
                 .as_deref()
                 .and_then(normalize_spdx_expression)
                 .map(|normalized| {
@@ -234,6 +242,21 @@ fn default_package_data() -> PackageData {
         datasource_id: Some(DatasourceId::CargoToml),
         ..Default::default()
     }
+}
+
+/// Convert Cargo's legacy `/` dual-license separator to SPDX `OR`. SPDX license
+/// ids never contain `/`, so any `/` in a Cargo `license` field is the
+/// deprecated OR separator (e.g. `Apache-2.0/MIT` -> `Apache-2.0 OR MIT`).
+fn normalize_cargo_legacy_license_separator(license: &str) -> String {
+    if !license.contains('/') {
+        return license.to_string();
+    }
+    license
+        .split('/')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join(" OR ")
 }
 
 /// Reads and parses a TOML file
