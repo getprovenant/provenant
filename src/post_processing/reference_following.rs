@@ -1383,6 +1383,12 @@ fn path_is_within_root(path: &str, root: &str) -> bool {
 }
 
 fn join_reference_candidate(base: &str, referenced_filename: &str) -> String {
+    // Deliberately use string concatenation rather than `Path::join` here:
+    // `Path::join` treats an OS-absolute `referenced_filename` as a root
+    // replacement (`Path::new("pkg/ios").join("/LICENSE")` -> `/LICENSE`), which
+    // is wrong for scan-relative file-map keys. Absolute references are handled
+    // separately by the caller, and these keys are never OS-absolute, so joining
+    // onto the base and normalizing is the intended behavior.
     let joined = if base.is_empty() {
         referenced_filename.replace('\\', "/")
     } else {

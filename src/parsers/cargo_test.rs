@@ -243,6 +243,41 @@ license = "Apache-2.0/MIT"
     }
 
     #[test]
+    fn test_legacy_slash_dual_license_handles_spacing_and_chains() {
+        // Space-padded slashes and three-license chains both seen in the wild.
+        for (license, expected, expected_spdx) in [
+            ("Apache-2.0 / MIT", "apache-2.0 OR mit", "Apache-2.0 OR MIT"),
+            (
+                "MIT/Apache-2.0/BSD-3-Clause",
+                "apache-2.0 OR bsd-new OR mit",
+                "Apache-2.0 OR BSD-3-Clause OR MIT",
+            ),
+        ] {
+            let content = format!(
+                "[package]\nname = \"slashed\"\nversion = \"1.0.0\"\nlicense = \"{license}\"\n"
+            );
+            let (_temp_file, cargo_path) = create_temp_cargo_toml(&content);
+            let package_data = CargoParser::extract_first_package(&cargo_path);
+
+            assert_eq!(
+                package_data.declared_license_expression.as_deref(),
+                Some(expected),
+                "declared for {license:?}"
+            );
+            assert_eq!(
+                package_data.declared_license_expression_spdx.as_deref(),
+                Some(expected_spdx),
+                "declared spdx for {license:?}"
+            );
+            assert_eq!(
+                package_data.extracted_license_statement.as_deref(),
+                Some(license),
+                "extracted statement stays source-faithful for {license:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_extract_short_composite_declared_license_preserves_mit_zero_and_or() {
         let content = r#"
 [package]
