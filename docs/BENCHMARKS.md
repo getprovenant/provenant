@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **13.2× median speedup** and **13.0× geometric-mean speedup** overall; the median gap grows from **7.3×** on sub-100-file targets to **19.7×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **13.4× median speedup** and **13.2× geometric-mean speedup** overall; the median gap grows from **7.3×** on sub-100-file targets to **19.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -55,12 +55,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Android / AOSP
 
-##### [aosp-mirror/platform_build @ 045a3d6](https://github.com/aosp-mirror/platform_build/tree/045a3d6a3e359633a14853a5a5e1e4f2a11cbdae) — **9.52× faster**
+##### [aosp-mirror/platform_build @ 045a3d6](https://github.com/aosp-mirror/platform_build/tree/045a3d6a3e359633a14853a5a5e1e4f2a11cbdae) — **17.87× faster**
 
 - Files: 1,515
-- Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `25.23s`; ScanCode `240.24s`
-- Broader Android package visibility (`14` vs `0` file-level package records) across committed Soong `METADATA`, `AndroidManifest.xml`, and `TestApp.apk` surfaces, plus extra `go.work` and Docker metadata detection, with cleaner clue-only handling of bare-word GPL/LGPL, placeholder-author, and URL-shape noise
+- Run context: 2026-06-15 · platform_build-22987 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.68s`; ScanCode `155.12s`
+- Richer file-level Android package extraction (`31` vs `18` package_data records) and dependency coverage (`148` vs `145`) across committed Soong `METADATA`, `AndroidManifest.xml`, `TestApp.apk`, cargo, and `go.work` surfaces, with correct `The Android Open Source Project` holder attribution where ScanCode leaves it null, plus declared licenses that avoid conflating the `tools/compliance` test-fixture licenses ScanCode pulls into the package expression
 
 ##### [facebook/fresco @ c991a69](https://github.com/facebook/fresco/tree/c991a692a254358d1cf56c5b4b06e6c5dd96cfab) — **23.42× faster**
 
@@ -92,11 +92,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `12.01s`; ScanCode `87.31s`
 - Matched Chef package and dependency coverage on committed `metadata.rb` surfaces, with fuller Debian-style script-header author capture and cleaner rejection of weak README maintainer prose as an author
 
-##### [sous-chefs/mysql @ 6b7110b](https://github.com/sous-chefs/mysql/tree/6b7110bee2bc64c9149f24d524cbb740387e527a) — **6.45× faster**
+##### [sous-chefs/mysql @ 6b7110b](https://github.com/sous-chefs/mysql/tree/6b7110bee2bc64c9149f24d524cbb740387e527a) — **9.60× faster**
 
-- Files: 92
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `11.72s`; ScanCode `75.55s`
+- Files: 91
+- Run context: 2026-06-15 · mysql-57215 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.79s`; ScanCode `45.99s`
 - Matched Chef package and dependency coverage on committed `metadata.rb` surfaces, with cleaner rejection of config-word author noise such as `chef-client` and fuller `Author:: Name (<email>)` identity capture
 
 #### Python / Conda / Pixi
@@ -157,11 +157,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.24s`; ScanCode `70.31s`
 - Far broader Conda recipe and dependency extraction (`257` vs `1` packages, `164` vs `13` dependencies) across committed `meta.yaml` recipe fixtures, split-package test recipes, and sidecar Python manifests, with explicit malformed-recipe scan errors on duplicate-key negative fixtures instead of silently treating them as ordinary package metadata
 
-##### [conda-forge/pandas-feedstock @ 4063b72](https://github.com/conda-forge/pandas-feedstock/tree/4063b725cd252c02b0cebe935a8859a6b540fe00) — **7.59× faster**
+##### [conda-forge/pandas-feedstock @ 4063b72](https://github.com/conda-forge/pandas-feedstock/tree/4063b725cd252c02b0cebe935a8859a6b540fe00) — **6.31× faster**
 
-- Files: 51
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `8.66s`; ScanCode `65.66s`
+- Files: 49
+- Run context: 2026-06-15 · pandas-feedstock-68688 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.79s`; ScanCode `42.84s`
 - Direct schema-versioned conda-forge feedstock package visibility (`1` vs `0` packages, `51` vs `0` dependencies) from `recipe/recipe.yaml`, plus assembled top-level Conda package identity and preserved source/about metadata
 
 ##### [DefectDojo/django-DefectDojo @ 2f25c45](https://github.com/DefectDojo/django-DefectDojo/tree/2f25c4510361e2f27f63fbbcff3901cbd2ef4a07) — **18.83× faster**
@@ -192,12 +192,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `13.09s`; ScanCode `418.88s`
 - Far broader Python/Conda/Pixi package and dependency extraction (`4` vs `1` packages, hundreds of additional dependencies) because `pixi.lock` and `environment.yml` surface large resolved Conda/Pixi package graphs with per-package license inventories ScanCode ignores entirely, while avoiding ScanCode's `pixi.lock` timeout, preserving SPDX-aligned `BSD-3-Clause` declared licensing, and skipping ScanCode's data-table copyright false positives such as `(c) Rain (mm) Wind`
 
-##### [prefix-dev/pixi @ 6458b15](https://github.com/prefix-dev/pixi/tree/6458b15a855cf6beeaad1853ef007d9d20a5bccc) — **8.09× faster**
+##### [prefix-dev/pixi @ 6458b15](https://github.com/prefix-dev/pixi/tree/6458b15a855cf6beeaad1853ef007d9d20a5bccc) — **12.84× faster**
 
 - Files: 2,372
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `62.21s`; ScanCode `503.12s`
-- Broader Pixi package and dependency extraction (`223` vs `128` packages, `18016` vs `3116` dependencies) from the root and example `pixi.toml` or `pixi.lock` surfaces plus feature-scoped `pypi-dependencies`, with no example-lock scan errors where ScanCode times out and safer credential stripping or git URL normalization across Pixi source fixtures
+- Run context: 2026-06-15 · pixi-71346 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `27.77s`; ScanCode `356.55s`
+- Broader Pixi package and dependency extraction (`233` vs `128` packages, `22369` vs `3116` dependencies) from the root and example `pixi.toml` or `pixi.lock` surfaces plus feature-scoped `pypi-dependencies` and cargo workspace members that inherit the declared `BSD-3-Clause` license ScanCode leaves unset, with no example-lock scan errors where ScanCode times out and safer credential stripping or git URL normalization across Pixi source fixtures
 
 ##### [pydata/xarray @ f7e47a1](https://github.com/pydata/xarray/tree/f7e47a19726321e56d74bca896eb55c6f330506b) — **14.48× faster**
 
@@ -243,11 +243,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### R / CRAN
 
-##### [r-lib/devtools @ a3447b9](https://github.com/r-lib/devtools/tree/a3447b9f3d59abb6cc8b63a54db3435819324c1e) — **8.71× faster**
+##### [r-lib/devtools @ a3447b9](https://github.com/r-lib/devtools/tree/a3447b9f3d59abb6cc8b63a54db3435819324c1e) — **9.89× faster**
 
-- Files: 266
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.28s`; ScanCode `80.85s`
+- Files: 265
+- Run context: 2026-06-15 · devtools-88197 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.97s`; ScanCode `49.16s`
 - Far broader CRAN package and dependency extraction (`14` vs `1` packages, `45` vs `1` dependencies) from the root `DESCRIPTION` plus committed test-package fixtures, with correct filtering of fake `pkg:cran/R` dependency noise and cleaner maintainer or URL normalization
 
 ##### [tidyverse/dplyr @ 2f9f49e](https://github.com/tidyverse/dplyr/tree/2f9f49ef0d361dc612abc55982d68db3fb3854d0) — **12.32× faster**
@@ -287,12 +287,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `14.03s`; ScanCode `135.56s`
 - Broader Hex dependency extraction (`16` vs `0`) from the repo-root `mix.lock` plus `examples/friends/mix.lock`, with direct locked package identities for entries such as `ecto_sql`, `postgrex`, and `telemetry` that ScanCode leaves dependency-blind
 
-##### [elixir-plug/plug @ 47649aa](https://github.com/elixir-plug/plug/tree/47649aa7bb910f481b66cc3e98c14b2c3b761c3c) — **8.55× faster**
+##### [elixir-plug/plug @ 47649aa](https://github.com/elixir-plug/plug/tree/47649aa7bb910f481b66cc3e98c14b2c3b761c3c) — **10.51× faster**
 
 - Files: 104
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `10.77s`; ScanCode `92.08s`
-- Direct Hex package visibility on `mix.lock` (`1` vs `0`) plus locked dependency extraction (`9` vs `0`) for `plug_crypto`, `telemetry`, `ex_doc`, and sibling Hex pins that ScanCode leaves at zero, with Unicode-preserving `Loïc Hoguin` holder normalization
+- Run context: 2026-06-15 · plug-85462 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.88s`; ScanCode `51.28s`
+- Locked Hex dependency extraction (`9` vs `0`) for `plug_crypto`, `telemetry`, `ex_doc`, and sibling Hex pins that ScanCode leaves at zero, with Unicode-preserving `Loïc Hoguin` holder normalization
 
 ##### [erlang/otp @ 264def5](https://github.com/erlang/otp/tree/264def545b8214ea7100bfede1a4629c676ff1c0) — **23.52× faster**
 
@@ -373,11 +373,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `12.53s`; ScanCode `170.19s`
 - Direct `publiccode.yml` package visibility on the root metadata file (`1` vs `0` on that file), with matched top-level package and dependency counts elsewhere plus Unicode-preserving Potree copyright normalization and cleaner URL shaping across README and docs material
 
-##### [jashkenas/backbone @ da75718](https://github.com/jashkenas/backbone/tree/da75718e896e52e84aa1f0411ba67fafcdcf6af3) — **9.28× faster**
+##### [jashkenas/backbone @ da75718](https://github.com/jashkenas/backbone/tree/da75718e896e52e84aa1f0411ba67fafcdcf6af3) — **12.27× faster**
 
 - Files: 122
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `11.27s`; ScanCode `104.56s`
+- Run context: 2026-06-15 · backbone-19202 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.03s`; ScanCode `61.74s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and package-level party metadata from `package.json`
 
 ##### [jquery/jquery-ui @ eda7aa3](https://github.com/jquery/jquery-ui/tree/eda7aa34fa59d8f764b2164be3e3b7f14639b0db) — **19.49× faster**
@@ -415,11 +415,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `295.10s`; ScanCode `3376.85s`
 - Clean root npm workspace manifest coverage without ScanCode's workspace-assembly scan errors, fewer large registry-fixture JSON timeouts, and cleaner handling of duplicated private-workspace dependency exports and repeated MIT-style registry-fixture metadata noise
 
-##### [oakserver/oak @ 185baef](https://github.com/oakserver/oak/tree/185baef02551a84798000f25d3bd01c2fdfcb1ce) — **8.94× faster**
+##### [oakserver/oak @ 185baef](https://github.com/oakserver/oak/tree/185baef02551a84798000f25d3bd01c2fdfcb1ce) — **9.43× faster**
 
 - Files: 103
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `12.95s`; ScanCode `115.73s`
+- Run context: 2026-06-15 · oak-93582 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.09s`; ScanCode `47.99s`
 - Direct Deno package visibility on the root `deno.json` (`1` vs `0` packages), plus Dockerfile package visibility on `.devcontainer/Dockerfile`, with cleaner trailing-slash URL normalization across README and docs material
 
 ##### [oven-sh/bun @ 700fc11](https://github.com/oven-sh/bun/tree/700fc117a2fd01ac0201deaa6fa69c5557acb04f) — **19.72× faster**
@@ -480,12 +480,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `26.97s`; ScanCode `681.19s`
 - Matched top-level SBT package coverage (`7` vs `7`) with broader dependency extraction (`49` vs `40`) from the root `build.sbt`, sample applications, and native-image test manifests, plus cleaner rejection of weak actor-name author noise such as `the ActorSystem` and `the ReceiveBuilder`
 
-##### [apache/felix-dev @ 20aee77](https://github.com/apache/felix-dev/tree/20aee77cce8cad21493368403701d9c44c168f62) — **9.09× faster**
+##### [apache/felix-dev @ 20aee77](https://github.com/apache/felix-dev/tree/20aee77cce8cad21493368403701d9c44c168f62) — **24.00× faster**
 
-- Files: 5,354
-- Run context: 2026-04-12 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `52.75s`; ScanCode `479.56s`
-- Matched Maven/OSGi package coverage (`196` vs `196`) with richer dependency extraction (`995` vs `962`) from classifier/type-aware Maven coordinates, OSGi integration-test POMs, and committed JAR or `MANIFEST.MF` metadata
+- Files: 5,356
+- Run context: 2026-06-15 · felix-dev-96478 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `26.70s`; ScanCode `640.75s`
+- Broader Maven/OSGi package coverage (`201` vs `196`) with richer dependency extraction (`1033` vs `962`) from classifier/type-aware Maven coordinates, OSGi integration-test POMs, and committed JAR or `MANIFEST.MF` metadata, plus declared licenses that stay faithful to each module's POM where ScanCode conflates bundled JUnit `CPL`/`EPL` licenses into the declared expression
 
 ##### [apache/camel @ c9c34a1](https://github.com/apache/camel/tree/c9c34a1c2fbc5d093241565c0272ca466407a8e1) — **11.38× faster**
 
@@ -557,12 +557,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `67.58s`; ScanCode `776.24s`
 - Broader JVM monorepo package and dependency extraction (`173` vs `165` packages, `4434` vs `4233` dependencies) from nested Maven example POMs, the committed Antora `package-lock.json`, and Docker/WAR metadata, plus more specific SBOM license expressions where ScanCode flattens `EPL-2.0 AND Classpath-exception-2.0` or `BSD-2-Clause-Views AND BSD-3-Clause`
 
-##### [technomancy/leiningen @ 4022732](https://github.com/technomancy/leiningen/tree/40227328d4a9c8945362d6d626d19c2449175df6) — **8.90× faster**
+##### [technomancy/leiningen @ 4022732](https://github.com/technomancy/leiningen/tree/40227328d4a9c8945362d6d626d19c2449175df6) — **10.80× faster**
 
-- Files: 302
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.34s`; ScanCode `91.99s`
-- Broader Clojure manifest and dependency extraction (`82` vs `10` dependencies) from the root, nested checkout, and test-project `project.clj` surfaces that ScanCode leaves at manifest-only visibility, plus OFL font-license recovery and cleaner URL normalization where ScanCode preserves regex suffixes, trailing-slash drift, or percent-encoded placeholder text
+- Files: 301
+- Run context: 2026-06-15 · leiningen-90777 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.06s`; ScanCode `54.67s`
+- Broader Clojure manifest and dependency extraction (`92` vs `10` dependencies) from the root, nested checkout, and test-project `project.clj` surfaces that ScanCode leaves at manifest-only visibility, plus OFL font-license recovery and cleaner URL normalization where ScanCode preserves regex suffixes, trailing-slash drift, or percent-encoded placeholder text
 
 #### Rust / Go / native / infrastructure
 
