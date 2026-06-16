@@ -1,0 +1,35 @@
+{{!--
+SPDX-FileCopyrightText: Provenant contributors
+SPDX-License-Identifier: Apache-2.0
+
+Handlebars template for `cargo about generate`. Renders the third-party license
+disclosure for the components bundled in the Provenant binary.
+--}}# Third-Party Software Notices
+
+Provenant's distributed binary statically links the open-source components
+listed below. Each is provided under the license shown, and the full license
+texts follow. This file is generated with `cargo about`; see `about.toml` and
+`scripts/generate_third_party_notices.sh`.
+
+## Overview
+
+{{#each overview}}
+- {{{name}}}: {{count}} component(s)
+{{/each}}
+
+## Licenses
+
+{{#each licenses}}
+### {{{name}}}
+
+Used by:
+
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}{{#if crate.repository}} ({{crate.repository}}){{/if}}
+{{/each}}
+
+```
+{{{text}}}
+```
+
+{{/each}}

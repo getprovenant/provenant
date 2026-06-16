@@ -44,6 +44,13 @@
       "depNameTemplate": "rust",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "rust-release-channel"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)\\.github/workflows/release\\.yml$/"],
+      "matchStrings": ["tool:\\s*cargo-about@(?<currentValue>[0-9][^\\s\"]*)"],
+      "depNameTemplate": "cargo-about",
+      "datasourceTemplate": "crate"
     }
   ],
   "lockFileMaintenance": {

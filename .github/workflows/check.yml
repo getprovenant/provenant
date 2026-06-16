@@ -86,6 +86,9 @@ jobs:
       - name: Check release version sync
         run: ./scripts/check_release_version_sync.sh
 
+      - name: Check license config sync (about.toml vs deny.toml)
+        run: ./scripts/check_license_config_sync.sh
+
       - name: Check xtask lockfile sync and supported formats
         run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-supported-formats -- --check
 

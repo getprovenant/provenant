@@ -63,3 +63,6 @@ testdata/**/*.sqlite-wal
 
 # Background agent worktrees
 .claude/worktrees/
+
+# Generated at release time by scripts/generate_third_party_notices.sh
+/THIRD-PARTY-NOTICES.md

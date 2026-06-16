@@ -64,6 +64,21 @@ jobs:
       - name: Verify crates.io package publish dry-run
         run: cargo publish --locked --dry-run -p provenant-cli
 
+      - name: Install cargo-about
+        uses: taiki-e/install-action@15449e3094499af05d8d964a1c884208e4b8b595 # v2.81.11
+        with:
+          tool: cargo-about@0.9.0
+
+      - name: Generate third-party license disclosure
+        run: ./scripts/generate_third_party_notices.sh THIRD-PARTY-NOTICES.md
+
+      - name: Upload third-party license disclosure
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: third-party-notices
+          path: THIRD-PARTY-NOTICES.md
+          if-no-files-found: error
+
   build:
     name: Build ${{ matrix.target }}
     needs: verify-release
@@ -129,12 +144,18 @@ jobs:
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Download third-party license disclosure
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8
+        with:
+          name: third-party-notices
+          path: .
+
       - name: Create archive (Unix)
         if: matrix.archive_format == 'tar.gz'
         run: |
           cd target/${{ matrix.target }}/release
-          cp "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" .
-          tar czf ${{ matrix.asset_name }}.tar.gz provenant${{ matrix.ext }} LICENSE NOTICE
+          cp "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" "$GITHUB_WORKSPACE/THIRD-PARTY-NOTICES.md" .
+          tar czf ${{ matrix.asset_name }}.tar.gz provenant${{ matrix.ext }} LICENSE NOTICE THIRD-PARTY-NOTICES.md
           if command -v sha256sum > /dev/null; then
             sha256sum ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
           else
@@ -148,7 +169,8 @@ jobs:
           cd target/${{ matrix.target }}/release
           Copy-Item "$env:GITHUB_WORKSPACE\LICENSE" .
           Copy-Item "$env:GITHUB_WORKSPACE\NOTICE" .
-          7z a ${{ matrix.asset_name }}.zip provenant${{ matrix.ext }} LICENSE NOTICE
+          Copy-Item "$env:GITHUB_WORKSPACE\THIRD-PARTY-NOTICES.md" .
+          7z a ${{ matrix.asset_name }}.zip provenant${{ matrix.ext }} LICENSE NOTICE THIRD-PARTY-NOTICES.md
           $hash = (Get-FileHash "${{ matrix.asset_name }}.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  ${{ matrix.asset_name }}.zip" | Out-File -FilePath "${{ matrix.asset_name }}.zip.sha256" -Encoding ascii
         shell: pwsh

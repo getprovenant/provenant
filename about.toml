@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Configuration for `cargo about generate`, which produces the third-party
+# license disclosure (THIRD-PARTY-NOTICES.md) bundled into Provenant's binary
+# release archives. See scripts/generate_third_party_notices.sh.
+#
+# This must stay aligned with the shipped dependency graph that cargo-deny
+# enforces in deny.toml: `targets` mirrors deny.toml's [graph].targets,
+# dev-dependencies are excluded (deny.toml sets exclude-dev), and `accepted`
+# mirrors deny.toml's [licenses].allow plus its per-crate exceptions. The
+# alignment is enforced by scripts/check_license_config_sync.sh.
+
+# Build the disclosure for exactly the platforms we ship, matching deny.toml.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+
+# Dev-dependencies are not part of the shipped binary (deny.toml: exclude-dev).
+ignore-dev-dependencies = true
+
+# Accepted SPDX license identifiers. cargo-about fails if a shipped crate uses a
+# license not listed here, which surfaces new transitive licenses for review.
+# Kept equal to deny.toml's allow list plus its exception licenses.
+accepted = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "bzip2-1.0.6",
+]
+
+# Built-in clarifications for crates whose licensing cargo-about cannot detect
+# reliably from their source tree alone.
+workarounds = [
+    "ring",
+]
