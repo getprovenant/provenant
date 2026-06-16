@@ -92,6 +92,14 @@ echo "🔎 Verifying ScanCode output format version sync..."
 ./scripts/check_scancode_output_format_sync.sh
 echo "🔎 Verifying NOTICE attribution sync (retained upstream notices verbatim)..."
 ./scripts/check_notice_attribution_sync.sh --require-submodule
+echo "🔎 Validating third-party license disclosure generation..."
+if cargo about --version > /dev/null 2>&1; then
+    ./scripts/generate_third_party_notices.sh /tmp/provenant-third-party-notices.md > /dev/null
+    echo "✅ Third-party license disclosure generates cleanly"
+else
+    echo "⚠️  cargo-about not installed; skipping local disclosure validation (CI enforces it at release)."
+    echo "    Install with: cargo install --locked cargo-about --features cli"
+fi
 echo "🔧 Regenerating embedded license index artifact..."
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact
 

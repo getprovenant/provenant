@@ -116,6 +116,40 @@ Example:
 ./scripts/check_scancode_output_format_sync.sh
 ```
 
+## `generate_third_party_notices.sh`
+
+Generate the third-party license disclosure (`THIRD-PARTY-NOTICES.md`) for the
+dependencies bundled in the Provenant binary, using `cargo-about` and the
+repo-root `about.toml` / `about.hbs`. The release workflow generates this file
+and bundles it into the binary release archives alongside `LICENSE` and
+`NOTICE`; `release.sh` validates it generates cleanly before tagging.
+
+Requires `cargo-about` (`cargo install --locked cargo-about --features cli`). It
+fails if a bundled dependency uses a license not listed in `about.toml`'s
+`accepted` set, surfacing new transitive licenses for review.
+
+Example:
+
+```bash
+./scripts/generate_third_party_notices.sh
+./scripts/generate_third_party_notices.sh THIRD-PARTY-NOTICES.md
+```
+
+## `check_license_config_sync.sh`
+
+Verify that `about.toml` (cargo-about, third-party disclosure) stays aligned
+with `deny.toml` (cargo-deny, license policy). The two tools evaluate the same
+shipped dependency graph but cannot share configuration, so this enforces the
+invariant: `about.toml` `targets` must equal `deny.toml` `[graph].targets`, and
+`about.toml` `accepted` must equal `deny.toml` `[licenses].allow` plus its
+per-crate exception licenses.
+
+Example:
+
+```bash
+./scripts/check_license_config_sync.sh
+```
+
 ## `check_notice_attribution_sync.sh`
 
 Verify that the upstream ScanCode Toolkit attribution notices Provenant retains

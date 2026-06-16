@@ -77,6 +77,13 @@ pre-commit:
         - tools/license-headers/Cargo.toml
       run: ./scripts/check_dependency_policy.sh
 
+    check-license-config-sync:
+      glob:
+        - about.toml
+        - deny.toml
+        - scripts/check_license_config_sync.sh
+      run: ./scripts/check_license_config_sync.sh
+
     generate-supported-formats:
       glob: src/parsers/*.rs
       exclude:
