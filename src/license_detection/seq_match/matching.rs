@@ -5,6 +5,11 @@
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 //! Sequence matching algorithms for finding matching blocks.
+//!
+//! The longest-match routine here is derived from Python's `difflib` (Python
+//! Software Foundation License, PSF-2.0; Copyright (c) Python Software
+//! Foundation and others) via ScanCode's `seq.py`, retained per Apache-2.0
+//! section 4(c). The header above covers the ScanCode/nexB derivation.
 
 use crate::license_detection::LicenseDetectionError;
 use crate::license_detection::index::LicenseIndex;

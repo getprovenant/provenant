@@ -1,24 +1,14 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Grammar rules for copyright parse tree construction.
+//! Type definitions for the copyright grammar: the matcher and rule types used
+//! to express grammar rules as Rust data. Rules are applied bottom-up to a
+//! sequence of POS-tagged tokens; each rule matches a pattern of tags/labels
+//! and replaces the matched span with a new tree node.
 //!
-//! Rules are applied bottom-up to a sequence of POS-tagged tokens.
-//! Each rule matches a pattern of tags/labels and replaces the matched
-//! span with a new tree node.
-//!
-//! Ported from the Python `GRAMMAR` string in
-//! `reference/scancode-toolkit/src/cluecode/copyrights.py` lines 2367–3530.
-//! Includes all rule categories: YEAR, ALL RIGHTS RESERVED, EMAIL, CC, NAME,
-//! COMPANY, ANDCO, DASHCAPS, NAME-EMAIL, NAME-YEAR, URL, INITIALDEV,
-//! COPYRIGHT, COPYRIGHT2, NAME-COPY, NAME-CAPS, AUTHOR, and ANDAUTH.
-//!
-//! Quantifier expansion strategy:
-//! - `<X>+` (one or more) → rules for 1, 2, and sometimes 3 instances.
-//!   The parser applies rules iteratively so longer sequences build up.
-//! - `<X>?` (optional) → two rules: one with X and one without.
-//! - `<X>*` (zero or more) → rules without X, and with 1 instance.
-//! - `<X>{3}` (exactly 3) → one rule with exactly 3 instances.
+//! The grammar rules themselves — ported from the Python `GRAMMAR` string in
+//! `reference/scancode-toolkit/src/cluecode/copyrights.py` — live in
+//! `rules.rs`, which carries the corresponding upstream attribution.
 
 use crate::copyright::types::{PosTag, TreeLabel};
 
