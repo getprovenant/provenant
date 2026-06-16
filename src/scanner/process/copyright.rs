@@ -484,8 +484,13 @@ fn is_binary_garbage_party_value(text: &str) -> bool {
 fn is_font_metadata_label_copyright(text: &str) -> bool {
     const FONT_METADATA_LABELS: &[&str] = &["License Description:", "License Info URL:"];
     let trimmed = text.trim_start();
+    // Compare on bytes so a multi-byte UTF-8 char at the slice boundary cannot panic;
+    // the labels are pure ASCII, so a byte-level case-insensitive prefix is exact.
     FONT_METADATA_LABELS.iter().any(|label| {
-        trimmed.len() >= label.len() && trimmed[..label.len()].eq_ignore_ascii_case(label)
+        trimmed
+            .as_bytes()
+            .get(..label.len())
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(label.as_bytes()))
     })
 }
 
