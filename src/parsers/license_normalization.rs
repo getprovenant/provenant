@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: nexB Inc. and others
+// ScanCode is a trademark of nexB Inc.
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
+// Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 use std::sync::{Arc, LazyLock};
 

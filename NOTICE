@@ -11,7 +11,9 @@ Portions of Provenant are derived from the ScanCode Toolkit:
 
   - Engine code (Apache-2.0) ported to Rust and modified. Derived source files
     carry upstream nexB attribution alongside the Provenant copyright and a
-    change notice.
+    change notice. Some of this code further descends, via ScanCode, from
+    Python's difflib under the Python Software Foundation License (PSF-2.0),
+    Copyright (c) Python Software Foundation and others.
   - A license-detection dataset (CC-BY-4.0), modified from upstream: rules
     excluded, reclassified, or tightened, and some entries added. Each scan
     reports the exact modifications in its license-index provenance output.
