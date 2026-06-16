@@ -16,6 +16,9 @@ const LICENSE_LINE: &str = "SPDX-License-Identifier: Apache-2.0";
 /// Upstream attribution carried by files derived from ScanCode Toolkit, in
 /// addition to the Provenant copyright line.
 const UPSTREAM_COPYRIGHT_LINE: &str = "SPDX-FileCopyrightText: nexB Inc. and others";
+/// Trademark notice retained verbatim from upstream ScanCode source-file headers
+/// (Apache-2.0 section 4(c)) for derived files.
+const UPSTREAM_TRADEMARK_LINE: &str = "ScanCode is a trademark of nexB Inc.";
 /// "Stating changes" notice (Apache-2.0 section 4(b)) for derived files. The
 /// set of derived files is enumerated in `.license-headers.toml`; this line
 /// stays uniform across them so the header remains idempotent.
@@ -365,6 +368,7 @@ fn expected_header(prefix: &str, derived: bool) -> Vec<String> {
     let mut header = Vec::new();
     if derived {
         header.push(format!("{prefix} {UPSTREAM_COPYRIGHT_LINE}"));
+        header.push(format!("{prefix} {UPSTREAM_TRADEMARK_LINE}"));
     }
     header.push(format!("{prefix} {COPYRIGHT_LINE}"));
     header.push(format!("{prefix} {LICENSE_LINE}"));
@@ -378,6 +382,7 @@ fn rewrite_with_header(path: &Path, original: &str, derived: bool) -> Result<Str
     let prefix = comment_prefix(path)
         .with_context(|| format!("no comment prefix configured for {}", path.display()))?;
     let expected = expected_header(prefix, derived);
+    let trademark = format!("{prefix} {UPSTREAM_TRADEMARK_LINE}");
     let derived_note = format!("{prefix} {DERIVED_NOTE}");
     let mut lines: Vec<&str> = original.lines().collect();
 
@@ -392,16 +397,15 @@ fn rewrite_with_header(path: &Path, original: &str, derived: bool) -> Result<Str
         index += 1;
     }
 
-    while lines.get(index).is_some_and(|line| line.contains("SPDX-")) {
-        index += 1;
-    }
-
-    // Consume any existing derived-note line so the header stays idempotent
-    // whether or not the file was previously classified as derived.
-    while lines
-        .get(index)
-        .is_some_and(|line| line.trim() == derived_note.trim())
-    {
+    // Consume any existing header comment lines — SPDX tags, the upstream
+    // trademark notice, and the derived-note line — in whatever order they
+    // appear, so the header stays idempotent and reclassifying a file
+    // (derived <-> non-derived) cleanly strips the upstream-only lines. The
+    // trademark notice is not an SPDX tag, so it must be matched explicitly.
+    while lines.get(index).is_some_and(|line| {
+        let trimmed = line.trim();
+        trimmed.contains("SPDX-") || trimmed == trademark.trim() || trimmed == derived_note.trim()
+    }) {
         index += 1;
     }
 
@@ -442,6 +446,7 @@ mod tests {
         assert_eq!(
             rewrite("mod a;\n", true),
             "// SPDX-FileCopyrightText: nexB Inc. and others\n\
+             // ScanCode is a trademark of nexB Inc.\n\
              // SPDX-FileCopyrightText: Provenant contributors\n\
              // SPDX-License-Identifier: Apache-2.0\n\
              // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.\n\
