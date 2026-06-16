@@ -710,6 +710,18 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^contributor,\s*path$",
         r"(?x)\b[A-Za-z_][A-Za-z0-9_]*\([^)]*\).*[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\(",
         r"^(?:[\u{0080}-\u{00FF}]+\s*){6,}$",
+        // Creative Commons license-body prose. The CC texts truncate to bare
+        // "Similar" / "resulting" holders, and yield several generic legal-prose
+        // fragments. The "Similar Rights ..." family and CC/treaty vocabulary are
+        // handled by the shared `is_creative_commons_license_prose` predicate in
+        // junk.rs; these are the remaining short prose fragments.
+        r"(?i)^similar$",
+        r"(?i)^resulting$",
+        r"(?i)^including\s*,\s*without\s+limitation\b",
+        r"(?i)^as\s+requested(?:\.\s+if)?$",
+        r"(?i)^notice\s*,\s*terms\s+of\s+service\b",
+        r"(?i)^may\s+be\s+implemented\s+in\b",
+        r"(?i)^certain\s+other$",
     ];
     patterns.iter().filter_map(|p| Regex::new(p).ok()).collect()
 });

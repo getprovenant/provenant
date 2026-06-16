@@ -827,6 +827,10 @@ pub(super) static COPYRIGHTS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new
         r"(?i)^[A-Z_][A-Z0-9_]*\(c\);\s*[a-z_][a-z0-9_]*->[a-z_][a-z0-9_]*\s*=\s*[a-z_][a-z0-9_]*$",
         r#"(?i)^[a-z_][a-z0-9_]*\("copyright:\s*%s",\s*[a-z_][a-z0-9_]*->copyright\)$"#,
         r"(?i)^copyright\s*(?:\(c\)\s*)?(?:19|20)\d{2}(?:-(?:19|20)\d{2})?\s+.*copyright holder$",
+        // Creative Commons license-body prose (e.g. "Copyright and Similar Rights")
+        // is handled generally by `is_creative_commons_license_prose` in junk.rs.
+        // The CC-BY-SA text also truncates a sentence to this bare "(c)" fragment.
+        r"(?i)^\(c\)\s+may\s+be\s+implemented\s+in\b",
     ];
     patterns.iter().filter_map(|p| Regex::new(p).ok()).collect()
 });
