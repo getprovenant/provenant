@@ -710,11 +710,14 @@ pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^contributor,\s*path$",
         r"(?x)\b[A-Za-z_][A-Za-z0-9_]*\([^)]*\).*[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\(",
         r"^(?:[\u{0080}-\u{00FF}]+\s*){6,}$",
-        // Creative Commons license-body prose. The CC texts truncate to bare
-        // "Similar" / "resulting" holders, and yield several generic legal-prose
-        // fragments. The "Similar Rights ..." family and CC/treaty vocabulary are
+        // Short legal-prose holder fragments seen in full CC license texts. The
+        // "Similar Rights ..." family and CC/treaty-exclusive vocabulary are
         // handled by the shared `is_creative_commons_license_prose` predicate in
-        // junk.rs; these are the remaining short prose fragments.
+        // junk.rs; these are the remaining short fragments. Note that several of
+        // these (e.g. "including, without limitation", "notice, terms of
+        // service") are general legal boilerplate, not CC-exclusive vocabulary;
+        // they merely surface here from CC bodies. The `^` anchor keeps them
+        // narrow enough to stay safe against real holder names.
         r"(?i)^similar$",
         r"(?i)^resulting$",
         r"(?i)^including\s*,\s*without\s+limitation\b",

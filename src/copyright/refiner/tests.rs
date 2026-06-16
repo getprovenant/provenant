@@ -591,6 +591,21 @@ fn test_cc_prose_suppression_preserves_real_notices() {
     assert!(!is_junk_holder("Acme Inc."));
 }
 
+#[test]
+fn test_cc_prose_year_guard_keeps_weak_marker_notices() {
+    // The year guard protects the *weak* CC markers. A real notice that both
+    // carries a copyright year AND contains a weak marker phrase ("similar
+    // rights", "certain other rights") must NOT be dropped as junk. The year
+    // lives in the copyright statement, so this invariant is exercised at the
+    // copyright level (refined holders do not carry years).
+    assert!(!is_junk_copyright(
+        "Copyright 2020 Foundation for Similar Rights"
+    ));
+    assert!(!is_junk_copyright(
+        "Copyright 2020 Acme and certain other rights reserved"
+    ));
+}
+
 // ── refine_copyright ─────────────────────────────────────────────
 
 #[test]
