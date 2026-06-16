@@ -59,6 +59,17 @@ pub(super) fn extract_copyright_information(
         (copyrights, holders, authors)
     };
 
+    // Universal guard against binary garbage leaking into parties. Real copyright
+    // and holder values are short and printable; a multi-kilobyte blob or a string
+    // dense with replacement / non-printable bytes (e.g. a raw image or font byte
+    // run) is never a legitimate notice, regardless of the detection source path.
+    // The rendered copyright value is checked alongside the normalized one because
+    // raw-text projection can re-expand a blob the normalized value had collapsed.
+    let holders: Vec<HolderDetection> = holders
+        .into_iter()
+        .filter(|h| !is_binary_garbage_party_value(&h.holder))
+        .collect();
+
     file_info_builder.copyrights(
         copyrights
             .into_iter()
@@ -72,6 +83,18 @@ pub(super) fn extract_copyright_information(
                 ),
                 start_line: c.start_line,
                 end_line: c.end_line,
+            })
+            .filter(|c| {
+                !is_binary_garbage_party_value(&c.copyright)
+                    && !is_font_metadata_label_copyright(&c.copyright)
+                    && !c
+                        .normalized_copyright
+                        .as_deref()
+                        .is_some_and(is_binary_garbage_party_value)
+                    && !c
+                        .normalized_copyright
+                        .as_deref()
+                        .is_some_and(is_font_metadata_label_copyright)
             })
             .collect::<Vec<Copyright>>(),
     );
@@ -90,7 +113,8 @@ pub(super) fn extract_copyright_information(
     authors.extend(extract_comment_author_supplements(text_content));
     let mut seen_authors = HashSet::new();
     authors.retain(|author| {
-        seen_authors.insert((author.author.clone(), author.start_line, author.end_line))
+        !is_binary_garbage_party_value(&author.author)
+            && seen_authors.insert((author.author.clone(), author.start_line, author.end_line))
     });
 
     file_info_builder.authors(
@@ -406,6 +430,63 @@ fn ranges_overlap(
     b_end: LineNumber,
 ) -> bool {
     a_start <= b_end && b_start <= a_end
+}
+
+/// Hard reject for party values (copyright / holder / author) that are obviously
+/// scraped binary content rather than a human-authored notice. This is a last-line
+/// correctness guard applied on every emit path: a legitimate notice is short and
+/// printable, so a very long value or one dense with replacement / non-printable
+/// bytes can be dropped outright without risking real source-file detections.
+fn is_binary_garbage_party_value(text: &str) -> bool {
+    // Longest realistic notices (multi-holder lines with URLs) stay well under
+    // this bound; a value beyond it is a binary blob, not a notice.
+    const MAX_PARTY_VALUE_BYTES: usize = 1_000;
+    // Replacement chars come from lossy decoding of non-UTF-8 binary runs.
+    const MAX_REPLACEMENT_RATIO: f64 = 0.02;
+    // Non-printable controls (excluding ordinary whitespace) never appear in a
+    // genuine notice but pepper binary scrapes.
+    const MAX_CONTROL_RATIO: f64 = 0.02;
+
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if trimmed.len() > MAX_PARTY_VALUE_BYTES {
+        return true;
+    }
+
+    let total = trimmed.chars().count();
+    if total == 0 {
+        return false;
+    }
+
+    let replacement = trimmed.chars().filter(|&ch| ch == '\u{FFFD}').count();
+    if replacement as f64 / total as f64 > MAX_REPLACEMENT_RATIO {
+        return true;
+    }
+
+    let control = trimmed
+        .chars()
+        .filter(|ch| ch.is_control() && !ch.is_whitespace())
+        .count();
+    if control as f64 / total as f64 > MAX_CONTROL_RATIO {
+        return true;
+    }
+
+    false
+}
+
+/// Reject copyright values that are actually font name-table metadata lines wrapped
+/// with their field label (e.g. `License Description: ...`). The license/URL text
+/// of a font may embed a copyright notice, but the labeled wrapper line is metadata,
+/// not a copyright statement, and license detection already owns that text.
+fn is_font_metadata_label_copyright(text: &str) -> bool {
+    const FONT_METADATA_LABELS: &[&str] = &["License Description:", "License Info URL:"];
+    let trimmed = text.trim_start();
+    FONT_METADATA_LABELS.iter().any(|label| {
+        trimmed.len() >= label.len() && trimmed[..label.len()].eq_ignore_ascii_case(label)
+    })
 }
 
 fn is_binary_string_copyright_candidate(text: &str) -> bool {
