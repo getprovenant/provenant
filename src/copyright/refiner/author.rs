@@ -863,7 +863,7 @@ fn strip_trailing_on_date(s: &str) -> String {
 /// never part of a real author name, so the bare name is recovered.
 fn strip_trailing_version(s: &str) -> String {
     static VERSION_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"^(?P<prefix>.+?)\s+\d+\.\d+(?:\.\d+)*(?:[.-][0-9A-Za-z]+)?\s*$").unwrap()
+        Regex::new(r"^(?P<prefix>.+?)\s+\d+\.\d+(?:\.\d+)*(?:[.-][0-9A-Za-z]+)*\s*$").unwrap()
     });
     let trimmed = s.trim();
     if let Some(cap) = VERSION_RE.captures(trimmed) {

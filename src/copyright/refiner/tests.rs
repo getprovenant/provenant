@@ -121,6 +121,11 @@ fn test_refine_author_strips_javadoc_since_version_suffix() {
         refine_author("Andy Wilkinson 2.0.0-SNAPSHOT"),
         Some("Andy Wilkinson".to_string())
     );
+    // Spring's historic multi-segment qualifier `X.Y.Z.BUILD-SNAPSHOT`.
+    assert_eq!(
+        refine_author("Juergen Hoeller 5.3.0.BUILD-SNAPSHOT"),
+        Some("Juergen Hoeller".to_string())
+    );
     // A bare name with no trailing version is untouched.
     assert_eq!(
         refine_author("Phillip Webb"),
