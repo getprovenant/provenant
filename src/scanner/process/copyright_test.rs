@@ -3,12 +3,113 @@
 
 use super::{
     extract_comment_author_supplements, extract_copyright_information,
-    extract_patch_header_author_supplements, is_binary_string_copyright_candidate,
+    extract_patch_header_author_supplements, is_binary_garbage_party_value,
+    is_binary_string_copyright_candidate, is_font_metadata_label_copyright,
 };
 use crate::copyright;
 use crate::models::{FileInfoBuilder, FileType};
 use std::path::Path;
 use std::time::Duration;
+
+fn build_single_file(mut builder: FileInfoBuilder) -> crate::models::FileInfo {
+    builder
+        .name("fixture".to_string())
+        .base_name("fixture".to_string())
+        .extension(String::new())
+        .path("fixture".to_string())
+        .file_type(FileType::File)
+        .size(0)
+        .build()
+        .expect("builder should produce file info")
+}
+
+#[test]
+fn test_binary_garbage_party_value_rejects_oversized_blob() {
+    let blob = "Copyright ".to_string() + &"a".repeat(2_000);
+    assert!(is_binary_garbage_party_value(&blob));
+}
+
+#[test]
+fn test_binary_garbage_party_value_rejects_control_byte_dense_value() {
+    let noisy = "Copyright 2020 \u{0001}\u{0002}\u{0001}\u{0002}\u{0001}\u{0002}Acme";
+    assert!(is_binary_garbage_party_value(noisy));
+}
+
+#[test]
+fn test_binary_garbage_party_value_rejects_replacement_char_dense_value() {
+    let noisy = format!("Copyright 2020 {}", "\u{FFFD}".repeat(30));
+    assert!(is_binary_garbage_party_value(&noisy));
+}
+
+#[test]
+fn test_binary_garbage_party_value_keeps_legitimate_notice() {
+    assert!(!is_binary_garbage_party_value(
+        "Copyright (c) 2010-2011 by tyPoland Lukasz Dziedzic (http://www.typoland.com/)"
+    ));
+    assert!(!is_binary_garbage_party_value(
+        "Copyright 2013 Google Inc. All Rights Reserved."
+    ));
+}
+
+#[test]
+fn test_font_metadata_label_copyright_rejects_license_description_wrapper() {
+    assert!(is_font_metadata_label_copyright(
+        "License Description: Copyright (c) 2009-2010, Design Science, Inc."
+    ));
+    assert!(is_font_metadata_label_copyright(
+        "License Info URL: http://scripts.sil.org/OFL"
+    ));
+    assert!(!is_font_metadata_label_copyright(
+        "Copyright (c) 2009-2010 Design Science, Inc."
+    ));
+}
+
+#[test]
+fn test_extract_copyright_information_drops_font_name_table_glyph_run() {
+    // A printable-string scrape of a font binary: a clean curated notice followed
+    // by a glyph-name concatenation run with no year or copyright marker.
+    let text = "Copyright 2013 Google Inc. All Rights Reserved.\n\
+        (c) ordfeminine guillemotleft danish ae oe period comma";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("font.ttf"), text, 120.0, true);
+
+    let file = build_single_file(builder);
+    let copyrights: Vec<&str> = file
+        .copyrights
+        .iter()
+        .map(|c| c.copyright.as_str())
+        .collect();
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.contains("Copyright 2013 Google Inc.")),
+        "copyrights: {copyrights:?}"
+    );
+    assert!(
+        !copyrights.iter().any(|c| c.contains("ordfeminine")),
+        "glyph-name run leaked into copyrights: {copyrights:?}"
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_drops_oversized_rendered_blob_copyright() {
+    // A single line carrying a copyright marker followed by a multi-kilobyte run of
+    // text: detection latches onto the marker, but the rendered raw value re-expands
+    // into the full blob, which must be dropped rather than emitted as a copyright.
+    let blob = format!("Copyright 2020 Acme Inc. {}", "word ".repeat(500));
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("photo.jpg"), &blob, 120.0, false);
+
+    let file = build_single_file(builder);
+    assert!(
+        file.copyrights.iter().all(|c| c.copyright.len() <= 1_000),
+        "oversized blob leaked as copyright: {:?}",
+        file.copyrights
+            .iter()
+            .map(|c| c.copyright.len())
+            .collect::<Vec<_>>()
+    );
+}
 
 #[test]
 fn test_binary_string_copyright_candidate_rejects_gibberish_holder_text() {

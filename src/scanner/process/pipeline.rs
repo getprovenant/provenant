@@ -270,6 +270,13 @@ fn extract_information_from_content(
         scan_diagnostics.push(ScanDiagnostic::error(text_scan_error));
     }
     let from_binary_strings = matches!(text_kind, ExtractedTextKind::BinaryStrings);
+    // Font metadata text combines a trustworthy curated name-table notice with a
+    // raw printable-string scrape of the font binary; the scrape leaks name-table
+    // and glyph-name junk into copyrights/holders. Prune it like binary strings so
+    // only the legitimate (year- or marker-bearing) notice survives, while keeping
+    // the unpruned text for license and contact detection.
+    let prune_copyright_binary_strings =
+        from_binary_strings || matches!(text_kind, ExtractedTextKind::FontMetadata);
 
     if is_timeout_exceeded(started, text_options.timeout_seconds) {
         return Err(FileScanError::Timeout(FileScanTimeout {
@@ -289,7 +296,7 @@ fn extract_information_from_content(
             path,
             &text_content,
             text_options.timeout_seconds,
-            from_binary_strings,
+            prune_copyright_binary_strings,
         );
         progress.record_detail_timing(
             "scan:copyrights",
