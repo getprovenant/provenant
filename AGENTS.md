@@ -32,7 +32,7 @@ Routine scans use the embedded license index. The `reference/scancode-toolkit/` 
 
 Use the Python ScanCode codebase as a behavioral reference, not an implementation template or an unquestioned source of truth. When comparing with ScanCode code or scan output, first identify the user-facing contract it demonstrates, then ask whether Provenant can solve the case more accurately, clearly, or safely before adopting the same behavior.
 
-When an upstream test fixture is needed for Provenant tests, copy it into Provenant-owned `testdata/` and reference that local copy. Do **not** make tests or golden fixtures depend directly on paths under `reference/scancode-toolkit/`.
+When an upstream test fixture is needed for Provenant tests, copy it into Provenant-owned `testdata/` and reference that local copy. Do **not** make tests or golden fixtures depend directly on paths under `reference/scancode-toolkit/`. Prefer synthetic or truncated fixtures over wholesale copies. When you do add a **substantial, wholesale** copy of an identifiable third-party file or package — especially under a copyleft or notice-required license — record its source and license in a short co-located note (a `README`/`SOURCE` in the containing directory), not in a central index. See [`testdata/PROVENANCE.md`](testdata/PROVENANCE.md) for the overall provenance policy.
 
 ## Run-Every-Time Guardrails
 
