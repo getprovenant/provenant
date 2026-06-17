@@ -214,6 +214,20 @@ for the first time, enabling it can surface pre-existing ScanCode-vs-Provenant
 declared-license deltas that have nothing to do with any recent change; that is
 expected, valuable parity signal to classify, not automatically a regression.
 
+`comparison/samples/field_value_frequency.json` is a cross-file frequency
+rollup of the per-file value diffs in `file_metric_value_differences.json`. For
+each field (authors, holders, copyrights, license expressions/clues, etc.) it
+aggregates the value-level differences across **all** common-path files and
+ranks them by total occurrence count, so systematic patterns become visible
+(for example one author value appearing hundreds of times instead of as
+hundreds of scattered one-count entries). It is framed by direction
+(`extra_in_provenant` = PV-only, `extra_in_scancode` = SC-only); PV-extra is
+**not** inherently junk, since much of it is legitimate source-faithful or
+richer output, so the rollup is a triage aid and the reviewer decides
+junk-vs-advantage. It is a pure diagnostic: it never feeds `comparison_status`,
+the signal counts, or any pass/fail gate. `summary.json` also surfaces a short
+per-field top-N preview under `field_value_frequency_top`.
+
 Optional diagnostic logs when available:
 
 - `raw/scancode-stdout.txt`
