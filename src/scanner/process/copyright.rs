@@ -84,6 +84,10 @@ pub(super) fn extract_copyright_information(
                 start_line: c.start_line,
                 end_line: c.end_line,
             })
+            // The font-metadata-label check is applied to every copyright, not only
+            // font paths: `License Description:` / `License Info URL:` are OpenType
+            // name-table field labels and are never a legitimate copyright prefix in
+            // real source, so rejecting them universally is safe and path-independent.
             .filter(|c| {
                 !is_binary_garbage_party_value(&c.copyright)
                     && !is_font_metadata_label_copyright(&c.copyright)
@@ -457,10 +461,6 @@ fn is_binary_garbage_party_value(text: &str) -> bool {
     }
 
     let total = trimmed.chars().count();
-    if total == 0 {
-        return false;
-    }
-
     let replacement = trimmed.chars().filter(|&ch| ch == '\u{FFFD}').count();
     if replacement as f64 / total as f64 > MAX_REPLACEMENT_RATIO {
         return true;
