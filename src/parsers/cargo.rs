@@ -59,6 +59,26 @@ const FIELD_RUST_VERSION: &str = "rust-version";
 const FIELD_EDITION: &str = "edition";
 const FIELD_README: &str = "readme";
 const FIELD_PUBLISH: &str = "publish";
+const FIELD_DOCUMENTATION: &str = "documentation";
+const FIELD_INCLUDE: &str = "include";
+const FIELD_EXCLUDE: &str = "exclude";
+
+/// Inheritable `[workspace.package]` fields whose `{ workspace = true }` marker is
+/// recorded generically (handled with a uniform `"workspace"` extra_data marker).
+/// Fields needing bespoke parsing (e.g. `documentation`, `license-file`, `readme`,
+/// `edition`, `rust-version`, `publish`) are handled explicitly above.
+const WORKSPACE_INHERITABLE_MARKER_FIELDS: &[&str] = &[
+    FIELD_VERSION,
+    FIELD_LICENSE,
+    FIELD_HOMEPAGE,
+    FIELD_REPOSITORY,
+    FIELD_CATEGORIES,
+    FIELD_KEYWORDS,
+    FIELD_AUTHORS,
+    FIELD_DESCRIPTION,
+    FIELD_INCLUDE,
+    FIELD_EXCLUDE,
+];
 
 /// Rust Cargo.toml manifest parser.
 ///
@@ -598,6 +618,15 @@ fn toml_to_json(value: &toml::Value, guard: &mut RecursionGuard<()>) -> serde_js
     result
 }
 
+/// Returns true when a manifest field is written as `<field> = { workspace = true }`
+/// (or the dotted `<field>.workspace = true`), i.e. it inherits from the
+/// workspace root's `[workspace.package]`.
+fn is_workspace_inherited(value: &toml::Value) -> bool {
+    value
+        .as_table()
+        .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
+}
+
 /// Extracts extra_data fields (rust-version, edition, documentation, license-file, workspace)
 fn extract_extra_data(
     toml_content: &Value,
@@ -616,10 +645,7 @@ fn extract_extra_data(
         if let Some(rust_version_value) = package.get(FIELD_RUST_VERSION) {
             if let Some(rust_version_str) = rust_version_value.as_str() {
                 extra_data.insert("rust_version".to_string(), json!(rust_version_str));
-            } else if rust_version_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-            {
+            } else if is_workspace_inherited(rust_version_value) {
                 extra_data.insert("rust-version".to_string(), json!("workspace"));
             }
         }
@@ -628,22 +654,27 @@ fn extract_extra_data(
         if let Some(edition_value) = package.get(FIELD_EDITION) {
             if let Some(edition_str) = edition_value.as_str() {
                 extra_data.insert("rust_edition".to_string(), json!(edition_str));
-            } else if edition_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-            {
+            } else if is_workspace_inherited(edition_value) {
                 extra_data.insert("edition".to_string(), json!("workspace"));
             }
         }
 
-        // Extract documentation URL
-        if let Some(documentation) = package.get("documentation").and_then(|v| v.as_str()) {
-            extra_data.insert("documentation_url".to_string(), json!(documentation));
+        // Extract documentation URL (or detect workspace inheritance)
+        if let Some(documentation_value) = package.get(FIELD_DOCUMENTATION) {
+            if let Some(documentation) = documentation_value.as_str() {
+                extra_data.insert("documentation_url".to_string(), json!(documentation));
+            } else if is_workspace_inherited(documentation_value) {
+                extra_data.insert("documentation".to_string(), json!("workspace"));
+            }
         }
 
-        // Extract license-file path
-        if let Some(license_file) = package.get(FIELD_LICENSE_FILE).and_then(|v| v.as_str()) {
-            extra_data.insert("license_file".to_string(), json!(license_file));
+        // Extract license-file path (or detect workspace inheritance)
+        if let Some(license_file_value) = package.get(FIELD_LICENSE_FILE) {
+            if let Some(license_file) = license_file_value.as_str() {
+                extra_data.insert("license_file".to_string(), json!(license_file));
+            } else if is_workspace_inherited(license_file_value) {
+                extra_data.insert("license-file".to_string(), json!("workspace"));
+            }
         }
 
         if let Some(readme_value) = package.get(FIELD_README) {
@@ -651,74 +682,34 @@ fn extract_extra_data(
                 extra_data.insert("readme_file".to_string(), json!(readme_file));
             } else if let Some(readme_enabled) = readme_value.as_bool() {
                 extra_data.insert("readme".to_string(), json!(readme_enabled));
-            } else if readme_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-            {
+            } else if is_workspace_inherited(readme_value) {
                 extra_data.insert("readme".to_string(), json!("workspace"));
             }
         }
 
         if let Some(publish_value) = package.get(FIELD_PUBLISH) {
-            extra_data.insert(
-                "publish".to_string(),
-                toml_to_json(publish_value, &mut RecursionGuard::depth_only()),
-            );
+            if is_workspace_inherited(publish_value) {
+                extra_data.insert("publish".to_string(), json!("workspace"));
+            } else {
+                extra_data.insert(
+                    "publish".to_string(),
+                    toml_to_json(publish_value, &mut RecursionGuard::depth_only()),
+                );
+            }
         }
 
-        // Check for workspace inheritance markers for other fields
-        // version
-        if let Some(version_value) = package.get(FIELD_VERSION)
-            && version_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-        {
-            extra_data.insert("version".to_string(), json!("workspace"));
-        }
-
-        // license
-        if let Some(license_value) = package.get(FIELD_LICENSE)
-            && license_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-        {
-            extra_data.insert("license".to_string(), json!("workspace"));
-        }
-
-        // homepage
-        if let Some(homepage_value) = package.get(FIELD_HOMEPAGE)
-            && homepage_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-        {
-            extra_data.insert("homepage".to_string(), json!("workspace"));
-        }
-
-        // repository
-        if let Some(repository_value) = package.get(FIELD_REPOSITORY)
-            && repository_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-        {
-            extra_data.insert("repository".to_string(), json!("workspace"));
-        }
-
-        // categories
-        if let Some(categories_value) = package.get(FIELD_CATEGORIES)
-            && categories_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-        {
-            extra_data.insert("categories".to_string(), json!("workspace"));
-        }
-
-        // authors
-        if let Some(authors_value) = package.get(FIELD_AUTHORS)
-            && authors_value
-                .as_table()
-                .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
-        {
-            extra_data.insert("authors".to_string(), json!("workspace"));
+        // Record a `"workspace"` marker for every remaining inheritable
+        // `[workspace.package]` field written as `<field> = { workspace = true }`,
+        // so assembly can resolve it from the workspace root. Without a marker the
+        // field would be silently dropped (and historically leaked the literal
+        // token "workspace" for some fields). The marker keys match Cargo's field
+        // names; assembly consumes them in `apply_workspace_inheritance`.
+        for field in WORKSPACE_INHERITABLE_MARKER_FIELDS {
+            if let Some(value) = package.get(*field)
+                && is_workspace_inherited(value)
+            {
+                extra_data.insert((*field).to_string(), json!("workspace"));
+            }
         }
     }
 

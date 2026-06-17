@@ -538,6 +538,72 @@ publish = false
     }
 
     #[test]
+    fn test_workspace_inheritance_markers_recorded_for_all_inheritable_fields() {
+        use serde_json::json;
+
+        // Every inheritable `[workspace.package]` field, written as both the
+        // inline-table and dotted form, must be recorded as a `"workspace"`
+        // marker so assembly can resolve it. None may surface the literal token
+        // as a real field value at the parser stage.
+        let content = r#"
+[package]
+name = "member"
+version = { workspace = true }
+license.workspace = true
+authors = { workspace = true }
+description.workspace = true
+keywords.workspace = true
+categories = { workspace = true }
+homepage.workspace = true
+repository = { workspace = true }
+documentation.workspace = true
+license-file = { workspace = true }
+readme.workspace = true
+edition = { workspace = true }
+rust-version.workspace = true
+publish = { workspace = true }
+include.workspace = true
+exclude = { workspace = true }
+"#;
+
+        let (_temp_file, cargo_path) = create_temp_cargo_toml(content);
+        let package_data = CargoParser::extract_first_package(&cargo_path);
+        let extra_data = package_data.extra_data.expect("extra_data should be set");
+
+        for field in [
+            "version",
+            "license",
+            "authors",
+            "description",
+            "keywords",
+            "categories",
+            "homepage",
+            "repository",
+            "documentation",
+            "license-file",
+            "readme",
+            "edition",
+            "rust-version",
+            "publish",
+            "include",
+            "exclude",
+        ] {
+            assert_eq!(
+                extra_data.get(field),
+                Some(&json!("workspace")),
+                "field `{field}` should be recorded as a workspace inheritance marker"
+            );
+        }
+
+        // The inherited marker must not be misread as a real value.
+        assert!(package_data.parties.is_empty());
+        assert!(package_data.keywords.is_empty());
+        assert_eq!(package_data.description, None);
+        // `publish = { workspace = true }` is a marker, not a literal `false`.
+        assert!(!package_data.is_private);
+    }
+
+    #[test]
     fn test_extract_manifest_file_references() {
         let content = r#"
 [package]
