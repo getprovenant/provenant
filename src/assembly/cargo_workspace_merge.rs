@@ -825,6 +825,80 @@ fn apply_workspace_inheritance(
         extra_data.remove("readme");
     }
 
+    if has_workspace_marker(extra_data, "description") {
+        if let Some(description_str) = workspace_data
+            .package
+            .get("description")
+            .and_then(|v| v.as_str())
+        {
+            pkg_data.description = Some(description_str.to_string());
+        }
+        extra_data.remove("description");
+    }
+
+    if has_workspace_marker(extra_data, "keywords") {
+        if let Some(keywords_arr) = workspace_data
+            .package
+            .get("keywords")
+            .and_then(|v| v.as_array())
+        {
+            let keywords: Vec<String> = keywords_arr
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect();
+            pkg_data.keywords.extend(keywords);
+        }
+        extra_data.remove("keywords");
+    }
+
+    if has_workspace_marker(extra_data, "documentation") {
+        if let Some(documentation_str) = workspace_data
+            .package
+            .get("documentation")
+            .and_then(|v| v.as_str())
+        {
+            extra_data.insert(
+                "documentation_url".to_string(),
+                serde_json::json!(documentation_str),
+            );
+        }
+        extra_data.remove("documentation");
+    }
+
+    if has_workspace_marker(extra_data, "license-file") {
+        if let Some(license_file_str) = workspace_data
+            .package
+            .get("license-file")
+            .and_then(|v| v.as_str())
+        {
+            extra_data.insert(
+                "license_file".to_string(),
+                serde_json::json!(license_file_str),
+            );
+        }
+        extra_data.remove("license-file");
+    }
+
+    if has_workspace_marker(extra_data, "publish") {
+        if let Some(false) = workspace_data
+            .package
+            .get("publish")
+            .and_then(|v| v.as_bool())
+        {
+            pkg_data.is_private = true;
+        }
+        extra_data.remove("publish");
+    }
+
+    // `include` / `exclude` have no domain field; consume the marker so the literal
+    // token "workspace" cannot leak into output.
+    for field in ["include", "exclude"] {
+        if has_workspace_marker(extra_data, field) {
+            extra_data.remove(field);
+        }
+    }
+
     if let (Some(name), Some(version)) = (&pkg_data.name, &pkg_data.version)
         && let Ok(purl) = PackageUrl::new("cargo", name)
     {

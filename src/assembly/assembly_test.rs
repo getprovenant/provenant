@@ -2667,6 +2667,128 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_cargo_workspace_resolves_member_inherited_keywords_and_description() {
+        let mut root = create_test_file_info(
+            "workspace/Cargo.toml",
+            DatasourceId::CargoToml,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Cargo);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace".to_string(),
+            json!({
+                "members": ["crates/app"],
+                "package": {
+                    "keywords": ["cli", "tool"],
+                    "description": "shared description",
+                },
+            }),
+        )]));
+
+        let mut member_manifest = create_test_file_info(
+            "workspace/crates/app/Cargo.toml",
+            DatasourceId::CargoToml,
+            Some("pkg:cargo/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member_manifest.package_data[0].package_type = Some(PackageType::Cargo);
+        member_manifest.package_data[0].extra_data = Some(HashMap::from([
+            ("keywords".to_string(), json!("workspace")),
+            ("description".to_string(), json!("workspace")),
+        ]));
+
+        let mut files = vec![root, member_manifest];
+        let result = assemble(&mut files);
+
+        let member = result
+            .packages
+            .iter()
+            .find(|pkg| pkg.purl.as_deref() == Some("pkg:cargo/app@0.1.0"))
+            .expect("member package should be assembled");
+        assert_eq!(member.keywords, vec!["cli".to_string(), "tool".to_string()]);
+        assert_eq!(member.description.as_deref(), Some("shared description"));
+        let leftover: Vec<&String> = member
+            .extra_data
+            .as_ref()
+            .map(|extra| {
+                extra
+                    .iter()
+                    .filter(|(_, v)| v.as_str() == Some("workspace"))
+                    .map(|(k, _)| k)
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert!(
+            leftover.is_empty(),
+            "no inheritance marker should leak the literal \"workspace\", found: {leftover:?}"
+        );
+    }
+
+    #[test]
+    fn test_assemble_cargo_workspace_omits_inherited_keywords_when_root_undeclared() {
+        let mut root = create_test_file_info(
+            "workspace/Cargo.toml",
+            DatasourceId::CargoToml,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Cargo);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace".to_string(),
+            json!({
+                "members": ["crates/app"],
+                "package": { "version": "0.1.0" },
+            }),
+        )]));
+
+        let mut member_manifest = create_test_file_info(
+            "workspace/crates/app/Cargo.toml",
+            DatasourceId::CargoToml,
+            Some("pkg:cargo/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member_manifest.package_data[0].package_type = Some(PackageType::Cargo);
+        member_manifest.package_data[0].extra_data = Some(HashMap::from([
+            ("keywords".to_string(), json!("workspace")),
+            ("description".to_string(), json!("workspace")),
+        ]));
+
+        let mut files = vec![root, member_manifest];
+        let result = assemble(&mut files);
+
+        let member = result
+            .packages
+            .iter()
+            .find(|pkg| pkg.purl.as_deref() == Some("pkg:cargo/app@0.1.0"))
+            .expect("member package should be assembled");
+        assert!(
+            member.keywords.is_empty(),
+            "unresolvable inherited keywords must be omitted, not emitted as \"workspace\""
+        );
+        assert_eq!(
+            member.description, None,
+            "unresolvable inherited description must be omitted"
+        );
+        assert_eq!(
+            member
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("keywords")),
+            None,
+            "stale workspace keywords marker must be removed even when unresolvable"
+        );
+    }
+
+    #[test]
     fn test_assemble_cargo_workspace_keeps_root_package_when_root_is_real_member() {
         let mut root = create_test_file_info(
             "workspace/Cargo.toml",
