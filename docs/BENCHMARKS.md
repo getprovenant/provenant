@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **14.1× median speedup** and **13.8× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.4×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **14.3× median speedup** and **13.9× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.5×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -62,27 +62,27 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `8.68s`; ScanCode `155.12s`
 - Richer file-level Android package extraction (`31` vs `18` package_data records) and dependency coverage (`148` vs `145`) across committed Soong `METADATA`, `AndroidManifest.xml`, `TestApp.apk`, cargo, and `go.work` surfaces, with correct `The Android Open Source Project` holder attribution where ScanCode leaves it null, plus declared licenses that avoid conflating the `tools/compliance` test-fixture licenses ScanCode pulls into the package expression
 
-##### [facebook/fresco @ c991a69](https://github.com/facebook/fresco/tree/c991a692a254358d1cf56c5b4b06e6c5dd96cfab) — **23.42× faster**
+##### [facebook/fresco @ c991a69](https://github.com/facebook/fresco/tree/c991a692a254358d1cf56c5b4b06e6c5dd96cfab) — **37.03× faster**
 
 - Files: 2,900
-- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `21.38s`; ScanCode `500.76s`
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.79s`; ScanCode `362.51s`
 - Richer Android and Gradle dependency extraction (`768` vs `688`) across committed `build.gradle`, nearby Kotlin `buildSrc` constant catalogs, and `AndroidManifest.xml` surfaces, with exact Maven coordinates for symbolic Gradle references such as `Deps.AndroidX.*`, `Deps.Bolts.*`, and `TestDeps.*` where ScanCode emits placeholder-only names like `AndroidX`, `Bolts`, or `junit`, plus direct Android package visibility and cleaner URL normalization
 
-##### [KhronosGroup/Vulkan-ValidationLayers @ d72c5f5](https://github.com/KhronosGroup/Vulkan-ValidationLayers/tree/d72c5f52886913598d4064fe8d03bf8ac471e215) — **17.97× faster**
+##### [KhronosGroup/Vulkan-ValidationLayers @ d72c5f5](https://github.com/KhronosGroup/Vulkan-ValidationLayers/tree/d72c5f52886913598d4064fe8d03bf8ac471e215) — **33.22× faster**
 
 - Files: 979
-- Run context: 2026-04-21 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `38.32s`; ScanCode `688.72s`
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `12.37s`; ScanCode `410.98s`
 - Direct AndroidManifest package visibility (`1` vs `0` on `tests/android/AndroidManifest.xml`), clue-only weak GPL handling across Graphics Pipeline Library acronym sites instead of ScanCode's hard `GPL-1.0-or-later` detections, and cleaner Khronos documentation copyright or holder recovery without appended `- ! Khronos Vulkan` noise
 
 #### Chef
 
-##### [chef/chef @ 0e353ff](https://github.com/chef/chef/tree/0e353ffcc8c03ac5b57025081787913121c785d5) — **12.07× faster**
+##### [chef/chef @ 0e353ff](https://github.com/chef/chef/tree/0e353ffcc8c03ac5b57025081787913121c785d5) — **19.55× faster**
 
 - Files: 2,274
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `30.70s`; ScanCode `370.51s`
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `12.03s`; ScanCode `235.22s`
 - Richer mixed-surface package identity with fewer placeholder-only Debian rows and far broader dependency extraction (`351` vs `278`) across `Gemfile`, `Gemfile.lock`, `chef-*/Gemfile`, gemspec, Dockerfile, and fixture archive/control surfaces, plus email-preserving author normalization and cleaner placeholder-holder filtering
 
 ##### [sous-chefs/apache2 @ 420d824](https://github.com/sous-chefs/apache2/tree/420d82402811a131729a6bcc80aaac08d307ac87) — **10.22× faster**
@@ -115,39 +115,39 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `22.82s`; ScanCode `292.75s`
 - Broader ABOUT and Python package visibility (`28` vs `1` packages, `292` vs `56` dependencies) across committed `.ABOUT` files, root and suffixed `pyproject.toml` manifests, and `uv.lock`, plus zero scan-file errors where ScanCode times out on large generated scan-result JSON fixtures
 
-##### [aboutcode-org/scancode-toolkit @ 6570c13](https://github.com/aboutcode-org/scancode-toolkit/tree/6570c131e2821388286f661368a70e0120aaf2c6) — **13.48× faster**
+##### [aboutcode-org/scancode-toolkit @ 6570c13](https://github.com/aboutcode-org/scancode-toolkit/tree/6570c131e2821388286f661368a70e0120aaf2c6) — **19.96× faster**
 
 - Files: 64,369
-- Run context: 2026-04-25 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `535.40s`; ScanCode `7214.43s`
-- Far broader ABOUT-adjacent package and dependency visibility (`1281` vs `6` packages, `10943` vs `377` dependencies) across committed `.ABOUT` sidecars, Python/Swift/Dart/CocoaPods fixture manifests, and bounded RPM header metadata recovery, with real ecosystem PURLs derived from ABOUT `download_url` metadata instead of `pkg:about/...` fallbacks and zero scan-file errors where ScanCode times out on heavy fixture snapshots; the remaining ScanCode edge is concentrated in a small set of license-detection corpus and legal-text cases where it still preserves extra detections beyond Provenant’s current policy or refinement choices
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `207.10s`; ScanCode `4134.60s`
+- Far broader ABOUT-adjacent package and dependency visibility (`1294` vs `6` packages, `10952` vs `377` dependencies) across committed `.ABOUT` sidecars, Python/Swift/Dart/CocoaPods fixture manifests, and bounded RPM header metadata recovery, with real ecosystem PURLs derived from ABOUT `download_url` metadata instead of `pkg:about/...` fallbacks and zero scan-file errors where ScanCode times out on heavy fixture snapshots; the remaining ScanCode edge is concentrated in a small set of license-detection corpus and legal-text cases where it still preserves extra detections beyond Provenant’s current policy or refinement choices
 
-##### [apache/airflow @ 47ce5f3](https://github.com/apache/airflow/tree/47ce5f32b4fae95f5865ba256d409c778d53a3d5) — **14.33× faster**
+##### [apache/airflow @ 47ce5f3](https://github.com/apache/airflow/tree/47ce5f32b4fae95f5865ba256d409c778d53a3d5) — **22.72× faster**
 
-- Files: 11,854
-- Run context: 2026-04-11 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `65.32s`; ScanCode `936.34s`
-- Far broader Python/provider package coverage (`142` vs `1`) and dependency extraction (`7579` vs `450`) from `uv.lock`, provider `pyproject.toml`, and committed `pnpm-lock.yaml` inputs, plus extra Docker and Helm package visibility, safer URL credential stripping, and cleaner copyright/author normalization across large documentation and kernel-style metadata blocks
+- Files: 11,935
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `50.99s`; ScanCode `1158.57s`
+- Far broader Python/provider package coverage (`142` vs `1`) and dependency extraction (`7599` vs `1014`) from `uv.lock`, provider `pyproject.toml`, and committed `pnpm-lock.yaml` inputs, plus extra Docker and Helm package visibility, safer URL credential stripping, and cleaner copyright/author normalization across large documentation and kernel-style metadata blocks
 
-##### [astral-sh/uv @ 9581f2b](https://github.com/astral-sh/uv/tree/9581f2b0ea65550a3efe28bd7aabde19d98b39ba) — **17.90× faster**
+##### [astral-sh/uv @ 9581f2b](https://github.com/astral-sh/uv/tree/9581f2b0ea65550a3efe28bd7aabde19d98b39ba) — **5.98× faster**
 
 - Files: 1,259
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `20.79s`; ScanCode `372.18s`
-- Far broader Python-family package and dependency extraction (`112` vs `1` packages, `5277` vs `759` dependencies) from the large `test/requirements/**` tree, many fixture/workspace `pyproject.toml` files, and multiple `uv.lock` inputs that ScanCode leaves at zero, with safer URL credential stripping, Unicode-preserving party normalization, and METADATA-backed wheel identity instead of double-counting a misleading filename
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `45.62s`; ScanCode `272.81s`
+- Far broader Python-family package and dependency extraction (`113` vs `1` packages, `5279` vs `759` dependencies) from the large `test/requirements/**` tree, many fixture/workspace `pyproject.toml` files, and multiple `uv.lock` inputs that ScanCode leaves at zero, with safer URL credential stripping, Unicode-preserving party normalization, and METADATA-backed wheel identity instead of double-counting a misleading filename
 
-##### [astropy/astropy @ 40280e3](https://github.com/astropy/astropy/tree/40280e3bd715a4968eda816c73bf88f05aa6cdc0) — **22.04× faster**
+##### [astropy/astropy @ 40280e3](https://github.com/astropy/astropy/tree/40280e3bd715a4968eda816c73bf88f05aa6cdc0) — **36.99× faster**
 
-- Files: 1,970
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `24.26s`; ScanCode `534.66s`
-- Direct `CITATION.cff` package visibility on the root citation metadata (`1` vs `0` on that file), plus far broader Python dependency extraction (`79` vs `1`) from `pyproject.toml` and `docs/rtd_environment.yaml`, with cleaner vendored holder recovery and Unicode-preserving copyright normalization
+- Files: 1,962
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.63s`; ScanCode `356.23s`
+- Broader Python package coverage (`3` vs `1` packages) including direct `CITATION.cff` citation-metadata visibility, with matched dependency coverage (`79` vs `77`) from `pyproject.toml` and `docs/rtd_environment.yaml`, cleaner vendored holder recovery, and Unicode-preserving copyright normalization
 
-##### [conda/conda @ 37549c4](https://github.com/conda/conda/tree/37549c41a1925b0625e346e2823a5e15af03b862) — **11.70× faster**
+##### [conda/conda @ 37549c4](https://github.com/conda/conda/tree/37549c41a1925b0625e346e2823a5e15af03b862) — **15.79× faster**
 
-- Files: 285
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.05s`; ScanCode `117.64s`
+- Files: 284
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.02s`; ScanCode `79.28s`
 - Broader Conda and Python package coverage (`5` vs `2` packages, `73` vs `26` dependencies) from `conda.recipe/meta.yaml`, multiple `environment.yml` fixtures, and the root `setup.py`, with safer URL credential stripping across authentication test fixtures
 
 ##### [conda/conda-build @ 5da509d](https://github.com/conda/conda-build/tree/5da509d13764d96c02c80f24b54ab87d652b2538) — **7.61× faster**
@@ -164,18 +164,18 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.79s`; ScanCode `42.84s`
 - Direct schema-versioned conda-forge feedstock package visibility (`1` vs `0` packages, `51` vs `0` dependencies) from `recipe/recipe.yaml`, plus assembled top-level Conda package identity and preserved source/about metadata
 
-##### [DefectDojo/django-DefectDojo @ 2f25c45](https://github.com/DefectDojo/django-DefectDojo/tree/2f25c4510361e2f27f63fbbcff3901cbd2ef4a07) — **18.83× faster**
+##### [DefectDojo/django-DefectDojo @ 2f25c45](https://github.com/DefectDojo/django-DefectDojo/tree/2f25c4510361e2f27f63fbbcff3901cbd2ef4a07) — **16.13× faster**
 
 - Files: 4,301
-- Run context: 2026-04-16 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `78.26s`; ScanCode `1473.92s`
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `66.90s`; ScanCode `1079.38s`
 - Broader full-repo package and dependency extraction (`3` vs `2` packages, `616` vs `535` dependencies) from `.gitmodules`, `helm/defectdojo/Chart.yaml`, `helm/defectdojo/Chart.lock`, and the root `requirements*.txt` manifests, with direct Helm chart package visibility, pinned PostgreSQL or Valkey chart dependencies, Git-submodule package metadata, and zero scan errors where ScanCode reports 3 scan-file failures on large vulnerability fixtures
 
-##### [django/django @ 09f27cc](https://github.com/django/django/tree/09f27cc373eb1e6e5e8b286204809a79b61d55c3) — **12.03× faster**
+##### [django/django @ 09f27cc](https://github.com/django/django/tree/09f27cc373eb1e6e5e8b286204809a79b61d55c3) — **39.22× faster**
 
-- Files: 6,994
-- Run context: 2026-04-09 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `29.74s`; ScanCode `357.65s`
+- Files: 7,029
+- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `13.85s`; ScanCode `543.19s`
 - Far broader Python-family package and dependency extraction (`2` vs `1` packages, `16` vs `6` dependencies) because `pyproject.toml` contributes both a real PyPI root package and 5 Python dependencies while `docs/requirements.txt` adds 5 more documentation dependencies that ScanCode leaves at zero, with clearer `BSD-3-Clause` declared-license capture and visibility into the vendored CVS marker that ScanCode skips
 
 ##### [OpenMDAO/OpenMDAO @ bf1fcb6](https://github.com/OpenMDAO/OpenMDAO/tree/bf1fcb6f09a07a49cdba27c2fd765153ec54694c) — **16.66× faster**
