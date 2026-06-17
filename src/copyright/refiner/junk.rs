@@ -30,6 +30,7 @@ pub fn is_junk_copyright(s: &str) -> bool {
         || is_junk_copyright_symbol_garbage(s)
         || is_junk_c_sign_path_fragment(s)
         || is_creative_commons_license_prose(s)
+        || looks_like_source_code(s)
 }
 
 /// Return true if `s` is a fragment of Creative Commons (or cited treaty)
@@ -184,7 +185,7 @@ pub(super) fn is_junk_copyright_code_fragment(s: &str) -> bool {
 
 /// Return true if `s` matches any known junk author pattern.
 pub(super) fn is_junk_author(s: &str) -> bool {
-    AUTHORS_JUNK_PATTERNS.iter().any(|re| re.is_match(s))
+    AUTHORS_JUNK_PATTERNS.iter().any(|re| re.is_match(s)) || looks_like_source_code(s)
 }
 
 /// Return true if `s` matches any known junk holder pattern.
@@ -193,6 +194,7 @@ pub(crate) fn is_junk_holder(s: &str) -> bool {
         || is_junk_holder_code_fragment(s)
         || is_junk_holder_symbol_garbage(s)
         || is_creative_commons_license_prose(s)
+        || looks_like_source_code(s)
         || s.eq_ignore_ascii_case("MIT")
 }
 
@@ -852,4 +854,71 @@ pub(crate) fn is_path_like_code_fragment(s: &str) -> bool {
     });
 
     PATH_LIKE_CODE_FRAGMENT_RE.is_match(s.trim())
+}
+
+/// Return true if `s` is obviously a fragment of source code rather than a
+/// copyright notice, holder, or author name.
+///
+/// Detected authors/copyrights/holders are sometimes lifted out of program
+/// source (Ruby `Author::` headers near code, ORM model definitions such as
+/// `Author.objects.create(...)`, C++ API calls such as
+/// `vk::CmdCopyImage(..., &copyRegion);`). These carry method-call, operator,
+/// or namespace syntax that never appears in a real name or notice, so we can
+/// reject them conservatively.
+///
+/// This is intentionally strict about what counts as code: real legal notices
+/// and names use commas, periods, `Inc.`, `(c)`, angle-bracketed emails, and
+/// even `&` (as in `R&D`, `AT&T`), so those alone never trip this predicate. We
+/// require syntax specific to code: namespace `::`, a method/property call
+/// (`ident.ident(`), a C-style address-of a variable (` &lowerCamel`), a
+/// keyword/assignment call argument (`create(pk=1`), or a Django-style ORM
+/// access (`.objects.`, `models.ForeignKey`/`ManyToManyField`/`OneToOneField`).
+pub(crate) fn looks_like_source_code(s: &str) -> bool {
+    static SOURCE_CODE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?x)
+            # namespace resolution: ident::ident
+            \b[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_~]
+            # method or property call: foo.bar( ... )  (dot immediately before a call)
+          | \b[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\s*\(
+            # C-style address-of a variable: ` &copyRegion`. Require a space (or
+            # paren/comma) before `&` and a lowercase start after it so real org
+            # names such as `R&D` / `AT&T` (letter-`&`-uppercase) are not matched.
+          | (?:^|[\s(,])&[a-z][A-Za-z0-9_]*
+            # call with a keyword/assignment argument: create(pk=1
+          | \([^()]*[A-Za-z_][A-Za-z0-9_]*\s*=
+            ",
+        )
+    });
+    static ORM_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?ix)
+            \.objects\.
+          | \bmodels\.(?:ForeignKey|ManyToManyField|OneToOneField)\b
+            ",
+        )
+    });
+
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if ORM_RE.is_match(trimmed) {
+        return true;
+    }
+
+    // Angle-bracketed emails and URLs legitimately contain `=`, `;`, and `&`
+    // (query strings, mailto links), so do not treat those as code on their own.
+    let lower = trimmed.to_ascii_lowercase();
+    let has_web_contact = trimmed.contains('@')
+        || lower.contains("http://")
+        || lower.contains("https://")
+        || lower.contains("www.")
+        || lower.contains("mailto:");
+    if has_web_contact {
+        return false;
+    }
+
+    SOURCE_CODE_RE.is_match(trimmed)
 }

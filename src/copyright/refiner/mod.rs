@@ -62,7 +62,7 @@ pub use utils::{
 pub use copyright::refine_copyright;
 pub use holder::{refine_holder, refine_holder_in_copyright_context};
 pub use junk::is_junk_copyright;
-pub(crate) use junk::{is_junk_holder, is_path_like_code_fragment};
+pub(crate) use junk::{is_junk_holder, is_path_like_code_fragment, looks_like_source_code};
 
 /// Compile a static regex literal.
 ///

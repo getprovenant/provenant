@@ -9,8 +9,8 @@ use super::binary_text::{
     has_sufficient_alphabetic_content, is_binary_string_author_candidate, is_company_like_suffix,
 };
 use crate::copyright::{
-    self, AuthorDetection, CopyrightDetection, HolderDetection, prepare_text_line, refine_author,
-    refine_copyright,
+    self, AuthorDetection, CopyrightDetection, HolderDetection, looks_like_source_code,
+    prepare_text_line, refine_author, refine_copyright,
 };
 use crate::models::{Author, Copyright, FileInfoBuilder, Holder, LineNumber};
 use regex::Regex;
@@ -89,8 +89,10 @@ pub(super) fn extract_copyright_information(
             // name-table field labels and are never a legitimate copyright prefix in
             // real source, so rejecting them universally is safe and path-independent.
             .filter(|c| {
+                let raw_span = render_raw_span(text_content, c.start_line, c.end_line);
                 !is_binary_garbage_party_value(&c.copyright)
                     && !is_font_metadata_label_copyright(&c.copyright)
+                    && !detection_is_source_code(&c.copyright, &raw_span)
                     && !c
                         .normalized_copyright
                         .as_deref()
@@ -105,6 +107,10 @@ pub(super) fn extract_copyright_information(
     file_info_builder.holders(
         holders
             .into_iter()
+            .filter(|h| {
+                let raw_span = render_raw_span(text_content, h.start_line, h.end_line);
+                !detection_is_source_code(&h.holder, &raw_span)
+            })
             .map(|h| Holder {
                 holder: h.holder,
                 start_line: h.start_line,
@@ -117,7 +123,9 @@ pub(super) fn extract_copyright_information(
     authors.extend(extract_comment_author_supplements(text_content));
     let mut seen_authors = HashSet::new();
     authors.retain(|author| {
+        let raw_span = render_raw_span(text_content, author.start_line, author.end_line);
         !is_binary_garbage_party_value(&author.author)
+            && !detection_is_source_code(&author.author, &raw_span)
             && seen_authors.insert((author.author.clone(), author.start_line, author.end_line))
     });
 
@@ -163,6 +171,32 @@ fn render_raw_copyright_from_text(
     } else {
         project_native_copyright_value(&rendered, fallback)
     }
+}
+
+/// Render the raw source span backing a detection so it can be tested for
+/// source-code shape. Holder and author detections only carry a refined value
+/// (`Region`, `Author`), which can look like an ordinary name; the underlying
+/// source line (`vk::CmdCopyImage(..., &copyRegion);`,
+/// `Author.objects.create(...)`) is what reveals it as code.
+fn render_raw_span(text_content: &str, start_line: LineNumber, end_line: LineNumber) -> String {
+    let raw_lines: Vec<&str> = text_content.lines().collect();
+    let start_index = start_line.get().saturating_sub(1);
+    let end_index = end_line.get();
+    let Some(span) = raw_lines.get(start_index..end_index) else {
+        return String::new();
+    };
+
+    span.iter()
+        .map(|line| strip_common_comment_wrappers(line.trim()))
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Return true when a detection's refined value or its backing source span is
+/// obviously source code, so it should be dropped from output.
+fn detection_is_source_code(value: &str, raw_span: &str) -> bool {
+    looks_like_source_code(value) || looks_like_source_code(raw_span)
 }
 
 fn project_wrapped_copyright_value(rendered: &str, _fallback: &str) -> Option<String> {

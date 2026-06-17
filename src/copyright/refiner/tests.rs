@@ -2724,3 +2724,97 @@ fn test_refine_holder_trims_separator_rule_runs() {
         Some("Scott Kirkland ByteSize".to_string())
     );
 }
+
+// ── Fix: strip trailing parenthesized email contact from author names ──
+
+#[test]
+fn test_strip_trailing_parenthesized_email_contact_from_author() {
+    // Ruby `Author:: Adam Jacob (<adam@chef.io>)` style: the bracketed email is
+    // redundant (it is captured in emails[]) and otherwise renders malformed.
+    assert_eq!(
+        refine_author("Adam Jacob (<adam@chef.io>)"),
+        Some("Adam Jacob".to_string())
+    );
+    // Spacing variants must collapse to the same bare name.
+    assert_eq!(
+        refine_author("Adam Jacob ( <adam@chef.io> )"),
+        Some("Adam Jacob".to_string())
+    );
+    // The bare parenthesized form (no angle brackets) is an established author
+    // contract and must be preserved, not stripped.
+    assert_eq!(
+        refine_author("Elias Ioup (ezioup@alumni.uchicago.edu)"),
+        Some("Elias Ioup (ezioup@alumni.uchicago.edu)".to_string())
+    );
+}
+
+#[test]
+fn test_angle_only_email_author_is_preserved() {
+    // A bare `Name <email>` author (no parentheses) must survive intact.
+    assert_eq!(
+        refine_author("Björn Lindström <bjorn@example.com>"),
+        Some("Björn Lindström <bjorn@example.com>".to_string())
+    );
+    assert_eq!(
+        refine_author("Jane Doe <jane@example.org>"),
+        Some("Jane Doe <jane@example.org>".to_string())
+    );
+}
+
+// ── Fix: reject values that are obviously source code ──
+
+#[test]
+fn test_looks_like_source_code_rejects_code() {
+    assert!(looks_like_source_code(
+        "vk::CmdCopyImage(m_command_buffer, srcImage, srcLayout, dstImage, dstLayout, 1, &copyRegion);"
+    ));
+    assert!(looks_like_source_code(
+        "Author.objects.create(pk=1, name=Baudelaire)"
+    ));
+    assert!(looks_like_source_code("models.ForeignKey(Author)"));
+    assert!(looks_like_source_code("models.ManyToManyField(Author)"));
+    assert!(looks_like_source_code("models.OneToOneField(Author)"));
+}
+
+#[test]
+fn test_looks_like_source_code_keeps_real_notices_and_names() {
+    assert!(!looks_like_source_code("Copyright (c) 2020 Acme, Inc."));
+    assert!(!looks_like_source_code("Adam Jacob"));
+    assert!(!looks_like_source_code("Björn Lindström"));
+    assert!(!looks_like_source_code(
+        "Red Hat, Inc. and/or its affiliates"
+    ));
+    assert!(!looks_like_source_code("The Foo Bar Team"));
+    // Angle-bracketed email is a contact form, not code.
+    assert!(!looks_like_source_code("Jane Doe <jane@example.org>"));
+    // A holder name that is a single common word is not, by itself, code.
+    assert!(!looks_like_source_code("Region"));
+}
+
+#[test]
+fn test_source_code_is_junk_for_copyright_holder_author() {
+    let code = "vk::CmdCopyImage(m_command_buffer, &copyRegion);";
+    assert!(is_junk_copyright(code));
+    assert!(is_junk_holder(code));
+    assert!(is_junk_author(code));
+
+    let orm = "Author.objects.create(pk=1)";
+    assert!(is_junk_copyright(orm));
+    assert!(is_junk_holder(orm));
+    assert!(is_junk_author(orm));
+}
+
+#[test]
+fn test_refine_copyright_rejects_source_code() {
+    assert_eq!(
+        refine_copyright(
+            "vk::CmdCopyImage(m_command_buffer, srcImage, srcLayout, dstImage, dstLayout, 1, &copyRegion);"
+        ),
+        None
+    );
+    // Real notice still refines.
+    assert_eq!(
+        refine_copyright("Copyright (c) 2020 Acme, Inc."),
+        Some("Copyright (c) 2020 Acme, Inc.".to_string())
+    );
+}

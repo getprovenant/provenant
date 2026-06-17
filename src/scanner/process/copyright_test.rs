@@ -1046,3 +1046,52 @@ fn test_extract_copyright_information_ipynb_detects_notice_in_output() {
         file.copyrights
     );
 }
+
+#[test]
+fn test_extract_copyright_information_drops_cpp_copy_call_source_line() {
+    // Vulkan C++ API call: the `Copy`/`copyRegion` tokens trip the copyright
+    // grammar, producing a spurious holder `Region` and a copyright whose rendered
+    // value is the full source line. Both must be dropped as source code.
+    let text = "vk::CmdCopyImage(m_command_buffer, srcImage, srcLayout, dstImage, dstLayout, 1, &copyRegion);";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("copy.cpp"), text, 120.0, false);
+
+    let file = build_single_file(builder);
+    assert!(
+        file.copyrights.is_empty(),
+        "source-code copyright leaked: {:?}",
+        file.copyrights
+            .iter()
+            .map(|c| &c.copyright)
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        file.holders.is_empty(),
+        "source-code holder leaked: {:?}",
+        file.holders.iter().map(|h| &h.holder).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_extract_copyright_information_keeps_real_notice_and_name_with_email() {
+    let text = "Copyright (c) 2020 Acme, Inc.\nAuthor: Jane Doe <jane@example.org>";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("LICENSE"), text, 120.0, false);
+
+    let file = build_single_file(builder);
+    assert!(
+        file.copyrights
+            .iter()
+            .any(|c| c.copyright.contains("Acme, Inc.")),
+        "real copyright dropped: {:?}",
+        file.copyrights
+            .iter()
+            .map(|c| &c.copyright)
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        file.authors.iter().any(|a| a.author.contains("Jane Doe")),
+        "name-with-email author dropped: {:?}",
+        file.authors.iter().map(|a| &a.author).collect::<Vec<_>>()
+    );
+}
