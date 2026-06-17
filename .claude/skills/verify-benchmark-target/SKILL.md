@@ -169,7 +169,7 @@ Each benchmark entry should use the same visible structure as the current docume
 4. A `- Timing: Provenant \`Xs\`; ScanCode \`Ys\`` bullet
 5. A final outcome bullet written as a present-tense end-state comparison (see writing rules below)
 
-**Run context**: Copy the `run_id` suffix from `.provenant/compare-runs/<run-id>/run-manifest.json` — it is the portion after the leading UTC timestamp (e.g. `airflow-44518`). Get the date from the same manifest. Record machine information (OS, CPU, RAM, arch, process count).
+**Run context**: Record the run date and machine information (OS, CPU, RAM, arch, process count), formatted as `<date> · <OS> · <CPU> · <RAM> · <arch> · <N> proc`. Do not include the `run_id`/process-id suffix — it only ever pointed at a local, uncommitted `compare-runs/` directory and is meaningless to other readers.
 
 **Timing**: Record same-host wall-clock timings for Provenant and ScanCode from the compare-outputs run. Compute relative speedup. If `run-manifest.json` reports `scancode.cache_hit: true`, use the cached ScanCode raw timing.
 
