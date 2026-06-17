@@ -221,7 +221,7 @@ aggregates the value-level differences across **all** common-path files and
 ranks them by total occurrence count, so systematic patterns become visible
 (for example one author value appearing hundreds of times instead of as
 hundreds of scattered one-count entries). It is framed by direction
-(`extra_in_provenant` = PV-only, `missing_in_scancode` = SC-only); PV-extra is
+(`extra_in_provenant` = PV-only, `extra_in_scancode` = SC-only); PV-extra is
 **not** inherently junk, since much of it is legitimate source-faithful or
 richer output, so the rollup is a triage aid and the reviewer decides
 junk-vs-advantage. It is a pure diagnostic: it never feeds `comparison_status`,

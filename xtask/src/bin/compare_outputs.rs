@@ -2271,10 +2271,10 @@ struct FieldValueFrequencyEntry {
 
 #[derive(Debug, Serialize, Clone, Default)]
 struct FieldValueFrequencyDirections {
-    /// Values present only in Provenant output (`extra_in_provenant`).
+    /// Values present only in Provenant output (PV-only).
     extra_in_provenant: Vec<FieldValueFrequencyEntry>,
-    /// Values present only in ScanCode output (`missing_in_provenant`).
-    missing_in_scancode: Vec<FieldValueFrequencyEntry>,
+    /// Values present only in ScanCode output (SC-only).
+    extra_in_scancode: Vec<FieldValueFrequencyEntry>,
 }
 
 /// Roll the per-file value-level diffs up into a cross-file, frequency-ranked
@@ -2292,13 +2292,13 @@ fn field_value_frequency_rollup(
     value_differences
         .iter()
         .map(|(field, entries)| {
-            let extra = aggregate_direction(entries, |entry| &entry.extra_in_provenant, top_n);
-            let missing = aggregate_direction(entries, |entry| &entry.missing_in_provenant, top_n);
+            let pv_only = aggregate_direction(entries, |entry| &entry.extra_in_provenant, top_n);
+            let sc_only = aggregate_direction(entries, |entry| &entry.missing_in_provenant, top_n);
             (
                 field.clone(),
                 FieldValueFrequencyDirections {
-                    extra_in_provenant: extra,
-                    missing_in_scancode: missing,
+                    extra_in_provenant: pv_only,
+                    extra_in_scancode: sc_only,
                 },
             )
         })
@@ -2342,7 +2342,9 @@ fn aggregate_direction(
 
 /// How many top values per field/direction to surface inline in `summary.json`.
 /// The standalone samples file carries the full top-N; this is just a glanceable
-/// preview. Fields with no values in a direction are omitted entirely.
+/// preview. A field with values in only one direction still appears, with the
+/// empty direction rendered as `[]`; only fields empty in both directions are
+/// omitted.
 const FIELD_VALUE_FREQUENCY_SUMMARY_TOP_N: usize = 5;
 
 fn field_value_frequency_summary(
@@ -2351,16 +2353,16 @@ fn field_value_frequency_summary(
 ) -> Map<String, Value> {
     let mut summary = Map::new();
     for (field, directions) in rollup {
-        let extra = &directions.extra_in_provenant;
-        let missing = &directions.missing_in_scancode;
-        if extra.is_empty() && missing.is_empty() {
+        let pv_only = &directions.extra_in_provenant;
+        let sc_only = &directions.extra_in_scancode;
+        if pv_only.is_empty() && sc_only.is_empty() {
             continue;
         }
         summary.insert(
             field.clone(),
             json!({
-                "extra_in_provenant": field_value_frequency_preview(extra, top_n),
-                "missing_in_scancode": field_value_frequency_preview(missing, top_n),
+                "extra_in_provenant": field_value_frequency_preview(pv_only, top_n),
+                "extra_in_scancode": field_value_frequency_preview(sc_only, top_n),
             }),
         );
     }
@@ -4812,10 +4814,10 @@ mod tests {
         assert_eq!(authors.extra_in_provenant[1].total_count, 1);
         assert_eq!(authors.extra_in_provenant[1].file_count, 1);
 
-        // Missing (SC-only) values aggregate independently.
-        assert_eq!(authors.missing_in_scancode.len(), 1);
-        assert_eq!(authors.missing_in_scancode[0].value, "Only In SC");
-        assert_eq!(authors.missing_in_scancode[0].total_count, 4);
+        // SC-only values aggregate independently.
+        assert_eq!(authors.extra_in_scancode.len(), 1);
+        assert_eq!(authors.extra_in_scancode[0].value, "Only In SC");
+        assert_eq!(authors.extra_in_scancode[0].total_count, 4);
     }
 
     #[test]
@@ -4851,7 +4853,7 @@ mod tests {
                     total_count: 9,
                     file_count: 4,
                 }],
-                missing_in_scancode: Vec::new(),
+                extra_in_scancode: Vec::new(),
             },
         );
 
@@ -4865,7 +4867,9 @@ mod tests {
             summary["authors"]["extra_in_provenant"][0]["total_count"],
             9
         );
-        assert_eq!(summary["authors"]["missing_in_scancode"], json!([]));
+        // Field non-empty in one direction still appears, with the empty
+        // direction rendered as `[]`.
+        assert_eq!(summary["authors"]["extra_in_scancode"], json!([]));
     }
 
     #[test]
