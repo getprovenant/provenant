@@ -108,14 +108,25 @@ fn drops_year_free_party_inside_license_body_region() {
 }
 
 #[test]
-fn keeps_year_bearing_notice_inside_license_body_region() {
+fn keeps_real_notice_and_its_bare_name_party_inside_license_body_region() {
     let mut file_info = file_info_with_region(107);
-    // A genuine embedded copyright notice with a year, inside the region.
-    file_info.copyrights = vec![copyright("Copyright (c) 1995 Kungliga Tekniska", 4, 4)];
+    // A genuine embedded copyright notice with a year, inside the region. The
+    // holder and author it produces are bare entity names with NO year of their
+    // own (real extraction output), co-located on the same line.
+    file_info.copyrights = vec![copyright(
+        "Copyright (c) 1995 Mort Bay Consulting Pty. Ltd.",
+        4,
+        4,
+    )];
     file_info.holders = vec![Holder {
-        holder: "Copyright 2016 Jane Doe".to_string(),
-        start_line: line(6),
-        end_line: line(6),
+        holder: "Mort Bay Consulting Pty. Ltd.".to_string(),
+        start_line: line(4),
+        end_line: line(4),
+    }];
+    file_info.authors = vec![Author {
+        author: "Mort Bay Consulting Pty. Ltd.".to_string(),
+        start_line: line(4),
+        end_line: line(4),
     }];
 
     suppress_license_text_region_parties(&mut file_info);
@@ -125,7 +136,90 @@ fn keeps_year_bearing_notice_inside_license_body_region() {
         1,
         "year notice kept inside region"
     );
-    assert_eq!(file_info.holders.len(), 1, "year holder kept inside region");
+    assert_eq!(
+        file_info.holders.len(),
+        1,
+        "bare-name holder anchored to a kept copyright must survive: {:?}",
+        file_info.holders
+    );
+    assert_eq!(
+        file_info.authors.len(),
+        1,
+        "bare-name author anchored to a kept copyright must survive: {:?}",
+        file_info.authors
+    );
+}
+
+#[test]
+fn keeps_marker_copyright_without_year_and_its_holder_inside_region() {
+    let mut file_info = file_info_with_region(996);
+    // A real notice with a copyright marker but NO year (jetty-style), plus the
+    // prose fragment that merely mentions "Copyright" mid-sentence.
+    file_info.copyrights = vec![
+        copyright(
+            "Copyright (c) Mort Bay Consulting Pty. Ltd. (Australia)",
+            4,
+            4,
+        ),
+        copyright(
+            "at the Copyright Holders option either a return of any price paid or",
+            7,
+            7,
+        ),
+    ];
+    file_info.holders = vec![
+        Holder {
+            holder: "Mort Bay Consulting Pty. Ltd. (Australia)".to_string(),
+            start_line: line(4),
+            end_line: line(4),
+        },
+        Holder {
+            holder: "option either".to_string(),
+            start_line: line(7),
+            end_line: line(7),
+        },
+    ];
+
+    suppress_license_text_region_parties(&mut file_info);
+
+    assert_eq!(file_info.copyrights.len(), 1, "{:?}", file_info.copyrights);
+    assert!(
+        file_info.copyrights[0]
+            .copyright
+            .starts_with("Copyright (c) Mort Bay"),
+        "marker notice without a year must survive: {:?}",
+        file_info.copyrights
+    );
+    assert_eq!(file_info.holders.len(), 1, "{:?}", file_info.holders);
+    assert_eq!(
+        file_info.holders[0].holder,
+        "Mort Bay Consulting Pty. Ltd. (Australia)"
+    );
+}
+
+#[test]
+fn drops_holder_in_region_without_co_located_copyright() {
+    let mut file_info = file_info_with_region(107);
+    // The only real copyright is outside the region; the prose-derived holder
+    // inside the region has no copyright to anchor it, so it is dropped.
+    file_info.copyrights = vec![copyright("Copyright (c) 2020 Acme, Inc.", 1, 1)];
+    file_info.holders = vec![
+        Holder {
+            holder: "Acme, Inc.".to_string(),
+            start_line: line(1),
+            end_line: line(1),
+        },
+        Holder {
+            holder: "Software Foundation".to_string(),
+            start_line: line(5),
+            end_line: line(5),
+        },
+    ];
+
+    suppress_license_text_region_parties(&mut file_info);
+
+    assert_eq!(file_info.holders.len(), 1, "{:?}", file_info.holders);
+    assert_eq!(file_info.holders[0].holder, "Acme, Inc.");
 }
 
 #[test]
