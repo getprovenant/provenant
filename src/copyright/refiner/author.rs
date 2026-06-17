@@ -30,6 +30,8 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = strip_trailing_comma_year_after_angle_email(&a);
     a = strip_trailing_comma_year(&a);
     a = strip_trailing_comma_month_year(&a);
+    a = strip_trailing_on_date(&a);
+    a = strip_trailing_version(&a);
     a = strip_trailing_comma_email_matching_name(&a);
     a = truncate_trailing_from_clause_after_angle_contact(&a);
     a = truncate_trailing_clause_after_contact(&a);
@@ -831,6 +833,42 @@ fn strip_trailing_comma_month_year(s: &str) -> String {
     if let Some(cap) = COMMA_MM_YYYY_RE.captures(trimmed) {
         let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
         if !prefix.is_empty() {
+            return prefix.to_string();
+        }
+    }
+    s.to_string()
+}
+
+/// Strip a trailing `on <date>` suffix produced by Xcode/IDE file headers such
+/// as `Created by Jane Doe on 10/6/13`, where the author parse captures both the
+/// bare name and the date-suffixed form. The date-suffixed variant dedupes back
+/// to the clean name once the suffix is removed.
+fn strip_trailing_on_date(s: &str) -> String {
+    static ON_DATE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)^(?P<prefix>.+?)\s+on\s+\d{1,2}/\d{1,2}/\d{2,4}\.?\s*$").unwrap()
+    });
+    let trimmed = s.trim();
+    if let Some(cap) = ON_DATE_RE.captures(trimmed) {
+        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+        if !prefix.is_empty() && prefix.chars().any(|ch| ch.is_alphabetic()) {
+            return prefix.to_string();
+        }
+    }
+    s.to_string()
+}
+
+/// Strip a trailing version token that bled in from a Javadoc `@since <version>`
+/// tag on the line after `@author <Name>`, e.g. `Phillip Webb 4.0.0`. A
+/// dotted version (`X.Y` or `X.Y.Z`, with an optional `-SNAPSHOT`/qualifier) is
+/// never part of a real author name, so the bare name is recovered.
+fn strip_trailing_version(s: &str) -> String {
+    static VERSION_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^(?P<prefix>.+?)\s+\d+\.\d+(?:\.\d+)*(?:[.-][0-9A-Za-z]+)*\s*$").unwrap()
+    });
+    let trimmed = s.trim();
+    if let Some(cap) = VERSION_RE.captures(trimmed) {
+        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+        if !prefix.is_empty() && prefix.chars().any(|ch| ch.is_alphabetic()) {
             return prefix.to_string();
         }
     }

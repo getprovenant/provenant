@@ -276,3 +276,46 @@ fn test_maven_nested_merge_skips_multiple_nested_poms() {
 
     assert!(assembled.is_none());
 }
+
+#[test]
+fn test_maven_nested_merge_skips_source_reactor_poms() {
+    // A source multi-module reactor has many sibling `pom.xml` files in nested
+    // directories, none under `META-INF/maven/`. The nested merge must not fold
+    // these independent module packages into the root reactor POM; the
+    // per-directory sibling merge already models each module as its own package.
+    let config = AssemblerConfig {
+        datasource_ids: &[
+            DatasourceId::MavenPom,
+            DatasourceId::MavenPomProperties,
+            DatasourceId::JavaJarManifest,
+        ],
+        sibling_file_patterns: &["pom.xml", "pom.properties", "**/META-INF/MANIFEST.MF"],
+        mode: crate::assembly::AssemblyMode::SiblingMerge,
+    };
+
+    let module = |path: &str, name: &str, version: &str| {
+        test_file(
+            path,
+            vec![PackageData {
+                datasource_id: Some(DatasourceId::MavenPom),
+                package_type: Some(crate::models::PackageType::Maven),
+                primary_language: Some("Java".to_string()),
+                purl: Some(format!("pkg:maven/com.example/{name}@{version}")),
+                name: Some(name.to_string()),
+                namespace: Some("com.example".to_string()),
+                version: Some(version.to_string()),
+                ..Default::default()
+            }],
+        )
+    };
+
+    let files = vec![
+        module("reactor/pom.xml", "reactor", "1.0.0"),
+        module("reactor/module-a/pom.xml", "module-a", "1.0.0"),
+        module("reactor/module-b/pom.xml", "module-b", "1.0.0"),
+    ];
+
+    let assembled = assemble_nested_patterns(&files, &config);
+
+    assert!(assembled.is_none());
+}

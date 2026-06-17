@@ -87,6 +87,53 @@ fn test_refine_author_discards_laboriously_took_the_trouble_junk() {
 }
 
 #[test]
+fn test_refine_author_strips_xcode_on_date_suffix() {
+    // Xcode/IDE headers `Created by <Name> on M/D/YY` yield a date-suffixed
+    // author variant; the suffix is stripped so it dedupes to the bare name.
+    assert_eq!(
+        refine_author("Robert Böhnke on 10/6/13"),
+        Some("Robert Böhnke".to_string())
+    );
+    assert_eq!(
+        refine_author("Justin Spahr-Summers on 19/03/14"),
+        Some("Justin Spahr-Summers".to_string())
+    );
+    // A legitimate trailing word that is not an `on <date>` clause is preserved.
+    assert_eq!(
+        refine_author("Robert Böhnke"),
+        Some("Robert Böhnke".to_string())
+    );
+}
+
+#[test]
+fn test_refine_author_strips_javadoc_since_version_suffix() {
+    // `@author Phillip Webb` followed by `@since 4.0.0` bleeds the version into
+    // the author; the dotted version is stripped back to the bare name.
+    assert_eq!(
+        refine_author("Phillip Webb 4.0.0"),
+        Some("Phillip Webb".to_string())
+    );
+    assert_eq!(
+        refine_author("Phillip Webb 1.3.0"),
+        Some("Phillip Webb".to_string())
+    );
+    assert_eq!(
+        refine_author("Andy Wilkinson 2.0.0-SNAPSHOT"),
+        Some("Andy Wilkinson".to_string())
+    );
+    // Spring's historic multi-segment qualifier `X.Y.Z.BUILD-SNAPSHOT`.
+    assert_eq!(
+        refine_author("Juergen Hoeller 5.3.0.BUILD-SNAPSHOT"),
+        Some("Juergen Hoeller".to_string())
+    );
+    // A bare name with no trailing version is untouched.
+    assert_eq!(
+        refine_author("Phillip Webb"),
+        Some("Phillip Webb".to_string())
+    );
+}
+
+#[test]
 fn test_refine_author_drops_generic_role_and_prose_fragments() {
     assert_eq!(refine_author("Philip"), None);
     assert_eq!(refine_author("john"), None);

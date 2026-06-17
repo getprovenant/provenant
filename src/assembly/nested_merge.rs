@@ -140,18 +140,24 @@ fn should_skip_nested_merge(
         return false;
     }
 
-    let nested_pom_count = indices
+    let maven_pom_count = indices
         .iter()
         .filter(|&&idx| {
             files[idx].package_data.iter().any(|pkg_data| {
                 pkg_data.datasource_id == Some(crate::models::DatasourceId::MavenPom)
                     && Path::new(&files[idx].path).starts_with(root)
-                    && files[idx].path.contains("META-INF/maven/")
             })
         })
         .count();
 
-    nested_pom_count > 1
+    // The Maven nested merge exists to fold a single packaged artifact (one
+    // `pom.xml` plus its sibling `pom.properties` / `MANIFEST.MF`) into one
+    // package. It must fire only when exactly one Maven POM is anchored under
+    // the root. Skip a source reactor, where each module `pom.xml` is an
+    // independent package the per-directory sibling merge already produced, and
+    // skip a fat artifact bundling multiple POMs; both surface more than one POM
+    // under the root.
+    maven_pom_count > 1
 }
 
 fn should_dedupe_ruby_extracted_dependencies(config: &AssemblerConfig) -> bool {
