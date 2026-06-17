@@ -96,7 +96,7 @@ pub(super) fn looks_like_structured_copyright_notice_with_year(s: &str) -> bool 
     STRUCTURED_NOTICE_RE.is_match(s.trim())
 }
 
-pub(super) fn has_copyright_year(s: &str) -> bool {
+pub(crate) fn has_copyright_year(s: &str) -> bool {
     static COPYRIGHT_YEAR_RE: LazyLock<Regex> = LazyLock::new(|| {
         compile_static_regex(
             r"(?i)\b(?:19\d{2}|20\d{2})(?:\s*[-–/]\s*(?:19\d{2}|20\d{2}|\d{2}))?\b",

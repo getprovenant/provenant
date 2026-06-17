@@ -5,6 +5,7 @@ use super::contacts::extract_email_url_information;
 use super::copyright::extract_copyright_information;
 use super::file_scan_error::{FileScanError, FileScanTimeout, TimeoutPhase};
 use super::license::{LicenseExtractionInput, extract_license_information};
+use super::license_region_filter;
 use super::special_cases::{is_go_non_production_source, should_skip_text_detection};
 use crate::license_detection::LicenseDetectionEngine;
 use crate::models::{
@@ -117,6 +118,15 @@ pub(super) fn process_file(
 
     if file_info.percentage_of_license_text.is_none() && license_enabled {
         file_info.percentage_of_license_text = Some(0.0);
+    }
+
+    // Copyright detection runs before license detection, so it cannot tell that
+    // an attribution-shaped fragment came from license boilerplate. Now that
+    // both detections are materialized, drop copyright/holder/author findings
+    // that sit inside a detected full-license-text region and carry no notice
+    // year. Real notices (with a year) survive even inside a LICENSE file.
+    if license_enabled && text_options.detect_copyrights {
+        license_region_filter::suppress_license_text_region_parties(&mut file_info);
     }
 
     file_info
