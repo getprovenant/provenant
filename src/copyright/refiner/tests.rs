@@ -2792,6 +2792,40 @@ fn test_looks_like_source_code_keeps_real_notices_and_names() {
 }
 
 #[test]
+fn test_looks_like_source_code_keeps_ampersand_company_names() {
+    // `&` in a company name (with or without surrounding spaces, including the
+    // malformed `space-&-lowercase` OCR/header variant) is not source code: the
+    // address-of rule only fires when `&var` closes a call or statement.
+    assert!(!looks_like_source_code("R&D"));
+    assert!(!looks_like_source_code("AT&T"));
+    assert!(!looks_like_source_code("Ernst &young"));
+    assert!(!looks_like_source_code("Foo &co, Ltd."));
+    assert!(!looks_like_source_code("Foo &associates, Ltd."));
+    // The same `&var` token inside a call is still caught.
+    assert!(looks_like_source_code("foo(bar, &result)"));
+    assert!(looks_like_source_code("compute(&result);"));
+}
+
+#[test]
+fn test_looks_like_source_code_catches_code_with_embedded_email_or_url() {
+    // A code line whose argument list embeds an email or URL literal must still
+    // be classified as code: the structural namespace/address-of signals are not
+    // bypassed by the presence of a contact-looking substring.
+    assert!(looks_like_source_code(
+        r#"ns::func(handler, "admin@example.com", &result)"#
+    ));
+    assert!(looks_like_source_code(
+        r#"client.connect("https://example.com", &session)"#
+    ));
+    // A genuine `Name <email>` / parenthesized-URL author still survives because
+    // it carries no structural code signal.
+    assert!(!looks_like_source_code("Jane Doe <jane@example.org>"));
+    assert!(!looks_like_source_code(
+        "Mathias Bynens (https://mathiasbynens.be)"
+    ));
+}
+
+#[test]
 fn test_source_code_is_junk_for_copyright_holder_author() {
     let code = "vk::CmdCopyImage(m_command_buffer, &copyRegion);";
     assert!(is_junk_copyright(code));

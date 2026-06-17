@@ -1095,3 +1095,33 @@ fn test_extract_copyright_information_keeps_real_notice_and_name_with_email() {
         file.authors.iter().map(|a| &a.author).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn test_extract_copyright_information_drops_code_line_with_embedded_email_literal() {
+    // A C++ source line whose argument list embeds an email literal must still be
+    // rejected: the namespace/address-of code signals are not bypassed by the
+    // contact-looking substring in the raw span.
+    let text = "ns::registerHandler(\"admin@example.com\", &copyResult);\n";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("handler.cpp"), text, 120.0, false);
+
+    let file = build_single_file(builder);
+    assert!(
+        file.copyrights.is_empty(),
+        "source-code copyright leaked: {:?}",
+        file.copyrights
+            .iter()
+            .map(|c| &c.copyright)
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        file.holders.is_empty(),
+        "source-code holder leaked: {:?}",
+        file.holders.iter().map(|h| &h.holder).collect::<Vec<_>>()
+    );
+    assert!(
+        file.authors.is_empty(),
+        "source-code author leaked: {:?}",
+        file.authors.iter().map(|a| &a.author).collect::<Vec<_>>()
+    );
+}

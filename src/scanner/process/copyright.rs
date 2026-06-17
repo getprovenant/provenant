@@ -70,6 +70,11 @@ pub(super) fn extract_copyright_information(
         .filter(|h| !is_binary_garbage_party_value(&h.holder))
         .collect();
 
+    // Collect the file's lines once and reuse the slice for every detection's
+    // raw-span rendering, instead of re-splitting the whole file per copyright,
+    // holder, and author.
+    let raw_lines: Vec<&str> = text_content.lines().collect();
+
     file_info_builder.copyrights(
         copyrights
             .into_iter()
@@ -89,7 +94,7 @@ pub(super) fn extract_copyright_information(
             // name-table field labels and are never a legitimate copyright prefix in
             // real source, so rejecting them universally is safe and path-independent.
             .filter(|c| {
-                let raw_span = render_raw_span(text_content, c.start_line, c.end_line);
+                let raw_span = render_raw_span(&raw_lines, c.start_line, c.end_line);
                 !is_binary_garbage_party_value(&c.copyright)
                     && !is_font_metadata_label_copyright(&c.copyright)
                     && !detection_is_source_code(&c.copyright, &raw_span)
@@ -108,7 +113,7 @@ pub(super) fn extract_copyright_information(
         holders
             .into_iter()
             .filter(|h| {
-                let raw_span = render_raw_span(text_content, h.start_line, h.end_line);
+                let raw_span = render_raw_span(&raw_lines, h.start_line, h.end_line);
                 !detection_is_source_code(&h.holder, &raw_span)
             })
             .map(|h| Holder {
@@ -123,7 +128,7 @@ pub(super) fn extract_copyright_information(
     authors.extend(extract_comment_author_supplements(text_content));
     let mut seen_authors = HashSet::new();
     authors.retain(|author| {
-        let raw_span = render_raw_span(text_content, author.start_line, author.end_line);
+        let raw_span = render_raw_span(&raw_lines, author.start_line, author.end_line);
         !is_binary_garbage_party_value(&author.author)
             && !detection_is_source_code(&author.author, &raw_span)
             && seen_authors.insert((author.author.clone(), author.start_line, author.end_line))
@@ -178,8 +183,10 @@ fn render_raw_copyright_from_text(
 /// (`Region`, `Author`), which can look like an ordinary name; the underlying
 /// source line (`vk::CmdCopyImage(..., &copyRegion);`,
 /// `Author.objects.create(...)`) is what reveals it as code.
-fn render_raw_span(text_content: &str, start_line: LineNumber, end_line: LineNumber) -> String {
-    let raw_lines: Vec<&str> = text_content.lines().collect();
+///
+/// `raw_lines` is the file split into lines once by the caller, so this stays
+/// O(span length) per detection rather than re-splitting the whole file.
+fn render_raw_span(raw_lines: &[&str], start_line: LineNumber, end_line: LineNumber) -> String {
     let start_index = start_line.get().saturating_sub(1);
     let end_index = end_line.get();
     let Some(span) = raw_lines.get(start_index..end_index) else {
