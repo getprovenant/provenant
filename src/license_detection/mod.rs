@@ -130,6 +130,27 @@ pub struct LicenseDetectionEngine {
 
 const MAX_DETECTION_SIZE: usize = 10 * 1024 * 1024; // 10MB
 const MAX_REGULAR_SEQ_CANDIDATES: usize = 70;
+
+/// Upper bound on the token length of a query run that is handed to the
+/// approximate sequence matcher.
+///
+/// Sequence matching is the difflib-derived longest-common-substring aligner
+/// (see `seq_match`). On a single very large query run it degrades toward
+/// quadratic time when a handful of "legalese" tokens (e.g. `gnu`, `variant`,
+/// `releases`) recur thousands of times, as happens in big generated data files
+/// and lockfiles (e.g. uv's 2.6 MB `download-metadata.json`, which tokenizes to
+/// a single ~232k-token run). Such a run cannot be a license: the largest
+/// license text in the index is well under 15k tokens, and the largest genuine
+/// query runs observed across real source/license files stay under ~22k tokens.
+///
+/// Above this bound we skip only the *approximate* sequence matcher for that
+/// run. Exact matching (hash, SPDX-LID, Aho-Corasick) has already run and is
+/// unaffected, so verbatim and near-verbatim licenses embedded in a large file
+/// are still detected; only fuzzy alignment against an implausibly large,
+/// license-free run is bypassed. The ceiling is intentionally generous (several
+/// times both the largest rule and the largest legitimate run) so it never
+/// trims detection on real license-bearing content.
+const MAX_SEQ_QUERY_RUN_TOKENS: usize = 50_000;
 const MAX_REDUNDANT_SEQ_CONTAINER_BOUNDARY_GAP: usize = 8;
 const MAX_REDUNDANT_SEQ_CONTAINER_UNMATCHED_GAP: usize = 2;
 
@@ -427,6 +448,12 @@ fn collect_whole_query_exact_followup_matches(
 
     let mut seq_all_matches = Vec::new();
 
+    // Skip the near-duplicate whole-run sequence pass for implausibly large
+    // runs; see `MAX_SEQ_QUERY_RUN_TOKENS`. Exact matchers have already run.
+    if whole_run.tokens().len() > MAX_SEQ_QUERY_RUN_TOKENS {
+        return Ok(seq_all_matches);
+    }
+
     if whole_run.is_matchable(false, matched_qspans) {
         let near_dupe_candidates = if deadline.is_some() {
             select_seq_candidates_with_deadline(
@@ -482,6 +509,12 @@ fn collect_regular_seq_matches(
         }
 
         if !query_run.is_matchable(false, matched_qspans) {
+            continue;
+        }
+
+        // Skip approximate sequence matching for implausibly large runs; see
+        // `MAX_SEQ_QUERY_RUN_TOKENS`. Exact matchers have already run.
+        if query_run.tokens().len() > MAX_SEQ_QUERY_RUN_TOKENS {
             continue;
         }
 

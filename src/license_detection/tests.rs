@@ -1784,3 +1784,75 @@ fn test_detect_with_kind_handles_multibyte_boundary_at_size_limit() {
 
     assert!(detections.is_empty());
 }
+
+// A large, low-license-signal query run (the kind produced by big generated
+// data files and lockfiles) must not drive the difflib-derived sequence matcher
+// into its near-quadratic worst case. The orchestration layer skips sequence
+// matching for runs above `MAX_SEQ_QUERY_RUN_TOKENS`; exact matchers still run,
+// so a verbatim license embedded in such a file is still detected. This test
+// pins both halves of that contract.
+#[test]
+fn test_oversized_low_signal_run_skips_sequence_matching_but_keeps_exact() {
+    let engine = get_engine();
+
+    // Verbatim MIT license: this is caught by exact (hash/aho) matching, which
+    // is unaffected by the sequence-matching size cap.
+    let mit_text = r#"Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE."#;
+
+    // A large blob that tokenizes to far more than MAX_SEQ_QUERY_RUN_TOKENS,
+    // built from frequently-recurring legalese tokens (the autojunk-style
+    // pathology) interleaved with non-legalese filler. The legalese tokens keep
+    // the whole blob in a single query run (no 15-line gap), reproducing the
+    // single-giant-run shape of the regressing input.
+    let mut blob = String::with_capacity(2 * 1024 * 1024);
+    let line = "gnu variant releases name build version url download github\n";
+    while blob.len() < 1_500_000 {
+        blob.push_str(line);
+    }
+    let text = format!("{mit_text}\n\n{blob}");
+
+    let start = Instant::now();
+    let detections = engine
+        .detect_with_kind(&text, false, false)
+        .expect("Detection should succeed on a large low-signal input");
+    let elapsed = start.elapsed();
+
+    // The cap keeps this bounded; without it the difflib matcher runs for many
+    // seconds on the giant run. A generous ceiling keeps the test robust on slow
+    // CI while still failing loudly if the cap is removed.
+    assert!(
+        elapsed < Duration::from_secs(10),
+        "large low-signal detection should stay bounded, took {elapsed:?}"
+    );
+
+    let mit_related = detections.iter().any(|d| {
+        d.license_expression
+            .as_ref()
+            .map(|e| e.contains("mit"))
+            .unwrap_or(false)
+    });
+    assert!(
+        mit_related,
+        "verbatim MIT must still be detected via exact matching, got: {:?}",
+        detections
+            .iter()
+            .map(|d| d.license_expression.as_deref().unwrap_or("none"))
+            .collect::<Vec<_>>()
+    );
+}
