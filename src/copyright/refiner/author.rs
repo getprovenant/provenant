@@ -13,6 +13,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     }
     let had_obfuscated_angle_contact = contains_obfuscated_angle_contact(s);
     let mut a = remove_some_extra_words_and_punct(s);
+    a = strip_trailing_parenthesized_email_contact(&a);
     a = truncate_trailing_collective_contributors_prose(&a);
     a = strip_leading_maintainers_label(&a);
     a = strip_trailing_javadoc_tags(&a);
@@ -111,6 +112,37 @@ fn contains_obfuscated_angle_contact(s: &str) -> bool {
         LazyLock::new(|| Regex::new(r"(?i)<\s*(?P<inner>[^<>]*\bat\b[^<>]*)\s*>").unwrap());
 
     OBFUSCATED_ANGLE_CONTACT_RE.is_match(s)
+}
+
+/// Strip a trailing parenthesized angle-bracketed email contact from an author
+/// name.
+///
+/// Ruby and other headers write `Author:: Adam Jacob (<adam@chef.io>)`, which the
+/// parser captures as the author `Adam Jacob (<adam@chef.io>)`. The bracketed
+/// email is redundant — it is already captured in the file's `emails[]` list —
+/// and refinement otherwise renders it as the malformed
+/// `Adam Jacob ( <adam@chef.io> )`. Reduce it to the bare name.
+///
+/// Only the **angle-bracketed-inside-parens** form `(<email>)` (any spacing
+/// variant) is stripped. The bare parenthesized form `Name (email@host)` is an
+/// established author contract elsewhere and is left intact, as is a bare
+/// angle-bracketed `Name <email>` author.
+fn strip_trailing_parenthesized_email_contact(s: &str) -> String {
+    static PAREN_EMAIL_CONTACT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?P<prefix>.+?)\s*\(\s*<\s*[^\s@()<>]+@[^\s@()<>]+\s*>\s*\)\s*$")
+            .expect("valid parenthesized email contact regex")
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = PAREN_EMAIL_CONTACT_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || !prefix.chars().any(|ch| ch.is_alphabetic()) {
+        return s.to_string();
+    }
+
+    prefix.to_string()
 }
 
 fn looks_like_prose_fragment_author(s: &str) -> bool {

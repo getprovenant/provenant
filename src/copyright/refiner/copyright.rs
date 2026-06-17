@@ -29,6 +29,9 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     {
         return None;
     }
+    if looks_like_source_code(&original) {
+        return None;
+    }
     let mut c = original.clone();
     c = strip_known_copyright_wrappers(&c);
     c = trim_separator_rule_runs(&c);
