@@ -29,6 +29,62 @@ pub fn is_junk_copyright(s: &str) -> bool {
         || is_junk_copyright_code_fragment(s)
         || is_junk_copyright_symbol_garbage(s)
         || is_junk_c_sign_path_fragment(s)
+        || is_creative_commons_license_prose(s)
+}
+
+/// Return true if `s` is a fragment of Creative Commons (or cited treaty)
+/// license body text rather than a real copyright statement or holder.
+///
+/// Full CC public-license texts (CC-BY, CC-BY-SA, etc.) contain legal prose that
+/// repeatedly uses the words "copyright", "Licensor", "Similar Rights", and
+/// treaty names. The copyright detector extracts fragments of that prose as
+/// spurious copyrights and holders.
+///
+/// "Strong" markers are phrases that appear only in CC/treaty license bodies and
+/// never in a real copyright line, so they classify as prose regardless of any
+/// embedded year (the WIPO/Berne paragraph cites treaty years). "Weak" markers
+/// are shorter CC phrases that are only treated as prose when the candidate
+/// carries no copyright year, which keeps genuine notices such as
+/// `Copyright (c) 2016 Jane Doe` untouched.
+pub(super) fn is_creative_commons_license_prose(s: &str) -> bool {
+    const CC_STRONG_PROSE_MARKERS: &[&str] = &[
+        "rights granted under",
+        "effective technological measures",
+        "berne convention",
+        "wipo copyright treaty",
+        "wipo performances and phonograms",
+        "universal copyright convention",
+        "rome convention",
+        "convention as revised",
+        "certain other rights specified in the public",
+        "declarations recited in the",
+        "arising from limitations or exceptions",
+    ];
+    const CC_WEAK_PROSE_MARKERS: &[&str] = &[
+        "similar rights",
+        "copyright and/or",
+        "copyright and certain other rights",
+        "certain other rights",
+        "other rights in the material",
+    ];
+
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if CC_STRONG_PROSE_MARKERS
+        .iter()
+        .any(|marker| lower.contains(marker))
+    {
+        return true;
+    }
+
+    !has_copyright_year(trimmed)
+        && CC_WEAK_PROSE_MARKERS
+            .iter()
+            .any(|marker| lower.contains(marker))
 }
 
 pub(super) fn looks_like_structured_copyright_notice_with_year(s: &str) -> bool {
@@ -136,6 +192,7 @@ pub(crate) fn is_junk_holder(s: &str) -> bool {
     HOLDERS_JUNK_PATTERNS.iter().any(|re| re.is_match(s))
         || is_junk_holder_code_fragment(s)
         || is_junk_holder_symbol_garbage(s)
+        || is_creative_commons_license_prose(s)
         || s.eq_ignore_ascii_case("MIT")
 }
 

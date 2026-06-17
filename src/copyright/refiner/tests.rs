@@ -531,6 +531,81 @@ fn test_is_junk_copyright_c_sign_path_fragment() {
     assert!(is_junk_copyright("(c) Ljoptsimple/AbstractOptionSpec"));
 }
 
+// ── Creative Commons license-prose suppression ───────────────────
+
+#[test]
+fn test_is_junk_copyright_cc_license_prose() {
+    // "Copyright and Similar Rights" and its continuations from CC license text.
+    assert!(is_junk_copyright("Copyright and Similar Rights"));
+    assert!(is_junk_copyright(
+        "Copyright and Similar Rights held by the Licensor"
+    ));
+    assert!(is_junk_copyright("Copyright and Similar Rights in Your"));
+    assert!(is_junk_copyright(
+        "copyright and/or similar rights closely related to"
+    ));
+    assert!(is_junk_copyright(
+        "copyright and certain other rights. Our licenses are irrevocable"
+    ));
+    assert!(is_junk_copyright(
+        "copyright declarations recited in the relevant treaty"
+    ));
+}
+
+#[test]
+fn test_is_junk_copyright_cc_treaty_paragraph_with_years() {
+    // The WIPO/Berne paragraph cites treaty years but is still license prose,
+    // not a copyright notice. Strong markers classify it regardless of year.
+    assert!(is_junk_copyright(
+        "The rights granted under, and the subject matter referenced, in this \
+         License were drafted utilizing the terminology of the Berne Convention \
+         of 1979, the Rome Convention of 1961, the WIPO Copyright Treaty of 1996."
+    ));
+}
+
+#[test]
+fn test_is_junk_holder_cc_license_prose() {
+    assert!(is_junk_holder("Similar"));
+    assert!(is_junk_holder("Similar Rights"));
+    assert!(is_junk_holder("Similar Rights held by the Licensor"));
+    assert!(is_junk_holder("Similar Rights in Your"));
+    assert!(is_junk_holder(
+        "certain other rights specified in the public"
+    ));
+    assert!(is_junk_holder("certain other"));
+    assert!(is_junk_holder("Convention as revised"));
+    assert!(is_junk_holder("declarations recited in the"));
+    assert!(is_junk_holder("arising from limitations or exceptions"));
+    assert!(is_junk_holder("resulting"));
+}
+
+#[test]
+fn test_cc_prose_suppression_preserves_real_notices() {
+    // Real copyright notices and holders must survive even when they share
+    // tokens with CC prose; the year guard protects weak-marker phrases.
+    assert!(!is_junk_copyright("Copyright (c) 2016 Jane Doe"));
+    assert!(!is_junk_copyright(
+        "Copyright 2020 Acme Inc. All rights reserved."
+    ));
+    assert!(!is_junk_holder("Jane Doe"));
+    assert!(!is_junk_holder("Acme Inc."));
+}
+
+#[test]
+fn test_cc_prose_year_guard_keeps_weak_marker_notices() {
+    // The year guard protects the *weak* CC markers. A real notice that both
+    // carries a copyright year AND contains a weak marker phrase ("similar
+    // rights", "certain other rights") must NOT be dropped as junk. The year
+    // lives in the copyright statement, so this invariant is exercised at the
+    // copyright level (refined holders do not carry years).
+    assert!(!is_junk_copyright(
+        "Copyright 2020 Foundation for Similar Rights"
+    ));
+    assert!(!is_junk_copyright(
+        "Copyright 2020 Acme and certain other rights reserved"
+    ));
+}
+
 // ── refine_copyright ─────────────────────────────────────────────
 
 #[test]
