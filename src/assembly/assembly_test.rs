@@ -2537,6 +2537,136 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_cargo_workspace_resolves_member_inherited_authors() {
+        let mut root = create_test_file_info(
+            "workspace/Cargo.toml",
+            DatasourceId::CargoToml,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Cargo);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace".to_string(),
+            json!({
+                "members": ["crates/app"],
+                "package": { "authors": ["uv", "Jane Doe <jane@example.com>"] },
+            }),
+        )]));
+
+        let mut member_manifest = create_test_file_info(
+            "workspace/crates/app/Cargo.toml",
+            DatasourceId::CargoToml,
+            Some("pkg:cargo/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member_manifest.package_data[0].package_type = Some(PackageType::Cargo);
+        // Member declares `authors.workspace = true`, recorded as a marker by the parser.
+        member_manifest.package_data[0].extra_data =
+            Some(HashMap::from([("authors".to_string(), json!("workspace"))]));
+
+        let mut files = vec![root, member_manifest];
+        let result = assemble(&mut files);
+
+        let member = result
+            .packages
+            .iter()
+            .find(|pkg| pkg.purl.as_deref() == Some("pkg:cargo/app@0.1.0"))
+            .expect("member package should be assembled");
+        let parties: Vec<(Option<&str>, Option<&str>)> = member
+            .parties
+            .iter()
+            .map(|party| (party.name.as_deref(), party.email.as_deref()))
+            .collect();
+        assert_eq!(
+            parties,
+            vec![
+                (Some("uv"), None),
+                (Some("Jane Doe"), Some("jane@example.com")),
+            ],
+            "workspace authors should be resolved into parties, never the literal token"
+        );
+        // The marker must be consumed so the literal "workspace" never surfaces.
+        assert_eq!(
+            member
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("authors")),
+            None,
+            "workspace authors marker should be consumed once resolved"
+        );
+    }
+
+    #[test]
+    fn test_assemble_cargo_workspace_omits_inherited_authors_when_root_undeclared() {
+        // Member inherits authors, but the workspace root never declares them.
+        // The marker must still be consumed rather than leaked as an author named
+        // "workspace".
+        let mut root = create_test_file_info(
+            "workspace/Cargo.toml",
+            DatasourceId::CargoToml,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Cargo);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace".to_string(),
+            json!({
+                "members": ["crates/app"],
+                "package": { "license": "MIT" },
+            }),
+        )]));
+
+        let mut member_manifest = create_test_file_info(
+            "workspace/crates/app/Cargo.toml",
+            DatasourceId::CargoToml,
+            Some("pkg:cargo/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member_manifest.package_data[0].package_type = Some(PackageType::Cargo);
+        member_manifest.package_data[0].extra_data =
+            Some(HashMap::from([("authors".to_string(), json!("workspace"))]));
+
+        let mut files = vec![root, member_manifest];
+        let result = assemble(&mut files);
+
+        let member = result
+            .packages
+            .iter()
+            .find(|pkg| pkg.purl.as_deref() == Some("pkg:cargo/app@0.1.0"))
+            .expect("member package should be assembled");
+        assert!(
+            member.parties.is_empty(),
+            "unresolvable inherited authors must be omitted, not emitted as \"workspace\""
+        );
+        assert_eq!(
+            member
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("authors")),
+            None,
+            "stale workspace authors marker must be removed even when unresolvable"
+        );
+        // The file-level package data must also be clean of the leaked marker.
+        let member_file_pkg = &files[1].package_data[0];
+        assert_eq!(
+            member_file_pkg
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("authors")),
+            None,
+            "file-level workspace authors marker must be removed even when unresolvable"
+        );
+    }
+
+    #[test]
     fn test_assemble_cargo_workspace_keeps_root_package_when_root_is_real_member() {
         let mut root = create_test_file_info(
             "workspace/Cargo.toml",

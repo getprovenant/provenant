@@ -677,6 +677,12 @@ fn resolve_workspace_license(workspace_data: &WorkspaceData) -> Option<ResolvedW
     })
 }
 
+/// Returns true when the member manifest recorded `<field> = { workspace = true }`,
+/// stored by the parser as the literal marker string `"workspace"`.
+fn has_workspace_marker(extra_data: &HashMap<String, serde_json::Value>, field: &str) -> bool {
+    extra_data.get(field).and_then(|v| v.as_str()) == Some("workspace")
+}
+
 fn apply_workspace_inheritance(
     pkg_data: &mut PackageData,
     workspace_data: &WorkspaceData,
@@ -690,103 +696,132 @@ fn apply_workspace_inheritance(
         return;
     };
 
-    if extra_data.get("version").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(version_value) = workspace_data.package.get("version")
-        && let Some(version_str) = version_value.as_str()
-    {
-        pkg_data.version = Some(version_str.to_string());
+    // Each `<field> = { workspace = true }` marker is consumed unconditionally
+    // once observed, even when the workspace root does not actually declare that
+    // field. Leaving the marker in place would surface the literal token
+    // "workspace" as the field value (e.g. an author named "workspace"); an
+    // unresolvable inherited field must be omitted instead.
+    if has_workspace_marker(extra_data, "version") {
+        if let Some(version_str) = workspace_data
+            .package
+            .get("version")
+            .and_then(|v| v.as_str())
+        {
+            pkg_data.version = Some(version_str.to_string());
+        }
         extra_data.remove("version");
     }
 
-    if extra_data.get("license").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(resolved) = resolved_license
-    {
-        pkg_data.extracted_license_statement = Some(resolved.statement.clone());
-        pkg_data.declared_license_expression = resolved.declared_expression.clone();
-        pkg_data.declared_license_expression_spdx = resolved.declared_expression_spdx.clone();
-        pkg_data.license_detections = resolved.detections.clone();
+    if has_workspace_marker(extra_data, "license") {
+        if let Some(resolved) = resolved_license {
+            pkg_data.extracted_license_statement = Some(resolved.statement.clone());
+            pkg_data.declared_license_expression = resolved.declared_expression.clone();
+            pkg_data.declared_license_expression_spdx = resolved.declared_expression_spdx.clone();
+            pkg_data.license_detections = resolved.detections.clone();
+        }
         extra_data.remove("license");
     }
 
-    if extra_data.get("homepage").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(homepage_value) = workspace_data.package.get("homepage")
-        && let Some(homepage_str) = homepage_value.as_str()
-    {
-        pkg_data.homepage_url = Some(homepage_str.to_string());
+    if has_workspace_marker(extra_data, "homepage") {
+        if let Some(homepage_str) = workspace_data
+            .package
+            .get("homepage")
+            .and_then(|v| v.as_str())
+        {
+            pkg_data.homepage_url = Some(homepage_str.to_string());
+        }
         extra_data.remove("homepage");
     }
 
-    if extra_data.get("repository").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(repo_value) = workspace_data.package.get("repository")
-        && let Some(repo_str) = repo_value.as_str()
-    {
-        pkg_data.vcs_url = Some(repo_str.to_string());
+    if has_workspace_marker(extra_data, "repository") {
+        if let Some(repo_str) = workspace_data
+            .package
+            .get("repository")
+            .and_then(|v| v.as_str())
+        {
+            pkg_data.vcs_url = Some(repo_str.to_string());
+        }
         extra_data.remove("repository");
     }
 
-    if extra_data.get("categories").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(categories_value) = workspace_data.package.get("categories")
-        && let Some(categories_arr) = categories_value.as_array()
-    {
-        let categories: Vec<String> = categories_arr
-            .iter()
-            .filter_map(|v| v.as_str())
-            .map(|s| s.to_string())
-            .collect();
-        pkg_data.keywords.extend(categories);
+    if has_workspace_marker(extra_data, "categories") {
+        if let Some(categories_arr) = workspace_data
+            .package
+            .get("categories")
+            .and_then(|v| v.as_array())
+        {
+            let categories: Vec<String> = categories_arr
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect();
+            pkg_data.keywords.extend(categories);
+        }
         extra_data.remove("categories");
     }
 
-    if extra_data.get("edition").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(edition_value) = workspace_data.package.get("edition")
-        && let Some(edition_str) = edition_value.as_str()
-    {
-        extra_data.insert("rust_edition".to_string(), serde_json::json!(edition_str));
+    if has_workspace_marker(extra_data, "edition") {
+        if let Some(edition_str) = workspace_data
+            .package
+            .get("edition")
+            .and_then(|v| v.as_str())
+        {
+            extra_data.insert("rust_edition".to_string(), serde_json::json!(edition_str));
+        }
         extra_data.remove("edition");
     }
 
-    if extra_data.get("rust-version").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(rust_version_value) = workspace_data.package.get("rust-version")
-        && let Some(rust_version_str) = rust_version_value.as_str()
-    {
-        extra_data.insert(
-            "rust_version".to_string(),
-            serde_json::json!(rust_version_str),
-        );
+    if has_workspace_marker(extra_data, "rust-version") {
+        if let Some(rust_version_str) = workspace_data
+            .package
+            .get("rust-version")
+            .and_then(|v| v.as_str())
+        {
+            extra_data.insert(
+                "rust_version".to_string(),
+                serde_json::json!(rust_version_str),
+            );
+        }
         extra_data.remove("rust-version");
     }
 
-    if extra_data.get("authors").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(authors_value) = workspace_data.package.get("authors")
-        && let Some(authors_arr) = authors_value.as_array()
-    {
-        use crate::parsers::utils::split_name_email;
-        let parties: Vec<crate::models::Party> = authors_arr
-            .iter()
-            .filter_map(|v| v.as_str())
-            .map(|author_str| {
-                let (name, email) = split_name_email(author_str);
-                crate::models::Party {
-                    r#type: None,
-                    role: Some("author".to_string()),
-                    name,
-                    email,
-                    url: None,
-                    organization: None,
-                    organization_url: None,
-                    timezone: None,
-                }
-            })
-            .collect();
-        pkg_data.parties = parties;
+    if has_workspace_marker(extra_data, "authors") {
+        if let Some(authors_arr) = workspace_data
+            .package
+            .get("authors")
+            .and_then(|v| v.as_array())
+        {
+            use crate::parsers::utils::split_name_email;
+            let parties: Vec<crate::models::Party> = authors_arr
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(|author_str| {
+                    let (name, email) = split_name_email(author_str);
+                    crate::models::Party {
+                        r#type: None,
+                        role: Some("author".to_string()),
+                        name,
+                        email,
+                        url: None,
+                        organization: None,
+                        organization_url: None,
+                        timezone: None,
+                    }
+                })
+                .collect();
+            pkg_data.parties = parties;
+        }
         extra_data.remove("authors");
     }
 
-    if extra_data.get("readme").and_then(|v| v.as_str()) == Some("workspace")
-        && let Some(readme_value) = workspace_data.package.get("readme")
-        && let Some(readme_str) = readme_value.as_str()
-    {
-        extra_data.insert("readme_file".to_string(), serde_json::json!(readme_str));
+    if has_workspace_marker(extra_data, "readme") {
+        if let Some(readme_str) = workspace_data
+            .package
+            .get("readme")
+            .and_then(|v| v.as_str())
+        {
+            extra_data.insert("readme_file".to_string(), serde_json::json!(readme_str));
+        }
         extra_data.remove("readme");
     }
 
