@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 219 of 219 recorded runs, with a **14.8× median speedup** and **15.0× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **22.4×** on 10k+ file targets.
+> Provenant is faster on 219 of 219 recorded runs, with a **14.8× median speedup** and **15.1× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1399,19 +1399,19 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `13.31s`; ScanCode `241.45s`
 - More correct Linux-distro identity on `usr/lib/os-release` (`debian` instead of ScanCode's incorrect `distroless`) with homepage, support, and bug-report URLs preserved, plus broader dependency extraction (`534` vs `0`) from the real `dpkg/status` relation fields while preserving top-level package count parity (`88` vs `88`)
 
-##### [distroless base-debian12 @ sha256:9dce90e](https://github.com/GoogleContainerTools/distroless/blob/main/PACKAGE_METADATA.md) — **9.17× faster**
+##### [distroless base-debian12 @ sha256:e7e678c](https://github.com/GoogleContainerTools/distroless/blob/main/PACKAGE_METADATA.md) — **12.77× faster**
 
-- Files: 1,264
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `12.05s`; ScanCode `110.49s`
-- Direct Distroless Debian 12 identity on `usr/lib/os-release` with homepage, support, and bug-report URLs preserved despite the sparse image layout, plus broader dependency extraction (`52` vs `0`) from `status.d` and zero scan errors where ScanCode crashes on six `*.md5sums` companions
+- Files: 1,260
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.87s`; ScanCode `74.98s`
+- Direct Distroless Debian 12 identity on `usr/lib/os-release` with homepage, support, and bug-report URLs preserved despite the sparse image layout, plus broader dependency extraction (`53` vs `0`) from `status.d` and zero scan errors where ScanCode crashes on six `*.md5sums` companions; reproduce by pulling the pinned image (`skopeo copy --override-os linux --override-arch amd64 docker://gcr.io/distroless/base-debian12@sha256:e7e678c88c59e70e105a46549bb3fbfb3d732ee3b4afd3a19fdab2e15afaa6b3 oci:base-debian12:latest`) and scanning its extracted rootfs layers
 
-##### [Fedora Minimal 42 container rootfs @ sha256:c30f069](https://quay.io/repository/fedora/fedora-minimal) — **13.35× faster**
+##### [Fedora Minimal 42 container rootfs @ sha256:09a2061](https://quay.io/repository/fedora/fedora-minimal) — **21.68× faster**
 
-- Files: 1,989
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `34.69s`; ScanCode `463.11s`
-- Direct Fedora distro identity on `usr/lib/os-release` with homepage, documentation, and support URLs preserved, plus installed-RPM package and dependency extraction (`102` vs `0` packages, `1427` vs `0` dependencies) from the real rpmdb where ScanCode stays package-blind
+- Files: 1,983
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `15.74s`; ScanCode `341.28s`
+- Direct Fedora distro identity on `usr/lib/os-release` with homepage and support URLs preserved, plus richer installed-RPM identities on the same 102 packages — full `fedora`-namespaced PURLs with complete `-N.fcXX` release versions (e.g. `pkg:rpm/fedora/bash@5.2.37-1.fc42` vs ScanCode's namespace-less, release-truncated `pkg:rpm/bash@5.2.37`) — and broader dependency extraction (`1744` vs `0`) from the real rpmdb; reproduce by pulling the pinned image (`skopeo copy --override-os linux --override-arch amd64 docker://quay.io/fedora/fedora-minimal@sha256:09a2061e2cfb85ac8e7fa7f2234d0ace6ad4f2b7dfdf0f257c90405e4f07577d oci:fedora-minimal:latest`) and scanning its extracted rootfs layers
 
 #### Installed package database snapshots
 
@@ -1429,26 +1429,26 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `11.36s`; ScanCode `95.97s`
 - Matched installed Debian package coverage (`88` vs `88`) with broader dependency extraction (`536` vs `0`) from the real `status` relation fields, richer Debian-qualified package identities on `.list` and `.md5sums` companions, and maintainer parties preserved in package metadata instead of only generic file-author guesses
 
-##### [distroless base-debian13 status.d @ sha256:c83f022](https://github.com/GoogleContainerTools/distroless/blob/main/PACKAGE_METADATA.md) — **6.75× faster**
+##### [distroless base-debian13 status.d @ sha256:57c1e4c](https://github.com/GoogleContainerTools/distroless/blob/main/PACKAGE_METADATA.md) — **8.36× faster**
 
 - Files: 18
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.31s`; ScanCode `69.61s`
-- Matched distroless Debian package coverage (`9` vs `9`) with broader dependency extraction (`84` vs `0`) from `status.d` relation fields, maintainer parties preserved in package metadata, and zero scan errors where ScanCode crashes on all nine `*.md5sums` companions
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.21s`; ScanCode `43.55s`
+- Matched distroless Debian package coverage (`9` vs `9`) with broader dependency extraction (`84` vs `0`) from `status.d` relation fields, maintainer parties preserved in package metadata, and zero scan errors where ScanCode crashes on all nine `*.md5sums` companions; reproduce by pulling the pinned image (`skopeo copy --override-os linux --override-arch amd64 docker://gcr.io/distroless/base-debian13@sha256:57c1e4c72feb5925c4763ae4f6bd2013ad3854f57eff5b60dd9acb1ce0abc66e oci:base-debian13:latest`) and scanning the extracted `var/lib/dpkg/status.d` subtree
 
-##### [Fedora Minimal 42 rpmdb SQLite snapshot @ sha256:c30f069](https://quay.io/repository/fedora/fedora-minimal) — **17.88× faster**
+##### [Fedora Minimal 42 rpmdb SQLite snapshot @ sha256:09a2061](https://quay.io/repository/fedora/fedora-minimal) — **24.09× faster**
 
 - Files: 3
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.09s`; ScanCode `162.53s`
-- No installed-RPM package extraction on the narrow SQLite primary-DB snapshot (`0` vs `0` packages, `0` vs `0` dependencies); this lane is mostly a raw database byte scan, and the remaining ScanCode-only detections on `rpmdb.sqlite` are low-value noise/false positives rather than useful package or license coverage
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.66s`; ScanCode `112.26s`
+- Matched installed-RPM package coverage on the narrow SQLite rpmdb snapshot (`102` vs `102`) with richer identities — full `fedora`-namespaced PURLs and complete `-N.fcXX` release versions (e.g. `pkg:rpm/fedora/alternatives@1.33-3.fc42` vs ScanCode's `pkg:rpm/alternatives@1.33`) — plus broader dependency extraction (`1744` vs `0`); reproduce by pulling the pinned image (`skopeo copy --override-os linux --override-arch amd64 docker://quay.io/fedora/fedora-minimal@sha256:09a2061e2cfb85ac8e7fa7f2234d0ace6ad4f2b7dfdf0f257c90405e4f07577d oci:fedora-minimal:latest`) and scanning the extracted `var/lib/rpm/rpmdb.sqlite` plus its `-shm`/`-wal` siblings
 
-##### [openSUSE Tumbleweed rpmdb NDB snapshot @ sha256:25afd25](https://registry.opensuse.org/) — **16.99× faster**
+##### [openSUSE Tumbleweed rpmdb NDB snapshot @ sha256:224594d](https://registry.opensuse.org/) — **24.27× faster**
 
 - Files: 2
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.13s`; ScanCode `172.04s`
-- Direct installed-RPM package and dependency extraction (`123` vs `0` packages, `1460` vs `0` dependencies) from the real openSUSE `Packages.db`/`Index.db` NDB snapshot, with zero scan errors
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.81s`; ScanCode `116.72s`
+- Direct installed-RPM package and dependency extraction (`123` vs `0` packages, `1844` vs `0` dependencies) from the real openSUSE `Packages.db`/`Index.db` NDB snapshot where ScanCode stays package-blind, with zero scan errors; the exact `Packages.db`/`Index.db` bytes are archived as a fixture at [`testdata/opensuse/benchmark-tumbleweed-ndb`](../testdata/opensuse/benchmark-tumbleweed-ndb) (extracted from the pinned Tumbleweed image — see the co-located `SOURCE.md`)
 
 #### Package archives
 
@@ -1487,12 +1487,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.45s`; ScanCode `39.63s`
 - Real NuGet package-archive extraction on the shipped `.nupkg` (`1` vs `0` packages, `6` vs `0` dependencies), with a named `pkg:nuget/Humanizer.Core@3.0.10` identity instead of ScanCode's generic unnamed archive row, plus an `MIT` license detection from modern package metadata
 
-##### [pkg 2.7.4 .pkg +COMPACT_MANIFEST sample @ sha256:4128dba](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/Latest/pkg.pkg) — **7.72× faster**
+##### [pkg 2.7.5 .pkg +COMPACT_MANIFEST sample @ sha256:e0f3403](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/Latest/pkg.pkg) — **8.93× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.60s`; ScanCode `74.17s`
-- Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `BSD-2-Clause` declared-license reporting where ScanCode leaves the package license unknown
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.44s`; ScanCode `39.67s`
+- Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `BSD-2-Clause` declared-license reporting where ScanCode leaves the package license unknown; reproduce by downloading the current `pkg.pkg` and extracting its manifest (`tar --zstd -xf pkg.pkg +COMPACT_MANIFEST`), which is `sha256:e0f340319f63bc9596a8e6b079f805ed6cc81f5a66ca19757367b4773a72358a` for pkg `2.7.5`
 
 ##### [python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3](https://archive.archlinux.org/packages/p/python-construct/python-construct-2.10.70-6-any.pkg.tar.zst) — **7.01× faster**
 
@@ -1584,19 +1584,19 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Generated dependency lock manifests
 
-##### [Flask 3.1.0 pip-inspect.deplock @ sha256:fd65296](https://pypi.org/project/flask/3.1.0/) — **6.87× faster**
+##### [Flask 3.1.0 pip-inspect.deplock @ sha256:2f30046](https://pypi.org/project/flask/3.1.0/) — **9.06× faster**
 
 - Files: 1
-- Run context: 2026-06-05 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · generated via `pip inspect` (pip 26.1.1) over a venv with `flask==3.1.0`
-- Timing: Provenant `6.35s`; ScanCode `43.65s`
-- Matched pip-inspect deplock dependency extraction (`8` vs `8` resolved dependencies) across the installed set, with PURL-identified `flask` and its transitive `werkzeug`, `jinja2`, `click`, `itsdangerous`, `markupsafe`, and `blinker` pins on a lockfile-style deplock package, structured author capture in the resolved package metadata, and cleaner `BSD-3-Clause` classification where ScanCode appends an unknown-license reference
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · generated via `pip inspect` (pip 26.1.2) over a venv with `flask==3.1.0`
+- Timing: Provenant `4.46s`; ScanCode `40.40s`
+- Matched pip-inspect deplock dependency extraction (`8` vs `8` resolved dependencies) across the installed set, with PURL-identified `flask` and its transitive `werkzeug`, `jinja2`, `click`, `itsdangerous`, `markupsafe`, and `blinker` pins on a lockfile-style deplock package, structured author capture in the resolved package metadata, and cleaner `BSD-3-Clause` classification where ScanCode appends a top-level unknown-license reference; the exact deplock is archived as a fixture at [`testdata/python/benchmark-flask-pip-inspect/pip-inspect.deplock`](../testdata/python/benchmark-flask-pip-inspect/pip-inspect.deplock) (see the co-located `SOURCE.md`)
 
-##### [swift-dependencies 1.9.4 swift-show-dependencies.deplock @ sha256:bed4a47](https://github.com/pointfreeco/swift-dependencies/tree/1.9.4) — **6.78× faster**
+##### [swift-dependencies 1.9.4 swift-show-dependencies.deplock @ sha256:c03e7c7](https://github.com/pointfreeco/swift-dependencies/tree/1.9.4) — **9.05× faster**
 
 - Files: 1
-- Run context: 2026-06-05 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · generated via `swift package show-dependencies --format json` (Swift 6.3.2) on `swift-dependencies@1.9.4`
-- Timing: Provenant `6.08s`; ScanCode `41.20s`
-- Matched swift-show-dependencies deplock dependency extraction (`17` vs `17` resolved dependencies) across the full transitive graph spanning `combine-schedulers`, `swift-clocks`, `swift-concurrency-extras`, `swift-syntax`, and sibling Point-Free packages, with no detected output differences
+- Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · generated via `swift package show-dependencies --format json` (Swift 6.3.2) on `swift-dependencies@1.9.4`
+- Timing: Provenant `4.34s`; ScanCode `39.29s`
+- Matched swift-show-dependencies deplock dependency extraction (`17` vs `17` resolved dependencies) across the full transitive graph spanning `combine-schedulers`, `swift-clocks`, `swift-concurrency-extras`, `swift-syntax`, and sibling Point-Free packages, with safer root-package identity that leaves the local-path root PURL unset rather than minting ScanCode's namespace-less, spec-invalid `pkg:swift/swift-dependencies`; the exact deplock is archived as a fixture at [`testdata/swift/benchmark-swift-dependencies-1.9.4/swift-show-dependencies.deplock`](../testdata/swift/benchmark-swift-dependencies-1.9.4/swift-show-dependencies.deplock) (see the co-located `SOURCE.md`)
 
 #### Legacy NuGet manifest sets
 
