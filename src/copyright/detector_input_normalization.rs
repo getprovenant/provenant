@@ -70,16 +70,18 @@ fn has_split_obfuscated_email_continuation_candidate(content: &str) -> bool {
 /// tld)` span and the parser leaks the first token (e.g. `chris`) into the
 /// holder. Folding the parenthetical back onto the preceding line restores the
 /// single-line behavior, which already recovers the clean holder.
-fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str) -> Cow<'a, str> {
-    // Conservative: the previous line carries a copyright marker, and the
-    // continuation line is solely a comment-prefixed `(... at ... dot ...)`.
-    static SPLIT_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(
-            r"(?im)(?P<head>^.*\bcopyright\b.*[A-Za-z])[ \t]*\r?\n[ \t]*(?:[/*#;]+[ \t]*)?(?P<email>\([^()\n]*\bat\b[^()\n]*\bdot\b[^()\n]*\))[ \t]*$",
-        )
-        .unwrap()
-    });
+// Conservative: the previous line carries a copyright marker, and the
+// continuation line is solely a comment-prefixed `(... at ... dot ...)`.
+// Module-scoped (not function-local) so the prefilter-superset invariant can be
+// verified in tests by driving this regex directly.
+static SPLIT_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?im)(?P<head>^.*\bcopyright\b.*[A-Za-z])[ \t]*\r?\n[ \t]*(?:[/*#;]+[ \t]*)?(?P<email>\([^()\n]*\bat\b[^()\n]*\bdot\b[^()\n]*\))[ \t]*$",
+    )
+    .unwrap()
+});
 
+fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str) -> Cow<'a, str> {
     // Cheap, allocation-free necessary-condition gate before the multiline
     // PikeVM scan. The regex can only match when a line carrying a `copyright`
     // marker is immediately followed by a comment-style obfuscated-email
@@ -215,20 +217,23 @@ mod tests {
 
     #[test]
     fn prefilter_is_a_superset_of_the_regex() {
-        // For every input the regex matches, the prefilter must also accept it.
+        // The prefilter gates the expensive regex, so it must accept every input
+        // the regex would match (a strict superset) or real matches get dropped.
+        // Drive SPLIT_EMAIL_RE directly rather than through the gated function:
+        // a prefilter false negative then fails this test instead of silently
+        // making the observed "match" false (which would make the test
+        // tautological).
         let inputs = [
             "// Copyright (c) 1999 Foo Bar\n// (foo at bar dot com)\n",
             "/* Copyright 2010 Baz */\n/* (baz at baz dot net) */\n",
             "# Copyright Qux\n# (qux at qux dot io)\n",
+            "Copyright X\n;(y at z dot q)\n",
+            "  Copyright Z  \n  (a at b dot c)  \n",
             "no marker here\n(a at b dot c)\n",
             "Copyright but no email next\nplain text\n",
         ];
         for input in inputs {
-            let regex_matches = matches!(
-                normalize_split_obfuscated_email_continuation(input),
-                Cow::Owned(_)
-            );
-            if regex_matches {
+            if SPLIT_EMAIL_RE.is_match(input) {
                 assert!(
                     has_split_obfuscated_email_continuation_candidate(input),
                     "prefilter must accept every regex match: {input:?}"
