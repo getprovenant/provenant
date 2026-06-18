@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **14.4× median speedup** and **14.3× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **14.5× median speedup** and **14.5× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -213,11 +213,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `10.77s`; ScanCode `135.33s`
 - Broader dependency extraction (`796` vs `718`) and slightly broader package visibility (`53` vs `52`) from `environment.yml`, `.gitmodules`, and committed wheel artifacts, with extension-qualified wheel PURLs, richer patch-header author recovery, and the fuller `Pyodide contributors and Mozilla` documentation notice
 
-##### [python/cpython @ 7a468a1](https://github.com/python/cpython/tree/7a468a101268d2b13105f94ae027df8b502d0c87) — **44.49× faster**
+##### [python/cpython @ 7a468a1](https://github.com/python/cpython/tree/7a468a101268d2b13105f94ae027df8b502d0c87) — **70.74× faster**
 
 - Files: 5,627
-- Run context: 2026-06-03 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `27.46s`; ScanCode `1221.65s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `17.27s`; ScanCode `1221.65s`
 - Direct PEP 751 `Doc/pylock.toml` package visibility with 29 pinned PyPI documentation dependencies where ScanCode leaves the lockfile dependency-blind, plus cleaner FTP documentation URL extraction that keeps real FTP hosts while rejecting `ftp.*` method and member references
 
 ##### [python-poetry/poetry @ bfce511](https://github.com/python-poetry/poetry/tree/bfce5118814fa95445e823cb07a59bd77ffe1474) — **14.8× faster**
@@ -450,11 +450,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.59s`; ScanCode `93.41s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and cleaner package-author normalization in `package.json`
 
-##### [triggerdotdev/trigger.dev @ d1f4302](https://github.com/triggerdotdev/trigger.dev/tree/d1f430247e8a70a28e6c71a19fee5d0a7b5eccbf) — **28.86× faster**
+##### [triggerdotdev/trigger.dev @ d1f4302](https://github.com/triggerdotdev/trigger.dev/tree/d1f430247e8a70a28e6c71a19fee5d0a7b5eccbf) — **42.62× faster**
 
 - Files: 4,169
-- Run context: 2026-06-03 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `11.71s`; ScanCode `337.98s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.93s`; ScanCode `337.98s`
 - Broader pnpm/npm workspace and Helm coverage (`45` vs `39` packages, `6971` vs `6689` dependencies) from the root `pnpm-lock.yaml`, nested fixture lockfiles, workspace member manifests, `.gitmodules`, and `hosting/k8s/helm/Chart.yaml`, while private pnpm workspace root cleanup intentionally avoids a redundant root package row and remaining Yarn patch protocol deltas are representation differences rather than missing dependency evidence
 
 ##### [vercel/next.js @ 8e5a36f](https://github.com/vercel/next.js/tree/8e5a36f6347528d8968da97262f372f908897bac) — **20.68× faster**
@@ -615,11 +615,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `15.37s`; ScanCode `200.37s`
 - Cleaner URL and copyright normalization across Boost metadata files, preserving the real `http://www.boost.org/` target while dropping ScanCode's broken pseudo-URL variant in `example/boost_web.dat`, plus Unicode-preserving `René Ferdinand Rivera Morell` handling on `build.jam` and top-level `.gitattributes` visibility in the final output
 
-##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **11.09× faster**
+##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **13.78× faster**
 
 - Files: 705
-- Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `14.54s`; ScanCode `161.21s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `11.70s`; ScanCode `161.21s`
 - Cleaner benchmark-corpus author extraction in `bench/data/gsoc-2018.json` and `bench/data/github_events.json`, replacing ScanCode junk such as `type' Person name' AadityaNair` and prose fragments with actual participant names while preserving Unicode identities like `Nils Jørgen Mittet`, plus Unicode-preserving holder normalization for `René Ferdinand Rivera Morell` on build metadata
 
 ##### [boostorg/serialization @ 097a6c6](https://github.com/boostorg/serialization/tree/097a6c63a137be836d663cdb27f2e6c803a4100b) — **14.30× faster**
@@ -643,11 +643,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `18.97s`; ScanCode `333.52s`
 - More correct root Autotools package identity on `configure.ac` instead of ScanCode's generic input placeholder, plus cleaner holder normalization on `include/asio.hpp` and the Oliver Kowalke C++ notice set; the remaining ScanCode edge is limited to two multiline continuation headers and a small Perl author/copyright-email-tail set
 
-##### [chuckha/crispy-tribble @ 20479cf](https://github.com/chuckha/crispy-tribble/tree/20479cfe45a694ee4fababd635f1bd8ebcb44ed3) — **13.28× faster**
+##### [chuckha/crispy-tribble @ 20479cf](https://github.com/chuckha/crispy-tribble/tree/20479cfe45a694ee4fababd635f1bd8ebcb44ed3) — **19.28× faster**
 
 - Files: 471
-- Run context: 2026-06-03 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `9.32s`; ScanCode `123.76s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.42s`; ScanCode `123.76s`
 - Broader Go module graph dependency visibility (`117` vs `61` dependencies) from committed `go.mod.graph` while preserving matched package coverage (`10` vs `10`) across `go.mod`, `go.sum`, and vendored manifests, plus cleaner rejection of Go AUTHORS boilerplate and code-comment author/copyright fragments
 
 ##### [chromium/chromium @ 2befda7](https://github.com/chromium/chromium/tree/2befda78fcc7fa5649540420eedcdd87a2583fe0) — **23.90× faster**
@@ -748,11 +748,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `15.66s`; ScanCode `412.03s`
 - Broader package and dependency extraction from `flake.nix`, `flake.lock`, `Dockerfile`, and `uv.lock`, plus a correct root Go module identity on `go.mod` where ScanCode emits the malformed `pkg:golang/%28` package row, with remaining license deltas confined to generated `assets/go-licenses.json` inventory noise and README author prose
 
-##### [goharbor/harbor @ eb944bb](https://github.com/goharbor/harbor/tree/eb944bb199211d6ac76fb207cd2ef1bf33ec0030) — **14.31× faster**
+##### [goharbor/harbor @ eb944bb](https://github.com/goharbor/harbor/tree/eb944bb199211d6ac76fb207cd2ef1bf33ec0030) — **25.16× faster**
 
 - Files: 3,233
-- Run context: 2026-06-03 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `22.87s`; ScanCode `327.33s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `13.01s`; ScanCode `327.33s`
 - Broader package and dependency extraction (`5` vs `2` packages, `2972` vs `2407` dependencies) from committed Pipfile/Pipfile.lock, npm-family, Docker, and Go manifests, with local Go `replace` paths kept out of invalid PURLs, templated Conda YAML skipped instead of degraded into false metadata, and URL differences limited to normalization/truncation/canonicalization after review
 
 ##### [goharbor/harbor-helm @ 7233a81](https://github.com/goharbor/harbor-helm/tree/7233a81d24c891abc3fd83285ea8b91e2ab5522f) — **7.57× faster**
@@ -776,11 +776,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `27.87s`; ScanCode `563.43s`
 - Broader Debian source-package and dependency extraction (`23` vs `19` packages, `18` vs `0` dependencies) from the root multi-binary `debian/control` file plus committed `.dsc` fixtures, with explicit package visibility for `dpkg-dev`, `libdpkg-dev`, and `libdpkg-perl` and one extra top-level Autotools package on `configure.ac`
 
-##### [kubernetes/autoscaler @ 9045d28](https://github.com/kubernetes/autoscaler/tree/9045d287a3458d6ea7440c3dcf921806bc994224) — **20.46× faster**
+##### [kubernetes/autoscaler @ 9045d28](https://github.com/kubernetes/autoscaler/tree/9045d287a3458d6ea7440c3dcf921806bc994224) — **32.10× faster**
 
 - Files: 5,929
-- Run context: 2026-06-03 · macOS 26.5 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `36.39s`; ScanCode `744.62s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `23.20s`; ScanCode `744.62s`
 - Broader Go and Helm package visibility (`11` vs `8` packages, `3127` vs `2892` dependencies), including 165 dependencies from `addon-resizer/Godeps/Godeps.json` where ScanCode reports none, direct chart packages for `cluster-autoscaler` and `vertical-pod-autoscaler`, cleaner rejection of ScanCode malformed Go-version package rows such as `pkg:golang/v2.4.0`, and generic author cleanup for Markdown `Authors:` lines with trailing bare handles
 
 ##### [kubernetes/kubernetes @ d3b9c54](https://github.com/kubernetes/kubernetes/tree/d3b9c54bd952117924fb0790f6989c0d30715b19) — **16.19× faster**
@@ -804,11 +804,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.93s`; ScanCode `254.45s`
 - Broader mixed-repository dependency extraction (`12` vs `0`) from committed `script/api-docs/package.json` and `script/api-docs/package-lock.json`, while preserving top-level Autotools package parity (`1` vs `1`)
 
-##### [LinuxCNC/linuxcnc @ cd534c9](https://github.com/LinuxCNC/linuxcnc/tree/cd534c951aefa3c57ced93d84d1eec5aa5596672) — **10.15× faster**
+##### [LinuxCNC/linuxcnc @ cd534c9](https://github.com/LinuxCNC/linuxcnc/tree/cd534c951aefa3c57ced93d84d1eec5aa5596672) — **14.54× faster**
 
 - Files: 9,078
-- Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `163.61s`; ScanCode `1659.92s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `114.17s`; ScanCode `1659.92s`
 - Direct Meson package visibility on the root `meson.build` plus declared dependency extraction (`2` vs `0` packages, `2` vs `0` dependencies) for `boost` and `python2`, with Debian copyright metadata carrying a Debian namespace instead of an unqualified source-package row
 
 ##### [madler/zlib @ f9dd600](https://github.com/madler/zlib/tree/f9dd6009be3ed32415edf1e89d1bc38380ecb95d) — **12.06× faster**
@@ -1116,11 +1116,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `27.54s`; ScanCode `525.35s`
 - Broader .NET/NuGet package and dependency extraction (`162` vs `2` packages, `1161` vs `690` dependencies) across many `*.csproj` files, `Directory.Packages.props`, `Directory.Build.props`, and imported `eng/packages/*.props` / `Tests.props` / `Tools.props` central-version surfaces, with root and nested central package manifests carrying resolved package-version dependency metadata instead of empty imported-props placeholders
 
-##### [dotnet/fsharp @ f7be8d0](https://github.com/dotnet/fsharp/tree/f7be8d05a7e22ba1209e62363ee639d100df2488) — **26.48× faster**
+##### [dotnet/fsharp @ f7be8d0](https://github.com/dotnet/fsharp/tree/f7be8d05a7e22ba1209e62363ee639d100df2488) — **38.12× faster**
 
 - Files: 10,138
-- Run context: 2026-06-05 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `29.07s`; ScanCode `769.93s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `20.20s`; ScanCode `769.93s`
 - Broader .NET/NuGet package and dependency extraction (`111` vs `0` packages, `186` vs `0` dependencies) across `*.fsproj`, the `FSharp.ProjectSystem.PropertyPages.vbproj`, shipping `*.nuspec`, `*.csproj`, and `Directory.Build.props` surfaces that ScanCode leaves unassembled, plus matched dual `CC0-1.0 AND MIT` detection on the TaskBuilder-derived files where a public-domain dedication abuts the project-license reference, and cleaner rejection of F# quotation `(c)` code-fragment copyrights and holders, filename- and prose-shaped author noise, a placeholder email, and a malformed concatenated URL
 
 ##### [dotnet/runtime @ d1163e5](https://github.com/dotnet/runtime/tree/d1163e5a8f3f3aaa374993e8b5805911689aba28) — **31.49× faster**
