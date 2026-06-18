@@ -5,7 +5,7 @@ use crate::models::{DatasourceId, PackageType};
 use std::path::PathBuf;
 
 use super::PackageParser;
-use super::vcpkg::VcpkgManifestParser;
+use super::vcpkg::{VcpkgLockParser, VcpkgManifestParser};
 
 #[test]
 fn test_vcpkg_manifest_is_match() {
@@ -14,6 +14,19 @@ fn test_vcpkg_manifest_is_match() {
     )));
     assert!(!VcpkgManifestParser::is_match(&PathBuf::from(
         "/tmp/vcpkg-configuration.json"
+    )));
+    assert!(!VcpkgManifestParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg-lock.json"
+    )));
+}
+
+#[test]
+fn test_vcpkg_lock_is_match() {
+    assert!(VcpkgLockParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg-lock.json"
+    )));
+    assert!(!VcpkgLockParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg.json"
     )));
 }
 
@@ -179,6 +192,68 @@ fn test_invalid_vcpkg_manifest_returns_default_package() {
     assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgJson));
     assert!(pkg.name.is_none());
     assert!(pkg.dependencies.is_empty());
+}
+
+#[test]
+fn test_parse_vcpkg_lock_preserves_registry_revisions() {
+    let path = PathBuf::from("testdata/vcpkg/lock/vcpkg-lock.json");
+    let pkg = VcpkgLockParser::extract_first_package(&path);
+
+    assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
+    assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgLockJson));
+    assert!(pkg.name.is_none());
+    assert!(pkg.version.is_none());
+    assert!(pkg.purl.is_none());
+    assert!(pkg.dependencies.is_empty());
+
+    let extra = pkg.extra_data.as_ref().expect("extra_data should exist");
+    let registry_locks = extra
+        .get("registry_locks")
+        .and_then(serde_json::Value::as_array)
+        .expect("registry_locks should be an array");
+    assert_eq!(registry_locks.len(), 2);
+
+    let microsoft_registry = registry_locks
+        .iter()
+        .find(|entry| {
+            entry.get("repository").and_then(serde_json::Value::as_str)
+                == Some("https://github.com/microsoft/vcpkg")
+        })
+        .expect("expected microsoft/vcpkg registry lock");
+    assert_eq!(
+        microsoft_registry["references"]["HEAD"],
+        serde_json::json!("0123456789abcdef0123456789abcdef01234567")
+    );
+    assert_eq!(
+        microsoft_registry["references"]["release/2024.02"],
+        serde_json::json!("89abcdef0123456789abcdef0123456789abcdef")
+    );
+
+    let local_registry = registry_locks
+        .iter()
+        .find(|entry| {
+            entry.get("repository").and_then(serde_json::Value::as_str)
+                == Some("/opt/private-vcpkg-registry")
+        })
+        .expect("expected local registry lock");
+    assert_eq!(
+        local_registry["references"]["HEAD"],
+        serde_json::json!("fedcba9876543210fedcba9876543210fedcba98")
+    );
+}
+
+#[test]
+fn test_invalid_vcpkg_lock_returns_default_package() {
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let path = temp_dir.path().join("vcpkg-lock.json");
+    std::fs::write(&path, "{ invalid json }").expect("Failed to write invalid vcpkg-lock.json");
+
+    let pkg = VcpkgLockParser::extract_first_package(&path);
+
+    assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
+    assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgLockJson));
+    assert!(pkg.name.is_none());
+    assert!(pkg.extra_data.is_none());
 }
 
 #[test]

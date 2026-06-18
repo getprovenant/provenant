@@ -1,0 +1,26 @@
+[
+  {
+    "type": "vcpkg",
+    "primary_language": "C++",
+    "parties": [],
+    "extra_data": {
+      "registry_locks": [
+        {
+          "repository": "https://github.com/microsoft/vcpkg",
+          "references": {
+            "HEAD": "0123456789abcdef0123456789abcdef01234567",
+            "release/2024.02": "89abcdef0123456789abcdef0123456789abcdef"
+          }
+        },
+        {
+          "repository": "/opt/private-vcpkg-registry",
+          "references": {
+            "HEAD": "fedcba9876543210fedcba9876543210fedcba98"
+          }
+        }
+      ]
+    },
+    "dependencies": [],
+    "datasource_id": "vcpkg_lock_json"
+  }
+]

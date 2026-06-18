@@ -63,4 +63,30 @@ mod tests {
         );
         assert!(!package.license_detections.is_empty());
     }
+
+    #[test]
+    fn test_vcpkg_lock_scan_remains_unassembled_and_preserves_registry_locks() {
+        let (files, result) = scan_and_assemble(Path::new("testdata/vcpkg/lock"));
+
+        assert!(result.packages.is_empty());
+        let lockfile = files
+            .iter()
+            .find(|file| file.path.ends_with("/vcpkg-lock.json"))
+            .expect("vcpkg-lock.json should be scanned");
+        assert!(lockfile.for_packages.is_empty());
+
+        let package = lockfile
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgLockJson))
+            .expect("vcpkg lock package data should be present");
+        let registry_locks = package
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("registry_locks"))
+            .and_then(serde_json::Value::as_array)
+            .expect("registry_locks should be preserved");
+
+        assert_eq!(registry_locks.len(), 2);
+    }
 }
