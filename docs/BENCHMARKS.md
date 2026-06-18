@@ -1420,7 +1420,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `10.09s`; ScanCode `75.84s`
-- Matched standalone Alpine installed-db package and license coverage on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata; reproduce the target by extracting `lib/apk/db/installed` from the immutable `alpine-minirootfs-3.23.3-x86_64.tar.gz` (`tar -xzf alpine-minirootfs-3.23.3-x86_64.tar.gz lib/apk/db/installed`)
+- Matched standalone Alpine installed-db package and license coverage on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata; the exact single-file input is archived as a fixture at [`testdata/alpine/benchmark-minirootfs-3.23.3/installed`](../testdata/alpine/benchmark-minirootfs-3.23.3/installed) (extracted via `tar -xzf alpine-minirootfs-3.23.3-x86_64.tar.gz lib/apk/db/installed` from the immutable release tarball)
 
 ##### [debian:bookworm-slim dpkg DB snapshot @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **8.45× faster**
 
@@ -1457,7 +1457,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `10.06s`; ScanCode `80.82s`
-- Direct Alpine archive package visibility on the shipped `.apk` (`1` vs `1` file-level package records), with a concrete `pkg:alpine/7zip@25.01-r0?arch=x86_64` identity instead of ScanCode's weaker generic package-data row
+- Direct Alpine archive package visibility on the shipped `.apk` (`1` vs `1` file-level package records), with a concrete `pkg:alpine/7zip@25.01-r0?arch=x86_64` identity instead of ScanCode's weaker generic package-data row; because Alpine's `v3.23/main` keeps only the current build per branch, the exact `25.01-r0` bytes are archived as a fixture at [`testdata/alpine/apk/7zip-25.01-r0/7zip-25.01-r0.apk`](../testdata/alpine/apk/7zip-25.01-r0/7zip-25.01-r0.apk)
 
 ##### [bash 5.2.15-2+b10 .deb @ sha256:be3ab2f](https://snapshot.debian.org/package/bash/5.2.15-2/) — **3.02× faster**
 
