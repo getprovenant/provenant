@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **14.6× median speedup** and **14.6× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
+> Provenant is faster on 219 of 219 recorded runs, with a **14.6× median speedup** and **14.6× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1581,13 +1581,6 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `8.76s`; ScanCode `42.90s`
 - Matched NSIS installer plus Windows PE package visibility (`2` vs `2` file-level package records), with a concrete `pkg:winexe/nsis-3.12-setup@3.12` identity on the executable metadata record and cleaner rejection of ScanCode's spurious `LicenseRef-scancode-unknown` license inferred only from the `LegalCopyright` URL
-
-##### [WSUS wsusscn2 extracted snapshot](https://support.microsoft.com/en-us/topic/a-new-version-of-the-windows-update-offline-scan-file-wsusscn2-cab-is-available-for-advanced-users-fe433f4d-44f4-28e3-88c5-5b22329c0a08) — **10.04× faster**
-
-- Files: 75
-- Run context: 2026-04-24 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `62.51s`; ScanCode `627.66s`
-- Equivalent package visibility on the outer offline-scan snapshot (`0` vs `0` packages), with far cleaner rejection of random CAB-byte email noise (`0` vs `9`) while scanning the signed index-plus-CAB bundle
 
 #### Generated dependency lock manifests
 

@@ -188,9 +188,6 @@ ScanCode: 44.14s</title></rect>
     <rect x="387.65" y="448.50" width="8" height="8" fill="#d97706" rx="1.5"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
 Files: 73
 ScanCode: 44.65s</title></rect>
-    <rect x="389.51" y="323.61" width="8" height="8" fill="#d97706" rx="1.5"><title>WSUS wsusscn2 extracted snapshot
-Files: 75
-ScanCode: 627.66s</title></rect>
     <rect x="393.09" y="445.73" width="8" height="8" fill="#d97706" rx="1.5"><title>Mantle/Mantle @ 2a8e212
 Files: 79
 ScanCode: 47.35s</title></rect>
@@ -850,9 +847,6 @@ Provenant: 4.65s</title></circle>
     <circle cx="391.65" cy="540.73" r="4.5" fill="#2563eb"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
 Files: 73
 Provenant: 6.90s</title></circle>
-    <circle cx="393.51" cy="436.60" r="4.5" fill="#2563eb"><title>WSUS wsusscn2 extracted snapshot
-Files: 75
-Provenant: 62.51s</title></circle>
     <circle cx="397.09" cy="557.29" r="4.5" fill="#2563eb"><title>Mantle/Mantle @ 2a8e212
 Files: 79
 Provenant: 4.86s</title></circle>
