@@ -25,6 +25,42 @@ pub(super) fn maybe_expand_copyrighted_by_href_urls<'a>(content: &'a str) -> Cow
     Cow::Owned(HREF_HTTP_RE.replace_all(content, " ${url} ").into_owned())
 }
 
+/// Case-insensitive ASCII substring search without allocation.
+fn contains_ascii_ci(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    haystack
+        .windows(needle.len())
+        .any(|window| window.eq_ignore_ascii_case(needle))
+}
+
+/// Necessary-condition prefilter for [`normalize_split_obfuscated_email_continuation`].
+///
+/// Returns `true` only if some line carries a `copyright` marker and the
+/// immediately following line contains an obfuscated-email parenthetical shape
+/// (`(`, `at`, `dot`). This is a strict superset of the regex's matches, so
+/// gating on it never drops a real match; it only avoids the expensive
+/// whole-file multiline regex scan when no candidate adjacency exists.
+fn has_split_obfuscated_email_continuation_candidate(content: &str) -> bool {
+    let mut prev_has_copyright = false;
+    for line in content.lines() {
+        let bytes = line.as_bytes();
+        if prev_has_copyright
+            && bytes.contains(&b'(')
+            && contains_ascii_ci(bytes, b"at")
+            && contains_ascii_ci(bytes, b"dot")
+        {
+            return true;
+        }
+        prev_has_copyright = contains_ascii_ci(bytes, b"copyright");
+    }
+    false
+}
+
 /// Join a copyright/name line with a following comment line whose only payload
 /// is an obfuscated-email parenthetical such as `(chris at kohlhoff dot com)`.
 ///
@@ -34,18 +70,27 @@ pub(super) fn maybe_expand_copyrighted_by_href_urls<'a>(content: &'a str) -> Cow
 /// tld)` span and the parser leaks the first token (e.g. `chris`) into the
 /// holder. Folding the parenthetical back onto the preceding line restores the
 /// single-line behavior, which already recovers the clean holder.
-fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str) -> Cow<'a, str> {
-    // Conservative: the previous line carries a copyright marker, and the
-    // continuation line is solely a comment-prefixed `(... at ... dot ...)`.
-    static SPLIT_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(
-            r"(?im)(?P<head>^.*\bcopyright\b.*[A-Za-z])[ \t]*\r?\n[ \t]*(?:[/*#;]+[ \t]*)?(?P<email>\([^()\n]*\bat\b[^()\n]*\bdot\b[^()\n]*\))[ \t]*$",
-        )
-        .unwrap()
-    });
+// Conservative: the previous line carries a copyright marker, and the
+// continuation line is solely a comment-prefixed `(... at ... dot ...)`.
+// Module-scoped (not function-local) so the prefilter-superset invariant can be
+// verified in tests by driving this regex directly.
+static SPLIT_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?im)(?P<head>^.*\bcopyright\b.*[A-Za-z])[ \t]*\r?\n[ \t]*(?:[/*#;]+[ \t]*)?(?P<email>\([^()\n]*\bat\b[^()\n]*\bdot\b[^()\n]*\))[ \t]*$",
+    )
+    .unwrap()
+});
 
-    let lower = content.to_ascii_lowercase();
-    if !lower.contains("copyright") || !lower.contains(" at ") || !lower.contains(" dot ") {
+fn normalize_split_obfuscated_email_continuation<'a>(content: &'a str) -> Cow<'a, str> {
+    // Cheap, allocation-free necessary-condition gate before the multiline
+    // PikeVM scan. The regex can only match when a line carrying a `copyright`
+    // marker is immediately followed by a comment-style obfuscated-email
+    // parenthetical such as `(name at host dot tld)`. Confirming that adjacency
+    // with byte scans first avoids lowercasing and PikeVM-scanning entire
+    // multi-megabyte files (e.g. gettext catalogs) that merely happen to mention
+    // "copyright", "at" and "dot" in unrelated places. This is a strict superset
+    // of the regex's matches, so the detector output is unchanged.
+    if !has_split_obfuscated_email_continuation_candidate(content) {
         return Cow::Borrowed(content);
     }
     if !SPLIT_EMAIL_RE.is_match(content) {
@@ -133,5 +178,67 @@ mod tests {
             normalize_split_obfuscated_email_continuation(input),
             Cow::Borrowed(_)
         ));
+    }
+
+    #[test]
+    fn prefilter_accepts_real_continuation_shapes() {
+        // The cheap prefilter must not reject inputs the regex would match.
+        for input in [
+            "// Copyright (c) 2003-2008 Christopher M. Kohlhoff\n// (chris at kohlhoff dot com)\n",
+            " * Copyright (c) 2003-2008 Christopher M. Kohlhoff\n * (chris at kohlhoff dot com)\n",
+            "Copyright 2020 ACME\n(jane AT example DOT org)\n",
+        ] {
+            assert!(
+                has_split_obfuscated_email_continuation_candidate(input),
+                "prefilter rejected a real candidate: {input:?}"
+            );
+            assert!(matches!(
+                normalize_split_obfuscated_email_continuation(input),
+                Cow::Owned(_)
+            ));
+        }
+    }
+
+    #[test]
+    fn prefilter_rejects_non_adjacent_or_missing_markers() {
+        // No copyright marker on the preceding line.
+        assert!(!has_split_obfuscated_email_continuation_candidate(
+            "// Some heading\n// (chris at kohlhoff dot com)\n"
+        ));
+        // Marker and parenthetical present but not on adjacent lines.
+        assert!(!has_split_obfuscated_email_continuation_candidate(
+            "Copyright 2020 ACME\nfiller line\n(chris at kohlhoff dot com)\n"
+        ));
+        // Bulk text that merely mentions the trigger words in scattered places.
+        assert!(!has_split_obfuscated_email_continuation_candidate(
+            "look at the cat\nthe dog ran\nCopyright notice text\nplain tail line\n"
+        ));
+    }
+
+    #[test]
+    fn prefilter_is_a_superset_of_the_regex() {
+        // The prefilter gates the expensive regex, so it must accept every input
+        // the regex would match (a strict superset) or real matches get dropped.
+        // Drive SPLIT_EMAIL_RE directly rather than through the gated function:
+        // a prefilter false negative then fails this test instead of silently
+        // making the observed "match" false (which would make the test
+        // tautological).
+        let inputs = [
+            "// Copyright (c) 1999 Foo Bar\n// (foo at bar dot com)\n",
+            "/* Copyright 2010 Baz */\n/* (baz at baz dot net) */\n",
+            "# Copyright Qux\n# (qux at qux dot io)\n",
+            "Copyright X\n;(y at z dot q)\n",
+            "  Copyright Z  \n  (a at b dot c)  \n",
+            "no marker here\n(a at b dot c)\n",
+            "Copyright but no email next\nplain text\n",
+        ];
+        for input in inputs {
+            if SPLIT_EMAIL_RE.is_match(input) {
+                assert!(
+                    has_split_obfuscated_email_continuation_candidate(input),
+                    "prefilter must accept every regex match: {input:?}"
+                );
+            }
+        }
     }
 }
