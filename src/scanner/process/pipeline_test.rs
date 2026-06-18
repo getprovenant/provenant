@@ -450,3 +450,67 @@ fn test_process_file_detects_versioned_project_banner_on_minified_js() {
         file_info.holders
     );
 }
+
+#[test]
+fn test_process_file_drops_license_prose_parties_but_keeps_real_notice() {
+    use crate::license_detection::LicenseDetectionEngine;
+    use std::sync::Arc;
+
+    // A real BSD-original license body: the year-bearing copyright/holder notice
+    // sits above the matched license-text region, while the advertising-clause
+    // "...and its contributors" author is license prose inside the region.
+    let path = Path::new("testdata/license-golden/datadriven/lic2/bsd-original_1.txt");
+    assert!(path.exists(), "fixture missing: {}", path.display());
+
+    let engine =
+        Arc::new(LicenseDetectionEngine::from_embedded().expect("embedded engine should load"));
+    let metadata = fs::metadata(path).expect("metadata");
+    let progress = ScanProgress::new(ProgressMode::Quiet);
+
+    let file_info = process_file(
+        path,
+        &metadata,
+        &progress,
+        Some(engine),
+        LicenseScanOptions::default(),
+        &TextDetectionOptions::default(),
+    );
+
+    // License detection itself is unaffected.
+    assert!(
+        file_info
+            .license_detections
+            .iter()
+            .any(|d| d.license_expression.contains("bsd")),
+        "license detection should still fire: {:?}",
+        file_info.license_detections,
+    );
+    // The genuine, year-bearing copyright notice and holder survive, even though
+    // a license-text region was detected in the same file.
+    assert!(
+        file_info
+            .copyrights
+            .iter()
+            .any(|c| c.copyright.contains("Kungliga")),
+        "real notice dropped: {:?}",
+        file_info.copyrights,
+    );
+    assert!(
+        file_info
+            .holders
+            .iter()
+            .any(|h| h.holder.contains("Kungliga")),
+        "real holder dropped: {:?}",
+        file_info.holders,
+    );
+    // The advertising-clause author fragment is license prose inside the region
+    // and carries no year, so it is suppressed.
+    assert!(
+        !file_info
+            .authors
+            .iter()
+            .any(|a| a.author.contains("and its contributors")),
+        "license-prose author not suppressed: {:?}",
+        file_info.authors,
+    );
+}

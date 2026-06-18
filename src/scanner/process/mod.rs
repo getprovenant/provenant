@@ -6,6 +6,7 @@ mod contacts;
 mod copyright;
 mod file_scan_error;
 mod license;
+mod license_region_filter;
 mod orchestrator;
 mod pipeline;
 mod special_cases;

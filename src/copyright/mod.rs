@@ -29,6 +29,7 @@ mod types;
 
 pub use credits::{detect_credits_authors, is_credits_file};
 pub(crate) use prepare::prepare_text_line;
+pub(crate) use refiner::has_copyright_year;
 pub(crate) use refiner::looks_like_source_code;
 pub(crate) use refiner::refine_author;
 pub use refiner::refine_copyright;
