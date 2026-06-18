@@ -71,7 +71,7 @@ ScanCode: 80.82s</title></rect>
     <rect x="92.00" y="423.47" width="8" height="8" fill="#d97706" rx="1.5"><title>Alpine 3.23.3 installed DB snapshot @ sha256:42d0e6d
 Files: 1
 ScanCode: 75.84s</title></rect>
-    <rect x="92.00" y="425.26" width="8" height="8" fill="#d97706" rx="1.5"><title>Firefox Multi-Account Containers 8.3.7 .xpi
+    <rect x="92.00" y="425.26" width="8" height="8" fill="#d97706" rx="1.5"><title>Firefox Multi-Account Containers 8.3.7 .xpi @ sha256:7f6f5ef
 Files: 1
 ScanCode: 73.02s</title></rect>
     <rect x="92.00" y="424.52" width="8" height="8" fill="#d97706" rx="1.5"><title>Firefox langpack en-GB 141.0.2 .xpi
@@ -143,9 +143,6 @@ ScanCode: 73.20s</title></rect>
     <rect x="257.23" y="449.34" width="8" height="8" fill="#d97706" rx="1.5"><title>Amanieu/atomic-rs @ 44c213a
 Files: 11
 ScanCode: 43.86s</title></rect>
-    <rect x="257.23" y="327.58" width="8" height="8" fill="#d97706" rx="1.5"><title>Windows 10 KB5049993 cumulative update extracted snapshot
-Files: 11
-ScanCode: 577.11s</title></rect>
     <rect x="263.23" y="453.39" width="8" height="8" fill="#d97706" rx="1.5"><title>archlinux/packaging/packages/pacman @ 4ee8983
 Files: 12
 ScanCode: 40.26s</title></rect>
@@ -191,9 +188,6 @@ ScanCode: 44.14s</title></rect>
     <rect x="387.65" y="448.50" width="8" height="8" fill="#d97706" rx="1.5"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
 Files: 73
 ScanCode: 44.65s</title></rect>
-    <rect x="389.51" y="323.61" width="8" height="8" fill="#d97706" rx="1.5"><title>WSUS wsusscn2 extracted snapshot
-Files: 75
-ScanCode: 627.66s</title></rect>
     <rect x="393.09" y="445.73" width="8" height="8" fill="#d97706" rx="1.5"><title>Mantle/Mantle @ 2a8e212
 Files: 79
 ScanCode: 47.35s</title></rect>
@@ -341,9 +335,6 @@ ScanCode: 219.94s</title></rect>
     <rect x="531.64" y="376.71" width="8" height="8" fill="#d97706" rx="1.5"><title>i18next/react-i18next @ cb20d18
 Files: 590
 ScanCode: 204.00s</title></rect>
-    <rect x="532.45" y="403.78" width="8" height="8" fill="#d97706" rx="1.5"><title>Windows 10 KB5050109 servicing stack update extracted snapshot
-Files: 597
-ScanCode: 115.03s</title></rect>
     <rect x="534.61" y="385.27" width="8" height="8" fill="#d97706" rx="1.5"><title>iTowns/itowns @ 08e08f5
 Files: 616
 ScanCode: 170.19s</title></rect>
@@ -739,7 +730,7 @@ Provenant: 10.06s</title></circle>
     <circle cx="96.00" cy="522.78" r="4.5" fill="#2563eb"><title>Alpine 3.23.3 installed DB snapshot @ sha256:42d0e6d
 Files: 1
 Provenant: 10.09s</title></circle>
-    <circle cx="96.00" cy="522.68" r="4.5" fill="#2563eb"><title>Firefox Multi-Account Containers 8.3.7 .xpi
+    <circle cx="96.00" cy="522.68" r="4.5" fill="#2563eb"><title>Firefox Multi-Account Containers 8.3.7 .xpi @ sha256:7f6f5ef
 Files: 1
 Provenant: 10.11s</title></circle>
     <circle cx="96.00" cy="521.94" r="4.5" fill="#2563eb"><title>Firefox langpack en-GB 141.0.2 .xpi
@@ -811,9 +802,6 @@ Provenant: 10.27s</title></circle>
     <circle cx="261.23" cy="558.78" r="4.5" fill="#2563eb"><title>Amanieu/atomic-rs @ 44c213a
 Files: 11
 Provenant: 4.71s</title></circle>
-    <circle cx="261.23" cy="400.68" r="4.5" fill="#2563eb"><title>Windows 10 KB5049993 cumulative update extracted snapshot
-Files: 11
-Provenant: 133.69s</title></circle>
     <circle cx="267.23" cy="559.38" r="4.5" fill="#2563eb"><title>archlinux/packaging/packages/pacman @ 4ee8983
 Files: 12
 Provenant: 4.65s</title></circle>
@@ -859,9 +847,6 @@ Provenant: 4.65s</title></circle>
     <circle cx="391.65" cy="540.73" r="4.5" fill="#2563eb"><title>hello-world multi-arch OCI image layout @ sha256:ec15384
 Files: 73
 Provenant: 6.90s</title></circle>
-    <circle cx="393.51" cy="436.60" r="4.5" fill="#2563eb"><title>WSUS wsusscn2 extracted snapshot
-Files: 75
-Provenant: 62.51s</title></circle>
     <circle cx="397.09" cy="557.29" r="4.5" fill="#2563eb"><title>Mantle/Mantle @ 2a8e212
 Files: 79
 Provenant: 4.86s</title></circle>
@@ -1009,9 +994,6 @@ Provenant: 14.57s</title></circle>
     <circle cx="535.64" cy="504.61" r="4.5" fill="#2563eb"><title>i18next/react-i18next @ cb20d18
 Files: 590
 Provenant: 14.82s</title></circle>
-    <circle cx="536.45" cy="513.77" r="4.5" fill="#2563eb"><title>Windows 10 KB5050109 servicing stack update extracted snapshot
-Files: 597
-Provenant: 12.21s</title></circle>
     <circle cx="538.61" cy="512.54" r="4.5" fill="#2563eb"><title>iTowns/itowns @ 08e08f5
 Files: 616
 Provenant: 12.53s</title></circle>
