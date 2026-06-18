@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Map, Value, json};
 
 use crate::compare_normalization::{
     normalize_compare_path, normalize_license_expression, normalize_text,
@@ -730,6 +730,135 @@ pub fn tsv_row(
     ]
 }
 
+/// Maximum number of values retained per field/direction in the cross-file
+/// frequency rollup. The rollup is a triage aid, so a bounded top-N keeps the
+/// artifact readable while still surfacing the systematic patterns.
+pub const FIELD_VALUE_FREQUENCY_TOP_N: usize = 50;
+
+#[derive(Debug, Serialize, Clone)]
+pub struct FieldValueFrequencyEntry {
+    pub value: String,
+    /// Total occurrences of this value summed across every common-path file.
+    pub total_count: usize,
+    /// Number of distinct files contributing at least one occurrence.
+    pub file_count: usize,
+}
+
+#[derive(Debug, Serialize, Clone, Default)]
+pub struct FieldValueFrequencyDirections {
+    /// Values present only in Provenant output (PV-only).
+    pub extra_in_provenant: Vec<FieldValueFrequencyEntry>,
+    /// Values present only in ScanCode output (SC-only).
+    pub extra_in_scancode: Vec<FieldValueFrequencyEntry>,
+}
+
+/// Roll the per-file value-level diffs up into a cross-file, frequency-ranked
+/// view so systematic patterns become visible (e.g. one author value appearing
+/// hundreds of times across files instead of as scattered one-count entries).
+///
+/// This is a pure aggregation of `value_differences`, which both compare drivers
+/// already compute per file. It is a neutral diagnostic only: PV-only values are
+/// not necessarily junk (much is legitimate source-faithful or richer output),
+/// so the rollup is framed by direction and never feeds pass/fail or signal
+/// counts.
+pub fn field_value_frequency_rollup(
+    value_differences: &BTreeMap<String, Vec<ValueDifferenceEntry>>,
+    top_n: usize,
+) -> BTreeMap<String, FieldValueFrequencyDirections> {
+    value_differences
+        .iter()
+        .map(|(field, entries)| {
+            let pv_only = aggregate_direction(entries, |entry| &entry.extra_in_provenant, top_n);
+            let sc_only = aggregate_direction(entries, |entry| &entry.missing_in_provenant, top_n);
+            (
+                field.clone(),
+                FieldValueFrequencyDirections {
+                    extra_in_provenant: pv_only,
+                    extra_in_scancode: sc_only,
+                },
+            )
+        })
+        .collect()
+}
+
+fn aggregate_direction(
+    entries: &[ValueDifferenceEntry],
+    select: impl Fn(&ValueDifferenceEntry) -> &Vec<ValueCountEntry>,
+    top_n: usize,
+) -> Vec<FieldValueFrequencyEntry> {
+    let mut totals: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+    for entry in entries {
+        for value_count in select(entry) {
+            let slot = totals.entry(value_count.value.clone()).or_insert((0, 0));
+            slot.0 += value_count.count;
+            slot.1 += 1;
+        }
+    }
+    let mut ranked: Vec<FieldValueFrequencyEntry> = totals
+        .into_iter()
+        .map(
+            |(value, (total_count, file_count))| FieldValueFrequencyEntry {
+                value,
+                total_count,
+                file_count,
+            },
+        )
+        .collect();
+    // Sort by total count descending, then by value ascending for a stable,
+    // deterministic order across runs. Starting from a BTreeMap keeps the
+    // by-value tie-break deterministic regardless of input ordering.
+    ranked.sort_by(|a, b| {
+        b.total_count
+            .cmp(&a.total_count)
+            .then_with(|| a.value.cmp(&b.value))
+    });
+    ranked.truncate(top_n);
+    ranked
+}
+
+/// How many top values per field/direction to surface inline in `summary.json`.
+/// The standalone samples file carries the full top-N; this is just a glanceable
+/// preview. A field with values in only one direction still appears, with the
+/// empty direction rendered as `[]`; only fields empty in both directions are
+/// omitted.
+pub const FIELD_VALUE_FREQUENCY_SUMMARY_TOP_N: usize = 5;
+
+pub fn field_value_frequency_summary(
+    rollup: &BTreeMap<String, FieldValueFrequencyDirections>,
+    top_n: usize,
+) -> Map<String, Value> {
+    let mut summary = Map::new();
+    for (field, directions) in rollup {
+        let pv_only = &directions.extra_in_provenant;
+        let sc_only = &directions.extra_in_scancode;
+        if pv_only.is_empty() && sc_only.is_empty() {
+            continue;
+        }
+        summary.insert(
+            field.clone(),
+            json!({
+                "extra_in_provenant": field_value_frequency_preview(pv_only, top_n),
+                "extra_in_scancode": field_value_frequency_preview(sc_only, top_n),
+            }),
+        );
+    }
+    summary
+}
+
+fn field_value_frequency_preview(entries: &[FieldValueFrequencyEntry], top_n: usize) -> Vec<Value> {
+    entries
+        .iter()
+        .take(top_n)
+        .map(|entry| {
+            json!({
+                "value": entry.value,
+                "total_count": entry.total_count,
+                "file_count": entry.file_count,
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -974,5 +1103,112 @@ mod tests {
         assert_eq!(tally.value_vs_value_mismatch, 1);
         assert_eq!(tally.missing_in_provenant, 0);
         assert_tally_reconciles(&tally, differences.len());
+    }
+
+    fn value_diff(
+        path: &str,
+        missing: &[(&str, usize)],
+        extra: &[(&str, usize)],
+    ) -> ValueDifferenceEntry {
+        let to_entries = |pairs: &[(&str, usize)]| {
+            pairs
+                .iter()
+                .map(|(value, count)| ValueCountEntry {
+                    value: (*value).to_string(),
+                    count: *count,
+                })
+                .collect::<Vec<_>>()
+        };
+        ValueDifferenceEntry {
+            path: path.to_string(),
+            scancode: 0,
+            provenant: 0,
+            missing_in_provenant: to_entries(missing),
+            extra_in_provenant: to_entries(extra),
+        }
+    }
+
+    #[test]
+    fn field_value_frequency_rollup_aggregates_counts_across_files() {
+        let mut value_differences: BTreeMap<String, Vec<ValueDifferenceEntry>> = BTreeMap::new();
+        value_differences.insert(
+            "authors".to_string(),
+            vec![
+                value_diff("a.rs", &[], &[("Adam Jacob", 2), ("rare", 1)]),
+                value_diff("b.rs", &[], &[("Adam Jacob", 1)]),
+                value_diff("c.rs", &[("Only In SC", 4)], &[("Adam Jacob", 1)]),
+            ],
+        );
+
+        let rollup = field_value_frequency_rollup(&value_differences, 50);
+        let authors = &rollup["authors"];
+
+        // Extra (PV-only) values roll up across all three files.
+        assert_eq!(authors.extra_in_provenant.len(), 2);
+        let adam = &authors.extra_in_provenant[0];
+        assert_eq!(adam.value, "Adam Jacob");
+        assert_eq!(adam.total_count, 4);
+        assert_eq!(adam.file_count, 3);
+        // Sorted by total_count descending: Adam (4) before rare (1).
+        assert_eq!(authors.extra_in_provenant[1].value, "rare");
+        assert_eq!(authors.extra_in_provenant[1].total_count, 1);
+        assert_eq!(authors.extra_in_provenant[1].file_count, 1);
+
+        // SC-only values aggregate independently.
+        assert_eq!(authors.extra_in_scancode.len(), 1);
+        assert_eq!(authors.extra_in_scancode[0].value, "Only In SC");
+        assert_eq!(authors.extra_in_scancode[0].total_count, 4);
+    }
+
+    #[test]
+    fn field_value_frequency_rollup_is_deterministic_and_capped() {
+        let entries: Vec<ValueDifferenceEntry> = (0..10)
+            .map(|i| value_diff(&format!("f{i}.rs"), &[], &[("tie-a", 3), ("tie-b", 3)]))
+            .collect();
+        let mut value_differences = BTreeMap::new();
+        value_differences.insert("holders".to_string(), entries);
+
+        let rollup = field_value_frequency_rollup(&value_differences, 1);
+        let holders = &rollup["holders"];
+        // Cap honored: only the single top-ranked value survives.
+        assert_eq!(holders.extra_in_provenant.len(), 1);
+        // Equal totals break ties by value ascending, so "tie-a" wins.
+        assert_eq!(holders.extra_in_provenant[0].value, "tie-a");
+        assert_eq!(holders.extra_in_provenant[0].total_count, 30);
+        assert_eq!(holders.extra_in_provenant[0].file_count, 10);
+    }
+
+    #[test]
+    fn field_value_frequency_summary_omits_empty_fields() {
+        let mut rollup: BTreeMap<String, FieldValueFrequencyDirections> = BTreeMap::new();
+        rollup.insert(
+            "copyrights".to_string(),
+            FieldValueFrequencyDirections::default(),
+        );
+        rollup.insert(
+            "authors".to_string(),
+            FieldValueFrequencyDirections {
+                extra_in_provenant: vec![FieldValueFrequencyEntry {
+                    value: "Adam Jacob".to_string(),
+                    total_count: 9,
+                    file_count: 4,
+                }],
+                extra_in_scancode: Vec::new(),
+            },
+        );
+
+        let summary = field_value_frequency_summary(&rollup, 5);
+        assert!(!summary.contains_key("copyrights"));
+        assert_eq!(
+            summary["authors"]["extra_in_provenant"][0]["value"],
+            "Adam Jacob"
+        );
+        assert_eq!(
+            summary["authors"]["extra_in_provenant"][0]["total_count"],
+            9
+        );
+        // Field non-empty in one direction still appears, with the empty
+        // direction rendered as `[]`.
+        assert_eq!(summary["authors"]["extra_in_scancode"], json!([]));
     }
 }
