@@ -1165,12 +1165,8 @@ impl<'a> QueryRun<'a> {
             .get_or_init(|| {
                 let start = self.start;
                 let end = self.end.map(|e| e + 1).unwrap_or(usize::MAX);
-                let source = self.source_high_matchables();
-                let live_span = PositionSpan::new(start, end);
-                source
-                    .iter()
-                    .filter(|&pos| live_span.contains(pos))
-                    .collect()
+                self.source_high_matchables()
+                    .restricted_to_range(start, end)
             })
             .clone()
     }
@@ -1180,12 +1176,7 @@ impl<'a> QueryRun<'a> {
             .get_or_init(|| {
                 let start = self.start;
                 let end = self.end.map(|e| e + 1).unwrap_or(usize::MAX);
-                let source = self.source_low_matchables();
-                let live_span = PositionSpan::new(start, end);
-                source
-                    .iter()
-                    .filter(|&pos| live_span.contains(pos))
-                    .collect()
+                self.source_low_matchables().restricted_to_range(start, end)
             })
             .clone()
     }

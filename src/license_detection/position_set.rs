@@ -123,6 +123,55 @@ impl PositionSet {
         range_end > self.min_pos && range_start <= self.max_pos
     }
 
+    /// Build the subset of positions that fall within the half-open range
+    /// `[start, end)`.
+    ///
+    /// The naive form is `self.iter().filter(|p| start <= p < end)`, which
+    /// always walks the *entire* set. When this set is a whole-query matchables
+    /// set (hundreds of thousands of positions for a multi-MB file) but the
+    /// range is a single small query run (tens of tokens), that full scan is
+    /// repeated once per run and the per-file cost degrades to
+    /// `O(num_runs * total_positions)` — quadratic in file size. Translation
+    /// catalogs (`.po`) are the pathological case: thousands of small runs over
+    /// a single huge token stream.
+    ///
+    /// Instead, iterate whichever side is smaller. The clamped range can never
+    /// be longer than the set's own span, and for a small run it is far
+    /// shorter, so we probe `range.contains` against this set's O(1) membership
+    /// test. For a range that spans the whole set (the whole-query run) we fall
+    /// back to walking the set directly, which is the same work as before.
+    pub fn restricted_to_range(&self, start: usize, end: usize) -> PositionSet {
+        if self.min_pos == usize::MAX || end <= start {
+            return PositionSet::new();
+        }
+
+        // Clamp to the set's populated bounds; positions outside cannot be present.
+        let lo = start.max(self.min_pos);
+        let hi = end.min(self.max_pos + 1);
+        if hi <= lo {
+            return PositionSet::new();
+        }
+
+        // `iter()` walks the bit vector across the set's whole populated span,
+        // so use that span as its cost proxy. Probing the clamped range costs
+        // `range_len` O(1) membership tests. Probe only when the clamped range
+        // is strictly narrower than the set's span; when it already covers the
+        // span (the whole-query run, `range_len == set_span`) iterate the set
+        // directly, which is the original behavior and avoids probing every
+        // gap position. The clamp guarantees `range_len <= set_span`, so `<`
+        // (not `<=`) is what keeps the whole-query case on the set-iter path.
+        let range_len = hi - lo;
+        let set_span = self.max_pos - self.min_pos + 1;
+        if range_len < set_span {
+            (lo..hi).filter(|&pos| self.bitset.contains(pos)).collect()
+        } else {
+            self.bitset
+                .iter()
+                .filter(|&pos| pos >= lo && pos < hi)
+                .collect()
+        }
+    }
+
     /// Compute the union of this set with another PositionSet.
     ///
     /// Returns a new PositionSet containing all positions from both sets.
@@ -244,6 +293,59 @@ mod tests {
         let set = PositionSet::from_usize_iter(vec![1, 2, 2, 3, 3, 3]);
         assert_eq!(set.len(), 3);
         assert_eq!(set.iter().collect::<Vec<_>>(), vec![1, 2, 3]);
+    }
+
+    // `restricted_to_range` must equal the naive `iter().filter(start <= p < end)`
+    // form for every range, regardless of which internal branch it picks (probe
+    // the range vs. walk the set). This pins the contract that the perf
+    // optimization is purely behavior-preserving.
+    #[test]
+    fn test_restricted_to_range_matches_naive_filter() {
+        let positions = vec![0usize, 1, 5, 6, 7, 100, 101, 5000, 5001, 9999];
+        let set = PositionSet::from_usize_iter(positions.iter().copied());
+
+        let naive = |start: usize, end: usize| -> Vec<usize> {
+            set.iter().filter(|&p| p >= start && p < end).collect()
+        };
+
+        let cases = [
+            (0, 0),         // empty range
+            (3, 3),         // empty range mid-set
+            (0, 10000),     // whole span (walk-the-set branch)
+            (5, 8),         // small interior run (probe-the-range branch)
+            (6, 7),         // single element
+            (0, 2),         // at the low bound
+            (5000, 6000),   // straddles populated and empty
+            (200, 5000),    // gap then boundary (exclusive end)
+            (12000, 99999), // entirely above max_pos
+        ];
+
+        for (start, end) in cases {
+            let got: Vec<usize> = set.restricted_to_range(start, end).iter().collect();
+            assert_eq!(
+                got,
+                naive(start, end),
+                "restricted_to_range({start}, {end}) diverged from naive filter"
+            );
+        }
+    }
+
+    #[test]
+    fn test_restricted_to_range_empty_set() {
+        let set = PositionSet::new();
+        assert!(set.restricted_to_range(0, 100).is_empty());
+    }
+
+    #[test]
+    fn test_restricted_to_range_unbounded_end() {
+        // The whole-query run uses end == usize::MAX; it must return every
+        // position at or after `start` without overflowing.
+        let set = PositionSet::from_usize_iter(vec![1usize, 50, 999]);
+        let got: Vec<usize> = set.restricted_to_range(0, usize::MAX).iter().collect();
+        assert_eq!(got, vec![1, 50, 999]);
+
+        let got: Vec<usize> = set.restricted_to_range(50, usize::MAX).iter().collect();
+        assert_eq!(got, vec![50, 999]);
     }
 
     #[test]
