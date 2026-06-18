@@ -431,9 +431,9 @@ ScanCode: 155.12s</title></rect>
     <rect x="603.42" y="355.19" width="8" height="8" fill="#d97706" rx="1.5"><title>PX4/eigen @ 7cf1c01
 Files: 1672
 ScanCode: 321.68s</title></rect>
-    <rect x="607.19" y="328.71" width="8" height="8" fill="#d97706" rx="1.5"><title>guillemj/dpkg @ 0061122
+    <rect x="607.19" y="341.69" width="8" height="8" fill="#d97706" rx="1.5"><title>guillemj/dpkg @ 0061122
 Files: 1766
-ScanCode: 563.43s</title></rect>
+ScanCode: 428.07s</title></rect>
     <rect x="607.89" y="346.71" width="8" height="8" fill="#d97706" rx="1.5"><title>ValveSoftware/eigen @ e9c4315
 Files: 1784
 ScanCode: 384.96s</title></rect>
@@ -536,18 +536,18 @@ ScanCode: 316.25s</title></rect>
     <rect x="666.38" y="352.86" width="8" height="8" fill="#d97706" rx="1.5"><title>triggerdotdev/trigger.dev @ d1f4302
 Files: 4169
 ScanCode: 337.98s</title></rect>
-    <rect x="667.96" y="325.26" width="8" height="8" fill="#d97706" rx="1.5"><title>curl/curl @ 2bb5c9b
+    <rect x="667.96" y="347.89" width="8" height="8" fill="#d97706" rx="1.5"><title>curl/curl @ 2bb5c9b
 Files: 4266
-ScanCode: 606.05s</title></rect>
+ScanCode: 375.45s</title></rect>
     <rect x="668.53" y="297.99" width="8" height="8" fill="#d97706" rx="1.5"><title>DefectDojo/django-DefectDojo @ 2f25c45
 Files: 4301
 ScanCode: 1079.38s</title></rect>
     <rect x="673.50" y="319.74" width="8" height="8" fill="#d97706" rx="1.5"><title>akka/akka @ 5ace141
 Files: 4623
 ScanCode: 681.19s</title></rect>
-    <rect x="675.14" y="339.11" width="8" height="8" fill="#d97706" rx="1.5"><title>git/git @ 9f223ef
+    <rect x="675.14" y="323.90" width="8" height="8" fill="#d97706" rx="1.5"><title>git/git @ 9f223ef
 Files: 4734
-ScanCode: 452.09s</title></rect>
+ScanCode: 623.80s</title></rect>
     <rect x="677.07" y="355.67" width="8" height="8" fill="#d97706" rx="1.5"><title>rails/rails @ 27fb2a9
 Files: 4869
 ScanCode: 318.46s</title></rect>
@@ -566,9 +566,9 @@ ScanCode: 1221.65s</title></rect>
     <rect x="690.65" y="315.53" width="8" height="8" fill="#d97706" rx="1.5"><title>kubernetes/autoscaler @ 9045d28
 Files: 5929
 ScanCode: 744.62s</title></rect>
-    <rect x="692.31" y="293.00" width="8" height="8" fill="#d97706" rx="1.5"><title>openssl/openssl @ 7fb28b9
+    <rect x="692.31" y="309.74" width="8" height="8" fill="#d97706" rx="1.5"><title>openssl/openssl @ 7fb28b9
 Files: 6074
-ScanCode: 1199.73s</title></rect>
+ScanCode: 841.78s</title></rect>
     <rect x="694.77" y="315.99" width="8" height="8" fill="#d97706" rx="1.5"><title>yoctoproject/poky @ cb2dcb4
 Files: 6295
 ScanCode: 737.50s</title></rect>
@@ -584,15 +584,15 @@ ScanCode: 2352.73s</title></rect>
     <rect x="701.92" y="334.25" width="8" height="8" fill="#d97706" rx="1.5"><title>openembedded/meta-openembedded @ 7bf89d0
 Files: 6983
 ScanCode: 501.03s</title></rect>
-    <rect x="702.03" y="292.91" width="8" height="8" fill="#d97706" rx="1.5"><title>systemd/systemd @ 89d705a
+    <rect x="702.03" y="310.15" width="8" height="8" fill="#d97706" rx="1.5"><title>systemd/systemd @ 89d705a
 Files: 6994
-ScanCode: 1201.90s</title></rect>
+ScanCode: 834.45s</title></rect>
     <rect x="702.37" y="330.44" width="8" height="8" fill="#d97706" rx="1.5"><title>django/django @ 09f27cc
 Files: 7029
 ScanCode: 543.19s</title></rect>
-    <rect x="703.83" y="315.08" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/kafka @ 0d9fe51
+    <rect x="703.83" y="295.56" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/kafka @ 0d9fe51
 Files: 7179
-ScanCode: 751.77s</title></rect>
+ScanCode: 1136.27s</title></rect>
     <rect x="709.11" y="332.59" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/dune @ b13ab94
 Files: 7751
 ScanCode: 519.01s</title></rect>
@@ -632,24 +632,24 @@ ScanCode: 812.80s</title></rect>
     <rect x="729.11" y="318.85" width="8" height="8" fill="#d97706" rx="1.5"><title>grpc/grpc @ f87c29f
 Files: 10361
 ScanCode: 694.17s</title></rect>
-    <rect x="733.17" y="258.43" width="8" height="8" fill="#d97706" rx="1.5"><title>qemu/qemu @ da6c4fe
+    <rect x="733.17" y="282.81" width="8" height="8" fill="#d97706" rx="1.5"><title>qemu/qemu @ da6c4fe
 Files: 10989
-ScanCode: 2493.21s</title></rect>
+ScanCode: 1488.40s</title></rect>
     <rect x="736.27" y="285.81" width="8" height="8" fill="#d97706" rx="1.5"><title>bazelbuild/bazel @ eb5aeaa
 Files: 11495
 ScanCode: 1396.87s</title></rect>
     <rect x="737.15" y="301.70" width="8" height="8" fill="#d97706" rx="1.5"><title>spring-projects/spring-boot @ 53827d4
 Files: 11643
 ScanCode: 997.84s</title></rect>
-    <rect x="737.77" y="246.68" width="8" height="8" fill="#d97706" rx="1.5"><title>erlang/otp @ 264def5
+    <rect x="737.77" y="268.04" width="8" height="8" fill="#d97706" rx="1.5"><title>erlang/otp @ 264def5
 Files: 11749
-ScanCode: 3197.26s</title></rect>
+ScanCode: 2034.56s</title></rect>
     <rect x="738.86" y="294.65" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/airflow @ 47ce5f3
 Files: 11935
 ScanCode: 1158.57s</title></rect>
-    <rect x="741.35" y="286.09" width="8" height="8" fill="#d97706" rx="1.5"><title>moby/moby @ 21bd660
+    <rect x="741.35" y="286.00" width="8" height="8" fill="#d97706" rx="1.5"><title>moby/moby @ 21bd660
 Files: 12375
-ScanCode: 1388.49s</title></rect>
+ScanCode: 1391.11s</title></rect>
     <rect x="742.32" y="309.33" width="8" height="8" fill="#d97706" rx="1.5"><title>oven-sh/bun @ 700fc11
 Files: 12551
 ScanCode: 849.10s</title></rect>
@@ -671,9 +671,9 @@ ScanCode: 807.63s</title></rect>
     <rect x="757.62" y="257.15" width="8" height="8" fill="#d97706" rx="1.5"><title>flutter/flutter @ 238d79a
 Files: 15670
 ScanCode: 2561.81s</title></rect>
-    <rect x="760.63" y="229.74" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/hadoop @ dbcc7cd
+    <rect x="760.63" y="246.36" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/hadoop @ dbcc7cd
 Files: 16370
-ScanCode: 4575.96s</title></rect>
+ScanCode: 3218.68s</title></rect>
     <rect x="767.28" y="288.09" width="8" height="8" fill="#d97706" rx="1.5"><title>metabase/metabase @ 10997b1
 Files: 18030
 ScanCode: 1330.92s</title></rect>
@@ -1090,9 +1090,9 @@ Provenant: 8.68s</title></circle>
     <circle cx="607.42" cy="500.64" r="4.5" fill="#2563eb"><title>PX4/eigen @ 7cf1c01
 Files: 1672
 Provenant: 16.12s</title></circle>
-    <circle cx="611.19" cy="474.77" r="4.5" fill="#2563eb"><title>guillemj/dpkg @ 0061122
+    <circle cx="611.19" cy="510.59" r="4.5" fill="#2563eb"><title>guillemj/dpkg @ 0061122
 Files: 1766
-Provenant: 27.87s</title></circle>
+Provenant: 13.06s</title></circle>
     <circle cx="611.89" cy="491.89" r="4.5" fill="#2563eb"><title>ValveSoftware/eigen @ e9c4315
 Files: 1784
 Provenant: 19.40s</title></circle>
@@ -1195,18 +1195,18 @@ Provenant: 17.19s</title></circle>
     <circle cx="670.38" cy="534.16" r="4.5" fill="#2563eb"><title>triggerdotdev/trigger.dev @ d1f4302
 Files: 4169
 Provenant: 7.93s</title></circle>
-    <circle cx="671.96" cy="456.82" r="4.5" fill="#2563eb"><title>curl/curl @ 2bb5c9b
+    <circle cx="671.96" cy="506.43" r="4.5" fill="#2563eb"><title>curl/curl @ 2bb5c9b
 Files: 4266
-Provenant: 40.75s</title></circle>
+Provenant: 14.26s</title></circle>
     <circle cx="672.53" cy="453.98" r="4.5" fill="#2563eb"><title>DefectDojo/django-DefectDojo @ 2f25c45
 Files: 4301
 Provenant: 43.27s</title></circle>
     <circle cx="677.50" cy="476.32" r="4.5" fill="#2563eb"><title>akka/akka @ 5ace141
 Files: 4623
 Provenant: 26.97s</title></circle>
-    <circle cx="679.14" cy="480.47" r="4.5" fill="#2563eb"><title>git/git @ 9f223ef
+    <circle cx="679.14" cy="505.25" r="4.5" fill="#2563eb"><title>git/git @ 9f223ef
 Files: 4734
-Provenant: 24.70s</title></circle>
+Provenant: 14.62s</title></circle>
     <circle cx="681.07" cy="483.29" r="4.5" fill="#2563eb"><title>rails/rails @ 27fb2a9
 Files: 4869
 Provenant: 23.27s</title></circle>
@@ -1225,9 +1225,9 @@ Provenant: 17.27s</title></circle>
     <circle cx="694.65" cy="483.43" r="4.5" fill="#2563eb"><title>kubernetes/autoscaler @ 9045d28
 Files: 5929
 Provenant: 23.20s</title></circle>
-    <circle cx="696.31" cy="439.39" r="4.5" fill="#2563eb"><title>openssl/openssl @ 7fb28b9
+    <circle cx="696.31" cy="486.40" r="4.5" fill="#2563eb"><title>openssl/openssl @ 7fb28b9
 Files: 6074
-Provenant: 58.93s</title></circle>
+Provenant: 21.79s</title></circle>
     <circle cx="698.77" cy="449.75" r="4.5" fill="#2563eb"><title>yoctoproject/poky @ cb2dcb4
 Files: 6295
 Provenant: 47.33s</title></circle>
@@ -1243,15 +1243,15 @@ Provenant: 58.53s</title></circle>
     <circle cx="705.92" cy="463.08" r="4.5" fill="#2563eb"><title>openembedded/meta-openembedded @ 7bf89d0
 Files: 6983
 Provenant: 35.69s</title></circle>
-    <circle cx="706.03" cy="445.60" r="4.5" fill="#2563eb"><title>systemd/systemd @ 89d705a
+    <circle cx="706.03" cy="491.79" r="4.5" fill="#2563eb"><title>systemd/systemd @ 89d705a
 Files: 6994
-Provenant: 51.67s</title></circle>
+Provenant: 19.44s</title></circle>
     <circle cx="706.37" cy="507.81" r="4.5" fill="#2563eb"><title>django/django @ 09f27cc
 Files: 7029
 Provenant: 13.85s</title></circle>
-    <circle cx="707.83" cy="443.86" r="4.5" fill="#2563eb"><title>apache/kafka @ 0d9fe51
+    <circle cx="707.83" cy="458.27" r="4.5" fill="#2563eb"><title>apache/kafka @ 0d9fe51
 Files: 7179
-Provenant: 53.61s</title></circle>
+Provenant: 39.52s</title></circle>
     <circle cx="713.11" cy="488.73" r="4.5" fill="#2563eb"><title>ocaml/dune @ b13ab94
 Files: 7751
 Provenant: 20.74s</title></circle>
@@ -1291,24 +1291,24 @@ Provenant: 60.60s</title></circle>
     <circle cx="733.11" cy="448.97" r="4.5" fill="#2563eb"><title>grpc/grpc @ f87c29f
 Files: 10361
 Provenant: 48.11s</title></circle>
-    <circle cx="737.17" cy="425.83" r="4.5" fill="#2563eb"><title>qemu/qemu @ da6c4fe
+    <circle cx="737.17" cy="467.86" r="4.5" fill="#2563eb"><title>qemu/qemu @ da6c4fe
 Files: 10989
-Provenant: 78.51s</title></circle>
+Provenant: 32.26s</title></circle>
     <circle cx="740.27" cy="448.60" r="4.5" fill="#2563eb"><title>bazelbuild/bazel @ eb5aeaa
 Files: 11495
 Provenant: 48.49s</title></circle>
     <circle cx="741.15" cy="452.64" r="4.5" fill="#2563eb"><title>spring-projects/spring-boot @ 53827d4
 Files: 11643
 Provenant: 44.52s</title></circle>
-    <circle cx="741.77" cy="399.90" r="4.5" fill="#2563eb"><title>erlang/otp @ 264def5
+    <circle cx="741.77" cy="438.55" r="4.5" fill="#2563eb"><title>erlang/otp @ 264def5
 Files: 11749
-Provenant: 135.93s</title></circle>
+Provenant: 59.99s</title></circle>
     <circle cx="742.86" cy="446.23" r="4.5" fill="#2563eb"><title>apache/airflow @ 47ce5f3
 Files: 11935
 Provenant: 50.99s</title></circle>
-    <circle cx="745.35" cy="441.80" r="4.5" fill="#2563eb"><title>moby/moby @ 21bd660
+    <circle cx="745.35" cy="474.55" r="4.5" fill="#2563eb"><title>moby/moby @ 21bd660
 Files: 12375
-Provenant: 56.00s</title></circle>
+Provenant: 28.00s</title></circle>
     <circle cx="746.32" cy="454.22" r="4.5" fill="#2563eb"><title>oven-sh/bun @ 700fc11
 Files: 12551
 Provenant: 43.05s</title></circle>
@@ -1330,9 +1330,9 @@ Provenant: 33.41s</title></circle>
     <circle cx="761.62" cy="403.97" r="4.5" fill="#2563eb"><title>flutter/flutter @ 238d79a
 Files: 15670
 Provenant: 124.69s</title></circle>
-    <circle cx="764.63" cy="365.98" r="4.5" fill="#2563eb"><title>apache/hadoop @ dbcc7cd
+    <circle cx="764.63" cy="405.26" r="4.5" fill="#2563eb"><title>apache/hadoop @ dbcc7cd
 Files: 16370
-Provenant: 278.63s</title></circle>
+Provenant: 121.35s</title></circle>
     <circle cx="771.28" cy="445.44" r="4.5" fill="#2563eb"><title>metabase/metabase @ 10997b1
 Files: 18030
 Provenant: 51.84s</title></circle>
