@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **14.3× median speedup** and **14.1× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.5×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **14.4× median speedup** and **14.3× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -594,11 +594,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.71s`; ScanCode `43.86s`
 - Matched Cargo package and dependency coverage (`1` vs `1` packages, `5` vs `5` dependencies) while preserving the repository's `Apache-2.0 OR MIT` README license semantics and normalizing docs.rs and Keep a Changelog links without trailing-slash drift
 
-##### [bazelbuild/bazel @ eb5aeaa](https://github.com/bazelbuild/bazel/tree/eb5aeaaa23d52601a2aca11ff6fd1a74ea97f0d6) — **14.51× faster**
+##### [bazelbuild/bazel @ eb5aeaa](https://github.com/bazelbuild/bazel/tree/eb5aeaaa23d52601a2aca11ff6fd1a74ea97f0d6) — **28.81× faster**
 
 - Files: 11,495
-- Run context: 2026-06-15 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `96.27s`; ScanCode `1396.87s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `48.49s`; ScanCode `1396.87s`
 - Broader Bazel package and dependency extraction (`1746` vs `1711` packages, `129` vs `14` dependencies) from root and nested `BUILD` files plus direct `MODULE.bazel` dependency visibility, with richer Debian and RPM sidecar package metadata
 
 ##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **12.29× faster**
@@ -1260,11 +1260,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `22.78s`; ScanCode `332.82s`
 - Broader mixed Hackage and Nix package extraction (`5` vs `0` packages, `197` vs `0` dependencies) from sibling `pandoc*.cabal` manifests, `stack.yaml`, and `flake.nix` / `flake.lock`, with explicit package identities across `pandoc`, `pandoc-cli`, `pandoc-lua-engine`, and `pandoc-server`
 
-##### [JuliaAcademy/DataScience @ 201f2e6](https://github.com/JuliaAcademy/DataScience/tree/201f2e66cf2067dacee2df02b546f75d77ed22e7) — **8.58× faster**
+##### [JuliaAcademy/DataScience @ 201f2e6](https://github.com/JuliaAcademy/DataScience/tree/201f2e66cf2067dacee2df02b546f75d77ed22e7) — **40.81× faster**
 
 - Files: 50
-- Run context: 2026-06-06 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `27.50s`; ScanCode `235.99s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.68s`; ScanCode `231.82s`
 - Direct Julia package visibility and broader dependency extraction (`1` vs `0` packages, `53` vs `0` dependencies) from the root legacy v1.0-format `Manifest.toml` and its `Project.toml`, with zero scan errors where ScanCode times out after 120s on `05. Clustering.ipynb` and no spurious low-confidence `GPL-3.0-only` detection bleeding from the binary `data/face_recog_qr.mat` blob
 
 ##### [JuliaLang/julia @ afc71c2](https://github.com/JuliaLang/julia/tree/afc71c255e327d8a64b69061c15994e80740974d) — **21.75× faster**
