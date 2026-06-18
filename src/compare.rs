@@ -802,6 +802,12 @@ pub(crate) fn write_comparison_artifacts(
         "no_detected_differences"
     };
 
+    // Cross-file, frequency-ranked rollup of the per-file value diffs. Pure
+    // aggregation of `value_differences`; diagnostic only and intentionally not
+    // wired into any signal count or `comparison_status`.
+    let field_value_frequency =
+        field_value_frequency_rollup(&value_differences, FIELD_VALUE_FREQUENCY_TOP_N);
+
     let sample_paths = [
         (
             "scancode_only_output_paths",
@@ -871,6 +877,10 @@ pub(crate) fn write_comparison_artifacts(
                 .samples_dir
                 .join("package_field_content_value_differences.json"),
         ),
+        (
+            "field_value_frequency",
+            layout.samples_dir.join("field_value_frequency.json"),
+        ),
     ];
 
     write_pretty_json(&sample_paths[0].1, &scancode_only_output_paths)?;
@@ -890,6 +900,7 @@ pub(crate) fn write_comparison_artifacts(
         &sample_paths[13].1,
         &package_field_content_value_differences,
     )?;
+    write_pretty_json(&sample_paths[14].1, &field_value_frequency)?;
 
     let summary = json!({
         "comparison_status": comparison_status,
@@ -942,6 +953,7 @@ pub(crate) fn write_comparison_artifacts(
         "top_level_scancode_favored_differences": top_level_scancode_favored_differences,
         "top_level_provenant_favored_differences": top_level_provenant_favored_differences,
         "top_level_license_expression_delta_count": license_deltas.len(),
+        "field_value_frequency_top": field_value_frequency_summary(&field_value_frequency, FIELD_VALUE_FREQUENCY_SUMMARY_TOP_N),
         "sample_artifacts": BTreeMap::from(sample_paths.map(|(name, path)| (name.to_string(), path.display().to_string()))),
     });
 
@@ -1281,4 +1293,75 @@ fn raw_dependency_differences(scancode: &Value, provenant: &Value) -> Vec<ValueD
         }
     }
     differences
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        std::env::temp_dir().join(format!("provenant-compare-test-{label}-{nanos}"))
+    }
+
+    #[test]
+    fn write_comparison_artifacts_produces_field_value_frequency_rollup() {
+        let temp_root = unique_temp_dir("field-value-frequency");
+        let layout = prepare_layout(&temp_root).unwrap();
+
+        // Same author appears as PV-only in two files; the rollup must collapse
+        // them into a single frequency-ranked entry.
+        let scancode = json!({
+            "files": [
+                {"path": "a.rs", "type": "file", "authors": []},
+                {"path": "b.rs", "type": "file", "authors": []}
+            ],
+            "packages": [], "dependencies": [],
+            "license_detections": [], "license_references": [], "license_rule_references": []
+        });
+        let provenant = json!({
+            "files": [
+                {"path": "a.rs", "type": "file", "authors": [{"author": "Adam Jacob"}]},
+                {"path": "b.rs", "type": "file", "authors": [{"author": "Adam Jacob"}]}
+            ],
+            "packages": [], "dependencies": [],
+            "license_detections": [], "license_references": [], "license_rule_references": []
+        });
+        fs::write(&layout.scancode_json, scancode.to_string()).unwrap();
+        fs::write(&layout.provenant_json, provenant.to_string()).unwrap();
+
+        let summary =
+            write_comparison_artifacts(&layout.scancode_json, &layout.provenant_json, &layout, &[])
+                .unwrap();
+
+        let artifact: Value = serde_json::from_str(
+            &fs::read_to_string(layout.samples_dir.join("field_value_frequency.json")).unwrap(),
+        )
+        .unwrap();
+        let adam = &artifact["authors"]["extra_in_provenant"][0];
+        assert_eq!(adam["value"], "Adam Jacob");
+        assert_eq!(adam["total_count"], 2);
+        assert_eq!(adam["file_count"], 2);
+
+        assert_eq!(
+            summary["field_value_frequency_top"]["authors"]["extra_in_provenant"][0]["value"],
+            "Adam Jacob"
+        );
+        // Diagnostic only: status is driven solely by the underlying value diff
+        // (the extra author is a provenant-favored signal); the rollup never
+        // feeds a signal count, so non_directional stays zero.
+        assert_eq!(summary["comparison_status"], "review_required");
+        assert_eq!(summary["comparison_signal_summary"]["non_directional"], 0);
+        assert!(
+            summary["comparison_signal_summary"]["provenant_favored"]
+                .as_u64()
+                .unwrap()
+                > 0
+        );
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
 }
