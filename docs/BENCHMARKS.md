@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **14.5× median speedup** and **14.5× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
+> Provenant is faster on 220 of 220 recorded runs, with a **14.6× median speedup** and **14.6× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.7×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1371,7 +1371,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Linux rootfs images
 
-##### [Alpine 3.23.3 minirootfs @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **11.59× faster**
+##### [Alpine 3.23.3 minirootfs @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **11.59× faster**
 
 - Files: 84
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
@@ -1383,14 +1383,14 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 1,844
 - Run context: 2026-06-03 · macOS 26.5.0 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `7.26s`; ScanCode `62.57s`
-- Matched Azure Linux and Mariner RPM manifest package coverage (`5` vs `5`) from `var/lib/rpmmanifest/container-manifest-2`, with RPM package-license sidecar metadata merged from `/usr/share/licenses/*` and direct Linux distro PURL identity on `usr/lib/os-release`
+- Matched Azure Linux and Mariner RPM manifest package coverage (`5` vs `5`) from `var/lib/rpmmanifest/container-manifest-2`, with RPM package-license sidecar metadata merged from `/usr/share/licenses/*` and direct Linux distro PURL identity on `usr/lib/os-release`; reproduce the linux/amd64 rootfs with `skopeo copy docker://mcr.microsoft.com/azurelinux/distroless/minimal@sha256:0c64ab9cfc44d4f100c0590bd59ead9afedda6cc54f14bb7465b5f9c35ddc037 oci:azurelinux-minimal:3.0 && skopeo copy --override-os linux --override-arch amd64 docker://mcr.microsoft.com/azurelinux/distroless/minimal@sha256:0c64ab9cfc44d4f100c0590bd59ead9afedda6cc54f14bb7465b5f9c35ddc037 docker-archive:azurelinux-minimal-amd64.tar` (the immutable index digest is also tagged `3.0.20260517`)
 
-##### [lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11](https://hub.docker.com/r/lambci/lambda) — **18.40× faster**
+##### [lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11](https://hub.docker.com/layers/lambci/lambda/provided.al2/images/sha256-7765ec11e11603d4123630148e115f980812c33f7ab6943c5cbfafccca0f2f17) — **18.40× faster**
 
 - Files: 4,085
 - Run context: 2026-06-03 · macOS 26.5.0 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `17.19s`; ScanCode `316.25s`
-- Broader Amazon Linux 2 RPM rootfs inventory (`45` vs `0` packages, `590` vs `0` dependencies) from the real Berkeley rpmdb, with YumDB sidecar provenance merged onto matching installed RPM packages under `extra_data.yumdb` for repository, checksum, origin, and install-reason metadata while ScanCode reports one rpmdb assembly error and leaves top-level package/dependency output empty
+- Broader Amazon Linux 2 RPM rootfs inventory (`45` vs `0` packages, `590` vs `0` dependencies) from the real Berkeley rpmdb, with YumDB sidecar provenance merged onto matching installed RPM packages under `extra_data.yumdb` for repository, checksum, origin, and install-reason metadata while ScanCode reports one rpmdb assembly error and leaves top-level package/dependency output empty; reproduce the rootfs with `skopeo copy docker://lambci/lambda@sha256:7765ec11e11603d4123630148e115f980812c33f7ab6943c5cbfafccca0f2f17 docker-archive:lambci-lambda-provided-al2.tar` (single linux/amd64 manifest)
 
 ##### [debian:bookworm-slim @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **18.14× faster**
 
@@ -1415,12 +1415,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Installed package database snapshots
 
-##### [Alpine 3.23.3 installed DB snapshot @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **7.52× faster**
+##### [Alpine 3.23.3 installed DB snapshot @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **7.52× faster**
 
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `10.09s`; ScanCode `75.84s`
-- Matched standalone Alpine installed-db package and license coverage on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata
+- Matched standalone Alpine installed-db package and license coverage on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata; reproduce the target by extracting `lib/apk/db/installed` from the immutable `alpine-minirootfs-3.23.3-x86_64.tar.gz` (`tar -xzf alpine-minirootfs-3.23.3-x86_64.tar.gz lib/apk/db/installed`)
 
 ##### [debian:bookworm-slim dpkg DB snapshot @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **8.45× faster**
 
@@ -1452,19 +1452,19 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Package archives
 
-##### [7zip 25.01-r0 .apk @ sha256:6602ccb](https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/x86_64/7zip-25.01-r0.apk) — **8.03× faster**
+##### [7zip 25.01-r0 .apk @ sha256:6602ccb](https://dl-cdn.alpinelinux.org/alpine/v3.23/main/x86_64/7zip-25.01-r0.apk) — **8.03× faster**
 
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `10.06s`; ScanCode `80.82s`
 - Direct Alpine archive package visibility on the shipped `.apk` (`1` vs `1` file-level package records), with a concrete `pkg:alpine/7zip@25.01-r0?arch=x86_64` identity instead of ScanCode's weaker generic package-data row
 
-##### [bash 5.2.15-2+b10 .deb @ sha256:be3ab2f](https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.15-2%2Bb10_amd64.deb) — **3.02× faster**
+##### [bash 5.2.15-2+b10 .deb @ sha256:be3ab2f](https://snapshot.debian.org/package/bash/5.2.15-2/) — **3.02× faster**
 
 - Files: 1
 - Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
 - Timing: Provenant `22.19s`; ScanCode `66.94s`
-- Matched shipped Debian package coverage (`1` vs `1`) with broader dependency extraction (`9` vs `0`) from the archive control metadata, plus the correct `pkg:deb` `arch=amd64` qualifier where ScanCode uses the nonstandard `architecture` key
+- Matched shipped Debian package coverage (`1` vs `1`) with broader dependency extraction (`9` vs `0`) from the archive control metadata, plus the correct `pkg:deb` `arch=amd64` qualifier where ScanCode uses the nonstandard `architecture` key; the exact `bash_5.2.15-2+b10_amd64.deb` bytes are retained on the Debian snapshot archive at `https://snapshot.debian.org/file/bd6a22d6918ec3e917cc5840d8ac13235220553e`
 
 ##### [bash 5.3.9 .pkg +COMPACT_MANIFEST sample @ sha256:37207e8](https://github.com/FreeBSD/freebsd-ports/commit/f77f497167a5dbca6c685f40dbdc90f2e7713223) — **7.27× faster**
 
@@ -1494,12 +1494,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.60s`; ScanCode `74.17s`
 - Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `BSD-2-Clause` declared-license reporting where ScanCode leaves the package license unknown
 
-##### [python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3](https://archlinux.org/packages/extra/any/python-construct/) — **7.01× faster**
+##### [python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3](https://archive.archlinux.org/packages/p/python-construct/python-construct-2.10.70-6-any.pkg.tar.zst) — **7.01× faster**
 
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
 - Timing: Provenant `9.89s`; ScanCode `69.35s`
-- Direct Arch built-package visibility on real `.PKGINFO` metadata (`1` vs `0` file-level package records) with twenty structured dependency edges across `depend`, `makedepend`, `checkdepend`, and `optdepend`, plus an arch-qualified `pkg:alpm/arch/python-construct@2.10.70-6?arch=any` identity instead of a scanner-silent package file
+- Direct Arch built-package visibility on real `.PKGINFO` metadata (`1` vs `0` file-level package records) with twenty structured dependency edges across `depend`, `makedepend`, `checkdepend`, and `optdepend`, plus an arch-qualified `pkg:alpm/arch/python-construct@2.10.70-6?arch=any` identity instead of a scanner-silent package file; reproduce the target by extracting `.PKGINFO` from the immutable `python-construct-2.10.70-6-any.pkg.tar.zst` (`tar --zstd -xf python-construct-2.10.70-6-any.pkg.tar.zst .PKGINFO`)
 
 ##### [rubocop 1.86.1 .gem @ sha256:44415f3](https://rubygems.org/gems/rubocop/versions/1.86.1) — **8.63× faster**
 
@@ -1540,7 +1540,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `10.27s`; ScanCode `74.17s`
 - Equivalent Mozilla XPI package visibility on the shipped Firefox language-pack artifact
 
-##### [Firefox Multi-Account Containers 8.3.7 .xpi](https://addons.mozilla.org/en-US/firefox/addon/multi-account-containers/) — **7.22× faster**
+##### [Firefox Multi-Account Containers 8.3.7 .xpi @ sha256:7f6f5ef](https://addons.mozilla.org/firefox/downloads/file/4733069/multi_account_containers-8.3.7.xpi) — **7.22× faster**
 
 - Files: 1
 - Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
@@ -1581,20 +1581,6 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `8.76s`; ScanCode `42.90s`
 - Matched NSIS installer plus Windows PE package visibility (`2` vs `2` file-level package records), with a concrete `pkg:winexe/nsis-3.12-setup@3.12` identity on the executable metadata record and cleaner rejection of ScanCode's spurious `LicenseRef-scancode-unknown` license inferred only from the `LegalCopyright` URL
-
-##### [Windows 10 KB5049993 cumulative update extracted snapshot](https://support.microsoft.com/help/5049993) — **4.32× faster**
-
-- Files: 11
-- Run context: 2026-04-24 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `133.69s`; ScanCode `577.11s`
-- Broader Windows Update package visibility through assembled `update.mum` metadata (`1` top-level package vs `0`), with correct `Package_for_RollupFix@14393.7699.1.9` wrapper identity, preserved Microsoft owner/support metadata on the CBS manifest, zero scan errors where ScanCode reports one failed CAB scan, and cleaner rejection of random CAB-byte email noise
-
-##### [Windows 10 KB5050109 servicing stack update extracted snapshot](https://support.microsoft.com/help/5050109) — **9.42× faster**
-
-- Files: 597
-- Run context: 2026-04-24 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `12.21s`; ScanCode `115.03s`
-- Broader Windows Update package visibility through assembled servicing-stack metadata (`1` top-level package vs `0`), plus matching file-level `.mum` coverage across `133` manifests, correct `Package_for_KB5050109@14393.7692.1.1` wrapper identity, richer certificate URL visibility from `update.cat`, and cleaner rejection of a bogus CAB-byte email false positive
 
 ##### [WSUS wsusscn2 extracted snapshot](https://support.microsoft.com/en-us/topic/a-new-version-of-the-windows-update-offline-scan-file-wsusscn2-cab-is-available-for-advanced-users-fe433f4d-44f4-28e3-88c5-5b22329c0a08) — **10.04× faster**
 
@@ -1646,7 +1632,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Debian source packages
 
-##### [htop 3.5.1 Debian source package @ sha256:bd7b02b](https://deb.debian.org/debian/pool/main/h/htop/) — **6.63× faster**
+##### [htop 3.5.1 Debian source package @ sha256:bd7b02b](https://snapshot.debian.org/package/htop/3.5.1-3/) — **6.63× faster**
 
 - Files: 3
 - Run context: 2026-06-05 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc · `htop_3.5.1-3.dsc` + `htop_3.5.1.orig.tar.gz` + `htop_3.5.1-3.debian.tar.xz` from the Debian archive
