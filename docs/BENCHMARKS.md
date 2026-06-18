@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 222 of 222 recorded runs, with a **14.3× median speedup** and **13.9× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.5×** on 10k+ file targets.
+> Provenant is faster on 222 of 222 recorded runs, with a **14.3× median speedup** and **14.1× geometric-mean speedup** overall; the median gap grows from **7.7×** on sub-100-file targets to **20.5×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -129,11 +129,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `50.99s`; ScanCode `1158.57s`
 - Far broader Python/provider package coverage (`142` vs `1`) and dependency extraction (`7599` vs `1014`) from `uv.lock`, provider `pyproject.toml`, and committed `pnpm-lock.yaml` inputs, plus extra Docker and Helm package visibility, safer URL credential stripping, and cleaner copyright/author normalization across large documentation and kernel-style metadata blocks
 
-##### [astral-sh/uv @ 9581f2b](https://github.com/astral-sh/uv/tree/9581f2b0ea65550a3efe28bd7aabde19d98b39ba) — **5.98× faster**
+##### [astral-sh/uv @ 9581f2b](https://github.com/astral-sh/uv/tree/9581f2b0ea65550a3efe28bd7aabde19d98b39ba) — **28.81× faster**
 
 - Files: 1,259
-- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `45.62s`; ScanCode `272.81s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.47s`; ScanCode `272.81s`
 - Far broader Python-family package and dependency extraction (`113` vs `1` packages, `5279` vs `759` dependencies) from the large `test/requirements/**` tree, many fixture/workspace `pyproject.toml` files, and multiple `uv.lock` inputs that ScanCode leaves at zero, with safer URL credential stripping, Unicode-preserving party normalization, and METADATA-backed wheel identity instead of double-counting a misleading filename
 
 ##### [astropy/astropy @ 40280e3](https://github.com/astropy/astropy/tree/40280e3bd715a4968eda816c73bf88f05aa6cdc0) — **36.99× faster**
@@ -164,11 +164,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.79s`; ScanCode `42.84s`
 - Direct schema-versioned conda-forge feedstock package visibility (`1` vs `0` packages, `51` vs `0` dependencies) from `recipe/recipe.yaml`, plus assembled top-level Conda package identity and preserved source/about metadata
 
-##### [DefectDojo/django-DefectDojo @ 2f25c45](https://github.com/DefectDojo/django-DefectDojo/tree/2f25c4510361e2f27f63fbbcff3901cbd2ef4a07) — **16.13× faster**
+##### [DefectDojo/django-DefectDojo @ 2f25c45](https://github.com/DefectDojo/django-DefectDojo/tree/2f25c4510361e2f27f63fbbcff3901cbd2ef4a07) — **24.94× faster**
 
 - Files: 4,301
-- Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `66.90s`; ScanCode `1079.38s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `43.27s`; ScanCode `1079.38s`
 - Broader full-repo package and dependency extraction (`3` vs `2` packages, `616` vs `535` dependencies) from `.gitmodules`, `helm/defectdojo/Chart.yaml`, `helm/defectdojo/Chart.lock`, and the root `requirements*.txt` manifests, with direct Helm chart package visibility, pinned PostgreSQL or Valkey chart dependencies, Git-submodule package metadata, and zero scan errors where ScanCode reports 3 scan-file failures on large vulnerability fixtures
 
 ##### [django/django @ 09f27cc](https://github.com/django/django/tree/09f27cc373eb1e6e5e8b286204809a79b61d55c3) — **39.22× faster**
@@ -408,11 +408,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `58.96s`; ScanCode `1410.57s`
 - Broader monorepo package and dependency extraction (`138` vs `1` packages, `7718` vs `1815` dependencies) from the root `package-lock.json`, many extension fixture manifests and lockfiles, and embedded Cargo/Docker metadata, plus richer named package identities where ScanCode emits generic lockfile and archive rows
 
-##### [npm/cli @ 05dbba5](https://github.com/npm/cli/tree/05dbba5b8d727ddb2c098ce0553714eae791c5f2) — **22.16× faster**
+##### [npm/cli @ 05dbba5](https://github.com/npm/cli/tree/05dbba5b8d727ddb2c098ce0553714eae791c5f2) — **40.20× faster**
 
 - Files: 6,732
-- Run context: 2026-06-16 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `106.15s`; ScanCode `2352.73s`
+- Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `58.53s`; ScanCode `2352.73s`
 - Clean root npm workspace manifest coverage without ScanCode's workspace-assembly scan errors, fewer large registry-fixture JSON timeouts, and cleaner handling of duplicated private-workspace dependency exports and repeated MIT-style registry-fixture metadata noise
 
 ##### [oakserver/oak @ 185baef](https://github.com/oakserver/oak/tree/185baef02551a84798000f25d3bd01c2fdfcb1ce) — **9.43× faster**
