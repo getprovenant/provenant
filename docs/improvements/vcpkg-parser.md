@@ -44,7 +44,7 @@ For object dependencies, Rust preserves the most important vcpkg dependency meta
 - `host`
 - `platform`
 
-This gives the scan result the core modern vcpkg dependency graph without needing lock-state support first.
+This gives the scan result the core modern vcpkg dependency graph while keeping lock-state support as a separate provenance surface.
 
 ### 4. Preserve manifest-level resolution metadata
 
@@ -66,6 +66,14 @@ When embedded configuration is absent, Rust also opportunistically reads a sibli
 
 This preserves useful real-world repository metadata without claiming standalone `vcpkg-configuration.json` provenance as its own parser surface.
 
+### 6. Registry lock provenance preservation
+
+Rust now parses standalone `vcpkg-lock.json` files as a first-class vcpkg package-data surface.
+
+The parser preserves registry resolution metadata in `extra_data.registry_locks`, recording each registry `location` together with the locked reference-to-revision mapping. The fixture covers one Git URL location and one filesystem path location; it does not claim a builtin-registry-specific representation without a tool-generated sample.
+
+It intentionally does not derive resolved packages or alter dependency output from the lockfile alone because the lockfile records registry fetch state rather than dependency intent. The emitted package data is marked private because a standalone lockfile has no package identity.
+
 ## Scope Boundary
 
 This improvement intentionally covers:
@@ -73,11 +81,12 @@ This improvement intentionally covers:
 - `vcpkg.json`
 - embedded `configuration` / `vcpkg-configuration`
 - sibling `vcpkg-configuration.json` ingestion into manifest metadata
+- `vcpkg-lock.json` registry lock metadata
 
 This improvement intentionally does **not** yet claim first-class support for:
 
 - standalone `vcpkg-configuration.json` provenance as its own parser/datasource
-- `vcpkg-lock.json` registry lock-state parsing
+- dependency or resolved-package inference from `vcpkg-lock.json`
 
 Those supporting layers remain out of scope for this document.
 
@@ -87,6 +96,7 @@ Those supporting layers remain out of scope for this document.
 - vcpkg port/library manifest parsing
 - direct dependency extraction for modern vcpkg manifests
 - manifest metadata preservation for baselines, overrides, and configuration
+- registry lock metadata preservation for standalone `vcpkg-lock.json`
 
 ## Coverage
 
@@ -96,5 +106,8 @@ Coverage includes:
 - unit tests for port/library manifests
 - unit tests for project manifests without package identity
 - unit tests for sibling configuration ingestion
+- unit tests for standalone registry lock metadata
+- scanner contract tests for lockfile dispatch
 - parser goldens for project manifests
 - parser goldens for port/library manifests
+- parser goldens for registry lockfiles

@@ -1,0 +1,9 @@
+{
+  "https://github.com/microsoft/vcpkg": {
+    "HEAD": "0123456789abcdef0123456789abcdef01234567",
+    "release/2024.02": "89abcdef0123456789abcdef0123456789abcdef"
+  },
+  "/opt/private-vcpkg-registry": {
+    "HEAD": "fedcba9876543210fedcba9876543210fedcba98"
+  }
+}

@@ -6,7 +6,7 @@ use std::path::Path;
 
 use crate::parser_warn as warn;
 use packageurl::PackageUrl;
-use serde_json::Value;
+use serde_json::{Map as JsonMap, Value};
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::utils::{capped_iteration_limit, split_name_email, truncate_field};
@@ -14,6 +14,7 @@ use crate::parsers::utils::{capped_iteration_limit, split_name_email, truncate_f
 use super::PackageParser;
 
 pub struct VcpkgManifestParser;
+pub struct VcpkgLockParser;
 
 impl PackageParser for VcpkgManifestParser {
     const PACKAGE_TYPE: PackageType = PackageType::Vcpkg;
@@ -53,10 +54,57 @@ impl PackageParser for VcpkgManifestParser {
     }
 }
 
+impl PackageParser for VcpkgLockParser {
+    const PACKAGE_TYPE: PackageType = PackageType::Vcpkg;
+
+    fn is_match(path: &Path) -> bool {
+        path.file_name().and_then(|name| name.to_str()) == Some("vcpkg-lock.json")
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        let content = match crate::parsers::utils::read_file_to_string(path, None) {
+            Ok(content) => content,
+            Err(e) => {
+                warn!("Failed to read vcpkg-lock.json at {:?}: {}", path, e);
+                return vec![default_lock_package_data()];
+            }
+        };
+
+        let json: Value = match serde_json::from_str(&content) {
+            Ok(json) => json,
+            Err(e) => {
+                warn!("Failed to parse vcpkg-lock.json at {:?}: {}", path, e);
+                return vec![default_lock_package_data()];
+            }
+        };
+
+        vec![parse_vcpkg_lock(&json)]
+    }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "vcpkg registry lockfile",
+            file_patterns: &["**/vcpkg-lock.json"],
+            package_type: "vcpkg",
+            primary_language: "C++",
+            documentation_url: Some("https://github.com/microsoft/vcpkg-tool"),
+        }]
+    }
+}
+
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Vcpkg),
         datasource_id: Some(DatasourceId::VcpkgJson),
+        ..Default::default()
+    }
+}
+
+fn default_lock_package_data() -> PackageData {
+    PackageData {
+        package_type: Some(PackageType::Vcpkg),
+        datasource_id: Some(DatasourceId::VcpkgLockJson),
+        is_private: true,
         ..Default::default()
     }
 }
@@ -91,6 +139,71 @@ fn parse_vcpkg_manifest(path: &Path, json: &Value) -> PackageData {
             .map(truncate_field),
         ..default_package_data()
     }
+}
+
+fn parse_vcpkg_lock(json: &Value) -> PackageData {
+    PackageData {
+        primary_language: Some("C++".to_string()),
+        extra_data: build_lock_extra_data(json),
+        ..default_lock_package_data()
+    }
+}
+
+fn build_lock_extra_data(json: &Value) -> Option<HashMap<String, Value>> {
+    let registry_locks = extract_lock_registry_entries(json);
+    if registry_locks.is_empty() {
+        return None;
+    }
+
+    let mut extra = HashMap::new();
+    extra.insert("registry_locks".to_string(), Value::Array(registry_locks));
+    Some(extra)
+}
+
+fn extract_lock_registry_entries(json: &Value) -> Vec<Value> {
+    let Some(registries) = json.as_object() else {
+        return Vec::new();
+    };
+
+    let registry_limit = capped_iteration_limit(registries.len(), "vcpkg lock registries");
+    registries
+        .iter()
+        .take(registry_limit)
+        .filter_map(|(location, references)| {
+            let references = references.as_object()?;
+            let reference_limit = capped_iteration_limit(references.len(), "vcpkg lock references");
+            let mut normalized_references = JsonMap::new();
+            for (reference, revision) in references.iter().take(reference_limit) {
+                let Some(revision) = revision
+                    .as_str()
+                    .map(str::trim)
+                    .filter(|revision| !revision.is_empty())
+                else {
+                    continue;
+                };
+
+                normalized_references.insert(
+                    truncate_field(reference.to_string()),
+                    Value::String(truncate_field(revision.to_string())),
+                );
+            }
+
+            if normalized_references.is_empty() {
+                return None;
+            }
+
+            let mut entry = JsonMap::new();
+            entry.insert(
+                "location".to_string(),
+                Value::String(truncate_field(location.to_string())),
+            );
+            entry.insert(
+                "references".to_string(),
+                Value::Object(normalized_references),
+            );
+            Some(Value::Object(entry))
+        })
+        .collect()
 }
 
 fn manifest_version(json: &Value) -> Option<String> {
