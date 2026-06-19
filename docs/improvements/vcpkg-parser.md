@@ -70,9 +70,9 @@ This preserves useful real-world repository metadata without claiming standalone
 
 Rust now parses standalone `vcpkg-lock.json` files as a first-class vcpkg package-data surface.
 
-The parser preserves registry resolution metadata in `extra_data.registry_locks`, recording each registry repository/path together with the locked reference-to-revision mapping.
+The parser preserves registry resolution metadata in `extra_data.registry_locks`, recording each registry `location` together with the locked reference-to-revision mapping. The fixture covers one Git URL location and one filesystem path location; it does not claim a builtin-registry-specific representation without a tool-generated sample.
 
-It intentionally does not derive resolved packages or alter dependency output from the lockfile alone because the lockfile records registry fetch state rather than dependency intent.
+It intentionally does not derive resolved packages or alter dependency output from the lockfile alone because the lockfile records registry fetch state rather than dependency intent. The emitted package data is marked private because a standalone lockfile has no package identity.
 
 ## Scope Boundary
 

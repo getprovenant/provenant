@@ -204,6 +204,7 @@ fn test_parse_vcpkg_lock_preserves_registry_revisions() {
     assert!(pkg.name.is_none());
     assert!(pkg.version.is_none());
     assert!(pkg.purl.is_none());
+    assert!(pkg.is_private);
     assert!(pkg.dependencies.is_empty());
 
     let extra = pkg.extra_data.as_ref().expect("extra_data should exist");
@@ -216,7 +217,7 @@ fn test_parse_vcpkg_lock_preserves_registry_revisions() {
     let microsoft_registry = registry_locks
         .iter()
         .find(|entry| {
-            entry.get("repository").and_then(serde_json::Value::as_str)
+            entry.get("location").and_then(serde_json::Value::as_str)
                 == Some("https://github.com/microsoft/vcpkg")
         })
         .expect("expected microsoft/vcpkg registry lock");
@@ -232,7 +233,7 @@ fn test_parse_vcpkg_lock_preserves_registry_revisions() {
     let local_registry = registry_locks
         .iter()
         .find(|entry| {
-            entry.get("repository").and_then(serde_json::Value::as_str)
+            entry.get("location").and_then(serde_json::Value::as_str)
                 == Some("/opt/private-vcpkg-registry")
         })
         .expect("expected local registry lock");
@@ -253,6 +254,7 @@ fn test_invalid_vcpkg_lock_returns_default_package() {
     assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
     assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgLockJson));
     assert!(pkg.name.is_none());
+    assert!(pkg.is_private);
     assert!(pkg.extra_data.is_none());
 }
 

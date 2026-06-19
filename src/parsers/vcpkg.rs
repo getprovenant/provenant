@@ -104,6 +104,7 @@ fn default_lock_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Vcpkg),
         datasource_id: Some(DatasourceId::VcpkgLockJson),
+        is_private: true,
         ..Default::default()
     }
 }
@@ -142,11 +143,9 @@ fn parse_vcpkg_manifest(path: &Path, json: &Value) -> PackageData {
 
 fn parse_vcpkg_lock(json: &Value) -> PackageData {
     PackageData {
-        package_type: Some(PackageType::Vcpkg),
         primary_language: Some("C++".to_string()),
         extra_data: build_lock_extra_data(json),
-        datasource_id: Some(DatasourceId::VcpkgLockJson),
-        ..Default::default()
+        ..default_lock_package_data()
     }
 }
 
@@ -170,7 +169,7 @@ fn extract_lock_registry_entries(json: &Value) -> Vec<Value> {
     registries
         .iter()
         .take(registry_limit)
-        .filter_map(|(repository, references)| {
+        .filter_map(|(location, references)| {
             let references = references.as_object()?;
             let reference_limit = capped_iteration_limit(references.len(), "vcpkg lock references");
             let mut normalized_references = JsonMap::new();
@@ -195,8 +194,8 @@ fn extract_lock_registry_entries(json: &Value) -> Vec<Value> {
 
             let mut entry = JsonMap::new();
             entry.insert(
-                "repository".to_string(),
-                Value::String(truncate_field(repository.to_string())),
+                "location".to_string(),
+                Value::String(truncate_field(location.to_string())),
             );
             entry.insert(
                 "references".to_string(),

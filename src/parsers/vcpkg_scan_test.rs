@@ -80,6 +80,7 @@ mod tests {
             .iter()
             .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgLockJson))
             .expect("vcpkg lock package data should be present");
+        assert!(package.is_private);
         let registry_locks = package
             .extra_data
             .as_ref()
