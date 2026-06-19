@@ -75,6 +75,11 @@ pub(super) fn extract_copyright_information(
     // holder, and author.
     let raw_lines: Vec<&str> = text_content.lines().collect();
 
+    // Two distinct detections (e.g. `(c) 2012. Natural Earth` and the
+    // stray-space variant `(c) 2012 . Natural Earth`) can render to the same
+    // native value at the same span; collapse those exact duplicates so the file
+    // does not report the same notice twice.
+    let mut seen_copyrights = HashSet::new();
     file_info_builder.copyrights(
         copyrights
             .into_iter()
@@ -107,6 +112,7 @@ pub(super) fn extract_copyright_information(
                         .as_deref()
                         .is_some_and(is_font_metadata_label_copyright)
             })
+            .filter(|c| seen_copyrights.insert((c.copyright.clone(), c.start_line, c.end_line)))
             .collect::<Vec<Copyright>>(),
     );
     file_info_builder.holders(
@@ -165,6 +171,13 @@ fn render_raw_copyright_from_text(
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
         .join(" ");
+    // Normalize the HTML copyright entity to `(c)` so an `&copy;`-encoded notice
+    // does not survive verbatim and split into a near-duplicate value. `(c)` is
+    // used (rather than the `©` glyph) so the entity renders identically whether
+    // it reaches the native field through the wrapper path — which re-normalizes
+    // via `prepare_text_line` — or the plain projection path. Literal `©` glyphs
+    // are left untouched and still preserved natively.
+    let rendered = normalize_html_copyright_entity(&rendered);
     let rendered = rendered.split_whitespace().collect::<Vec<_>>().join(" ");
 
     if rendered.is_empty() {
@@ -237,6 +250,22 @@ fn project_wrapped_copyright_value(rendered: &str, _fallback: &str) -> Option<St
         )
         .expect("valid markup text copyright wrapper regex")
     });
+    // MSBuild project metadata element: `<Copyright>Acme © 2024</Copyright>`.
+    static XML_COPYRIGHT_ELEMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?ix)^<copyright>\s*(?P<value>[^<]+?)\s*</copyright>$"#)
+            .expect("valid xml copyright element wrapper regex")
+    });
+    // C# assembly attribute: `[assembly: AssemblyCopyright("Copyright © 2024")]`.
+    static ASSEMBLY_COPYRIGHT_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?ix)
+            ^\[\s*assembly\s*:\s*AssemblyCopyright\s*\(\s*
+            "(?P<value>[^"]+)"
+            \s*\)\s*\]$
+            "#,
+        )
+        .expect("valid assembly copyright attribute wrapper regex")
+    });
 
     let extracted = if let Some(captures) = VALUE_LEGALCOPYRIGHT_RE.captures(rendered) {
         captures
@@ -254,6 +283,14 @@ fn project_wrapped_copyright_value(rendered: &str, _fallback: &str) -> Option<St
         captures
             .name("dq")
             .or_else(|| captures.name("sq"))
+            .map(|m| m.as_str().trim().to_string())
+    } else if let Some(captures) = XML_COPYRIGHT_ELEMENT_RE.captures(rendered) {
+        captures
+            .name("value")
+            .map(|m| m.as_str().trim().to_string())
+    } else if let Some(captures) = ASSEMBLY_COPYRIGHT_ATTR_RE.captures(rendered) {
+        captures
+            .name("value")
             .map(|m| m.as_str().trim().to_string())
     } else {
         None
@@ -391,6 +428,17 @@ fn normalize_native_suffix(suffix: &str) -> Option<String> {
     }
 
     None
+}
+
+/// Normalize the HTML copyright entity (named and numeric forms) to `(c)` so an
+/// `&copy;`-encoded notice does not leak the raw entity text into the native
+/// value. `(c)` keeps the rendering identical across the wrapper path (which
+/// re-normalizes through `prepare_text_line`) and the plain projection path.
+fn normalize_html_copyright_entity(text: &str) -> std::borrow::Cow<'_, str> {
+    static COPYRIGHT_ENTITY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)&(?:copy|#0*169|#x0*a9);").expect("valid copyright entity regex")
+    });
+    COPYRIGHT_ENTITY_RE.replace_all(text, "(c)")
 }
 
 fn strip_common_comment_wrappers(line: &str) -> String {

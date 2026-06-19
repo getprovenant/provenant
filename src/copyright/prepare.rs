@@ -263,11 +263,16 @@ fn replace_tags_preserving_copyright(text: &str, re: &Regex) -> String {
     re.replace_all(text, |caps: &regex::Captures| {
         let m = caps.get(0).unwrap().as_str();
         if should_keep_angle_bracket_content(m) {
-            m.trim_start_matches('<')
+            // Pad with spaces so a kept tag word keeps its word boundary instead
+            // of gluing onto adjacent text: `<Copyright>MaxRev` must become
+            // ` Copyright MaxRev`, not `CopyrightMaxRev` (which hides the holder).
+            // Surrounding whitespace is collapsed downstream.
+            let kept = m
+                .trim_start_matches('<')
                 .trim_end_matches('>')
                 .trim_start_matches('/')
-                .trim()
-                .to_string()
+                .trim();
+            format!(" {kept} ")
         } else {
             " ".to_string()
         }
@@ -276,6 +281,14 @@ fn replace_tags_preserving_copyright(text: &str, re: &Regex) -> String {
 }
 
 fn should_keep_angle_bracket_content(m: &str) -> bool {
+    // A closing tag (`</copyright>`, `</author>`, …) is purely structural markup,
+    // never a label preceding a value, so always strip it. Keeping its tag word
+    // would glue a spurious marker onto a real notice (e.g. `<Copyright>MaxRev ©
+    // 2026</Copyright>` yielding a `2026Copyright` holder).
+    if m.trim_start_matches('<').trim_start().starts_with('/') {
+        return false;
+    }
+
     let inner = m
         .trim_start_matches('<')
         .trim_end_matches('>')
@@ -1557,6 +1570,18 @@ mod tests {
             result.contains("legal"),
             "legal token should be preserved: {result}"
         );
+    }
+
+    #[test]
+    fn test_kept_tag_word_keeps_boundary_with_following_text() {
+        // `<Copyright>MaxRev` must not collapse to `CopyrightMaxRev`, which would
+        // bury the holder name; the kept tag word stays a separate token.
+        let result = prepare_text_line("<Copyright>MaxRev © 2026</Copyright>");
+        assert!(
+            !result.contains("CopyrightMaxRev"),
+            "tag word glued to holder: {result}"
+        );
+        assert!(result.contains("MaxRev"), "holder lost: {result}");
     }
 
     #[test]

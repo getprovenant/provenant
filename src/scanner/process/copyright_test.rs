@@ -1125,3 +1125,102 @@ fn test_extract_copyright_information_drops_code_line_with_embedded_email_litera
         file.authors.iter().map(|a| &a.author).collect::<Vec<_>>()
     );
 }
+
+fn build_named_file(
+    mut builder: FileInfoBuilder,
+    name: &str,
+    ext: &str,
+) -> crate::models::FileInfo {
+    builder
+        .name(name.to_string())
+        .base_name(name.to_string())
+        .extension(ext.to_string())
+        .path(name.to_string())
+        .file_type(FileType::File)
+        .size(0)
+        .build()
+        .expect("builder should produce file info")
+}
+
+#[test]
+fn test_msbuild_xml_copyright_element_strips_tags_and_keeps_holder() {
+    // `<Copyright>…</Copyright>` is an MSBuild project element; the wrapper tags
+    // must not leak into the native value, and the holder name before the symbol
+    // must survive.
+    let text = "<Project>\n  <PropertyGroup>\n    <Copyright>MaxRev © 2026</Copyright>\n  </PropertyGroup>\n</Project>\n";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("a.csproj"), text, 120.0, false);
+    let file = build_named_file(builder, "a.csproj", ".csproj");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.copyrights[0].copyright, "MaxRev (c) 2026");
+    assert_eq!(
+        file.holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["MaxRev"]
+    );
+}
+
+#[test]
+fn test_csharp_assembly_copyright_attribute_unwraps_to_notice() {
+    // `[assembly: AssemblyCopyright("…")]` is C# attribute syntax; only the inner
+    // notice should be reported as the copyright.
+    let text = "[assembly: AssemblyProduct(\"Demo\")]\n[assembly: AssemblyCopyright(\"Copyright ©  2024\")]\n[assembly: AssemblyTrademark(\"\")]\n";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(
+        &mut builder,
+        Path::new("AssemblyInfo.cs"),
+        text,
+        120.0,
+        false,
+    );
+    let file = build_named_file(builder, "AssemblyInfo.cs", ".cs");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(file.copyrights[0].copyright, "Copyright (c) 2024");
+}
+
+#[test]
+fn test_html_copyright_entity_is_detected_not_treated_as_source_code() {
+    // `&copy;` is an HTML entity, not a C address-of expression, so the notice
+    // must be detected (not dropped as code) and reported once, with the entity
+    // normalized to `(c)` rather than leaking the raw `&copy;` text.
+    let text = "\t\t&copy; 2012. Natural Earth. All rights reserved.\n";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("README.html"), text, 120.0, false);
+    let file = build_named_file(builder, "README.html", ".html");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "(c) 2012. Natural Earth. All rights reserved."
+    );
+    assert_eq!(
+        file.copyrights[0].normalized_copyright.as_deref(),
+        Some("(c) 2012. Natural Earth")
+    );
+    assert_eq!(
+        file.holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Natural Earth"]
+    );
+}

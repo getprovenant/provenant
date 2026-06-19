@@ -2792,6 +2792,22 @@ fn test_looks_like_source_code_keeps_real_notices_and_names() {
 }
 
 #[test]
+fn test_looks_like_source_code_allows_html_copyright_entities() {
+    // HTML entities (`&copy;`, `&reg;`, `&amp;`) abut `;` like a C statement
+    // terminator but are ordinary markup in copyright/legal prose, so they must
+    // not be mistaken for an address-of code expression.
+    assert!(!looks_like_source_code(
+        "&copy; 2012. Natural Earth. All rights reserved."
+    ));
+    assert!(!looks_like_source_code(
+        "Copyright &copy; 2024 Example Corp."
+    ));
+    assert!(!looks_like_source_code("Acme &reg; 2020"));
+    // A genuine C address-of with a real variable name is still code.
+    assert!(looks_like_source_code("foo(a, &result);"));
+}
+
+#[test]
 fn test_looks_like_source_code_keeps_ampersand_company_names() {
     // `&` in a company name (with or without surrounding spaces, including the
     // malformed `space-&-lowercase` OCR/header variant) is not source code: the
