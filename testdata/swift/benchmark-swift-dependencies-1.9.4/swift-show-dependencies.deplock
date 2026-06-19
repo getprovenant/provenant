@@ -1,0 +1,205 @@
+{
+  "identity": "swift-dependencies",
+  "name": "swift-dependencies",
+  "url": "/swift-dependencies",
+  "version": "unspecified",
+  "path": "/swift-dependencies",
+  "traits": [
+    "default"
+  ],
+  "dependencies": [
+    {
+      "identity": "combine-schedulers",
+      "name": "combine-schedulers",
+      "url": "https://github.com/pointfreeco/combine-schedulers",
+      "version": "1.0.3",
+      "path": "/swift-dependencies/.build/checkouts/combine-schedulers",
+      "traits": [
+        "default"
+      ],
+      "dependencies": [
+        {
+          "identity": "swift-concurrency-extras",
+          "name": "swift-concurrency-extras",
+          "url": "https://github.com/pointfreeco/swift-concurrency-extras",
+          "version": "1.3.1",
+          "path": "/swift-dependencies/.build/checkouts/swift-concurrency-extras",
+          "traits": [
+            "default"
+          ],
+          "dependencies": []
+        },
+        {
+          "identity": "xctest-dynamic-overlay",
+          "name": "xctest-dynamic-overlay",
+          "url": "https://github.com/pointfreeco/xctest-dynamic-overlay",
+          "version": "1.5.2",
+          "path": "/swift-dependencies/.build/checkouts/xctest-dynamic-overlay",
+          "traits": [
+            "default"
+          ],
+          "dependencies": []
+        }
+      ]
+    },
+    {
+      "identity": "swift-clocks",
+      "name": "swift-clocks",
+      "url": "https://github.com/pointfreeco/swift-clocks",
+      "version": "1.0.6",
+      "path": "/swift-dependencies/.build/checkouts/swift-clocks",
+      "traits": [
+        "default"
+      ],
+      "dependencies": [
+        {
+          "identity": "swift-concurrency-extras",
+          "name": "swift-concurrency-extras",
+          "url": "https://github.com/pointfreeco/swift-concurrency-extras",
+          "version": "1.3.1",
+          "path": "/swift-dependencies/.build/checkouts/swift-concurrency-extras",
+          "traits": [
+            "default"
+          ],
+          "dependencies": []
+        },
+        {
+          "identity": "xctest-dynamic-overlay",
+          "name": "xctest-dynamic-overlay",
+          "url": "https://github.com/pointfreeco/xctest-dynamic-overlay",
+          "version": "1.5.2",
+          "path": "/swift-dependencies/.build/checkouts/xctest-dynamic-overlay",
+          "traits": [
+            "default"
+          ],
+          "dependencies": []
+        }
+      ]
+    },
+    {
+      "identity": "swift-concurrency-extras",
+      "name": "swift-concurrency-extras",
+      "url": "https://github.com/pointfreeco/swift-concurrency-extras",
+      "version": "1.3.1",
+      "path": "/swift-dependencies/.build/checkouts/swift-concurrency-extras",
+      "traits": [
+        "default"
+      ],
+      "dependencies": []
+    },
+    {
+      "identity": "xctest-dynamic-overlay",
+      "name": "xctest-dynamic-overlay",
+      "url": "https://github.com/pointfreeco/xctest-dynamic-overlay",
+      "version": "1.5.2",
+      "path": "/swift-dependencies/.build/checkouts/xctest-dynamic-overlay",
+      "traits": [
+        "default"
+      ],
+      "dependencies": []
+    },
+    {
+      "identity": "swift-syntax",
+      "name": "swift-syntax",
+      "url": "https://github.com/swiftlang/swift-syntax",
+      "version": "600.0.1",
+      "path": "/swift-dependencies/.build/checkouts/swift-syntax",
+      "traits": [
+        "default"
+      ],
+      "dependencies": []
+    },
+    {
+      "identity": "swift-macro-testing",
+      "name": "swift-macro-testing",
+      "url": "https://github.com/pointfreeco/swift-macro-testing",
+      "version": "0.6.0",
+      "path": "/swift-dependencies/.build/checkouts/swift-macro-testing",
+      "traits": [
+        "default"
+      ],
+      "dependencies": [
+        {
+          "identity": "swift-snapshot-testing",
+          "name": "swift-snapshot-testing",
+          "url": "https://github.com/pointfreeco/swift-snapshot-testing",
+          "version": "1.18.1",
+          "path": "/swift-dependencies/.build/checkouts/swift-snapshot-testing",
+          "traits": [
+            "default"
+          ],
+          "dependencies": [
+            {
+              "identity": "swift-custom-dump",
+              "name": "swift-custom-dump",
+              "url": "https://github.com/pointfreeco/swift-custom-dump",
+              "version": "1.3.3",
+              "path": "/swift-dependencies/.build/checkouts/swift-custom-dump",
+              "traits": [
+                "default"
+              ],
+              "dependencies": [
+                {
+                  "identity": "xctest-dynamic-overlay",
+                  "name": "xctest-dynamic-overlay",
+                  "url": "https://github.com/pointfreeco/xctest-dynamic-overlay",
+                  "version": "1.5.2",
+                  "path": "/swift-dependencies/.build/checkouts/xctest-dynamic-overlay",
+                  "traits": [
+                    "default"
+                  ],
+                  "dependencies": []
+                }
+              ]
+            },
+            {
+              "identity": "swift-syntax",
+              "name": "swift-syntax",
+              "url": "https://github.com/swiftlang/swift-syntax",
+              "version": "600.0.1",
+              "path": "/swift-dependencies/.build/checkouts/swift-syntax",
+              "traits": [
+                "default"
+              ],
+              "dependencies": []
+            }
+          ]
+        },
+        {
+          "identity": "swift-syntax",
+          "name": "swift-syntax",
+          "url": "https://github.com/swiftlang/swift-syntax",
+          "version": "600.0.1",
+          "path": "/swift-dependencies/.build/checkouts/swift-syntax",
+          "traits": [
+            "default"
+          ],
+          "dependencies": []
+        }
+      ]
+    },
+    {
+      "identity": "swift-docc-plugin",
+      "name": "SwiftDocCPlugin",
+      "url": "https://github.com/apple/swift-docc-plugin",
+      "version": "1.4.3",
+      "path": "/swift-dependencies/.build/checkouts/swift-docc-plugin",
+      "traits": [
+        "default"
+      ],
+      "dependencies": [
+        {
+          "identity": "swift-docc-symbolkit",
+          "name": "SymbolKit",
+          "url": "https://github.com/swiftlang/swift-docc-symbolkit",
+          "version": "1.0.0",
+          "path": "/swift-dependencies/.build/checkouts/swift-docc-symbolkit",
+          "traits": [
+            "default"
+          ],
+          "dependencies": []
+        }
+      ]
+    }
+  ]
+}
