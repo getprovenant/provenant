@@ -893,11 +893,13 @@ pub(crate) fn looks_like_source_code(s: &str) -> bool {
             # parenthesized URL/name (`AUTHORS.txt (http://...)`,
             # `google.com (Name)`) is not mistaken for a call.
           | \b[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\(
-            # C-style address-of a variable that closes a call or statement:
-            # ` &copyRegion)` / `, &result;`. Requiring the trailing `)` or `;`
-            # excludes name fragments such as `Ernst &young` or `Foo &co, Ltd.`,
-            # which are not followed by call/statement punctuation.
-          | (?:^|[\s(,])&[a-z][A-Za-z0-9_]*\s*[);]
+            # C-style address-of a variable that closes a call: ` &copyRegion)`,
+            # `, &result)`. Only the `)`-closing form is matched: HTML entities
+            # (`&copy;`, `&euro;`, `&eacute;`, …) always close with `;`, never
+            # `)`, so a copyright line carrying an entity is never mistaken for
+            # code. The trailing `)` also excludes name fragments such as
+            # `Ernst &young` that are not followed by call punctuation.
+          | (?:^|[\s(,])&[a-z][A-Za-z0-9_]*\s*\)
             ",
         )
     });

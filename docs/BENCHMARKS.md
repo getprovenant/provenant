@@ -1130,12 +1130,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `299.53s`; ScanCode `9432.77s`
 - Broader .NET/NuGet and sibling npm package visibility (`2249` vs `5` packages, `983` vs `503` dependencies) across many `*.csproj` files, `Directory.Packages.props`, `Directory.Build.props`, and committed `package-lock.json` inputs, with zero scan-file timeouts where ScanCode aborts on `EncryptedXmlSample4.xml`
 
-##### [MaxRev-Dev/gdal.netcore @ 6cc0145](https://github.com/MaxRev-Dev/gdal.netcore/tree/6cc0145f3dc182629fb11c4db96ced7a71fedf70) — **9.98× faster**
+##### [MaxRev-Dev/gdal.netcore @ 6cc0145](https://github.com/MaxRev-Dev/gdal.netcore/tree/6cc0145f3dc182629fb11c4db96ced7a71fedf70) — **10.75× faster**
 
 - Files: 156
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `5.08s`; ScanCode `50.68s`
-- Broader .NET/NuGet and vcpkg package and dependency extraction (`5` vs `0` packages, `92` vs `4` dependencies) from many `*.csproj` and `packages.config` project manifests assembled into named `pkg:nuget/*` identities, alongside the standalone `shared/vcpkg.json` manifest and the `shared/vcpkg-lock.json` registry-lock surface that preserves each registry location and its locked reference-to-revision mapping, plus sibling `Dockerfile` and pip-requirements visibility, where ScanCode reports no top-level packages and stays manifest-blind
+- Timing: Provenant `4.71s`; ScanCode `50.68s`
+- Broader .NET/NuGet and vcpkg package and dependency extraction (`5` vs `0` packages, `92` vs `4` dependencies) from many `*.csproj` and `packages.config` project manifests assembled into named `pkg:nuget/*` identities, alongside the standalone `shared/vcpkg.json` manifest and the `shared/vcpkg-lock.json` registry-lock surface that preserves each registry location and its locked reference-to-revision mapping, plus sibling `Dockerfile` and pip-requirements visibility where ScanCode reports no top-level packages
 
 ##### [microsoft/onnxruntime @ 97e0a00](https://github.com/microsoft/onnxruntime/tree/97e0a001d43f8783db4507c9b2ac3731dc95a1ed) — **23.89× faster**
 
