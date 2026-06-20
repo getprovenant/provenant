@@ -335,9 +335,9 @@ ScanCode: 63.97s</title></rect>
     <rect x="529.99" y="401.38" width="8" height="8" fill="#d97706" rx="1.5"><title>catchorg/Catch2 @ 10f6248
 Files: 576
 ScanCode: 121.03s</title></rect>
-    <rect x="531.64" y="376.71" width="8" height="8" fill="#d97706" rx="1.5"><title>i18next/react-i18next @ cb20d18
+    <rect x="531.64" y="398.72" width="8" height="8" fill="#d97706" rx="1.5"><title>i18next/react-i18next @ cb20d18
 Files: 590
-ScanCode: 204.00s</title></rect>
+ScanCode: 128.04s</title></rect>
     <rect x="534.61" y="404.01" width="8" height="8" fill="#d97706" rx="1.5"><title>iTowns/itowns @ 08e08f5
 Files: 616
 ScanCode: 114.48s</title></rect>
@@ -392,9 +392,9 @@ ScanCode: 113.37s</title></rect>
     <rect x="572.02" y="412.37" width="8" height="8" fill="#d97706" rx="1.5"><title>commercialhaskell/stack @ cb6070f
 Files: 1060
 ScanCode: 95.91s</title></rect>
-    <rect x="573.49" y="357.97" width="8" height="8" fill="#d97706" rx="1.5"><title>jquery/jquery-ui @ eda7aa3
+    <rect x="573.49" y="377.40" width="8" height="8" fill="#d97706" rx="1.5"><title>jquery/jquery-ui @ eda7aa3
 Files: 1083
-ScanCode: 303.29s</title></rect>
+ScanCode: 201.04s</title></rect>
     <rect x="574.44" y="417.69" width="8" height="8" fill="#d97706" rx="1.5"><title>pointfreeco/swift-composable-architecture @ 7517cc3
 Files: 1098
 ScanCode: 85.71s</title></rect>
@@ -407,9 +407,9 @@ ScanCode: 117.46s</title></rect>
     <rect x="578.35" y="408.58" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/libdnf @ d395731
 Files: 1162
 ScanCode: 103.93s</title></rect>
-    <rect x="580.33" y="373.93" width="8" height="8" fill="#d97706" rx="1.5"><title>openfl/openfl @ 74d8f72
+    <rect x="580.33" y="395.45" width="8" height="8" fill="#d97706" rx="1.5"><title>openfl/openfl @ 74d8f72
 Files: 1196
-ScanCode: 216.36s</title></rect>
+ScanCode: 137.21s</title></rect>
     <rect x="580.51" y="375.16" width="8" height="8" fill="#d97706" rx="1.5"><title>OpenMDAO/OpenMDAO @ bf1fcb6
 Files: 1199
 ScanCode: 210.82s</title></rect>
@@ -425,9 +425,9 @@ ScanCode: 191.41s</title></rect>
     <rect x="585.23" y="404.76" width="8" height="8" fill="#d97706" rx="1.5"><title>restic/restic @ 29446b0
 Files: 1284
 ScanCode: 112.67s</title></rect>
-    <rect x="594.45" y="353.48" width="8" height="8" fill="#d97706" rx="1.5"><title>chriskohlhoff/asio @ bd500f0
+    <rect x="594.45" y="380.96" width="8" height="8" fill="#d97706" rx="1.5"><title>chriskohlhoff/asio @ bd500f0
 Files: 1468
-ScanCode: 333.52s</title></rect>
+ScanCode: 186.47s</title></rect>
     <rect x="596.63" y="389.66" width="8" height="8" fill="#d97706" rx="1.5"><title>aosp-mirror/platform_build @ 045a3d6
 Files: 1515
 ScanCode: 155.12s</title></rect>
@@ -449,9 +449,9 @@ ScanCode: 163.56s</title></rect>
     <rect x="613.49" y="327.10" width="8" height="8" fill="#d97706" rx="1.5"><title>scalatest/scalatest @ f6ba8f2
 Files: 1935
 ScanCode: 582.97s</title></rect>
-    <rect x="613.95" y="329.87" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaLang/julia @ afc71c2
+    <rect x="613.95" y="349.71" width="8" height="8" fill="#d97706" rx="1.5"><title>JuliaLang/julia @ afc71c2
 Files: 1948
-ScanCode: 549.75s</title></rect>
+ScanCode: 361.23s</title></rect>
     <rect x="614.44" y="350.37" width="8" height="8" fill="#d97706" rx="1.5"><title>astropy/astropy @ 40280e3
 Files: 1962
 ScanCode: 356.23s</title></rect>
@@ -461,9 +461,9 @@ ScanCode: 341.28s</title></rect>
     <rect x="618.50" y="383.74" width="8" height="8" fill="#d97706" rx="1.5"><title>rubocop/rubocop @ 4e0d642
 Files: 2081
 ScanCode: 175.80s</title></rect>
-    <rect x="619.68" y="377.56" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/graph @ ae8e08d
+    <rect x="619.68" y="397.27" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/graph @ ae8e08d
 Files: 2117
-ScanCode: 200.37s</title></rect>
+ScanCode: 132.02s</title></rect>
     <rect x="619.78" y="321.51" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/merlin @ 30b4f24
 Files: 2120
 ScanCode: 656.13s</title></rect>
@@ -485,24 +485,24 @@ ScanCode: 418.88s</title></rect>
     <rect x="638.16" y="373.05" width="8" height="8" fill="#d97706" rx="1.5"><title>jgm/pandoc @ d9838eb
 Files: 2768
 ScanCode: 220.43s</title></rect>
-    <rect x="639.24" y="345.52" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/std @ a864f62
+    <rect x="639.24" y="371.62" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/std @ a864f62
 Files: 2812
-ScanCode: 394.76s</title></rect>
+ScanCode: 227.22s</title></rect>
     <rect x="640.96" y="376.44" width="8" height="8" fill="#d97706" rx="1.5"><title>rust-lang/cargo @ b54fe55
 Files: 2883
 ScanCode: 205.19s</title></rect>
-    <rect x="641.06" y="351.33" width="8" height="8" fill="#d97706" rx="1.5"><title>pnpm/pnpm @ 2a1ffe1
+    <rect x="641.06" y="367.52" width="8" height="8" fill="#d97706" rx="1.5"><title>pnpm/pnpm @ 2a1ffe1
 Files: 2887
-ScanCode: 349.11s</title></rect>
+ScanCode: 247.80s</title></rect>
     <rect x="641.37" y="349.55" width="8" height="8" fill="#d97706" rx="1.5"><title>facebook/fresco @ c991a69
 Files: 2900
 ScanCode: 362.51s</title></rect>
     <rect x="641.77" y="389.02" width="8" height="8" fill="#d97706" rx="1.5"><title>NixOS/nix @ 6a659e1
 Files: 2917
 ScanCode: 157.23s</title></rect>
-    <rect x="643.66" y="353.67" width="8" height="8" fill="#d97706" rx="1.5"><title>scipy/scipy @ 8a4633f
+    <rect x="643.66" y="334.70" width="8" height="8" fill="#d97706" rx="1.5"><title>scipy/scipy @ 8a4633f
 Files: 2998
-ScanCode: 332.23s</title></rect>
+ScanCode: 496.36s</title></rect>
     <rect x="646.82" y="368.39" width="8" height="8" fill="#d97706" rx="1.5"><title>laravel/framework @ a3960e8
 Files: 3139
 ScanCode: 243.30s</title></rect>
@@ -530,9 +530,9 @@ ScanCode: 446.79s</title></rect>
     <rect x="659.81" y="375.65" width="8" height="8" fill="#d97706" rx="1.5"><title>yarnpkg/berry @ c0274d6
 Files: 3790
 ScanCode: 208.66s</title></rect>
-    <rect x="664.50" y="341.57" width="8" height="8" fill="#d97706" rx="1.5"><title>yairm210/Unciv @ d54f33c
+    <rect x="664.50" y="362.06" width="8" height="8" fill="#d97706" rx="1.5"><title>yairm210/Unciv @ d54f33c
 Files: 4057
-ScanCode: 429.19s</title></rect>
+ScanCode: 278.15s</title></rect>
     <rect x="664.98" y="356.00" width="8" height="8" fill="#d97706" rx="1.5"><title>lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11
 Files: 4085
 ScanCode: 316.25s</title></rect>
@@ -997,9 +997,9 @@ Provenant: 4.70s</title></circle>
     <circle cx="533.99" cy="546.25" r="4.5" fill="#2563eb"><title>catchorg/Catch2 @ 10f6248
 Files: 576
 Provenant: 6.14s</title></circle>
-    <circle cx="535.64" cy="504.61" r="4.5" fill="#2563eb"><title>i18next/react-i18next @ cb20d18
+    <circle cx="535.64" cy="542.05" r="4.5" fill="#2563eb"><title>i18next/react-i18next @ cb20d18
 Files: 590
-Provenant: 14.82s</title></circle>
+Provenant: 6.71s</title></circle>
     <circle cx="538.61" cy="547.42" r="4.5" fill="#2563eb"><title>iTowns/itowns @ 08e08f5
 Files: 616
 Provenant: 5.99s</title></circle>
@@ -1054,9 +1054,9 @@ Provenant: 6.40s</title></circle>
     <circle cx="576.02" cy="544.29" r="4.5" fill="#2563eb"><title>commercialhaskell/stack @ cb6070f
 Files: 1060
 Provenant: 6.40s</title></circle>
-    <circle cx="577.49" cy="502.31" r="4.5" fill="#2563eb"><title>jquery/jquery-ui @ eda7aa3
+    <circle cx="577.49" cy="542.12" r="4.5" fill="#2563eb"><title>jquery/jquery-ui @ eda7aa3
 Files: 1083
-Provenant: 15.56s</title></circle>
+Provenant: 6.70s</title></circle>
     <circle cx="578.44" cy="554.37" r="4.5" fill="#2563eb"><title>pointfreeco/swift-composable-architecture @ 7517cc3
 Files: 1098
 Provenant: 5.17s</title></circle>
@@ -1069,9 +1069,9 @@ Provenant: 6.59s</title></circle>
     <circle cx="582.35" cy="547.57" r="4.5" fill="#2563eb"><title>rpm-software-management/libdnf @ d395731
 Files: 1162
 Provenant: 5.97s</title></circle>
-    <circle cx="584.33" cy="511.65" r="4.5" fill="#2563eb"><title>openfl/openfl @ 74d8f72
+    <circle cx="584.33" cy="522.82" r="4.5" fill="#2563eb"><title>openfl/openfl @ 74d8f72
 Files: 1196
-Provenant: 12.77s</title></circle>
+Provenant: 10.08s</title></circle>
     <circle cx="584.51" cy="534.94" r="4.5" fill="#2563eb"><title>OpenMDAO/OpenMDAO @ bf1fcb6
 Files: 1199
 Provenant: 7.80s</title></circle>
@@ -1087,9 +1087,9 @@ Provenant: 11.28s</title></circle>
     <circle cx="589.23" cy="509.69" r="4.5" fill="#2563eb"><title>restic/restic @ 29446b0
 Files: 1284
 Provenant: 13.31s</title></circle>
-    <circle cx="598.45" cy="492.95" r="4.5" fill="#2563eb"><title>chriskohlhoff/asio @ bd500f0
+    <circle cx="598.45" cy="534.04" r="4.5" fill="#2563eb"><title>chriskohlhoff/asio @ bd500f0
 Files: 1468
-Provenant: 18.97s</title></circle>
+Provenant: 7.95s</title></circle>
     <circle cx="600.63" cy="529.89" r="4.5" fill="#2563eb"><title>aosp-mirror/platform_build @ 045a3d6
 Files: 1515
 Provenant: 8.68s</title></circle>
@@ -1111,9 +1111,9 @@ Provenant: 6.16s</title></circle>
     <circle cx="617.49" cy="467.46" r="4.5" fill="#2563eb"><title>scalatest/scalatest @ f6ba8f2
 Files: 1935
 Provenant: 32.53s</title></circle>
-    <circle cx="617.95" cy="479.38" r="4.5" fill="#2563eb"><title>JuliaLang/julia @ afc71c2
+    <circle cx="617.95" cy="528.39" r="4.5" fill="#2563eb"><title>JuliaLang/julia @ afc71c2
 Files: 1948
-Provenant: 25.28s</title></circle>
+Provenant: 8.96s</title></circle>
     <circle cx="618.44" cy="524.98" r="4.5" fill="#2563eb"><title>astropy/astropy @ 40280e3
 Files: 1962
 Provenant: 9.63s</title></circle>
@@ -1123,9 +1123,9 @@ Provenant: 15.74s</title></circle>
     <circle cx="622.50" cy="536.73" r="4.5" fill="#2563eb"><title>rubocop/rubocop @ 4e0d642
 Files: 2081
 Provenant: 7.51s</title></circle>
-    <circle cx="623.68" cy="502.89" r="4.5" fill="#2563eb"><title>boostorg/graph @ ae8e08d
+    <circle cx="623.68" cy="539.99" r="4.5" fill="#2563eb"><title>boostorg/graph @ ae8e08d
 Files: 2117
-Provenant: 15.37s</title></circle>
+Provenant: 7.01s</title></circle>
     <circle cx="623.78" cy="468.34" r="4.5" fill="#2563eb"><title>ocaml/merlin @ 30b4f24
 Files: 2120
 Provenant: 31.93s</title></circle>
@@ -1147,24 +1147,24 @@ Provenant: 13.09s</title></circle>
     <circle cx="642.16" cy="524.25" r="4.5" fill="#2563eb"><title>jgm/pandoc @ d9838eb
 Files: 2768
 Provenant: 9.78s</title></circle>
-    <circle cx="643.24" cy="500.11" r="4.5" fill="#2563eb"><title>denoland/std @ a864f62
+    <circle cx="643.24" cy="543.12" r="4.5" fill="#2563eb"><title>denoland/std @ a864f62
 Files: 2812
-Provenant: 16.30s</title></circle>
+Provenant: 6.56s</title></circle>
     <circle cx="644.96" cy="531.78" r="4.5" fill="#2563eb"><title>rust-lang/cargo @ b54fe55
 Files: 2883
 Provenant: 8.34s</title></circle>
-    <circle cx="645.06" cy="499.42" r="4.5" fill="#2563eb"><title>pnpm/pnpm @ 2a1ffe1
+    <circle cx="645.06" cy="537.94" r="4.5" fill="#2563eb"><title>pnpm/pnpm @ 2a1ffe1
 Files: 2887
-Provenant: 16.54s</title></circle>
+Provenant: 7.32s</title></circle>
     <circle cx="645.37" cy="524.20" r="4.5" fill="#2563eb"><title>facebook/fresco @ c991a69
 Files: 2900
 Provenant: 9.79s</title></circle>
     <circle cx="645.77" cy="548.86" r="4.5" fill="#2563eb"><title>NixOS/nix @ 6a659e1
 Files: 2917
 Provenant: 5.81s</title></circle>
-    <circle cx="647.66" cy="482.69" r="4.5" fill="#2563eb"><title>scipy/scipy @ 8a4633f
+    <circle cx="647.66" cy="516.43" r="4.5" fill="#2563eb"><title>scipy/scipy @ 8a4633f
 Files: 2998
-Provenant: 23.57s</title></circle>
+Provenant: 11.54s</title></circle>
     <circle cx="650.82" cy="539.65" r="4.5" fill="#2563eb"><title>laravel/framework @ a3960e8
 Files: 3139
 Provenant: 7.06s</title></circle>
@@ -1192,9 +1192,9 @@ Provenant: 23.74s</title></circle>
     <circle cx="663.81" cy="530.05" r="4.5" fill="#2563eb"><title>yarnpkg/berry @ c0274d6
 Files: 3790
 Provenant: 8.65s</title></circle>
-    <circle cx="668.50" cy="486.03" r="4.5" fill="#2563eb"><title>yairm210/Unciv @ d54f33c
+    <circle cx="668.50" cy="526.88" r="4.5" fill="#2563eb"><title>yairm210/Unciv @ d54f33c
 Files: 4057
-Provenant: 21.96s</title></circle>
+Provenant: 9.25s</title></circle>
     <circle cx="668.98" cy="497.60" r="4.5" fill="#2563eb"><title>lambci/lambda:provided.al2 linux/amd64 @ sha256:7765ec11
 Files: 4085
 Provenant: 17.19s</title></circle>
