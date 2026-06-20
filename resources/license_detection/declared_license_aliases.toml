@@ -1,0 +1,51 @@
+# Declared-license name aliases
+#
+# Maps bare / informal license *names* that are not valid SPDX expressions to a
+# canonical license key. These aliases are applied ONLY when normalizing a
+# package's declared license field (e.g. an npm `"license"`, a Python setup
+# classifier, a Ruby gemspec license) — they are NEVER consulted during
+# file-content license detection and are not part of the license index.
+#
+# Why a declared-only alias instead of a license-index rule:
+#   A rule in the license index matches anywhere the text appears, including
+#   arbitrary file content. Bare license names are unsafe there — "Python" is a
+#   language word, and "Apache"/"Boost" appear inside their own license notices,
+#   so an index rule would either false-positive on prose or fragment a real
+#   detection. Restricting these mappings to the trusted, bounded declared field
+#   removes that risk entirely: the input is the package's own stated license,
+#   not free text. This mirrors how ScanCode normalizes declared license fields
+#   in its package handlers, separately from its file-content detector.
+#
+# Inclusion bar: only names with a single dominant, unambiguous-by-convention
+# target. Genuinely version-ambiguous bare names are deliberately omitted — an
+# honest null is preferable to a guessed version. Deliberately NOT aliased:
+#   - "LGPL"  : ambiguous between LGPL-2.1 and LGPL-3.0, no dominant default
+#               (note: bare "LGPL" already resolves via the bundled
+#               lgpl_bare_single_word index rule, so it needs no alias here).
+#   - "MPL"   : ambiguous between MPL-1.0/1.1/2.0.
+#   - "EPL"   : ambiguous between EPL-1.0 and EPL-2.0.
+#   - "CDDL"  : ambiguous between CDDL-1.0 and CDDL-1.1; no observed declared case.
+#   - "BSD" / "GPL" : already handled as clue-only index rules
+#               (bsd_bare_word_only / gpl_bare_word_only), where the bare word
+#               in file content is reliably a license reference.
+#
+# Schema (array of tables):
+#   names      = case-insensitive declared strings that map to `expression`.
+#   expression = canonical license key; MUST exist in the license index
+#                (enforced by a test).
+#   reason     = required justification for why this mapping is safe and correct.
+
+[[alias]]
+names = ["apache"]
+expression = "apache-2.0"
+reason = "SPDX deprecated the bare 'Apache' identifier in favor of Apache-2.0; a declared `license: \"Apache\"` is conventionally Apache-2.0, and ScanCode resolves it the same. Observed in apache/hadoop's hadoop-yarn-ui package.json."
+
+[[alias]]
+names = ["boost"]
+expression = "boost-1.0"
+reason = "Boost ships a single license, the Boost Software License 1.0 (SPDX BSL-1.0; ScanCode key boost-1.0); a declared 'Boost' has no other meaning. Observed in pyodide's bundled libboost conda metadata."
+
+[[alias]]
+names = ["psf", "python"]
+expression = "python"
+reason = "The Python Software Foundation License (SPDX Python-2.0) is conventionally written 'PSF' or 'Python' in declared license fields; ScanCode maps the PSF family to the 'python' license. Observed in pyodide conda package metadata. Safe only because this is declared-field-only — the bare word 'Python' is a false positive in file content (it is the language name), which is exactly why this is an alias and not an index rule."

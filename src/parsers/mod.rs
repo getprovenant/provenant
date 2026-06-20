@@ -115,6 +115,7 @@ mod dart_scan_test;
 #[cfg(test)]
 mod dart_test;
 mod debian;
+mod declared_license_aliases;
 mod deno;
 mod deno_lock;
 #[cfg(test)]

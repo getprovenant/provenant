@@ -11,6 +11,7 @@ use std::cell::Cell;
 
 use crate::parser_warn as warn;
 use crate::parsers::active_parser_license_engine;
+use crate::parsers::declared_license_aliases::declared_license_alias;
 use crate::parsers::utils::{RecursionGuard, capped_iteration_limit};
 
 use crate::license_detection::LicenseDetectionEngine;
@@ -128,7 +129,9 @@ pub(crate) fn normalize_spdx_declared_license(
         return empty_declared_license_data();
     };
 
-    let Some(normalized) = normalize_spdx_expression(statement) else {
+    let Some(normalized) =
+        normalize_spdx_expression(statement).or_else(|| resolve_declared_license_alias(statement))
+    else {
         return empty_declared_license_data();
     };
 
@@ -136,6 +139,18 @@ pub(crate) fn normalize_spdx_declared_license(
         normalized,
         DeclaredLicenseMatchMetadata::single_line(statement),
     )
+}
+
+/// Resolve a declared license statement through the curated declared-license
+/// alias table (`resources/license_detection/declared_license_aliases.toml`).
+///
+/// This is applied only to bounded, trustworthy declared license fields — never
+/// to file content — so bare informal names that would be unsafe as license
+/// index rules (e.g. `"Apache"`, `"Python"`) resolve safely here.
+fn resolve_declared_license_alias(statement: &str) -> Option<NormalizedDeclaredLicense> {
+    let expression = declared_license_alias(statement)?;
+    let engine = parser_license_engine()?;
+    normalize_license_key(expression, engine.index())
 }
 
 /// Runs free-text license detection over `text` and shapes the result into
@@ -312,7 +327,7 @@ pub(crate) fn normalize_declared_license_key(key: &str) -> Option<NormalizedDecl
     }
 
     let engine = parser_license_engine()?;
-    normalize_license_key(key, engine.index())
+    normalize_license_key(key, engine.index()).or_else(|| resolve_declared_license_alias(key))
 }
 
 pub(crate) fn combine_normalized_licenses(
@@ -1960,6 +1975,34 @@ mod tests {
                 declared_spdx.is_none(),
                 "{statement:?} -> {declared_spdx:?}"
             );
+        }
+    }
+
+    #[test]
+    fn test_bare_informal_declared_names_resolve_via_alias() {
+        // Bare, non-SPDX declared license names map through the curated alias
+        // table (resources/license_detection/declared_license_aliases.toml).
+        // This path is declared-field-only and never touches file content.
+        for (statement, expr) in [
+            ("Apache", "apache-2.0"),
+            ("apache", "apache-2.0"),
+            ("Boost", "boost-1.0"),
+            ("PSF", "python"),
+            ("Python", "python"),
+        ] {
+            let (declared, declared_spdx) = declared_for(statement);
+            assert_eq!(declared.as_deref(), Some(expr), "{statement:?}");
+            assert!(declared_spdx.is_some(), "{statement:?} spdx missing");
+        }
+    }
+
+    #[test]
+    fn test_ambiguous_bare_names_are_not_force_aliased() {
+        // Deliberately-excluded version-ambiguous names must not be mapped by
+        // the alias table — an honest null beats a guessed version.
+        for statement in ["MPL", "EPL", "CDDL"] {
+            let (declared, _) = declared_for(statement);
+            assert!(declared.is_none(), "{statement:?} -> {declared:?}");
         }
     }
 
