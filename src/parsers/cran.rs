@@ -34,7 +34,13 @@ use crate::parser_warn as warn;
 use packageurl::PackageUrl;
 use regex::Regex;
 
-use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::models::{
+    DatasourceId, Dependency, LicenseDetection, PackageData, PackageType, Party, PartyType,
+};
+use crate::parsers::license_normalization::{
+    DeclaredLicenseMatchMetadata, NormalizedDeclaredLicense, build_declared_license_data,
+    combine_normalized_licenses, normalize_declared_license_key, normalize_spdx_expression,
+};
 use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 use super::PackageParser;
@@ -84,6 +90,13 @@ impl PackageParser for CranParser {
         let extracted_license_statement = fields
             .get("License")
             .map(|s| truncate_field(s.trim().to_string()));
+
+        // Recover the SPDX core from R-specific `License:` idioms (e.g.
+        // `MIT + file LICENSE`, `GPL-2 | file LICENSE`, `BSD_3_clause`) that the
+        // shared declared-license normalization cannot parse. Cases this leaves
+        // unset fall through to the shared post-extraction populate step.
+        let (declared_license_expression, declared_license_expression_spdx, license_detections) =
+            normalize_r_declared_license(extracted_license_statement.as_deref());
 
         // Extract URL field
         let homepage_url = fields
@@ -150,9 +163,9 @@ impl PackageParser for CranParser {
             vcs_url: None,
             copyright: None,
             holder: None,
-            declared_license_expression: None,
-            declared_license_expression_spdx: None,
-            license_detections: Vec::new(),
+            declared_license_expression,
+            declared_license_expression_spdx,
+            license_detections,
             other_license_expression: None,
             other_license_expression_spdx: None,
             other_license_detections: Vec::new(),
@@ -470,6 +483,126 @@ fn create_package_url(name: &Option<String>, version: &Option<String>) -> Option
 
         Some(package_url.to_string())
     })
+}
+
+/// Normalizes an R `License:` field into declared-license data, recovering the
+/// SPDX core from R-specific idioms.
+///
+/// R's `DESCRIPTION` `License:` grammar is not SPDX: `|` separates alternatives
+/// (OR), `+ file <NAME>` / `| file <NAME>` attach a supplementary file holding
+/// the year/holder (the license itself is the non-file part), and BSD licenses
+/// use underscore spellings (`BSD_3_clause`, `BSD_2_clause`).
+///
+/// This handles only the idioms the shared declared-license normalization cannot
+/// parse. When the statement carries no R-specific idiom (e.g. a bare `GPL` or a
+/// version-range `GPL (>= 3)`), this returns empty data so the statement falls
+/// through to the shared post-extraction populate step, which already resolves
+/// those forms. It is deliberately conservative: an alternative that does not
+/// resolve to a known license is dropped, and if no alternative resolves the
+/// whole statement is left unset rather than guessed.
+fn normalize_r_declared_license(
+    statement: Option<&str>,
+) -> (Option<String>, Option<String>, Vec<LicenseDetection>) {
+    let Some(statement) = statement.map(str::trim).filter(|value| !value.is_empty()) else {
+        return empty_license_data();
+    };
+
+    if !has_r_license_idiom(statement) {
+        return empty_license_data();
+    }
+
+    // `|` separates OR alternatives. Each alternative may carry a `+ file <NAME>`
+    // (or be a bare `file <NAME>`) clause that is dropped.
+    let normalized: Vec<NormalizedDeclaredLicense> = statement
+        .split('|')
+        .capped("R License alternatives")
+        .filter_map(strip_supplementary_file_clause)
+        .filter_map(normalize_r_license_core)
+        .collect();
+
+    if normalized.is_empty() {
+        return empty_license_data();
+    }
+
+    let Some(combined) = combine_normalized_licenses(normalized, " OR ") else {
+        return empty_license_data();
+    };
+
+    build_declared_license_data(
+        combined,
+        DeclaredLicenseMatchMetadata::single_line(statement),
+    )
+}
+
+/// Returns true when the statement uses an R-specific `License:` idiom that the
+/// shared SPDX/declared normalization cannot parse on its own: an alternative
+/// separator (`|`), a supplementary `file` clause, or an underscore BSD
+/// spelling.
+fn has_r_license_idiom(statement: &str) -> bool {
+    let lower = statement.to_ascii_lowercase();
+    statement.contains('|')
+        || lower.contains("file ")
+        || lower.contains("bsd_3_clause")
+        || lower.contains("bsd_2_clause")
+}
+
+/// Drops a trailing `+ file <NAME>` supplementary-file clause from one
+/// alternative and returns the remaining license core. A bare `file <NAME>`
+/// alternative (no license core) yields `None` so it is skipped.
+fn strip_supplementary_file_clause(alternative: &str) -> Option<String> {
+    let core = alternative
+        .split('+')
+        .capped("R License components")
+        .map(str::trim)
+        .filter(|component| {
+            !component.is_empty() && !component.to_ascii_lowercase().starts_with("file ")
+        })
+        .collect::<Vec<_>>()
+        .join(" + ");
+
+    let core = core.trim();
+    (!core.is_empty()).then(|| core.to_string())
+}
+
+/// Matches R's bare GNU-family version spelling (`GPL-2`, `LGPL-2.1`, `AGPL-3`)
+/// so the major-only form can be expanded to the SPDX point release.
+static R_GNU_FAMILY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(A?GPL|LGPL)-(\d+)(\.\d+)?$").expect("valid regex"));
+
+/// Resolves a single cleaned R license core into a normalized declared license,
+/// mapping R's non-SPDX spellings to SPDX before normalization.
+///
+/// R writes BSD licenses with underscores (`BSD_3_clause`) and GNU licenses with
+/// a bare major version (`GPL-2`, `LGPL-3`); the latter is not valid SPDX, which
+/// requires the point release (`GPL-2.0`). A major-only GNU version is expanded
+/// to its canonical point release (`GPL-2` -> `GPL-2.0`), matching R's "version N
+/// exactly" meaning (the `-only` SPDX form). Version-or-later forms such as
+/// `GPL (>= 2)` are not handled here; they carry no R-specific idiom and are left
+/// to the shared post-extraction populate step.
+fn normalize_r_license_core(core: String) -> Option<NormalizedDeclaredLicense> {
+    let mapped = match core.to_ascii_lowercase().as_str() {
+        "bsd_3_clause" => "BSD-3-Clause".to_string(),
+        "bsd_2_clause" => "BSD-2-Clause".to_string(),
+        _ => expand_r_gnu_family_version(&core),
+    };
+
+    normalize_spdx_expression(&mapped).or_else(|| normalize_declared_license_key(&mapped))
+}
+
+/// Expands R's bare GNU-family version (`GPL-2`) to the SPDX point release
+/// (`GPL-2.0`), leaving an explicit minor version (`LGPL-2.1`) and any
+/// non-GNU value untouched.
+fn expand_r_gnu_family_version(core: &str) -> String {
+    match R_GNU_FAMILY_RE.captures(core) {
+        Some(captures) if captures.get(3).is_none() => {
+            format!("{}-{}.0", &captures[1], &captures[2])
+        }
+        _ => core.to_string(),
+    }
+}
+
+fn empty_license_data() -> (Option<String>, Option<String>, Vec<LicenseDetection>) {
+    (None, None, Vec::new())
 }
 
 fn default_package_data() -> PackageData {

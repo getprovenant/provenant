@@ -335,4 +335,97 @@ mod tests {
 
         fs::remove_dir_all(&dir).expect("remove temp dir");
     }
+
+    /// Parses a `DESCRIPTION` with the given `License:` value and returns the
+    /// resulting `(declared_license_expression, declared_license_expression_spdx)`
+    /// after the shared post-extraction populate step has run.
+    fn declared_license_for(license_field: &str) -> (Option<String>, Option<String>) {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time went backwards")
+            .as_nanos();
+        // Include the field text so concurrent cases never share a temp dir even
+        // when their nanosecond timestamps collide.
+        let slug: String = license_field
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+            .collect();
+        let dir = std::env::temp_dir().join(format!("cran-license-idiom-{slug}-{unique}"));
+        fs::create_dir_all(&dir).expect("create temp dir");
+
+        let desc_path = dir.join("DESCRIPTION");
+        fs::write(
+            &desc_path,
+            format!("Package: demo\nVersion: 0.1.0\nLicense: {license_field}\n"),
+        )
+        .expect("write temp DESCRIPTION");
+
+        let package_data = CranParser::extract_first_package(&desc_path);
+        fs::remove_dir_all(&dir).expect("remove temp dir");
+
+        (
+            package_data.declared_license_expression,
+            package_data.declared_license_expression_spdx,
+        )
+    }
+
+    #[test]
+    fn test_license_idiom_mit_plus_file_license() {
+        // dplyr's real declared value: `MIT + file LICENSE` means the MIT text
+        // lives in a sibling LICENSE file; the license itself is MIT.
+        let (declared, declared_spdx) = declared_license_for("MIT + file LICENSE");
+        assert_eq!(declared.as_deref(), Some("mit"));
+        assert_eq!(declared_spdx.as_deref(), Some("MIT"));
+    }
+
+    #[test]
+    fn test_license_idiom_gpl_version_or_file_alternative() {
+        // `GPL-2 | file LICENSE`: the `| file LICENSE` alternative is a
+        // supplementary file, leaving the GPL-2 core.
+        let (declared, declared_spdx) = declared_license_for("GPL-2 | file LICENSE");
+        assert_eq!(declared.as_deref(), Some("gpl-2.0"));
+        assert_eq!(declared_spdx.as_deref(), Some("GPL-2.0-only"));
+    }
+
+    #[test]
+    fn test_license_idiom_bsd_underscore_spelling() {
+        // R spells BSD with underscores; map to the SPDX core before normalizing.
+        let (declared, declared_spdx) = declared_license_for("BSD_3_clause + file LICENSE");
+        assert_eq!(declared.as_deref(), Some("bsd-new"));
+        assert_eq!(declared_spdx.as_deref(), Some("BSD-3-Clause"));
+
+        let (declared, declared_spdx) = declared_license_for("BSD_2_clause + file LICENSE");
+        assert_eq!(declared.as_deref(), Some("bsd-simplified"));
+        assert_eq!(declared_spdx.as_deref(), Some("BSD-2-Clause"));
+    }
+
+    #[test]
+    fn test_license_idiom_gpl_alternatives() {
+        // `|` is an OR between two concrete licenses.
+        let (declared, declared_spdx) = declared_license_for("GPL-2 | GPL-3");
+        assert_eq!(declared.as_deref(), Some("gpl-2.0 OR gpl-3.0"));
+        assert_eq!(
+            declared_spdx.as_deref(),
+            Some("GPL-2.0-only OR GPL-3.0-only")
+        );
+    }
+
+    #[test]
+    fn test_license_version_range_defers_to_shared_populate() {
+        // `GPL (>= 2)` carries no R-specific idiom this step handles, so the R
+        // normalizer leaves it unset and the shared post-extraction populate step
+        // (which maps the version-range "or later" idiom) resolves it.
+        let (declared, declared_spdx) = declared_license_for("GPL (>= 2)");
+        assert_eq!(declared.as_deref(), Some("gpl-2.0-plus"));
+        assert_eq!(declared_spdx.as_deref(), Some("GPL-2.0-or-later"));
+    }
+
+    #[test]
+    fn test_license_plain_spdx_defers_to_shared_populate() {
+        // A plain SPDX identifier with no R idiom is resolved by the shared path,
+        // unchanged by the R normalizer.
+        let (declared, declared_spdx) = declared_license_for("MIT");
+        assert_eq!(declared.as_deref(), Some("mit"));
+        assert_eq!(declared_spdx.as_deref(), Some("MIT"));
+    }
 }
