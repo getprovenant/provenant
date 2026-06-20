@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **16.6× median speedup** and **15.8× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
+> Provenant is faster on 220 of 220 recorded runs, with a **16.8× median speedup** and **16.1× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -227,11 +227,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `8.01s`; ScanCode `118.91s`
 - Far broader Python package and dependency extraction (`72` vs `16` packages, `840` vs `595` dependencies) from the root PEP 621 `pyproject.toml`, Poetry dependency groups, committed `poetry.lock` fixtures, and bundled wheel/sdist metadata, with the project's MIT license placed on the named `poetry` package rather than smeared onto a nameless lockfile aggregate, and clean handling of `.dist-info` `Author`/`Author-email` lines that ScanCode mangles into one malformed party
 
-##### [scipy/scipy @ 8a4633f](https://github.com/scipy/scipy/tree/8a4633fa0e01d62e9ccdd06ebe5bb30551cfa056) — **14.10× faster**
+##### [scipy/scipy @ 8a4633f](https://github.com/scipy/scipy/tree/8a4633fa0e01d62e9ccdd06ebe5bb30551cfa056) — **43.01× faster**
 
 - Files: 2,998
-- Run context: 2026-04-09 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `23.57s`; ScanCode `332.23s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `11.54s`; ScanCode `496.36s`
 - Far broader Python/Conda/Pixi package and dependency extraction (`4` vs `1` packages, `1469` vs `78` dependencies) from `pixi.lock`'s large resolved Conda graph, `environment.yml`, `pixi.toml`, and the aggregated `requirements/*.txt` tree that ScanCode leaves at zero, with cleaner `pyproject.toml` requirement shaping for exact pins and environment markers
 
 ##### [UCBoulder/tardigrade_micromorphic_tools @ d03a8ca](https://github.com/UCBoulder/tardigrade_micromorphic_tools/tree/d03a8cae9e0983040487d2ecf32da98d9b297b92) — **7.70× faster**
@@ -352,12 +352,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.70s`; ScanCode `63.97s`
 - Broader Deno package and dependency extraction (`8` vs `0` packages, `966` vs `0` dependencies) from the root `deno.json`, `deno.lock`, and nested `packages/*/deno.json` manifests, with direct JSR and npm import-map or lockfile package identity where ScanCode stays manifest-blind
 
-##### [denoland/std @ a864f62](https://github.com/denoland/std/tree/a864f62bcc8a5f20716d2becab3cfe224a2ad810) — **24.22× faster**
+##### [denoland/std @ a864f62](https://github.com/denoland/std/tree/a864f62bcc8a5f20716d2becab3cfe224a2ad810) — **34.64× faster**
 
 - Files: 2,812
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `16.30s`; ScanCode `394.76s`
-- Broader Deno package visibility (`45` vs `3` packages) from the root and leaf `*/deno.json` manifests across the standard-library tree, plus concrete Cargo lock package identities on embedded Rust fixtures instead of anonymous `cargo_lock` rows, with zero top-level license-expression deltas under the shared profile
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.56s`; ScanCode `227.22s`
+- Broader Deno package visibility (`42` more packages, `0` missing) from the root and leaf `*/deno.json` manifests across the standard-library tree, plus concrete Cargo lock package identities on embedded Rust fixtures instead of anonymous `cargo_lock` rows; ScanCode detects more file-level MIT here, from the terse one-line `// … the Deno authors. MIT license.` header that Provenant's file-content matcher does not yet pick up
 
 ##### [getsentry/self-hosted @ 8728919](https://github.com/getsentry/self-hosted/tree/8728919e080836c53724f277d4d36cc310fc5011) — **9.54× faster**
 
@@ -380,11 +380,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.03s`; ScanCode `61.74s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and package-level party metadata from `package.json`
 
-##### [jquery/jquery-ui @ eda7aa3](https://github.com/jquery/jquery-ui/tree/eda7aa34fa59d8f764b2164be3e3b7f14639b0db) — **19.49× faster**
+##### [jquery/jquery-ui @ eda7aa3](https://github.com/jquery/jquery-ui/tree/eda7aa34fa59d8f764b2164be3e3b7f14639b0db) — **30.01× faster**
 
 - Files: 1,083
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `15.56s`; ScanCode `303.29s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.70s`; ScanCode `201.04s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and cleaner Unicode-preserving author normalization across locale files and vendored docs
 
 ##### [lodash/lodash @ cb0b9b9](https://github.com/lodash/lodash/tree/cb0b9b9212521c08e3eafe7c8cb0af1b42b6649e) — **20.62× faster**
@@ -429,11 +429,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `43.05s`; ScanCode `849.10s`
 - Far broader Bun/npm-family package extraction (`382` vs `29` packages, `5773` vs `323` dependencies) from the repo's 52 committed `bun.lock` / `bun.lockb` inputs that ScanCode leaves at zero, plus legacy `bun.lockb` coverage on `bench/bundle` and plainer `BSD-2-Clause` rebucketing where ScanCode uses the over-specific `BSD-2-Clause-Views` label
 
-##### [pnpm/pnpm @ 2a1ffe1](https://github.com/pnpm/pnpm/tree/2a1ffe1956a75746844b1c6cd863ecfbb5a55729) — **21.11× faster**
+##### [pnpm/pnpm @ 2a1ffe1](https://github.com/pnpm/pnpm/tree/2a1ffe1956a75746844b1c6cd863ecfbb5a55729) — **33.85× faster**
 
 - Files: 2,887
-- Run context: 2026-04-27 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `16.54s`; ScanCode `349.11s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.32s`; ScanCode `247.80s`
 - Broader pnpm/npm monorepo package and dependency extraction (`396` vs `282` packages, `11606` vs `3080` dependencies) from the root `pnpm-lock.yaml`, nested workspace member manifests, and shared workspace `npm-shrinkwrap.json` / `pnpm-lock.yaml` roots, plus zero scan-file errors where ScanCode crashes on the root workspace manifests and catalog-protocol fixture inputs
 
 ##### [renovatebot/renovate @ 91a7213](https://github.com/renovatebot/renovate/tree/91a72131e8aefcda8f0dab7499f378f7eb41300f) — **18.82× faster**
@@ -529,11 +529,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `145.05s`; ScanCode `1879.67s`
 - Broader Gradle package and dependency extraction (`73` vs `68` packages, `1675` vs `1541` dependencies) from committed `build.gradle`, `build.gradle.kts`, `gradle.lockfile`, and `.module` metadata across docs and test fixtures
 
-##### [yairm210/Unciv @ d54f33c](https://github.com/yairm210/Unciv/tree/d54f33c881ad2de1ac7136540f59ad8596143ce5) — **19.54× faster**
+##### [yairm210/Unciv @ d54f33c](https://github.com/yairm210/Unciv/tree/d54f33c881ad2de1ac7136540f59ad8596143ce5) — **30.07× faster**
 
 - Files: 4,057
-- Run context: 2026-04-30 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `21.96s`; ScanCode `429.19s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.25s`; ScanCode `278.15s`
 - Far broader Gradle dependency extraction (`51` vs `6` dependencies) from the root multi-project `build.gradle.kts`, module-local `android/build.gradle.kts`, and `buildSrc/build.gradle.kts`, with concrete version recovery for property-backed Kotlin DSL quoted configuration calls such as `"implementation"("io.ktor:ktor-client-core:$ktorVersion")`, `"implementation"("com.badlogicgames.gdx:gdx-tools:$gdxVersion")`, and `classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")` where ScanCode leaves `$kotlinVersion` / `$gdxVersion` unresolved and misses most of the centralized root build graph
 
 ##### [playframework/playframework @ c2c114f](https://github.com/playframework/playframework/tree/c2c114ff31eff1557bef65cc3f586fbc53c974a6) — **24.01× faster**
@@ -608,11 +608,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.20s`; ScanCode `75.26s`
 - Direct `.gitmodules` package-adjacent visibility (`1` vs `0` file-level package records, plus one raw dependency edge) across the umbrella superproject, cleaner XML author extraction that drops prose-tainted suffixes such as `A.Meredith Compiler`, and Unicode-preserving name normalization for identities such as `René Ferdinand Rivera Morell`, `Ion Gaztañaga`, and `J. López`
 
-##### [boostorg/graph @ ae8e08d](https://github.com/boostorg/graph/tree/ae8e08d88f68669dc3fe5c7043dbc01b3c7c52ae) — **13.04× faster**
+##### [boostorg/graph @ ae8e08d](https://github.com/boostorg/graph/tree/ae8e08d88f68669dc3fe5c7043dbc01b3c7c52ae) — **18.83× faster**
 
 - Files: 2,117
-- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `15.37s`; ScanCode `200.37s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.01s`; ScanCode `132.02s`
 - Cleaner URL and copyright normalization across Boost metadata files, preserving the real `http://www.boost.org/` target while dropping ScanCode's broken pseudo-URL variant in `example/boost_web.dat`, plus Unicode-preserving `René Ferdinand Rivera Morell` handling on `build.jam` and top-level `.gitattributes` visibility in the final output
 
 ##### [boostorg/json @ 70efd4b](https://github.com/boostorg/json/tree/70efd4b032b7f3e718bb4ca4ae144c3171b21568) — **13.78× faster**
@@ -636,11 +636,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.14s`; ScanCode `121.03s`
 - Broader Conan, Meson, and Bazel package visibility (`2` vs `1` packages, `3` vs `0` dependencies) from the root `conanfile.py`, `MODULE.bazel`, and committed `meson.build` manifests, with the local `LICENSE` notice in `.conan/test_package/conanfile.py` collapsed to plain `BSL-1.0` instead of ScanCode's extra unknown-reference placeholder
 
-##### [chriskohlhoff/asio @ bd500f0](https://github.com/chriskohlhoff/asio/tree/bd500f0a018db9a845ebaaed5c0318343ae9f497) — **17.58× faster**
+##### [chriskohlhoff/asio @ bd500f0](https://github.com/chriskohlhoff/asio/tree/bd500f0a018db9a845ebaaed5c0318343ae9f497) — **23.46× faster**
 
 - Files: 1,468
-- Run context: 2026-05-07 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `18.97s`; ScanCode `333.52s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.95s`; ScanCode `186.47s`
 - More correct root Autotools package identity on `configure.ac` instead of ScanCode's generic input placeholder, plus cleaner holder normalization on `include/asio.hpp` and the Oliver Kowalke C++ notice set; the remaining ScanCode edge is limited to two multiline continuation headers and a small Perl author/copyright-email-tail set
 
 ##### [chuckha/crispy-tribble @ 20479cf](https://github.com/chuckha/crispy-tribble/tree/20479cfe45a694ee4fababd635f1bd8ebcb44ed3) — **19.28× faster**
@@ -1037,11 +1037,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `37.11s`; ScanCode `849.94s`
 - Far broader Dart/Flutter monorepo package and dependency extraction (`293` vs `201` packages, `2087` vs `1167` dependencies) from many package and example `pubspec.yaml` manifests plus committed podspec and Android `build.gradle.kts` inputs, with contributor-roster visibility across `AUTHORS` files that ScanCode leaves empty
 
-##### [i18next/react-i18next @ cb20d18](https://github.com/i18next/react-i18next/tree/cb20d1886bbb113f8005c4324e962e161a449ab9) — **13.77× faster**
+##### [i18next/react-i18next @ cb20d18](https://github.com/i18next/react-i18next/tree/cb20d1886bbb113f8005c4324e962e161a449ab9) — **19.08× faster**
 
 - Files: 590
-- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `14.82s`; ScanCode `204.00s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.71s`; ScanCode `128.04s`
 - Broader mixed-surface package and dependency extraction (`17` vs `1` packages, `21579` vs `911` dependencies) across committed example-app `package.json`, React Native CocoaPods `Podfile`, Android `AndroidManifest.xml`, Gemfile, NuGet `packages.config`, and Buck surfaces, with concrete Flipper coordinates where ScanCode preserves `${FLIPPER_VERSION}` placeholders and Unicode-preserving author normalization for `Jan Mühlemann`
 
 ##### [Mantle/Mantle @ 2a8e212](https://github.com/Mantle/Mantle/tree/2a8e2123a3931038179ee06105c9e6ec336b12ea) — **9.74× faster**
@@ -1274,11 +1274,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.68s`; ScanCode `231.82s`
 - Direct Julia package visibility and broader dependency extraction (`1` vs `0` packages, `53` vs `0` dependencies) from the root legacy v1.0-format `Manifest.toml` and its `Project.toml`, with zero scan errors where ScanCode times out after 120s on `05. Clustering.ipynb` and no spurious low-confidence `GPL-3.0-only` detection bleeding from the binary `data/face_recog_qr.mat` blob
 
-##### [JuliaLang/julia @ afc71c2](https://github.com/JuliaLang/julia/tree/afc71c255e327d8a64b69061c15994e80740974d) — **21.75× faster**
+##### [JuliaLang/julia @ afc71c2](https://github.com/JuliaLang/julia/tree/afc71c255e327d8a64b69061c15994e80740974d) — **40.32× faster**
 
 - Files: 1,948
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `25.28s`; ScanCode `549.75s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.96s`; ScanCode `361.23s`
 - Direct Julia package visibility and much broader dependency extraction (`115` vs `0` packages, `240` vs `0` dependencies) from stdlib, test, and nested `Project.toml` / `Manifest.toml` pairs across the tree, with richer author recovery on Julia metadata and cleaner rejection of prose-only copyright or holder noise
 
 ##### [JuliaLang/Pkg.jl @ c96cfdf](https://github.com/JuliaLang/Pkg.jl/tree/c96cfdf70976e8a5cc21fcef53c0ba137f6b2f64) — **11.47× faster**
@@ -1344,11 +1344,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.79s`; ScanCode `99.19s`
 - Broader opam package visibility (`3` vs `1` packages) with slightly richer dependency extraction (`380` vs `376`) from the root and submodule `.opam` manifests plus `flake.lock`, with cleaner maintainer and email recovery on opam metadata and Unicode-preserving copyright normalization
 
-##### [openfl/openfl @ 74d8f72](https://github.com/openfl/openfl/tree/74d8f72890b9ae70bba589d034ea35b86588e548) — **16.94× faster**
+##### [openfl/openfl @ 74d8f72](https://github.com/openfl/openfl/tree/74d8f72890b9ae70bba589d034ea35b86588e548) — **13.61× faster**
 
 - Files: 1,196
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `12.77s`; ScanCode `216.36s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `10.08s`; ScanCode `137.21s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with richer bundled Windows executable identity on `assets/templates/bin/openfl.exe`, extra Docker package visibility on `Dockerfile`, and cleaner URL normalization across shipped font metadata
 
 ##### [univention/Nubus @ fef2258](https://github.com/univention/Nubus/tree/fef2258483c56cce0e1f14e4c8d8fce24d26b891) — **8.64× faster**
