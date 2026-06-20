@@ -14,6 +14,7 @@ use crate::parsers::utils::{capped_iteration_limit, split_name_email, truncate_f
 use super::PackageParser;
 
 pub struct VcpkgManifestParser;
+pub struct VcpkgConfigurationParser;
 pub struct VcpkgLockParser;
 
 impl PackageParser for VcpkgManifestParser {
@@ -50,6 +51,52 @@ impl PackageParser for VcpkgManifestParser {
             package_type: "vcpkg",
             primary_language: "",
             documentation_url: Some("https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json"),
+        }]
+    }
+}
+
+impl PackageParser for VcpkgConfigurationParser {
+    const PACKAGE_TYPE: PackageType = PackageType::Vcpkg;
+
+    fn is_match(path: &Path) -> bool {
+        path.file_name().and_then(|name| name.to_str()) == Some("vcpkg-configuration.json")
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        let content = match crate::parsers::utils::read_file_to_string(path, None) {
+            Ok(content) => content,
+            Err(e) => {
+                warn!(
+                    "Failed to read vcpkg-configuration.json at {:?}: {}",
+                    path, e
+                );
+                return vec![default_configuration_package_data()];
+            }
+        };
+
+        let json: Value = match serde_json::from_str(&content) {
+            Ok(json) => json,
+            Err(e) => {
+                warn!(
+                    "Failed to parse vcpkg-configuration.json at {:?}: {}",
+                    path, e
+                );
+                return vec![default_configuration_package_data()];
+            }
+        };
+
+        vec![parse_vcpkg_configuration(&json)]
+    }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "vcpkg configuration file",
+            file_patterns: &["**/vcpkg-configuration.json"],
+            package_type: "vcpkg",
+            primary_language: "C++",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-configuration-json",
+            ),
         }]
     }
 }
@@ -109,6 +156,15 @@ fn default_lock_package_data() -> PackageData {
     }
 }
 
+fn default_configuration_package_data() -> PackageData {
+    PackageData {
+        package_type: Some(PackageType::Vcpkg),
+        datasource_id: Some(DatasourceId::VcpkgConfigurationJson),
+        is_private: true,
+        ..Default::default()
+    }
+}
+
 fn parse_vcpkg_manifest(path: &Path, json: &Value) -> PackageData {
     let name = get_non_empty_string(json, "name").map(truncate_field);
     let version = manifest_version(json).map(truncate_field);
@@ -147,6 +203,34 @@ fn parse_vcpkg_lock(json: &Value) -> PackageData {
         extra_data: build_lock_extra_data(json),
         ..default_lock_package_data()
     }
+}
+
+fn parse_vcpkg_configuration(json: &Value) -> PackageData {
+    PackageData {
+        primary_language: Some("C++".to_string()),
+        extra_data: build_configuration_extra_data(json),
+        ..default_configuration_package_data()
+    }
+}
+
+/// Preserve registry and overlay provenance from a standalone
+/// `vcpkg-configuration.json`. This file declares where dependencies are
+/// resolved from (registries) and which local overlays apply, but it has no
+/// package identity of its own, so the metadata is preserved verbatim.
+fn build_configuration_extra_data(json: &Value) -> Option<HashMap<String, Value>> {
+    let mut extra = HashMap::new();
+    for field in [
+        "default-registry",
+        "registries",
+        "overlay-ports",
+        "overlay-triplets",
+    ] {
+        if let Some(value) = json.get(field) {
+            extra.insert(field.to_string(), value.clone());
+        }
+    }
+
+    (!extra.is_empty()).then_some(extra)
 }
 
 fn build_lock_extra_data(json: &Value) -> Option<HashMap<String, Value>> {
@@ -262,6 +346,8 @@ fn extract_maintainers(json: &Value) -> Vec<Party> {
 }
 
 fn extract_dependencies(json: &Value) -> Vec<Dependency> {
+    let overrides = extract_overrides(json);
+
     let mut dependencies: Vec<Dependency> = json
         .get("dependencies")
         .and_then(Value::as_array)
@@ -269,7 +355,7 @@ fn extract_dependencies(json: &Value) -> Vec<Dependency> {
             let limit = capped_iteration_limit(deps.len(), "vcpkg dependencies");
             deps.iter()
                 .take(limit)
-                .filter_map(parse_dependency_entry)
+                .filter_map(|dep| parse_dependency_entry(dep, &overrides))
                 .collect()
         })
         .unwrap_or_default();
@@ -288,7 +374,7 @@ fn extract_dependencies(json: &Value) -> Vec<Dependency> {
             for dependency in feature_dependencies
                 .iter()
                 .take(feature_deps_limit)
-                .filter_map(parse_dependency_entry)
+                .filter_map(|dep| parse_dependency_entry(dep, &overrides))
                 .map(|mut dependency| {
                     let mut extra_data = dependency.extra_data.take().unwrap_or_default();
                     extra_data.insert(
@@ -307,19 +393,50 @@ fn extract_dependencies(json: &Value) -> Vec<Dependency> {
     dependencies
 }
 
-fn parse_dependency_entry(value: &Value) -> Option<Dependency> {
+/// Map of dependency name to the exact version pinned by the manifest's
+/// `overrides` array. An override is an author-declared hard pin, so it proves
+/// version intent even though the dependency entry itself only declares a
+/// `version>=` floor.
+fn extract_overrides(json: &Value) -> HashMap<String, String> {
+    let Some(overrides) = json.get("overrides").and_then(Value::as_array) else {
+        return HashMap::new();
+    };
+
+    let limit = capped_iteration_limit(overrides.len(), "vcpkg overrides");
+    overrides
+        .iter()
+        .take(limit)
+        .filter_map(|entry| {
+            let name = entry
+                .get("name")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|name| !name.is_empty())?;
+            let version = manifest_version(entry)?;
+            Some((name.to_string(), truncate_field(version)))
+        })
+        .collect()
+}
+
+fn parse_dependency_entry(
+    value: &Value,
+    overrides: &HashMap<String, String>,
+) -> Option<Dependency> {
     match value {
-        Value::String(name) => Some(Dependency {
-            purl: build_vcpkg_purl(name, None).map(truncate_field),
-            extracted_requirement: Some(truncate_field(name.clone())),
-            scope: Some("dependencies".to_string()),
-            is_runtime: Some(true),
-            is_optional: Some(false),
-            is_pinned: Some(false),
-            is_direct: Some(true),
-            resolved_package: None,
-            extra_data: None,
-        }),
+        Value::String(name) => {
+            let pinned = overrides.get(name.trim());
+            Some(Dependency {
+                purl: build_vcpkg_purl(name, None).map(truncate_field),
+                extracted_requirement: Some(truncate_field(name.clone())),
+                scope: Some("dependencies".to_string()),
+                is_runtime: Some(true),
+                is_optional: Some(false),
+                is_pinned: Some(pinned.is_some()),
+                is_direct: Some(true),
+                resolved_package: None,
+                extra_data: pinned.map(|version| override_extra_data(version)),
+            })
+        }
         Value::Object(obj) => {
             let name = obj.get("name").and_then(Value::as_str)?.trim();
             if name.is_empty() {
@@ -333,6 +450,7 @@ fn parse_dependency_entry(value: &Value) -> Option<Dependency> {
                 .or_else(|| Some(truncate_field(name.to_string())));
 
             let host = obj.get("host").and_then(Value::as_bool).unwrap_or(false);
+            let pinned = overrides.get(name);
             let mut extra = HashMap::new();
             for field in [
                 "version>=",
@@ -345,6 +463,12 @@ fn parse_dependency_entry(value: &Value) -> Option<Dependency> {
                     extra.insert(field.to_string(), field_value.clone());
                 }
             }
+            if let Some(version) = pinned {
+                extra.insert(
+                    "override_version".to_string(),
+                    Value::String(version.clone()),
+                );
+            }
 
             Some(Dependency {
                 purl: build_vcpkg_purl(name, None).map(truncate_field),
@@ -352,7 +476,7 @@ fn parse_dependency_entry(value: &Value) -> Option<Dependency> {
                 scope: Some("dependencies".to_string()),
                 is_runtime: Some(!host),
                 is_optional: Some(false),
-                is_pinned: Some(false),
+                is_pinned: Some(pinned.is_some()),
                 is_direct: Some(true),
                 resolved_package: None,
                 extra_data: (!extra.is_empty()).then_some(extra),
@@ -360,6 +484,15 @@ fn parse_dependency_entry(value: &Value) -> Option<Dependency> {
         }
         _ => None,
     }
+}
+
+fn override_extra_data(version: &str) -> HashMap<String, Value> {
+    let mut extra = HashMap::new();
+    extra.insert(
+        "override_version".to_string(),
+        Value::String(version.to_owned()),
+    );
+    extra
 }
 
 fn build_extra_data(path: &Path, json: &Value) -> Option<HashMap<String, Value>> {

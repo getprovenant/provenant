@@ -1,0 +1,17 @@
+{
+  "default-registry": {
+    "kind": "git",
+    "repository": "https://github.com/microsoft/vcpkg",
+    "baseline": "3426db05b996481ca31e95fff3734cf23e0f51bc"
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/northwindtraders/vcpkg-registry",
+      "baseline": "dacf4de488094a384ca2c202b923ccc097956e0c",
+      "packages": ["beicode", "beison"]
+    }
+  ],
+  "overlay-ports": ["./ports"],
+  "overlay-triplets": ["./triplets"]
+}

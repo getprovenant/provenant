@@ -90,4 +90,93 @@ mod tests {
 
         assert_eq!(registry_locks.len(), 2);
     }
+
+    #[test]
+    fn test_vcpkg_configuration_scan_remains_unassembled_and_preserves_provenance() {
+        let (files, result) = scan_and_assemble(Path::new("testdata/vcpkg/configuration"));
+
+        assert!(result.packages.is_empty());
+        let config = files
+            .iter()
+            .find(|file| file.path.ends_with("/vcpkg-configuration.json"))
+            .expect("vcpkg-configuration.json should be scanned");
+        assert!(config.for_packages.is_empty());
+
+        let package = config
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgConfigurationJson))
+            .expect("vcpkg configuration package data should be present");
+        assert!(package.is_private);
+        let registries = package
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("registries"))
+            .and_then(serde_json::Value::as_array)
+            .expect("registries should be preserved");
+
+        assert_eq!(registries.len(), 1);
+    }
+
+    #[test]
+    fn test_vcpkg_colocated_manifest_and_configuration_both_surface() {
+        // A `vcpkg-configuration.json` sitting next to a manifest with no embedded
+        // configuration is read twice on purpose: the manifest parser ingests it as a
+        // sibling into its own `extra_data["configuration"]`, and the standalone
+        // configuration parser independently emits its own private package_data record.
+        // Both representations must coexist without suppressing each other.
+        let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+        std::fs::write(
+            temp_dir.path().join("vcpkg.json"),
+            r#"{"name":"colocated-sample","version-string":"1.0.0","dependencies":["fmt"]}"#,
+        )
+        .expect("Failed to write vcpkg.json");
+        std::fs::write(
+            temp_dir.path().join("vcpkg-configuration.json"),
+            r#"{"default-registry":{"kind":"git","repository":"https://github.com/microsoft/vcpkg","baseline":"3426db05b996481ca31e95fff3734cf23e0f51bc"},"registries":[{"kind":"git","repository":"https://example.com/registry","baseline":"0000000000000000000000000000000000000000","packages":["foo"]}]}"#,
+        )
+        .expect("Failed to write vcpkg-configuration.json");
+
+        let (files, result) = scan_and_assemble(temp_dir.path());
+
+        // vcpkg datasources stay unassembled, so neither file produces a top-level package.
+        assert!(result.packages.is_empty());
+
+        let manifest = files
+            .iter()
+            .find(|file| file.path.ends_with("/vcpkg.json"))
+            .expect("vcpkg.json should be scanned");
+        let manifest_package = manifest
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgJson))
+            .expect("vcpkg manifest package data should be present");
+        assert!(
+            manifest_package
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("configuration"))
+                .is_some(),
+            "manifest should ingest the sibling configuration"
+        );
+
+        let config = files
+            .iter()
+            .find(|file| file.path.ends_with("/vcpkg-configuration.json"))
+            .expect("vcpkg-configuration.json should be scanned");
+        assert!(config.for_packages.is_empty());
+        let config_package = config
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgConfigurationJson))
+            .expect("standalone configuration package data should be present");
+        assert!(config_package.is_private);
+        let registries = config_package
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("registries"))
+            .and_then(serde_json::Value::as_array)
+            .expect("registries should be preserved");
+        assert_eq!(registries.len(), 1);
+    }
 }
