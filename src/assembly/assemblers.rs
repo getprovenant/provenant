@@ -946,6 +946,7 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::RustBinary,
     DatasourceId::SbtBuildSbt,
     DatasourceId::VcpkgJson,
+    DatasourceId::VcpkgConfigurationJson,
     DatasourceId::VcpkgLockJson,
 ];
 

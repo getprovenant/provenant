@@ -5,7 +5,7 @@ use crate::models::{DatasourceId, PackageType};
 use std::path::PathBuf;
 
 use super::PackageParser;
-use super::vcpkg::{VcpkgLockParser, VcpkgManifestParser};
+use super::vcpkg::{VcpkgConfigurationParser, VcpkgLockParser, VcpkgManifestParser};
 
 #[test]
 fn test_vcpkg_manifest_is_match() {
@@ -27,6 +27,19 @@ fn test_vcpkg_lock_is_match() {
     )));
     assert!(!VcpkgLockParser::is_match(&PathBuf::from(
         "/tmp/vcpkg.json"
+    )));
+}
+
+#[test]
+fn test_vcpkg_configuration_is_match() {
+    assert!(VcpkgConfigurationParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg-configuration.json"
+    )));
+    assert!(!VcpkgConfigurationParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg.json"
+    )));
+    assert!(!VcpkgConfigurationParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg-lock.json"
     )));
 }
 
@@ -108,12 +121,29 @@ fn test_parse_vcpkg_project_manifest() {
         Some(&serde_json::json!("windows"))
     );
 
+    // zlib is pinned by the manifest `overrides` array, so the declared
+    // `version>=` floor is preserved while the dependency is marked pinned and
+    // the exact override version is recorded alongside it.
     let zlib = pkg
         .dependencies
         .iter()
         .find(|dep| dep.purl.as_deref() == Some("pkg:generic/vcpkg/zlib"))
         .expect("expected zlib dependency");
     assert_eq!(zlib.extracted_requirement.as_deref(), Some("1.3.1#2"));
+    assert_eq!(zlib.is_pinned, Some(true));
+    let zlib_extra = zlib.extra_data.as_ref().expect("expected zlib extra_data");
+    assert_eq!(
+        zlib_extra.get("override_version"),
+        Some(&serde_json::json!("1.3.1#2"))
+    );
+
+    // fmt has no override entry, so it stays unpinned with no override metadata.
+    assert!(
+        fmt.extra_data
+            .as_ref()
+            .map(|extra| !extra.contains_key("override_version"))
+            .unwrap_or(true)
+    );
 }
 
 #[test]
@@ -253,6 +283,64 @@ fn test_invalid_vcpkg_lock_returns_default_package() {
 
     assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
     assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgLockJson));
+    assert!(pkg.name.is_none());
+    assert!(pkg.is_private);
+    assert!(pkg.extra_data.is_none());
+}
+
+#[test]
+fn test_parse_vcpkg_configuration_preserves_registry_and_overlay_provenance() {
+    let path = PathBuf::from("testdata/vcpkg/configuration/vcpkg-configuration.json");
+    let pkg = VcpkgConfigurationParser::extract_first_package(&path);
+
+    assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
+    assert_eq!(
+        pkg.datasource_id,
+        Some(DatasourceId::VcpkgConfigurationJson)
+    );
+    assert!(pkg.name.is_none());
+    assert!(pkg.version.is_none());
+    assert!(pkg.purl.is_none());
+    assert!(pkg.is_private);
+    assert!(pkg.dependencies.is_empty());
+
+    let extra = pkg.extra_data.as_ref().expect("extra_data should exist");
+    assert_eq!(
+        extra
+            .get("default-registry")
+            .and_then(|registry| registry.get("repository"))
+            .and_then(serde_json::Value::as_str),
+        Some("https://github.com/microsoft/vcpkg")
+    );
+    let registries = extra
+        .get("registries")
+        .and_then(serde_json::Value::as_array)
+        .expect("registries should be an array");
+    assert_eq!(registries.len(), 1);
+    assert_eq!(
+        extra.get("overlay-ports"),
+        Some(&serde_json::json!(["./ports"]))
+    );
+    assert_eq!(
+        extra.get("overlay-triplets"),
+        Some(&serde_json::json!(["./triplets"]))
+    );
+}
+
+#[test]
+fn test_invalid_vcpkg_configuration_returns_default_package() {
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let path = temp_dir.path().join("vcpkg-configuration.json");
+    std::fs::write(&path, "{ invalid json }")
+        .expect("Failed to write invalid vcpkg-configuration.json");
+
+    let pkg = VcpkgConfigurationParser::extract_first_package(&path);
+
+    assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
+    assert_eq!(
+        pkg.datasource_id,
+        Some(DatasourceId::VcpkgConfigurationJson)
+    );
     assert!(pkg.name.is_none());
     assert!(pkg.is_private);
     assert!(pkg.extra_data.is_none());
