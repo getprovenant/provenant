@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **14.8× median speedup** and **15.1× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
+> Provenant is faster on 220 of 220 recorded runs, with a **15.0× median speedup** and **15.3× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -199,18 +199,18 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `27.77s`; ScanCode `356.55s`
 - Broader Pixi package and dependency extraction (`233` vs `128` packages, `22369` vs `3116` dependencies) from the root and example `pixi.toml` or `pixi.lock` surfaces plus feature-scoped `pypi-dependencies` and cargo workspace members that inherit the declared `BSD-3-Clause` license ScanCode leaves unset, with no example-lock scan errors where ScanCode times out and safer credential stripping or git URL normalization across Pixi source fixtures
 
-##### [pydata/xarray @ f7e47a1](https://github.com/pydata/xarray/tree/f7e47a19726321e56d74bca896eb55c6f330506b) — **14.48× faster**
+##### [pydata/xarray @ f7e47a1](https://github.com/pydata/xarray/tree/f7e47a19726321e56d74bca896eb55c6f330506b) — **22.17× faster**
 
 - Files: 429
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `12.89s`; ScanCode `186.62s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.60s`; ScanCode `124.15s`
 - Broader Pixi and Conda environment coverage (`3` vs `1` packages, `509` vs `84` dependencies) from the repo-root `pixi.toml` plus committed Binder and CI environment manifests, with direct Pixi package identity and cleaner URL normalization across docs and SVG metadata
 
-##### [pyodide/pyodide @ 86e27b0](https://github.com/pyodide/pyodide/tree/86e27b004d06bccd91a937aa5fc2601978642b74) — **12.57× faster**
+##### [pyodide/pyodide @ 86e27b0](https://github.com/pyodide/pyodide/tree/86e27b004d06bccd91a937aa5fc2601978642b74) — **14.25× faster**
 
 - Files: 540
-- Run context: 2026-05-05 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.77s`; ScanCode `135.33s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.67s`; ScanCode `80.78s`
 - Broader dependency extraction (`796` vs `718`) and slightly broader package visibility (`53` vs `52`) from `environment.yml`, `.gitmodules`, and committed wheel artifacts, with extension-qualified wheel PURLs, richer patch-header author recovery, and the fuller `Pyodide contributors and Mozilla` documentation notice
 
 ##### [python/cpython @ 7a468a1](https://github.com/python/cpython/tree/7a468a101268d2b13105f94ae027df8b502d0c87) — **70.74× faster**
@@ -250,11 +250,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.97s`; ScanCode `49.16s`
 - Far broader CRAN package and dependency extraction (`14` vs `1` packages, `45` vs `1` dependencies) from the root `DESCRIPTION` plus committed test-package fixtures, with correct filtering of fake `pkg:cran/R` dependency noise and cleaner maintainer or URL normalization
 
-##### [tidyverse/dplyr @ 2f9f49e](https://github.com/tidyverse/dplyr/tree/2f9f49ef0d361dc612abc55982d68db3fb3854d0) — **12.32× faster**
+##### [tidyverse/dplyr @ 2f9f49e](https://github.com/tidyverse/dplyr/tree/2f9f49ef0d361dc612abc55982d68db3fb3854d0) — **19.42× faster**
 
 - Files: 462
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `13.86s`; ScanCode `170.71s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.52s`; ScanCode `107.21s`
 - Direct CRAN package visibility on the root `DESCRIPTION` plus declared dependency extraction (`29` vs `0`) across `Depends`, `Imports`, `Suggests`, `Enhances`, and `LinkingTo`, with cleaner Rd or markdown URL normalization and preserved shipped license-holder metadata
 
 ##### [tidyverse/ggplot2 @ 7d79c95](https://github.com/tidyverse/ggplot2/tree/7d79c956b5707cb7c762d834caf842dc6496b032) — **12.33× faster**
@@ -301,11 +301,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `59.99s`; ScanCode `2034.56s`
 - Direct OTP application package visibility (`11` vs `0`) across committed `lib/*/src/*.app.src` templates, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable and preserves the same non-stdlib runtime dependency inventory ScanCode finds
 
-##### [phoenixframework/phoenix @ e7b8081](https://github.com/phoenixframework/phoenix/tree/e7b8081792fa51c9fede6d0fb9ddb610bac3f26f) — **11.66× faster**
+##### [phoenixframework/phoenix @ e7b8081](https://github.com/phoenixframework/phoenix/tree/e7b8081792fa51c9fede6d0fb9ddb610bac3f26f) — **14.38× faster**
 
 - Files: 476
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `12.80s`; ScanCode `149.17s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.49s`; ScanCode `78.97s`
 - Direct Hex package visibility on the repo-root, `installer/mix.lock`, and `integration_test/mix.lock` surfaces (`3` vs `0` file-level package records), while preserving top-level package and dependency parity elsewhere and preserving structured npm party metadata
 
 ##### [processone/ejabberd @ 87475d8](https://github.com/processone/ejabberd/tree/87475d813b974492f338720eab5c9c3d4646a4ce) — **12.80× faster**
@@ -601,11 +601,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `48.49s`; ScanCode `1396.87s`
 - Broader Bazel package and dependency extraction (`1746` vs `1711` packages, `129` vs `14` dependencies) from root and nested `BUILD` files plus direct `MODULE.bazel` dependency visibility, with richer Debian and RPM sidecar package metadata
 
-##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **12.29× faster**
+##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **14.47× faster**
 
 - Files: 241
-- Run context: 2026-04-29 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `12.34s`; ScanCode `151.70s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.20s`; ScanCode `75.26s`
 - Direct `.gitmodules` package-adjacent visibility (`1` vs `0` file-level package records, plus one raw dependency edge) across the umbrella superproject, cleaner XML author extraction that drops prose-tainted suffixes such as `A.Meredith Compiler`, and Unicode-preserving name normalization for identities such as `René Ferdinand Rivera Morell`, `Ion Gaztañaga`, and `J. López`
 
 ##### [boostorg/graph @ ae8e08d](https://github.com/boostorg/graph/tree/ae8e08d88f68669dc3fe5c7043dbc01b3c7c52ae) — **13.04× faster**
@@ -678,11 +678,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `14.26s`; ScanCode `375.45s`
 - Matched ScanCode's file-level Autotools `configure.ac` coverage while promoting one top-level Autotools package (`1` vs `0`), with the real `pkg:autotools/curl` identity instead of a generic input placeholder, plus extra Docker package and dependency visibility from the committed `Dockerfile`
 
-##### [Debian/apt @ 6b12812](https://github.com/Debian/apt/tree/6b128124271e94bdb0f4e7850d9286170d712b04) — **15.11× faster**
+##### [Debian/apt @ 6b12812](https://github.com/Debian/apt/tree/6b128124271e94bdb0f4e7850d9286170d712b04) — **16.24× faster**
 
 - Files: 889
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `17.56s`; ScanCode `265.28s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `11.53s`; ScanCode `187.26s`
 - Matched Debian source-package coverage (`7` vs `7`) with broader dependency extraction (`32` vs `0`) from the root multi-binary `debian/control` Build-Depends plus runtime relation fields such as `Depends`, `Recommends`, `Suggests`, `Breaks`, `Conflicts`, and `Provides`
 
 ##### [docker-library/official-images @ 71567fb](https://github.com/docker-library/official-images/tree/71567fbcfa7945774c08c32c04f67ef34c9bce82) — **10.27× faster**
@@ -811,11 +811,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `114.17s`; ScanCode `1659.92s`
 - Direct Meson package visibility on the root `meson.build` plus declared dependency extraction (`2` vs `0` packages, `2` vs `0` dependencies) for `boost` and `python2`, with Debian copyright metadata carrying a Debian namespace instead of an unqualified source-package row
 
-##### [madler/zlib @ f9dd600](https://github.com/madler/zlib/tree/f9dd6009be3ed32415edf1e89d1bc38380ecb95d) — **12.06× faster**
+##### [madler/zlib @ f9dd600](https://github.com/madler/zlib/tree/f9dd6009be3ed32415edf1e89d1bc38380ecb95d) — **12.48× faster**
 
 - Files: 261
-- Run context: 2026-05-01 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.86s`; ScanCode `130.94s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.24s`; ScanCode `65.39s`
 - Broader native-build package and dependency visibility (`5` vs `0` packages, `3` vs `0` dependencies) from the root `configure`, `MODULE.bazel`, and committed `.csproj` surfaces, with the real `pkg:autotools/zlib` identity instead of ScanCode's generic input placeholder, direct Bazel and NuGet surface coverage, and the more specific `LicenseRef-scancode-info-zip-2009-01 AND Zlib` classification on `contrib/minizip/unzip.c`
 
 ##### [moby/moby @ 21bd660](https://github.com/moby/moby/tree/21bd660cd595929275d8f1361d224f663a2cfc44) — **49.68× faster**
@@ -839,11 +839,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `25.48s`; ScanCode `686.99s`
 - Broader package/dependency extraction (`19` vs `2` packages, `13` vs `2` dependencies), preserved NPSL/source-available handling across core Nmap and Zenmap reference-notice files, and cleaner rejection of weak translated-manpage GPL bare-word and placeholder noise
 
-##### [nginx/nginx @ 6e14e95](https://github.com/nginx/nginx/tree/6e14e954aaacce9a433d9b07b4653809c7594ab8) — **17.78× faster**
+##### [nginx/nginx @ 6e14e95](https://github.com/nginx/nginx/tree/6e14e954aaacce9a433d9b07b4653809c7594ab8) — **25.10× faster**
 
 - Files: 521
-- Run context: 2026-04-25 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `11.92s`; ScanCode `211.97s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.70s`; ScanCode `143.06s`
 - Direct CPAN package visibility (`1` vs `0` packages) from the embedded Perl `src/http/modules/perl/Makefile.PL`, with concrete `pkg:cpan/nginx@%%VERSION%%` identity and author metadata instead of ScanCode's generic CPAN placeholder, plus safer rejection of nginx's custom `auto/configure` shell script as Autotools package metadata and cleaner author, email, and URL normalization across manpage markup and README badge links
 
 ##### [openembedded/meta-openembedded @ 7bf89d0](https://github.com/openembedded/meta-openembedded/tree/7bf89d06a41405b48fa3af260da36bc686973afc) — **14.04× faster**
@@ -1072,11 +1072,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.66s`; ScanCode `49.57s`
 - Matched top-level package coverage (`7` vs `7`) with broader package-adjacent dependency extraction (`14` vs `0`) from `.gitmodules`, `Cartfile`, `Cartfile.private`, `Cartfile.resolved`, and the sibling podspecs, plus safer `Package.resolved` modeling as one resolved-file package record with structured pinned dependencies instead of exploded duplicate pseudo-packages
 
-##### [rrousselGit/riverpod @ cac77b1](https://github.com/rrousselGit/riverpod/tree/cac77b1ec1c4b4c0ca7c6e9b1436f80250b4edc0) — **14.36× faster**
+##### [rrousselGit/riverpod @ cac77b1](https://github.com/rrousselGit/riverpod/tree/cac77b1ec1c4b4c0ca7c6e9b1436f80250b4edc0) — **26.55× faster**
 
 - Files: 1,930
-- Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `12.13s`; ScanCode `174.19s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.16s`; ScanCode `163.56s`
 - Broader Dart/Flutter workspace package and dependency extraction (`29` vs `26` packages, `1417` vs `1350` dependencies) from package, example, and test `pubspec.yaml` manifests across the monorepo, plus cleaner structured-literal copyright extraction on generated Dart and JSON fixtures
 
 ##### [SDWebImage/SDWebImage @ c3ad5e1](https://github.com/SDWebImage/SDWebImage/tree/c3ad5e1a9bf55c9b76d4c362430b5fcded96c502) — **16.45× faster**
@@ -1302,11 +1302,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `9.05s`; ScanCode `59.81s`
 - Broader Nix package extraction (`39` vs `11` top-level packages) from committed `flake.lock` inputs and flake-compat-backed `default.nix` wrapper surfaces, with version-qualified purls (`pkg:cargo/app@0.1.0` where ScanCode emits an unversioned identity), declared-license enrichment on the bundled `npm/minimal` package, and junk-URL avoidance that skips the `${info.host` template interpolation ScanCode mis-extracts
 
-##### [NixOS/nix @ 6a659e1](https://github.com/NixOS/nix/tree/6a659e16bd2bcd871aedcb38724a1cff77690a31) — **18.21× faster**
+##### [NixOS/nix @ 6a659e1](https://github.com/NixOS/nix/tree/6a659e16bd2bcd871aedcb38724a1cff77690a31) — **27.06× faster**
 
 - Files: 2,917
-- Run context: 2026-04-27 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `12.29s`; ScanCode `223.79s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.81s`; ScanCode `157.23s`
 - Broader Nix package and dependency extraction (`3` vs `0` packages, `69` vs `0` dependencies) from committed `flake.lock`, root `default.nix`, and other Nix manifest surfaces, with richer structured author, email, and URL recovery across repository docs and release metadata
 
 ##### [NixOS/nixpkgs @ c407343](https://github.com/NixOS/nixpkgs/tree/c4073437f5ffeaeee270c37a2eddf370658d1332) — **14.84× faster**
