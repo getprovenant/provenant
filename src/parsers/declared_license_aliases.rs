@@ -116,4 +116,18 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn every_alias_expression_resolves_in_the_license_index() {
+        // Enforce the schema contract documented in the TOML: each `expression`
+        // must be a real license key the index can resolve, so a typo such as
+        // "apache-2" instead of "apache-2.0" fails loudly here.
+        for expression in DECLARED_LICENSE_ALIASES.values() {
+            assert!(
+                crate::parsers::license_normalization::normalize_declared_license_key(expression)
+                    .is_some(),
+                "alias expression {expression:?} does not resolve in the license index"
+            );
+        }
+    }
 }
