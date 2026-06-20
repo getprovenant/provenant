@@ -497,9 +497,10 @@ fn create_package_url(name: &Option<String>, version: &Option<String>) -> Option
 /// parse. When the statement carries no R-specific idiom (e.g. a bare `GPL` or a
 /// version-range `GPL (>= 3)`), this returns empty data so the statement falls
 /// through to the shared post-extraction populate step, which already resolves
-/// those forms. It is deliberately conservative: an alternative that does not
-/// resolve to a known license is dropped, and if no alternative resolves the
-/// whole statement is left unset rather than guessed.
+/// those forms. It is deliberately conservative: a pure `+ file <NAME>` pointer
+/// is skipped, but if any real license alternative cannot be resolved (e.g. a
+/// version-range form like `GPL (>= 3)` mixed with `|`), the whole statement is
+/// left unset rather than emitting a partial that silently drops an operand.
 fn normalize_r_declared_license(
     statement: Option<&str>,
 ) -> (Option<String>, Option<String>, Vec<LicenseDetection>) {
@@ -512,20 +513,19 @@ fn normalize_r_declared_license(
     }
 
     // `|` separates OR alternatives. Each alternative may carry a `+ file <NAME>`
-    // (or be a bare `file <NAME>`) clause that is dropped. A pure `file <NAME>`
+    // (or be a bare `file <NAME>`) clause that is dropped; a pure `file <NAME>`
     // alternative yields no license core and is skipped.
-    let cores: Vec<String> = statement
-        .split('|')
-        .capped("R License alternatives")
-        .filter_map(strip_supplementary_file_clause)
-        .collect();
-
+    //
     // Every remaining license core must normalize. If any real alternative does
     // not (e.g. a version-range form this idiom layer does not expand, as in
     // `GPL-2 | GPL (>= 3)`), bail to an honest null via the shared path rather
     // than silently dropping that alternative and emitting a misleading partial.
-    let mut normalized: Vec<NormalizedDeclaredLicense> = Vec::with_capacity(cores.len());
-    for core in cores {
+    let mut normalized: Vec<NormalizedDeclaredLicense> = Vec::new();
+    for core in statement
+        .split('|')
+        .capped("R License alternatives")
+        .filter_map(strip_supplementary_file_clause)
+    {
         let Some(license) = normalize_r_license_core(core) else {
             return empty_license_data();
         };
