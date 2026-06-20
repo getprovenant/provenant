@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **15.0× median speedup** and **15.3× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
+> Provenant is faster on 220 of 220 recorded runs, with a **15.7× median speedup** and **15.5× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -257,11 +257,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.52s`; ScanCode `107.21s`
 - Direct CRAN package visibility on the root `DESCRIPTION` plus declared dependency extraction (`29` vs `0`) across `Depends`, `Imports`, `Suggests`, `Enhances`, and `LinkingTo`, with cleaner Rd or markdown URL normalization and preserved shipped license-holder metadata
 
-##### [tidyverse/ggplot2 @ 7d79c95](https://github.com/tidyverse/ggplot2/tree/7d79c956b5707cb7c762d834caf842dc6496b032) — **12.33× faster**
+##### [tidyverse/ggplot2 @ 7d79c95](https://github.com/tidyverse/ggplot2/tree/7d79c956b5707cb7c762d834caf842dc6496b032) — **17.82× faster**
 
 - Files: 1,154
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `14.46s`; ScanCode `178.35s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.59s`; ScanCode `117.46s`
 - Direct CRAN package visibility on the root `DESCRIPTION` plus declared dependency extraction (`41` vs `0`) across `Imports`, `Suggests`, and `Enhances`, with correct hyphenated CRAN version constraints such as `sf (>= 0.7-3)` and cleaner Rd or roxygen URL recovery
 
 #### Hugging Face / AI model repositories
@@ -308,11 +308,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.49s`; ScanCode `78.97s`
 - Direct Hex package visibility on the repo-root, `installer/mix.lock`, and `integration_test/mix.lock` surfaces (`3` vs `0` file-level package records), while preserving top-level package and dependency parity elsewhere and preserving structured npm party metadata
 
-##### [processone/ejabberd @ 87475d8](https://github.com/processone/ejabberd/tree/87475d813b974492f338720eab5c9c3d4646a4ce) — **12.80× faster**
+##### [processone/ejabberd @ 87475d8](https://github.com/processone/ejabberd/tree/87475d813b974492f338720eab5c9c3d4646a4ce) — **15.15× faster**
 
 - Files: 623
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `16.74s`; ScanCode `214.30s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.01s`; ScanCode `121.38s`
 - Broader Erlang/Rebar package and dependency extraction (`2` vs `1` packages, `43` vs `3` dependencies) from the root `rebar.config`, `rebar.lock`, nested `_checkouts/configure_deps` manifests, and committed Dockerfiles, with the bundled `priv/mod_invites/copyright` notice kept as clue-level license evidence instead of being overstated as Debian package metadata
 
 ##### [vernemq/vernemq @ 4681e54](https://github.com/vernemq/vernemq/tree/4681e5490cc42e6cc26a504bb4b3c5413315c21f) — **14.07× faster**
@@ -366,11 +366,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.74s`; ScanCode `45.20s`
 - Broader mixed Docker/npm/Python package extraction (`2` vs `1` packages, `111` vs `0` dependencies) from the integration-test `package-lock.json`, `uv.lock`, and committed service Dockerfiles, plus the more specific `Apache-2.0 AND FSL-1.1-ALv2` license classification on `LICENSE.md` where ScanCode reports only `FSL-1.1-ALv2`
 
-##### [iTowns/itowns @ 08e08f5](https://github.com/iTowns/itowns/tree/08e08f512983b6f3d60d04d431b67b3c5e2e1584) — **13.58× faster**
+##### [iTowns/itowns @ 08e08f5](https://github.com/iTowns/itowns/tree/08e08f512983b6f3d60d04d431b67b3c5e2e1584) — **19.11× faster**
 
 - Files: 616
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `12.53s`; ScanCode `170.19s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.99s`; ScanCode `114.48s`
 - Direct `publiccode.yml` package visibility on the root metadata file (`1` vs `0` on that file), with matched top-level package and dependency counts elsewhere plus Unicode-preserving Potree copyright normalization and cleaner URL shaping across README and docs material
 
 ##### [jashkenas/backbone @ da75718](https://github.com/jashkenas/backbone/tree/da75718e896e52e84aa1f0411ba67fafcdcf6af3) — **12.27× faster**
@@ -629,11 +629,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.85s`; ScanCode `83.67s`
 - Richer and cleaner serialization notice recovery across headers, tests, and legacy HTML docs, with multi-person codecvt attribution that preserves both Ronald Garcia and Andrew Lumsdaine, `Peter Dimov` author attribution on `test/test_mi.cpp`, fuller `Joaquin M Lopez Munoz` identity capture, and Unicode-preserving `René Ferdinand Rivera Morell` normalization
 
-##### [catchorg/Catch2 @ 10f6248](https://github.com/catchorg/Catch2/tree/10f62484bff73e3a58a411e2e10b4e1c13cfba9f) — **15.10× faster**
+##### [catchorg/Catch2 @ 10f6248](https://github.com/catchorg/Catch2/tree/10f62484bff73e3a58a411e2e10b4e1c13cfba9f) — **19.71× faster**
 
 - Files: 576
-- Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `14.57s`; ScanCode `219.94s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.14s`; ScanCode `121.03s`
 - Broader Conan, Meson, and Bazel package visibility (`2` vs `1` packages, `3` vs `0` dependencies) from the root `conanfile.py`, `MODULE.bazel`, and committed `meson.build` manifests, with the local `LICENSE` notice in `.conan/test_package/conanfile.py` collapsed to plain `BSL-1.0` instead of ScanCode's extra unknown-reference placeholder
 
 ##### [chriskohlhoff/asio @ bd500f0](https://github.com/chriskohlhoff/asio/tree/bd500f0a018db9a845ebaaed5c0318343ae9f497) — **17.58× faster**
@@ -727,11 +727,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `60.60s`; ScanCode `812.80s`
 - Matched ScanCode's file-level Autotools `configure` package identity while also promoting one top-level Autotools package (`1` vs `0`), plus cleaner clue-only handling of weak `configure` variable-name and bare-word GPL noise such as `EXTERNAL_LIBRARY_GPL_LIST` and `LICENSE_LIST="gpl"`
 
-##### [fmtlib/fmt @ 2cb3983](https://github.com/fmtlib/fmt/tree/2cb39832132a5c56a802bc817179e85d5f32fb9c) — **13.15× faster**
+##### [fmtlib/fmt @ 2cb3983](https://github.com/fmtlib/fmt/tree/2cb39832132a5c56a802bc817179e85d5f32fb9c) — **13.57× faster**
 
 - Files: 133
-- Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `11.99s`; ScanCode `157.63s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.60s`; ScanCode `76.01s`
 - Matched package and dependency parity (`0` packages, `1` dependency) while collapsing the local `LICENSE-MIT` notice in `support/docopt.py` to plain `MIT`, with cleaner copyright normalization on mkdocstrings support code and consistent URL normalization across README and docs
 
 ##### [git/git @ 9f223ef](https://github.com/git/git/tree/9f223ef1c026d91c7ac68cc0211bde255dda6199) — **42.67× faster**
@@ -888,11 +888,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `13.31s`; ScanCode `112.67s`
 - Broader Go module and RPM spec dependency extraction (`2` vs `1` packages, `352` vs `348` dependencies) from `go.mod`/`go.sum` plus `contrib/restic.spec`, with correct `rpm_specfile` datasource spelling and valid RPM purl construction where ScanCode emits a typo (`rpm_spefile`) and null purl, cleaner `BSD-2-Clause` detection without ScanCode's low-relevance `unknown-license-reference` false positive on README.md, extra Docker package visibility on `docker/Dockerfile`, and correct rejection of `sftp.X` Go-identifier URLs, `dnf copr` copyright noise, and bash `${var[@]}` array-expansion copyright artifacts
 
-##### [rpm-software-management/dnf @ e47634f](https://github.com/rpm-software-management/dnf/tree/e47634fbe3565d0580e89ec21adb7c1b308642ce) — **14.16× faster**
+##### [rpm-software-management/dnf @ e47634f](https://github.com/rpm-software-management/dnf/tree/e47634fbe3565d0580e89ec21adb7c1b308642ce) — **18.95× faster**
 
 - Files: 655
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `14.37s`; ScanCode `203.47s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.87s`; ScanCode `130.21s`
 - Broader RPM package and dependency extraction (`163` vs `138` packages, `579` vs `1` dependencies) from committed `.rpm` fixtures and sibling `.spec` metadata, with normalized RPM header license expressions and one-package-per-spec ownership across the shipped module fixture trees
 
 ##### [rpm-software-management/libdnf @ d395731](https://github.com/rpm-software-management/libdnf/tree/d39573195e24b43687587a8d83b9f6ac274e2412) — **12.33× faster**
@@ -1002,11 +1002,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `14.71s`; ScanCode `175.16s`
 - Matched top-level CocoaPods package coverage (`1` vs `1`) and main podspec/license parity, with slightly richer dependency extraction (`56` vs `54`) from the root `Gemfile`
 
-##### [Carthage/Carthage @ e33e133](https://github.com/Carthage/Carthage/tree/e33e133a5427129b38bfb1ae18d8f56b29a93204) — **12.22× faster**
+##### [Carthage/Carthage @ e33e133](https://github.com/Carthage/Carthage/tree/e33e133a5427129b38bfb1ae18d8f56b29a93204) — **14.41× faster**
 
 - Files: 183
-- Run context: 2026-04-20 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.76s`; ScanCode `131.47s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.94s`; ScanCode `71.21s`
 - Matched top-level package coverage (`9` vs `9`) with direct Carthage manifest visibility and hoisted declared or pinned dependency extraction (`20` vs `0`) from committed `Cartfile`, `Cartfile.private`, and `Cartfile.resolved`, plus safer `Package.resolved` modeling as one resolved-file package record with structured pinned dependencies instead of exploded duplicate pseudo-packages
 
 ##### [facebook/react-native @ 179e0cd](https://github.com/facebook/react-native/tree/179e0cdef68d12249a5a13b975a82f72bca7f368) — **15.08× faster**
@@ -1144,11 +1144,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `54.99s`; ScanCode `1313.69s`
 - Broader mixed-repository package and dependency extraction (`45` vs `1` packages, `3607` vs `80` dependencies) from `cmake/vcpkg.json` plus committed `cmake/vcpkg-ports/*/vcpkg.json` manifests, with the large `package-lock.json` license-count gap reduced with any residual license delta concentrated in ONNX model fixtures that still stay scan-error-free and explicit vcpkg package identities where ScanCode stays manifest-blind
 
-##### [microsoft/regorus @ 7f42115](https://github.com/microsoft/regorus/tree/7f42115b6338999efd13916e89b81ac278bc6273) — **13.37× faster**
+##### [microsoft/regorus @ 7f42115](https://github.com/microsoft/regorus/tree/7f42115b6338999efd13916e89b81ac278bc6273) — **21.39× faster**
 
 - Files: 1,121
-- Run context: 2026-04-30 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `16.29s`; ScanCode `217.76s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.45s`; ScanCode `137.98s`
 - Broader mixed Rust/.NET/Ruby package and dependency extraction (`19` vs `14` packages, `1253` vs `1238` dependencies) across committed `bindings/csharp/Directory.Packages.props`, consumer `*.csproj`, and Ruby sidecar manifests, with resolved `Microsoft.Regorus` central package version `0.9.1` propagated from same-file property composition instead of leaving the CPM expression unresolved
 
 ##### [microsoft/terminal @ 84ae7ad](https://github.com/microsoft/terminal/tree/84ae7adec6b3975314d8ca73d8f0bf2128ae59e2) — **14.55× faster**
@@ -1246,11 +1246,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.40s`; ScanCode `95.91s`
 - Far broader Hackage package and dependency extraction (`76` vs `1` packages, `525` vs `4` dependencies) from the root `stack.cabal`, `stack.yaml`, `cabal.project`, and committed integration-fixture manifests, with richer maintainer identity on Cabal metadata
 
-##### [HaxeFlixel/flixel @ ec54c5a](https://github.com/HaxeFlixel/flixel/tree/ec54c5a582b252de3aca69283045719d3201778b) — **12.66× faster**
+##### [HaxeFlixel/flixel @ ec54c5a](https://github.com/HaxeFlixel/flixel/tree/ec54c5a582b252de3aca69283045719d3201778b) — **17.08× faster**
 
 - Files: 446
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.70s`; ScanCode `135.43s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.22s`; ScanCode `89.17s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with compound `LicenseRef-scancode-public-domain AND OFL-1.1` font licensing on `assets/fonts/monsterrat.ttf` instead of split duplicate detections and cleaner URL normalization across docs and snippets
 
 ##### [HeapsIO/heaps @ d2992b0](https://github.com/HeapsIO/heaps/tree/d2992b061db3f51b47cdb87c39d659a5bb96dd83) — **15.91× faster**
@@ -1337,11 +1337,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `31.93s`; ScanCode `656.13s`
 - Direct opam package visibility (`1` vs `0` packages) with broader dependency extraction (`27` vs `24`) from the repo-root `merlin*.opam`, `dot-merlin-reader.opam`, `ocaml-index.opam`, and `flake.lock` surfaces, plus Unicode-preserving copyright normalization across the Merlin source tree
 
-##### [ocaml/ocaml-lsp @ 788ff73](https://github.com/ocaml/ocaml-lsp/tree/788ff738991189537141776bfa07652547bff9c4) — **13.40× faster**
+##### [ocaml/ocaml-lsp @ 788ff73](https://github.com/ocaml/ocaml-lsp/tree/788ff738991189537141776bfa07652547bff9c4) — **17.13× faster**
 
 - Files: 546
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `13.83s`; ScanCode `185.33s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.79s`; ScanCode `99.19s`
 - Broader opam package visibility (`3` vs `1` packages) with slightly richer dependency extraction (`380` vs `376`) from the root and submodule `.opam` manifests plus `flake.lock`, with cleaner maintainer and email recovery on opam metadata and Unicode-preserving copyright normalization
 
 ##### [openfl/openfl @ 74d8f72](https://github.com/openfl/openfl/tree/74d8f72890b9ae70bba589d034ea35b86588e548) — **16.94× faster**
