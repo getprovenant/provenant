@@ -251,6 +251,9 @@ jobs:
   rust-sharded-tests:
     name: Tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
+    # These suites finish in a few minutes; cap the job so a scheduling/deadlock
+    # regression fails fast instead of running to GitHub's 6-hour default.
+    timeout-minutes: 25
     if: |
       !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
     strategy:

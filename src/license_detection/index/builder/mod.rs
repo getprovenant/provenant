@@ -541,23 +541,32 @@ pub fn build_index(rules: Vec<Rule>, licenses: Vec<License>) -> LicenseIndex {
     // dominate the cold index build. Overlap them so wall time is the longer of
     // the two instead of their sum. Each automaton is deterministic, so the
     // result is byte-identical to building them sequentially.
-    let (rules_automaton, unknown_automaton) = rayon::join(
-        || rules_builder.build(),
-        || {
-            if unknown_automaton_patterns.is_empty() {
-                AutomatonBuilder::new().build()
-            } else {
-                let mut unique_patterns: Vec<Vec<u8>> =
-                    unknown_automaton_patterns.into_iter().collect();
-                unique_patterns.sort();
-                let mut builder = AutomatonBuilder::new();
-                for pattern in &unique_patterns {
-                    builder.add_pattern(pattern);
-                }
-                builder.build()
+    //
+    // Use dedicated OS threads (`std::thread::scope`) rather than `rayon::join`:
+    // this build can run inside a rayon worker — a parser triggers lazy
+    // license-engine initialization while a scan is processing files on the
+    // global rayon pool — and borrowing the ambient pool there deadlocks a
+    // small, saturated pool (e.g. a 2-core CI runner) because the nested work
+    // has no free worker to run on. Plain threads do not depend on the pool.
+    let (rules_automaton, unknown_automaton) = std::thread::scope(|scope| {
+        let rules_handle = scope.spawn(move || rules_builder.build());
+        let unknown_automaton = if unknown_automaton_patterns.is_empty() {
+            AutomatonBuilder::new().build()
+        } else {
+            let mut unique_patterns: Vec<Vec<u8>> =
+                unknown_automaton_patterns.into_iter().collect();
+            unique_patterns.sort();
+            let mut builder = AutomatonBuilder::new();
+            for pattern in &unique_patterns {
+                builder.add_pattern(pattern);
             }
-        },
-    );
+            builder.build()
+        };
+        let rules_automaton = rules_handle
+            .join()
+            .expect("rules automaton build thread panicked");
+        (rules_automaton, unknown_automaton)
+    });
 
     let mut index = LicenseIndex {
         dictionary,
