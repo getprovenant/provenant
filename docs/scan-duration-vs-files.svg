@@ -230,9 +230,9 @@ ScanCode: 50.68s</title></rect>
     <rect x="439.98" y="430.21" width="8" height="8" fill="#d97706" rx="1.5"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
 ScanCode: 65.75s</title></rect>
-    <rect x="441.29" y="385.10" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
+    <rect x="441.29" y="409.83" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
 Files: 159
-ScanCode: 170.82s</title></rect>
+ScanCode: 101.22s</title></rect>
     <rect x="450.98" y="426.44" width="8" height="8" fill="#d97706" rx="1.5"><title>Carthage/Carthage @ e33e133
 Files: 183
 ScanCode: 71.21s</title></rect>
@@ -326,12 +326,12 @@ ScanCode: 83.67s</title></rect>
     <rect x="526.30" y="410.78" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
 ScanCode: 99.19s</title></rect>
-    <rect x="528.90" y="383.91" width="8" height="8" fill="#d97706" rx="1.5"><title>Alamofire/Alamofire @ ac01666
+    <rect x="528.90" y="392.88" width="8" height="8" fill="#d97706" rx="1.5"><title>Alamofire/Alamofire @ ac01666
 Files: 567
-ScanCode: 175.16s</title></rect>
-    <rect x="528.90" y="389.48" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/fresh @ 49c4be1
+ScanCode: 144.88s</title></rect>
+    <rect x="528.90" y="431.51" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/fresh @ 49c4be1
 Files: 567
-ScanCode: 155.71s</title></rect>
+ScanCode: 63.97s</title></rect>
     <rect x="529.99" y="401.38" width="8" height="8" fill="#d97706" rx="1.5"><title>catchorg/Catch2 @ 10f6248
 Files: 576
 ScanCode: 121.03s</title></rect>
@@ -350,9 +350,9 @@ ScanCode: 184.01s</title></rect>
     <rect x="538.84" y="397.93" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/dnf @ e47634f
 Files: 655
 ScanCode: 130.21s</title></rect>
-    <rect x="539.99" y="385.56" width="8" height="8" fill="#d97706" rx="1.5"><title>HeapsIO/heaps @ d2992b0
+    <rect x="539.99" y="407.44" width="8" height="8" fill="#d97706" rx="1.5"><title>HeapsIO/heaps @ d2992b0
 Files: 666
-ScanCode: 169.15s</title></rect>
+ScanCode: 106.46s</title></rect>
     <rect x="543.81" y="413.62" width="8" height="8" fill="#d97706" rx="1.5"><title>select2/select2 @ 595494a
 Files: 704
 ScanCode: 93.41s</title></rect>
@@ -371,9 +371,9 @@ ScanCode: 103.73s</title></rect>
     <rect x="555.57" y="427.04" width="8" height="8" fill="#d97706" rx="1.5"><title>conda/conda-build @ 5da509d
 Files: 835
 ScanCode: 70.31s</title></rect>
-    <rect x="558.17" y="345.08" width="8" height="8" fill="#d97706" rx="1.5"><title>pulseaudio/pulseaudio @ b096704
+    <rect x="558.17" y="366.21" width="8" height="8" fill="#d97706" rx="1.5"><title>pulseaudio/pulseaudio @ b096704
 Files: 867
-ScanCode: 398.45s</title></rect>
+ScanCode: 254.79s</title></rect>
     <rect x="559.89" y="380.76" width="8" height="8" fill="#d97706" rx="1.5"><title>Debian/apt @ 6b12812
 Files: 889
 ScanCode: 187.26s</title></rect>
@@ -404,15 +404,15 @@ ScanCode: 137.98s</title></rect>
     <rect x="577.87" y="402.80" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
 ScanCode: 117.46s</title></rect>
-    <rect x="578.35" y="385.81" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/libdnf @ d395731
+    <rect x="578.35" y="408.58" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/libdnf @ d395731
 Files: 1162
-ScanCode: 168.27s</title></rect>
+ScanCode: 103.93s</title></rect>
     <rect x="580.33" y="373.93" width="8" height="8" fill="#d97706" rx="1.5"><title>openfl/openfl @ 74d8f72
 Files: 1196
 ScanCode: 216.36s</title></rect>
-    <rect x="580.51" y="358.66" width="8" height="8" fill="#d97706" rx="1.5"><title>OpenMDAO/OpenMDAO @ bf1fcb6
+    <rect x="580.51" y="375.16" width="8" height="8" fill="#d97706" rx="1.5"><title>OpenMDAO/OpenMDAO @ bf1fcb6
 Files: 1199
-ScanCode: 298.91s</title></rect>
+ScanCode: 210.82s</title></rect>
     <rect x="583.87" y="362.98" width="8" height="8" fill="#d97706" rx="1.5"><title>astral-sh/uv @ 9581f2b
 Files: 1259
 ScanCode: 272.81s</title></rect>
@@ -473,18 +473,18 @@ ScanCode: 235.22s</title></rect>
     <rect x="627.52" y="350.33" width="8" height="8" fill="#d97706" rx="1.5"><title>prefix-dev/pixi @ 6458b15
 Files: 2372
 ScanCode: 356.55s</title></rect>
-    <rect x="633.28" y="363.07" width="8" height="8" fill="#d97706" rx="1.5"><title>playframework/playframework @ c2c114f
+    <rect x="633.28" y="388.01" width="8" height="8" fill="#d97706" rx="1.5"><title>playframework/playframework @ c2c114f
 Files: 2579
-ScanCode: 272.30s</title></rect>
+ScanCode: 160.61s</title></rect>
     <rect x="633.71" y="319.34" width="8" height="8" fill="#d97706" rx="1.5"><title>nmap/nmap @ d9199d7
 Files: 2595
 ScanCode: 686.99s</title></rect>
     <rect x="634.05" y="342.72" width="8" height="8" fill="#d97706" rx="1.5"><title>pandas-dev/pandas @ c385d01
 Files: 2608
 ScanCode: 418.88s</title></rect>
-    <rect x="638.16" y="353.58" width="8" height="8" fill="#d97706" rx="1.5"><title>jgm/pandoc @ d9838eb
+    <rect x="638.16" y="373.05" width="8" height="8" fill="#d97706" rx="1.5"><title>jgm/pandoc @ d9838eb
 Files: 2768
-ScanCode: 332.82s</title></rect>
+ScanCode: 220.43s</title></rect>
     <rect x="639.24" y="345.52" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/std @ a864f62
 Files: 2812
 ScanCode: 394.76s</title></rect>
@@ -551,9 +551,9 @@ ScanCode: 681.19s</title></rect>
     <rect x="675.14" y="323.90" width="8" height="8" fill="#d97706" rx="1.5"><title>git/git @ 9f223ef
 Files: 4734
 ScanCode: 623.80s</title></rect>
-    <rect x="677.07" y="355.67" width="8" height="8" fill="#d97706" rx="1.5"><title>rails/rails @ 27fb2a9
+    <rect x="677.07" y="360.75" width="8" height="8" fill="#d97706" rx="1.5"><title>rails/rails @ 27fb2a9
 Files: 4869
-ScanCode: 318.46s</title></rect>
+ScanCode: 285.98s</title></rect>
     <rect x="681.62" y="343.50" width="8" height="8" fill="#d97706" rx="1.5"><title>go-gitea/gitea @ 47fdf3e2
 Files: 5201
 ScanCode: 412.03s</title></rect>
@@ -892,9 +892,9 @@ Provenant: 4.79s</title></circle>
     <circle cx="443.98" cy="557.39" r="4.5" fill="#2563eb"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
 Provenant: 4.85s</title></circle>
-    <circle cx="445.29" cy="519.13" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
+    <circle cx="445.29" cy="556.81" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
 Files: 159
-Provenant: 10.90s</title></circle>
+Provenant: 4.91s</title></circle>
     <circle cx="454.98" cy="556.52" r="4.5" fill="#2563eb"><title>Carthage/Carthage @ e33e133
 Files: 183
 Provenant: 4.94s</title></circle>
@@ -988,12 +988,12 @@ Provenant: 5.85s</title></circle>
     <circle cx="530.30" cy="549.02" r="4.5" fill="#2563eb"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
 Provenant: 5.79s</title></circle>
-    <circle cx="532.90" cy="504.96" r="4.5" fill="#2563eb"><title>Alamofire/Alamofire @ ac01666
+    <circle cx="532.90" cy="545.41" r="4.5" fill="#2563eb"><title>Alamofire/Alamofire @ ac01666
 Files: 567
-Provenant: 14.71s</title></circle>
-    <circle cx="532.90" cy="509.65" r="4.5" fill="#2563eb"><title>denoland/fresh @ 49c4be1
+Provenant: 6.25s</title></circle>
+    <circle cx="532.90" cy="558.88" r="4.5" fill="#2563eb"><title>denoland/fresh @ 49c4be1
 Files: 567
-Provenant: 13.32s</title></circle>
+Provenant: 4.70s</title></circle>
     <circle cx="533.99" cy="546.25" r="4.5" fill="#2563eb"><title>catchorg/Catch2 @ 10f6248
 Files: 576
 Provenant: 6.14s</title></circle>
@@ -1012,9 +1012,9 @@ Provenant: 17.30s</title></circle>
     <circle cx="542.84" cy="540.94" r="4.5" fill="#2563eb"><title>rpm-software-management/dnf @ e47634f
 Files: 655
 Provenant: 6.87s</title></circle>
-    <circle cx="543.99" cy="520.31" r="4.5" fill="#2563eb"><title>HeapsIO/heaps @ d2992b0
+    <circle cx="543.99" cy="556.24" r="4.5" fill="#2563eb"><title>HeapsIO/heaps @ d2992b0
 Files: 666
-Provenant: 10.63s</title></circle>
+Provenant: 4.97s</title></circle>
     <circle cx="547.81" cy="550.68" r="4.5" fill="#2563eb"><title>select2/select2 @ 595494a
 Files: 704
 Provenant: 5.59s</title></circle>
@@ -1033,9 +1033,9 @@ Provenant: 5.55s</title></circle>
     <circle cx="559.57" cy="526.93" r="4.5" fill="#2563eb"><title>conda/conda-build @ 5da509d
 Files: 835
 Provenant: 9.24s</title></circle>
-    <circle cx="562.17" cy="488.62" r="4.5" fill="#2563eb"><title>pulseaudio/pulseaudio @ b096704
+    <circle cx="562.17" cy="530.44" r="4.5" fill="#2563eb"><title>pulseaudio/pulseaudio @ b096704
 Files: 867
-Provenant: 20.79s</title></circle>
+Provenant: 8.58s</title></circle>
     <circle cx="563.89" cy="516.47" r="4.5" fill="#2563eb"><title>Debian/apt @ 6b12812
 Files: 889
 Provenant: 11.53s</title></circle>
@@ -1066,15 +1066,15 @@ Provenant: 6.45s</title></circle>
     <circle cx="581.87" cy="542.91" r="4.5" fill="#2563eb"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
 Provenant: 6.59s</title></circle>
-    <circle cx="582.35" cy="508.50" r="4.5" fill="#2563eb"><title>rpm-software-management/libdnf @ d395731
+    <circle cx="582.35" cy="547.57" r="4.5" fill="#2563eb"><title>rpm-software-management/libdnf @ d395731
 Files: 1162
-Provenant: 13.65s</title></circle>
+Provenant: 5.97s</title></circle>
     <circle cx="584.33" cy="511.65" r="4.5" fill="#2563eb"><title>openfl/openfl @ 74d8f72
 Files: 1196
 Provenant: 12.77s</title></circle>
-    <circle cx="584.51" cy="495.58" r="4.5" fill="#2563eb"><title>OpenMDAO/OpenMDAO @ bf1fcb6
+    <circle cx="584.51" cy="534.94" r="4.5" fill="#2563eb"><title>OpenMDAO/OpenMDAO @ bf1fcb6
 Files: 1199
-Provenant: 17.94s</title></circle>
+Provenant: 7.80s</title></circle>
     <circle cx="587.87" cy="525.77" r="4.5" fill="#2563eb"><title>astral-sh/uv @ 9581f2b
 Files: 1259
 Provenant: 9.47s</title></circle>
@@ -1135,18 +1135,18 @@ Provenant: 12.03s</title></circle>
     <circle cx="631.52" cy="474.94" r="4.5" fill="#2563eb"><title>prefix-dev/pixi @ 6458b15
 Files: 2372
 Provenant: 27.77s</title></circle>
-    <circle cx="637.28" cy="504.23" r="4.5" fill="#2563eb"><title>playframework/playframework @ c2c114f
+    <circle cx="637.28" cy="542.19" r="4.5" fill="#2563eb"><title>playframework/playframework @ c2c114f
 Files: 2579
-Provenant: 14.94s</title></circle>
+Provenant: 6.69s</title></circle>
     <circle cx="637.71" cy="479.01" r="4.5" fill="#2563eb"><title>nmap/nmap @ d9199d7
 Files: 2595
 Provenant: 25.48s</title></circle>
     <circle cx="638.05" cy="510.48" r="4.5" fill="#2563eb"><title>pandas-dev/pandas @ c385d01
 Files: 2608
 Provenant: 13.09s</title></circle>
-    <circle cx="642.16" cy="484.30" r="4.5" fill="#2563eb"><title>jgm/pandoc @ d9838eb
+    <circle cx="642.16" cy="524.25" r="4.5" fill="#2563eb"><title>jgm/pandoc @ d9838eb
 Files: 2768
-Provenant: 22.78s</title></circle>
+Provenant: 9.78s</title></circle>
     <circle cx="643.24" cy="500.11" r="4.5" fill="#2563eb"><title>denoland/std @ a864f62
 Files: 2812
 Provenant: 16.30s</title></circle>
@@ -1213,9 +1213,9 @@ Provenant: 26.97s</title></circle>
     <circle cx="679.14" cy="505.25" r="4.5" fill="#2563eb"><title>git/git @ 9f223ef
 Files: 4734
 Provenant: 14.62s</title></circle>
-    <circle cx="681.07" cy="483.29" r="4.5" fill="#2563eb"><title>rails/rails @ 27fb2a9
+    <circle cx="681.07" cy="532.18" r="4.5" fill="#2563eb"><title>rails/rails @ 27fb2a9
 Files: 4869
-Provenant: 23.27s</title></circle>
+Provenant: 8.27s</title></circle>
     <circle cx="685.62" cy="502.01" r="4.5" fill="#2563eb"><title>go-gitea/gitea @ 47fdf3e2
 Files: 5201
 Provenant: 15.66s</title></circle>

@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **15.7× median speedup** and **15.5× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
+> Provenant is faster on 220 of 220 recorded runs, with a **16.6× median speedup** and **15.8× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **22.4×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -178,11 +178,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `13.85s`; ScanCode `543.19s`
 - Far broader Python-family package and dependency extraction (`2` vs `1` packages, `16` vs `6` dependencies) because `pyproject.toml` contributes both a real PyPI root package and 5 Python dependencies while `docs/requirements.txt` adds 5 more documentation dependencies that ScanCode leaves at zero, with clearer `BSD-3-Clause` declared-license capture and visibility into the vendored CVS marker that ScanCode skips
 
-##### [OpenMDAO/OpenMDAO @ bf1fcb6](https://github.com/OpenMDAO/OpenMDAO/tree/bf1fcb6f09a07a49cdba27c2fd765153ec54694c) — **16.66× faster**
+##### [OpenMDAO/OpenMDAO @ bf1fcb6](https://github.com/OpenMDAO/OpenMDAO/tree/bf1fcb6f09a07a49cdba27c2fd765153ec54694c) — **27.03× faster**
 
 - Files: 1,199
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `17.94s`; ScanCode `298.91s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.80s`; ScanCode `210.82s`
 - Broader Pixi, Julia, and Docker package visibility (`3` vs `1` packages, `1489` vs `76` dependencies) from the root `pixi.toml`, resolved `pixi.lock`, and the experimental Julia `Project.toml`, with no `pixi.lock` scan errors where ScanCode times out and much richer lockfile license visibility
 
 ##### [pandas-dev/pandas @ c385d01](https://github.com/pandas-dev/pandas/tree/c385d0188cbfb2294fb6362ec24b514b211c7fb1) — **32.0× faster**
@@ -345,11 +345,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.02s`; ScanCode `40.69s`
 - Deno v4 lockfile dependency extraction (`37` vs `0` from `deno.lock`'s resolved `npm` and `jsr` graphs) where ScanCode is lockfile-blind, plus `deno.json` import-map package visibility and cleaner rejection of a bare-URL holder mistaken from README prose; the deno.lock parser now covers lockfile formats v1–v5 rather than v5 alone
 
-##### [denoland/fresh @ 49c4be1](https://github.com/denoland/fresh/tree/49c4be1ac60603174bad1c6e3c13bd88602c51bb) — **11.69× faster**
+##### [denoland/fresh @ 49c4be1](https://github.com/denoland/fresh/tree/49c4be1ac60603174bad1c6e3c13bd88602c51bb) — **13.61× faster**
 
 - Files: 567
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 10 proc
-- Timing: Provenant `13.32s`; ScanCode `155.71s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.70s`; ScanCode `63.97s`
 - Broader Deno package and dependency extraction (`8` vs `0` packages, `966` vs `0` dependencies) from the root `deno.json`, `deno.lock`, and nested `packages/*/deno.json` manifests, with direct JSR and npm import-map or lockfile package identity where ScanCode stays manifest-blind
 
 ##### [denoland/std @ a864f62](https://github.com/denoland/std/tree/a864f62bcc8a5f20716d2becab3cfe224a2ad810) — **24.22× faster**
@@ -387,11 +387,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `15.56s`; ScanCode `303.29s`
 - Matched Bower package and dependency coverage on the repo-root `bower.json`, with datasource-tagged Bower package identity instead of a bare purl-only row and cleaner Unicode-preserving author normalization across locale files and vendored docs
 
-##### [lodash/lodash @ cb0b9b9](https://github.com/lodash/lodash/tree/cb0b9b9212521c08e3eafe7c8cb0af1b42b6649e) — **15.67× faster**
+##### [lodash/lodash @ cb0b9b9](https://github.com/lodash/lodash/tree/cb0b9b9212521c08e3eafe7c8cb0af1b42b6649e) — **20.62× faster**
 
 - Files: 159
-- Run context: 2026-05-07 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.90s`; ScanCode `170.82s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.91s`; ScanCode `101.22s`
 - Matched npm package and dependency coverage on the repo-root `package.json` and `package-lock.json`, with source-faithful copyright recovery across `lodash.js`, `dist/lodash*.js`, and `LICENSE`, plus encoded-query URL preservation and extra Firebug asset URL visibility where ScanCode flattens or misses the underlying source text
 
 ##### [metabase/metabase @ 10997b1](https://github.com/metabase/metabase/tree/10997b10908414ab05773b085a56a37fcdebcd1a) — **25.67× faster**
@@ -536,11 +536,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `21.96s`; ScanCode `429.19s`
 - Far broader Gradle dependency extraction (`51` vs `6` dependencies) from the root multi-project `build.gradle.kts`, module-local `android/build.gradle.kts`, and `buildSrc/build.gradle.kts`, with concrete version recovery for property-backed Kotlin DSL quoted configuration calls such as `"implementation"("io.ktor:ktor-client-core:$ktorVersion")`, `"implementation"("com.badlogicgames.gdx:gdx-tools:$gdxVersion")`, and `classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")` where ScanCode leaves `$kotlinVersion` / `$gdxVersion` unresolved and misses most of the centralized root build graph
 
-##### [playframework/playframework @ c2c114f](https://github.com/playframework/playframework/tree/c2c114ff31eff1557bef65cc3f586fbc53c974a6) — **18.23× faster**
+##### [playframework/playframework @ c2c114f](https://github.com/playframework/playframework/tree/c2c114ff31eff1557bef65cc3f586fbc53c974a6) — **24.01× faster**
 
 - Files: 2,579
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `14.94s`; ScanCode `272.30s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.69s`; ScanCode `160.61s`
 - Broader SBT dependency extraction (`7` vs `3`) and file-level SBT package visibility across the root build and committed `play-sbt-plugin` fixture projects, plus correct no-year copyright and holder recovery on vendored jQuery banners that ScanCode-only parity previously exposed
 
 ##### [scalatest/scalatest @ f6ba8f2](https://github.com/scalatest/scalatest/tree/f6ba8f25999f240831362cd7498ba5beee7dc375) — **17.92× faster**
@@ -860,11 +860,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `21.79s`; ScanCode `841.78s`
 - Broader package and dependency visibility (`1` vs `0` packages, `41` vs `0` dependencies) from bundled `external/perl/Text-Template-1.56` CPAN metadata plus committed `.gitmodules` and `test/quic-openssl-docker/Dockerfile` surfaces, with stronger `Written by ...` author recovery on OpenSSL-style comment headers and cleaner rejection of weak CPAL or MIT overcalls on standard OpenSSL license footers
 
-##### [pulseaudio/pulseaudio @ b096704](https://github.com/pulseaudio/pulseaudio/tree/b096704c0d42c5e784deb781a07b23cfb5286a82) — **19.16× faster**
+##### [pulseaudio/pulseaudio @ b096704](https://github.com/pulseaudio/pulseaudio/tree/b096704c0d42c5e784deb781a07b23cfb5286a82) — **29.70× faster**
 
 - Files: 867
-- Run context: 2026-05-26 · macOS 26.5 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `20.79s`; ScanCode `398.45s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.58s`; ScanCode `254.79s`
 - Broader Meson dependency visibility (`8` vs `0` top-level dependencies) from `meson.build`, more correct LGPL-2.0/LGPL-2.1 notice classification across the source and manpage trees, and cleaner rejection of placeholder `COPYRIGHT HOLDER`, contributor-tail, and code-fragment noise, with the remaining deltas concentrated in low-value translation-header placeholders and source-faithful Unicode/name rendering
 
 ##### [protocolbuffers/protobuf @ e3370c2](https://github.com/protocolbuffers/protobuf/tree/e3370c2e26bbfaa63bc9f8e4ac0f8dc066ba3eeb) — **28.62× faster**
@@ -895,11 +895,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.87s`; ScanCode `130.21s`
 - Broader RPM package and dependency extraction (`163` vs `138` packages, `579` vs `1` dependencies) from committed `.rpm` fixtures and sibling `.spec` metadata, with normalized RPM header license expressions and one-package-per-spec ownership across the shipped module fixture trees
 
-##### [rpm-software-management/libdnf @ d395731](https://github.com/rpm-software-management/libdnf/tree/d39573195e24b43687587a8d83b9f6ac274e2412) — **12.33× faster**
+##### [rpm-software-management/libdnf @ d395731](https://github.com/rpm-software-management/libdnf/tree/d39573195e24b43687587a8d83b9f6ac274e2412) — **17.41× faster**
 
 - Files: 1,162
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `13.65s`; ScanCode `168.27s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.97s`; ScanCode `103.93s`
 - Broader RPM package and dependency extraction (`352` vs `327` packages, `1441` vs `0` dependencies) from committed `.rpm` fixture trees and sibling `.spec` metadata, with normalized RPM header license expressions and cleaner rejection of config or doc false positives such as `baseurl` and `doxygen. Using` as holder or author data
 
 ##### [marshallpierce/rust-base64 @ 13f4fe8](https://github.com/marshallpierce/rust-base64/tree/13f4fe86e565b3a8ed9402d3b8b1bcf83ab9817c) — **8.98× faster**
@@ -995,11 +995,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.17s`; ScanCode `54.22s`
 - Matched top-level CocoaPods package coverage (`1` vs `1`) with broader dependency extraction (`124` vs `115`) from `AFNetworking.podspec` subspec edges and the root `Gemfile`
 
-##### [Alamofire/Alamofire @ ac01666](https://github.com/Alamofire/Alamofire/tree/ac016668a19532686e320edf447f79a5cf5bd057) — **11.91× faster**
+##### [Alamofire/Alamofire @ ac01666](https://github.com/Alamofire/Alamofire/tree/ac016668a19532686e320edf447f79a5cf5bd057) — **23.18× faster**
 
 - Files: 567
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `14.71s`; ScanCode `175.16s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.25s`; ScanCode `144.88s`
 - Matched top-level CocoaPods package coverage (`1` vs `1`) and main podspec/license parity, with slightly richer dependency extraction (`56` vs `54`) from the root `Gemfile`
 
 ##### [Carthage/Carthage @ e33e133](https://github.com/Carthage/Carthage/tree/e33e133a5427129b38bfb1ae18d8f56b29a93204) — **14.41× faster**
@@ -1216,11 +1216,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.22s`; ScanCode `51.98s`
 - Direct CPAN package identity and broader dependency extraction (`1` vs `0` packages, `22` vs `0` dependencies) from `META.json`, `dist.ini`, and `Makefile.PL`, with CPAN resource metadata preserved from the distribution manifest
 
-##### [rails/rails @ 27fb2a9](https://github.com/rails/rails/tree/27fb2a9192b2492791528fc7c3afb53736696bc5) — **13.69× faster**
+##### [rails/rails @ 27fb2a9](https://github.com/rails/rails/tree/27fb2a9192b2492791528fc7c3afb53736696bc5) — **34.58× faster**
 
 - Files: 4,869
-- Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `23.27s`; ScanCode `318.46s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `8.27s`; ScanCode `285.98s`
 - Broader Ruby/Bundler package and dependency extraction (`20` vs `17` packages, `899` vs `802` dependencies) from the root `Gemfile`, the multi-gemspec Rails component tree, and resolved `RAILS_VERSION`-backed gemspec versions, with real `8.2.0.alpha` gem identities where ScanCode leaves literal `version` placeholders
 
 ##### [rubocop/rubocop @ 4e0d642](https://github.com/rubocop/rubocop/tree/4e0d642eca6e9a694b8a359d39e0d4b5b6b26bb8) — **23.4× faster**
@@ -1253,18 +1253,18 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.22s`; ScanCode `89.17s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with compound `LicenseRef-scancode-public-domain AND OFL-1.1` font licensing on `assets/fonts/monsterrat.ttf` instead of split duplicate detections and cleaner URL normalization across docs and snippets
 
-##### [HeapsIO/heaps @ d2992b0](https://github.com/HeapsIO/heaps/tree/d2992b061db3f51b47cdb87c39d659a5bb96dd83) — **15.91× faster**
+##### [HeapsIO/heaps @ d2992b0](https://github.com/HeapsIO/heaps/tree/d2992b061db3f51b47cdb87c39d659a5bb96dd83) — **21.42× faster**
 
 - Files: 666
-- Run context: 2026-04-22 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.63s`; ScanCode `169.15s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.97s`; ScanCode `106.46s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with cleaner copyright and holder recovery on `hxd/fmt/fbx/Writer.hx` and `samples/text_res/trueTypeFont.ttf` plus safer trailing-slash URL normalization
 
-##### [jgm/pandoc @ d9838eb](https://github.com/jgm/pandoc/tree/d9838eba11ae18216f52e233dbbca735f0f97ccb) — **14.61× faster**
+##### [jgm/pandoc @ d9838eb](https://github.com/jgm/pandoc/tree/d9838eba11ae18216f52e233dbbca735f0f97ccb) — **22.54× faster**
 
 - Files: 2,768
-- Run context: 2026-04-17 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `22.78s`; ScanCode `332.82s`
+- Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.78s`; ScanCode `220.43s`
 - Broader mixed Hackage and Nix package extraction (`5` vs `0` packages, `197` vs `0` dependencies) from sibling `pandoc*.cabal` manifests, `stack.yaml`, and `flake.nix` / `flake.lock`, with explicit package identities across `pandoc`, `pandoc-cli`, `pandoc-lua-engine`, and `pandoc-server`
 
 ##### [JuliaAcademy/DataScience @ 201f2e6](https://github.com/JuliaAcademy/DataScience/tree/201f2e66cf2067dacee2df02b546f75d77ed22e7) — **40.81× faster**
