@@ -221,9 +221,9 @@ ScanCode: 61.74s</title></rect>
     <rect x="426.88" y="447.92" width="8" height="8" fill="#d97706" rx="1.5"><title>getsentry/self-hosted @ 8728919
 Files: 129
 ScanCode: 45.20s</title></rect>
-    <rect x="428.98" y="388.90" width="8" height="8" fill="#d97706" rx="1.5"><title>fmtlib/fmt @ 2cb3983
+    <rect x="428.98" y="423.36" width="8" height="8" fill="#d97706" rx="1.5"><title>fmtlib/fmt @ 2cb3983
 Files: 133
-ScanCode: 157.63s</title></rect>
+ScanCode: 76.01s</title></rect>
     <rect x="439.98" y="442.51" width="8" height="8" fill="#d97706" rx="1.5"><title>MaxRev-Dev/gdal.netcore @ 6cc0145
 Files: 156
 ScanCode: 50.68s</title></rect>
@@ -233,9 +233,9 @@ ScanCode: 65.75s</title></rect>
     <rect x="441.29" y="385.10" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
 Files: 159
 ScanCode: 170.82s</title></rect>
-    <rect x="450.98" y="397.47" width="8" height="8" fill="#d97706" rx="1.5"><title>Carthage/Carthage @ e33e133
+    <rect x="450.98" y="426.44" width="8" height="8" fill="#d97706" rx="1.5"><title>Carthage/Carthage @ e33e133
 Files: 183
-ScanCode: 131.47s</title></rect>
+ScanCode: 71.21s</title></rect>
     <rect x="460.46" y="439.32" width="8" height="8" fill="#d97706" rx="1.5"><title>AFNetworking/AFNetworking @ d9f589c
 Files: 210
 ScanCode: 54.22s</title></rect>
@@ -296,9 +296,9 @@ ScanCode: 62.68s</title></rect>
     <rect x="511.58" y="417.47" width="8" height="8" fill="#d97706" rx="1.5"><title>vernemq/vernemq @ 4681e54
 Files: 441
 ScanCode: 86.10s</title></rect>
-    <rect x="512.36" y="396.07" width="8" height="8" fill="#d97706" rx="1.5"><title>HaxeFlixel/flixel @ ec54c5a
+    <rect x="512.36" y="415.82" width="8" height="8" fill="#d97706" rx="1.5"><title>HaxeFlixel/flixel @ ec54c5a
 Files: 446
-ScanCode: 135.43s</title></rect>
+ScanCode: 89.17s</title></rect>
     <rect x="514.79" y="407.11" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/dplyr @ 2f9f49e
 Files: 462
 ScanCode: 107.21s</title></rect>
@@ -323,33 +323,33 @@ ScanCode: 80.78s</title></rect>
     <rect x="525.67" y="418.82" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/serialization @ 097a6c6
 Files: 541
 ScanCode: 83.67s</title></rect>
-    <rect x="526.30" y="381.25" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/ocaml-lsp @ 788ff73
+    <rect x="526.30" y="410.78" width="8" height="8" fill="#d97706" rx="1.5"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
-ScanCode: 185.33s</title></rect>
+ScanCode: 99.19s</title></rect>
     <rect x="528.90" y="383.91" width="8" height="8" fill="#d97706" rx="1.5"><title>Alamofire/Alamofire @ ac01666
 Files: 567
 ScanCode: 175.16s</title></rect>
     <rect x="528.90" y="389.48" width="8" height="8" fill="#d97706" rx="1.5"><title>denoland/fresh @ 49c4be1
 Files: 567
 ScanCode: 155.71s</title></rect>
-    <rect x="529.99" y="373.16" width="8" height="8" fill="#d97706" rx="1.5"><title>catchorg/Catch2 @ 10f6248
+    <rect x="529.99" y="401.38" width="8" height="8" fill="#d97706" rx="1.5"><title>catchorg/Catch2 @ 10f6248
 Files: 576
-ScanCode: 219.94s</title></rect>
+ScanCode: 121.03s</title></rect>
     <rect x="531.64" y="376.71" width="8" height="8" fill="#d97706" rx="1.5"><title>i18next/react-i18next @ cb20d18
 Files: 590
 ScanCode: 204.00s</title></rect>
-    <rect x="534.61" y="385.27" width="8" height="8" fill="#d97706" rx="1.5"><title>iTowns/itowns @ 08e08f5
+    <rect x="534.61" y="404.01" width="8" height="8" fill="#d97706" rx="1.5"><title>iTowns/itowns @ 08e08f5
 Files: 616
-ScanCode: 170.19s</title></rect>
-    <rect x="535.39" y="374.38" width="8" height="8" fill="#d97706" rx="1.5"><title>processone/ejabberd @ 87475d8
+ScanCode: 114.48s</title></rect>
+    <rect x="535.39" y="401.24" width="8" height="8" fill="#d97706" rx="1.5"><title>processone/ejabberd @ 87475d8
 Files: 623
-ScanCode: 214.30s</title></rect>
+ScanCode: 121.38s</title></rect>
     <rect x="537.57" y="381.59" width="8" height="8" fill="#d97706" rx="1.5"><title>Apache Tomcat 10.1.52 extracted release snapshot
 Files: 643
 ScanCode: 184.01s</title></rect>
-    <rect x="538.84" y="376.84" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/dnf @ e47634f
+    <rect x="538.84" y="397.93" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/dnf @ e47634f
 Files: 655
-ScanCode: 203.47s</title></rect>
+ScanCode: 130.21s</title></rect>
     <rect x="539.99" y="385.56" width="8" height="8" fill="#d97706" rx="1.5"><title>HeapsIO/heaps @ d2992b0
 Files: 666
 ScanCode: 169.15s</title></rect>
@@ -398,12 +398,12 @@ ScanCode: 303.29s</title></rect>
     <rect x="574.44" y="417.69" width="8" height="8" fill="#d97706" rx="1.5"><title>pointfreeco/swift-composable-architecture @ 7517cc3
 Files: 1098
 ScanCode: 85.71s</title></rect>
-    <rect x="575.87" y="373.63" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/regorus @ 7f42115
+    <rect x="575.87" y="395.19" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/regorus @ 7f42115
 Files: 1121
-ScanCode: 217.76s</title></rect>
-    <rect x="577.87" y="383.06" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/ggplot2 @ 7d79c95
+ScanCode: 137.98s</title></rect>
+    <rect x="577.87" y="402.80" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
-ScanCode: 178.35s</title></rect>
+ScanCode: 117.46s</title></rect>
     <rect x="578.35" y="385.81" width="8" height="8" fill="#d97706" rx="1.5"><title>rpm-software-management/libdnf @ d395731
 Files: 1162
 ScanCode: 168.27s</title></rect>
@@ -883,9 +883,9 @@ Provenant: 5.03s</title></circle>
     <circle cx="430.88" cy="558.48" r="4.5" fill="#2563eb"><title>getsentry/self-hosted @ 8728919
 Files: 129
 Provenant: 4.74s</title></circle>
-    <circle cx="432.98" cy="514.62" r="4.5" fill="#2563eb"><title>fmtlib/fmt @ 2cb3983
+    <circle cx="432.98" cy="550.60" r="4.5" fill="#2563eb"><title>fmtlib/fmt @ 2cb3983
 Files: 133
-Provenant: 11.99s</title></circle>
+Provenant: 5.60s</title></circle>
     <circle cx="443.98" cy="557.98" r="4.5" fill="#2563eb"><title>MaxRev-Dev/gdal.netcore @ 6cc0145
 Files: 156
 Provenant: 4.79s</title></circle>
@@ -895,9 +895,9 @@ Provenant: 4.85s</title></circle>
     <circle cx="445.29" cy="519.13" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
 Files: 159
 Provenant: 10.90s</title></circle>
-    <circle cx="454.98" cy="519.74" r="4.5" fill="#2563eb"><title>Carthage/Carthage @ e33e133
+    <circle cx="454.98" cy="556.52" r="4.5" fill="#2563eb"><title>Carthage/Carthage @ e33e133
 Files: 183
-Provenant: 10.76s</title></circle>
+Provenant: 4.94s</title></circle>
     <circle cx="464.46" cy="554.37" r="4.5" fill="#2563eb"><title>AFNetworking/AFNetworking @ d9f589c
 Files: 210
 Provenant: 5.17s</title></circle>
@@ -958,9 +958,9 @@ Provenant: 4.88s</title></circle>
     <circle cx="515.58" cy="546.40" r="4.5" fill="#2563eb"><title>vernemq/vernemq @ 4681e54
 Files: 441
 Provenant: 6.12s</title></circle>
-    <circle cx="516.36" cy="520.00" r="4.5" fill="#2563eb"><title>HaxeFlixel/flixel @ ec54c5a
+    <circle cx="516.36" cy="553.92" r="4.5" fill="#2563eb"><title>HaxeFlixel/flixel @ ec54c5a
 Files: 446
-Provenant: 10.70s</title></circle>
+Provenant: 5.22s</title></circle>
     <circle cx="518.79" cy="551.28" r="4.5" fill="#2563eb"><title>tidyverse/dplyr @ 2f9f49e
 Files: 462
 Provenant: 5.52s</title></circle>
@@ -985,33 +985,33 @@ Provenant: 5.67s</title></circle>
     <circle cx="529.67" cy="548.53" r="4.5" fill="#2563eb"><title>boostorg/serialization @ 097a6c6
 Files: 541
 Provenant: 5.85s</title></circle>
-    <circle cx="530.30" cy="507.88" r="4.5" fill="#2563eb"><title>ocaml/ocaml-lsp @ 788ff73
+    <circle cx="530.30" cy="549.02" r="4.5" fill="#2563eb"><title>ocaml/ocaml-lsp @ 788ff73
 Files: 546
-Provenant: 13.83s</title></circle>
+Provenant: 5.79s</title></circle>
     <circle cx="532.90" cy="504.96" r="4.5" fill="#2563eb"><title>Alamofire/Alamofire @ ac01666
 Files: 567
 Provenant: 14.71s</title></circle>
     <circle cx="532.90" cy="509.65" r="4.5" fill="#2563eb"><title>denoland/fresh @ 49c4be1
 Files: 567
 Provenant: 13.32s</title></circle>
-    <circle cx="533.99" cy="505.42" r="4.5" fill="#2563eb"><title>catchorg/Catch2 @ 10f6248
+    <circle cx="533.99" cy="546.25" r="4.5" fill="#2563eb"><title>catchorg/Catch2 @ 10f6248
 Files: 576
-Provenant: 14.57s</title></circle>
+Provenant: 6.14s</title></circle>
     <circle cx="535.64" cy="504.61" r="4.5" fill="#2563eb"><title>i18next/react-i18next @ cb20d18
 Files: 590
 Provenant: 14.82s</title></circle>
-    <circle cx="538.61" cy="512.54" r="4.5" fill="#2563eb"><title>iTowns/itowns @ 08e08f5
+    <circle cx="538.61" cy="547.42" r="4.5" fill="#2563eb"><title>iTowns/itowns @ 08e08f5
 Files: 616
-Provenant: 12.53s</title></circle>
-    <circle cx="539.39" cy="498.86" r="4.5" fill="#2563eb"><title>processone/ejabberd @ 87475d8
+Provenant: 5.99s</title></circle>
+    <circle cx="539.39" cy="533.68" r="4.5" fill="#2563eb"><title>processone/ejabberd @ 87475d8
 Files: 623
-Provenant: 16.74s</title></circle>
+Provenant: 8.01s</title></circle>
     <circle cx="541.57" cy="497.30" r="4.5" fill="#2563eb"><title>Apache Tomcat 10.1.52 extracted release snapshot
 Files: 643
 Provenant: 17.30s</title></circle>
-    <circle cx="542.84" cy="506.07" r="4.5" fill="#2563eb"><title>rpm-software-management/dnf @ e47634f
+    <circle cx="542.84" cy="540.94" r="4.5" fill="#2563eb"><title>rpm-software-management/dnf @ e47634f
 Files: 655
-Provenant: 14.37s</title></circle>
+Provenant: 6.87s</title></circle>
     <circle cx="543.99" cy="520.31" r="4.5" fill="#2563eb"><title>HeapsIO/heaps @ d2992b0
 Files: 666
 Provenant: 10.63s</title></circle>
@@ -1060,12 +1060,12 @@ Provenant: 15.56s</title></circle>
     <circle cx="578.44" cy="554.37" r="4.5" fill="#2563eb"><title>pointfreeco/swift-composable-architecture @ 7517cc3
 Files: 1098
 Provenant: 5.17s</title></circle>
-    <circle cx="579.87" cy="500.14" r="4.5" fill="#2563eb"><title>microsoft/regorus @ 7f42115
+    <circle cx="579.87" cy="543.92" r="4.5" fill="#2563eb"><title>microsoft/regorus @ 7f42115
 Files: 1121
-Provenant: 16.29s</title></circle>
-    <circle cx="581.87" cy="505.77" r="4.5" fill="#2563eb"><title>tidyverse/ggplot2 @ 7d79c95
+Provenant: 6.45s</title></circle>
+    <circle cx="581.87" cy="542.91" r="4.5" fill="#2563eb"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
-Provenant: 14.46s</title></circle>
+Provenant: 6.59s</title></circle>
     <circle cx="582.35" cy="508.50" r="4.5" fill="#2563eb"><title>rpm-software-management/libdnf @ d395731
 Files: 1162
 Provenant: 13.65s</title></circle>
