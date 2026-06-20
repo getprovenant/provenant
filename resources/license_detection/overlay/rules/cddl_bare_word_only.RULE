@@ -1,0 +1,8 @@
+---
+license_expression: cddl-1.0
+is_license_clue: yes
+relevance: 50
+notes: Bare versionless CDDL shorthand is too weak for a hard detection; preserve it as clue-only evidence (ScanCode maps the bare CDDL name to cddl-1.0, its curated default for the family).
+---
+
+CDDL

@@ -1458,6 +1458,67 @@ mod tests {
     }
 
     #[test]
+    fn test_populate_declared_license_bare_informal_names_normalize() {
+        // Bare informal (non-SPDX) package-license names fail strict SPDX parsing
+        // and only match a clue-only overlay rule; on a declared manifest
+        // statement they must normalize to their conventional expression,
+        // matching ScanCode's curated mapping. Each pair is (declared, spdx).
+        let cases = [
+            ("PSF", "python", "Python-2.0"),
+            ("Python", "python", "Python-2.0"),
+            ("CDDL", "cddl-1.0", "CDDL-1.0"),
+        ];
+
+        for (name, expected_declared, expected_spdx) in cases {
+            let mut package = package_with(Some(name), None, None);
+            populate_declared_license_and_holder(&mut package);
+
+            assert_eq!(
+                package.declared_license_expression.as_deref(),
+                Some(expected_declared),
+                "bare {name:?} should normalize to {expected_declared}"
+            );
+            assert_eq!(
+                package.declared_license_expression_spdx.as_deref(),
+                Some(expected_spdx),
+                "bare {name:?} should normalize to SPDX {expected_spdx}"
+            );
+            assert_eq!(
+                package.license_detections.len(),
+                1,
+                "bare {name:?} should yield exactly one declared detection"
+            );
+        }
+    }
+
+    #[test]
+    fn test_bare_informal_name_clue_rules_do_not_hard_detect_in_file_content() {
+        // The bare-name overlay rules are clue-only: a source comment that merely
+        // mentions the bare word must NOT produce a hard (expression-bearing)
+        // file-content detection. Only the bounded declared-manifest context
+        // promotes the clue (see promote_whole_statement_clue); arbitrary file
+        // text must stay clue-only, exactly as bare BSD does.
+        let engine = parser_license_engine().expect("embedded engine available in tests");
+
+        for word in ["PSF", "Python", "CDDL"] {
+            let file_text =
+                format!("// This module is loosely inspired by the {word} project utilities.\n");
+            let detections = engine
+                .detect_with_kind(&file_text, false, false)
+                .expect("detection should succeed");
+
+            for detection in &detections {
+                assert!(
+                    detection.license_expression.is_none()
+                        && detection.license_expression_spdx.is_none(),
+                    "bare {word:?} in a source comment must stay clue-only, got expression {:?}",
+                    detection.license_expression
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_populate_declared_license_custom_generic_stays_extracted_only() {
         // A custom/proprietary statement whose only match resolves to a generic
         // catch-all license (here `commercial-license`, with the custom `Acme`
