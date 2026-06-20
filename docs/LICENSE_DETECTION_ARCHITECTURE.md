@@ -75,6 +75,17 @@ instead of minting a tool-specific variant. This applies across detection output
 fallbacks such as `unknown-spdx`, and parser-side declared-license normalization for keys such as
 `public-domain`, `proprietary-license`, and `unknown-license-reference`.
 
+Parser-side declared-license normalization also maps bare, informal license names that are not
+valid SPDX but resolve to a license by strong convention (for example `Apache`, `PSF`, `Python`).
+These mappings live in a curated config, `resources/license_detection/declared_license_aliases.toml`,
+and are applied **only** to a package's declared license field — never to file content. This is
+intentionally separate from the overlay/index curation above: an overlay is an index rule that
+matches wherever its text appears, so a bare name that also occurs in ordinary prose or inside its
+own license notice would false-positive in file content; restricting the mapping to the trusted,
+bounded declared field avoids that. The config is compiled in and loaded at runtime (no index
+regeneration), and every entry carries a required justification (enforced by tests, which also
+verify the target key resolves in the index).
+
 ### Initialization Flow
 
 ```text
