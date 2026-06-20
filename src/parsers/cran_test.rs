@@ -428,4 +428,15 @@ mod tests {
         assert_eq!(declared.as_deref(), Some("mit"));
         assert_eq!(declared_spdx.as_deref(), Some("MIT"));
     }
+
+    #[test]
+    fn test_license_mixed_concrete_and_version_range_alternative_is_null() {
+        // Regression: a `|` mix of a concrete-version idiom (`GPL-2`) and a
+        // version-range form (`GPL (>= 3)`) the R layer cannot expand must yield
+        // an honest null, not a partial `gpl-2.0` that silently drops the second
+        // operand.
+        let (declared, declared_spdx) = declared_license_for("GPL-2 | GPL (>= 3)");
+        assert_eq!(declared, None, "got {declared:?}");
+        assert_eq!(declared_spdx, None, "got {declared_spdx:?}");
+    }
 }
