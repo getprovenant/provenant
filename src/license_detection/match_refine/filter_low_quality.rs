@@ -145,17 +145,6 @@ pub(crate) fn filter_short_matches_scattered_on_too_many_lines(
         .collect()
 }
 
-/// Filter matches that are missing required phrases.
-///
-/// A match to a rule with required phrases ({{...}} markers) must contain
-/// all those required phrases in the matched region. If any required phrase
-/// is missing or interrupted by unknown/stopwords, the match is discarded.
-///
-/// This also handles:
-/// - `is_continuous` rules: the entire match must be continuous
-/// - `is_required_phrase` rules: same as is_continuous
-///
-/// Based on Python: `filter_matches_missing_required_phrases()` (match.py:2154-2328)
 /// True when the referenced filename `name` appears in `matched_text`, compared on
 /// the license tokenizer's tokens rather than as a raw substring.
 ///
@@ -176,6 +165,17 @@ fn referenced_filename_tokens_present(matched_text: &str, name: &str) -> bool {
         .any(|w| w == needle.as_slice())
 }
 
+/// Filter matches that are missing required phrases.
+///
+/// A match to a rule with required phrases ({{...}} markers) must contain
+/// all those required phrases in the matched region. If any required phrase
+/// is missing or interrupted by unknown/stopwords, the match is discarded.
+///
+/// This also handles:
+/// - `is_continuous` rules: the entire match must be continuous
+/// - `is_required_phrase` rules: same as is_continuous
+///
+/// Based on Python: `filter_matches_missing_required_phrases()` (match.py:2154-2328)
 pub(crate) fn filter_matches_missing_required_phrases(
     index: &LicenseIndex,
     matches: &[LicenseMatch],
