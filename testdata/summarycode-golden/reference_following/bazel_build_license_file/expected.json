@@ -128,18 +128,6 @@
   "packages": [
     {
       "type": "bazel",
-      "name": "no_license_attr",
-      "version": null,
-      "declared_license_expression": null,
-      "declared_license_expression_spdx": null,
-      "other_license_expression": null,
-      "other_license_expression_spdx": null,
-      "datafile_paths": ["codebase/BUILD"],
-      "license_detections": [],
-      "other_license_detections": []
-    },
-    {
-      "type": "bazel",
       "name": "with_license_file",
       "version": null,
       "declared_license_expression": "apache-2.0",
