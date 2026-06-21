@@ -352,12 +352,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.70s`; ScanCode `63.97s`
 - Broader Deno package and dependency extraction (`8` vs `0` packages, `966` vs `0` dependencies) from the root `deno.json`, `deno.lock`, and nested `packages/*/deno.json` manifests, with direct JSR and npm import-map or lockfile package identity where ScanCode stays manifest-blind
 
-##### [denoland/std @ a864f62](https://github.com/denoland/std/tree/a864f62bcc8a5f20716d2becab3cfe224a2ad810) — **25.53× faster**
+##### [denoland/std @ a864f62](https://github.com/denoland/std/tree/a864f62bcc8a5f20716d2becab3cfe224a2ad810) — **32.46× faster**
 
 - Files: 2,812
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `8.90s`; ScanCode `227.22s`
-- Broader Deno package visibility (`42` more packages, `0` missing) from the root and leaf `*/deno.json` manifests across the standard-library tree, plus concrete Cargo lock package identities on embedded Rust fixtures instead of anonymous `cargo_lock` rows, with file-level `MIT` header detection now matching ScanCode across the tree's `// … MIT license.` headers
+- Timing: Provenant `7.00s`; ScanCode `227.22s`
+- Broader Deno package visibility (`42` more packages, `0` missing) from the root and leaf `*/deno.json` manifests across the standard-library tree, plus concrete Cargo lock package identities on embedded Rust fixtures instead of anonymous `cargo_lock` rows
 
 ##### [getsentry/self-hosted @ 8728919](https://github.com/getsentry/self-hosted/tree/8728919e080836c53724f277d4d36cc310fc5011) — **9.54× faster**
 
