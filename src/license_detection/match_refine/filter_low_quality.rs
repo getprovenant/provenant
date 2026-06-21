@@ -13,6 +13,7 @@ use crate::license_detection::index::LicenseIndex;
 use crate::license_detection::models::{LicenseMatch, MatcherKind};
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::Query;
+use crate::license_detection::tokenize::tokenize_without_stopwords;
 use std::path::Path;
 
 const INHERIT_LICENSE_FROM_PACKAGE_REFERENCE: &str = "INHERIT_LICENSE_FROM_PACKAGE";
@@ -144,6 +145,26 @@ pub(crate) fn filter_short_matches_scattered_on_too_many_lines(
         .collect()
 }
 
+/// True when the referenced filename `name` appears in `matched_text`, compared on
+/// the license tokenizer's tokens rather than as a raw substring.
+///
+/// Filenames tokenize identically regardless of separator punctuation, so a rule
+/// referencing `LICENSE_MIT` is satisfied by real-world `LICENSE-MIT` / `LICENSE.MIT`
+/// spellings (and any case), while still requiring the referenced name to actually
+/// occur as a contiguous token run. This keeps the referenced-filename evidence guard
+/// intact — `COPYING` still requires a `copying` token — without discarding otherwise
+/// perfect matches over a `-` vs `_` difference.
+fn referenced_filename_tokens_present(matched_text: &str, name: &str) -> bool {
+    let needle = tokenize_without_stopwords(name);
+    if needle.is_empty() {
+        return false;
+    }
+    let haystack = tokenize_without_stopwords(matched_text);
+    haystack
+        .windows(needle.len())
+        .any(|w| w == needle.as_slice())
+}
+
 /// Filter matches that are missing required phrases.
 ///
 /// A match to a rule with required phrases ({{...}} markers) must contain
@@ -222,7 +243,7 @@ pub(crate) fn filter_matches_missing_required_phrases(
                     };
                     let has_referenced_filename =
                         concrete_referenced_filenames.iter().any(|filename| {
-                            if matched_text.contains(filename.as_str()) {
+                            if referenced_filename_tokens_present(&matched_text, filename) {
                                 return true;
                             }
 
@@ -235,9 +256,7 @@ pub(crate) fn filter_matches_missing_required_phrases(
 
                             is_path_like
                                 && basename.contains('.')
-                                && matched_text
-                                    .to_ascii_lowercase()
-                                    .contains(&basename.to_ascii_lowercase())
+                                && referenced_filename_tokens_present(&matched_text, basename)
                         });
                     if !has_referenced_filename {
                         discarded.push(m.clone());
@@ -673,6 +692,31 @@ mod tests {
     use crate::license_detection::unknown_match::MATCH_UNKNOWN;
     use crate::models::LineNumber;
     use crate::models::MatchScore;
+
+    #[test]
+    fn test_referenced_filename_tokens_present_is_separator_insensitive() {
+        // A rule referencing `LICENSE_MIT` is satisfied by the real-world hyphenated
+        // and dotted spellings, and is case-insensitive, because filenames tokenize
+        // identically regardless of separator punctuation.
+        assert!(referenced_filename_tokens_present(
+            "licensed under the MIT license found in the LICENSE-MIT file",
+            "LICENSE_MIT"
+        ));
+        assert!(referenced_filename_tokens_present(
+            "see the license.mit file",
+            "LICENSE_MIT"
+        ));
+        // The referenced name must still actually appear: a GPL notice that never
+        // mentions COPYING does not satisfy a COPYING reference (the FP guard).
+        assert!(!referenced_filename_tokens_present(
+            "under the terms of the GNU General Public License version 2 or later",
+            "COPYING"
+        ));
+        assert!(referenced_filename_tokens_present(
+            "see the file COPYING for details",
+            "COPYING"
+        ));
+    }
 
     fn parse_rule_id(rule_identifier: &str) -> Option<usize> {
         let trimmed = rule_identifier.trim();

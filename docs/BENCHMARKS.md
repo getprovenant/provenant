@@ -706,12 +706,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.21s`; ScanCode `45.03s`
 - Broader BitBake package visibility (`4` vs `0` packages) from committed `.bb` and `.bbappend` metadata, with `linuxconsoletools_1.6.0.bb` carrying source URL/checksum plus local file-reference evidence and wildcard append manifests such as `u-boot%.bbappend` and `linux-yocto_%.bbappend` retained as package records instead of scanner-silent inputs
 
-##### [facebook/buck2 @ 3359f75](https://github.com/facebook/buck2/tree/3359f75abe3c7b6f543fdb2c7a775d47347b8897) — **15.27× faster**
+##### [facebook/buck2 @ 3359f75](https://github.com/facebook/buck2/tree/3359f75abe3c7b6f543fdb2c7a775d47347b8897) — **25.46× faster**
 
 - Files: 9,600
-- Run context: 2026-04-14 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `35.72s`; ScanCode `545.33s`
-- Slightly richer mixed-repository dependency extraction (`7079` vs `7034`) from committed `yarn.lock`, `flake.nix` / `flake.lock`, and Conan fixtures, plus zero scan errors where ScanCode still trips on `prelude/third-party/hmaptool/METADATA.bzl` and richer Buck target visibility on multi-rule `BUCK` files
+- Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `26.73s`; ScanCode `680.60s`
+- Slightly richer mixed-repository dependency extraction (`7079` vs `7034`) from committed `yarn.lock`, `flake.nix` / `flake.lock`, and Conan fixtures, plus zero scan errors where ScanCode still trips on `prelude/third-party/hmaptool/METADATA.bzl`
 
 ##### [facebook/watchman @ 426a7b7](https://github.com/facebook/watchman/tree/426a7b7dbd8600e1f3f9a33fd6715bb08295ca1a) — **18.1× faster**
 
