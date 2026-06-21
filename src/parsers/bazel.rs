@@ -36,7 +36,6 @@ use super::PackageParser;
 use super::metadata::ParserMetadata;
 
 type StarlarkCallArgs = ast::CallArgsP<ast::AstNoPayload>;
-const SCANCODE_SIMPLE_TOP_LEVEL_KEY: &str = "scancode_simple_top_level";
 
 struct StarlarkCall<'a> {
     func: &'a ast::AstExpr,
@@ -81,15 +80,13 @@ fn parse_bazel_build(path: &Path) -> Result<Vec<PackageData>, String> {
     let content =
         crate::parsers::utils::read_file_to_string(path, None).map_err(|e| e.to_string())?;
     let module = parse_starlark_module("<BUILD>", content)?;
-    let scancode_simple_top_level = is_scancode_simple_top_level_module(&module);
 
     let mut packages = Vec::new();
 
     let statements = top_level_statements(&module);
     let limit = capped_iteration_limit(statements.len(), "bazel BUILD top-level statements");
     for statement in statements.iter().take(limit) {
-        if let Some(mut package_data) = extract_package_from_statement(statement) {
-            set_scancode_simple_top_level(&mut package_data, scancode_simple_top_level);
+        if let Some(package_data) = extract_package_from_statement(statement) {
             packages.push(package_data);
         }
     }
@@ -157,29 +154,6 @@ fn fallback_package_data(path: &Path) -> PackageData {
         name,
         datasource_id: Some(DatasourceId::BazelBuild),
         ..Default::default()
-    }
-}
-
-fn set_scancode_simple_top_level(package_data: &mut PackageData, enabled: bool) {
-    let extra_data = package_data.extra_data.get_or_insert_with(Default::default);
-    extra_data.insert(
-        SCANCODE_SIMPLE_TOP_LEVEL_KEY.to_string(),
-        JsonValue::Bool(enabled),
-    );
-}
-
-fn is_scancode_simple_top_level_module(module: &AstModule) -> bool {
-    top_level_statements(module)
-        .iter()
-        .all(is_scancode_simple_top_level_statement)
-}
-
-fn is_scancode_simple_top_level_statement(statement: &ast::AstStmt) -> bool {
-    match &statement.node {
-        ast::StmtP::Expression(expr) => {
-            matches!(&expr.node, ast::ExprP::Call(func, _) if matches!(&func.node, ast::ExprP::Identifier(_)))
-        }
-        _ => true,
     }
 }
 
@@ -537,37 +511,5 @@ mod tests {
         assert_eq!(pkg.package_type, Some(PackageType::Bazel));
         assert_eq!(pkg.name, Some("myproject".to_string()));
         assert_eq!(pkg.purl.as_deref(), Some("pkg:bazel/myproject"));
-    }
-
-    #[test]
-    fn test_scancode_simple_top_level_allows_direct_calls() {
-        let module = parse_starlark_module(
-            "<BUILD>",
-            "cc_library(name = \"demo\")\npy_binary(name = \"tool\")\n".to_string(),
-        )
-        .expect("parse BUILD");
-
-        assert!(is_scancode_simple_top_level_module(&module));
-    }
-
-    #[test]
-    fn test_scancode_simple_top_level_rejects_attribute_calls() {
-        let module = parse_starlark_module(
-            "<BUILD>",
-            "selects.config_setting_group(name = \"demo\")\ncc_library(name = \"demo\")\n"
-                .to_string(),
-        )
-        .expect("parse BUILD");
-
-        assert!(!is_scancode_simple_top_level_module(&module));
-    }
-
-    #[test]
-    fn test_scancode_simple_top_level_rejects_non_call_expressions() {
-        let module =
-            parse_starlark_module("<BUILD>", "[(cc_binary(name = \"demo\"),)]\n".to_string())
-                .expect("parse BUILD");
-
-        assert!(!is_scancode_simple_top_level_module(&module));
     }
 }

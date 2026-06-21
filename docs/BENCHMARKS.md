@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **17.8× median speedup** and **17.0× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **23.9×** on 10k+ file targets.
+> Provenant is faster on 220 of 220 recorded runs, with a **18.0× median speedup** and **17.2× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **23.9×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -599,7 +599,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 11,495
 - Run context: 2026-06-18 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `48.49s`; ScanCode `1396.87s`
-- Broader Bazel package and dependency extraction (`1746` vs `1711` packages, `129` vs `14` dependencies) from root and nested `BUILD` files plus direct `MODULE.bazel` dependency visibility, with richer Debian and RPM sidecar package metadata
+- Broader Bazel dependency extraction (`129` vs `14` dependencies) from root and nested `BUILD` files plus direct `MODULE.bazel` dependency visibility, internal `BUILD` targets collapsed to one component per build directory (`546` vs ScanCode's `1711` name-only per-target package shells with no license, dependency, or version), and richer Debian and RPM sidecar package metadata
 
 ##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **14.47× faster**
 
@@ -767,7 +767,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 10,361
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `31.30s`; ScanCode `904.39s`
-- Far broader dependency extraction (`418` vs `92`) from the root `.gitmodules`, `MODULE.bazel`, and vendored package surfaces, richer package coverage (`782` vs `761`), and direct Git-submodule visibility on 17 tracked third-party submodules where ScanCode reports zero package data on the same manifest
+- Far broader dependency extraction (`418` vs `92`) from the root `.gitmodules`, `MODULE.bazel`, and vendored package surfaces, internal Bazel `BUILD` targets collapsed to one component per build directory (`270` vs ScanCode's `761` name-only per-target package shells), and direct Git-submodule visibility on 17 tracked third-party submodules where ScanCode reports zero package data on the same manifest
 
 ##### [guillemj/dpkg @ 0061122](https://github.com/guillemj/dpkg/tree/006112209ac937b373d4497c81998a415cbef0f5) — **32.78× faster**
 
@@ -825,12 +825,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `28.00s`; ScanCode `1391.11s`
 - Matched top-level package coverage (`5` vs `5`) with slightly richer dependency extraction (`1093` vs `1088`) from relative Go module edges, vendored `.gitmodules`, and committed `requirements.txt`, plus extra Docker package visibility on committed Dockerfiles and cleaner rejection of weak prose-only author or holder matches such as `the Prometheus`
 
-##### [mongodb/mongo @ d6877a3](https://github.com/mongodb/mongo/tree/d6877a33a90e253f4e7a9641a3eb237518a5a495) — **13.91× faster**
+##### [mongodb/mongo @ d6877a3](https://github.com/mongodb/mongo/tree/d6877a33a90e253f4e7a9641a3eb237518a5a495) — **44.75× faster**
 
 - Files: 52,443
-- Run context: 2026-04-11 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `313.61s`; ScanCode `4363.53s`
-- Broader package/dependency extraction (`40` vs `1` packages, `618` vs `7` dependencies) from vendored gRPC Bazel BUILD files plus `poetry.lock`, `pnpm-lock.yaml`, and RPM spec metadata, richer Debian namespace/PURL identity on package metadata, and cleaner SBOM author recovery with score-fusion code examples left as code data instead of people
+- Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `143.10s`; ScanCode `6404.29s`
+- Broader polyglot package and dependency extraction (`49` vs `1` packages, `727` vs `7` dependencies) from `poetry.lock`, `pnpm-lock.yaml`, RPM spec, Nix, Cargo, and Conan metadata plus vendored gRPC Buck `BUILD` files collapsed to one component per build directory, with richer Debian namespace/PURL identity on package metadata and cleaner SBOM author recovery that leaves score-fusion code examples as code data instead of people
 
 ##### [nmap/nmap @ d9199d7](https://github.com/nmap/nmap/tree/d9199d7cd5e99f54fc4b67d592a30fa597a94c40) — **26.96× faster**
 
@@ -872,7 +872,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 3,463
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `13.25s`; ScanCode `611.44s`
-- Broader Bazel and cross-language dependency extraction (`551` vs `537` packages, `144` vs `64` dependencies) from root and example `MODULE.bazel`, many `BUILD` files, committed `*.csproj`, and Maven BOM imports, with direct Git-submodule package visibility on `.gitmodules`
+- Broader Bazel and cross-language dependency extraction (`144` vs `64` dependencies) from root and example `MODULE.bazel`, many `BUILD` files, committed `*.csproj`, and Maven BOM imports, internal `BUILD` targets collapsed to one component per build directory (`110` vs ScanCode's `537` name-only per-target package shells), and direct Git-submodule package visibility on `.gitmodules`
 
 ##### [qemu/qemu @ da6c4fe](https://github.com/qemu/qemu/tree/da6c4fe60fee30dd77267764d55b38af9cb89d4b) — **46.14× faster**
 
@@ -937,12 +937,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `19.44s`; ScanCode `834.45s`
 - Broader Meson dependency extraction (`40` vs `2`) from the root and nested `meson.build` files, with literal `\x2d` filenames preserved on committed unit and fuzz fixtures instead of being path-shaped into different resources
 
-##### [tensorflow/tensorflow @ 2cd48d2](https://github.com/tensorflow/tensorflow/tree/2cd48d27d98b3fefd565f246f41bf93724f3f23c) — **20.41× faster**
+##### [tensorflow/tensorflow @ 2cd48d2](https://github.com/tensorflow/tensorflow/tree/2cd48d27d98b3fefd565f246f41bf93724f3f23c) — **35.79× faster**
 
 - Files: 36,237
-- Run context: 2026-04-19 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `290.44s`; ScanCode `5927.08s`
-- Broader Bazel and mixed-tree dependency extraction (`8202` vs `8056` packages, `1465` vs `700` dependencies) from root and vendored `MODULE.bazel`, many committed `BUILD` files, Python lockfiles, Dockerfiles, and Debian control metadata, plus direct `CITATION.cff` package visibility
+- Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `117.09s`; ScanCode `4190.35s`
+- Broader Bazel and mixed-tree dependency extraction (`1471` vs `700` dependencies) from root and vendored `MODULE.bazel`, many committed `BUILD` files, Python lockfiles, Dockerfiles, and Debian control metadata, internal `BUILD` targets collapsed to one component per build directory (`1236` vs ScanCode's `8056` name-only per-target package shells), plus direct `CITATION.cff` package visibility
 
 ##### [PX4/eigen @ 7cf1c01](https://github.com/PX4/eigen/tree/7cf1c0179eb0f5499dfc1bffbd229783a7865fe1) — **27.26× faster**
 

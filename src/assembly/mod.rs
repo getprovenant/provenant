@@ -7,7 +7,6 @@
 mod assemblers;
 #[cfg(test)]
 mod assembly_test;
-mod bazel_merge;
 mod bazel_prune;
 mod cargo_resource_assign;
 mod cargo_workspace_merge;

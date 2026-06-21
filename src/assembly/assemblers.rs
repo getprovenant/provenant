@@ -11,16 +11,15 @@ use crate::models::{DatasourceId, FileInfo, Package, TopLevelDependency};
 use strum::EnumIter;
 
 use super::{
-    AssemblerConfig, AssemblyMode, DirectoryMergeOutput, bazel_merge, bazel_prune,
-    cargo_resource_assign, composer_resource_assign, conda_rootfs_merge, debian_source_merge,
-    file_ref_resolve, hackage_merge, nix_flake_compat_merge, npm_resource_assign,
-    nuget_cpm_resolve, python_requirements_assign, ruby_resource_assign, swift_merge, topology,
+    AssemblerConfig, AssemblyMode, DirectoryMergeOutput, bazel_prune, cargo_resource_assign,
+    composer_resource_assign, conda_rootfs_merge, debian_source_merge, file_ref_resolve,
+    hackage_merge, nix_flake_compat_merge, npm_resource_assign, nuget_cpm_resolve,
+    python_requirements_assign, ruby_resource_assign, swift_merge, topology,
 };
 
 #[derive(Clone, Copy)]
 pub(super) enum SpecialDirectoryMergerKind {
     Skip,
-    Bazel,
     DebianSource,
     Hackage,
     Huggingface,
@@ -49,7 +48,6 @@ pub(super) fn special_directory_merger_for(
     config_key: DatasourceId,
 ) -> Option<SpecialDirectoryMergerKind> {
     match config_key {
-        DatasourceId::BazelBuild => Some(SpecialDirectoryMergerKind::Bazel),
         DatasourceId::DebianControlInSource => Some(SpecialDirectoryMergerKind::DebianSource),
         DatasourceId::HackageCabal => Some(SpecialDirectoryMergerKind::Hackage),
         DatasourceId::HuggingfaceModelCard => Some(SpecialDirectoryMergerKind::Huggingface),
@@ -199,7 +197,6 @@ impl SpecialDirectoryMergerKind {
     ) -> Vec<DirectoryMergeOutput> {
         match self {
             Self::Skip => Vec::new(),
-            Self::Bazel => bazel_merge::assemble_bazel_packages(config, files, file_indices),
             Self::DebianSource => {
                 debian_source_merge::assemble_debian_source_packages(config, files, file_indices)
             }
@@ -769,7 +766,11 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["configure", "configure.ac"],
         mode: AssemblyMode::SiblingMerge,
     },
-    // Bazel (build system)
+    // Bazel (build system). BUILD targets sibling-merge into one component per
+    // build directory rather than one package per target: internal build targets
+    // carry no license/dependency/version metadata, so per-target emission only
+    // floods the inventory with name-only shells. Kept consistent with Buck below.
+    // See docs/improvements/bazel-buck-build-targets.md.
     AssemblerConfig {
         datasource_ids: &[DatasourceId::BazelBuild],
         sibling_file_patterns: &["BUILD"],
