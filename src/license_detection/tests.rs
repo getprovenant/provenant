@@ -774,6 +774,49 @@ fn test_engine_does_not_keep_copying_referenced_rule_without_copying_filename_ev
 }
 
 #[test]
+fn test_engine_detects_meta_dual_license_header_as_or_with_hyphenated_license_filenames() {
+    let engine = get_engine();
+
+    // The ubiquitous Meta/Rust dual-license header references LICENSE-MIT /
+    // LICENSE-APACHE (hyphens), while the matching notice rule references the
+    // underscore spelling (LICENSE_MIT / LICENSE_APACHE). The dual-license notice
+    // must still resolve to an OR expression -- the project is dual-licensed and the
+    // licensee may choose either -- rather than an over-restrictive AND of the
+    // individual MIT and Apache-2.0 fragments. Regression for the referenced-filename
+    // presence check discarding the combined notice match over a `-` vs `_` mismatch.
+    let text = "\
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This source code is licensed under both the MIT license found in the
+# LICENSE-MIT file in the root directory of this source tree and the Apache
+# License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+# of this source tree.
+
+fn main() {}
+";
+
+    let detections = engine
+        .detect_with_kind(text, false, false)
+        .expect("Detection should succeed");
+
+    let expressions: Vec<&str> = detections
+        .iter()
+        .filter_map(|d| d.license_expression.as_deref())
+        .collect();
+
+    assert!(
+        expressions.contains(&"mit OR apache-2.0"),
+        "expected dual-license OR expression, got: {:?}",
+        expressions
+    );
+    assert!(
+        expressions.iter().all(|expr| !expr.contains(" AND ")),
+        "dual-license header must not produce an AND expression, got: {:?}",
+        expressions
+    );
+}
+
+#[test]
 fn test_engine_detects_squashfs_notice_as_gpl_2_or_later_only() {
     let engine = get_engine();
 
