@@ -811,6 +811,35 @@ fn test_prune_contextual_short_reference_matches_keeps_short_license_notice_with
 }
 
 #[test]
+fn test_prune_contextual_short_reference_matches_keeps_deno_style_copyright_header_mention() {
+    // Regression: the negated-shorthand-list heuristic matched the "no" inside
+    // "Deno" (substring) plus the `//` comment slash, wrongly pruning the real
+    // `MIT license.` reference on this extremely common header line.
+    let text = "// Copyright 2018-2026 the Deno authors. MIT license.\n";
+    let mut detections = vec![make_public_detection_with_matches(
+        "mit",
+        "MIT",
+        vec![make_public_match("mit", "MIT", 1, 1, 2, "mit_14.RULE")],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("mod.ts"),
+        text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert_eq!(
+        detections.len(),
+        1,
+        "deno-style copyright+license header must keep its MIT mention: {detections:#?}"
+    );
+    assert_eq!(detections[0].license_expression_spdx, "MIT");
+}
+
+#[test]
 fn test_convert_detection_to_model_includes_diagnostics_when_enabled() {
     let text = concat!(
         "Reproduction and distribution of this file, with or without modification, are\n",

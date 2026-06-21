@@ -1147,9 +1147,9 @@ Provenant: 13.09s</title></circle>
     <circle cx="642.16" cy="524.25" r="4.5" fill="#2563eb"><title>jgm/pandoc @ d9838eb
 Files: 2768
 Provenant: 9.78s</title></circle>
-    <circle cx="643.24" cy="543.12" r="4.5" fill="#2563eb"><title>denoland/std @ a864f62
+    <circle cx="643.24" cy="528.71" r="4.5" fill="#2563eb"><title>denoland/std @ a864f62
 Files: 2812
-Provenant: 6.56s</title></circle>
+Provenant: 8.90s</title></circle>
     <circle cx="644.96" cy="531.78" r="4.5" fill="#2563eb"><title>rust-lang/cargo @ b54fe55
 Files: 2883
 Provenant: 8.34s</title></circle>

@@ -963,7 +963,21 @@ fn line_has_possessive_without_license_phrase(lower: &str) -> bool {
 
 fn line_has_negated_license_shorthand_list(line: &str) -> bool {
     let lower = line.to_ascii_lowercase();
-    lower.contains("no ") && line.contains('/') && line.chars().any(|ch| ch.is_ascii_uppercase())
+    line_has_standalone_no(&lower)
+        && line.contains('/')
+        && line.chars().any(|ch| ch.is_ascii_uppercase())
+}
+
+/// True when `lower` contains the standalone negation word "no", not the "no"
+/// inside an unrelated word. The previous `contains("no ")` substring check
+/// misfired on common copyright headers such as
+/// `// Copyright … the Deno authors. MIT license.` (the "no " inside "deno "),
+/// which — combined with the `//` slash and an uppercase letter — wrongly
+/// pruned the real `MIT license.` reference as a negated shorthand list.
+fn line_has_standalone_no(lower: &str) -> bool {
+    lower
+        .split(|ch: char| !ch.is_ascii_alphanumeric())
+        .any(|word| word == "no")
 }
 
 fn expand_dual_licensed_under_readme_choice_detections(
