@@ -61,9 +61,7 @@ struct Artifact {
     /// (e.g. a content-addressed snapshot hash) and the parser needs a real
     /// extension to match (`.deb`, …).
     filename: Option<String>,
-    /// Multiple asset URLs gathered into one directory (e.g. release `APK+AAB+manifest`).
-    urls: Option<Vec<String>>,
-    /// Expected sha256 of the primary download (or, for `multi`, omitted).
+    /// Expected sha256 of the primary download.
     sha256: Option<String>,
     prep: Prep,
 }
@@ -82,8 +80,6 @@ enum Prep {
     /// Extract only the listed members (curated "release snapshot" subset). Archive
     /// type is detected from the download extension (`.zip` → unzip, else tar).
     SelectMembers { members: Vec<String> },
-    /// Each entry in `urls` is downloaded into one directory (the scan target).
-    Multi,
     /// Pull a container image (may be digest-pinned) and extract the listed rootfs
     /// paths into a directory (e.g. `var/lib/dpkg` for an installed-package database).
     DockerExport { image: String, paths: Vec<String> },
@@ -130,42 +126,26 @@ fn prepare(artifact: &Artifact, force: bool) -> Result<PathBuf> {
     let dir = cache_dir(&artifact.id);
     fs::create_dir_all(&dir).with_context(|| format!("creating cache dir {}", dir.display()))?;
 
-    if let Prep::Multi = artifact.prep {
-        let urls = artifact
-            .urls
-            .as_ref()
-            .context("`multi` prep requires `urls`")?;
-        let assets_dir = dir.join("assets");
-        fs::create_dir_all(&assets_dir)?;
-        for url in urls {
-            let name = url
-                .rsplit('/')
-                .next()
-                .filter(|name| !name.is_empty())
-                .context("cannot derive asset filename from url")?;
-            let dest = assets_dir.join(name);
-            if force || !dest.exists() {
-                download(url, &dest)?;
-            }
-        }
-        return Ok(assets_dir);
-    }
-
     if let Prep::DockerExport { image, paths } = &artifact.prep {
         let out = dir.join("rootfs");
+        if !force && out.exists() {
+            return Ok(out);
+        }
         let _ = fs::remove_dir_all(&out);
         fs::create_dir_all(&out)?;
         let tar = dir.join("rootfs.tar");
         // `docker create` resolves the (possibly digest-pinned) image, pulling if needed.
-        let cid = String::from_utf8(
-            Command::new("docker")
-                .args(["create", image])
-                .output()
-                .with_context(|| format!("docker create {image}"))?
-                .stdout,
-        )?
-        .trim()
-        .to_string();
+        let create = Command::new("docker")
+            .args(["create", image])
+            .output()
+            .with_context(|| format!("docker create {image}"))?;
+        if !create.status.success() {
+            bail!(
+                "docker create {image} failed: {}",
+                String::from_utf8_lossy(&create.stderr).trim()
+            );
+        }
+        let cid = String::from_utf8(create.stdout)?.trim().to_string();
         if cid.is_empty() {
             bail!(
                 "docker create {image} produced no container id (is the image/digest available?)"
@@ -270,7 +250,7 @@ fn prepare(artifact: &Artifact, force: bool) -> Result<PathBuf> {
             }
             Ok(out)
         }
-        Prep::Multi | Prep::DockerExport { .. } => unreachable!("handled above"),
+        Prep::DockerExport { .. } => unreachable!("handled above"),
     }
 }
 
