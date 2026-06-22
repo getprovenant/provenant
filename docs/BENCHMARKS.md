@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 220 of 220 recorded runs, with a **18.0× median speedup** and **17.2× geometric-mean speedup** overall; the median gap grows from **8.6×** on sub-100-file targets to **23.9×** on 10k+ file targets.
+> Provenant is faster on 217 of 217 recorded runs, with a **18.4× median speedup** and **18.0× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **23.9×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -573,11 +573,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `96.91s`; ScanCode `1798.33s`
 - Broader Alpine package visibility (`12609` vs `12502`) and dependency extraction (`102257` vs `1438`) from committed `APKBUILD` metadata plus nested Cargo and Docker surfaces, with static shell-style manifest handling that preserves concrete package identities instead of malformed placeholder expansions
 
-##### [archlinux/packaging/packages/grep @ 29d2e10](https://gitlab.archlinux.org/archlinux/packaging/packages/grep/-/tree/29d2e1085e3c69ded524b8fae3b436f10f801ed0) — **7.13× faster**
+##### [archlinux/packaging/packages/grep @ 29d2e10](https://gitlab.archlinux.org/archlinux/packaging/packages/grep/-/tree/29d2e1085e3c69ded524b8fae3b436f10f801ed0) — **8.79× faster**
 
 - Files: 6
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.27s`; ScanCode `73.20s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.88s`; ScanCode `42.89s`
 - Direct Arch source-package visibility on committed `.SRCINFO` (`1` vs `0` file-level package records) with broader dependency extraction (`9` vs `0`) across runtime, make, and check edges, plus Unicode-preserving maintainer recovery and exact trailing-slash URL normalization on `PKGBUILD` while avoiding ScanCode's low-coverage `LGPL-2.0-or-later` false positive
 
 ##### [archlinux/packaging/packages/pacman @ 4ee8983](https://gitlab.archlinux.org/archlinux/packaging/packages/pacman/-/tree/4ee8983653633d6fad7b2b9d6c35027c9705de5d) — **8.66× faster**
@@ -979,11 +979,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `401.15s`; ScanCode `11017.99s`
 - Broader sparse-tree package visibility (`4` vs `2` packages, `20` vs `19` dependencies), plus cleaner common-profile author extraction on representative native-source docs such as `sysrq`, `cpusets`, and `hwmon` rosters while rejecting several ScanCode-only prose false positives like `the Coreboot BIOS.` and `the Host`
 
-##### [yoctoproject/poky @ cb2dcb4](https://git.yoctoproject.org/poky/tree/?id=cb2dcb4963e5fbe449f1bcb019eae883ddecc8ec) — **15.58× faster**
+##### [yoctoproject/poky @ cb2dcb4](https://git.yoctoproject.org/poky/tree/?id=cb2dcb4963e5fbe449f1bcb019eae883ddecc8ec) — **30.75× faster**
 
 - Files: 6,295
-- Run context: 2026-04-21 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `47.33s`; ScanCode `737.50s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `16.04s`; ScanCode `493.15s`
 - Broader BitBake package and dependency visibility (`546` vs `2` packages, `3061` vs `22` dependencies) from committed `.bb`, `.bbappend`, and `.inc` metadata, plus recipe-local declared-license output on manifests such as `rdma-core_62.0.bb` and `libowfat_0.32.bb`, with cleaner package records for wildcard append files and comment-style author recovery where ScanCode still mixes in low-signal project/community strings
 
 #### Apple / Swift / Flutter / mobile
@@ -1422,18 +1422,18 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Installed package database snapshots
 
-##### [Alpine 3.23.3 installed DB snapshot @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **7.52× faster**
+##### [Alpine 3.23.3 installed DB snapshot @ sha256:42d0e6d](https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/alpine-minirootfs-3.23.3-x86_64.tar.gz) — **9.10× faster**
 
-- Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.09s`; ScanCode `75.84s`
-- Matched standalone Alpine installed-db package and license coverage on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata; the exact single-file input is archived as a fixture at [`testdata/alpine/benchmark-minirootfs-3.23.3/installed`](../testdata/alpine/benchmark-minirootfs-3.23.3/installed) (extracted via `tar -xzf alpine-minirootfs-3.23.3-x86_64.tar.gz lib/apk/db/installed` from the immutable release tarball)
+- Files: 2
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.65s`; ScanCode `42.30s`
+- Matched standalone Alpine installed-db package and license coverage (`16` vs `16` packages) on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata; the exact bytes are archived as a fixture at [`testdata/alpine/benchmark-minirootfs-3.23.3/rootfs/lib/apk/db/installed`](../testdata/alpine/benchmark-minirootfs-3.23.3/rootfs/lib/apk/db/installed) (extracted via `tar -xzf alpine-minirootfs-3.23.3-x86_64.tar.gz lib/apk/db/installed` from the immutable release tarball), scanned as the `benchmark-minirootfs-3.23.3` directory whose second file is the co-located `SOURCE.md`
 
-##### [debian:bookworm-slim dpkg DB snapshot @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **8.45× faster**
+##### [debian:bookworm-slim dpkg DB snapshot @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **13.08× faster**
 
-- Files: 421
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `11.36s`; ScanCode `95.97s`
+- Files: 437
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.21s`; ScanCode `68.16s`
 - Matched installed Debian package coverage (`88` vs `88`) with broader dependency extraction (`536` vs `0`) from the real `status` relation fields, richer Debian-qualified package identities on `.list` and `.md5sums` companions, and maintainer parties preserved in package metadata instead of only generic file-author guesses
 
 ##### [distroless base-debian13 status.d @ sha256:57c1e4c](https://github.com/GoogleContainerTools/distroless/blob/main/PACKAGE_METADATA.md) — **8.36× faster**
@@ -1459,33 +1459,26 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Package archives
 
-##### [7zip 25.01-r0 .apk @ sha256:6602ccb](https://dl-cdn.alpinelinux.org/alpine/v3.23/main/x86_64/7zip-25.01-r0.apk) — **8.03× faster**
+##### [7zip 25.01-r0 .apk @ sha256:6602ccb](https://dl-cdn.alpinelinux.org/alpine/v3.23/main/x86_64/7zip-25.01-r0.apk) — **8.66× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.06s`; ScanCode `80.82s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.72s`; ScanCode `40.88s`
 - Direct Alpine archive package visibility on the shipped `.apk` (`1` vs `1` file-level package records), with a concrete `pkg:alpine/7zip@25.01-r0?arch=x86_64` identity instead of ScanCode's weaker generic package-data row; because Alpine's `v3.23/main` keeps only the current build per branch, the exact `25.01-r0` bytes are archived as a fixture at [`testdata/alpine/apk/7zip-25.01-r0/7zip-25.01-r0.apk`](../testdata/alpine/apk/7zip-25.01-r0/7zip-25.01-r0.apk)
 
-##### [bash 5.2.15-2+b10 .deb @ sha256:be3ab2f](https://snapshot.debian.org/package/bash/5.2.15-2/) — **3.02× faster**
+##### [bash 5.2.15-2+b10 .deb @ sha256:be3ab2f](https://snapshot.debian.org/package/bash/5.2.15-2/) — **8.75× faster**
 
 - Files: 1
-- Run context: 2026-04-15 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `22.19s`; ScanCode `66.94s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.58s`; ScanCode `40.09s`
 - Matched shipped Debian package coverage (`1` vs `1`) with broader dependency extraction (`9` vs `0`) from the archive control metadata, plus the correct `pkg:deb` `arch=amd64` qualifier where ScanCode uses the nonstandard `architecture` key; the exact `bash_5.2.15-2+b10_amd64.deb` bytes are retained on the Debian snapshot archive at `https://snapshot.debian.org/file/bd6a22d6918ec3e917cc5840d8ac13235220553e`
 
-##### [bash 5.3.9 .pkg +COMPACT_MANIFEST sample @ sha256:37207e8](https://github.com/FreeBSD/freebsd-ports/commit/f77f497167a5dbca6c685f40dbdc90f2e7713223) — **7.27× faster**
+##### [FreeBSD bash 5.3.15 +COMPACT_MANIFEST @ sha256:88cea96](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/All/Hashed/bash-5.3.15~a16f84ceed.pkg) — **9.09× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.39s`; ScanCode `68.27s`
-- Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `GPL-3.0-or-later` declared-license reporting and a single top-level declared-license detection instead of ScanCode's duplicated GPL row
-
-##### [curl 8.19.0_2 .pkg +COMPACT_MANIFEST sample @ sha256:b78b1ff](https://github.com/FreeBSD/freebsd-ports/commit/b889b19eb5e30e1c77d57d0e43977b4af9a0cbb5) — **7.14× faster**
-
-- Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.81s`; ScanCode `70.01s`
-- Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `MIT` declared-license reporting instead of a raw manifest-license structure
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.47s`; ScanCode `40.62s`
+- Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the real `+COMPACT_MANIFEST` extracted from the shipped bash `.pkg`, with normalized `GPL-3.0-or-later` declared-license reporting and a single top-level declared-license detection instead of ScanCode's duplicated GPL row; the manifest text is committed at [`testdata/freebsd/benchmark-bash-5.3.15/+COMPACT_MANIFEST`](../testdata/freebsd/benchmark-bash-5.3.15/+COMPACT_MANIFEST) since FreeBSD's `latest` repository prunes superseded builds
 
 ##### [Humanizer.Core 3.0.10 .nupkg @ sha256:99f9521](https://api.nuget.org/v3-flatcontainer/humanizer.core/3.0.10/humanizer.core.3.0.10.nupkg) — **8.91× faster**
 
@@ -1501,11 +1494,11 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.44s`; ScanCode `39.67s`
 - Matched FreeBSD package-manifest package coverage (`1` vs `1`) on the `+COMPACT_MANIFEST` extracted from the shipped `.pkg`, with normalized `BSD-2-Clause` declared-license reporting where ScanCode leaves the package license unknown; reproduce by downloading the current `pkg.pkg` and extracting its manifest (`tar --zstd -xf pkg.pkg +COMPACT_MANIFEST`), which is `sha256:e0f340319f63bc9596a8e6b079f805ed6cc81f5a66ca19757367b4773a72358a` for pkg `2.7.5`
 
-##### [python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3](https://archive.archlinux.org/packages/p/python-construct/python-construct-2.10.70-6-any.pkg.tar.zst) — **7.01× faster**
+##### [python-construct 2.10.70-6 .PKGINFO from Arch package @ sha256:2020ae3](https://archive.archlinux.org/packages/p/python-construct/python-construct-2.10.70-6-any.pkg.tar.zst) — **8.92× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `9.89s`; ScanCode `69.35s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.72s`; ScanCode `42.12s`
 - Direct Arch built-package visibility on real `.PKGINFO` metadata (`1` vs `0` file-level package records) with twenty structured dependency edges across `depend`, `makedepend`, `checkdepend`, and `optdepend`, plus an arch-qualified `pkg:alpm/arch/python-construct@2.10.70-6?arch=any` identity instead of a scanner-silent package file; reproduce the target by extracting `.PKGINFO` from the immutable `python-construct-2.10.70-6-any.pkg.tar.zst` (`tar --zstd -xf python-construct-2.10.70-6-any.pkg.tar.zst .PKGINFO`)
 
 ##### [rubocop 1.86.1 .gem @ sha256:44415f3](https://rubygems.org/gems/rubocop/versions/1.86.1) — **8.63× faster**
@@ -1522,44 +1515,28 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.17s`; ScanCode `39.29s`
 - Matched shipped source-RPM package visibility (`1` vs `1`) with broader dependency extraction (`17` vs `0`) from the archive header metadata, plus an RPM namespace-qualified source package identity and an extra `ISC` license detection where ScanCode stays generic
 
-#### Mobile app artifacts
-
-##### [Bitwarden Android v2024.12.0 APK+AAB+manifest](https://github.com/bitwarden/android/releases/tag/v2024.12.0) — **6.98× faster**
-
-- Files: 3
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.07s`; ScanCode `70.31s`
-- Direct Android package visibility on the shipped APK and AAB plus the production `AndroidManifest.xml` (`3` file-level package records vs `1` generic APK row), with concrete `com.x8bit.bitwarden` identity and `2024.12.0` version extraction where ScanCode stays unnamed or manifest-blind
-
 #### Release binaries and extracted app snapshots
 
-##### [Apache Tomcat 10.1.52 extracted release snapshot](https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.52/bin/) — **10.64× faster**
+##### [Apache Tomcat 10.1.52 extracted release snapshot](https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.52/bin/) — **14.48× faster**
 
 - Files: 643
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `17.30s`; ScanCode `184.01s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.00s`; ScanCode `101.38s`
 - Broader Apache Tomcat release-tree package visibility on shipped `.war` and `WEB-INF/web.xml` surfaces (`7` file-level package records vs `0`), plus more complete Apache-2.0 coverage across the bundled docs/webapps tree, HTML-entity-faithful `&copy;` normalization on the shipped docs footer notices, and cleaner rejection of ScanCode's weak author fragments such as `the Digester`, `the Cluster`, and `the Connector`
 
-##### [Firefox langpack en-GB 141.0.2 .xpi](https://releases.mozilla.org/pub/mozilla.org/firefox/releases/141.0.2/win64/xpi/en-GB.xpi) — **7.22× faster**
+##### [Firefox langpack en-GB 141.0.2 .xpi](https://releases.mozilla.org/pub/mozilla.org/firefox/releases/141.0.2/win64/xpi/en-GB.xpi) — **9.21× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.27s`; ScanCode `74.17s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.60s`; ScanCode `42.35s`
 - Equivalent Mozilla XPI package visibility on the shipped Firefox language-pack artifact
 
-##### [Firefox Multi-Account Containers 8.3.7 .xpi @ sha256:7f6f5ef](https://addons.mozilla.org/firefox/downloads/file/4733069/multi_account_containers-8.3.7.xpi) — **7.22× faster**
+##### [Firefox Multi-Account Containers 8.3.7 .xpi @ sha256:7f6f5ef](https://addons.mozilla.org/firefox/downloads/file/4733069/multi_account_containers-8.3.7.xpi) — **8.90× faster**
 
 - Files: 1
-- Run context: 2026-04-23 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 4 proc
-- Timing: Provenant `10.11s`; ScanCode `73.02s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.67s`; ScanCode `41.56s`
 - Equivalent Mozilla XPI package visibility on the shipped Firefox add-on artifact
-
-##### [glzr-io/glazewm v3.10.1 Windows snapshot](https://github.com/glzr-io/glazewm/releases/tag/v3.10.1) — **2.77× faster**
-
-- Files: 3
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `24.89s`; ScanCode `68.91s`
-- Richer executable metadata extraction on `glazewm-v3.10.1.exe` (`3` vs `1` copyrights, `3` vs `1` holders), plus matched shipped package identity and declared license (`pkg:winexe/GlazeWM@3.10.1`, `GPL-3.0-only`) and cleaner rejection of ScanCode's bogus installer author fragments such as `uri. Failed` and `elements. Failed`
 
 ##### [ILSpy v9.1 binaries x64 snapshot @ sha256:1e925a4](https://github.com/icsharpcode/ILSpy/releases/download/v9.1/ILSpy_binaries_9.1.0.7988-x64.zip) — **11.14× faster**
 
@@ -1568,19 +1545,19 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.12s`; ScanCode `57.03s`
 - Shipped `.deps.json` coverage on the extracted ILSpy release (`3` vs `0` packages, `86` vs `0` dependencies), with file-level NuGet dependency visibility across `ILSpy.deps.json` and plugin manifests plus cleaner rejection of ScanCode's binary-text holder noise such as `LegalTrademarks OriginalFilename`
 
-##### [itchyny/gojq v0.12.19 darwin arm64 release snapshot @ sha256:40208d4](https://github.com/itchyny/gojq/releases/tag/v0.12.19) — **1.14× faster**
+##### [itchyny/gojq v0.12.19 darwin arm64 release snapshot @ sha256:40208d4](https://github.com/itchyny/gojq/releases/tag/v0.12.19) — **9.31× faster**
 
 - Files: 2
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `10.45s`; ScanCode `11.95s`
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.91s`; ScanCode `45.70s`
 - Embedded Go build-info package visibility on the shipped `gojq` binary (`9` file-level package records vs `0`), plus cleaner rejection of ScanCode's weak binary author false positive `the Go`
 
-##### [lichess-org/fishnet v2.13.2 macOS arm64 snapshot @ sha256:8556a4d](https://github.com/lichess-org/fishnet/releases/tag/v2.13.2) — **3.69× faster**
+##### [BurntSushi/ripgrep 14.1.1 aarch64-apple-darwin release snapshot @ sha256:24ad767](https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-aarch64-apple-darwin.tar.gz) — **9.67× faster**
 
-- Files: 3
-- Run context: 2026-04-13 · macOS 26.3.1 · Apple M1 Max · 32 GB · arm64 · 9 proc
-- Timing: Provenant `24.22s`; ScanCode `89.38s`
-- Cargo-auditable dependency visibility on the shipped `fishnet` binary (`406` file-level dependencies vs `0`), plus cleaner normalization of weak binary-text author/email noise around OpenSSL fragments such as `<appro@openssl.org>`
+- Files: 13
+- Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.90s`; ScanCode `47.37s`
+- Faithful multi-license detection across the shipped ripgrep release tree — the dual `MIT OR Unlicense` project license plus the vendored `LGPL-2.0-plus`/`other-copyleft` and exception-bearing expressions — on a real reproducible binary-release artifact
 
 ##### [NSIS 3.12 setup.exe](https://prdownloads.sourceforge.net/nsis/nsis-3.12-setup.exe?download) — **4.90× faster**
 

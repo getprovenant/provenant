@@ -42,6 +42,10 @@ name = "perf-ab"
 path = "src/bin/perf_ab.rs"
 
 [[bin]]
+name = "fetch-benchmark-artifact"
+path = "src/bin/fetch_benchmark_artifact.rs"
+
+[[bin]]
 name = "generate-benchmark-chart"
 path = "src/bin/generate_benchmark_chart.rs"
 
