@@ -446,6 +446,18 @@ Copyright - split out libs\0\xff",
     }
 
     #[test]
+    // Reverse of the fixture above: the license-bearing target is declared *last*.
+    // Bazel/Buck collapse all of a directory's targets into one component, so this
+    // guards that a license declared by a non-first target still resolves onto the
+    // merged component (target declaration order must not change the declared license).
+    fn test_golden_reference_follow_bazel_build_license_file_reversed() {
+        assert_reference_follow_fixture_matches_expected(
+            "testdata/summarycode-golden/reference_following/bazel_build_license_file_reversed",
+            "testdata/summarycode-golden/reference_following/bazel_build_license_file_reversed/expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_reference_follow_readme_mit_see_license() {
         assert_reference_follow_fixture_matches_expected(
             "testdata/summarycode-golden/reference_following/readme_mit_see_license",
