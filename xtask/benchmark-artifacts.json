@@ -1,0 +1,81 @@
+{
+  "_comment": "Pinned, sha256-verified sources for the downloadable benchmark artifacts in docs/BENCHMARKS.md. Fetched into the gitignored .provenant/benchmark-artifacts/ cache by `cargo run --manifest-path xtask/Cargo.toml --bin fetch-benchmark-artifact`, then scanned via `compare-outputs --target-path`. Keeps the benchmark reproducible without committing binaries. sha256 is the digest of the primary download; on first fetch the tool prints the computed value to pin here.",
+  "artifacts": [
+    {
+      "id": "python-construct-pkginfo",
+      "description": "python-construct 2.10.70-6 .PKGINFO from Arch package",
+      "url": "https://archive.archlinux.org/packages/p/python-construct/python-construct-2.10.70-6-any.pkg.tar.zst",
+      "sha256": "2020ae30dee098c24a609a59324817ef4a99384b27cc787bebb9a52ca7b66534",
+      "prep": {
+        "type": "tar_member",
+        "member": ".PKGINFO"
+      }
+    },
+    {
+      "id": "firefox-langpack-en-gb",
+      "description": "Firefox langpack en-GB 141.0.2 .xpi",
+      "url": "https://releases.mozilla.org/pub/mozilla.org/firefox/releases/141.0.2/win64/xpi/en-GB.xpi",
+      "sha256": "af013ae7063aee77d3406d89e0d11199d3622cd1d4333dd5e3575f2201f29143",
+      "prep": {
+        "type": "raw"
+      }
+    },
+    {
+      "id": "firefox-multi-account-containers",
+      "description": "Firefox Multi-Account Containers 8.3.7 .xpi",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4733069/multi_account_containers-8.3.7.xpi",
+      "sha256": "7f6f5ef7b106d33d1b99d2c5e53a2065d07f784b1852fe9b9f78394e9b405165",
+      "prep": {
+        "type": "raw"
+      }
+    },
+    {
+      "id": "tomcat-10-1-52",
+      "description": "Apache Tomcat 10.1.52 extracted release snapshot",
+      "url": "https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.52/bin/apache-tomcat-10.1.52.tar.gz",
+      "sha256": "5d3583061085d412d5132a36c5422ad96adc8d5bd5869013d707a920696c9457",
+      "prep": {
+        "type": "tar_all"
+      }
+    },
+    {
+      "id": "gojq-darwin-arm64-snapshot",
+      "description": "itchyny/gojq v0.12.19 darwin arm64 release snapshot (binary + LICENSE)",
+      "url": "https://github.com/itchyny/gojq/releases/download/v0.12.19/gojq_v0.12.19_darwin_arm64.zip",
+      "sha256": "40208d4c385c5cebe3798f9d5a30ff1123537d66e171f2450a110347933482f7",
+      "prep": {
+        "type": "select_members",
+        "members": ["gojq_v0.12.19_darwin_arm64/gojq", "gojq_v0.12.19_darwin_arm64/LICENSE"]
+      }
+    },
+    {
+      "id": "ripgrep-darwin-arm64",
+      "description": "BurntSushi/ripgrep 14.1.1 aarch64-apple-darwin release snapshot",
+      "url": "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-aarch64-apple-darwin.tar.gz",
+      "sha256": "24ad76777745fbff131c8fbc466742b011f925bfa4fffa2ded6def23b5b937be",
+      "prep": {
+        "type": "tar_all"
+      }
+    },
+    {
+      "id": "bash-deb",
+      "description": "bash 5.2.15-2+b10 .deb (Debian snapshot)",
+      "url": "https://snapshot.debian.org/file/bd6a22d6918ec3e917cc5840d8ac13235220553e",
+      "filename": "bash_5.2.15-2+b10_amd64.deb",
+      "sha256": "be3ab2fd057cb9a29e733d0d8c2b867468731d99af2ce62a63ec6a6c7928572f",
+      "prep": {
+        "type": "raw"
+      }
+    },
+    {
+      "id": "debian-bookworm-dpkg-db",
+      "description": "debian:bookworm-slim dpkg DB snapshot",
+      "sha256": null,
+      "prep": {
+        "type": "docker_export",
+        "image": "debian@sha256:f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a",
+        "paths": ["var/lib/dpkg"]
+      }
+    }
+  ]
+}
