@@ -14,7 +14,8 @@ use crate::license_detection::detection::{
 use crate::license_detection::expression::parse_expression;
 use crate::license_detection::models::RuleId;
 use crate::models::{
-    FileInfo, FileType, LicenseDetection, Match, Package, PackageUid, TopLevelLicenseDetection,
+    DatasourceId, FileInfo, FileType, LicenseDetection, Match, Package, PackageUid,
+    TopLevelLicenseDetection,
 };
 use crate::utils::spdx::combine_license_expressions;
 
@@ -735,7 +736,7 @@ fn sync_packages_from_followed_package_data(
             } else {
                 package.license_detections.clone()
             };
-            let next_other_license_detections = if !preserve_existing_package_license_fields
+            let mut next_other_license_detections = if !preserve_existing_package_license_fields
                 || package.other_license_detections.is_empty()
             {
                 matched_package_data
@@ -765,7 +766,7 @@ fn sync_packages_from_followed_package_data(
                         package_data.declared_license_expression_spdx.clone()
                     })
                 });
-            let next_other_license_expression = if preserve_existing_package_license_fields {
+            let mut next_other_license_expression = if preserve_existing_package_license_fields {
                 package.other_license_expression.clone()
             } else {
                 None
@@ -774,15 +775,83 @@ fn sync_packages_from_followed_package_data(
                 matched_package_data
                     .and_then(|package_data| package_data.other_license_expression.clone())
             });
-            let next_other_license_expression_spdx = if preserve_existing_package_license_fields {
-                package.other_license_expression_spdx.clone()
-            } else {
-                None
+            let mut next_other_license_expression_spdx =
+                if preserve_existing_package_license_fields {
+                    package.other_license_expression_spdx.clone()
+                } else {
+                    None
+                }
+                .or_else(|| {
+                    matched_package_data
+                        .and_then(|package_data| package_data.other_license_expression_spdx.clone())
+                });
+
+            // Bazel/Buck build files collapse all of a directory's build targets into one
+            // component (see docs/improvements/bazel-buck-build-targets.md). Reference-following
+            // resolves each target's `licenses=` reference on its own `package_data`, so syncing
+            // only the base target's `package_data` would drop a license declared by a sibling
+            // target — making the result depend on target declaration order. Take the union of
+            // all the file's targets' resolved licenses instead. Restricted to build-file
+            // datasources so multi-package databases and lockfiles are never smeared, and gated on
+            // the same `preserve_existing_package_license_fields` flag as the per-field logic above
+            // so a multi-datafile package's already-established license fields are left intact on a
+            // BUILD-datafile iteration.
+            if !preserve_existing_package_license_fields
+                && let Some(build_targets) = package_data_by_path
+                    .get(datafile_path.as_str())
+                    .filter(|package_datas| {
+                        package_datas.len() > 1
+                            && package_datas.iter().all(|package_data| {
+                                matches!(
+                                    package_data.datasource_id,
+                                    Some(DatasourceId::BazelBuild) | Some(DatasourceId::BuckFile)
+                                )
+                            })
+                    })
+            {
+                let mut merged_detections: Vec<LicenseDetection> = Vec::new();
+                let mut merged_other_detections: Vec<LicenseDetection> = Vec::new();
+                for package_data in build_targets.iter() {
+                    for detection in &package_data.license_detections {
+                        if !merged_detections.contains(detection) {
+                            merged_detections.push(detection.clone());
+                        }
+                    }
+                    for detection in &package_data.other_license_detections {
+                        if !merged_other_detections.contains(detection) {
+                            merged_other_detections.push(detection.clone());
+                        }
+                    }
+                }
+                if !merged_detections.is_empty() {
+                    next_declared_license_expression = combine_license_expressions(
+                        merged_detections
+                            .iter()
+                            .map(|detection| detection.license_expression.clone()),
+                    );
+                    next_declared_license_expression_spdx = combine_license_expressions(
+                        merged_detections
+                            .iter()
+                            .filter(|detection| !detection.license_expression_spdx.is_empty())
+                            .map(|detection| detection.license_expression_spdx.clone()),
+                    );
+                    next_license_detections = merged_detections;
+                }
+                if !merged_other_detections.is_empty() {
+                    next_other_license_expression = combine_license_expressions(
+                        merged_other_detections
+                            .iter()
+                            .map(|detection| detection.license_expression.clone()),
+                    );
+                    next_other_license_expression_spdx = combine_license_expressions(
+                        merged_other_detections
+                            .iter()
+                            .filter(|detection| !detection.license_expression_spdx.is_empty())
+                            .map(|detection| detection.license_expression_spdx.clone()),
+                    );
+                    next_other_license_detections = merged_other_detections;
+                }
             }
-            .or_else(|| {
-                matched_package_data
-                    .and_then(|package_data| package_data.other_license_expression_spdx.clone())
-            });
 
             // Reference-following enrichment (NOT a parser backfill). For a single-datafile
             // package whose package_data carried no detections, adopt the detections found
