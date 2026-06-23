@@ -1,0 +1,12 @@
+Source: ace
+Version: 6.5.5
+Port-Version: 2
+Description: The ADAPTIVE Communication Environment
+Homepage: https://example.com/ace
+Build-Depends: zlib, curl[core,openssl] (!windows), curl[core,winssl] (windows)
+Default-Features: ssl
+Supports: !(uwp|arm)
+
+Feature: tools
+Description: Build command-line tools
+Build-Depends: vcpkg-cmake, openssl

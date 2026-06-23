@@ -1,0 +1,122 @@
+[
+  {
+    "type": "vcpkg",
+    "namespace": null,
+    "name": "ace",
+    "version": "6.5.5#2",
+    "qualifiers": {},
+    "subpath": null,
+    "primary_language": "C++",
+    "description": "The ADAPTIVE Communication Environment",
+    "release_date": null,
+    "parties": [],
+    "keywords": [],
+    "homepage_url": "https://example.com/ace",
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
+    "code_view_url": null,
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": null,
+    "declared_license_expression_spdx": null,
+    "license_detections": [],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": null,
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {
+      "default-features": ["ssl"],
+      "supports": "!(uwp|arm)",
+      "features": [
+        {
+          "name": "tools",
+          "description": "Build command-line tools",
+          "build-depends": ["vcpkg-cmake", "openssl"]
+        }
+      ]
+    },
+    "dependencies": [
+      {
+        "purl": "pkg:generic/vcpkg/zlib",
+        "extracted_requirement": "zlib",
+        "scope": "build-depends",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:generic/vcpkg/curl",
+        "extracted_requirement": "curl[core,openssl] (!windows)",
+        "scope": "build-depends",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "features": ["core", "openssl"],
+          "platform": "!windows"
+        }
+      },
+      {
+        "purl": "pkg:generic/vcpkg/curl",
+        "extracted_requirement": "curl[core,winssl] (windows)",
+        "scope": "build-depends",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "features": ["core", "winssl"],
+          "platform": "windows"
+        }
+      },
+      {
+        "purl": "pkg:generic/vcpkg/vcpkg-cmake",
+        "extracted_requirement": "vcpkg-cmake",
+        "scope": "build-depends",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "feature": "tools"
+        }
+      },
+      {
+        "purl": "pkg:generic/vcpkg/openssl",
+        "extracted_requirement": "openssl",
+        "scope": "build-depends",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "feature": "tools"
+        }
+      }
+    ],
+    "repository_homepage_url": null,
+    "repository_download_url": null,
+    "api_data_url": null,
+    "datasource_id": "vcpkg_control",
+    "purl": "pkg:generic/vcpkg/ace@6.5.5%232"
+  }
+]

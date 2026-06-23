@@ -5,7 +5,9 @@ use crate::models::{DatasourceId, PackageType};
 use std::path::PathBuf;
 
 use super::PackageParser;
-use super::vcpkg::{VcpkgConfigurationParser, VcpkgLockParser, VcpkgManifestParser};
+use super::vcpkg::{
+    VcpkgConfigurationParser, VcpkgControlParser, VcpkgLockParser, VcpkgManifestParser,
+};
 
 #[test]
 fn test_vcpkg_manifest_is_match() {
@@ -40,6 +42,22 @@ fn test_vcpkg_configuration_is_match() {
     )));
     assert!(!VcpkgConfigurationParser::is_match(&PathBuf::from(
         "/tmp/vcpkg-lock.json"
+    )));
+}
+
+#[test]
+fn test_vcpkg_control_is_match() {
+    assert!(VcpkgControlParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg/ports/ace/CONTROL"
+    )));
+    assert!(!VcpkgControlParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg/ports/ace/portfile.cmake"
+    )));
+    assert!(!VcpkgControlParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg/CONTROL"
+    )));
+    assert!(!VcpkgControlParser::is_match(&PathBuf::from(
+        "/tmp/vcpkg/ports/ace/subdir/CONTROL"
     )));
 }
 
@@ -325,6 +343,101 @@ fn test_parse_vcpkg_configuration_preserves_registry_and_overlay_provenance() {
         extra.get("overlay-triplets"),
         Some(&serde_json::json!(["./triplets"]))
     );
+}
+
+#[test]
+fn test_parse_vcpkg_control_preserves_classic_port_metadata() {
+    let path = PathBuf::from("testdata/vcpkg/classic/ports/ace/CONTROL");
+    let pkg = VcpkgControlParser::extract_first_package(&path);
+
+    assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
+    assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgControl));
+    assert_eq!(pkg.name.as_deref(), Some("ace"));
+    assert_eq!(pkg.version.as_deref(), Some("6.5.5#2"));
+    assert_eq!(
+        pkg.description.as_deref(),
+        Some("The ADAPTIVE Communication Environment")
+    );
+    assert_eq!(pkg.homepage_url.as_deref(), Some("https://example.com/ace"));
+    assert_eq!(pkg.purl.as_deref(), Some("pkg:generic/vcpkg/ace@6.5.5%232"));
+    assert!(!pkg.is_private);
+
+    assert_eq!(pkg.dependencies.len(), 5);
+    let zlib = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.purl.as_deref() == Some("pkg:generic/vcpkg/zlib"))
+        .expect("expected zlib dependency");
+    assert_eq!(zlib.scope.as_deref(), Some("build-depends"));
+    assert_eq!(zlib.extracted_requirement.as_deref(), Some("zlib"));
+    assert_eq!(zlib.is_runtime, Some(true));
+    assert_eq!(zlib.is_optional, Some(false));
+    assert_eq!(zlib.is_direct, Some(true));
+    assert_eq!(zlib.is_pinned, Some(false));
+
+    let curl_openssl = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.extracted_requirement.as_deref() == Some("curl[core,openssl] (!windows)"))
+        .expect("expected curl openssl dependency");
+    assert_eq!(curl_openssl.purl.as_deref(), Some("pkg:generic/vcpkg/curl"));
+    let curl_extra = curl_openssl
+        .extra_data
+        .as_ref()
+        .expect("expected curl extra_data");
+    assert_eq!(
+        curl_extra.get("features"),
+        Some(&serde_json::json!(["core", "openssl"]))
+    );
+    assert_eq!(
+        curl_extra.get("platform"),
+        Some(&serde_json::json!("!windows"))
+    );
+
+    let feature_dep = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.purl.as_deref() == Some("pkg:generic/vcpkg/vcpkg-cmake"))
+        .expect("expected feature dependency");
+    assert_eq!(
+        feature_dep
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("feature")),
+        Some(&serde_json::json!("tools"))
+    );
+
+    let extra = pkg.extra_data.as_ref().expect("extra_data should exist");
+    assert_eq!(
+        extra.get("default-features"),
+        Some(&serde_json::json!(["ssl"]))
+    );
+    assert_eq!(
+        extra.get("supports"),
+        Some(&serde_json::json!("!(uwp|arm)"))
+    );
+    let features = extra
+        .get("features")
+        .and_then(serde_json::Value::as_array)
+        .expect("features should be preserved");
+    assert_eq!(features.len(), 1);
+    assert_eq!(features[0]["name"], serde_json::json!("tools"));
+}
+
+#[test]
+fn test_invalid_vcpkg_control_returns_default_package() {
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let path = temp_dir.path().join("CONTROL");
+    std::fs::write(&path, "this is not a valid CONTROL file")
+        .expect("Failed to write invalid CONTROL");
+
+    let pkg = VcpkgControlParser::extract_first_package(&path);
+
+    assert_eq!(pkg.package_type, Some(PackageType::Vcpkg));
+    assert_eq!(pkg.datasource_id, Some(DatasourceId::VcpkgControl));
+    assert!(pkg.name.is_none());
+    assert!(pkg.is_private);
+    assert!(pkg.dependencies.is_empty());
 }
 
 #[test]
