@@ -283,8 +283,14 @@ fn parse_vcpkg_control(content: &str) -> PackageData {
     let homepage_url =
         rfc822::get_header_first(&source_paragraph.headers, "homepage").map(truncate_field);
 
+    let feature_paragraphs = &paragraphs[1..];
+    let feature_limit = capped_iteration_limit(
+        feature_paragraphs.len(),
+        "vcpkg CONTROL feature dependency paragraphs",
+    );
+
     let mut dependencies = extract_control_dependencies(source_paragraph, None);
-    for feature_paragraph in paragraphs.iter().skip(1) {
+    for feature_paragraph in feature_paragraphs.iter().take(feature_limit) {
         if let Some(feature) = rfc822::get_header_first(&feature_paragraph.headers, "feature")
             .map(truncate_field)
             .filter(|feature| !feature.is_empty())
@@ -304,7 +310,7 @@ fn parse_vcpkg_control(content: &str) -> PackageData {
         description,
         homepage_url,
         dependencies,
-        extra_data: build_control_extra_data(source_paragraph, &paragraphs[1..]),
+        extra_data: build_control_extra_data(source_paragraph, feature_paragraphs),
         datasource_id: Some(DatasourceId::VcpkgControl),
         purl: build_vcpkg_purl(&name, version.as_deref()).map(truncate_field),
         is_private: false,
