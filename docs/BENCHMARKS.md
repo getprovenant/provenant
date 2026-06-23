@@ -399,14 +399,14 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 18,030
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `22.99s`; ScanCode `1523.27s`
-- Broader package and dependency extraction (`8` vs `1` packages, `1436` vs `423` dependencies) from the root and driver `deps.edn` manifests plus committed `bun.lock` and `uv.lock`, with cleaner OFL font URL normalization where ScanCode preserves broken concatenated links
+- Broader package and dependency extraction (`9` vs `1` packages, `7055` vs `423` dependencies) from the root and driver `deps.edn` manifests plus committed `bun.lock` and `uv.lock`, with cleaner OFL font URL normalization where ScanCode preserves broken concatenated links
 
 ##### [microsoft/vscode @ 0c1e100](https://github.com/microsoft/vscode/tree/0c1e100626c19724d1222c2bc4b63ba3556858a7) — **43.13× faster**
 
 - Files: 14,398
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `40.89s`; ScanCode `1763.40s`
-- Broader monorepo package and dependency extraction (`138` vs `1` packages, `7718` vs `1815` dependencies) from the root `package-lock.json`, many extension fixture manifests and lockfiles, and embedded Cargo/Docker metadata, plus richer named package identities where ScanCode emits generic lockfile and archive rows
+- Broader monorepo package and dependency extraction (`138` vs `1` packages, `7720` vs `1815` dependencies) from the root `package-lock.json`, many extension fixture manifests and lockfiles, and embedded Cargo/Docker metadata, plus richer named package identities where ScanCode emits generic lockfile and archive rows
 
 ##### [npm/cli @ 05dbba5](https://github.com/npm/cli/tree/05dbba5b8d727ddb2c098ce0553714eae791c5f2) — **40.20× faster**
 
@@ -427,7 +427,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 12,551
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `21.17s`; ScanCode `1100.75s`
-- Far broader Bun/npm-family package extraction (`382` vs `29` packages, `5773` vs `323` dependencies) from the repo's 52 committed `bun.lock` / `bun.lockb` inputs that ScanCode leaves at zero, plus legacy `bun.lockb` coverage on `bench/bundle` and plainer `BSD-2-Clause` rebucketing where ScanCode uses the over-specific `BSD-2-Clause-Views` label
+- Far broader Bun/npm-family package extraction (`383` vs `29` packages, `14381` vs `323` dependencies) from the repo's 52 committed `bun.lock` / `bun.lockb` inputs that ScanCode leaves at zero, plus legacy `bun.lockb` coverage on `bench/bundle` and plainer `BSD-2-Clause` rebucketing where ScanCode uses the over-specific `BSD-2-Clause-Views` label
 
 ##### [pnpm/pnpm @ 2a1ffe1](https://github.com/pnpm/pnpm/tree/2a1ffe1956a75746844b1c6cd863ecfbb5a55729) — **33.85× faster**
 
@@ -462,7 +462,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 28,044
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `47.66s`; ScanCode `1226.76s`
-- Broader monorepo package and dependency extraction (`464` vs `249` packages, `13787` vs `12017` dependencies) from the root `pnpm-lock.yaml`, many workspace fixture subtrees, and embedded Cargo/npm metadata, plus zero scan errors where ScanCode crashes on workspace `package.json` and `pnpm-lock.yaml` inputs
+- Broader monorepo package and dependency extraction (`466` vs `252` packages, `14259` vs `12345` dependencies) from the root `pnpm-lock.yaml`, many workspace fixture subtrees, and embedded Cargo/npm metadata, plus zero scan errors where ScanCode crashes on workspace `package.json` and `pnpm-lock.yaml` inputs
 
 ##### [yarnpkg/berry @ c0274d6](https://github.com/yarnpkg/berry/tree/c0274d6d7ba5939f447e78aaf16e456a00cf0bd1) — **24.12× faster**
 
@@ -527,7 +527,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 27,912
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `93.96s`; ScanCode `2127.58s`
-- Broader Gradle package and dependency extraction (`73` vs `68` packages, `1675` vs `1541` dependencies) from committed `build.gradle`, `build.gradle.kts`, `gradle.lockfile`, and `.module` metadata across docs and test fixtures
+- Broader Gradle package and dependency extraction (`74` vs `68` packages, `1725` vs `1541` dependencies) from committed `build.gradle`, `build.gradle.kts`, `gradle.lockfile`, and `.module` metadata across docs and test fixtures
 
 ##### [yairm210/Unciv @ d54f33c](https://github.com/yairm210/Unciv/tree/d54f33c881ad2de1ac7136540f59ad8596143ce5) — **30.07× faster**
 
@@ -571,7 +571,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 23,293
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `30.81s`; ScanCode `1163.13s`
-- Broader Alpine package visibility (`12609` vs `12502`) and dependency extraction (`102257` vs `1438`) from committed `APKBUILD` metadata plus nested Cargo and Docker surfaces, with static shell-style manifest handling that preserves concrete package identities instead of malformed placeholder expansions
+- Broader Alpine package visibility (`12602` vs `12502`) and dependency extraction (`102278` vs `1438`) from committed `APKBUILD` metadata plus nested Cargo and Docker surfaces, with static shell-style manifest handling that preserves concrete package identities instead of malformed placeholder expansions
 
 ##### [archlinux/packaging/packages/grep @ 29d2e10](https://gitlab.archlinux.org/archlinux/packaging/packages/grep/-/tree/29d2e1085e3c69ded524b8fae3b436f10f801ed0) — **8.79× faster**
 
@@ -788,7 +788,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 29,080
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `98.23s`; ScanCode `3237.19s`
-- Broader Dockerfile and `go.work` package coverage, richer staging-workspace dependency extraction (`7187` vs `6950`), and richer `BSD-3-Clause AND Apache-2.0` compound license classification where ScanCode collapses many of the same files to plain `Apache-2.0`
+- Broader Dockerfile and `go.work` package coverage, richer staging-workspace dependency extraction (`7008` vs `6950`), and richer `BSD-3-Clause AND Apache-2.0` compound license classification where ScanCode collapses many of the same files to plain `Apache-2.0`
 
 ##### [libevent/libevent @ 4829651](https://github.com/libevent/libevent/tree/48296514d8fd9c0b3812b11d45ad80b0c002c14e) — **15.1× faster**
 
@@ -1163,7 +1163,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 13,670
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `11.35s`; ScanCode `386.36s`
-- Far broader vcpkg registry package and dependency extraction (`9` vs `1` packages, `13650` vs `39` dependencies) from many committed `ports/*/vcpkg.json` manifests with host, feature, and platform-qualified dependencies, plus standalone Debian copyright package rows on `ports/*/copyright` and explicit vcpkg package identities where ScanCode stays largely manifest-blind
+- Far broader vcpkg registry package and dependency extraction (`2` vs `1` packages, `13653` vs `39` dependencies) from many committed `ports/*/vcpkg.json` manifests with host, feature, and platform-qualified dependencies, plus standalone Debian copyright package rows on `ports/*/copyright` and explicit vcpkg package identities where ScanCode stays largely manifest-blind
 
 ##### [OrchardCMS/OrchardCore @ 01386f3](https://github.com/OrchardCMS/OrchardCore/tree/01386f38ee3fef620a93934f05ba1363ff05c291) — **51.92× faster**
 
@@ -1235,7 +1235,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 13,294
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `26.46s`; ScanCode `850.01s`
-- Matched split-package Composer monorepo package and dependency coverage (`188` vs `188` packages, `1460` vs `1460` dependencies), with Unicode-preserving author normalization, cleaner rejection of URL-style pseudo-authors such as `Tobias Schultze http://tobion.de`, and more explicit proprietary-license normalization where ScanCode leaves an unknown-license bucket
+- Matched split-package Composer monorepo package and dependency coverage (`189` vs `189` packages, `1461` vs `1461` dependencies), with Unicode-preserving author normalization, cleaner rejection of URL-style pseudo-authors such as `Tobias Schultze http://tobion.de`, and more explicit proprietary-license normalization where ScanCode leaves an unknown-license bucket
 
 #### Julia / Nix / Haskell / other ecosystems
 
