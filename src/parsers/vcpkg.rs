@@ -434,13 +434,18 @@ fn parse_control_dependency_entry(entry: &str, feature_name: Option<&str>) -> Op
             Value::String(truncate_field(feature_name.to_string())),
         );
     }
+    let is_optional = if feature_name.is_some() {
+        None
+    } else {
+        Some(false)
+    };
 
     Some(Dependency {
         purl: build_vcpkg_purl(name, None).map(truncate_field),
         extracted_requirement: Some(truncate_field(raw_entry.to_string())),
         scope: Some("build-depends".to_string()),
         is_runtime: Some(true),
-        is_optional: Some(false),
+        is_optional,
         is_pinned: Some(false),
         is_direct: Some(true),
         resolved_package: None,
@@ -522,12 +527,25 @@ fn split_dependency_features(entry: &str) -> (&str, Vec<Value>) {
     }
 
     let name = entry[..start].trim();
-    let features = entry[start + 1..entry.len() - 1]
-        .split(',')
-        .map(str::trim)
-        .filter(|feature| !feature.is_empty())
-        .map(|feature| Value::String(truncate_field(feature.to_string())))
-        .collect();
+    let mut features = Vec::new();
+    let mut remaining = entry[start..].trim();
+    while !remaining.is_empty() {
+        let Some(after_open) = remaining.strip_prefix('[') else {
+            return (entry, Vec::new());
+        };
+        let Some(end) = after_open.find(']') else {
+            return (entry, Vec::new());
+        };
+
+        features.extend(
+            after_open[..end]
+                .split(',')
+                .map(str::trim)
+                .filter(|feature| !feature.is_empty())
+                .map(|feature| Value::String(truncate_field(feature.to_string()))),
+        );
+        remaining = after_open[end + 1..].trim_start();
+    }
 
     (name, features)
 }

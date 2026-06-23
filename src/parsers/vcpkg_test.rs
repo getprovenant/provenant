@@ -399,6 +399,7 @@ fn test_parse_vcpkg_control_preserves_classic_port_metadata() {
         .iter()
         .find(|dep| dep.purl.as_deref() == Some("pkg:generic/vcpkg/vcpkg-cmake"))
         .expect("expected feature dependency");
+    assert_eq!(feature_dep.is_optional, None);
     assert_eq!(
         feature_dep
             .extra_data
@@ -422,6 +423,34 @@ fn test_parse_vcpkg_control_preserves_classic_port_metadata() {
         .expect("features should be preserved");
     assert_eq!(features.len(), 1);
     assert_eq!(features[0]["name"], serde_json::json!("tools"));
+}
+
+#[test]
+fn test_parse_vcpkg_control_flattens_repeated_dependency_feature_brackets() {
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let path = temp_dir.path().join("CONTROL");
+    std::fs::write(
+        &path,
+        r#"Source: sample
+Version: 1.0.0
+Build-Depends: curl[core][openssl], zlib
+"#,
+    )
+    .expect("Failed to write CONTROL");
+
+    let pkg = VcpkgControlParser::extract_first_package(&path);
+
+    let curl = pkg
+        .dependencies
+        .iter()
+        .find(|dep| dep.purl.as_deref() == Some("pkg:generic/vcpkg/curl"))
+        .expect("expected curl dependency");
+    assert_eq!(
+        curl.extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("features")),
+        Some(&serde_json::json!(["core", "openssl"]))
+    );
 }
 
 #[test]
