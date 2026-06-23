@@ -5,7 +5,9 @@
 mod golden_tests {
     use crate::parsers::PackageParser;
     use crate::parsers::golden_test_utils::compare_package_data_parser_only;
-    use crate::parsers::vcpkg::{VcpkgConfigurationParser, VcpkgLockParser, VcpkgManifestParser};
+    use crate::parsers::vcpkg::{
+        VcpkgConfigurationParser, VcpkgControlParser, VcpkgLockParser, VcpkgManifestParser,
+    };
     use std::path::PathBuf;
 
     #[test]
@@ -58,6 +60,19 @@ mod golden_tests {
         match compare_package_data_parser_only(&package_data, &expected_file) {
             Ok(_) => (),
             Err(e) => panic!("Golden test failed for vcpkg lockfile: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_golden_vcpkg_control() {
+        let test_file = PathBuf::from("testdata/vcpkg/classic/ports/ace/CONTROL");
+        let expected_file = PathBuf::from("testdata/vcpkg/golden/vcpkg-control-expected.json");
+
+        let package_data = VcpkgControlParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed for vcpkg CONTROL: {}", e),
         }
     }
 }

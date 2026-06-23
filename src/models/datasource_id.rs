@@ -356,6 +356,7 @@ pub enum DatasourceId {
     VcpkgJson,
     VcpkgConfigurationJson,
     VcpkgLockJson,
+    VcpkgControl,
 
     // ── Yarn ──
     YarnLock,
@@ -662,6 +663,7 @@ impl DatasourceId {
             Self::VcpkgJson => "vcpkg_json",
             Self::VcpkgConfigurationJson => "vcpkg_configuration_json",
             Self::VcpkgLockJson => "vcpkg_lock_json",
+            Self::VcpkgControl => "vcpkg_control",
 
             // Yarn
             Self::YarnLock => "yarn_lock",

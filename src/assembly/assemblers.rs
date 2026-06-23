@@ -949,6 +949,7 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::VcpkgJson,
     DatasourceId::VcpkgConfigurationJson,
     DatasourceId::VcpkgLockJson,
+    DatasourceId::VcpkgControl,
 ];
 
 #[cfg(test)]

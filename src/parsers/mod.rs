@@ -738,7 +738,9 @@ pub use self::swift_manifest_json::SwiftManifestJsonParser;
 pub use self::swift_resolved::SwiftPackageResolvedParser;
 pub use self::swift_show_dependencies::SwiftShowDependenciesParser;
 pub use self::uv_lock::UvLockParser;
-pub use self::vcpkg::{VcpkgConfigurationParser, VcpkgLockParser, VcpkgManifestParser};
+pub use self::vcpkg::{
+    VcpkgConfigurationParser, VcpkgControlParser, VcpkgLockParser, VcpkgManifestParser,
+};
 pub use self::yarn_lock::YarnLockParser;
 pub use self::yarn_pnp::YarnPnpParser;
 
@@ -1031,6 +1033,7 @@ register_package_handlers! {
         PythonParser,
         UvLockParser,
         VcpkgConfigurationParser,
+        VcpkgControlParser,
         VcpkgLockParser,
         VcpkgManifestParser,
         ReadmeParser,

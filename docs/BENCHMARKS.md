@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 217 of 217 recorded runs, with a **19.1× median speedup** and **18.7× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **32.2×** on 10k+ file targets.
+> Provenant is faster on 218 of 218 recorded runs, with a **19.2× median speedup** and **18.8× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **32.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1157,6 +1157,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `9.93s`; ScanCode `304.40s`
 - Broader mixed-package extraction (`15` vs `2` packages, `40` vs `0` dependencies) from the root `vcpkg.json`, overlay-port `dep/vcpkg-overlay-ports/*/vcpkg.json`, and committed `packages.config` files, with explicit vcpkg package identities where ScanCode reports none
+
+##### [microsoft/vcpkg @ 0bf3923](https://github.com/microsoft/vcpkg/tree/0bf3923f9fab4001c00f0f429682a0853b5749e0) — **31.18× faster**
+
+- Files: 5,536
+- Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.83s`; ScanCode `244.13s`
+- Far broader classic vcpkg registry package and dependency extraction (`1531` vs `9` package_data records, `4677` vs `0` dependencies) from 1444 committed `ports/*/CONTROL` files plus early `ports/*/vcpkg.json` manifests, with `Build-Depends` dependency visibility including feature and platform qualifiers, named Debian copyright package identities where ScanCode emits nameless standalone copyright rows, and URL normalization that preserves complete CMake variable expressions instead of truncating at `${...` braces
 
 ##### [microsoft/vcpkg @ b21ff8f](https://github.com/microsoft/vcpkg/tree/b21ff8f3cadbd8e0b175b49be2dd9202f1f208f4) — **34.04× faster**
 

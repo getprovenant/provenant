@@ -554,6 +554,9 @@ ScanCode: 476.87s</title></rect>
     <rect x="683.64" y="322.63" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/felix-dev @ 20aee77
 Files: 5356
 ScanCode: 640.75s</title></rect>
+    <rect x="685.92" y="368.23" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/vcpkg @ 0bf3923
+Files: 5536
+ScanCode: 244.13s</title></rect>
     <rect x="687.04" y="292.14" width="8" height="8" fill="#d97706" rx="1.5"><title>python/cpython @ 7a468a1
 Files: 5627
 ScanCode: 1221.65s</title></rect>
@@ -1207,6 +1210,9 @@ Provenant: 11.06s</title></circle>
     <circle cx="687.64" cy="476.80" r="4.5" fill="#2563eb"><title>apache/felix-dev @ 20aee77
 Files: 5356
 Provenant: 26.70s</title></circle>
+    <circle cx="689.92" cy="534.76" r="4.5" fill="#2563eb"><title>microsoft/vcpkg @ 0bf3923
+Files: 5536
+Provenant: 7.83s</title></circle>
     <circle cx="691.04" cy="497.38" r="4.5" fill="#2563eb"><title>python/cpython @ 7a468a1
 Files: 5627
 Provenant: 17.27s</title></circle>

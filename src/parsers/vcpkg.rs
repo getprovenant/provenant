@@ -9,6 +9,7 @@ use packageurl::PackageUrl;
 use serde_json::{Map as JsonMap, Value};
 
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
+use crate::parsers::rfc822::{self, Rfc822Metadata};
 use crate::parsers::utils::{capped_iteration_limit, split_name_email, truncate_field};
 
 use super::PackageParser;
@@ -16,6 +17,7 @@ use super::PackageParser;
 pub struct VcpkgManifestParser;
 pub struct VcpkgConfigurationParser;
 pub struct VcpkgLockParser;
+pub struct VcpkgControlParser;
 
 impl PackageParser for VcpkgManifestParser {
     const PACKAGE_TYPE: PackageType = PackageType::Vcpkg;
@@ -139,6 +141,44 @@ impl PackageParser for VcpkgLockParser {
     }
 }
 
+impl PackageParser for VcpkgControlParser {
+    const PACKAGE_TYPE: PackageType = PackageType::Vcpkg;
+
+    fn is_match(path: &Path) -> bool {
+        path.file_name().and_then(|name| name.to_str()) == Some("CONTROL")
+            && path
+                .parent()
+                .and_then(Path::parent)
+                .and_then(|parent| parent.file_name())
+                .and_then(|name| name.to_str())
+                == Some("ports")
+    }
+
+    fn extract_packages(path: &Path) -> Vec<PackageData> {
+        let content = match crate::parsers::utils::read_file_to_string(path, None) {
+            Ok(content) => content,
+            Err(e) => {
+                warn!("Failed to read vcpkg CONTROL at {:?}: {}", path, e);
+                return vec![default_control_package_data()];
+            }
+        };
+
+        vec![parse_vcpkg_control(&content)]
+    }
+
+    fn metadata() -> Vec<super::metadata::ParserMetadata> {
+        vec![super::metadata::ParserMetadata {
+            description: "vcpkg classic port CONTROL file",
+            file_patterns: &["**/ports/*/CONTROL"],
+            package_type: "vcpkg",
+            primary_language: "C++",
+            documentation_url: Some(
+                "https://learn.microsoft.com/en-us/vcpkg/maintainers/control-files",
+            ),
+        }]
+    }
+}
+
 fn default_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Vcpkg),
@@ -160,6 +200,16 @@ fn default_configuration_package_data() -> PackageData {
     PackageData {
         package_type: Some(PackageType::Vcpkg),
         datasource_id: Some(DatasourceId::VcpkgConfigurationJson),
+        is_private: true,
+        ..Default::default()
+    }
+}
+
+fn default_control_package_data() -> PackageData {
+    PackageData {
+        package_type: Some(PackageType::Vcpkg),
+        datasource_id: Some(DatasourceId::VcpkgControl),
+        primary_language: Some("C++".to_string()),
         is_private: true,
         ..Default::default()
     }
@@ -211,6 +261,293 @@ fn parse_vcpkg_configuration(json: &Value) -> PackageData {
         extra_data: build_configuration_extra_data(json),
         ..default_configuration_package_data()
     }
+}
+
+fn parse_vcpkg_control(content: &str) -> PackageData {
+    let paragraphs = rfc822::parse_rfc822_paragraphs(content);
+    let Some(source_paragraph) = paragraphs.first() else {
+        return default_control_package_data();
+    };
+
+    let Some(name) = rfc822::get_header_first(&source_paragraph.headers, "source")
+        .map(truncate_field)
+        .filter(|name| !name.is_empty())
+    else {
+        return default_control_package_data();
+    };
+
+    let version = control_version(source_paragraph).map(truncate_field);
+    let description = rfc822::get_header_first(&source_paragraph.headers, "description")
+        .map(truncate_field)
+        .filter(|description| !description.is_empty());
+    let homepage_url =
+        rfc822::get_header_first(&source_paragraph.headers, "homepage").map(truncate_field);
+
+    let mut dependencies = extract_control_dependencies(source_paragraph, None);
+    for feature_paragraph in paragraphs.iter().skip(1) {
+        if let Some(feature) = rfc822::get_header_first(&feature_paragraph.headers, "feature")
+            .map(truncate_field)
+            .filter(|feature| !feature.is_empty())
+        {
+            dependencies.extend(extract_control_dependencies(
+                feature_paragraph,
+                Some(feature.as_str()),
+            ));
+        }
+    }
+
+    PackageData {
+        package_type: Some(PackageType::Vcpkg),
+        name: Some(name.clone()),
+        version: version.clone(),
+        primary_language: Some("C++".to_string()),
+        description,
+        homepage_url,
+        dependencies,
+        extra_data: build_control_extra_data(source_paragraph, &paragraphs[1..]),
+        datasource_id: Some(DatasourceId::VcpkgControl),
+        purl: build_vcpkg_purl(&name, version.as_deref()).map(truncate_field),
+        is_private: false,
+        ..default_control_package_data()
+    }
+}
+
+fn control_version(paragraph: &Rfc822Metadata) -> Option<String> {
+    let version = rfc822::get_header_first(&paragraph.headers, "version")?;
+    let port_version = rfc822::get_header_first(&paragraph.headers, "port-version")
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|port_version| *port_version > 0);
+
+    match port_version {
+        Some(port_version) => Some(format!("{}#{}", version, port_version)),
+        None => Some(version),
+    }
+}
+
+fn build_control_extra_data(
+    source_paragraph: &Rfc822Metadata,
+    feature_paragraphs: &[Rfc822Metadata],
+) -> Option<HashMap<String, Value>> {
+    let mut extra = HashMap::new();
+
+    if let Some(default_features) =
+        rfc822::get_header_first(&source_paragraph.headers, "default-features")
+    {
+        let features =
+            string_list_to_json_array(&default_features, "vcpkg CONTROL default features");
+        if !features.is_empty() {
+            extra.insert("default-features".to_string(), Value::Array(features));
+        }
+    }
+
+    if let Some(supports) = rfc822::get_header_first(&source_paragraph.headers, "supports")
+        .filter(|supports| !supports.is_empty())
+    {
+        extra.insert(
+            "supports".to_string(),
+            Value::String(truncate_field(supports)),
+        );
+    }
+
+    let features = extract_control_feature_metadata(feature_paragraphs);
+    if !features.is_empty() {
+        extra.insert("features".to_string(), Value::Array(features));
+    }
+
+    (!extra.is_empty()).then_some(extra)
+}
+
+fn extract_control_feature_metadata(feature_paragraphs: &[Rfc822Metadata]) -> Vec<Value> {
+    let feature_limit =
+        capped_iteration_limit(feature_paragraphs.len(), "vcpkg CONTROL feature paragraphs");
+    feature_paragraphs
+        .iter()
+        .take(feature_limit)
+        .filter_map(|paragraph| {
+            let name = rfc822::get_header_first(&paragraph.headers, "feature")
+                .map(truncate_field)
+                .filter(|name| !name.is_empty())?;
+
+            let mut feature = JsonMap::new();
+            feature.insert("name".to_string(), Value::String(name));
+            if let Some(description) = rfc822::get_header_first(&paragraph.headers, "description")
+                .map(truncate_field)
+                .filter(|description| !description.is_empty())
+            {
+                feature.insert("description".to_string(), Value::String(description));
+            }
+            if let Some(build_depends) =
+                rfc822::get_header_first(&paragraph.headers, "build-depends")
+            {
+                let dependencies =
+                    string_list_to_json_array(&build_depends, "vcpkg CONTROL feature dependencies");
+                if !dependencies.is_empty() {
+                    feature.insert("build-depends".to_string(), Value::Array(dependencies));
+                }
+            }
+
+            Some(Value::Object(feature))
+        })
+        .collect()
+}
+
+fn extract_control_dependencies(
+    paragraph: &Rfc822Metadata,
+    feature_name: Option<&str>,
+) -> Vec<Dependency> {
+    let Some(build_depends) = rfc822::get_header_first(&paragraph.headers, "build-depends") else {
+        return Vec::new();
+    };
+
+    split_control_list(&build_depends, "vcpkg CONTROL dependencies")
+        .into_iter()
+        .filter_map(|dependency| parse_control_dependency_entry(&dependency, feature_name))
+        .collect()
+}
+
+fn parse_control_dependency_entry(entry: &str, feature_name: Option<&str>) -> Option<Dependency> {
+    let raw_entry = entry.trim();
+    if raw_entry.is_empty() {
+        return None;
+    }
+
+    let (without_platform, platform) = split_dependency_platform(raw_entry);
+    let (name, features) = split_dependency_features(without_platform);
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+
+    let mut extra_data = HashMap::new();
+    if !features.is_empty() {
+        extra_data.insert("features".to_string(), Value::Array(features));
+    }
+    if let Some(platform) = platform {
+        extra_data.insert(
+            "platform".to_string(),
+            Value::String(truncate_field(platform)),
+        );
+    }
+    if let Some(feature_name) = feature_name {
+        extra_data.insert(
+            "feature".to_string(),
+            Value::String(truncate_field(feature_name.to_string())),
+        );
+    }
+    let is_optional = if feature_name.is_some() {
+        None
+    } else {
+        Some(false)
+    };
+
+    Some(Dependency {
+        purl: build_vcpkg_purl(name, None).map(truncate_field),
+        extracted_requirement: Some(truncate_field(raw_entry.to_string())),
+        scope: Some("build-depends".to_string()),
+        is_runtime: Some(true),
+        is_optional,
+        is_pinned: Some(false),
+        is_direct: Some(true),
+        resolved_package: None,
+        extra_data: (!extra_data.is_empty()).then_some(extra_data),
+    })
+}
+
+fn split_control_list(value: &str, context: &str) -> Vec<String> {
+    let mut entries = Vec::new();
+    let mut start = 0;
+    let mut bracket_depth = 0_u32;
+    let mut paren_depth = 0_u32;
+
+    for (index, ch) in value.char_indices() {
+        match ch {
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth = bracket_depth.saturating_sub(1),
+            '(' => paren_depth += 1,
+            ')' => paren_depth = paren_depth.saturating_sub(1),
+            ',' if bracket_depth == 0 && paren_depth == 0 => {
+                entries.push(value[start..index].trim().to_string());
+                start = index + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    entries.push(value[start..].trim().to_string());
+
+    let limit = capped_iteration_limit(entries.len(), context);
+    entries
+        .into_iter()
+        .take(limit)
+        .filter(|entry| !entry.is_empty())
+        .collect()
+}
+
+fn string_list_to_json_array(value: &str, context: &str) -> Vec<Value> {
+    split_control_list(value, context)
+        .into_iter()
+        .map(|entry| Value::String(truncate_field(entry)))
+        .collect()
+}
+
+fn split_dependency_platform(entry: &str) -> (&str, Option<String>) {
+    let entry = entry.trim();
+    if !entry.ends_with(')') {
+        return (entry, None);
+    }
+
+    let mut depth = 0_i32;
+    for (index, ch) in entry.char_indices().rev() {
+        match ch {
+            ')' => depth += 1,
+            '(' => {
+                depth -= 1;
+                if depth == 0 {
+                    let dependency = entry[..index].trim_end();
+                    let platform = entry[index + 1..entry.len() - 1].trim();
+                    if dependency.is_empty() || platform.is_empty() {
+                        return (entry, None);
+                    }
+                    return (dependency, Some(platform.to_string()));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    (entry, None)
+}
+
+fn split_dependency_features(entry: &str) -> (&str, Vec<Value>) {
+    let entry = entry.trim();
+    let Some(start) = entry.find('[') else {
+        return (entry, Vec::new());
+    };
+    if !entry.ends_with(']') {
+        return (entry, Vec::new());
+    }
+
+    let name = entry[..start].trim();
+    let mut features = Vec::new();
+    let mut remaining = entry[start..].trim();
+    while !remaining.is_empty() {
+        let Some(after_open) = remaining.strip_prefix('[') else {
+            return (entry, Vec::new());
+        };
+        let Some(end) = after_open.find(']') else {
+            return (entry, Vec::new());
+        };
+
+        features.extend(
+            after_open[..end]
+                .split(',')
+                .map(str::trim)
+                .filter(|feature| !feature.is_empty())
+                .map(|feature| Value::String(truncate_field(feature.to_string()))),
+        );
+        remaining = after_open[end + 1..].trim_start();
+    }
+
+    (name, features)
 }
 
 /// Preserve registry and overlay provenance from a standalone

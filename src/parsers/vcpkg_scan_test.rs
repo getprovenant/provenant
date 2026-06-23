@@ -119,6 +119,34 @@ mod tests {
     }
 
     #[test]
+    fn test_vcpkg_control_scan_remains_unassembled_and_hoists_dependencies() {
+        let (files, result) = scan_and_assemble(Path::new("testdata/vcpkg/classic"));
+
+        assert!(result.packages.is_empty());
+        assert_dependency_present(&result.dependencies, "pkg:generic/vcpkg/zlib", "CONTROL");
+        assert_dependency_present(&result.dependencies, "pkg:generic/vcpkg/curl", "CONTROL");
+        assert_dependency_present(
+            &result.dependencies,
+            "pkg:generic/vcpkg/vcpkg-cmake",
+            "CONTROL",
+        );
+
+        let control = files
+            .iter()
+            .find(|file| file.path.ends_with("/ports/ace/CONTROL"))
+            .expect("ports/ace/CONTROL should be scanned");
+        assert!(control.for_packages.is_empty());
+
+        let package = control
+            .package_data
+            .iter()
+            .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgControl))
+            .expect("vcpkg CONTROL package data should be present");
+        assert_eq!(package.name.as_deref(), Some("ace"));
+        assert_eq!(package.version.as_deref(), Some("6.5.5#2"));
+    }
+
+    #[test]
     fn test_vcpkg_colocated_manifest_and_configuration_both_surface() {
         // A `vcpkg-configuration.json` sitting next to a manifest with no embedded
         // configuration is read twice on purpose: the manifest parser ingests it as a
