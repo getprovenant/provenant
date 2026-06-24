@@ -934,6 +934,7 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::OciImageManifest,
     DatasourceId::ErlangOtpAppSrc,
     DatasourceId::HexMixLock,
+    DatasourceId::AntIvyDependenciesProperties,
     DatasourceId::JavaEarApplicationXml,
     DatasourceId::JavaWarWebXml,
     DatasourceId::JbossServiceXml,

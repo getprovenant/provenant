@@ -684,7 +684,7 @@ pub use self::hex_lock::HexLockParser;
 pub use self::huggingface::{
     HuggingfaceConfigParser, HuggingfaceModelCardParser, HuggingfaceModelIndexParser,
 };
-pub use self::ivy::IvyXmlParser;
+pub use self::ivy::{IvyDependenciesPropertiesParser, IvyXmlParser};
 pub use self::julia::{JuliaManifestTomlParser, JuliaProjectTomlParser};
 pub use self::maven::MavenParser;
 pub use self::meson::MesonParser;
@@ -992,6 +992,7 @@ register_package_handlers! {
         HuggingfaceModelCardParser,
         HuggingfaceConfigParser,
         HuggingfaceModelIndexParser,
+        IvyDependenciesPropertiesParser,
         IvyXmlParser,
         JuliaManifestTomlParser,
         JuliaProjectTomlParser,
