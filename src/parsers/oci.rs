@@ -181,7 +181,11 @@ fn parse_oci_image_index(content: &str, layout_root: Option<&Path>) -> Vec<Packa
     let index: OciImageIndex = match serde_json::from_str(content) {
         Ok(index) => index,
         Err(error) => {
-            warn!("Failed to parse OCI image index JSON: {}", error);
+            // `index.json` / `manifest.json` are common filenames the parser
+            // matches broadly; content that is not OCI/docker JSON (e.g. a Chrome
+            // extension or web-app manifest, often JSONC) simply is not ours.
+            // Decline quietly rather than emitting a scan error.
+            log::debug!("Declining non-OCI index.json/manifest.json: {error}");
             return Vec::new();
         }
     };
@@ -451,7 +455,9 @@ fn parse_docker_save_manifest(content: &str) -> Vec<PackageData> {
     let entries: Vec<DockerSaveManifestEntry> = match serde_json::from_str(content) {
         Ok(entries) => entries,
         Err(error) => {
-            warn!("Failed to parse docker save manifest JSON: {}", error);
+            // A top-level JSON array that is not a docker-save manifest is not
+            // ours; decline quietly instead of emitting a scan error.
+            log::debug!("Declining non-docker-save manifest.json: {error}");
             return Vec::new();
         }
     };
