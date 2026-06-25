@@ -1637,13 +1637,6 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Record same-host wall-clock timings for Provenant and ScanCode, plus relative speedup.
 - Record machine information per row. If `run-manifest.json` reports `scancode.cache_hit: true`, use the cached ScanCode raw timing for that target/ref/runtime. Otherwise treat both scanner timings as license-cache-cold because the maintained workflow disables persistent license-cache reuse during actual execution.
 
-### Process count and the M1↔M5 core-count confound
-
-- All current (M5) rows use a fixed shared worker count for internal consistency: `--profile common` pins both scanners at `--processes 4` (single-sourced as `BENCHMARK_SCAN_PROCESSES` in `xtask/src/common.rs`). The `· N proc` field in each row's run-context line records the count that row was measured at.
-- The fixed count is deliberate. ScanCode is markedly process-count sensitive while Provenant scales down far more gracefully, so an implicit or per-host worker count would make rows non-comparable across hosts and dates. Holding the count fixed keeps every row on the same axis.
-- The older M1 rows were recorded at **mixed** process counts (some at 9, some at 4). M1↔M5 row-over-row deltas are therefore confounded by core count, not just hardware: at equal cores M5 is roughly 25–34% faster than M1, and the apparent per-row "slowdowns" on the largest repository targets were the 9→4 process drop rather than a hardware regression.
-- Re-measuring the whole matrix at a different standard process count is a separate, deliberate, serial effort (many hours) and is intentionally out of scope for any single row edit. Do not mix counts within the current set.
-
 ### Comparison review discipline
 
 - Treat benchmark verification as a **full shared-scanner compare review**, not a package-count-only check. Under `--profile common`, package extraction, license detection, copyright/holder/author extraction, email extraction, URL extraction, and other shared-scan behavior are all in scope.
