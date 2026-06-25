@@ -640,3 +640,35 @@ fn schema_version_fallback_requires_descriptor_digest() {
         Some("sha256:3333333333333333333333333333333333333333333333333333333333333333")
     );
 }
+
+#[test]
+fn test_non_oci_manifest_json_declines_without_packages() {
+    // Chrome extension / web-app manifests share the `manifest.json` filename the
+    // parser matches broadly, but are not OCI/docker images. They must yield no
+    // packages (and emit no scan error — the parser declines quietly).
+    let chrome_extension = r#"{
+        "manifest_version": 3,
+        "name": "Example Extension",
+        "version": "1.0",
+        "permissions": ["storage"]
+    }"#;
+    assert!(
+        parse_oci_content(chrome_extension, None).is_empty(),
+        "a Chrome extension manifest.json must not be claimed as an OCI image"
+    );
+
+    // JSONC-style content (comments / not strict JSON) must also decline cleanly
+    // rather than surface a parse failure.
+    let jsonc = "{\n  // a comment\n  \"name\": \"web-app\"\n}";
+    assert!(
+        parse_oci_content(jsonc, None).is_empty(),
+        "non-JSON/JSONC manifest content must decline without packages"
+    );
+
+    // A JSON array that is not a docker-save manifest also declines.
+    let unrelated_array = r#"[{"foo": "bar"}]"#;
+    assert!(
+        parse_oci_content(unrelated_array, None).is_empty(),
+        "an unrelated top-level JSON array must not be claimed as a docker save manifest"
+    );
+}

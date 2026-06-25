@@ -692,33 +692,33 @@ ScanCode: 4190.35s</title></rect>
     <rect x="818.67" y="238.22" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/camel @ c9c34a1
 Files: 38007
 ScanCode: 3824.09s</title></rect>
-    <rect x="822.70" y="228.21" width="8" height="8" fill="#d97706" rx="1.5"><title>elastic/elasticsearch @ a414f3d
+    <rect x="822.70" y="234.36" width="8" height="8" fill="#d97706" rx="1.5"><title>elastic/elasticsearch @ a414f3d
 Files: 40293
-ScanCode: 4726.52s</title></rect>
-    <rect x="840.49" y="229.06" width="8" height="8" fill="#d97706" rx="1.5"><title>NixOS/nixpkgs @ c407343
+ScanCode: 4149.25s</title></rect>
+    <rect x="840.49" y="242.14" width="8" height="8" fill="#d97706" rx="1.5"><title>NixOS/nixpkgs @ c407343
 Files: 52167
-ScanCode: 4641.96s</title></rect>
+ScanCode: 3520.06s</title></rect>
     <rect x="840.86" y="213.86" width="8" height="8" fill="#d97706" rx="1.5"><title>mongodb/mongo @ d6877a3
 Files: 52443
 ScanCode: 6404.29s</title></rect>
-    <rect x="847.33" y="195.56" width="8" height="8" fill="#d97706" rx="1.5"><title>dotnet/runtime @ d1163e5
+    <rect x="847.33" y="214.97" width="8" height="8" fill="#d97706" rx="1.5"><title>dotnet/runtime @ d1163e5
 Files: 57611
-ScanCode: 9432.77s</title></rect>
-    <rect x="848.76" y="271.78" width="8" height="8" fill="#d97706" rx="1.5"><title>rust-lang/rust @ dab8d9d
+ScanCode: 6254.44s</title></rect>
+    <rect x="848.76" y="256.04" width="8" height="8" fill="#d97706" rx="1.5"><title>rust-lang/rust @ dab8d9d
 Files: 58818
-ScanCode: 1879.48s</title></rect>
+ScanCode: 2622.46s</title></rect>
     <rect x="854.98" y="234.53" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/scancode-toolkit @ 6570c13
 Files: 64369
 ScanCode: 4134.60s</title></rect>
-    <rect x="856.03" y="218.55" width="8" height="8" fill="#d97706" rx="1.5"><title>gitlabhq/gitlabhq @ 48dc2f5
+    <rect x="856.03" y="233.63" width="8" height="8" fill="#d97706" rx="1.5"><title>gitlabhq/gitlabhq @ 48dc2f5
 Files: 65359
-ScanCode: 5798.22s</title></rect>
-    <rect x="879.98" y="188.22" width="8" height="8" fill="#d97706" rx="1.5"><title>torvalds/linux @ b42ed3b
+ScanCode: 4214.01s</title></rect>
+    <rect x="879.98" y="168.00" width="8" height="8" fill="#d97706" rx="1.5"><title>torvalds/linux @ b42ed3b
 Files: 92523
-ScanCode: 11017.99s</title></rect>
-    <rect x="995.03" y="153.67" width="8" height="8" fill="#d97706" rx="1.5"><title>chromium/chromium @ 2befda7
+ScanCode: 16900.59s</title></rect>
+    <rect x="995.03" y="137.50" width="8" height="8" fill="#d97706" rx="1.5"><title>chromium/chromium @ 2befda7
 Files: 491354
-ScanCode: 22892.20s</title></rect>
+ScanCode: 32231.76s</title></rect>
   </g>
   <g aria-label="Provenant points">
     <circle cx="96.00" cy="558.68" r="4.5" fill="#2563eb"><title>7zip 25.01-r0 .apk @ sha256:6602ccb
@@ -1348,32 +1348,32 @@ Provenant: 117.09s</title></circle>
     <circle cx="822.67" cy="375.31" r="4.5" fill="#2563eb"><title>apache/camel @ c9c34a1
 Files: 38007
 Provenant: 228.70s</title></circle>
-    <circle cx="826.70" cy="396.34" r="4.5" fill="#2563eb"><title>elastic/elasticsearch @ a414f3d
+    <circle cx="826.70" cy="411.27" r="4.5" fill="#2563eb"><title>elastic/elasticsearch @ a414f3d
 Files: 40293
-Provenant: 146.56s</title></circle>
-    <circle cx="844.49" cy="360.50" r="4.5" fill="#2563eb"><title>NixOS/nixpkgs @ c407343
+Provenant: 106.84s</title></circle>
+    <circle cx="844.49" cy="412.96" r="4.5" fill="#2563eb"><title>NixOS/nixpkgs @ c407343
 Files: 52167
-Provenant: 312.87s</title></circle>
+Provenant: 103.10s</title></circle>
     <circle cx="844.86" cy="397.47" r="4.5" fill="#2563eb"><title>mongodb/mongo @ d6877a3
 Files: 52443
 Provenant: 143.10s</title></circle>
-    <circle cx="851.33" cy="362.56" r="4.5" fill="#2563eb"><title>dotnet/runtime @ d1163e5
+    <circle cx="851.33" cy="411.16" r="4.5" fill="#2563eb"><title>dotnet/runtime @ d1163e5
 Files: 57611
-Provenant: 299.53s</title></circle>
-    <circle cx="852.76" cy="437.38" r="4.5" fill="#2563eb"><title>rust-lang/rust @ dab8d9d
+Provenant: 107.09s</title></circle>
+    <circle cx="852.76" cy="461.23" r="4.5" fill="#2563eb"><title>rust-lang/rust @ dab8d9d
 Files: 58818
-Provenant: 61.49s</title></circle>
+Provenant: 37.12s</title></circle>
     <circle cx="858.98" cy="380.00" r="4.5" fill="#2563eb"><title>aboutcode-org/scancode-toolkit @ 6570c13
 Files: 64369
 Provenant: 207.10s</title></circle>
-    <circle cx="860.03" cy="372.43" r="4.5" fill="#2563eb"><title>gitlabhq/gitlabhq @ 48dc2f5
+    <circle cx="860.03" cy="421.17" r="4.5" fill="#2563eb"><title>gitlabhq/gitlabhq @ 48dc2f5
 Files: 65359
-Provenant: 243.06s</title></circle>
-    <circle cx="883.98" cy="348.76" r="4.5" fill="#2563eb"><title>torvalds/linux @ b42ed3b
+Provenant: 86.65s</title></circle>
+    <circle cx="883.98" cy="367.29" r="4.5" fill="#2563eb"><title>torvalds/linux @ b42ed3b
 Files: 92523
-Provenant: 401.15s</title></circle>
-    <circle cx="999.03" cy="307.63" r="4.5" fill="#2563eb"><title>chromium/chromium @ 2befda7
+Provenant: 271.01s</title></circle>
+    <circle cx="999.03" cy="321.44" r="4.5" fill="#2563eb"><title>chromium/chromium @ 2befda7
 Files: 491354
-Provenant: 957.91s</title></circle>
+Provenant: 715.21s</title></circle>
   </g>
 </svg>
