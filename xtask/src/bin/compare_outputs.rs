@@ -2857,6 +2857,8 @@ mod tests {
 
     use std::time::{SystemTime, UNIX_EPOCH};
 
+    use provenant_xtask::common::BENCHMARK_SCAN_PROCESSES;
+
     fn test_context() -> ContextState {
         ContextState {
             compare_mode: CompareMode::ScanTarget,
@@ -2900,7 +2902,7 @@ mod tests {
                 "--system-package".to_string(),
                 "--strip-root".to_string(),
                 "--processes".to_string(),
-                "4".to_string(),
+                BENCHMARK_SCAN_PROCESSES.to_string(),
             ],
             provenant_bin: PathBuf::from("/tmp/project/target/release/provenant"),
             provenant_json: PathBuf::from(
@@ -3309,7 +3311,10 @@ mod tests {
         let args = build_provenant_args(&context);
 
         assert!(args.iter().any(|arg| arg == "--no-license-index-cache"));
-        assert!(args.windows(2).any(|pair| pair == ["--processes", "4"]));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--processes", BENCHMARK_SCAN_PROCESSES])
+        );
     }
 
     #[test]

@@ -13,6 +13,18 @@ use regex::Regex;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
+/// Shared worker count for benchmark/compare scans.
+///
+/// Both scanners run at this fixed `--processes` value so timings are
+/// internally comparable across rows. The count is deliberately fixed rather
+/// than host-derived: ScanCode is markedly process-count sensitive (on the M5
+/// Pro host, ScanCode core scan time is ~1.5x slower at 4 vs 9 processes),
+/// so an implicit or per-host worker count would make rows recorded on
+/// different hosts or at different times non-comparable. Changing this value
+/// requires a deliberate, serial re-measurement of the whole matrix; do not
+/// change it casually. See `docs/BENCHMARKS.md` and `xtask/README.md`.
+pub const BENCHMARK_SCAN_PROCESSES: &str = "4";
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub enum ScanProfile {
     Common,
@@ -54,7 +66,7 @@ impl ScanProfile {
                 "--system-package",
                 "--strip-root",
                 "--processes",
-                "4",
+                BENCHMARK_SCAN_PROCESSES,
             ],
             Self::CommonWithCompiled => &[
                 "-clupe",
@@ -503,8 +515,8 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        ProvenantBuildMode, ScanProfile, cargo_binary_path, read_binary_version,
-        resolve_git_worktree_identity, resolve_scan_args,
+        BENCHMARK_SCAN_PROCESSES, ProvenantBuildMode, ScanProfile, cargo_binary_path,
+        read_binary_version, resolve_git_worktree_identity, resolve_scan_args,
     };
 
     fn git(dir: &Path, args: &[&str]) {
@@ -542,10 +554,11 @@ mod tests {
                 "--system-package",
                 "--strip-root",
                 "--processes",
-                "4",
+                BENCHMARK_SCAN_PROCESSES,
             ]
         );
         assert_eq!(ScanProfile::Common.display_name(), "common");
+        assert_eq!(BENCHMARK_SCAN_PROCESSES, "4");
     }
 
     #[test]
@@ -577,7 +590,7 @@ mod tests {
                 "--system-package".to_string(),
                 "--strip-root".to_string(),
                 "--processes".to_string(),
-                "4".to_string(),
+                BENCHMARK_SCAN_PROCESSES.to_string(),
             ]
         );
     }
