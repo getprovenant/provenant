@@ -288,6 +288,19 @@ mod tests {
     }
 
     #[test]
+    fn test_repair_tracks_strings_inside_bracketed_args() {
+        // A string containing `]` sits inside a depth-1 argument list. Correct
+        // string tracking must NOT count that `]` as a bracket close, so depth
+        // stays > 0 and the missing comma between the two kwargs is still
+        // inserted. If string/bracket tracking miscounted, depth would drop to 0,
+        // the `depth_before > 0` guard would suppress the fix, and this assertion
+        // would fail — so this exercises the path the depth-0 case cannot.
+        let input = "func(\n    a = \"x]y\"\n    b = 1\n)\n";
+        let expected = "func(\n    a = \"x]y\",\n    b = 1\n)\n";
+        assert_eq!(repair_missing_argument_commas(input), expected);
+    }
+
+    #[test]
     fn test_mark_parse_recovery_sets_breadcrumb() {
         let mut package = PackageData::default();
         mark_parse_recovery(&mut package, RECOVERY_MISSING_SEPARATOR);
