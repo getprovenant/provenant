@@ -45,8 +45,7 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::PackageParser;
 
 use super::license_normalization::{
-    DeclaredLicenseMatchMetadata, build_declared_license_data, empty_declared_license_data,
-    normalize_spdx_expression,
+    DeclaredLicenseMatchMetadata, build_declared_license_data, normalize_declared_name_and_url,
 };
 
 /// Parses Gradle build files (build.gradle, build.gradle.kts).
@@ -1894,29 +1893,22 @@ fn extract_gradle_license_metadata(
             if let Some((license_name, license_url)) = parse_license_block(inner) {
                 let extracted =
                     format_gradle_license_statement(&license_name, license_url.as_deref());
-                let declared_candidate =
-                    derive_gradle_license_expression(&license_name, license_url.as_deref());
-                if let Some(declared_candidate) = declared_candidate
-                    && let Some(normalized) = normalize_spdx_expression(&declared_candidate)
-                {
-                    let matched_text = extracted.as_deref().unwrap_or(&declared_candidate);
-                    let (declared, declared_spdx, detections) = build_declared_license_data(
-                        normalized,
-                        DeclaredLicenseMatchMetadata::single_line(matched_text),
-                    );
-                    return (
-                        extracted.map(truncate_field),
-                        declared.map(truncate_field),
-                        declared_spdx.map(truncate_field),
-                        detections,
-                    );
-                }
-
+                // Resolve the declared `license { name; url }` through the shared
+                // name/url normalizer so Gradle recognizes the same breadth of
+                // declared licenses as Maven (free-text names, license URLs, SPDX
+                // keys) instead of a handful of hardcoded patterns.
+                let normalized =
+                    normalize_declared_name_and_url(Some(&license_name), license_url.as_deref());
+                let matched_text = extracted.as_deref().unwrap_or(&license_name);
+                let (declared, declared_spdx, detections) = build_declared_license_data(
+                    normalized,
+                    DeclaredLicenseMatchMetadata::single_line(matched_text),
+                );
                 return (
                     extracted.map(truncate_field),
-                    None,
-                    None,
-                    empty_declared_license_data().2,
+                    declared.map(truncate_field),
+                    declared_spdx.map(truncate_field),
+                    detections,
                 );
             }
             i = block_end + 1;
@@ -2011,30 +2003,6 @@ fn format_gradle_license_statement(name: &str, url: Option<&str>) -> Option<Stri
         output.push_str(&format!("    url: {url}\n"));
     }
     Some(truncate_field(output))
-}
-
-fn derive_gradle_license_expression(name: &str, url: Option<&str>) -> Option<String> {
-    let trimmed = name.trim();
-    let candidates = [trimmed, url.unwrap_or("")];
-
-    for candidate in candidates {
-        let lower = candidate.to_ascii_lowercase();
-        if trimmed == "Apache-2.0"
-            || lower.contains("apache-2.0")
-            || lower.contains("apache license, version 2.0")
-            || lower.contains("apache.org/licenses/license-2.0")
-        {
-            return Some(truncate_field("Apache-2.0".to_string()));
-        }
-        if trimmed == "MIT" || lower.contains("opensource.org/licenses/mit") {
-            return Some(truncate_field("MIT".to_string()));
-        }
-        if trimmed == "BSD-2-Clause" || trimmed == "BSD-3-Clause" {
-            return Some(truncate_field(trimmed.to_string()));
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]

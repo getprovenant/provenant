@@ -330,6 +330,65 @@ pub(crate) fn normalize_declared_license_key(key: &str) -> Option<NormalizedDecl
     normalize_license_key(key, engine.index()).or_else(|| resolve_declared_license_alias(key))
 }
 
+/// Resolves a declared license `name`/`url` pair — as found in manifest license
+/// blocks such as Maven `<license><name>/<url>` and Gradle `license { name; url }`
+/// — into a normalized declared license, stopping at the first confident match:
+///
+/// 1. `Public Domain` special case;
+/// 2. exact SPDX-key/identifier lookup on the name;
+/// 3. free-text detection over the name alone;
+/// 4. free-text detection over the combined name and url.
+///
+/// Step 4 recovers descriptive names that resolve only when paired with their
+/// url (e.g. "GNU General Lesser Public License (LGPL) version 3.0" with
+/// `http://www.gnu.org/licenses/lgpl.html` -> `lgpl-3.0`); it is used only when
+/// the name alone fails, so a name that already resolves is not muddied by a
+/// redundant url-derived operand. These are bounded, trustworthy declared
+/// manifest fields, so this is declared normalization, not file-content scanning.
+///
+/// An entry that resolves to nothing maps to `unknown-license-reference` (the
+/// existing convention for an unresolved but declared license reference) so it is
+/// preserved as an explicit operand rather than silently dropped.
+pub(crate) fn normalize_declared_name_and_url(
+    name: Option<&str>,
+    url: Option<&str>,
+) -> NormalizedDeclaredLicense {
+    let name = name.map(str::trim).filter(|value| !value.is_empty());
+    let url = url.map(str::trim).filter(|value| !value.is_empty());
+
+    if let Some(name) = name {
+        match name {
+            "Public Domain" | "public domain" => {
+                return NormalizedDeclaredLicense::new(
+                    "public-domain",
+                    "LicenseRef-scancode-public-domain",
+                );
+            }
+            other => {
+                if let Some(normalized) = normalize_declared_license_key(other) {
+                    return normalized;
+                }
+                if let Some(normalized) = detect_declared_license_name(other) {
+                    return normalized;
+                }
+            }
+        }
+    }
+
+    let detection_text = [name, url]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    detect_declared_license_name(&detection_text).unwrap_or_else(|| {
+        NormalizedDeclaredLicense::new(
+            "unknown-license-reference",
+            "LicenseRef-scancode-unknown-license-reference",
+        )
+    })
+}
+
 pub(crate) fn combine_normalized_licenses(
     licenses: Vec<NormalizedDeclaredLicense>,
     separator: &str,
