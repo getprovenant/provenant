@@ -1,0 +1,17 @@
+Name: SRE
+Short Name: speech-rule-engine
+URL: https://github.com/zorkow/speech-rule-engine
+Version: 3.3.3
+License: Apache 2.0
+License File: LICENSE
+Security Critical: no
+
+Description:
+Speech Rule Engine used by ChromeVox.
+
+third_party {
+  identifier {
+    type: "Git"
+    value: "https://github.com/zorkow/speech-rule-engine"
+  }
+}
