@@ -29,11 +29,12 @@ use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::path::Path;
 
 use crate::parser_warn as warn;
+use starlark_syntax::syntax::AstModule;
 use starlark_syntax::syntax::ast;
-use starlark_syntax::syntax::{AstModule, Dialect};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
+use super::starlark_parse::{self, RECOVERY_MISSING_SEPARATOR};
 
 type StarlarkCallArgs = ast::CallArgsP<ast::AstNoPayload>;
 
@@ -79,14 +80,17 @@ impl PackageParser for BazelBuildParser {
 fn parse_bazel_build(path: &Path) -> Result<Vec<PackageData>, String> {
     let content =
         crate::parsers::utils::read_file_to_string(path, None).map_err(|e| e.to_string())?;
-    let module = parse_starlark_module("<BUILD>", content)?;
+    let (module, repaired) = parse_starlark_module("<BUILD>", content)?;
 
     let mut packages = Vec::new();
 
     let statements = top_level_statements(&module);
     let limit = capped_iteration_limit(statements.len(), "bazel BUILD top-level statements");
     for statement in statements.iter().take(limit) {
-        if let Some(package_data) = extract_package_from_statement(statement) {
+        if let Some(mut package_data) = extract_package_from_statement(statement) {
+            if repaired {
+                starlark_parse::mark_parse_recovery(&mut package_data, RECOVERY_MISSING_SEPARATOR);
+            }
             packages.push(package_data);
         }
     }
@@ -192,7 +196,7 @@ impl PackageParser for BazelModuleParser {
 fn parse_bazel_module(path: &Path) -> Result<PackageData, String> {
     let content =
         crate::parsers::utils::read_file_to_string(path, None).map_err(|e| e.to_string())?;
-    let module = parse_starlark_module("<MODULE.bazel>", content)?;
+    let (module, repaired) = parse_starlark_module("<MODULE.bazel>", content)?;
 
     let mut package = default_bazel_module_package_data();
     let mut extra_data = JsonMap::new();
@@ -253,7 +257,11 @@ fn parse_bazel_module(path: &Path) -> Result<PackageData, String> {
     }
 
     if package.name.is_none() {
-        return Ok(default_bazel_module_package_data());
+        let mut fallback = default_bazel_module_package_data();
+        if repaired {
+            starlark_parse::mark_parse_recovery(&mut fallback, RECOVERY_MISSING_SEPARATOR);
+        }
+        return Ok(fallback);
     }
 
     if !overrides.is_empty() {
@@ -262,15 +270,14 @@ fn parse_bazel_module(path: &Path) -> Result<PackageData, String> {
 
     package.dependencies = dependencies;
     package.extra_data = (!extra_data.is_empty()).then(|| extra_data.into_iter().collect());
+    if repaired {
+        starlark_parse::mark_parse_recovery(&mut package, RECOVERY_MISSING_SEPARATOR);
+    }
     Ok(package)
 }
 
-fn parse_starlark_module(filename: &str, content: String) -> Result<AstModule, String> {
-    let dialect = Dialect {
-        enable_top_level_stmt: true,
-        ..Dialect::Standard
-    };
-    AstModule::parse(filename, content, &dialect).map_err(|error| error.to_string())
+fn parse_starlark_module(filename: &str, content: String) -> Result<(AstModule, bool), String> {
+    starlark_parse::parse_with_repair(filename, content)
 }
 
 fn top_level_statements(module: &AstModule) -> &[ast::AstStmt] {

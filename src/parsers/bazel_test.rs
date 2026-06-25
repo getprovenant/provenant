@@ -80,6 +80,35 @@ cc_library(
 }
 
 #[test]
+fn test_recovers_from_missing_argument_comma() {
+    // A missing comma after the `hdrs=[...]` list would otherwise fail the parse;
+    // the shared repair pass recovers it and records an auditable breadcrumb.
+    let content = r#"
+cc_library(
+    name = "hello-greet",
+    hdrs = [
+        "hello-greet.h",
+    ]
+    srcs = ["hello-greet.cc"],
+)
+"#;
+    let temp_dir = tempfile::tempdir().unwrap();
+    let build_path = temp_dir.path().join("BUILD");
+    std::fs::write(&build_path, content).unwrap();
+
+    let pkg = BazelBuildParser::extract_first_package(&build_path);
+    assert_eq!(pkg.name, Some("hello-greet".to_string()));
+    let recovery = pkg
+        .extra_data
+        .as_ref()
+        .and_then(|map| map.get(crate::parsers::starlark_parse::PARSE_RECOVERY_KEY));
+    assert!(
+        recovery.is_some(),
+        "recovered Bazel package should record a breadcrumb"
+    );
+}
+
+#[test]
 fn test_extracts_java_binary() {
     let content = r#"
 java_binary(

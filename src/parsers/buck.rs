@@ -27,13 +27,14 @@ use std::path::Path;
 use crate::parser_warn as warn;
 use crate::parsers::utils::{capped_iteration_limit, read_file_to_string, truncate_field};
 use packageurl::PackageUrl;
+use starlark_syntax::syntax::AstModule;
 use starlark_syntax::syntax::ast;
-use starlark_syntax::syntax::{AstModule, Dialect};
 
 use crate::models::{DatasourceId, PackageData, PackageType, Party, PartyType, Sha1Digest};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
+use super::starlark_parse::{self, RECOVERY_MISSING_SEPARATOR};
 
 type StarlarkCallArgs = ast::CallArgsP<ast::AstNoPayload>;
 
@@ -105,14 +106,17 @@ impl PackageParser for BuckMetadataBzlParser {
 /// Parse a Buck BUCK file (same logic as Bazel BUILD)
 fn parse_buck_build(path: &Path) -> Result<Vec<PackageData>, String> {
     let content = read_file_to_string(path, None).map_err(|e| e.to_string())?;
-    let module = parse_starlark_module("<BUCK>", content)?;
+    let (module, repaired) = parse_starlark_module("<BUCK>", content)?;
 
     let mut packages = Vec::new();
 
     let statements = top_level_statements(&module);
     let limit = capped_iteration_limit(statements.len(), "BUCK top-level statements");
     for statement in statements.iter().take(limit) {
-        if let Some(package_data) = extract_build_package_from_statement(statement) {
+        if let Some(mut package_data) = extract_build_package_from_statement(statement) {
+            if repaired {
+                starlark_parse::mark_parse_recovery(&mut package_data, RECOVERY_MISSING_SEPARATOR);
+            }
             packages.push(package_data);
         }
     }
@@ -123,13 +127,17 @@ fn parse_buck_build(path: &Path) -> Result<Vec<PackageData>, String> {
 /// Parse a Buck METADATA.bzl file
 fn parse_metadata_bzl(path: &Path) -> Result<PackageData, String> {
     let content = read_file_to_string(path, None).map_err(|e| e.to_string())?;
-    let module = parse_starlark_module("<METADATA.bzl>", content)?;
+    let (module, repaired) = parse_starlark_module("<METADATA.bzl>", content)?;
 
     let statements = top_level_statements(&module);
     let limit = capped_iteration_limit(statements.len(), "METADATA.bzl top-level statements");
     for statement in statements.iter().take(limit) {
         if let Some(dict) = extract_metadata_assignment_dict(statement) {
-            return Ok(extract_metadata_dict(dict));
+            let mut package_data = extract_metadata_dict(dict);
+            if repaired {
+                starlark_parse::mark_parse_recovery(&mut package_data, RECOVERY_MISSING_SEPARATOR);
+            }
+            return Ok(package_data);
         }
     }
 
@@ -140,13 +148,9 @@ fn parse_metadata_bzl(path: &Path) -> Result<PackageData, String> {
     })
 }
 
-fn parse_starlark_module(filename: &str, content: String) -> Result<AstModule, String> {
+fn parse_starlark_module(filename: &str, content: String) -> Result<(AstModule, bool), String> {
     let content = preprocess_starlark_content(&content);
-    let dialect = Dialect {
-        enable_top_level_stmt: true,
-        ..Dialect::Standard
-    };
-    AstModule::parse(filename, content, &dialect).map_err(|error| error.to_string())
+    starlark_parse::parse_with_repair(filename, content)
 }
 
 fn preprocess_starlark_content(content: &str) -> String {
@@ -761,5 +765,38 @@ rust_library(
         assert_eq!(packages.len(), 1);
         assert_eq!(packages[0].package_type, Some(PackageType::Buck));
         assert_eq!(packages[0].name.as_deref(), Some("library"));
+    }
+
+    #[test]
+    fn test_parse_buck_build_recovers_from_missing_argument_comma() {
+        // Mirrors a real vendored zstd BUCK file: a missing comma after the
+        // `exported_headers=[...]` list leaves `srcs=` with no separator.
+        let content = r#"cxx_library(
+    name='errors',
+    visibility=['PUBLIC'],
+    exported_headers=[
+        'zstd_errors.h',
+        'common/error_private.h',
+    ]
+    srcs=['common/error_private.c'],
+)
+"#;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let buck_path = temp_dir.path().join("BUCK");
+        std::fs::write(&buck_path, content).unwrap();
+
+        let packages = parse_buck_build(&buck_path).expect("BUCK file should parse after repair");
+        assert_eq!(packages.len(), 1);
+        assert_eq!(packages[0].name.as_deref(), Some("errors"));
+        // Recovered packages carry an auditable breadcrumb rather than a scan error.
+        let recovery = packages[0]
+            .extra_data
+            .as_ref()
+            .and_then(|map| map.get(super::starlark_parse::PARSE_RECOVERY_KEY));
+        assert!(
+            recovery.is_some(),
+            "recovered package should record a breadcrumb"
+        );
     }
 }
