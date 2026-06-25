@@ -276,8 +276,8 @@ fn summarize_header_messages(
                 };
                 errors.push(message);
             }
-            let (_, file_warnings) =
-                crate::progress::partition_scan_diagnostics(&file.scan_diagnostics);
+            let file_warnings =
+                crate::progress::partition_scan_diagnostics(&file.scan_diagnostics).warnings;
             if let Some(summary) =
                 format_default_scan_warning_from_list(Path::new(&file.path), &file_warnings)
             {

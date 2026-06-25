@@ -180,7 +180,11 @@ impl ScanProgress {
         let mut stats = self.stats.lock().expect("stats lock poisoned");
         stats.total_bytes_scanned += bytes;
 
-        let (errors, warnings) = partition_scan_diagnostics(scan_diagnostics);
+        let PartitionedDiagnostics {
+            errors,
+            warnings,
+            infos,
+        } = partition_scan_diagnostics(scan_diagnostics);
 
         if !errors.is_empty() {
             stats.error_count += 1;
@@ -203,7 +207,11 @@ impl ScanProgress {
                 }
             }
             ProgressMode::Verbose => {
-                if self.stderr_is_tty || !errors.is_empty() || !warnings.is_empty() {
+                if self.stderr_is_tty
+                    || !errors.is_empty()
+                    || !warnings.is_empty()
+                    || !infos.is_empty()
+                {
                     self.message(&path.to_string_lossy());
                 }
                 for err in &errors {
@@ -214,6 +222,11 @@ impl ScanProgress {
                 for warning in &warnings {
                     for line in warning.lines() {
                         self.message(&format!("  warning: {line}"));
+                    }
+                }
+                for info in &infos {
+                    for line in info.lines() {
+                        self.message(&format!("  info: {line}"));
                     }
                 }
             }
@@ -538,22 +551,33 @@ pub(crate) fn format_default_scan_warning_from_list(
         .map(|warning| format_default_scan_error(path, warning))
 }
 
+/// Diagnostics split by severity in a single pass.
+#[derive(Default)]
+pub(crate) struct PartitionedDiagnostics {
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+    /// Informational outcomes (for example, benign binary-content skips). These
+    /// are neither failures nor warnings: they are excluded from `scan_errors`
+    /// and from error/warning counts, and only surface in verbose output.
+    pub infos: Vec<String>,
+}
+
 pub(crate) fn partition_scan_diagnostics(
     scan_diagnostics: &[ScanDiagnostic],
-) -> (Vec<String>, Vec<String>) {
-    let mut errors = Vec::new();
-    let mut warnings = Vec::new();
+) -> PartitionedDiagnostics {
+    let mut partitioned = PartitionedDiagnostics::default();
 
     for diagnostic in scan_diagnostics {
         match diagnostic.severity {
             DiagnosticSeverity::Error | DiagnosticSeverity::Timeout => {
-                errors.push(diagnostic.message.clone())
+                partitioned.errors.push(diagnostic.message.clone())
             }
-            DiagnosticSeverity::Warning => warnings.push(diagnostic.message.clone()),
+            DiagnosticSeverity::Warning => partitioned.warnings.push(diagnostic.message.clone()),
+            DiagnosticSeverity::Info => partitioned.infos.push(diagnostic.message.clone()),
         }
     }
 
-    (errors, warnings)
+    partitioned
 }
 
 fn concise_scan_error_reason(err: &str) -> String {

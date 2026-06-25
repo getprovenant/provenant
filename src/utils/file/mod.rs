@@ -37,6 +37,7 @@ mod tests {
     use std::path::Path;
 
     use crate::copyright::detect_copyrights;
+    use crate::models::DiagnosticSeverity;
 
     use super::classify::classify_file_info;
     use super::encoding::{
@@ -163,10 +164,12 @@ mod tests {
 
         assert!(text.is_empty());
         assert_eq!(kind, ExtractedTextKind::None);
-        assert!(
-            scan_error
-                .as_deref()
-                .is_some_and(|message| message.contains("PDF text extraction skipped"))
+        let scan_error = scan_error.expect("oversized pdf should be surfaced");
+        assert!(scan_error.message.contains("PDF text extraction skipped"));
+        assert_eq!(
+            scan_error.severity,
+            DiagnosticSeverity::Error,
+            "a real PDF extraction failure must remain an error"
         );
     }
 
@@ -180,7 +183,16 @@ mod tests {
         assert!(text.is_empty());
         assert_eq!(kind, ExtractedTextKind::None);
         let scan_error = scan_error.expect("terminal pdf failure should be surfaced");
-        assert!(scan_error.contains("PDF text extraction failed after"));
+        assert!(
+            scan_error
+                .message
+                .contains("PDF text extraction failed after")
+        );
+        assert_eq!(
+            scan_error.severity,
+            DiagnosticSeverity::Error,
+            "a terminal PDF failure must remain an error"
+        );
     }
 
     #[test]
@@ -976,7 +988,13 @@ mod tests {
             decoded.is_empty(),
             "input over the 10% control-byte threshold must decode to empty"
         );
-        assert_eq!(diagnostic.as_deref(), Some(NEAR_BINARY_SKIP_DIAGNOSTIC));
+        let diagnostic = diagnostic.expect("near-binary skip must emit a diagnostic");
+        assert_eq!(diagnostic.message, NEAR_BINARY_SKIP_DIAGNOSTIC);
+        assert_eq!(
+            diagnostic.severity,
+            DiagnosticSeverity::Info,
+            "benign binary-content skip must be informational, not an error"
+        );
         // The thin public wrapper preserves the empty-string result contract.
         assert!(decode_bytes_to_string(&bytes).is_empty());
     }
@@ -1110,6 +1128,8 @@ mod tests {
 
         assert!(text.is_empty());
         assert_eq!(kind, ExtractedTextKind::None);
-        assert_eq!(diagnostic.as_deref(), Some(NEAR_BINARY_SKIP_DIAGNOSTIC));
+        let diagnostic = diagnostic.expect("near-binary skip must emit a diagnostic");
+        assert_eq!(diagnostic.message, NEAR_BINARY_SKIP_DIAGNOSTIC);
+        assert_eq!(diagnostic.severity, DiagnosticSeverity::Info);
     }
 }

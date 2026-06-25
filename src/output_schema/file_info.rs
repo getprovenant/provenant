@@ -378,6 +378,7 @@ impl OutputFileInfo {
             scan_errors: value
                 .scan_diagnostics
                 .iter()
+                .filter(|d| d.severity != crate::models::DiagnosticSeverity::Info)
                 .map(|d| d.message.clone())
                 .collect(),
             license_policy: value
@@ -537,9 +538,57 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
 #[cfg(test)]
 mod tests {
     use super::OutputFileInfo;
+    use crate::models::{FileInfoBuilder, FileType, ScanDiagnostic};
     use crate::output_schema::OutputFileType;
     use crate::output_schema::license_detection::OutputLicenseDetection;
     use serde_json::json;
+
+    fn file_info_with_diagnostics(diagnostics: Vec<ScanDiagnostic>) -> crate::models::FileInfo {
+        FileInfoBuilder::default()
+            .name("sample.bin".to_string())
+            .base_name("sample".to_string())
+            .extension(".bin".to_string())
+            .path("sample.bin".to_string())
+            .file_type(FileType::File)
+            .size(1)
+            .scan_diagnostics(diagnostics)
+            .build()
+            .expect("builder should produce file info")
+    }
+
+    #[test]
+    fn scan_errors_excludes_info_diagnostics_but_keeps_real_failures() {
+        let file_info = file_info_with_diagnostics(vec![
+            ScanDiagnostic::info("Text skipped from license/copyright detection: likely binary"),
+            ScanDiagnostic::error("PDF text extraction failed after 3 attempts"),
+            ScanDiagnostic::timeout("license detection timed out"),
+        ]);
+
+        let output = OutputFileInfo::from(&file_info);
+
+        assert_eq!(
+            output.scan_errors,
+            vec![
+                "PDF text extraction failed after 3 attempts".to_string(),
+                "license detection timed out".to_string(),
+            ],
+            "Info diagnostics must not surface as scan_errors, but real failures must"
+        );
+    }
+
+    #[test]
+    fn scan_errors_empty_when_only_info_diagnostics_present() {
+        let file_info = file_info_with_diagnostics(vec![ScanDiagnostic::info(
+            "Text skipped from license/copyright detection: likely binary",
+        )]);
+
+        let output = OutputFileInfo::from(&file_info);
+
+        assert!(
+            output.scan_errors.is_empty(),
+            "a benign binary-content skip must not produce any scan_errors"
+        );
+    }
 
     fn base_output_file_info() -> OutputFileInfo {
         OutputFileInfo {

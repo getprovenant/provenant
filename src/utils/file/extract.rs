@@ -14,6 +14,7 @@ use std::path::Path;
 
 use object::FileKind;
 
+use crate::models::ScanDiagnostic;
 use crate::parsers::windows_executable::extract_windows_executable_metadata_text;
 use crate::utils::font::extract_font_metadata_text;
 use crate::utils::language::detect_language;
@@ -177,7 +178,7 @@ fn canonical_shields_license_hint(candidate: &str) -> String {
 pub(crate) fn extract_text_for_detection_with_diagnostics(
     path: &Path,
     bytes: &[u8],
-) -> (String, ExtractedTextKind, Option<String>) {
+) -> (String, ExtractedTextKind, Option<ScanDiagnostic>) {
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
@@ -323,7 +324,7 @@ fn combine_extracted_text_fragments(prefix: Option<String>, suffix: String) -> S
 
 pub(super) fn windows_metadata_or_empty_result(
     windows_executable_metadata_text: Option<String>,
-) -> (String, ExtractedTextKind, Option<String>) {
+) -> (String, ExtractedTextKind, Option<ScanDiagnostic>) {
     if let Some(metadata_text) = windows_executable_metadata_text {
         (
             metadata_text,
