@@ -274,10 +274,10 @@ fn extract_information_from_content(
         }));
     }
 
-    let (text_content, text_kind, text_scan_error) =
+    let (text_content, text_kind, text_diagnostic) =
         extract_text_for_detection_with_diagnostics(&filesystem_path, &buffer);
-    if let Some(text_scan_error) = text_scan_error {
-        scan_diagnostics.push(ScanDiagnostic::error(text_scan_error));
+    if let Some(text_diagnostic) = text_diagnostic {
+        scan_diagnostics.push(text_diagnostic);
     }
     let from_binary_strings = matches!(text_kind, ExtractedTextKind::BinaryStrings);
     // Font metadata text combines a trustworthy curated name-table notice with a

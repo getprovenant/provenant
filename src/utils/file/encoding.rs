@@ -7,6 +7,8 @@
 //! Byte-to-text decoding and "does this look like text" heuristics shared by
 //! classification and text-extraction logic.
 
+use crate::models::ScanDiagnostic;
+
 const BINARY_CONTROL_CHAR_THRESHOLD_DIVISOR: usize = 10;
 
 pub(super) const CORRUPTED_UTF16_BOM_PREFIX: &[u8] = &[0xEF, 0xBF, 0xBD, 0xEF, 0xBF, 0xBD];
@@ -14,7 +16,10 @@ pub(super) const CORRUPTED_UTF16_BOM_PREFIX: &[u8] = &[0xEF, 0xBF, 0xBD, 0xEF, 0
 /// Diagnostic message emitted when invalid-UTF-8 input is dropped from
 /// detection because it exceeds the binary-control-char threshold. Surfaced via
 /// the scanner's structured `scan_diagnostics` channel so the skip is
-/// observable rather than silent.
+/// observable rather than silent. This is an informational outcome (Provenant
+/// correctly declined text detection on a binary file), not a failure, so it is
+/// recorded at [`DiagnosticSeverity::Info`](crate::models::DiagnosticSeverity)
+/// and excluded from the ScanCode-compatible `scan_errors` field.
 pub(super) const NEAR_BINARY_SKIP_DIAGNOSTIC: &str = "Text skipped from license/copyright detection: invalid UTF-8 with too many control bytes (likely binary)";
 
 /// Decode a byte buffer to a String, trying UTF-16 first when the byte shape
@@ -32,7 +37,9 @@ pub fn decode_bytes_to_string(bytes: &[u8]) -> String {
 /// (invalid UTF-8 with a high control-byte ratio). The decoded result is
 /// unchanged; only the optional diagnostic is added so the silent skip becomes
 /// observable in scan output.
-pub(super) fn decode_bytes_to_string_with_diagnostic(bytes: &[u8]) -> (String, Option<String>) {
+pub(super) fn decode_bytes_to_string_with_diagnostic(
+    bytes: &[u8],
+) -> (String, Option<ScanDiagnostic>) {
     if let Some(decoded) = decode_utf16_text(bytes) {
         return (decoded, None);
     }
@@ -42,7 +49,10 @@ pub(super) fn decode_bytes_to_string_with_diagnostic(bytes: &[u8]) -> (String, O
         Err(e) => {
             let bytes = e.into_bytes();
             if has_binary_control_chars(&bytes) {
-                return (String::new(), Some(NEAR_BINARY_SKIP_DIAGNOSTIC.to_string()));
+                return (
+                    String::new(),
+                    Some(ScanDiagnostic::info(NEAR_BINARY_SKIP_DIAGNOSTIC)),
+                );
             }
             (bytes.iter().map(|&b| b as char).collect(), None)
         }

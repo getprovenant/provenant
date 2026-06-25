@@ -203,7 +203,16 @@ impl ScanProgress {
                 }
             }
             ProgressMode::Verbose => {
-                if self.stderr_is_tty || !errors.is_empty() || !warnings.is_empty() {
+                let infos: Vec<&str> = scan_diagnostics
+                    .iter()
+                    .filter(|d| d.severity == DiagnosticSeverity::Info)
+                    .map(|d| d.message.as_str())
+                    .collect();
+                if self.stderr_is_tty
+                    || !errors.is_empty()
+                    || !warnings.is_empty()
+                    || !infos.is_empty()
+                {
                     self.message(&path.to_string_lossy());
                 }
                 for err in &errors {
@@ -214,6 +223,11 @@ impl ScanProgress {
                 for warning in &warnings {
                     for line in warning.lines() {
                         self.message(&format!("  warning: {line}"));
+                    }
+                }
+                for info in &infos {
+                    for line in info.lines() {
+                        self.message(&format!("  info: {line}"));
                     }
                 }
             }
@@ -550,6 +564,11 @@ pub(crate) fn partition_scan_diagnostics(
                 errors.push(diagnostic.message.clone())
             }
             DiagnosticSeverity::Warning => warnings.push(diagnostic.message.clone()),
+            // Informational outcomes (for example, benign binary-content skips)
+            // are neither failures nor warnings: they are excluded from
+            // `scan_errors` and from error/warning counts. They remain auditable
+            // in the internal model and verbose output.
+            DiagnosticSeverity::Info => {}
         }
     }
 

@@ -7,9 +7,11 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
 
+use crate::models::ScanDiagnostic;
+
 pub(super) const MAX_PDF_TEXT_EXTRACTION_BYTES: usize = 32 * 1024 * 1024;
 
-pub(super) fn extract_pdf_text(path: &Path, bytes: &[u8]) -> (String, Option<String>) {
+pub(super) fn extract_pdf_text(path: &Path, bytes: &[u8]) -> (String, Option<ScanDiagnostic>) {
     if bytes.len() < 5 || &bytes[..5] != b"%PDF-" {
         return (String::new(), None);
     }
@@ -17,10 +19,10 @@ pub(super) fn extract_pdf_text(path: &Path, bytes: &[u8]) -> (String, Option<Str
     if bytes.len() > MAX_PDF_TEXT_EXTRACTION_BYTES {
         return (
             String::new(),
-            Some(format!(
+            Some(ScanDiagnostic::error(format!(
                 "PDF text extraction skipped because file exceeds {} bytes",
                 MAX_PDF_TEXT_EXTRACTION_BYTES
-            )),
+            ))),
         );
     }
 
@@ -92,11 +94,11 @@ pub(super) fn extract_pdf_text(path: &Path, bytes: &[u8]) -> (String, Option<Str
     } else {
         (
             String::new(),
-            Some(format!(
+            Some(ScanDiagnostic::error(format!(
                 "PDF text extraction failed after {} attempts: {}",
                 failures.len(),
                 failures.join("; ")
-            )),
+            ))),
         )
     }
 }

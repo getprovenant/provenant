@@ -5,6 +5,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiagnosticSeverity {
+    /// Purely informational outcome that is not a failure. Provenant
+    /// deliberately took a benign action (for example, declining text detection
+    /// on a file that is binary). Info diagnostics stay auditable in the
+    /// internal model and verbose output, but must not surface in the
+    /// ScanCode-compatible `scan_errors` field or inflate error/warning counts.
+    Info,
     Warning,
     Error,
     Timeout,
@@ -17,6 +23,13 @@ pub struct ScanDiagnostic {
 }
 
 impl ScanDiagnostic {
+    pub fn info(message: impl Into<String>) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Info,
+            message: message.into(),
+        }
+    }
+
     pub fn warning(message: impl Into<String>) -> Self {
         Self {
             severity: DiagnosticSeverity::Warning,
