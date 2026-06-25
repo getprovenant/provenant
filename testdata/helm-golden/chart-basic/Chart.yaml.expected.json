@@ -1,10 +1,14 @@
 [
   {
     "type": "helm",
+    "namespace": null,
     "name": "nginx",
     "version": "22.1.1",
+    "qualifiers": {},
+    "subpath": null,
     "primary_language": "YAML",
     "description": "Example Helm chart",
+    "release_date": null,
     "parties": [
       {
         "type": "person",
@@ -16,17 +20,62 @@
     ],
     "keywords": ["nginx", "reverse-proxy"],
     "homepage_url": "https://example.com/nginx",
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
     "code_view_url": "https://github.com/example/nginx-chart",
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": "apache-2.0",
+    "declared_license_expression_spdx": "Apache-2.0",
+    "license_detections": [
+      {
+        "license_expression": "apache-2.0",
+        "license_expression_spdx": "Apache-2.0",
+        "matches": [
+          {
+            "license_expression": "apache-2.0",
+            "license_expression_spdx": "Apache-2.0",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+            "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+            "matched_text": "Apache-2.0"
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": "Apache-2.0",
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
     "extra_data": {
-      "api_version": "v2",
+      "kube_version": ">=1.25.0-0",
       "icon": "https://example.com/icon.png",
-      "app_version": "1.29.1",
+      "api_version": "v2",
       "sources": ["https://github.com/example/nginx-chart"],
+      "chart_type": "application",
       "annotations": {
         "artifacthub.io/license": "Apache-2.0"
       },
-      "kube_version": ">=1.25.0-0",
-      "chart_type": "application"
+      "app_version": "1.29.1"
     },
     "dependencies": [
       {
@@ -37,10 +86,11 @@
         "is_optional": true,
         "is_pinned": false,
         "is_direct": true,
+        "resolved_package": null,
         "extra_data": {
+          "repository": "oci://registry-1.docker.io/bitnamicharts",
           "alias": "shared",
-          "tags": ["common"],
-          "repository": "oci://registry-1.docker.io/bitnamicharts"
+          "tags": ["common"]
         }
       },
       {
@@ -51,15 +101,16 @@
         "is_optional": true,
         "is_pinned": true,
         "is_direct": true,
+        "resolved_package": null,
         "extra_data": {
           "condition": "metrics.enabled",
-          "repository": "https://charts.example.test",
           "import_values": [
             {
               "child": "exports.data",
               "parent": "metricsData"
             }
-          ]
+          ],
+          "repository": "https://charts.example.test"
         }
       },
       {
@@ -70,11 +121,15 @@
         "is_optional": false,
         "is_pinned": true,
         "is_direct": true,
+        "resolved_package": null,
         "extra_data": {
           "repository": "https://charts.example.test"
         }
       }
     ],
+    "repository_homepage_url": null,
+    "repository_download_url": null,
+    "api_data_url": null,
     "datasource_id": "helm_chart_yaml",
     "purl": "pkg:helm/nginx@22.1.1"
   }

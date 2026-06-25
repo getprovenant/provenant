@@ -164,6 +164,21 @@ dependencies:
             Some("Apache-2.0")
         );
 
+        // The `artifacthub.io/license` annotation is promoted to the declared license.
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert_eq!(package_data.license_detections.len(), 1);
+
         assert_eq!(package_data.dependencies.len(), 3);
         let common = package_data
             .dependencies
@@ -298,6 +313,39 @@ home: https://example.com/legacy
                 .and_then(|value| value.as_str()),
             Some("v1")
         );
+        // No `artifacthub.io/license` annotation: declared license stays unset.
+        assert_eq!(package_data.extracted_license_statement, None);
+        assert_eq!(package_data.declared_license_expression, None);
+        assert_eq!(package_data.declared_license_expression_spdx, None);
+        assert!(package_data.license_detections.is_empty());
+    }
+
+    #[test]
+    fn test_chart_yaml_license_annotation_normalizes_spdx_expression() {
+        let content = r#"
+apiVersion: v2
+name: dual-licensed
+version: 1.0.0
+annotations:
+  artifacthub.io/license: "MIT OR Apache-2.0"
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("Chart.yaml", content);
+        let package_data = HelmChartYamlParser::extract_first_package(&path);
+
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("MIT OR Apache-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT")
+        );
+        assert_eq!(package_data.license_detections.len(), 1);
     }
 
     #[test]

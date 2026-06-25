@@ -13,6 +13,7 @@ use yaml_serde::{Mapping, Value};
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 
 use super::PackageParser;
+use super::license_normalization::normalize_spdx_declared_license;
 use super::metadata::ParserMetadata;
 
 pub struct HelmChartYamlParser;
@@ -118,6 +119,14 @@ fn parse_chart_yaml(yaml_content: &Value) -> PackageData {
     let dependencies = extract_chart_yaml_dependencies(yaml_content);
     let extra_data = build_chart_yaml_extra_data(yaml_content);
 
+    // Helm's Chart.yaml has no first-class license field; the conventional
+    // declared-license surface is the Artifact Hub `artifacthub.io/license`
+    // annotation, whose value is an SPDX expression. Normalize it through the shared
+    // declared-license path (SPDX expression, then alias fallback).
+    let extracted_license_statement = extract_chart_license_statement(yaml_content);
+    let (declared_license_expression, declared_license_expression_spdx, license_detections) =
+        normalize_spdx_declared_license(extracted_license_statement.as_deref());
+
     PackageData {
         package_type: Some(PackageType::Helm),
         name: name.clone(),
@@ -128,6 +137,10 @@ fn parse_chart_yaml(yaml_content: &Value) -> PackageData {
         keywords,
         homepage_url,
         code_view_url,
+        extracted_license_statement,
+        declared_license_expression,
+        declared_license_expression_spdx,
+        license_detections,
         is_private: false,
         extra_data,
         dependencies,
@@ -137,6 +150,17 @@ fn parse_chart_yaml(yaml_content: &Value) -> PackageData {
             .and_then(|name| build_helm_purl(name, version.as_deref())),
         ..default_package_data(Some(DatasourceId::HelmChartYaml))
     }
+}
+
+/// Reads the Artifact Hub `artifacthub.io/license` annotation, the conventional
+/// declared-license surface for a Helm chart (an SPDX expression such as
+/// `Apache-2.0`). Helm's `Chart.yaml` spec has no dedicated license field.
+fn extract_chart_license_statement(yaml_content: &Value) -> Option<String> {
+    yaml_content
+        .get("annotations")
+        .and_then(|annotations| annotations.get("artifacthub.io/license"))
+        .and_then(yaml_value_to_string)
+        .filter(|value| !value.trim().is_empty())
 }
 
 fn parse_chart_lock(yaml_content: &Value) -> PackageData {

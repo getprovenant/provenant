@@ -21,6 +21,12 @@ That static file-format coverage remains compatible with current Helm v4 chart m
 - Root packages are emitted with Helm package identities such as `pkg:helm/nginx@22.1.1`.
 - The same static metadata path works for legacy `apiVersion: v1`, Helm 3 `apiVersion: v2`, and current Helm 4 `apiVersion: v3` charts.
 
+### Declared license from the `artifacthub.io/license` annotation
+
+- Helm's `Chart.yaml` has no first-class license field; the conventional declared-license surface is the Artifact Hub `artifacthub.io/license` annotation, whose value is an SPDX expression.
+- Rust reads that annotation and normalizes it through the shared declared-license path (SPDX expression, then the declared-license alias table), populating `extracted_license_statement`, `declared_license_expression`, `declared_license_expression_spdx`, and parser-side `license_detections`.
+- The annotation remains preserved verbatim in `extra_data.annotations`. Charts without the annotation keep an unset declared license rather than guessing.
+
 ### Declared dependency extraction from `Chart.yaml`
 
 - Rust now extracts chart dependencies declared in `Chart.yaml`.
