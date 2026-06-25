@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 218 of 218 recorded runs, with a **19.3× median speedup** and **19.2× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **36.6×** on 10k+ file targets.
+> Provenant is faster on 219 of 219 recorded runs, with a **19.3× median speedup** and **19.1× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **36.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -528,6 +528,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `93.96s`; ScanCode `2127.58s`
 - Broader Gradle package and dependency extraction (`74` vs `68` packages, `1725` vs `1541` dependencies) from committed `build.gradle`, `build.gradle.kts`, `gradle.lockfile`, and `.module` metadata across docs and test fixtures
+
+##### [Netflix/spectator @ fac9597](https://github.com/Netflix/spectator/tree/fac9597cbefd5066a68d92ac1834cb23da6362dc) — **14.77× faster**
+
+- Files: 585
+- Run context: 2026-06-25 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.10s`; ScanCode `104.90s`
+- Exclusive Ivy-style `dependencies.properties` coverage: Provenant extracts all `33` Maven coordinates from the auto-generated root dependency list (both `group:artifact = version` and `property = group:artifact:version` forms) as direct pinned Maven dependencies where ScanCode emits `0` for that surface, with trailing inline `# ...` annotations stripped from captured versions so `io.dropwizard.metrics5:metrics-core` resolves to a clean `@5.0.0-rc16` instead of a comment-polluted coordinate
 
 ##### [yairm210/Unciv @ d54f33c](https://github.com/yairm210/Unciv/tree/d54f33c881ad2de1ac7136540f59ad8596143ce5) — **30.07× faster**
 

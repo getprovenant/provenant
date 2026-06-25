@@ -228,6 +228,7 @@ pub enum DatasourceId {
     JuliaManifestToml,
 
     // ── Java ──
+    AntIvyDependenciesProperties,
     AntIvyXml,
     JavaEarApplicationXml,
     JavaEarArchive,
@@ -535,6 +536,7 @@ impl DatasourceId {
             Self::JuliaManifestToml => "julia_manifest_toml",
 
             // Java
+            Self::AntIvyDependenciesProperties => "ant_ivy_dependencies_properties",
             Self::AntIvyXml => "ant_ivy_xml",
             Self::JavaEarApplicationXml => "java_ear_application_xml",
             Self::JavaEarArchive => "java_ear_archive",

@@ -42,4 +42,42 @@ mod tests {
                 .any(|dep| dep.purl.as_deref() == Some("pkg:ivy/commons-lang/commons-lang"))
         );
     }
+
+    #[test]
+    fn test_dependencies_properties_hoists_unowned_maven_dependencies() {
+        let (files, result) = scan_and_assemble(Path::new("testdata/ivy-golden/dependencies"));
+
+        assert!(
+            result.packages.is_empty(),
+            "dependency-list fixture should not create a root package"
+        );
+        assert_eq!(result.dependencies.len(), 4);
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/javax.ws.rs/javax.ws.rs-api@2.1")
+                && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+                && dependency.for_package_uid.is_none()
+        }));
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:maven/org.slf4j/slf4j-api@2.0.13")
+                && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+        }));
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref()
+                == Some("pkg:maven/io.dropwizard.metrics5/metrics-core@5.0.0-rc16")
+                && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+        }));
+
+        let dependencies_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/dependencies.properties"))
+            .expect("dependencies.properties should be scanned");
+        assert!(dependencies_file.for_packages.is_empty());
+        assert!(
+            dependencies_file
+                .package_data
+                .iter()
+                .any(|pkg_data| pkg_data.datasource_id
+                    == Some(DatasourceId::AntIvyDependenciesProperties))
+        );
+    }
 }
