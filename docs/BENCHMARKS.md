@@ -650,12 +650,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.42s`; ScanCode `123.76s`
 - Broader Go module graph dependency visibility (`117` vs `61` dependencies) from committed `go.mod.graph` while preserving matched package coverage (`10` vs `10`) across `go.mod`, `go.sum`, and vendored manifests, plus cleaner rejection of Go AUTHORS boilerplate and code-comment author/copyright fragments
 
-##### [chromium/chromium @ 2befda7](https://github.com/chromium/chromium/tree/2befda78fcc7fa5649540420eedcdd87a2583fe0) — **45.07× faster**
+##### [chromium/chromium @ 2befda7](https://github.com/chromium/chromium/tree/2befda78fcc7fa5649540420eedcdd87a2583fe0) — **42.72× faster**
 
 - Files: 491,354
 - Run context: 2026-06-25 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `715.21s`; ScanCode `32231.76s`
-- Provenant collapses internal Bazel/Buck build targets to one component per build directory (`255` Bazel + `3` Buck vs ScanCode's per-target `962` + `9`), a documented design choice ([`docs/improvements/bazel-buck-build-targets.md`](improvements/bazel-buck-build-targets.md)), so its top-level package count is lower (`599` vs `1279`) while real-ecosystem coverage holds at or above parity (Cargo `240` vs `239`, npm `46` vs `33`) and dependency extraction stays materially richer (`16793` vs `12378`) from vendored `.gitmodules`, Cargo, and npm surfaces; the remaining Provenant scan-error entries (`82` vs `3`) are almost all safe binary-content skips on test image fixtures, not parse failures
+- Timing: Provenant `754.46s`; ScanCode `32231.76s`
+- Provenant collapses internal Bazel/Buck build targets to one component per build directory (`255` Bazel + `3` Buck vs ScanCode's per-target `962` + `9`), a documented design choice ([`docs/improvements/bazel-buck-build-targets.md`](improvements/bazel-buck-build-targets.md)), so its top-level package count is lower (`599` vs `1279`) while real-ecosystem coverage holds at or above parity (Cargo `240` vs `239`, npm `46` vs `33`) and dependency extraction stays materially richer (`16793` vs `12378`) from vendored `.gitmodules`, Cargo, and npm surfaces
 
 ##### [conan-io/conan-center-index @ bc78dfb](https://github.com/conan-io/conan-center-index/tree/bc78dfb366e6596d21a7a5c51b97970656f73254) — **36.57× faster**
 
