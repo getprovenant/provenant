@@ -642,6 +642,44 @@ configure(install.repositories.mavenInstaller) {
 }
 
 #[test]
+fn test_gradle_license_resolves_descriptive_name_via_shared_normalizer() {
+    // The classic ASF declared name "The Apache Software License, Version 2.0"
+    // was missed by the previous hardcoded patterns (which only matched the
+    // literal "apache license, version 2.0"). The shared name/url normalizer
+    // resolves it, matching Maven's handling of the same declared name.
+    let content = r#"
+plugins {
+    id 'java-library'
+}
+
+configure(install.repositories.mavenInstaller) {
+    pom.project {
+        licenses {
+            license {
+                name 'The Apache Software License, Version 2.0'
+            }
+        }
+    }
+}
+"#;
+
+    let temp_dir = tempdir().unwrap();
+    let build_gradle = temp_dir.path().join("build.gradle");
+    std::fs::write(&build_gradle, content).unwrap();
+
+    let package_data = GradleParser::extract_first_package(&build_gradle);
+
+    assert_eq!(
+        package_data.declared_license_expression.as_deref(),
+        Some("apache-2.0")
+    );
+    assert_eq!(
+        package_data.declared_license_expression_spdx.as_deref(),
+        Some("Apache-2.0")
+    );
+}
+
+#[test]
 fn test_parse_gradle_version_catalog_helper() {
     let temp_dir = tempdir().unwrap();
     let catalog_path = temp_dir.path().join("libs.versions.toml");
