@@ -345,6 +345,7 @@ annotations:
             package_data.declared_license_expression_spdx.as_deref(),
             Some("Apache-2.0 OR MIT")
         );
+        assert_eq!(package_data.license_detections.len(), 1);
     }
 
     #[test]
