@@ -18,7 +18,9 @@ pub(crate) use self::license_policy::apply_license_policy_from_file;
 pub(crate) use self::license_references::collect_top_level_license_references;
 use self::output_indexes::{OutputIndexMode, OutputIndexes};
 use self::package_file_index::PackageFileIndex;
-use self::package_metadata_promotion::promote_package_metadata_from_key_files;
+use self::package_metadata_promotion::{
+    promote_package_declared_license_from_legal_files, promote_package_metadata_from_key_files,
+};
 pub(crate) use self::reference_following::apply_package_reference_following;
 pub(crate) use self::reference_following::collect_top_level_license_detections;
 #[cfg(test)]
@@ -172,6 +174,7 @@ pub(crate) fn create_output(
     );
 
     promote_package_metadata_from_key_files(&files, &mut packages, &output_indexes);
+    promote_package_declared_license_from_legal_files(&files, &mut packages);
     assign_facets(&mut files, context.options.facet_rules);
     if context.options.include_tallies_with_details {
         compute_detailed_tallies(&mut files);
