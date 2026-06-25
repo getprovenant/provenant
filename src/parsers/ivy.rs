@@ -236,6 +236,10 @@ fn parse_properties_entries(content: &str) -> Vec<(String, String)> {
     {
         let line = raw_line.trim_end_matches('\r');
         let trimmed_end = line.trim_end();
+        if current.is_empty() && line.trim_start().starts_with(['#', '!']) {
+            continue;
+        }
+
         let is_continuation = trimmed_end.ends_with('\\');
         let line_without_slash = if is_continuation {
             trimmed_end.trim_end_matches('\\')
@@ -301,9 +305,9 @@ fn parse_ivy_dependencies_entry(key: &str, value: &str, scope: Option<&str>) -> 
 
 fn parse_maven_gav(value: &str) -> Option<(&str, &str, &str)> {
     let mut parts = value.split(':').map(str::trim);
-    let group = parts.next()?.trim();
-    let artifact = parts.next()?.trim();
-    let version = parts.next()?.trim();
+    let group = parts.next()?;
+    let artifact = parts.next()?;
+    let version = parts.next()?;
     if parts.next().is_some() || group.is_empty() || artifact.is_empty() || version.is_empty() {
         return None;
     }
@@ -313,8 +317,8 @@ fn parse_maven_gav(value: &str) -> Option<(&str, &str, &str)> {
 
 fn parse_maven_ga(value: &str) -> Option<(&str, &str)> {
     let mut parts = value.split(':').map(str::trim);
-    let group = parts.next()?.trim();
-    let artifact = parts.next()?.trim();
+    let group = parts.next()?;
+    let artifact = parts.next()?;
     if parts.next().is_some() || group.is_empty() || artifact.is_empty() {
         return None;
     }

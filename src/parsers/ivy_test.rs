@@ -159,6 +159,25 @@ fn test_dependencies_properties_prefix_becomes_scope() {
 }
 
 #[test]
+fn test_dependencies_properties_comment_backslash_does_not_continue() {
+    use std::io::Write;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("dependencies.properties");
+    let mut file = std::fs::File::create(&path).expect("create");
+    writeln!(file, "# issue note \\").expect("write");
+    writeln!(file, "com.example:kept=1.2.3").expect("write");
+    drop(file);
+
+    let package_data = IvyDependenciesPropertiesParser::extract_first_package(&path);
+    assert_eq!(package_data.dependencies.len(), 1);
+    assert_eq!(
+        package_data.dependencies[0].purl.as_deref(),
+        Some("pkg:maven/com.example/kept@1.2.3")
+    );
+}
+
+#[test]
 fn test_parses_info_without_dependencies() {
     let path = PathBuf::from("testdata/ivy-golden/no-deps/ivy.xml");
     let packages = IvyXmlParser::extract_packages(&path);
