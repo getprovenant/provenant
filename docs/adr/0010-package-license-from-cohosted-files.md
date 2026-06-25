@@ -1,10 +1,10 @@
 # ADR 0010: Package Declared License From Co-hosted License Files
 
-**Status**: Proposed
+**Status**: Accepted
 **Authors**: Provenant team
 **Supersedes**: None (narrows one boundary stated in [ADR 0002](0002-extraction-vs-detection.md))
 
-> **Current contract owner**: [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §3 and [`0002-extraction-vs-detection.md`](0002-extraction-vs-detection.md) own the declared-vs-detected boundary. The candidate implementation home is the post-assembly stage in `src/post_processing/` (`reference_following.rs`, `package_metadata_promotion.rs`).
+> **Current contract owner**: [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §3 and [`0002-extraction-vs-detection.md`](0002-extraction-vs-detection.md) own the declared-vs-detected boundary. The accepted behavior is implemented by the post-assembly pass `promote_package_declared_license_from_legal_files` in `src/post_processing/package_metadata_promotion.rs`.
 
 ## Context
 
@@ -75,35 +75,36 @@ a justification for this pass.
 
 ## Decision
 
-**Proposed — pending maintainer approval. No code lands until this ADR is
-Accepted.** This document records the decision to be made and the recommended
-option; it does not itself change behavior.
-
-The choice is among three options (see Alternatives). The **recommended** option is
-a **bounded, generic post-assembly pass** that promotes a co-hosted legal file's
-detected license into a package's declared license, under strict guards:
+**Accepted and implemented.** Of the three options (see Alternatives), the chosen
+approach is a **bounded, generic post-assembly pass**
+(`promote_package_declared_license_from_legal_files`) that promotes a co-hosted
+legal file's detected license into a package's declared license, under strict
+guards:
 
 - **Trigger only on genuine absence**: the assembled package has no
   `declared_license_expression` _and_ no `extracted_license_statement` (the
   manifest declared nothing and referenced nothing).
 - **Source only true legal files**: files matching the existing `is_legal_file`
-  classifier (`LICENSE`/`COPYING`/`NOTICE` family), co-located with one of the
-  package's `datafile_paths`. **Bounded walk**: prefer legal files in the
-  datafile's own directory; otherwise walk up and stop at the **nearest ancestor
-  that contains any legal file**, and only adopt it when no nearer ancestor owns
-  another package. The walk never passes the scan root, and a repo-root `LICENSE`
-  is adopted only when it is that nearest legal-file-bearing ancestor with no
-  closer package boundary in between — so a root license is not blindly attributed
-  to deeply nested sub-packages. Never `README`/source files.
-- **Single unambiguous result**: promote only when the co-hosted legal files yield
-  one combined detected expression; abstain on conflicting results rather than
-  guess.
-- **Never smear across multiple packages**: skip when the directory hosts multiple
-  packages or a multi-package datafile (e.g. a dpkg `status` database), mirroring
-  the existing guard in `apply_package_reference_following`.
-- **Preserve provenance**: the promoted detection must remain traceable to the
-  legal file it came from (`from_file`), so output consumers can distinguish a
-  manifest-declared license from a co-hosted-file-derived one.
+  classifier (`LICENSE`/`COPYING`/`NOTICE` family). Never `README`/source files.
+- **Same-directory, sole-package scope** (as implemented): a legal file is adopted
+  only when it sits in a directory the package is anchored in (the parent of one of
+  its `datafile_paths`) _and_ that directory anchors no other package. This bounds
+  attribution to the package's own directory, so a root `LICENSE` is never smeared
+  across sibling packages or down into nested sub-packages — the conservative
+  starting point for the "main correctness risk" below. An ancestor-walk
+  generalization (inheriting a parent `LICENSE` when no nearer package boundary
+  intervenes) is intentionally deferred; it widens attribution and should be a
+  separate change with its own nested-layout coverage. Note this does **not** use
+  the `for_packages` association that copyright/holder promotion relies on, because
+  that link is only populated by ecosystem-specific resource-assign passes and is
+  empty for exactly the formats this pass targets (Go, autotools, Swift, Bazel).
+- **Single unambiguous result**: promote only when the co-located legal files
+  resolve to exactly one distinct declared expression; abstain on conflicting
+  results (e.g. dual `LICENSE-APACHE` + `LICENSE-MIT`) rather than guessing an
+  `AND`/`OR` combination.
+- **Preserve provenance**: the promoted `license_detections` retain each match's
+  `from_file`, so output consumers can distinguish a co-hosted-file-derived license
+  from a manifest-declared one.
 
 This narrows ADR 0002's blanket prohibition to a precise one: **parsers** still
 never read sibling files for declared license; only this **sanctioned
@@ -113,17 +114,28 @@ Non-goals: full ScanCode parity for `README`-derived licenses; promoting when th
 manifest already declared or referenced a license; reading file content inside
 parsers.
 
-### Acceptance criteria
+### Acceptance criteria (satisfied)
 
-On accepting this ADR, the following must land with (or before) the implementation:
+- ✅ Narrowly scoped maintenance notes in [ADR 0002](0002-extraction-vs-detection.md)
+  and [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §3 forward-reference ADR 0010, so
+  their "never promoted into a package's declared license" statements are no longer
+  silently inaccurate.
+- ✅ Nested/monorepo coverage proving no smear: unit tests in
+  `package_metadata_promotion.rs` (`does_not_smear_root_license_into_nested_subpackage`,
+  `each_package_gets_its_own_colocated_license`, `skips_directory_hosting_multiple_packages`,
+  `abstains_when_colocated_legal_files_disagree`) plus an end-to-end `create_output`
+  wiring test.
 
-- A narrowly scoped maintenance note in [ADR 0002](0002-extraction-vs-detection.md)
-  and [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §3 forward-referencing ADR 0010,
-  so their current "never promoted into a package's declared license" statement is
-  not left silently inaccurate. (Per the ADR README, accepted ADRs may receive such
-  a current-contract note rather than being rewritten.)
-- Golden coverage for nested/monorepo layouts proving the bounded-walk guard does
-  not smear a repo-root `LICENSE` across sub-packages with their own boundaries.
+### Scope note: the origin case is not closed by this pass
+
+The delta that motivated this ADR — `Netflix/spectator`'s root `build.gradle` — is
+**not** affected, because that `build.gradle` carries no package identity, so
+Provenant assembles **no package** for it (`packages: []`); there is nothing to
+attach a declared license to. ScanCode reports the license on the file's
+`package_data` instead. Promoting onto identity-less file-level `package_data` is a
+larger, higher-false-positive expansion and remains out of scope. This pass targets
+the common, higher-value case: a package that **is** assembled (Go modules,
+autotools, Swift, Bazel) but declares no license.
 
 ## Consequences
 
@@ -144,13 +156,18 @@ On accepting this ADR, the following must land with (or before) the implementati
   by retained `from_file` provenance and by scoping the promotion to a dedicated
   post-assembly pass rather than parsers.
 - **False-attribution risk in monorepos**: a root `LICENSE` could be promoted onto
-  a sub-package that is actually licensed differently. Mitigated by the
-  nearest-owner / same-directory and single-result guards, but this is the main
-  correctness risk and needs golden coverage on nested layouts.
-- **Golden churn** across many ecosystems on first rollout; expected and one-time,
-  but must be reviewed rather than blindly regenerated.
-- **Determinism**: ancestor-walk and multi-file combination rules must be fully
-  deterministic to keep goldens stable.
+  a sub-package that is actually licensed differently. Addressed by the
+  same-directory + sole-package guards: a sub-package never inherits an ancestor's
+  `LICENSE`, and a directory shared by multiple packages is skipped entirely. The
+  deferred ancestor-walk generalization would reopen this risk and must carry its
+  own nested-layout coverage.
+- **No golden churn observed**: the genuine-absence guard means packages that
+  already declare a license are untouched; the assembly, post-processing,
+  output-format, scanner-integration, and license-detection golden suites all pass
+  unchanged.
+- **Conservative on dual-license dirs**: a directory with `LICENSE-APACHE` +
+  `LICENSE-MIT` is intentionally left unset rather than guessing `OR`/`AND`;
+  recovering those is future work.
 
 ## Alternatives Considered
 

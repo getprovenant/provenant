@@ -731,3 +731,100 @@ fn create_output_uses_scancode_header_timestamp_format() {
     assert_eq!(header.start_timestamp, "2026-04-11T091828.024390");
     assert_eq!(header.end_timestamp, "2026-04-11T091829.987654");
 }
+
+#[test]
+fn create_output_promotes_declared_license_from_cohosted_legal_file() {
+    // A package whose manifest declares no license (e.g. a Go module) sits next to a
+    // LICENSE file. ADR 0010's post-assembly pass should adopt that license as the
+    // package's declared license, preserving `from_file` provenance.
+    let license_rel = "module/LICENSE".to_string();
+    let mut license = file(&license_rel);
+    license.detected_license_expression = Some("apache-2.0".to_string());
+    license.license_detections = vec![crate::models::LicenseDetection {
+        license_expression: "apache-2.0".to_string(),
+        license_expression_spdx: "Apache-2.0".to_string(),
+        matches: vec![Match {
+            license_expression: "apache-2.0".to_string(),
+            license_expression_spdx: "Apache-2.0".to_string(),
+            from_file: Some(license_rel.clone()),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::ONE,
+            matcher: MatcherKind::Hash,
+            score: MatchScore::MAX,
+            matched_length: Some(100),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: String::new(),
+            rule_url: None,
+            matched_text: None,
+            referenced_filenames: None,
+            matched_text_diagnostics: None,
+        }],
+        identifier: String::new(),
+        detection_log: vec![],
+    }];
+
+    let mut package = crate::post_processing::test_utils::package("uid-gomod", "module/go.mod");
+    package.package_type = Some(PackageType::Golang);
+    package.purl = Some("pkg:golang/example.com/module".to_string());
+    package.declared_license_expression = None;
+    package.declared_license_expression_spdx = None;
+
+    let start = Utc::now();
+    let end = start;
+    let output = create_output(
+        start,
+        end,
+        crate::scanner::ProcessResult {
+            files: vec![dir("module"), file("module/go.mod"), license],
+            excluded_count: 0,
+        },
+        CreateOutputContext {
+            total_dirs: 1,
+            assembly_result: assembly::AssemblyResult {
+                packages: vec![package],
+                dependencies: vec![],
+            },
+            license_detections: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+            spdx_license_list_version: "3.27".to_string(),
+            license_index_provenance: None,
+            extra_errors: vec![],
+            extra_warnings: vec![],
+            header_options: serde_json::Map::new(),
+            options: CreateOutputOptions {
+                facet_rules: &[],
+                include_classify: false,
+                include_tallies_by_facet: false,
+                include_summary: false,
+                include_license_clarity_score: false,
+                include_tallies: false,
+                include_tallies_with_details: false,
+                include_tallies_of_key_files: false,
+                include_generated: false,
+                verbose: false,
+            },
+        },
+    );
+
+    let package = output.packages.first().expect("package present");
+    assert_eq!(
+        package.declared_license_expression.as_deref(),
+        Some("apache-2.0")
+    );
+    assert_eq!(
+        package.declared_license_expression_spdx.as_deref(),
+        Some("Apache-2.0")
+    );
+    assert_eq!(
+        package
+            .license_detections
+            .iter()
+            .flat_map(|detection| detection.matches.iter())
+            .filter_map(|match_item| match_item.from_file.as_deref())
+            .next(),
+        Some(license_rel.as_str()),
+        "promoted detection retains its co-hosted LICENSE provenance"
+    );
+}
