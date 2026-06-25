@@ -54,8 +54,8 @@ how each format populates `declared_license_expression`:
 | Bazel (`BUILD`/`MODULE.bazel`)      | File-ref attr, often absent on internal targets | MEDIUM–HIGH                                                          | `src/parsers/bazel.rs`                                   |
 | Gradle sub-modules (`build.gradle`) | `license {}` block, usually only at root        | MEDIUM–HIGH                                                          | `src/parsers/gradle.rs`                                  |
 | SBT sub-modules (`build.sbt`)       | `licenses :=`, often omitted                    | MEDIUM                                                               | `src/parsers/sbt.rs`                                     |
-| Helm (`Chart.yaml`)                 | Field exists, parser omits it                   | MEDIUM                                                               | `src/parsers/helm.rs`                                    |
 | Python (`pyproject.toml`)           | Field present but many use classifiers only     | MEDIUM                                                               | `src/parsers/python/pyproject.rs`                        |
+| Helm (`Chart.yaml`)                 | **Field exists; parser omits it** (parser gap)  | LOW (contingent)                                                     | `src/parsers/helm.rs`                                    |
 | Maven/npm/Cargo/Composer/…          | Field present, usually populated                | LOW                                                                  | parser license handling already populates declared       |
 
 The standout is **Go**: `go.mod` carries no license metadata whatsoever, so for the
@@ -64,6 +64,14 @@ module is its co-hosted `LICENSE` file. The next tier (autotools, Swift, Bazel,
 Gradle/SBT sub-modules) is also build-system code without a license field. This
 breadth argues that — _if_ adopted — the behavior must be a single generic
 post-assembly capability, not a per-parser patch.
+
+**Helm is a different case** and is listed separately: `Chart.yaml` _has_ a
+`license`-bearing surface the parser simply does not read yet, so the correct
+remedy is closing that parser gap, not co-hosted-file attribution. Its apparent
+benefit here is contingent on the parser gap remaining unfixed; once the parser
+reads the field, Helm belongs in the LOW row beside Maven/npm/Cargo. It is kept in
+the table only so reviewers can weigh the two remedies independently — it is **not**
+a justification for this pass.
 
 ## Decision
 
@@ -80,8 +88,13 @@ detected license into a package's declared license, under strict guards:
   manifest declared nothing and referenced nothing).
 - **Source only true legal files**: files matching the existing `is_legal_file`
   classifier (`LICENSE`/`COPYING`/`NOTICE` family), co-located with one of the
-  package's `datafile_paths` (same directory, or an ancestor only when no nearer
-  package owns it). Never `README`/source files.
+  package's `datafile_paths`. **Bounded walk**: prefer legal files in the
+  datafile's own directory; otherwise walk up and stop at the **nearest ancestor
+  that contains any legal file**, and only adopt it when no nearer ancestor owns
+  another package. The walk never passes the scan root, and a repo-root `LICENSE`
+  is adopted only when it is that nearest legal-file-bearing ancestor with no
+  closer package boundary in between — so a root license is not blindly attributed
+  to deeply nested sub-packages. Never `README`/source files.
 - **Single unambiguous result**: promote only when the co-hosted legal files yield
   one combined detected expression; abstain on conflicting results rather than
   guess.
@@ -99,6 +112,18 @@ post-assembly pass** may, and only under the guards above.
 Non-goals: full ScanCode parity for `README`-derived licenses; promoting when the
 manifest already declared or referenced a license; reading file content inside
 parsers.
+
+### Acceptance criteria
+
+On accepting this ADR, the following must land with (or before) the implementation:
+
+- A narrowly scoped maintenance note in [ADR 0002](0002-extraction-vs-detection.md)
+  and [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §3 forward-referencing ADR 0010,
+  so their current "never promoted into a package's declared license" statement is
+  not left silently inaccurate. (Per the ADR README, accepted ADRs may receive such
+  a current-contract note rather than being rewritten.)
+- Golden coverage for nested/monorepo layouts proving the bounded-walk guard does
+  not smear a repo-root `LICENSE` across sub-packages with their own boundaries.
 
 ## Consequences
 
