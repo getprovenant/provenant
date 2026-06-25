@@ -180,7 +180,11 @@ impl ScanProgress {
         let mut stats = self.stats.lock().expect("stats lock poisoned");
         stats.total_bytes_scanned += bytes;
 
-        let (errors, warnings) = partition_scan_diagnostics(scan_diagnostics);
+        let PartitionedDiagnostics {
+            errors,
+            warnings,
+            infos,
+        } = partition_scan_diagnostics(scan_diagnostics);
 
         if !errors.is_empty() {
             stats.error_count += 1;
@@ -203,11 +207,6 @@ impl ScanProgress {
                 }
             }
             ProgressMode::Verbose => {
-                let infos: Vec<&str> = scan_diagnostics
-                    .iter()
-                    .filter(|d| d.severity == DiagnosticSeverity::Info)
-                    .map(|d| d.message.as_str())
-                    .collect();
                 if self.stderr_is_tty
                     || !errors.is_empty()
                     || !warnings.is_empty()
@@ -552,27 +551,33 @@ pub(crate) fn format_default_scan_warning_from_list(
         .map(|warning| format_default_scan_error(path, warning))
 }
 
+/// Diagnostics split by severity in a single pass.
+#[derive(Default)]
+pub(crate) struct PartitionedDiagnostics {
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+    /// Informational outcomes (for example, benign binary-content skips). These
+    /// are neither failures nor warnings: they are excluded from `scan_errors`
+    /// and from error/warning counts, and only surface in verbose output.
+    pub infos: Vec<String>,
+}
+
 pub(crate) fn partition_scan_diagnostics(
     scan_diagnostics: &[ScanDiagnostic],
-) -> (Vec<String>, Vec<String>) {
-    let mut errors = Vec::new();
-    let mut warnings = Vec::new();
+) -> PartitionedDiagnostics {
+    let mut partitioned = PartitionedDiagnostics::default();
 
     for diagnostic in scan_diagnostics {
         match diagnostic.severity {
             DiagnosticSeverity::Error | DiagnosticSeverity::Timeout => {
-                errors.push(diagnostic.message.clone())
+                partitioned.errors.push(diagnostic.message.clone())
             }
-            DiagnosticSeverity::Warning => warnings.push(diagnostic.message.clone()),
-            // Informational outcomes (for example, benign binary-content skips)
-            // are neither failures nor warnings: they are excluded from
-            // `scan_errors` and from error/warning counts. They remain auditable
-            // in the internal model and verbose output.
-            DiagnosticSeverity::Info => {}
+            DiagnosticSeverity::Warning => partitioned.warnings.push(diagnostic.message.clone()),
+            DiagnosticSeverity::Info => partitioned.infos.push(diagnostic.message.clone()),
         }
     }
 
-    (errors, warnings)
+    partitioned
 }
 
 fn concise_scan_error_reason(err: &str) -> String {
