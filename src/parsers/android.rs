@@ -134,7 +134,7 @@ impl PackageParser for AndroidSoongMetadataParser {
             }
         };
 
-        vec![parse_soong_metadata(&content)]
+        parse_soong_metadata(&content).into_iter().collect()
     }
 }
 
@@ -194,29 +194,35 @@ impl PackageParser for AndroidApkParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
-        let package_data = match read_best_zip_entry(path, |entry_name| {
+        match read_best_zip_entry(path, |entry_name| {
             if entry_name == "AndroidManifest.xml" {
                 Some(0)
             } else {
                 None
             }
         }) {
-            Ok(Some((_, bytes))) => parse_binary_manifest_bytes(&bytes, DatasourceId::AndroidApk)
-                .unwrap_or_else(|error| {
-                    warn!("Failed to parse APK manifest {:?}: {}", path, error);
-                    default_package_data(DatasourceId::AndroidApk)
-                }),
+            Ok(Some((_, bytes))) => {
+                let package_data = parse_binary_manifest_bytes(&bytes, DatasourceId::AndroidApk)
+                    .unwrap_or_else(|error| {
+                        warn!("Failed to parse APK manifest {:?}: {}", path, error);
+                        default_package_data(DatasourceId::AndroidApk)
+                    });
+                vec![package_data]
+            }
             Ok(None) => {
-                warn!("No AndroidManifest.xml found in APK {:?}", path);
-                default_package_data(DatasourceId::AndroidApk)
+                // A `.apk` with no AndroidManifest.xml is not a usable Android
+                // package (e.g. a deliberately broken test fixture); decline
+                // quietly instead of emitting a scan error.
+                log::debug!("Declining .apk without AndroidManifest.xml {:?}", path);
+                Vec::new()
             }
             Err(error) => {
-                warn!("Failed to read APK archive {:?}: {}", path, error);
-                default_package_data(DatasourceId::AndroidApk)
+                // The file claimed a `.apk` extension and a zip magic but is not
+                // a readable archive; decline quietly rather than erroring.
+                log::debug!("Declining unreadable .apk archive {:?}: {}", path, error);
+                Vec::new()
             }
-        };
-
-        vec![package_data]
+        }
     }
 }
 
@@ -238,7 +244,7 @@ impl PackageParser for AndroidAabParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
-        let package_data = match read_best_zip_entry(path, |entry_name| {
+        match read_best_zip_entry(path, |entry_name| {
             if entry_name == "base/manifest/AndroidManifest.xml" {
                 Some(0)
             } else if entry_name.ends_with("/manifest/AndroidManifest.xml") {
@@ -248,25 +254,31 @@ impl PackageParser for AndroidAabParser {
             }
         }) {
             Ok(Some((entry_name, bytes))) => {
-                parse_proto_manifest_bytes(&bytes).unwrap_or_else(|error| {
+                let package_data = parse_proto_manifest_bytes(&bytes).unwrap_or_else(|error| {
                     warn!(
                         "Failed to parse AAB manifest {:?} ({}): {}",
                         path, entry_name, error
                     );
                     default_package_data(DatasourceId::AndroidAab)
-                })
+                });
+                vec![package_data]
             }
             Ok(None) => {
-                warn!("No proto AndroidManifest.xml found in AAB {:?}", path);
-                default_package_data(DatasourceId::AndroidAab)
+                // An `.aab` with no proto manifest is not a usable App Bundle;
+                // decline quietly instead of emitting a scan error.
+                log::debug!(
+                    "Declining .aab without proto AndroidManifest.xml {:?}",
+                    path
+                );
+                Vec::new()
             }
             Err(error) => {
-                warn!("Failed to read AAB archive {:?}: {}", path, error);
-                default_package_data(DatasourceId::AndroidAab)
+                // Claimed a `.aab` extension and zip magic but is not a readable
+                // archive; decline quietly rather than erroring.
+                log::debug!("Declining unreadable .aab archive {:?}: {}", path, error);
+                Vec::new()
             }
-        };
-
-        vec![package_data]
+        }
     }
 }
 
@@ -292,11 +304,18 @@ fn read_file_bytes(path: &Path, max_size: Option<u64>) -> Result<Vec<u8>, String
     Ok(bytes)
 }
 
-fn parse_soong_metadata(content: &str) -> PackageData {
-    let parsed = parse_textproto_map(content).unwrap_or_else(|error| {
-        warn!("Failed to parse Android Soong METADATA: {}", error);
-        ProtoMap::default()
-    });
+fn parse_soong_metadata(content: &str) -> Option<PackageData> {
+    let parsed = match parse_textproto_map(content) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            // `METADATA` is matched by filename, so we also see real-world
+            // textproto variants (e.g. legacy `Key: value` chromium METADATA
+            // with unquoted multi-word values) that this conservative parser
+            // does not model. Decline quietly instead of emitting a scan error.
+            log::debug!("Declining unparseable Android Soong METADATA: {error}");
+            return None;
+        }
+    };
 
     let mut package = default_package_data(DatasourceId::AndroidSoongMetadata);
     package.name = parsed.get_first_string("name").map(truncate_field);
@@ -444,36 +463,59 @@ fn parse_soong_metadata(content: &str) -> PackageData {
         }
     }
 
-    package
+    Some(package)
 }
+
+/// Magic header of a compiled binary Android XML (AXML) resource: a
+/// `RES_XML_TYPE` chunk (type `0x0003`, header size `0x0008`).
+const BINARY_AXML_MAGIC: [u8; 4] = [0x03, 0x00, 0x08, 0x00];
+
+/// Leading byte-order mark some text editors prepend to UTF-8 XML files.
+const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 
 fn parse_manifest_bytes(
     bytes: &[u8],
     datasource_id: DatasourceId,
     context: &str,
 ) -> Option<PackageData> {
-    if looks_like_text_xml(bytes) {
-        match parse_text_manifest_bytes(bytes, datasource_id) {
-            Ok(package) => return Some(package),
-            Err(error) => {
-                warn!("Failed to parse {} as text XML: {}", context, error);
-                return None;
-            }
-        }
+    if looks_like_binary_axml(bytes) {
+        return parse_binary_manifest_bytes(bytes, datasource_id)
+            .map(Some)
+            .unwrap_or_else(|error| {
+                warn!(
+                    "Failed to parse {} as binary Android XML: {}",
+                    context, error
+                );
+                None
+            });
     }
 
-    parse_binary_manifest_bytes(bytes, datasource_id)
-        .map(Some)
-        .unwrap_or_else(|error| {
-            warn!(
-                "Failed to parse {} as binary Android XML: {}",
-                context, error
-            );
-            None
-        })
+    if looks_like_text_xml(bytes) {
+        return match parse_text_manifest_bytes(bytes, datasource_id) {
+            Ok(package) => Some(package),
+            Err(error) => {
+                warn!("Failed to parse {} as text XML: {}", context, error);
+                None
+            }
+        };
+    }
+
+    // Neither a compiled AXML chunk nor recognizable text XML: this is not a
+    // manifest we can parse, so decline quietly without a scan error rather
+    // than feeding non-AXML bytes to rusty-axml (which panics on them).
+    log::debug!(
+        "Declining unrecognized {} content (neither binary AXML nor text XML)",
+        context
+    );
+    None
+}
+
+fn looks_like_binary_axml(bytes: &[u8]) -> bool {
+    bytes.starts_with(&BINARY_AXML_MAGIC)
 }
 
 fn looks_like_text_xml(bytes: &[u8]) -> bool {
+    let bytes = bytes.strip_prefix(&UTF8_BOM).unwrap_or(bytes);
     bytes
         .iter()
         .find(|byte| !byte.is_ascii_whitespace())

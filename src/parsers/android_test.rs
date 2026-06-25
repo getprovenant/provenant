@@ -542,6 +542,129 @@ third_party {
     }
 
     #[test]
+    fn test_bom_prefixed_text_manifest_parses_without_panic_or_scan_error() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let manifest_path = temp_dir.path().join("AndroidManifest.xml");
+        let mut bytes = vec![0xEF, 0xBB, 0xBF];
+        bytes.extend_from_slice(
+            br#"<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.bomapp"
+    android:versionName="1.2.3">
+    <uses-sdk android:targetSdkVersion="34" />
+    <application android:label="BOM App" />
+</manifest>
+"#,
+        );
+        fs::write(&manifest_path, &bytes).expect("write BOM manifest");
+
+        let result =
+            try_parse_file(&manifest_path).expect("android manifest should be claimed by dispatch");
+
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "BOM-prefixed text manifest must not produce scan errors: {:?}",
+            result.scan_diagnostics
+        );
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(
+            result.packages[0].name.as_deref(),
+            Some("com.example.bomapp")
+        );
+        assert_eq!(result.packages[0].version.as_deref(), Some("1.2.3"));
+    }
+
+    #[test]
+    fn test_text_manifest_routed_away_from_binary_parser_without_panic() {
+        // A plain source-tree text manifest must never reach the binary AXML
+        // parser (rusty-axml panics on non-AXML input). Confirm a leading
+        // comment ahead of the root element still routes to the text path.
+        let temp_dir = TempDir::new().expect("temp dir");
+        let manifest_path = temp_dir.path().join("AndroidManifest.xml");
+        fs::write(
+            &manifest_path,
+            br#"<!-- generated -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.commentapp" />
+"#,
+        )
+        .expect("write commented manifest");
+
+        let result =
+            try_parse_file(&manifest_path).expect("android manifest should be claimed by dispatch");
+
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "commented text manifest must not produce scan errors: {:?}",
+            result.scan_diagnostics
+        );
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(
+            result.packages[0].name.as_deref(),
+            Some("com.example.commentapp")
+        );
+    }
+
+    #[test]
+    fn test_malformed_apk_declines_without_scan_error() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let apk_path = temp_dir.path().join("broken.apk");
+        // A valid local-file-header zip magic followed by truncated bytes: it
+        // passes the `is_zip` magic check but is not a readable archive.
+        fs::write(&apk_path, b"PK\x03\x04 truncated not a real zip").expect("write broken apk");
+
+        let packages = AndroidApkParser::extract_packages(&apk_path);
+        assert!(packages.is_empty());
+
+        let result = try_parse_file(&apk_path);
+        if let Some(result) = result {
+            assert!(
+                result.scan_diagnostics.is_empty(),
+                "malformed .apk must not produce scan errors: {:?}",
+                result.scan_diagnostics
+            );
+            assert!(result.packages.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_manifestless_apk_declines_without_scan_error() {
+        let (_temp_dir, apk_path) = create_zip(&[("classes.dex", b"dex")], "no-manifest.apk");
+
+        let packages = AndroidApkParser::extract_packages(&apk_path);
+        assert!(packages.is_empty());
+
+        let result =
+            try_parse_file(&apk_path).expect("apk should be claimed by zip-magic dispatch");
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "manifest-less .apk must not produce scan errors: {:?}",
+            result.scan_diagnostics
+        );
+        assert!(result.packages.is_empty());
+    }
+
+    #[test]
+    fn test_legacy_keyvalue_soong_metadata_declines_without_scan_error() {
+        let metadata_path =
+            PathBuf::from("testdata/android/metadata/chromium_legacy_keyvalue/METADATA");
+
+        // The fixture matches the Soong METADATA heuristics but uses a legacy
+        // key/value shape this parser does not model; it must decline quietly.
+        assert!(AndroidSoongMetadataParser::is_match(&metadata_path));
+        assert!(AndroidSoongMetadataParser::extract_packages(&metadata_path).is_empty());
+
+        let result =
+            try_parse_file(&metadata_path).expect("METADATA should be claimed by dispatch");
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "legacy key/value METADATA must not produce scan errors: {:?}",
+            result.scan_diagnostics
+        );
+        assert!(result.packages.is_empty());
+    }
+
+    #[test]
     fn test_invalid_text_manifest_reports_single_scan_error_without_package() {
         let temp_dir = TempDir::new().expect("temp dir");
         let manifest_path = temp_dir.path().join("AndroidManifest.xml");
