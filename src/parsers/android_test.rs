@@ -645,6 +645,46 @@ third_party {
     }
 
     #[test]
+    fn test_malformed_aab_declines_without_scan_error() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let aab_path = temp_dir.path().join("broken.aab");
+        // A valid local-file-header zip magic followed by truncated bytes: it
+        // passes the `is_zip` magic check but is not a readable archive.
+        fs::write(&aab_path, b"PK\x03\x04 truncated not a real zip").expect("write broken aab");
+
+        let packages = AndroidAabParser::extract_packages(&aab_path);
+        assert!(packages.is_empty());
+
+        let result = try_parse_file(&aab_path);
+        if let Some(result) = result {
+            assert!(
+                result.scan_diagnostics.is_empty(),
+                "malformed .aab must not produce scan errors: {:?}",
+                result.scan_diagnostics
+            );
+            assert!(result.packages.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_manifestless_aab_declines_without_scan_error() {
+        let (_temp_dir, aab_path) =
+            create_zip(&[("BundleConfig.pb", b"config")], "no-manifest.aab");
+
+        let packages = AndroidAabParser::extract_packages(&aab_path);
+        assert!(packages.is_empty());
+
+        let result =
+            try_parse_file(&aab_path).expect("aab should be claimed by zip-magic dispatch");
+        assert!(
+            result.scan_diagnostics.is_empty(),
+            "manifest-less .aab must not produce scan errors: {:?}",
+            result.scan_diagnostics
+        );
+        assert!(result.packages.is_empty());
+    }
+
+    #[test]
     fn test_legacy_keyvalue_soong_metadata_declines_without_scan_error() {
         let metadata_path =
             PathBuf::from("testdata/android/metadata/chromium_legacy_keyvalue/METADATA");
