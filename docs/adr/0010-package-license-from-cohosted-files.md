@@ -126,16 +126,25 @@ parsers.
   `abstains_when_colocated_legal_files_disagree`) plus an end-to-end `create_output`
   wiring test.
 
-### Scope note: the origin case is not closed by this pass
+### Scope note: assembled packages only, not file-level `package_data`
 
-The delta that motivated this ADR — `Netflix/spectator`'s root `build.gradle` — is
-**not** affected, because that `build.gradle` carries no package identity, so
-Provenant assembles **no package** for it (`packages: []`); there is nothing to
-attach a declared license to. ScanCode reports the license on the file's
-`package_data` instead. Promoting onto identity-less file-level `package_data` is a
-larger, higher-false-positive expansion and remains out of scope. This pass targets
-the common, higher-value case: a package that **is** assembled (Go modules,
-autotools, Swift, Bazel) but declares no license.
+This pass enriches the assembled `Package`, not the file-level `package_data`
+entries on the contributing files. Two consequences, both verified and accepted:
+
+- The delta that motivated this ADR — `Netflix/spectator`'s root `build.gradle` —
+  is **not** closed, because that `build.gradle` carries no package identity, so
+  Provenant assembles **no package** for it (`packages: []`); there is nothing to
+  attach a declared license to.
+- Where a package _does_ assemble, ScanCode also stamps the license onto each
+  contributing file's `package_data` (e.g. `go.mod`/`go.sum`), whereas this pass
+  updates only the assembled package. Verified on `sirupsen/logrus`: the assembled
+  `pkg:golang/.../logrus` package gains `declared: mit` (matching ScanCode), while
+  the `go.mod`/`go.sum` file-level `package_data` stay null.
+
+Promoting onto file-level `package_data` (and onto identity-less manifest files
+like the spectator case) is a larger, higher-false-positive expansion left out of
+scope. This pass targets the authoritative, higher-value surface: a package that
+**is** assembled (Go modules, autotools, Swift, Bazel) but declares no license.
 
 ## Consequences
 
