@@ -51,7 +51,7 @@ mod tests {
             result.packages.is_empty(),
             "dependency-list fixture should not create a root package"
         );
-        assert_eq!(result.dependencies.len(), 3);
+        assert_eq!(result.dependencies.len(), 4);
         assert!(result.dependencies.iter().any(|dependency| {
             dependency.purl.as_deref() == Some("pkg:maven/javax.ws.rs/javax.ws.rs-api@2.1")
                 && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
@@ -59,6 +59,11 @@ mod tests {
         }));
         assert!(result.dependencies.iter().any(|dependency| {
             dependency.purl.as_deref() == Some("pkg:maven/org.slf4j/slf4j-api@2.0.13")
+                && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+        }));
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref()
+                == Some("pkg:maven/io.dropwizard.metrics5/metrics-core@5.0.0-rc16")
                 && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
         }));
 

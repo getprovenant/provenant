@@ -264,7 +264,7 @@ fn parse_properties_entries(content: &str) -> Vec<(String, String)> {
             && let Some((key, value)) = logical_line.split_once('=')
         {
             let key = key.trim();
-            let value = value.trim();
+            let value = strip_inline_comment(value.trim());
             if !key.is_empty() && !value.is_empty() {
                 entries.push((key.to_string(), value.to_string()));
             }
@@ -274,6 +274,20 @@ fn parse_properties_entries(content: &str) -> Vec<(String, String)> {
     }
 
     entries
+}
+
+/// Strips a trailing inline annotation from a property value.
+///
+/// Java `.properties` treats `#`/`!` as comments only at the start of a logical line, so the
+/// whole right-hand side is technically the value. In practice these Ivy-style Maven dependency
+/// files carry trailing notes such as `5.0.0-rc16 # 5.0.0 is a bad version do not use`. A Maven
+/// coordinate never embeds whitespace, so a ` #` (or `\t#`) marks the start of human commentary
+/// that must not bleed into the captured version.
+fn strip_inline_comment(value: &str) -> &str {
+    match value.find(" #").or_else(|| value.find("\t#")) {
+        Some(index) => value[..index].trim_end(),
+        None => value,
+    }
 }
 
 fn parse_ivy_dependencies_entry(key: &str, value: &str, scope: Option<&str>) -> Option<Dependency> {

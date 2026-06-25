@@ -326,6 +326,9 @@ ScanCode: 63.97s</title></rect>
     <rect x="529.99" y="401.38" width="8" height="8" fill="#d97706" rx="1.5"><title>catchorg/Catch2 @ 10f6248
 Files: 576
 ScanCode: 121.03s</title></rect>
+    <rect x="531.06" y="408.14" width="8" height="8" fill="#d97706" rx="1.5"><title>Netflix/spectator @ fac9597
+Files: 585
+ScanCode: 104.90s</title></rect>
     <rect x="531.64" y="398.72" width="8" height="8" fill="#d97706" rx="1.5"><title>i18next/react-i18next @ cb20d18
 Files: 590
 ScanCode: 128.04s</title></rect>
@@ -982,6 +985,9 @@ Provenant: 4.70s</title></circle>
     <circle cx="533.99" cy="546.25" r="4.5" fill="#2563eb"><title>catchorg/Catch2 @ 10f6248
 Files: 576
 Provenant: 6.14s</title></circle>
+    <circle cx="535.06" cy="539.38" r="4.5" fill="#2563eb"><title>Netflix/spectator @ fac9597
+Files: 585
+Provenant: 7.10s</title></circle>
     <circle cx="535.64" cy="542.05" r="4.5" fill="#2563eb"><title>i18next/react-i18next @ cb20d18
 Files: 590
 Provenant: 6.71s</title></circle>

@@ -83,7 +83,7 @@ fn test_parses_dependencies_properties_maven_coordinates() {
         Some(DatasourceId::AntIvyDependenciesProperties)
     );
     assert_eq!(package_data.primary_language.as_deref(), Some("Java"));
-    assert_eq!(package_data.dependencies.len(), 3);
+    assert_eq!(package_data.dependencies.len(), 4);
 
     let jaxrs = package_data
         .dependencies
@@ -174,6 +174,34 @@ fn test_dependencies_properties_comment_backslash_does_not_continue() {
     assert_eq!(
         package_data.dependencies[0].purl.as_deref(),
         Some("pkg:maven/com.example/kept@1.2.3")
+    );
+}
+
+#[test]
+fn test_dependencies_properties_strips_inline_comment_from_version() {
+    use std::io::Write;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("dependencies.properties");
+    let mut file = std::fs::File::create(&path).expect("create");
+    writeln!(
+        file,
+        "io.dropwizard.metrics5:metrics-core = 5.0.0-rc16 # bad version"
+    )
+    .expect("write");
+    drop(file);
+
+    let package_data = IvyDependenciesPropertiesParser::extract_first_package(&path);
+    assert_eq!(package_data.dependencies.len(), 1);
+    assert_eq!(
+        package_data.dependencies[0].purl.as_deref(),
+        Some("pkg:maven/io.dropwizard.metrics5/metrics-core@5.0.0-rc16")
+    );
+    assert_eq!(
+        package_data.dependencies[0]
+            .extracted_requirement
+            .as_deref(),
+        Some("5.0.0-rc16")
     );
 }
 

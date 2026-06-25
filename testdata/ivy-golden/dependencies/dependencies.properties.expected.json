@@ -90,10 +90,10 @@
           "purl": "pkg:maven/javax.ws.rs/javax.ws.rs-api@2.1"
         },
         "extra_data": {
-          "coordinate_format": "value_gav",
-          "artifact": "javax.ws.rs-api",
           "property_name": "javax.ws.rs-api",
-          "group": "javax.ws.rs"
+          "group": "javax.ws.rs",
+          "coordinate_format": "value_gav",
+          "artifact": "javax.ws.rs-api"
         }
       },
       {
@@ -149,10 +149,10 @@
           "purl": "pkg:maven/jstl/jstl@1.2"
         },
         "extra_data": {
-          "property_name": "jstl",
-          "artifact": "jstl",
+          "coordinate_format": "value_gav",
           "group": "jstl",
-          "coordinate_format": "value_gav"
+          "artifact": "jstl",
+          "property_name": "jstl"
         }
       },
       {
@@ -208,10 +208,69 @@
           "purl": "pkg:maven/org.slf4j/slf4j-api@2.0.13"
         },
         "extra_data": {
-          "group": "org.slf4j",
-          "artifact": "slf4j-api",
           "coordinate_format": "key_ga",
-          "property_name": "org.slf4j:slf4j-api"
+          "group": "org.slf4j",
+          "property_name": "org.slf4j:slf4j-api",
+          "artifact": "slf4j-api"
+        }
+      },
+      {
+        "purl": "pkg:maven/io.dropwizard.metrics5/metrics-core@5.0.0-rc16",
+        "extracted_requirement": "5.0.0-rc16",
+        "scope": null,
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": true,
+        "resolved_package": {
+          "type": "maven",
+          "namespace": "io.dropwizard.metrics5",
+          "name": "metrics-core",
+          "version": "5.0.0-rc16",
+          "qualifiers": {},
+          "subpath": null,
+          "primary_language": "Java",
+          "description": null,
+          "release_date": null,
+          "parties": [],
+          "keywords": [],
+          "homepage_url": null,
+          "download_url": null,
+          "size": null,
+          "sha1": null,
+          "md5": null,
+          "sha256": null,
+          "sha512": null,
+          "bug_tracking_url": null,
+          "code_view_url": null,
+          "vcs_url": null,
+          "copyright": null,
+          "holder": null,
+          "declared_license_expression": null,
+          "declared_license_expression_spdx": null,
+          "license_detections": [],
+          "other_license_expression": null,
+          "other_license_expression_spdx": null,
+          "other_license_detections": [],
+          "extracted_license_statement": null,
+          "notice_text": null,
+          "source_packages": [],
+          "file_references": [],
+          "is_private": false,
+          "is_virtual": false,
+          "extra_data": {},
+          "dependencies": [],
+          "repository_homepage_url": null,
+          "repository_download_url": null,
+          "api_data_url": null,
+          "datasource_id": "ant_ivy_dependencies_properties",
+          "purl": "pkg:maven/io.dropwizard.metrics5/metrics-core@5.0.0-rc16"
+        },
+        "extra_data": {
+          "coordinate_format": "key_ga",
+          "artifact": "metrics-core",
+          "property_name": "io.dropwizard.metrics5:metrics-core",
+          "group": "io.dropwizard.metrics5"
         }
       }
     ],
