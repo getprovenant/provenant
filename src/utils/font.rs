@@ -96,13 +96,39 @@ fn extract_sfnt_font_metadata_text(bytes: &[u8], include_permissions: bool) -> O
     (!lines.is_empty()).then(|| lines.join("\n"))
 }
 
-fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
-    let Some(font_data) = ReadScope::new(bytes).read::<FontData<'_>>().ok() else {
-        return Vec::new();
-    };
-
+/// Decode every `name` table record into its own newline-separated line.
+///
+/// Each record is decoded from its own `offset`/`length` slice of the name
+/// table's string storage, so adjacent records never run together. This is the
+/// safe alternative to scraping raw printable strings from the font binary,
+/// where packed UTF-16 name-table storage glues consecutive records (e.g.
+/// designer, vendor URL, description) into run-on tokens such as
+/// `bulenkovhttps://www.jetbrains.comThis`, corrupting downstream URL and
+/// copyright extraction.
+pub(crate) fn extract_font_name_table_strings(bytes: &[u8]) -> String {
     let mut lines = Vec::new();
     let mut seen = BTreeSet::new();
+    for line in extract_allsorts_all_name_strings(bytes) {
+        let normalized = line.split_whitespace().collect::<Vec<_>>().join(" ");
+        if normalized.is_empty() {
+            continue;
+        }
+        if seen.insert(normalized.clone()) {
+            lines.push(normalized);
+        }
+    }
+    lines.join("\n")
+}
+
+/// Read each face's `name` table from an SFNT/WOFF/collection and hand it to
+/// `visit`. Centralizes the `ReadScope` → `FontData` → face loop → provider →
+/// `NameTable` setup shared by the name-table extractors so the reading logic
+/// (tag constant, error handling, allsorts API) lives in one place.
+fn for_each_name_table(bytes: &[u8], mut visit: impl FnMut(&NameTable<'_>)) {
+    let Some(font_data) = ReadScope::new(bytes).read::<FontData<'_>>().ok() else {
+        return;
+    };
+
     for face_index in 0..allsorts_face_count(&font_data) {
         let Ok(provider) = font_data.table_provider(face_index) else {
             continue;
@@ -114,7 +140,32 @@ fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
         else {
             continue;
         };
+        visit(&name_table);
+    }
+}
 
+fn extract_allsorts_all_name_strings(bytes: &[u8]) -> Vec<String> {
+    let mut strings = Vec::new();
+    for_each_name_table(bytes, |name_table| {
+        // Decode each distinct name id via `string_for_id`, which reads each
+        // record from its own offset/length rather than concatenating storage.
+        let mut name_ids = BTreeSet::new();
+        for record in name_table.name_records.iter() {
+            name_ids.insert(record.name_id);
+        }
+        for name_id in name_ids {
+            if let Some(value) = name_table.string_for_id(name_id) {
+                strings.push(value);
+            }
+        }
+    });
+    strings
+}
+
+fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut seen = BTreeSet::new();
+    for_each_name_table(bytes, |name_table| {
         for (source_name_id, target_name_id) in [
             (NameTable::COPYRIGHT_NOTICE, name_id::COPYRIGHT_NOTICE),
             (NameTable::LICENSE_DESCRIPTION, name_id::LICENSE),
@@ -130,8 +181,7 @@ fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
                 lines.push(line);
             }
         }
-    }
-
+    });
     lines
 }
 
@@ -399,9 +449,11 @@ mod tests {
     use crate::license_detection::LicenseDetectionEngine;
     use ttf_parser::name_id;
 
+    use crate::finder::{DetectionConfig, find_urls};
+
     use super::{
         build_font_metadata_line, canonicalize_ofl_license_reference_urls,
-        extract_font_metadata_text,
+        extract_font_metadata_text, extract_font_name_table_strings,
     };
 
     #[test]
@@ -610,5 +662,55 @@ mod tests {
             "{text}"
         );
         assert!(text.contains("No rights reserved"), "{text}");
+    }
+
+    #[test]
+    fn name_table_strings_do_not_run_records_together_into_malformed_urls() {
+        // Reproduces the JetBrains variable-font name-table packing where
+        // designer, vendor URL, and description records are stored contiguously
+        // in UTF-16 storage with no separators. A raw whole-binary
+        // printable-strings scrape glued them into run-on URLs such as
+        // `bulenkovhttps://www.jetbrains.comThis`; per-record decoding keeps each
+        // value on its own line.
+        let bytes = fs::read("testdata/font-fixtures/SyntheticVariableNameRunon.ttf")
+            .expect("read synthetic variable font fixture");
+
+        let name_strings = extract_font_name_table_strings(&bytes);
+
+        assert!(
+            name_strings.contains("https://www.jetbrains.com"),
+            "{name_strings}"
+        );
+        // The vendor URL must stand alone, never fused with the adjacent
+        // designer or description records.
+        assert!(
+            !name_strings.contains("bulenkovhttps://www.jetbrains.com"),
+            "{name_strings}"
+        );
+        assert!(
+            !name_strings.contains("www.jetbrains.comThis"),
+            "{name_strings}"
+        );
+        assert!(
+            !name_strings.contains("OFLhttps://scripts.sil.org/OFL"),
+            "{name_strings}"
+        );
+
+        // The name-table strings feed URL detection downstream; assert no
+        // malformed run-on URL survives end-of-URL cleaning.
+        let urls = find_urls(&name_strings, &DetectionConfig::default());
+        let detected: Vec<&str> = urls.iter().map(|url| url.url.as_str()).collect();
+        assert!(
+            detected
+                .iter()
+                .any(|url| url.starts_with("https://www.jetbrains.com")),
+            "detected URLs: {detected:?}"
+        );
+        for url in &detected {
+            assert!(
+                !url.contains("comThis") && !url.contains("OFLhttps"),
+                "malformed run-on URL detected: {url:?} (all: {detected:?})"
+            );
+        }
     }
 }
