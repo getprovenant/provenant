@@ -43,6 +43,10 @@ pub fn assemble_siblings(
         return results;
     }
 
+    if let Some(results) = assemble_maven_distinct_gav_packages(config, files, file_indices) {
+        return results;
+    }
+
     assemble_single_sibling_package(config, files, file_indices)
         .into_iter()
         .collect()
@@ -149,6 +153,136 @@ fn assemble_single_sibling_package(
     } else {
         None
     }
+}
+
+/// Assemble a directory holding multiple INDEPENDENT Maven `.pom` files, each
+/// with a distinct group:artifact:version (GAV) identity, into one package per
+/// distinct GAV.
+///
+/// The Maven sibling assembler exists to fold a single module (one `pom.xml`
+/// plus its sibling `pom.properties` / `META-INF/MANIFEST.MF`, all describing
+/// the SAME package) into one package. But a directory can also hold many
+/// standalone `.pom` fixtures or a local-repo layout where each `.pom` carries a
+/// different GAV. The default single-package sibling merge would collapse all of
+/// them into one top-level package; instead each distinct GAV must stay its own
+/// package.
+///
+/// Identity is keyed off the package `purl` (the GAV proxy). Datafiles with no
+/// purl (a `pom.properties` or `MANIFEST.MF` carrying only supplementary,
+/// purl-less metadata) are not attached to any package in the multi-GAV path;
+/// this function returns `None` (falling through to the default merge path) only
+/// when fewer than two distinct Maven purls are present, so the single-module
+/// case (one `pom.xml` + purl-less siblings) is byte-for-byte unchanged.
+///
+/// Multiple datafiles that share the SAME purl are still merged into one package
+/// (their datafiles are all attached), so a duplicate-GAV datafile is never left
+/// orphaned.
+fn assemble_maven_distinct_gav_packages(
+    config: &AssemblerConfig,
+    files: &[FileInfo],
+    file_indices: &[usize],
+) -> Option<Vec<DirectoryMergeOutput>> {
+    if !is_maven_sibling_config(config) {
+        return None;
+    }
+
+    // Collect every Maven datafile carrying a concrete purl identity, keyed by
+    // (file_idx, package_data_idx). Distinct purls mean independent packages.
+    let mut purled: Vec<(usize, usize, &str)> = Vec::new();
+    for &idx in file_indices {
+        for (pkg_data_idx, pkg_data) in files[idx].package_data.iter().enumerate() {
+            if !is_handled_by(pkg_data, config) {
+                continue;
+            }
+            if let Some(purl) = pkg_data.purl.as_deref() {
+                purled.push((idx, pkg_data_idx, purl));
+            }
+        }
+    }
+
+    let distinct_purls: HashSet<&str> = purled.iter().map(|(_, _, purl)| *purl).collect();
+    if distinct_purls.len() < 2 {
+        // Zero or one distinct identity: the default single-package merge already
+        // produces the correct result (and keeps supplementary purl-less files
+        // merged into the one module package).
+        return None;
+    }
+
+    // Group datafiles by purl, preserving first-seen order for deterministic
+    // output. Datafiles that share a purl merge into the same package so none is
+    // left orphaned; in the standalone-`.pom` layouts this guards against each
+    // group is typically a single file.
+    let mut purl_order: Vec<&str> = Vec::new();
+    let mut groups: std::collections::HashMap<&str, Vec<(usize, usize)>> =
+        std::collections::HashMap::new();
+    for (idx, pkg_data_idx, purl) in &purled {
+        groups.entry(purl).or_insert_with(|| {
+            purl_order.push(purl);
+            Vec::new()
+        });
+        if let Some(group) = groups.get_mut(purl) {
+            group.push((*idx, *pkg_data_idx));
+        }
+    }
+
+    let mut results = Vec::new();
+    for purl in purl_order {
+        let group = &groups[purl];
+
+        let mut package: Option<Package> = None;
+        let mut pending_dependencies: Vec<PendingDependency> = Vec::new();
+        let mut affected_indices: Vec<usize> = Vec::new();
+
+        for &(idx, pkg_data_idx) in group {
+            let pkg_data = &files[idx].package_data[pkg_data_idx];
+            let datafile_path = files[idx].path.clone();
+
+            match &mut package {
+                None => {
+                    package = Some(Package::from_package_data(pkg_data, datafile_path.clone()));
+                }
+                Some(pkg) => pkg.update(pkg_data, datafile_path.clone()),
+            }
+
+            // Mirror the default Maven sibling path: only hoist dependencies that
+            // carry a resolvable purl.
+            if let Some(datasource_id) = pkg_data.datasource_id {
+                pending_dependencies.extend(
+                    pkg_data
+                        .dependencies
+                        .iter()
+                        .filter(|dep| dep.purl.is_some())
+                        .map(|dep| PendingDependency {
+                            dependency: dep.clone(),
+                            datafile_path: datafile_path.clone(),
+                            datasource_id,
+                        }),
+                );
+            }
+
+            if !affected_indices.contains(&idx) {
+                affected_indices.push(idx);
+            }
+        }
+
+        results.push(build_directory_merge_output(
+            package,
+            pending_dependencies,
+            affected_indices,
+        ));
+    }
+
+    Some(results)
+}
+
+/// Recognize the Maven/Java sibling assembler config. Both `MavenPom` and
+/// `MavenPomProperties` are required so this stays bound to that one config even
+/// if a future assembler reuses `MavenPom` alongside unrelated datasource IDs.
+fn is_maven_sibling_config(config: &AssemblerConfig) -> bool {
+    config.datasource_ids.contains(&DatasourceId::MavenPom)
+        && config
+            .datasource_ids
+            .contains(&DatasourceId::MavenPomProperties)
 }
 
 fn assemble_cocoapods_multiple_podspecs(

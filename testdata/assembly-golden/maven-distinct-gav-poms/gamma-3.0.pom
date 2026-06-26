@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.example.other</groupId>
+    <artifactId>gamma</artifactId>
+    <version>3.0</version>
+    <packaging>jar</packaging>
+    <name>Gamma</name>
+    <dependencies>
+        <dependency>
+            <groupId>org.example.tests</groupId>
+            <artifactId>alpha</artifactId>
+            <version>1.0</version>
+        </dependency>
+    </dependencies>
+</project>
