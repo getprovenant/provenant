@@ -26,6 +26,7 @@ use super::detector_input_normalization::{
 use super::lexer::get_tokens;
 use super::line_tracking::{LineNumberIndex, PreparedLineCache};
 use super::parser::{parse, parse_with_deadline};
+use super::refiner::looks_like_bpe_merges_table;
 #[cfg(test)]
 use super::refiner::refine_copyright;
 use super::types::{
@@ -222,6 +223,12 @@ pub fn detect_copyrights_from_text_with_deadline(
     let deadline = max_runtime.and_then(|d| Instant::now().checked_add(d));
 
     if content.is_empty() {
+        return (copyrights, holders, authors);
+    }
+
+    // BPE tokenizer merge tables (e.g. `merges.txt`) embed the `©` symbol and
+    // mojibake byte pairs as merge rules but carry no genuine copyright notice.
+    if looks_like_bpe_merges_table(content) {
         return (copyrights, holders, authors);
     }
 
@@ -432,6 +439,12 @@ pub fn detect_copyrights_from_text_with_deadline(
         &raw_lines,
         &mut copyrights,
         &mut holders,
+    );
+    drop_tokenizer_data_fragment_detections(
+        &raw_lines,
+        &mut copyrights,
+        &mut holders,
+        &mut authors,
     );
 
     for group in &groups {
@@ -692,7 +705,7 @@ pub(super) use token_utils::collect_all_leaves;
 use token_utils::{
     apply_written_by_for_markers, drop_path_fragment_holders_from_bare_c_code_lines,
     drop_scan_only_holders_from_copyright_scan_lines,
-    drop_test_label_false_positive_copyrights_and_holders,
+    drop_test_label_false_positive_copyrights_and_holders, drop_tokenizer_data_fragment_detections,
     extract_original_author_additional_contributors,
 };
 use tree_walk::{

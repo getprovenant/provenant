@@ -471,6 +471,62 @@ fn test_refine_holder_drops_trailing_preposition_fragment() {
     );
 }
 
+// ── is_tokenizer_data_fragment ───────────────────────────────────
+
+#[test]
+fn test_tokenizer_data_fragment_bpe_word_marker() {
+    // Hugging Face merges.txt / vocab.json BPE artifacts carrying the `©`
+    // token must not be surfaced as copyright/holder notices.
+    assert!(is_tokenizer_data_fragment("Ã © goo gle</w> fren ch</w>"));
+    assert!(is_tokenizer_data_fragment("âģ ©</w> f ren st y</w>"));
+}
+
+#[test]
+fn test_tokenizer_data_fragment_json_token_id_entry() {
+    assert!(is_tokenizer_data_fragment(r#""©": 102,"#));
+    assert!(is_tokenizer_data_fragment(r#""copyright</w>": 15778,"#));
+    assert!(is_tokenizer_data_fragment(r#""Â©": 31148,"#));
+    // Multiple entries on one line (and a minified-object line) are still data.
+    assert!(is_tokenizer_data_fragment(
+        r#""andré": 35609, "ands": 32257,"#
+    ));
+    assert!(is_tokenizer_data_fragment(r#"{"a": 1, "b": 2}"#));
+}
+
+#[test]
+fn test_tokenizer_data_fragment_keeps_real_notices() {
+    assert!(!is_tokenizer_data_fragment("Copyright (c) 2024 Acme Inc."));
+    assert!(!is_tokenizer_data_fragment("(c) 2003 The Regents"));
+    // A normal URL with a port is not a JSON token:id entry.
+    assert!(!is_tokenizer_data_fragment(
+        "Copyright 2020 Foo http://example.com:8080"
+    ));
+    // A real notice that merely contains a mid-line `"key": <digit>` fragment
+    // must NOT be treated as tokenizer data (anchored whole-line match).
+    assert!(!is_tokenizer_data_fragment(
+        r#"Copyright 2024 Foo, "version": 5"#
+    ));
+    assert!(!is_tokenizer_data_fragment(
+        r#"Copyright 2020 Foo (see "config": 5)"#
+    ));
+}
+
+#[test]
+fn test_looks_like_bpe_merges_table() {
+    let merges = "#version: 0.2\ni n\nt h\nÂ ©\npok Ã©\n";
+    assert!(looks_like_bpe_merges_table(merges));
+}
+
+#[test]
+fn test_looks_like_bpe_merges_table_rejects_ordinary_text() {
+    // A normal source file with a #version-style comment is not a merge table:
+    // its lines are not all two-token pairs.
+    let src = "#version: 1.0\n// Copyright (c) 2024 Acme Inc. All rights reserved.\nfn main() {}\n";
+    assert!(!looks_like_bpe_merges_table(src));
+    // No `#version:` header at all.
+    assert!(!looks_like_bpe_merges_table("i n\nt h\n"));
+}
+
 // ── is_junk_copyright ────────────────────────────────────────────
 
 #[test]

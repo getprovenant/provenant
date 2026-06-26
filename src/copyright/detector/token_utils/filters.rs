@@ -10,9 +10,9 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use super::normalize_whitespace;
-use crate::copyright::refiner::is_path_like_code_fragment;
+use crate::copyright::refiner::{is_path_like_code_fragment, is_tokenizer_data_fragment};
 use crate::copyright::types::{
-    CopyrightDetection, HolderDetection, ParseNode, PosTag, Token, TreeLabel,
+    AuthorDetection, CopyrightDetection, HolderDetection, ParseNode, PosTag, Token, TreeLabel,
 };
 use crate::models::LineNumber;
 
@@ -285,6 +285,39 @@ fn collect_filtered_leaves_inner<'a>(
             }
         }
     }
+}
+
+/// Drop copyright, holder, and author detections that originate from machine
+/// subword-tokenizer data lines.
+///
+/// Hugging Face `merges.txt` BPE merge tables and `vocab.json` vocabularies
+/// embed the `©` symbol and the literal word `copyright` as tokens, which the
+/// detector would otherwise surface as dozens of spurious notices (e.g.
+/// `"©": 102,` or `Ã © goo gle</w> fren ch</w>`). A detection is dropped when any
+/// raw source line it spans is a tokenizer data fragment. Matching on the raw
+/// source line (rather than the refined statement) is robust because holder
+/// refinement strips the `</w>` markers and quotes that identify the data.
+pub fn drop_tokenizer_data_fragment_detections(
+    raw_lines: &[&str],
+    copyrights: &mut Vec<CopyrightDetection>,
+    holders: &mut Vec<HolderDetection>,
+    authors: &mut Vec<AuthorDetection>,
+) {
+    if raw_lines.is_empty() {
+        return;
+    }
+
+    let spans_tokenizer_line = |start: usize, end: usize| -> bool {
+        (start..=end).any(|line_no| {
+            raw_lines
+                .get(line_no.saturating_sub(1))
+                .is_some_and(|line| is_tokenizer_data_fragment(line))
+        })
+    };
+
+    copyrights.retain(|c| !spans_tokenizer_line(c.start_line.get(), c.end_line.get()));
+    holders.retain(|h| !spans_tokenizer_line(h.start_line.get(), h.end_line.get()));
+    authors.retain(|a| !spans_tokenizer_line(a.start_line.get(), a.end_line.get()));
 }
 
 pub fn drop_scan_only_holders_from_copyright_scan_lines(
