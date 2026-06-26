@@ -9,9 +9,9 @@ autobins = false
 repository = "https://github.com/mstykow/provenant"
 homepage = "https://github.com/mstykow/provenant"
 documentation = "https://github.com/mstykow/provenant/blob/main/docs/DOCUMENTATION_INDEX.md"
-description = "Rust scanner for ScanCode-compatible workflows, licenses, package metadata, SBOMs, and provenance data."
+description = "Fast Rust scanner for licenses, copyrights, package metadata, SBOMs, and provenance data."
 license = "Apache-2.0"
-keywords = ["scancode", "sbom", "license", "provenance", "compliance"]
+keywords = ["sbom", "license", "copyright", "provenance", "compliance"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "README.md"
 # Include only files needed to build from source
