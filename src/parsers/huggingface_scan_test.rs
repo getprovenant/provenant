@@ -116,4 +116,58 @@ mod tests {
             "README.md",
         );
     }
+
+    #[test]
+    fn diffusers_pipeline_component_config_does_not_surface_as_a_package() {
+        // A Diffusers pipeline repo has a repo-root `model_index.json` plus
+        // component subdirectories (`text_encoder/`, `unet/`, `vae/`, ...) each
+        // with their own `config.json`. The component config carries only a local
+        // cache path in `_name_or_path`, so on its own it would produce a
+        // purl-less, name-less junk package. Assembly must subsume it into the
+        // pipeline: exactly one `pkg:huggingface/...` package from the
+        // `model_index.json`, and no standalone component package.
+        let (_files, result) = scan_and_assemble(Path::new(
+            "testdata/assembly-golden/huggingface-diffusers-pipeline",
+        ));
+
+        let hf_packages: Vec<_> = result
+            .packages
+            .iter()
+            .filter(|package| package.package_type == Some(PackageType::Huggingface))
+            .collect();
+
+        assert_eq!(
+            hf_packages.len(),
+            1,
+            "expected exactly one pipeline package, got {:?}",
+            hf_packages
+                .iter()
+                .map(|p| p.purl.clone())
+                .collect::<Vec<_>>()
+        );
+
+        let pipeline = hf_packages[0];
+        assert_eq!(
+            pipeline.purl.as_deref(),
+            Some("pkg:huggingface/acme-ai/tiny-sd-demo"),
+            "the surviving package must be the model_index.json pipeline"
+        );
+        assert!(
+            pipeline
+                .datasource_ids
+                .iter()
+                .any(|id| id.as_str() == "huggingface_model_index_json"),
+            "pipeline package must come from model_index.json"
+        );
+
+        // No purl-less component package leaks through.
+        assert!(
+            !hf_packages.iter().any(|package| package.purl.is_none()),
+            "no purl-less component package should be emitted, got {:?}",
+            hf_packages
+                .iter()
+                .map(|p| (p.purl.clone(), p.name.clone()))
+                .collect::<Vec<_>>()
+        );
+    }
 }
