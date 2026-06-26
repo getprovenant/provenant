@@ -98,7 +98,7 @@ jobs:
       - name: Check output field reference document
         run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-output-field-reference -- --check
 
-      - name: Check packaged crate size
+      - name: Verify packaged crate builds and check size
         run: ./scripts/check_crate_size.sh
 
       - name: Check formatting

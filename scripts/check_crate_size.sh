@@ -15,7 +15,11 @@ for path in Path(sys.argv[1]).glob("provenant-cli-*.crate"):
     path.unlink()
 PY
 
-cargo package --locked --allow-dirty --no-verify > /dev/null
+# Verify (no --no-verify): this compiles the *packaged* tarball in isolation,
+# which is the only place an un-`include`d include_str!/include_bytes! resource
+# surfaces. Skipping verification here previously let such a bug reach the
+# release-only `cargo publish --dry-run` (see Cargo.toml `include`).
+cargo package --locked --allow-dirty > /dev/null
 
 crate_path=$(python3 - <<'PY'
 from pathlib import Path

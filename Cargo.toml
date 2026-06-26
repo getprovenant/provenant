@@ -26,6 +26,7 @@ include = [
     "/build.rs",
     "/resources/license_detection/license_index.zst",
     "/resources/license_detection/index_build_policy.toml",
+    "/resources/license_detection/declared_license_aliases.toml",
     "/resources/license_detection/overlay/**/*",
     "/resources/license_detection/legalese_data.txt",
     "/Cargo.toml",
