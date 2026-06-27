@@ -90,6 +90,59 @@ pub(crate) fn looks_like_hf_tokenizer_json(content: &str) -> bool {
         && content.contains("\"BPE\"")
 }
 
+/// The 1-based, inclusive line span of the `"merges"` array inside a Hugging
+/// Face `tokenizer.json`, or `None` if `content` is not such a file or has no
+/// merges array.
+///
+/// Detections inside this span are BPE merge-table junk (the mojibake `©`
+/// byte-pairs); everything else in the document — including any real
+/// `"copyright"`/`"license"` notice field — is left to normal detection, so the
+/// suppression is scoped to the merge table rather than the whole file. The
+/// array end is found by tracking `[`/`]` depth outside of double-quoted
+/// strings, so merge tokens that themselves contain a bracket do not confuse it.
+pub(crate) fn hf_tokenizer_merges_line_span(content: &str) -> Option<(usize, usize)> {
+    if !looks_like_hf_tokenizer_json(content) {
+        return None;
+    }
+
+    let start_line = content
+        .lines()
+        .position(|line| line.contains("\"merges\""))?;
+
+    let mut depth = 0i32;
+    let mut entered = false;
+    for (offset, line) in content.lines().skip(start_line).enumerate() {
+        let mut in_string = false;
+        let mut escaped = false;
+        for ch in line.chars() {
+            if in_string {
+                match ch {
+                    _ if escaped => escaped = false,
+                    '\\' => escaped = true,
+                    '"' => in_string = false,
+                    _ => {}
+                }
+                continue;
+            }
+            match ch {
+                '"' => in_string = true,
+                '[' => {
+                    depth += 1;
+                    entered = true;
+                }
+                ']' => {
+                    depth -= 1;
+                    if entered && depth == 0 {
+                        return Some((start_line + 1, start_line + offset + 1));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
 /// Return true if `s` matches any known junk copyright pattern.
 pub fn is_junk_copyright(s: &str) -> bool {
     if looks_like_structured_copyright_notice_with_year(s) {

@@ -299,6 +299,7 @@ fn collect_filtered_leaves_inner<'a>(
 /// refinement strips the `</w>` markers and quotes that identify the data.
 pub fn drop_tokenizer_data_fragment_detections(
     raw_lines: &[&str],
+    tokenizer_merges_span: Option<(usize, usize)>,
     copyrights: &mut Vec<CopyrightDetection>,
     holders: &mut Vec<HolderDetection>,
     authors: &mut Vec<AuthorDetection>,
@@ -308,6 +309,15 @@ pub fn drop_tokenizer_data_fragment_detections(
     }
 
     let spans_tokenizer_line = |start: usize, end: usize| -> bool {
+        // A detection that overlaps the Hugging Face `tokenizer.json` `"merges"`
+        // array is BPE merge-table junk; notices elsewhere in the document are
+        // untouched.
+        if let Some((merges_start, merges_end)) = tokenizer_merges_span
+            && start <= merges_end
+            && end >= merges_start
+        {
+            return true;
+        }
         (start..=end).any(|line_no| {
             raw_lines
                 .get(line_no.saturating_sub(1))

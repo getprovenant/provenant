@@ -26,6 +26,44 @@ fn test_bpe_tokenizer_data_lines_do_not_produce_copyrights_or_holders() {
 }
 
 #[test]
+fn test_hf_tokenizer_json_suppresses_merges_but_keeps_outside_notice() {
+    // A Hugging Face tokenizer.json embeds a BPE "merges" array of mojibake
+    // byte-pairs (junk) but is a larger document. Only the merges array is
+    // suppressed: a genuine notice elsewhere in the same file is preserved.
+    let input = concat!(
+        "{\n",
+        "  \"copyright\": \"Copyright 2024 Acme Inc.\",\n",
+        "  \"model\": {\n",
+        "    \"type\": \"BPE\",\n",
+        "    \"vocab\": { \"a\": 0 },\n",
+        "    \"merges\": [\n",
+        "      \"pok Ã©\",\n",
+        "      \"Â ©\",\n",
+        "      \"Ú ©\"\n",
+        "    ]\n",
+        "  }\n",
+        "}\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    // The real notice survives.
+    assert!(
+        copyrights.iter().any(|c| c.copyright.contains("Acme Inc")),
+        "expected the real notice to be detected: {copyrights:?}"
+    );
+    // None of the BPE merge mojibake pairs leak through as notices.
+    assert!(
+        !copyrights.iter().any(|c| c.copyright.contains('©')),
+        "merge-table junk leaked into copyrights: {copyrights:?}"
+    );
+    assert!(
+        !holders.iter().any(|h| h.holder.contains('©')),
+        "merge-table junk leaked into holders: {holders:?}"
+    );
+}
+
+#[test]
 fn test_bpe_merges_table_produces_no_copyrights() {
     // A full BPE merges.txt (header + two-token merge rules) embeds `©` and
     // mojibake byte pairs that are not copyright notices.
