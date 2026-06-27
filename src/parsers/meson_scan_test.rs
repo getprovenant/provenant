@@ -51,4 +51,51 @@ custom_target(
                 .any(|package| package.datasource_id == Some(DatasourceId::MesonBuild))
         );
     }
+
+    #[test]
+    fn test_meson_project_promotes_to_top_level_package_with_attached_deps() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        fs::write(
+            temp_dir.path().join("meson.build"),
+            "project('demo', 'c', version: '1.2.3')\nzlib = dependency('zlib')\n",
+        )
+        .expect("write root meson.build");
+        // A subdirectory build file with no project() declaration must not become
+        // its own package.
+        let sub = temp_dir.path().join("sub");
+        fs::create_dir(&sub).expect("create sub dir");
+        fs::write(sub.join("meson.build"), "executable('x', 'x.c')\n")
+            .expect("write sub meson.build");
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        let meson_pkgs: Vec<_> = result
+            .packages
+            .iter()
+            .filter(|p| {
+                p.purl
+                    .as_deref()
+                    .is_some_and(|purl| purl.starts_with("pkg:meson/"))
+            })
+            .collect();
+        assert_eq!(
+            meson_pkgs.len(),
+            1,
+            "only the project()-bearing meson.build should promote: {:?}",
+            result.packages.iter().map(|p| &p.purl).collect::<Vec<_>>()
+        );
+        assert_eq!(meson_pkgs[0].purl.as_deref(), Some("pkg:meson/demo@1.2.3"));
+
+        // The project's declared dependency is hoisted and owned by that package,
+        // not left orphaned with a null for_package_uid.
+        let zlib = result
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:generic/meson/zlib"))
+            .expect("zlib dependency should be present");
+        assert_eq!(
+            zlib.for_package_uid.as_ref(),
+            Some(&meson_pkgs[0].package_uid)
+        );
+    }
 }

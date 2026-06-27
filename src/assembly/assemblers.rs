@@ -800,6 +800,18 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["BUCK", "METADATA.bzl", ".buckconfig"],
         mode: AssemblyMode::SiblingMerge,
     },
+    // Meson (build system). Each `meson.build` that declares a `project()` is an
+    // independent package rooted at its directory, so one package per identity
+    // rather than a sibling merge: nested `meson.build` files in a project's
+    // subdirectories carry no `project()` (hence no purl) and are skipped, so the
+    // top-level package list is not flooded with subdir build files. Using
+    // `OnePerPackageData` also keeps independent sibling projects from collapsing
+    // into one another via nested merge.
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::MesonBuild],
+        sibling_file_patterns: &["meson.build"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // Ant/Ivy (Java dependency management)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::AntIvyXml],
@@ -951,7 +963,6 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::JavaEarApplicationXml,
     DatasourceId::JavaWarWebXml,
     DatasourceId::JbossServiceXml,
-    DatasourceId::MesonBuild,
     DatasourceId::GemGemspecInstalledSpecifications,
     DatasourceId::NugetDirectoryBuildProps,
     DatasourceId::NugetDirectoryPackagesProps,
