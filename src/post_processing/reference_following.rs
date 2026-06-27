@@ -82,6 +82,71 @@ pub(crate) fn apply_package_reference_following(files: &mut [FileInfo], packages
             break;
         }
     }
+
+    for file in files
+        .iter_mut()
+        .filter(|file| file.file_type == FileType::File)
+    {
+        demote_unresolved_reference_detections_to_clues(file);
+    }
+}
+
+/// True if a detection still carries a bare, unresolved reference placeholder
+/// expression (a "See the license in COPYING" / "distributed under the same
+/// license as the X project" match whose referenced license was never
+/// resolved). These are clues, not assertions: ScanCode reports an unresolved
+/// `unknown-file-reference-local` group as `license_clues` (no combined
+/// expression) at detection time, and only promotes it to a real detection
+/// once reference following resolves the referenced license. After the
+/// reference-following passes above have run, any file-level detection still
+/// carrying one of these placeholder expressions failed to resolve and must
+/// not leak into `detected_license_expression` / `license_detections`.
+fn is_unresolved_reference_placeholder_detection(detection: &LicenseDetection) -> bool {
+    matches!(
+        detection.license_expression.as_str(),
+        "unknown-license-reference" | "free-unknown"
+    ) && detection
+        .matches
+        .iter()
+        .all(is_unknown_reference_like_match_public)
+}
+
+fn is_unknown_reference_like_match_public(match_item: &Match) -> bool {
+    matches!(
+        match_item.license_expression.as_str(),
+        "unknown-license-reference" | "free-unknown"
+    )
+}
+
+/// Move unresolved reference-placeholder detections out of `license_detections`
+/// and into `license_clues`, then recompute the file-level
+/// `detected_license_expression` from the surviving real detections. This keeps
+/// the placeholder matches visible as weak evidence (matching ScanCode's
+/// `license_clues`) while ensuring they no longer assert a license.
+fn demote_unresolved_reference_detections_to_clues(file: &mut FileInfo) {
+    if !file
+        .license_detections
+        .iter()
+        .any(is_unresolved_reference_placeholder_detection)
+    {
+        return;
+    }
+
+    let mut surviving = Vec::with_capacity(file.license_detections.len());
+    for detection in std::mem::take(&mut file.license_detections) {
+        if is_unresolved_reference_placeholder_detection(&detection) {
+            file.license_clues.extend(detection.matches);
+        } else {
+            surviving.push(detection);
+        }
+    }
+    file.license_detections = surviving;
+
+    file.detected_license_expression = combine_license_expressions(
+        file.license_detections
+            .iter()
+            .map(|detection| detection.license_expression.clone()),
+    );
 }
 
 fn collect_referenced_file_paths(files: &[FileInfo]) -> HashSet<String> {
@@ -1767,5 +1832,106 @@ mod tests {
             font.license_detections[0].matches[0].from_file.as_deref(),
             Some("fonts/OFL.txt")
         );
+    }
+
+    fn placeholder_reference_match(expression: &str, rule_identifier: &str) -> Match {
+        Match {
+            license_expression: expression.to_string(),
+            license_expression_spdx: format!("LicenseRef-scancode-{expression}"),
+            from_file: None,
+            start_line: LineNumber::new(10).unwrap(),
+            end_line: LineNumber::new(10).unwrap(),
+            matcher: MatcherKind::Aho,
+            score: MatchScore::MAX,
+            matched_length: Some(8),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: rule_identifier.to_string(),
+            rule_url: None,
+            matched_text: None,
+            referenced_filenames: Some(vec!["INHERIT_LICENSE_FROM_PACKAGE".to_string()]),
+            matched_text_diagnostics: None,
+        }
+    }
+
+    #[test]
+    fn apply_package_reference_following_demotes_unresolved_free_unknown_to_clue() {
+        // A `.po` file with a "distributed under the same license as the X
+        // project" free-unknown reference and no resolvable package context.
+        // The reference can't resolve, so it must become a clue rather than
+        // leaking `free-unknown` into the detected expression.
+        let mut po = file("project/locale/messages.po");
+        po.license_detections = vec![crate::models::LicenseDetection {
+            license_expression: "free-unknown".to_string(),
+            license_expression_spdx: "LicenseRef-scancode-free-unknown".to_string(),
+            matches: vec![placeholder_reference_match(
+                "free-unknown",
+                "free-unknown-package_4.RULE",
+            )],
+            detection_log: vec!["unknown-reference-to-local-file".to_string()],
+            identifier: "free-unknown-id".to_string(),
+        }];
+        po.detected_license_expression = Some("free-unknown".to_string());
+
+        let mut files = vec![po];
+        apply_package_reference_following(&mut files, &mut []);
+        let po = files.remove(0);
+
+        assert!(po.license_detections.is_empty());
+        assert_eq!(po.license_clues.len(), 1);
+        assert_eq!(po.license_clues[0].license_expression, "free-unknown");
+        assert_eq!(po.detected_license_expression, None);
+    }
+
+    #[test]
+    fn apply_package_reference_following_keeps_unresolved_placeholder_alongside_real_detection() {
+        // A real detection in the same file must survive; only the unresolved
+        // placeholder is demoted, and the file expression keeps the real key.
+        let mut f = file("project/locale/messages.po");
+        f.license_detections = vec![
+            crate::models::LicenseDetection {
+                license_expression: "apache-2.0".to_string(),
+                license_expression_spdx: "Apache-2.0".to_string(),
+                matches: vec![Match {
+                    license_expression: "apache-2.0".to_string(),
+                    license_expression_spdx: "Apache-2.0".to_string(),
+                    from_file: Some("project/locale/messages.po".to_string()),
+                    start_line: LineNumber::new(20).unwrap(),
+                    end_line: LineNumber::new(40).unwrap(),
+                    matcher: MatcherKind::Seq,
+                    score: MatchScore::from_percentage(73.0),
+                    matched_length: Some(60),
+                    match_coverage: Some(73.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: "apache-2.0_932.RULE".to_string(),
+                    rule_url: None,
+                    matched_text: None,
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: "apache-id".to_string(),
+            },
+            crate::models::LicenseDetection {
+                license_expression: "free-unknown".to_string(),
+                license_expression_spdx: "LicenseRef-scancode-free-unknown".to_string(),
+                matches: vec![placeholder_reference_match(
+                    "free-unknown",
+                    "free-unknown-package_4.RULE",
+                )],
+                detection_log: vec!["unknown-reference-to-local-file".to_string()],
+                identifier: "free-unknown-id".to_string(),
+            },
+        ];
+        f.detected_license_expression = Some("apache-2.0 AND free-unknown".to_string());
+
+        let mut files = vec![f];
+        apply_package_reference_following(&mut files, &mut []);
+        let f = files.remove(0);
+
+        assert_eq!(f.license_detections.len(), 1);
+        assert_eq!(f.license_detections[0].license_expression, "apache-2.0");
+        assert_eq!(f.license_clues.len(), 1);
+        assert_eq!(f.detected_license_expression.as_deref(), Some("apache-2.0"));
     }
 }

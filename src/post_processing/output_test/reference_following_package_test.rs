@@ -815,12 +815,16 @@ fn apply_package_reference_following_leaves_ambiguous_multi_package_file_unresol
         .iter()
         .find(|file| file.path == "project/shared/locale.po")
         .expect("shared file should exist");
+    // The reference is ambiguous across two packages and does not resolve, so
+    // the bare `free-unknown` reference stays a clue rather than asserting a
+    // license.
+    assert_eq!(shared_file.detected_license_expression, None);
+    assert!(shared_file.license_detections.is_empty());
+    assert_eq!(shared_file.license_clues.len(), 1);
     assert_eq!(
-        shared_file.detected_license_expression.as_deref(),
-        Some("free-unknown")
+        shared_file.license_clues[0].license_expression,
+        "free-unknown"
     );
-    assert_eq!(shared_file.license_detections[0].matches.len(), 1);
-    assert!(shared_file.license_detections[0].detection_log.is_empty());
 }
 
 #[test]

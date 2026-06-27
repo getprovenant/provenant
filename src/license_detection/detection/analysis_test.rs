@@ -1630,3 +1630,27 @@ fn test_is_license_reference_local_file_false_none() {
     let m = create_test_match(100.0, "mit.RULE");
     assert!(!is_license_reference_local_file(&m));
 }
+
+#[test]
+fn analyze_detection_classifies_sub_threshold_exception_partial_as_low_quality() {
+    // A ~38% partial match of an `is_exception` license sharing generic
+    // boilerplate (e.g. emq-use-grant-for-bsl-1.1 inside a BSL-1.1 LICENSE)
+    // is a low-quality fragment, not a license assertion. ScanCode keeps it as
+    // a clue.
+    let m = create_test_match_full(
+        "emq-use-grant-for-bsl-1.1",
+        "3-seq",
+        1,
+        12,
+        MatchScore::from_percentage(38.01),
+        65,
+        171,
+        38.01,
+        100,
+        "emq-use-grant-for-bsl-1.1.LICENSE",
+    );
+    assert_eq!(
+        analyze_detection(std::slice::from_ref(&m), false),
+        "low-quality-match-fragments"
+    );
+}
