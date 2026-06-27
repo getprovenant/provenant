@@ -37,6 +37,48 @@ pub(crate) fn scan_and_assemble(path: &Path) -> (Vec<FileInfo>, assembly::Assemb
     (files, assembly_result)
 }
 
+/// Like [`scan_and_assemble`], but runs file-content license detection with the
+/// embedded engine and then applies the package reference-following pass, so a
+/// manifest's license-file reference resolves the sibling file's detected
+/// license onto the assembled package's declared license. Use for Layer-3
+/// contract tests where that cross-file resolution is the behavior under test.
+pub(crate) fn scan_assemble_and_follow_references(
+    path: &Path,
+) -> (Vec<FileInfo>, assembly::AssemblyResult) {
+    let progress = Arc::new(ScanProgress::new(ProgressMode::Quiet));
+    let collected = collect_paths(
+        path,
+        0,
+        &build_collection_exclude_patterns(path, &path.join(DEFAULT_CACHE_DIR_NAME)),
+    );
+    let engine = Arc::new(
+        crate::license_detection::LicenseDetectionEngine::from_embedded()
+            .expect("embedded license engine should initialize"),
+    );
+    let result = process_collected(
+        &collected,
+        progress,
+        Some(engine),
+        LicenseScanOptions::default(),
+        &TextDetectionOptions {
+            collect_info: true,
+            detect_packages: true,
+            detect_application_packages: true,
+            detect_system_packages: true,
+            detect_packages_in_compiled: false,
+            ..TextDetectionOptions::default()
+        },
+    );
+
+    let mut files = result.files;
+    let mut assembly_result = assembly::assemble(&mut files);
+    crate::post_processing::apply_package_reference_following(
+        &mut files,
+        &mut assembly_result.packages,
+    );
+    (files, assembly_result)
+}
+
 pub(crate) fn scan_and_assemble_with_stripped_root(
     path: &Path,
 ) -> (Vec<FileInfo>, assembly::AssemblyResult) {

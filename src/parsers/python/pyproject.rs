@@ -154,6 +154,18 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
     }
 
     let mut extra_data = extract_pyproject_extra_data(&toml_content).unwrap_or_default();
+    // Skip the file form when `[project].dynamic` declares `license`: per PEP 621 a
+    // dynamic field's static value is a build-time placeholder, so a stale
+    // `license = { file = "..." }` must not become an authoritative license-file
+    // reference that resolves onto the package.
+    if !project_declares_dynamic_license(project_metadata)
+        && let Some(license_file) = extract_license_file_reference(selected_metadata)
+    {
+        extra_data.insert(
+            "license_file".to_string(),
+            JsonValue::String(license_file.to_string()),
+        );
+    }
     let urls = extract_urls(
         project_metadata,
         poetry_metadata,
@@ -264,6 +276,42 @@ fn extract_raw_license_string(project: &TomlMap<String, TomlValue>) -> Option<St
                         .map(|expr| expr.to_string())
                 }),
             _ => None,
+        })
+}
+
+/// Extract a PEP 621 license-file reference from the `license = { file = "X" }`
+/// table form.
+///
+/// PEP 621 lets a project point its license field at a license file instead of
+/// inlining an expression. The referenced filename is recorded in
+/// `extra_data["license_file"]` (matching ScanCode and the existing convention
+/// honored by `finalize_package_declared_license_references`), so the package
+/// reference-following pass resolves the sibling file's detected license onto
+/// this package's declared license. The parser stays file-local and never reads
+/// the referenced file itself.
+fn extract_license_file_reference(project: &TomlMap<String, TomlValue>) -> Option<&str> {
+    match project.get(FIELD_LICENSE) {
+        Some(TomlValue::Table(license_table)) => license_table
+            .get("file")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty()),
+        _ => None,
+    }
+}
+
+/// Returns whether the PEP 621 `[project]` table lists `license` in its
+/// `dynamic` array, in which case any static `license` value is a build-time
+/// placeholder that must not be treated as authoritative.
+fn project_declares_dynamic_license(project: Option<&TomlMap<String, TomlValue>>) -> bool {
+    project
+        .and_then(|table| table.get("dynamic"))
+        .and_then(|value| value.as_array())
+        .is_some_and(|entries| {
+            entries
+                .iter()
+                .filter_map(|entry| entry.as_str())
+                .any(|entry| entry == FIELD_LICENSE)
         })
 }
 
