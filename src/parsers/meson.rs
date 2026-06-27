@@ -197,6 +197,9 @@ fn extract_dependencies_from_call(call: &CallExpr) -> Vec<Dependency> {
         .positional
         .iter()
         .filter_map(expr_as_string)
+        // Skip non-literal or empty names such as `dependency('')`; emitting a
+        // nameless `pkg:generic/meson/` identity is junk, not honest evidence.
+        .filter(|name| !name.trim().is_empty())
         .map(ToOwned::to_owned)
         .collect::<Vec<_>>();
 
