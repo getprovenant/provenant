@@ -41,7 +41,7 @@ We use **`DatasourceId` as the contract between parsers and assembly**, and we r
 
 4. **Assembly is multi-pass and ordered.**
    The stable architecture is:
-   - datasource-config-driven directory assembly (`SiblingMerge` and `OnePerPackageData`)
+   - datasource-config-driven directory assembly (`SiblingMerge`, `SiblingMergePerIdentity`, and `OnePerPackageData`)
    - nested merge for ecosystems whose related files live in different subpaths
    - file-reference and metadata-enrichment passes for installed-package/database style inputs
    - workspace assembly passes for monorepo/workspace ecosystems
@@ -49,6 +49,9 @@ We use **`DatasourceId` as the contract between parsers and assembly**, and we r
 
 5. **Assembler policy is centralized and cross-ecosystem.**
    `AssemblerConfig` defines which datasource IDs belong together, what sibling/nested file patterns anchor them, and which assembly mode they use.
+
+6. **Directory assembly strategy is declared, and ecosystem-specific directory logic stays out of the generic engine.**
+   How a directory becomes packages is chosen by `AssemblerConfig.mode`: `SiblingMerge` (collapse a directory into one package), `SiblingMergePerIdentity` (one package per distinct `purl`, for directories that may hold several independent manifests such as standalone Maven `.pom` files), or `OnePerPackageData` (one package per record, for installed-package databases). A layout needing bespoke grouping — e.g. CocoaPods' primary-podspec selection — registers a dedicated merge module through `special_directory_merger_for` in `src/assembly/assemblers.rs` (alongside Debian, Hugging Face, Hackage, …) rather than branching inside the generic `src/assembly/sibling_merge.rs` engine. New ecosystems pick a declarative mode when one fits, and add a registered module only when the layout is genuinely bespoke.
 
 ### In practice
 

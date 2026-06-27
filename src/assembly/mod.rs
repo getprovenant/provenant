@@ -10,6 +10,7 @@ mod assembly_test;
 mod bazel_prune;
 mod cargo_resource_assign;
 mod cargo_workspace_merge;
+mod cocoapods_merge;
 mod composer_resource_assign;
 mod conda_rootfs_merge;
 mod debian_source_merge;
@@ -79,6 +80,14 @@ pub struct AssemblyResult {
 pub enum AssemblyMode {
     /// Merge related files in the same directory (or nested) into one Package.
     SiblingMerge,
+    /// Like [`AssemblyMode::SiblingMerge`], but a directory holding multiple
+    /// manifests with distinct package identities (purls) yields one package per
+    /// identity instead of collapsing them into one. A directory with a single
+    /// identity (a normal one-module directory plus its purl-less supplementary
+    /// siblings) falls back to the `SiblingMerge` result unchanged. Use this for
+    /// ecosystems whose directories can legitimately hold several independent
+    /// manifests, e.g. a flat set of standalone Maven `.pom` files.
+    SiblingMergePerIdentity,
     /// Each PackageData becomes its own independent Package (e.g., database files
     /// containing many installed packages like Alpine DB, RPM DB, Debian status).
     OnePerPackageData,
@@ -128,6 +137,11 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
                     let results = sibling_merge::assemble_siblings(config, files, file_indices);
                     apply_directory_merge_results(files, &mut packages, &mut dependencies, results);
                 }
+                AssemblyMode::SiblingMergePerIdentity => {
+                    let results =
+                        sibling_merge::assemble_siblings_per_identity(config, files, file_indices);
+                    apply_directory_merge_results(files, &mut packages, &mut dependencies, results);
+                }
                 AssemblyMode::OnePerPackageData => {
                     let results = assemble_one_per_package_data(config, files, file_indices)
                         .into_iter()
@@ -142,7 +156,10 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
     topology_plan.apply_directory_scoped_domains(files, &mut packages, &mut dependencies);
 
     for config in ASSEMBLERS {
-        if config.mode != AssemblyMode::SiblingMerge {
+        if !matches!(
+            config.mode,
+            AssemblyMode::SiblingMerge | AssemblyMode::SiblingMergePerIdentity
+        ) {
             continue;
         }
         if let Some((pkg, deps, affected_indices)) =
