@@ -372,11 +372,32 @@ lockfile parser usually need different datasource IDs.
 
 Edit `src/assembly/assemblers.rs` and do one of the following for every new datasource:
 
-- add it to an `AssemblerConfig` when it participates in assembly
-- add it to `UNASSEMBLED_DATASOURCE_IDS` when it is intentionally standalone
+- add it to an `AssemblerConfig` when it participates in assembly, or
+- add it to `UNASSEMBLED_DATASOURCE_IDS` **with a justified `UnassembledReason`** when it is
+  genuinely standalone.
 
 If you skip this, `test_every_datasource_id_is_accounted_for` will fail even if the parser itself
 works.
+
+**`UNASSEMBLED_DATASOURCE_IDS` is not a "wire assembly later" placeholder.** Each entry must carry
+one of the legitimate `UnassembledReason` values — there is deliberately no "deferred"/"TODO"
+variant:
+
+- `NotAPackage` — the file does not describe a package (README, OS-release, a deployment- or
+  image-descriptor fragment, a Dockerfile).
+- `BinaryArtifact` — a compiled binary or binary archive whose contents are scanned/extracted
+  elsewhere, not a source manifest.
+- `SupplementaryMetadata` — metadata merged into another datasource's package, or consumed by a
+  dedicated post-assembly pass.
+- `DependenciesOnlyNoIdentity` — a dependency/lock list with no package identity of its own; its
+  dependencies are hoisted but it cannot become a package.
+
+If your parser emits a `purl`-bearing package identity (a real, named manifest such as a
+`build.sbt`, a vcpkg port, a `project.clj`, or a `*.opam`), it **must** be assembled — typically
+with an `AssemblyMode::OnePerPackageData` config (one package per standalone manifest), or
+`SiblingMergePerIdentity` when a directory can hold several distinct identities. Leaving such a
+manifest in `UNASSEMBLED_DATASOURCE_IDS` orphans its dependencies (`for_package_uid: null`) and
+drops its identity from the assembled `packages[]` and the SBOM exports built from it.
 
 ### Add assembly config when needed
 

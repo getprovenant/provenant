@@ -150,4 +150,24 @@ mod tests {
             "standalone gem archive should not claim unrelated sibling files"
         );
     }
+
+    #[test]
+    fn test_installed_specifications_gemspec_promotes_to_top_level_package() {
+        // An installed `specifications/*.gemspec` is a real gem identity and
+        // promotes to a top-level `pkg:gem/<name>@<v>` package owning its deps.
+        let (_files, result) =
+            scan_and_assemble(Path::new("testdata/gem/specifications/specifications"));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|p| p.purl.as_deref() == Some("pkg:gem/example-gem@1.2.3"))
+            .expect("installed specifications gemspec should promote to a package");
+        let dep = result
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:gem/rails"))
+            .expect("gemspec dependency should be present");
+        assert_eq!(dep.for_package_uid.as_ref(), Some(&package.package_uid));
+    }
 }
