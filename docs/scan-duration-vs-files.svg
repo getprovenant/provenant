@@ -140,6 +140,9 @@ ScanCode: 47.37s</title></rect>
     <rect x="283.05" y="450.63" width="8" height="8" fill="#d97706" rx="1.5"><title>univention/Nubus @ fef2258
 Files: 16
 ScanCode: 42.68s</title></rect>
+    <rect x="287.23" y="414.32" width="8" height="8" fill="#d97706" rx="1.5"><title>segmind/tiny-sd @ cad0bd7
+Files: 17
+ScanCode: 92.04s</title></rect>
     <rect x="291.17" y="449.68" width="8" height="8" fill="#d97706" rx="1.5"><title>distroless base-debian13 status.d @ sha256:57c1e4c
 Files: 18
 ScanCode: 43.55s</title></rect>
@@ -188,6 +191,9 @@ ScanCode: 54.13s</title></rect>
     <rect x="399.74" y="445.22" width="8" height="8" fill="#d97706" rx="1.5"><title>numtide/devshell @ 255a2b1
 Files: 87
 ScanCode: 47.86s</title></rect>
+    <rect x="401.30" y="423.11" width="8" height="8" fill="#d97706" rx="1.5"><title>Conda base environment conda-meta snapshot @ sha256:7de9956
+Files: 89
+ScanCode: 76.42s</title></rect>
     <rect x="402.83" y="447.10" width="8" height="8" fill="#d97706" rx="1.5"><title>sous-chefs/mysql @ 6b7110b
 Files: 91
 ScanCode: 45.99s</title></rect>
@@ -221,6 +227,9 @@ ScanCode: 50.68s</title></rect>
     <rect x="439.98" y="430.21" width="8" height="8" fill="#d97706" rx="1.5"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
 ScanCode: 65.75s</title></rect>
+    <rect x="441.29" y="399.53" width="8" height="8" fill="#d97706" rx="1.5"><title>JetBrains/JetBrainsMono @ 1937130
+Files: 159
+ScanCode: 125.87s</title></rect>
     <rect x="441.29" y="409.83" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
 Files: 159
 ScanCode: 101.22s</title></rect>
@@ -467,6 +476,9 @@ ScanCode: 235.22s</title></rect>
     <rect x="627.52" y="350.33" width="8" height="8" fill="#d97706" rx="1.5"><title>prefix-dev/pixi @ 6458b15
 Files: 2372
 ScanCode: 356.55s</title></rect>
+    <rect x="630.31" y="348.01" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/ant-ivy @ dc35d51
+Files: 2470
+ScanCode: 374.46s</title></rect>
     <rect x="633.28" y="388.01" width="8" height="8" fill="#d97706" rx="1.5"><title>playframework/playframework @ c2c114f
 Files: 2579
 ScanCode: 160.61s</title></rect>
@@ -799,6 +811,9 @@ Provenant: 4.90s</title></circle>
     <circle cx="287.05" cy="556.52" r="4.5" fill="#2563eb"><title>univention/Nubus @ fef2258
 Files: 16
 Provenant: 4.94s</title></circle>
+    <circle cx="291.23" cy="556.33" r="4.5" fill="#2563eb"><title>segmind/tiny-sd @ cad0bd7
+Files: 17
+Provenant: 4.96s</title></circle>
     <circle cx="295.17" cy="554.01" r="4.5" fill="#2563eb"><title>distroless base-debian13 status.d @ sha256:57c1e4c
 Files: 18
 Provenant: 5.21s</title></circle>
@@ -847,6 +862,9 @@ Provenant: 4.67s</title></circle>
     <circle cx="403.74" cy="559.08" r="4.5" fill="#2563eb"><title>numtide/devshell @ 255a2b1
 Files: 87
 Provenant: 4.68s</title></circle>
+    <circle cx="405.30" cy="554.01" r="4.5" fill="#2563eb"><title>Conda base environment conda-meta snapshot @ sha256:7de9956
+Files: 89
+Provenant: 5.21s</title></circle>
     <circle cx="406.83" cy="557.98" r="4.5" fill="#2563eb"><title>sous-chefs/mysql @ 6b7110b
 Files: 91
 Provenant: 4.79s</title></circle>
@@ -880,6 +898,9 @@ Provenant: 4.79s</title></circle>
     <circle cx="443.98" cy="557.39" r="4.5" fill="#2563eb"><title>elixir-ecto/ecto @ 28d9282
 Files: 156
 Provenant: 4.85s</title></circle>
+    <circle cx="445.29" cy="553.83" r="4.5" fill="#2563eb"><title>JetBrains/JetBrainsMono @ 1937130
+Files: 159
+Provenant: 5.23s</title></circle>
     <circle cx="445.29" cy="556.81" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
 Files: 159
 Provenant: 4.91s</title></circle>
@@ -1126,6 +1147,9 @@ Provenant: 12.03s</title></circle>
     <circle cx="631.52" cy="474.94" r="4.5" fill="#2563eb"><title>prefix-dev/pixi @ 6458b15
 Files: 2372
 Provenant: 27.77s</title></circle>
+    <circle cx="634.31" cy="504.96" r="4.5" fill="#2563eb"><title>apache/ant-ivy @ dc35d51
+Files: 2470
+Provenant: 14.71s</title></circle>
     <circle cx="637.28" cy="542.19" r="4.5" fill="#2563eb"><title>playframework/playframework @ c2c114f
 Files: 2579
 Provenant: 6.69s</title></circle>

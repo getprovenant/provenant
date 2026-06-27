@@ -176,6 +176,7 @@ Each benchmark entry should use the same visible structure as the current docume
 **Outcome bullet writing rules**:
 
 - Write as a **present-tense end-state comparison**, not implementation history.
+- Contrast **Provenant vs ScanCode**, never Provenant-now vs the bug you just fixed. Drop any "instead of / rather than `<old Provenant behavior>`" clause — that narrates the fix; a reader who never saw the bug has no referent. If the change only reached parity with ScanCode (no Provenant edge), say so plainly or omit it rather than dressing the fix as an advantage.
 - Lead with what Provenant does better today: broader coverage, richer identity, safer handling, cleaner normalization, more correct classification, or faster runtime.
 - Do **not** use process/history wording: `fixed`, `restored`, `aligned`, `added support`, `after`, `now that`, `triaged`, `reviewed tail`, `remaining deltas`.
 - If a reviewed non-regression difference matters, rewrite it as a **user-visible advantage**.
