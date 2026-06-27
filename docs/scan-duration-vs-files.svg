@@ -134,6 +134,9 @@ ScanCode: 43.86s</title></rect>
     <rect x="263.23" y="453.39" width="8" height="8" fill="#d97706" rx="1.5"><title>archlinux/packaging/packages/pacman @ 4ee8983
 Files: 12
 ScanCode: 40.26s</title></rect>
+    <rect x="263.23" y="414.95" width="8" height="8" fill="#d97706" rx="1.5"><title>openai/clip-vit-base-patch32 @ 3d74acf
+Files: 12
+ScanCode: 90.82s</title></rect>
     <rect x="268.75" y="445.71" width="8" height="8" fill="#d97706" rx="1.5"><title>BurntSushi/ripgrep 14.1.1 aarch64-apple-darwin release snapshot @ sha256:24ad767
 Files: 13
 ScanCode: 47.37s</title></rect>
@@ -374,6 +377,9 @@ ScanCode: 103.73s</title></rect>
     <rect x="555.57" y="427.04" width="8" height="8" fill="#d97706" rx="1.5"><title>conda/conda-build @ 5da509d
 Files: 835
 ScanCode: 70.31s</title></rect>
+    <rect x="555.57" y="394.56" width="8" height="8" fill="#d97706" rx="1.5"><title>pypa/pipenv @ fbce7b4
+Files: 835
+ScanCode: 139.82s</title></rect>
     <rect x="558.17" y="366.21" width="8" height="8" fill="#d97706" rx="1.5"><title>pulseaudio/pulseaudio @ b096704
 Files: 867
 ScanCode: 254.79s</title></rect>
@@ -428,6 +434,9 @@ ScanCode: 191.41s</title></rect>
     <rect x="585.23" y="404.76" width="8" height="8" fill="#d97706" rx="1.5"><title>restic/restic @ 29446b0
 Files: 1284
 ScanCode: 112.67s</title></rect>
+    <rect x="585.49" y="388.57" width="8" height="8" fill="#d97706" rx="1.5"><title>cli/cli @ 71fb4f5
+Files: 1289
+ScanCode: 158.71s</title></rect>
     <rect x="594.45" y="380.96" width="8" height="8" fill="#d97706" rx="1.5"><title>chriskohlhoff/asio @ bd500f0
 Files: 1468
 ScanCode: 186.47s</title></rect>
@@ -473,6 +482,9 @@ ScanCode: 348.59s</title></rect>
     <rect x="624.61" y="369.98" width="8" height="8" fill="#d97706" rx="1.5"><title>chef/chef @ 0e353ff
 Files: 2274
 ScanCode: 235.22s</title></rect>
+    <rect x="627.17" y="395.75" width="8" height="8" fill="#d97706" rx="1.5"><title>bazelbuild/rules_python @ ee53e46
+Files: 2360
+ScanCode: 136.34s</title></rect>
     <rect x="627.52" y="350.33" width="8" height="8" fill="#d97706" rx="1.5"><title>prefix-dev/pixi @ 6458b15
 Files: 2372
 ScanCode: 356.55s</title></rect>
@@ -569,6 +581,9 @@ ScanCode: 476.87s</title></rect>
     <rect x="683.64" y="322.63" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/felix-dev @ 20aee77
 Files: 5356
 ScanCode: 640.75s</title></rect>
+    <rect x="684.52" y="383.27" width="8" height="8" fill="#d97706" rx="1.5"><title>mesonbuild/meson @ b300d95
+Files: 5425
+ScanCode: 177.55s</title></rect>
     <rect x="685.92" y="368.23" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/vcpkg @ 0bf3923
 Files: 5536
 ScanCode: 244.13s</title></rect>
@@ -805,6 +820,9 @@ Provenant: 4.71s</title></circle>
     <circle cx="267.23" cy="559.38" r="4.5" fill="#2563eb"><title>archlinux/packaging/packages/pacman @ 4ee8983
 Files: 12
 Provenant: 4.65s</title></circle>
+    <circle cx="267.23" cy="535.00" r="4.5" fill="#2563eb"><title>openai/clip-vit-base-patch32 @ 3d74acf
+Files: 12
+Provenant: 7.79s</title></circle>
     <circle cx="272.75" cy="556.91" r="4.5" fill="#2563eb"><title>BurntSushi/ripgrep 14.1.1 aarch64-apple-darwin release snapshot @ sha256:24ad767
 Files: 13
 Provenant: 4.90s</title></circle>
@@ -1045,6 +1063,9 @@ Provenant: 5.55s</title></circle>
     <circle cx="559.57" cy="526.93" r="4.5" fill="#2563eb"><title>conda/conda-build @ 5da509d
 Files: 835
 Provenant: 9.24s</title></circle>
+    <circle cx="559.57" cy="518.01" r="4.5" fill="#2563eb"><title>pypa/pipenv @ fbce7b4
+Files: 835
+Provenant: 11.16s</title></circle>
     <circle cx="562.17" cy="530.44" r="4.5" fill="#2563eb"><title>pulseaudio/pulseaudio @ b096704
 Files: 867
 Provenant: 8.58s</title></circle>
@@ -1099,6 +1120,9 @@ Provenant: 11.28s</title></circle>
     <circle cx="589.23" cy="509.69" r="4.5" fill="#2563eb"><title>restic/restic @ 29446b0
 Files: 1284
 Provenant: 13.31s</title></circle>
+    <circle cx="589.49" cy="541.35" r="4.5" fill="#2563eb"><title>cli/cli @ 71fb4f5
+Files: 1289
+Provenant: 6.81s</title></circle>
     <circle cx="598.45" cy="534.04" r="4.5" fill="#2563eb"><title>chriskohlhoff/asio @ bd500f0
 Files: 1468
 Provenant: 7.95s</title></circle>
@@ -1144,6 +1168,9 @@ Provenant: 10.87s</title></circle>
     <circle cx="628.61" cy="514.47" r="4.5" fill="#2563eb"><title>chef/chef @ 0e353ff
 Files: 2274
 Provenant: 12.03s</title></circle>
+    <circle cx="631.17" cy="538.14" r="4.5" fill="#2563eb"><title>bazelbuild/rules_python @ ee53e46
+Files: 2360
+Provenant: 7.29s</title></circle>
     <circle cx="631.52" cy="474.94" r="4.5" fill="#2563eb"><title>prefix-dev/pixi @ 6458b15
 Files: 2372
 Provenant: 27.77s</title></circle>
@@ -1240,6 +1267,9 @@ Provenant: 11.06s</title></circle>
     <circle cx="687.64" cy="476.80" r="4.5" fill="#2563eb"><title>apache/felix-dev @ 20aee77
 Files: 5356
 Provenant: 26.70s</title></circle>
+    <circle cx="688.52" cy="524.93" r="4.5" fill="#2563eb"><title>mesonbuild/meson @ b300d95
+Files: 5425
+Provenant: 9.64s</title></circle>
     <circle cx="689.92" cy="534.76" r="4.5" fill="#2563eb"><title>microsoft/vcpkg @ 0bf3923
 Files: 5536
 Provenant: 7.83s</title></circle>

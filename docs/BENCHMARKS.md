@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 223 of 223 recorded runs, with a **19.3× median speedup** and **19.2× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **36.6×** on 10k+ file targets.
+> Provenant is faster on 228 of 228 recorded runs, with a **19.1× median speedup** and **19.1× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -213,6 +213,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.67s`; ScanCode `80.78s`
 - Broader dependency extraction (`796` vs `718`) and slightly broader package visibility (`53` vs `52`) from `environment.yml`, `.gitmodules`, and committed wheel artifacts, with extension-qualified wheel PURLs, richer patch-header author recovery, and the fuller `Pyodide contributors and Mozilla` documentation notice
 
+##### [pypa/pipenv @ fbce7b4](https://github.com/pypa/pipenv/tree/fbce7b4ff5be762cef1b5b88afc5bb4230a759de) — **12.53× faster**
+
+- Files: 835
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `11.16s`; ScanCode `139.82s`
+- Far broader Python package and dependency extraction (`6` vs `1` packages, `392` vs `296` dependencies) from the repo's `Pipfile`, `Pipfile.lock`, `pyproject.toml`/`pylock.toml`, and committed `setup.py`/`setup.cfg` fixtures plus bundled sdist/wheel artifacts that ScanCode collapses to a single pyproject-only package, including build-time `setup_requires` dependencies and PEP 503-normalized PyPI names such as `jaraco-classes` where ScanCode keeps the dotted `jaraco.classes`, with the MIT/ISC declared licenses consolidated onto the assembled packages rather than duplicated across each datafile
+
 ##### [python/cpython @ 7a468a1](https://github.com/python/cpython/tree/7a468a101268d2b13105f94ae027df8b502d0c87) — **70.74× faster**
 
 - Files: 5,627
@@ -265,6 +272,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Direct CRAN package visibility on the root `DESCRIPTION` plus declared dependency extraction (`41` vs `0`) across `Imports`, `Suggests`, and `Enhances`, with correct hyphenated CRAN version constraints such as `sf (>= 0.7-3)` and cleaner Rd or roxygen URL recovery
 
 #### Hugging Face / AI model repositories
+
+##### [openai/clip-vit-base-patch32 @ 3d74acf](https://huggingface.co/openai/clip-vit-base-patch32/tree/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268) — **11.66× faster**
+
+- Files: 12
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.79s`; ScanCode `90.82s`
+- Direct Hugging Face CLIP model package identity (`1` vs `0`) that ScanCode cannot model because it ships no Hugging Face parser: Provenant assembles the repository's `config.json` and model-card `README.md` into one `pkg:huggingface/openai/clip-vit-base-patch32` package, with both scanners reporting zero copyright and holder detections across the model weights and the BPE-merges `tokenizer.json` whose mojibake `©` byte-pairs (e.g. `pok Ã©`) carry no genuine notice
 
 ##### [segmind/tiny-sd @ cad0bd7](https://huggingface.co/segmind/tiny-sd/tree/cad0bd7495fa6c4bcca01b19a723dc91627fe84f) — **18.6× faster**
 
@@ -622,6 +636,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `48.49s`; ScanCode `1396.87s`
 - Broader Bazel dependency extraction (`129` vs `14` dependencies) from root and nested `BUILD` files plus direct `MODULE.bazel` dependency visibility, internal `BUILD` targets collapsed to one component per build directory (`546` vs ScanCode's `1711` name-only per-target package shells with no license, dependency, or version), and richer Debian and RPM sidecar package metadata
 
+##### [bazelbuild/rules_python @ ee53e46](https://github.com/bazelbuild/rules_python/tree/ee53e46d38927fbccfc3436bb8cf19ad2ec033f3) — **18.70× faster**
+
+- Files: 2,360
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.29s`; ScanCode `136.34s`
+- Far broader Bazel module coverage (`29` vs `5` `pkg:bazel/*` packages, `1362` vs `736` dependencies) from the repo's `MODULE.bazel` bzlmod manifests, `WORKSPACE`, and `BUILD` files across the example and test trees that ScanCode largely leaves unmodeled, with the assembled `pkg:bazel/py_toolchains` carrying both `apache-2.0` declared licensing and the `The Bazel Authors` holder where ScanCode attaches neither to its top-level package, plus extension-qualified installed-wheel PURLs and clean canonical PyPI dependency identities where ScanCode appends `file_name` archive qualifiers
+
 ##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **14.47× faster**
 
 - Files: 241
@@ -677,6 +698,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-25 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `754.46s`; ScanCode `32231.76s`
 - Provenant collapses internal Bazel/Buck build targets to one component per build directory (`255` Bazel + `3` Buck vs ScanCode's per-target `962` + `9`), a documented design choice ([`docs/improvements/bazel-buck-build-targets.md`](improvements/bazel-buck-build-targets.md)), so its top-level package count is lower (`599` vs `1279`) while real-ecosystem coverage holds at or above parity (Cargo `240` vs `239`, npm `46` vs `33`) and dependency extraction stays materially richer (`16793` vs `12378`) from vendored `.gitmodules`, Cargo, and npm surfaces
+
+##### [cli/cli @ 71fb4f5](https://github.com/cli/cli/tree/71fb4f5f4358c44c9328637752f0c15a47d84139) — **23.31× faster**
+
+- Files: 1,289
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.81s`; ScanCode `158.71s`
+- Matched Go module package and dependency extraction (`2` vs `2` packages, `535` vs `535` dependencies) from the root `go.mod` and `go.sum`, with the `pkg:golang/github.com/cli/cli/v2` identity assembled from both the manifest and the checksum database (ScanCode reads only `go.mod`) and carrying the repository's `mit` license, plus cleaner deduplicated file-level license expressions such as `bsd-new AND lgpl-3.0` where ScanCode emits redundant nested forms like `lgpl-3.0 AND (bsd-new AND lgpl-3.0)`
 
 ##### [conan-io/conan-center-index @ bc78dfb](https://github.com/conan-io/conan-center-index/tree/bc78dfb366e6596d21a7a5c51b97970656f73254) — **36.57× faster**
 
@@ -838,6 +866,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.24s`; ScanCode `65.39s`
 - Broader native-build package and dependency visibility (`5` vs `0` packages, `3` vs `0` dependencies) from the root `configure`, `MODULE.bazel`, and committed `.csproj` surfaces, with the real `pkg:autotools/zlib` identity instead of ScanCode's generic input placeholder, direct Bazel and NuGet surface coverage, and the more specific `LicenseRef-scancode-info-zip-2009-01 AND Zlib` classification on `contrib/minizip/unzip.c`
+
+##### [mesonbuild/meson @ b300d95](https://github.com/mesonbuild/meson/tree/b300d9578fe62c721afbf4e5c4672ad0c94cb96c) — **18.42× faster**
+
+- Files: 5,425
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.64s`; ScanCode `177.55s`
+- Direct Meson dependency extraction (`323` vs `0` top-level, `291` vs `0` raw `package_data`) that ScanCode cannot model because it ships no Meson parser: Provenant reads `dependency()` calls across the 1,535 committed `meson.build` files into real `pkg:generic/meson/*` identities such as `zlib`, `glib-2.0`, and `boost` while dropping nameless `dependency('')` placeholders rather than emitting empty `pkg:generic/meson/` rows, plus broader Cargo workspace fixture coverage (`22` extra packages) and SPDX-aligned `apache-2.0` declared licensing that avoids ScanCode's spurious `(apache-2.0 OR gpl-2.0-plus) AND unknown` reading of the `setup.cfg` license blob
 
 ##### [moby/moby @ 21bd660](https://github.com/moby/moby/tree/21bd660cd595929275d8f1361d224f663a2cfc44) — **49.68× faster**
 
