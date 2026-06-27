@@ -79,6 +79,7 @@ struct SetupKeywords {
     license: Option<String>,
     classifiers: Option<Vec<String>>,
     install_requires: Option<Vec<String>>,
+    setup_requires: Option<Vec<String>>,
     tests_require: Option<Vec<String>>,
     extras_require: Option<HashMap<String, Value>>,
     project_urls: Option<HashMap<String, Value>>,
@@ -100,6 +101,7 @@ impl SetupKeywords {
             "license" => self.license = value_to_string(&value),
             "classifiers" => self.classifiers = value_to_string_list(&value),
             "install_requires" => self.install_requires = value_to_string_list(&value),
+            "setup_requires" => self.setup_requires = value_to_string_list(&value),
             "tests_require" => self.tests_require = value_to_string_list(&value),
             "extras_require" => {
                 if let Value::Dict(dict) = value {
@@ -918,6 +920,10 @@ fn build_setup_py_dependencies(kw: &SetupKeywords) -> Vec<Dependency> {
 
     if let Some(reqs) = &kw.install_requires {
         dependencies.extend(build_setup_py_dependency_list(reqs, "install", false));
+    }
+
+    if let Some(reqs) = &kw.setup_requires {
+        dependencies.extend(build_setup_py_dependency_list(reqs, "setup", false));
     }
 
     if let Some(reqs) = &kw.tests_require {

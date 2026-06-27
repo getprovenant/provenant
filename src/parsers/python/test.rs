@@ -3102,6 +3102,38 @@ setup(
     }
 
     #[test]
+    fn test_setup_py_setup_requires_scope() {
+        let content = r#"
+from setuptools import setup
+
+setup(
+    name="cython-import-package",
+    version="1.0.0",
+    setup_requires=["cython", "setuptools-scm"],
+)
+"#;
+
+        let (_temp_dir, file_path) = create_temp_file(content, "setup.py");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        let setup_deps: Vec<&Dependency> = package_data
+            .dependencies
+            .iter()
+            .filter(|d| d.scope.as_deref() == Some("setup"))
+            .collect();
+        assert_eq!(setup_deps.len(), 2);
+        // setup_requires are build-time, non-optional, runtime-true (ScanCode parity).
+        assert!(setup_deps.iter().all(|d| d.is_optional == Some(false)));
+        assert!(setup_deps.iter().all(|d| d.is_runtime == Some(true)));
+        let purls: Vec<&str> = setup_deps
+            .iter()
+            .filter_map(|d| d.purl.as_deref())
+            .collect();
+        assert!(purls.contains(&"pkg:pypi/cython"));
+        assert!(purls.contains(&"pkg:pypi/setuptools-scm"));
+    }
+
+    #[test]
     fn test_setup_py_project_urls_ordered_dict() {
         let content = r#"
 from collections import OrderedDict
