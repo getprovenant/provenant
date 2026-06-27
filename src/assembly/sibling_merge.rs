@@ -262,6 +262,27 @@ pub(super) fn assemble_siblings_per_identity(
         ));
     }
 
+    // Handled files with no purl cannot join a specific identity in a
+    // multi-identity directory, but their dependencies are still hoisted
+    // (unowned) rather than dropped — the same visibility they had before the
+    // directory was split per identity.
+    let mut orphan_pending: Vec<PendingDependency> = Vec::new();
+    for &idx in file_indices {
+        for pkg_data in &files[idx].package_data {
+            if !is_handled_by(pkg_data, config) || pkg_data.purl.is_some() {
+                continue;
+            }
+            orphan_pending.extend(collect_pending_dependencies(pkg_data, &files[idx].path));
+        }
+    }
+    if !orphan_pending.is_empty() {
+        results.push(build_directory_merge_output(
+            None,
+            orphan_pending,
+            Vec::new(),
+        ));
+    }
+
     results
 }
 

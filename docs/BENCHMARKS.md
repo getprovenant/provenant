@@ -299,28 +299,28 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 305
 - Run context: 2026-06-06 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `6.53s`; ScanCode `57.19s`
-- Direct Hex dependency extraction (`367` vs `0` dependencies) from the root `mix.lock`'s legacy 7-element hex tuples that ScanCode does not parse, defaulting `hexpm` as the repository for tuples that omit it, with MIT license detection preserved across the Elixir source tree
+- Broader Hex package and dependency extraction (`6` vs `0` packages, `399` vs `0` dependencies): one `pkg:hex` package per `mix.exs` (the root `distillery` app plus five `test/fixtures/*` apps), each merging its sibling `mix.lock` for locked identities, parsing the root lockfile's legacy 7-element hex tuples ScanCode does not read and defaulting `hexpm` as the repository for tuples that omit it, with MIT license detection preserved across the Elixir source tree
 
 ##### [elixir-ecto/ecto @ 28d9282](https://github.com/elixir-ecto/ecto/tree/28d928267388018d5b0bb1f83e04368b7e8cae50) — **13.56× faster**
 
 - Files: 156
 - Run context: 2026-06-15 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.85s`; ScanCode `65.75s`
-- Broader Hex dependency extraction (`19` vs `0`) from the repo-root `mix.lock` plus `examples/friends/mix.lock`, with direct locked package identities for entries such as `ecto_sql`, `postgrex`, and `telemetry` that ScanCode leaves dependency-blind
+- Broader Hex package and dependency extraction (`2` vs `0` packages, `27` vs `0` dependencies): a `pkg:hex/ecto` package and an `examples/friends` app, each pairing `mix.exs` identity with `mix.lock` locked dependencies such as `ecto_sql`, `postgrex`, and `telemetry` that ScanCode leaves dependency-blind
 
 ##### [elixir-plug/plug @ 47649aa](https://github.com/elixir-plug/plug/tree/47649aa7bb910f481b66cc3e98c14b2c3b761c3c) — **10.51× faster**
 
 - Files: 104
 - Run context: 2026-06-15 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.88s`; ScanCode `51.28s`
-- Locked Hex dependency extraction (`9` vs `0`) for `plug_crypto`, `telemetry`, `ex_doc`, and sibling Hex pins that ScanCode leaves at zero, with Unicode-preserving `Loïc Hoguin` holder normalization
+- Direct Hex package and dependency extraction (`1` vs `0` packages, `13` vs `0` dependencies): a `pkg:hex/plug` package from `mix.exs` carrying locked `plug_crypto`, `telemetry`, `ex_doc`, and sibling Hex pins from `mix.lock` that ScanCode leaves at zero, with Unicode-preserving `Loïc Hoguin` holder normalization
 
 ##### [erlang/otp @ 264def5](https://github.com/erlang/otp/tree/264def545b8214ea7100bfede1a4629c676ff1c0) — **33.91× faster**
 
 - Files: 11,749
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `59.99s`; ScanCode `2034.56s`
-- Direct OTP application package visibility (`11` vs `0`) across committed `lib/*/src/*.app.src` templates, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable and preserves the same non-stdlib runtime dependency inventory ScanCode finds
+- Broader OTP package visibility (`51` vs `0` packages): one `pkg:hex/<app>` package per committed `lib/*/src/*.app.src` (`41`, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable) alongside `10` `pkg:autotools` packages from per-application `configure.ac` build manifests, preserving the same non-stdlib runtime dependency inventory ScanCode finds
 
 ##### [livebook-dev/livebook @ 77cbcd9](https://github.com/livebook-dev/livebook/tree/77cbcd98df133045f5a4adf7273e4cd077307714) — **17.14× faster**
 
@@ -334,14 +334,14 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 476
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.49s`; ScanCode `78.97s`
-- Direct Hex package visibility on the repo-root, `installer/mix.lock`, and `integration_test/mix.lock` surfaces (`3` vs `0` file-level package records), while preserving top-level package and dependency parity elsewhere and preserving structured npm party metadata
+- Direct Hex package visibility (`3` vs `0` file-level package records) on the repo-root, `installer/`, and `integration_test/` `mix.exs`/`mix.lock` surfaces — each `pkg:hex` package versioned from its `mix.exs` (`phoenix@1.8.5`, `phx_new@1.8.5`) and merged with its sibling lockfile — while preserving top-level package and dependency parity elsewhere and structured party metadata on the bundled `pkg:npm/phoenix` asset package
 
 ##### [processone/ejabberd @ 87475d8](https://github.com/processone/ejabberd/tree/87475d813b974492f338720eab5c9c3d4646a4ce) — **15.15× faster**
 
 - Files: 623
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `8.01s`; ScanCode `121.38s`
-- Broader Erlang/Rebar package and dependency extraction (`2` vs `1` packages, `43` vs `3` dependencies) from the root `rebar.config`, `rebar.lock`, nested `_checkouts/configure_deps` manifests, and committed Dockerfiles, with the bundled `priv/mod_invites/copyright` notice kept as clue-level license evidence instead of being overstated as Debian package metadata
+- Broader Erlang package and dependency extraction (`3` vs `1` packages, `43` vs `3` dependencies): `pkg:hex` and `pkg:autotools` identities from the `_checkouts/configure_deps` app and root `configure.ac` alongside the `pkg:npm` project, with rebar dependencies recovered from the root `rebar.config`/`rebar.lock` and committed Dockerfiles, plus the bundled `priv/mod_invites/copyright` notice kept as clue-level license evidence instead of being overstated as Debian package metadata
 
 ##### [vernemq/vernemq @ 4681e54](https://github.com/vernemq/vernemq/tree/4681e5490cc42e6cc26a504bb4b3c5413315c21f) — **14.07× faster**
 
@@ -506,7 +506,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 4,623
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.57s`; ScanCode `425.90s`
-- Matched top-level SBT package coverage (`7` vs `7`) with broader dependency extraction (`49` vs `40`) from the root `build.sbt`, sample applications, and native-image test manifests, plus cleaner rejection of weak actor-name author noise such as `the ActorSystem` and `the ReceiveBuilder`
+- Broader top-level package coverage (`11` vs `7`): each `build.sbt` project is its own `pkg:maven` package (`4` sbt projects) alongside the `7` Maven POM packages ScanCode also finds, with broader dependency extraction (`49` vs `40`) from the root `build.sbt`, sample applications, and native-image test manifests owned by their projects, plus cleaner rejection of weak actor-name author noise such as `the ActorSystem` and `the ReceiveBuilder`
 
 ##### [apache/ant-ivy @ dc35d51](https://github.com/apache/ant-ivy/tree/dc35d510d281ab2ab8fb4486e517e838c72a64d2) — **25.5× faster**
 
@@ -1219,21 +1219,21 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 3,625
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `9.93s`; ScanCode `304.40s`
-- Broader mixed-package extraction (`15` vs `2` packages, `40` vs `0` dependencies) from the root `vcpkg.json`, overlay-port `dep/vcpkg-overlay-ports/*/vcpkg.json`, and committed `packages.config` files, with explicit vcpkg package identities where ScanCode reports none
+- Broader mixed-package extraction (`17` vs `2` packages, `40` vs `0` dependencies) from the root `vcpkg.json`, overlay-port `dep/vcpkg-overlay-ports/*/vcpkg.json`, and committed `packages.config` files, with explicit `pkg:generic/vcpkg` and `pkg:nuget` package identities where ScanCode reports none
 
 ##### [microsoft/vcpkg @ 0bf3923](https://github.com/microsoft/vcpkg/tree/0bf3923f9fab4001c00f0f429682a0853b5749e0) — **31.18× faster**
 
 - Files: 5,536
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `7.83s`; ScanCode `244.13s`
-- Far broader classic vcpkg registry package and dependency extraction (`1531` vs `9` package_data records, `4677` vs `0` dependencies) from 1444 committed `ports/*/CONTROL` files plus early `ports/*/vcpkg.json` manifests, with `Build-Depends` dependency visibility including feature and platform qualifiers, named Debian copyright package identities where ScanCode emits nameless standalone copyright rows, and URL normalization that preserves complete CMake variable expressions instead of truncating at `${...` braces
+- Far broader classic vcpkg registry coverage: `1521` top-level `pkg:generic/vcpkg` packages — one per committed `ports/*/CONTROL` (1444) and early `ports/*/vcpkg.json` manifest — each owning its `Build-Depends` (`4677` dependencies, with feature and platform qualifiers) where ScanCode surfaces only `9` file-level records and no dependencies, plus named Debian copyright package identities where ScanCode emits nameless standalone copyright rows, and URL normalization that preserves complete CMake variable expressions instead of truncating at `${...` braces
 
 ##### [microsoft/vcpkg @ b21ff8f](https://github.com/microsoft/vcpkg/tree/b21ff8f3cadbd8e0b175b49be2dd9202f1f208f4) — **34.04× faster**
 
 - Files: 13,670
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `11.35s`; ScanCode `386.36s`
-- Far broader vcpkg registry package and dependency extraction (`2` vs `1` packages, `13653` vs `39` dependencies) from many committed `ports/*/vcpkg.json` manifests with host, feature, and platform-qualified dependencies, plus standalone Debian copyright package rows on `ports/*/copyright` and explicit vcpkg package identities where ScanCode stays largely manifest-blind
+- Far broader vcpkg registry package and dependency extraction (`2942` vs `1` packages, `13653` vs `39` dependencies): `2940` top-level `pkg:generic/vcpkg` packages, one per committed `ports/*/vcpkg.json` manifest, each owning its host, feature, and platform-qualified dependencies, plus standalone Debian copyright package rows on `ports/*/copyright` where ScanCode stays largely manifest-blind
 
 ##### [OrchardCMS/OrchardCore @ 01386f3](https://github.com/OrchardCMS/OrchardCore/tree/01386f38ee3fef620a93934f05ba1363ff05c291) — **51.92× faster**
 
@@ -1405,21 +1405,21 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 7,751
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `7.58s`; ScanCode `272.90s`
-- Broader opam and Nix package visibility (`4` vs `2` packages, `130` vs `116` dependencies) from the generated `opam/*.opam` manifests and `flake.lock`, with structured opam description, maintainer, and dependency recovery instead of ScanCode's field-bleeding author text on those manifests
+- Far broader opam and Nix package visibility (`257` vs `2` packages, `130` vs `116` dependencies): one `pkg:opam/<name>` package per `opam/*.opam` manifest (`256`, named from the filename when the manifest omits `name:`) plus the `flake.lock` package, with structured opam description, maintainer, and dependency recovery instead of ScanCode's field-bleeding author text on those manifests
 
 ##### [ocaml/merlin @ 30b4f24](https://github.com/ocaml/merlin/tree/30b4f24fdd76fdbf32685aac73de7fd4a6ff7470) — **32.07× faster**
 
 - Files: 2,120
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.87s`; ScanCode `348.59s`
-- Direct opam package visibility (`1` vs `0` packages) with broader dependency extraction (`27` vs `24`) from the repo-root `merlin*.opam`, `dot-merlin-reader.opam`, `ocaml-index.opam`, and `flake.lock` surfaces, plus Unicode-preserving copyright normalization across the Merlin source tree
+- Broader opam and Nix package visibility (`5` vs `0` packages) with broader dependency extraction (`27` vs `24`): one `pkg:opam` package per repo-root `merlin*.opam`, `dot-merlin-reader.opam`, and `ocaml-index.opam` manifest (`4`) plus the `flake.lock` package, with Unicode-preserving copyright normalization across the Merlin source tree
 
 ##### [ocaml/ocaml-lsp @ 788ff73](https://github.com/ocaml/ocaml-lsp/tree/788ff738991189537141776bfa07652547bff9c4) — **17.13× faster**
 
 - Files: 546
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.79s`; ScanCode `99.19s`
-- Broader opam package visibility (`3` vs `1` packages) with slightly richer dependency extraction (`380` vs `376`) from the root and submodule `.opam` manifests plus `flake.lock`, with cleaner maintainer and email recovery on opam metadata and Unicode-preserving copyright normalization
+- Broader package visibility (`11` vs `1` packages) with richer dependency extraction (`380` vs `376`): one `pkg:opam` package per root and submodule `.opam` manifest (`8`) alongside the `flake.lock`, `package.json`, and vendored-submodule `configure.ac` packages, with cleaner maintainer and email recovery on opam metadata and Unicode-preserving copyright normalization
 
 ##### [openfl/openfl @ 74d8f72](https://github.com/openfl/openfl/tree/74d8f72890b9ae70bba589d034ea35b86588e548) — **13.61× faster**
 
