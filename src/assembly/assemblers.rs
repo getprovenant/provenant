@@ -727,7 +727,12 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "*.packages.lock.json",
             "*.vbproj",
         ],
-        mode: AssemblyMode::SiblingMerge,
+        // A directory can hold one project (its `.csproj`/`.nuspec` plus
+        // supplementary `packages.config`/lock siblings) or several independent
+        // projects / `.nuspec` packaging outputs with distinct identities;
+        // collapsing the latter into one package loses the others, so split per
+        // identity. A single-identity directory falls back to one package.
+        mode: AssemblyMode::SiblingMergePerIdentity,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::NugetDepsJson],
