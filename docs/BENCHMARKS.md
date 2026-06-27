@@ -320,7 +320,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 11,749
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `59.99s`; ScanCode `2034.56s`
-- Direct OTP application package visibility (`11` vs `0`) across committed `lib/*/src/*.app.src` templates, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable and preserves the same non-stdlib runtime dependency inventory ScanCode finds
+- Direct OTP application package visibility (`41` vs `0`): one `pkg:hex/<app>` package per committed `lib/*/src/*.app.src`, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable and preserves the same non-stdlib runtime dependency inventory ScanCode finds
 
 ##### [livebook-dev/livebook @ 77cbcd9](https://github.com/livebook-dev/livebook/tree/77cbcd98df133045f5a4adf7273e4cd077307714) — **17.14× faster**
 
@@ -506,7 +506,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 4,623
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.57s`; ScanCode `425.90s`
-- Matched top-level SBT package coverage (`7` vs `7`) with broader dependency extraction (`49` vs `40`) from the root `build.sbt`, sample applications, and native-image test manifests, plus cleaner rejection of weak actor-name author noise such as `the ActorSystem` and `the ReceiveBuilder`
+- Broader top-level package coverage (`11` vs `7`): each `build.sbt` project is its own `pkg:maven` package (`4` sbt projects) alongside the `7` Maven POM packages ScanCode also finds, with broader dependency extraction (`49` vs `40`) from the root `build.sbt`, sample applications, and native-image test manifests owned by their projects, plus cleaner rejection of weak actor-name author noise such as `the ActorSystem` and `the ReceiveBuilder`
 
 ##### [apache/ant-ivy @ dc35d51](https://github.com/apache/ant-ivy/tree/dc35d510d281ab2ab8fb4486e517e838c72a64d2) — **25.5× faster**
 
@@ -1226,7 +1226,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 5,536
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `7.83s`; ScanCode `244.13s`
-- Far broader classic vcpkg registry package and dependency extraction (`1531` vs `9` package_data records, `4677` vs `0` dependencies) from 1444 committed `ports/*/CONTROL` files plus early `ports/*/vcpkg.json` manifests, with `Build-Depends` dependency visibility including feature and platform qualifiers, named Debian copyright package identities where ScanCode emits nameless standalone copyright rows, and URL normalization that preserves complete CMake variable expressions instead of truncating at `${...` braces
+- Far broader classic vcpkg registry coverage: `1521` top-level `pkg:generic/vcpkg` packages — one per committed `ports/*/CONTROL` (1444) and early `ports/*/vcpkg.json` manifest — each owning its `Build-Depends` (`4677` dependencies, with feature and platform qualifiers) where ScanCode surfaces only `9` file-level records and no dependencies, plus named Debian copyright package identities where ScanCode emits nameless standalone copyright rows, and URL normalization that preserves complete CMake variable expressions instead of truncating at `${...` braces
 
 ##### [microsoft/vcpkg @ b21ff8f](https://github.com/microsoft/vcpkg/tree/b21ff8f3cadbd8e0b175b49be2dd9202f1f208f4) — **34.04× faster**
 
@@ -1405,7 +1405,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 7,751
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `7.58s`; ScanCode `272.90s`
-- Broader opam and Nix package visibility (`4` vs `2` packages, `130` vs `116` dependencies) from the generated `opam/*.opam` manifests and `flake.lock`, with structured opam description, maintainer, and dependency recovery instead of ScanCode's field-bleeding author text on those manifests
+- Far broader opam and Nix package visibility (`257` vs `2` packages, `130` vs `116` dependencies): one `pkg:opam/<name>` package per `opam/*.opam` manifest (`256`, named from the filename when the manifest omits `name:`) plus the `flake.lock` package, with structured opam description, maintainer, and dependency recovery instead of ScanCode's field-bleeding author text on those manifests
 
 ##### [ocaml/merlin @ 30b4f24](https://github.com/ocaml/merlin/tree/30b4f24fdd76fdbf32685aac73de7fd4a6ff7470) — **32.07× faster**
 
