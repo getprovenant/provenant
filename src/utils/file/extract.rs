@@ -16,7 +16,7 @@ use object::FileKind;
 
 use crate::models::ScanDiagnostic;
 use crate::parsers::windows_executable::extract_windows_executable_metadata_text;
-use crate::utils::font::extract_font_metadata_text;
+use crate::utils::font::{extract_font_metadata_text, extract_font_name_table_strings};
 use crate::utils::language::detect_language;
 
 use super::encoding::{
@@ -222,11 +222,15 @@ pub(crate) fn extract_text_for_detection_with_diagnostics(
     }
 
     if let Some(text) = extract_font_metadata_text(path, bytes) {
-        let strings = extract_printable_strings(bytes);
-        let combined = if strings.is_empty() {
+        // Augment the structured legal fields with the remaining `name` table
+        // records (designer, vendor URL, etc.), decoded record-by-record so
+        // packed UTF-16 storage cannot glue them into run-on URLs the way a raw
+        // whole-binary printable-strings scrape would.
+        let name_strings = extract_font_name_table_strings(bytes);
+        let combined = if name_strings.is_empty() {
             text
         } else {
-            combine_extracted_text_fragments(Some(text), strings)
+            combine_extracted_text_fragments(Some(text), name_strings)
         };
         return (combined, ExtractedTextKind::FontMetadata, None);
     }
