@@ -7,6 +7,45 @@
 use super::*;
 
 #[test]
+fn test_bpe_tokenizer_data_lines_do_not_produce_copyrights_or_holders() {
+    // Hugging Face subword-tokenizer artifacts: merges.txt BPE pairs and
+    // vocab.json token:id entries embed the `©` symbol and the literal
+    // `copyright` token. They must not be surfaced as copyright/holder notices.
+    let input = concat!(
+        "Ã© goo gle</w> fren ch</w>\n",
+        "âģ ©</w> f ren st y</w>\n",
+        "\"©\": 102,\n",
+        "\"copyright</w>\": 15778,\n",
+    );
+
+    let (copyrights, holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
+fn test_bpe_merges_table_produces_no_copyrights() {
+    // A full BPE merges.txt (header + two-token merge rules) embeds `©` and
+    // mojibake byte pairs that are not copyright notices.
+    let input = concat!(
+        "#version: 0.2\n",
+        "i n\n",
+        "t h\n",
+        "Â ©\n",
+        "pok Ã©\n",
+        "Ú ©\n",
+    );
+
+    let (copyrights, holders, authors) = detect_copyrights_from_text(input);
+
+    assert!(copyrights.is_empty(), "copyrights: {copyrights:?}");
+    assert!(holders.is_empty(), "holders: {holders:?}");
+    assert!(authors.is_empty(), "authors: {authors:?}");
+}
+
+#[test]
 fn test_swift_convention_c_signatures_do_not_produce_copyrights_or_holders() {
     let input = concat!(
         "let invokeSuperSetter: @convention(c) (NSObject, AnyClass, Selector, AnyObject?) -> Void = { object, superclass, selector, delegate in\n",

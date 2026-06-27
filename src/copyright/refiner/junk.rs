@@ -18,6 +18,61 @@ use super::*;
 
 // ─── Junk detection ──────────────────────────────────────────────────────────
 
+/// Return true if `s` is a fragment of machine subword-tokenizer data rather
+/// than a real copyright, holder, or author.
+///
+/// Subword-tokenizer artifacts (e.g. Hugging Face `merges.txt` BPE merge tables
+/// and `vocab.json` vocabularies) embed the `©` symbol and the literal word
+/// `copyright` as tokens, which the detector would otherwise surface as dozens of
+/// spurious notices. Two signals are decisive and never occur in genuine
+/// copyright text: the BPE end-of-word marker `</w>`, and a line that is wholly a
+/// sequence of JSON `"token": <id>` vocabulary entries (e.g. `"©": 102,`).
+///
+/// The JSON check is anchored to the whole (trimmed) line so that a genuine
+/// notice which merely *contains* a `"key": 5` fragment (e.g.
+/// `Copyright 2024 Foo, "version": 5`) is never mistaken for tokenizer data — a
+/// real `vocab.json` line is nothing but quoted-token/integer-id pairs.
+pub(crate) fn is_tokenizer_data_fragment(s: &str) -> bool {
+    static JSON_TOKEN_ID_LINE_RE: LazyLock<Regex> =
+        LazyLock::new(|| compile_static_regex(r#"^\{?\s*("[^"]*"\s*:\s*-?\d+\s*,?\s*)+\}?$"#));
+    s.contains("</w>") || JSON_TOKEN_ID_LINE_RE.is_match(s.trim())
+}
+
+/// Return true if `content` is a Byte-Pair-Encoding (BPE) merges table, such as
+/// a Hugging Face / GPT-2 tokenizer `merges.txt`.
+///
+/// These files open with a `#version:` header and list one whitespace-separated
+/// token pair per line. They embed the `©` symbol and accented/mojibake byte
+/// pairs (e.g. `Â ©`, `pok Ã©`) as merge rules, which the detector would
+/// otherwise mistake for copyright notices — but a merge table never contains a
+/// genuine copyright statement. The `#version:` header plus the strict two-token
+/// line shape make this signature specific enough that it cannot match ordinary
+/// source or text files.
+pub(crate) fn looks_like_bpe_merges_table(content: &str) -> bool {
+    let mut lines = content
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty());
+
+    if !lines
+        .next()
+        .is_some_and(|first| first.starts_with("#version:"))
+    {
+        return false;
+    }
+
+    // Every merge rule is exactly two whitespace-separated tokens. Sample a
+    // bounded prefix and require all sampled rules to match the pair shape.
+    let mut sampled = 0;
+    for line in lines.take(64) {
+        if line.split_whitespace().count() != 2 {
+            return false;
+        }
+        sampled += 1;
+    }
+    sampled > 0
+}
+
 /// Return true if `s` matches any known junk copyright pattern.
 pub fn is_junk_copyright(s: &str) -> bool {
     if looks_like_structured_copyright_notice_with_year(s) {
