@@ -377,7 +377,18 @@ fn parse_leading_string(src: &str) -> Option<String> {
     let mut idx = 1usize;
     while idx < chars.len() {
         match chars[idx] {
-            '"' => return Some(out),
+            '"' => {
+                // The string closes here. Accept it only if nothing (other than a
+                // comment) follows: a value like `"1." <> patch` is a computed
+                // expression whose literal prefix must not be emitted as a partial
+                // version/requirement.
+                let rest: String = chars[idx + 1..].iter().collect();
+                let rest = rest.trim_start();
+                if rest.is_empty() || rest.starts_with('#') {
+                    return Some(out);
+                }
+                return None;
+            }
             '\\' => {
                 idx += 1;
                 if idx >= chars.len() {

@@ -117,6 +117,48 @@ end
 }
 
 #[test]
+fn test_parse_mix_exs_computed_string_prefix_is_skipped() {
+    // A string literal that is only the prefix of a computed expression must be
+    // rejected, not emitted as a partial version/requirement.
+    let content = r##"
+defmodule App.MixProject do
+  use Mix.Project
+
+  @suffix "0"
+
+  def project do
+    [app: :app, version: "1." <> @suffix, deps: deps()]
+  end
+
+  defp deps do
+    [
+      {:phoenix, "~> " <> phoenix_version()},
+      {:plug, "~> 1.15"}
+    ]
+  end
+end
+"##;
+    let package = super::mix_exs::parse_mix_exs_for_test(content);
+    assert_eq!(package.name.as_deref(), Some("app"));
+    // `"1." <> @suffix` is computed → no version guessed.
+    assert_eq!(package.version, None);
+
+    let phoenix = package
+        .dependencies
+        .iter()
+        .find(|d| d.purl.as_deref() == Some("pkg:hex/phoenix"))
+        .expect("phoenix dep should be present (name-only)");
+    // The computed requirement prefix `"~> "` must not leak.
+    assert_eq!(phoenix.extracted_requirement, None);
+    let plug = package
+        .dependencies
+        .iter()
+        .find(|d| d.purl.as_deref() == Some("pkg:hex/plug"))
+        .expect("plug dep should be present");
+    assert_eq!(plug.extracted_requirement.as_deref(), Some("~> 1.15"));
+}
+
+#[test]
 fn test_parse_mix_exs_missing_project_is_empty_but_typed() {
     let content = "defmodule App do\n  def hello, do: :world\nend\n";
     let package = super::mix_exs::parse_mix_exs_for_test(content);
