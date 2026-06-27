@@ -216,6 +216,7 @@ pub enum DatasourceId {
     HelmChartYaml,
 
     // ── Hex/Elixir ──
+    HexMixExs,
     HexMixLock,
 
     // ── Hugging Face ──
@@ -524,6 +525,7 @@ impl DatasourceId {
             Self::HelmChartYaml => "helm_chart_yaml",
 
             // Hex/Elixir
+            Self::HexMixExs => "hex_mix_exs",
             Self::HexMixLock => "hex_mix_lock",
 
             // Hugging Face

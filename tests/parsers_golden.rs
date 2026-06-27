@@ -65,6 +65,7 @@ mod parsers {
         maven,
         meson,
         microsoft_update_manifest,
+        mix_exs,
         npm,
         npm_lock,
         npm_workspace,
