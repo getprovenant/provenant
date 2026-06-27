@@ -951,7 +951,13 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             DatasourceId::BitbakeRecipeAppend,
         ],
         sibling_file_patterns: &["*.bb", "*.bbappend"],
-        mode: AssemblyMode::SiblingMerge,
+        // A recipe directory routinely holds several distinct `.bb` recipes
+        // (e.g. per-version or sibling components) each with its own
+        // `pkg:yocto/<pn>@<pv>` identity; collapsing the directory into one
+        // package loses the others, so split per identity. A single-recipe
+        // directory (recipe + its `.bbappend`/files) falls back to the
+        // one-package result unchanged.
+        mode: AssemblyMode::SiblingMergePerIdentity,
     },
 ];
 

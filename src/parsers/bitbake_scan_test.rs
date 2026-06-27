@@ -118,4 +118,37 @@ SRC_URI:append = " file://append.patch"
             );
         }
     }
+
+    #[test]
+    fn test_bitbake_distinct_recipes_in_one_dir_stay_separate_packages() {
+        // A recipe directory holding several distinct `.bb` recipes must yield one
+        // package per identity, not collapse them into a single package.
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        fs::write(
+            temp_dir.path().join("foo_1.0.bb"),
+            "SUMMARY = \"foo\"\nLICENSE = \"MIT\"\n",
+        )
+        .expect("write foo recipe");
+        fs::write(
+            temp_dir.path().join("bar_2.0.bb"),
+            "SUMMARY = \"bar\"\nLICENSE = \"MIT\"\n",
+        )
+        .expect("write bar recipe");
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        let purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|p| p.purl.as_deref())
+            .collect();
+        assert!(
+            purls.contains(&"pkg:yocto/foo@1.0"),
+            "expected foo package: {purls:?}"
+        );
+        assert!(
+            purls.contains(&"pkg:yocto/bar@2.0"),
+            "expected bar package: {purls:?}"
+        );
+    }
 }
