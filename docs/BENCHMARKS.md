@@ -320,7 +320,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 11,749
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `59.99s`; ScanCode `2034.56s`
-- Direct OTP application package visibility (`41` vs `0`): one `pkg:hex/<app>` package per committed `lib/*/src/*.app.src`, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable and preserves the same non-stdlib runtime dependency inventory ScanCode finds
+- Broader OTP package visibility (`51` vs `0` packages): one `pkg:hex/<app>` package per committed `lib/*/src/*.app.src` (`41`, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable) alongside `10` `pkg:autotools` packages from per-application `configure.ac` build manifests, preserving the same non-stdlib runtime dependency inventory ScanCode finds
 
 ##### [livebook-dev/livebook @ 77cbcd9](https://github.com/livebook-dev/livebook/tree/77cbcd98df133045f5a4adf7273e4cd077307714) — **17.14× faster**
 
@@ -341,7 +341,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 623
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `8.01s`; ScanCode `121.38s`
-- Broader Erlang/Rebar package and dependency extraction (`2` vs `1` packages, `43` vs `3` dependencies) from the root `rebar.config`, `rebar.lock`, nested `_checkouts/configure_deps` manifests, and committed Dockerfiles, with the bundled `priv/mod_invites/copyright` notice kept as clue-level license evidence instead of being overstated as Debian package metadata
+- Broader Erlang package and dependency extraction (`3` vs `1` packages, `43` vs `3` dependencies): `pkg:hex` and `pkg:autotools` identities from the `_checkouts/configure_deps` app and root `configure.ac` alongside the `pkg:npm` project, with rebar dependencies recovered from the root `rebar.config`/`rebar.lock` and committed Dockerfiles, plus the bundled `priv/mod_invites/copyright` notice kept as clue-level license evidence instead of being overstated as Debian package metadata
 
 ##### [vernemq/vernemq @ 4681e54](https://github.com/vernemq/vernemq/tree/4681e5490cc42e6cc26a504bb4b3c5413315c21f) — **14.07× faster**
 
@@ -1219,7 +1219,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 3,625
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `9.93s`; ScanCode `304.40s`
-- Broader mixed-package extraction (`15` vs `2` packages, `40` vs `0` dependencies) from the root `vcpkg.json`, overlay-port `dep/vcpkg-overlay-ports/*/vcpkg.json`, and committed `packages.config` files, with explicit vcpkg package identities where ScanCode reports none
+- Broader mixed-package extraction (`17` vs `2` packages, `40` vs `0` dependencies) from the root `vcpkg.json`, overlay-port `dep/vcpkg-overlay-ports/*/vcpkg.json`, and committed `packages.config` files, with explicit `pkg:generic/vcpkg` and `pkg:nuget` package identities where ScanCode reports none
 
 ##### [microsoft/vcpkg @ 0bf3923](https://github.com/microsoft/vcpkg/tree/0bf3923f9fab4001c00f0f429682a0853b5749e0) — **31.18× faster**
 
@@ -1412,14 +1412,14 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 2,120
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.87s`; ScanCode `348.59s`
-- Direct opam package visibility (`1` vs `0` packages) with broader dependency extraction (`27` vs `24`) from the repo-root `merlin*.opam`, `dot-merlin-reader.opam`, `ocaml-index.opam`, and `flake.lock` surfaces, plus Unicode-preserving copyright normalization across the Merlin source tree
+- Broader opam and Nix package visibility (`5` vs `0` packages) with broader dependency extraction (`27` vs `24`): one `pkg:opam` package per repo-root `merlin*.opam`, `dot-merlin-reader.opam`, and `ocaml-index.opam` manifest (`4`) plus the `flake.lock` package, with Unicode-preserving copyright normalization across the Merlin source tree
 
 ##### [ocaml/ocaml-lsp @ 788ff73](https://github.com/ocaml/ocaml-lsp/tree/788ff738991189537141776bfa07652547bff9c4) — **17.13× faster**
 
 - Files: 546
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.79s`; ScanCode `99.19s`
-- Broader opam package visibility (`3` vs `1` packages) with slightly richer dependency extraction (`380` vs `376`) from the root and submodule `.opam` manifests plus `flake.lock`, with cleaner maintainer and email recovery on opam metadata and Unicode-preserving copyright normalization
+- Broader package visibility (`11` vs `1` packages) with richer dependency extraction (`380` vs `376`): one `pkg:opam` package per root and submodule `.opam` manifest (`8`) alongside the `flake.lock`, `package.json`, and vendored-submodule `configure.ac` packages, with cleaner maintainer and email recovery on opam metadata and Unicode-preserving copyright normalization
 
 ##### [openfl/openfl @ 74d8f72](https://github.com/openfl/openfl/tree/74d8f72890b9ae70bba589d034ea35b86588e548) — **13.61× faster**
 
