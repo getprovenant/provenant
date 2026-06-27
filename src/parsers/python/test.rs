@@ -215,6 +215,131 @@ numpy = ">=1.20.0"
     }
 
     #[test]
+    fn test_pep621_license_string_form() {
+        let content = r#"
+[project]
+name = "demo"
+version = "1.0.0"
+license = "MIT"
+"#;
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("MIT")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("mit")
+        );
+        assert!(
+            package_data
+                .extra_data
+                .as_ref()
+                .map(|extra| !extra.contains_key("license_file"))
+                .unwrap_or(true)
+        );
+    }
+
+    #[test]
+    fn test_pep621_license_text_form() {
+        let content = r#"
+[project]
+name = "demo"
+version = "1.0.0"
+license = { text = "Apache-2.0" }
+"#;
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+    }
+
+    #[test]
+    fn test_pep621_license_expression_form() {
+        let content = r#"
+[project]
+name = "demo"
+version = "1.0.0"
+license = { expression = "MIT OR Apache-2.0" }
+"#;
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(
+            package_data.extracted_license_statement.as_deref(),
+            Some("MIT OR Apache-2.0")
+        );
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+    }
+
+    #[test]
+    fn test_pep621_license_file_form_records_license_file_reference() {
+        let content = r#"
+[project]
+name = "demo"
+version = "1.0.0"
+license = { file = "LICENSE.txt" }
+"#;
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        // The PEP 621 file form is recorded as a license-file reference in
+        // extra_data, matching ScanCode. The parser stays file-local and does not
+        // inline any expression for the file form, so the declared expression
+        // stays an honest null here; the cross-file reference-following pass
+        // resolves the referenced file's detected license downstream.
+        let extra_data = package_data
+            .extra_data
+            .as_ref()
+            .expect("extra_data should be present");
+        assert_eq!(
+            extra_data.get("license_file").and_then(|v| v.as_str()),
+            Some("LICENSE.txt")
+        );
+        assert_eq!(package_data.declared_license_expression, None);
+        assert_eq!(package_data.extracted_license_statement, None);
+    }
+
+    #[test]
+    fn test_pep621_dynamic_license_skips_stale_license_file_reference() {
+        // `license` is declared dynamic, so the static `{ file = ... }` value is a
+        // build-time placeholder and must not be recorded as an authoritative
+        // license-file reference.
+        let content = r#"
+[project]
+name = "demo"
+version = "1.0.0"
+dynamic = ["license"]
+license = { file = "OLD.txt" }
+"#;
+        let (_temp_file, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        let has_license_file = package_data
+            .extra_data
+            .as_ref()
+            .map(|extra| extra.contains_key("license_file"))
+            .unwrap_or(false);
+        assert!(
+            !has_license_file,
+            "a dynamic license must not record a stale license_file reference"
+        );
+        assert_eq!(package_data.declared_license_expression, None);
+    }
+
+    #[test]
     fn test_extract_from_pyproject_toml_with_pep621_tables_and_labeled_urls() {
         let content = r#"
 [project]

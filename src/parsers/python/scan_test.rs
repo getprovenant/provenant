@@ -8,6 +8,7 @@ mod tests {
     use crate::models::{DatasourceId, PackageType};
     use crate::parsers::scan_test_utils::{
         assert_dependency_present, assert_file_links_to_package, scan_and_assemble,
+        scan_assemble_and_follow_references,
     };
     use serde_json::Value as JsonValue;
 
@@ -647,5 +648,72 @@ pytest-github-actions-annotate-failures = "^0.1.7"
         assert_eq!(gha.scope.as_deref(), Some("github-actions"));
         assert_eq!(gha.is_runtime, Some(false));
         assert_eq!(gha.is_optional, Some(true));
+    }
+
+    /// Layer-3 contract: a single-datafile PEP 621 `license = { file = "LICENSE.txt" }`
+    /// manifest leaves the parser with no inline expression, yet the sibling
+    /// LICENSE.txt's detected license resolves onto the assembled package's
+    /// declared license through the reference-following pass. This guards the
+    /// common single-manifest case end to end and confirms recording the file
+    /// form in `extra_data["license_file"]` does not disturb that resolution.
+    #[test]
+    fn test_pep621_license_file_resolves_sibling_license_onto_package() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let project = temp_dir.path();
+
+        fs::write(
+            project.join("pyproject.toml"),
+            r#"[project]
+name = "demo"
+version = "1.0.0"
+license = { file = "LICENSE.txt" }
+"#,
+        )
+        .expect("write pyproject.toml");
+
+        let apache_text = fs::read_to_string(
+            "testdata/summarycode-golden/score/no_license_ambiguity/LICENSE-APACHE",
+        )
+        .expect("read apache license fixture");
+        fs::write(project.join("LICENSE.txt"), apache_text).expect("write LICENSE.txt");
+
+        let (files, result) = scan_assemble_and_follow_references(project);
+
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("demo"))
+            .expect("demo package should be assembled");
+
+        assert_eq!(
+            package.declared_license_expression.as_deref(),
+            Some("apache-2.0"),
+            "the referenced LICENSE.txt should resolve onto the package declared license"
+        );
+
+        let license_file = files
+            .iter()
+            .find(|file| file.path.ends_with("LICENSE.txt"))
+            .expect("LICENSE.txt should be scanned");
+        assert!(
+            license_file.is_referenced,
+            "the resolved license file should be marked as referenced"
+        );
+
+        // The resolved package detection should carry a match sourced from the
+        // referenced LICENSE.txt, not only the manifest's own reference clue.
+        let resolved_from_license_file = package
+            .license_detections
+            .iter()
+            .flat_map(|detection| detection.matches.iter())
+            .any(|m| {
+                m.from_file
+                    .as_deref()
+                    .is_some_and(|f| f.ends_with("LICENSE.txt"))
+            });
+        assert!(
+            resolved_from_license_file,
+            "the package license detection should include a match from the referenced LICENSE.txt"
+        );
     }
 }
