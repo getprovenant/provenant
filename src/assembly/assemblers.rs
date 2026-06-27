@@ -867,6 +867,18 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["APKBUILD"],
         mode: AssemblyMode::SiblingMerge,
     },
+    // Arch Linux package metadata. A `.SRCINFO`/`.PKGINFO`/`.AURINFO` names one
+    // or more `pkg:alpm/*` packages (a split recipe emits several subpackages),
+    // each owning its `depends`/`makedepends`. One package per record.
+    AssemblerConfig {
+        datasource_ids: &[
+            DatasourceId::ArchSrcinfo,
+            DatasourceId::ArchPkginfo,
+            DatasourceId::ArchAurinfo,
+        ],
+        sibling_file_patterns: &[".SRCINFO", ".PKGINFO", ".AURINFO"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // RPM installed package databases (BDB, NDB, SQLite)
     AssemblerConfig {
         datasource_ids: &[
@@ -961,9 +973,6 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::SharShellArchive,
     DatasourceId::SquashfsDiskImage,
     // Supplementary metadata (not primary package definitions)
-    DatasourceId::ArchAurinfo,
-    DatasourceId::ArchPkginfo,
-    DatasourceId::ArchSrcinfo,
     DatasourceId::Axis2ModuleXml,
     DatasourceId::ClojureDepsEdn,
     DatasourceId::DebianInstalledFilesList,
