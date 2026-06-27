@@ -3122,9 +3122,10 @@ setup(
             .filter(|d| d.scope.as_deref() == Some("setup"))
             .collect();
         assert_eq!(setup_deps.len(), 2);
-        // setup_requires are build-time, non-optional, runtime-true (ScanCode parity).
+        // setup_requires are build-time inputs: non-optional, but not runtime
+        // dependencies (an SBOM consumer must not treat them as runtime).
         assert!(setup_deps.iter().all(|d| d.is_optional == Some(false)));
-        assert!(setup_deps.iter().all(|d| d.is_runtime == Some(true)));
+        assert!(setup_deps.iter().all(|d| d.is_runtime == Some(false)));
         let purls: Vec<&str> = setup_deps
             .iter()
             .filter_map(|d| d.purl.as_deref())

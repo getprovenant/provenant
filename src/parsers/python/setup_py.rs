@@ -919,15 +919,18 @@ fn build_setup_py_dependencies(kw: &SetupKeywords) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
     if let Some(reqs) = &kw.install_requires {
-        dependencies.extend(build_setup_py_dependency_list(reqs, "install", false));
+        dependencies.extend(build_setup_py_dependency_list(reqs, "install", false, true));
     }
 
     if let Some(reqs) = &kw.setup_requires {
-        dependencies.extend(build_setup_py_dependency_list(reqs, "setup", false));
+        // `setup_requires` are build-time inputs, not runtime dependencies, so an
+        // SBOM consumer must not treat them as runtime. ScanCode marks them
+        // runtime; preferring correctness, Provenant does not.
+        dependencies.extend(build_setup_py_dependency_list(reqs, "setup", false, false));
     }
 
     if let Some(reqs) = &kw.tests_require {
-        dependencies.extend(build_setup_py_dependency_list(reqs, "test", true));
+        dependencies.extend(build_setup_py_dependency_list(reqs, "test", true, true));
     }
 
     if let Some(extras) = &kw.extras_require {
@@ -938,6 +941,7 @@ fn build_setup_py_dependencies(kw: &SetupKeywords) -> Vec<Dependency> {
                 dependencies.extend(build_setup_py_dependency_list(
                     reqs.as_slice(),
                     extra_name,
+                    true,
                     true,
                 ));
             }
@@ -951,9 +955,14 @@ fn build_setup_py_dependency_list(
     reqs: &[String],
     scope: &str,
     is_optional: bool,
+    is_runtime: bool,
 ) -> Vec<Dependency> {
     reqs.iter()
         .filter_map(|req| build_python_dependency(req, scope, is_optional, None))
+        .map(|mut dependency| {
+            dependency.is_runtime = Some(is_runtime);
+            dependency
+        })
         .collect()
 }
 
