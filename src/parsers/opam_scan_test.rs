@@ -85,4 +85,35 @@ depends: [
                 .any(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::OpamFile))
         );
     }
+
+    #[test]
+    fn test_opam_multi_package_root_promotes_each_named_after_its_filename() {
+        // A multi-package opam project ships several `<name>.opam` files that omit
+        // the `name:` field; each must promote to its own `pkg:opam/<name>`
+        // package named after the filename, not collapse into one.
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        for name in ["dune", "dune-rpc"] {
+            std::fs::write(
+                temp_dir.path().join(format!("{name}.opam")),
+                "opam-version: \"2.0\"\nsynopsis: \"part of dune\"\n",
+            )
+            .expect("write opam file");
+        }
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        let purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|p| p.purl.as_deref())
+            .collect();
+        assert!(
+            purls.contains(&"pkg:opam/dune"),
+            "expected dune package: {purls:?}"
+        );
+        assert!(
+            purls.contains(&"pkg:opam/dune-rpc"),
+            "expected dune-rpc package: {purls:?}"
+        );
+    }
 }
