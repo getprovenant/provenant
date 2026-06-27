@@ -302,6 +302,8 @@ mod ruby_scan_test;
 mod ruby_test;
 mod sbt;
 #[cfg(test)]
+mod sbt_scan_test;
+#[cfg(test)]
 mod sbt_test;
 #[cfg(test)]
 mod scan_test_utils;
