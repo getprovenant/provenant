@@ -2,7 +2,7 @@
   {
     "type": "opam",
     "namespace": null,
-    "name": null,
+    "name": "sample3",
     "version": null,
     "qualifiers": {},
     "subpath": null,
@@ -67,15 +67,15 @@
             "end_line": 1,
             "matcher": "parser-declared-license",
             "score": 100.0,
-            "matched_length": 4,
+            "matched_length": 1,
             "match_coverage": 100.0,
-            "rule_relevance": 50,
+            "rule_relevance": 100,
             "rule_identifier": "spdx_license_id_gpl-3.0-only_for_gpl-3.0.RULE",
             "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/spdx_license_id_gpl-3.0-only_for_gpl-3.0.RULE",
             "matched_text": "GPL-3.0-only"
           }
         ],
-        "identifier": "gpl_3_0-c40e1583-9bea-e122-2576-a76192b84364"
+        "identifier": null
       }
     ],
     "other_license_expression": null,
@@ -97,7 +97,7 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       },
       {
@@ -108,7 +108,7 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       },
       {
@@ -119,14 +119,14 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       }
     ],
-    "repository_homepage_url": null,
+    "repository_homepage_url": "https://opam.ocaml.org/packages/sample3",
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "opam_file",
-    "purl": null
+    "purl": "pkg:opam/sample3"
   }
 ]

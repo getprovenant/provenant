@@ -2,7 +2,7 @@
   {
     "type": "opam",
     "namespace": null,
-    "name": null,
+    "name": "sample7",
     "version": null,
     "qualifiers": {},
     "subpath": null,
@@ -58,17 +58,17 @@
             "from_file": null,
             "start_line": 1,
             "end_line": 1,
-            "matcher": "1-spdx-id",
+            "matcher": "parser-declared-license",
             "score": 100.0,
-            "matched_length": 9,
+            "matched_length": 3,
             "match_coverage": 100.0,
             "rule_relevance": 100,
-            "rule_identifier": "spdx-license-identifier-lgpl_3_0_with_ocaml_lgpl_linking_exception-45b28dafe2d3f59c703b2663cd62d139586477a0",
+            "rule_identifier": "parser-declared-license",
             "rule_url": null,
             "matched_text": "LGPL-3.0-only with OCaml-LGPL-linking-exception"
           }
         ],
-        "identifier": "lgpl_3_0_with_ocaml_lgpl_linking_exception-d5f22af5-e434-a5f7-9f3a-097820a7004f"
+        "identifier": null
       }
     ],
     "other_license_expression": null,
@@ -90,7 +90,7 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       },
       {
@@ -101,7 +101,7 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       },
       {
@@ -112,7 +112,7 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       },
       {
@@ -123,14 +123,14 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true,
-        "resolved_package": {},
+        "resolved_package": null,
         "extra_data": {}
       }
     ],
-    "repository_homepage_url": null,
+    "repository_homepage_url": "https://opam.ocaml.org/packages/sample7",
     "repository_download_url": null,
     "api_data_url": null,
     "datasource_id": "opam_file",
-    "purl": null
+    "purl": "pkg:opam/sample7"
   }
 ]
