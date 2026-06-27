@@ -3772,6 +3772,59 @@ mod tests {
     }
 
     #[test]
+    fn test_one_per_package_data_hoists_purlless_record_dependencies() {
+        // A purl-less manifest under OnePerPackageData cannot become a package,
+        // but its dependencies must still be hoisted (unowned) rather than
+        // dropped — the visibility they had before the datasource was assembled.
+        let mut files = vec![
+            create_test_file_info(
+                "proj/meson.build",
+                DatasourceId::MesonBuild,
+                Some("pkg:meson/proj@1.0"),
+                Some("proj"),
+                Some("1.0"),
+                vec![create_test_dependency("pkg:generic/meson/zlib", None, None)],
+            ),
+            create_test_file_info(
+                "proj/sub/meson.build",
+                DatasourceId::MesonBuild,
+                None,
+                None,
+                None,
+                vec![create_test_dependency(
+                    "pkg:generic/meson/openssl",
+                    None,
+                    None,
+                )],
+            ),
+        ];
+
+        let result = assemble(&mut files);
+
+        let proj = result
+            .packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("proj"))
+            .expect("project()-bearing meson.build should promote to a package");
+        assert!(
+            result.dependencies.iter().any(|d| {
+                d.purl.as_deref() == Some("pkg:generic/meson/zlib")
+                    && d.for_package_uid.as_ref() == Some(&proj.package_uid)
+            }),
+            "the named project must own its dependency"
+        );
+        let hoisted = result
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:generic/meson/openssl"))
+            .expect("a purl-less record's dependency must be hoisted, not dropped");
+        assert!(
+            hoisted.for_package_uid.is_none(),
+            "the hoisted dependency has no owning package"
+        );
+    }
+
+    #[test]
     fn test_assemble_python_standalone_wheel_creates_top_level_package() {
         let mut files = vec![create_test_file_info(
             "dist/construct-2.10.68-py3-none-any.whl",

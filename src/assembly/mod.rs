@@ -143,10 +143,7 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
                     apply_directory_merge_results(files, &mut packages, &mut dependencies, results);
                 }
                 AssemblyMode::OnePerPackageData => {
-                    let results = assemble_one_per_package_data(config, files, file_indices)
-                        .into_iter()
-                        .map(|(pkg, deps, affected_idx)| (Some(pkg), deps, vec![affected_idx]))
-                        .collect();
+                    let results = assemble_one_per_package_data(config, files, file_indices);
                     apply_directory_merge_results(files, &mut packages, &mut dependencies, results);
                 }
             }
@@ -322,7 +319,7 @@ fn assemble_one_per_package_data(
     config: &AssemblerConfig,
     files: &[FileInfo],
     file_indices: &[usize],
-) -> Vec<(Package, Vec<TopLevelDependency>, usize)> {
+) -> Vec<DirectoryMergeOutput> {
     let mut results = Vec::new();
 
     for &idx in file_indices {
@@ -332,17 +329,28 @@ fn assemble_one_per_package_data(
                 .datasource_id
                 .is_some_and(|dsid| config.datasource_ids.contains(&dsid));
 
-            if !dsid_matches
-                || pkg_data.purl.is_none()
-                || should_skip_placeholder_only_cocoapods_podspec(pkg_data)
-            {
+            if !dsid_matches || should_skip_placeholder_only_cocoapods_podspec(pkg_data) {
                 continue;
             }
 
+            let Some(datasource_id) = pkg_data.datasource_id else {
+                continue;
+            };
             let datafile_path = file.path.clone();
-            let datasource_id = pkg_data.datasource_id.expect("datasource_id must be Some");
-            let pkg = Package::from_package_data(pkg_data, datafile_path.clone());
-            let for_package_uid = Some(pkg.package_uid.clone());
+
+            // A record carrying an identity becomes its own package that owns its
+            // dependencies. A purl-less record cannot be a package, but its
+            // dependencies are still hoisted (unowned) rather than dropped — the
+            // same visibility they had before this datasource was assembled.
+            let (package, affected) = if pkg_data.purl.is_some() {
+                (
+                    Some(Package::from_package_data(pkg_data, datafile_path.clone())),
+                    vec![idx],
+                )
+            } else {
+                (None, Vec::new())
+            };
+            let for_package_uid = package.as_ref().map(|pkg| pkg.package_uid.clone());
 
             let deps: Vec<TopLevelDependency> = pkg_data
                 .dependencies
@@ -358,7 +366,11 @@ fn assemble_one_per_package_data(
                 })
                 .collect();
 
-            results.push((pkg, deps, idx));
+            if package.is_none() && deps.is_empty() {
+                continue;
+            }
+
+            results.push((package, deps, affected));
         }
     }
 
