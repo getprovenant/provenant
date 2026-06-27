@@ -299,21 +299,21 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 305
 - Run context: 2026-06-06 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `6.53s`; ScanCode `57.19s`
-- Direct Hex dependency extraction (`367` vs `0` dependencies) from the root `mix.lock`'s legacy 7-element hex tuples that ScanCode does not parse, defaulting `hexpm` as the repository for tuples that omit it, with MIT license detection preserved across the Elixir source tree
+- Broader Hex package and dependency extraction (`6` vs `0` packages, `399` vs `0` dependencies): one `pkg:hex` package per `mix.exs` (the root `distillery` app plus five `test/fixtures/*` apps), each merging its sibling `mix.lock` for locked identities, parsing the root lockfile's legacy 7-element hex tuples ScanCode does not read and defaulting `hexpm` as the repository for tuples that omit it, with MIT license detection preserved across the Elixir source tree
 
 ##### [elixir-ecto/ecto @ 28d9282](https://github.com/elixir-ecto/ecto/tree/28d928267388018d5b0bb1f83e04368b7e8cae50) — **13.56× faster**
 
 - Files: 156
 - Run context: 2026-06-15 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.85s`; ScanCode `65.75s`
-- Broader Hex dependency extraction (`19` vs `0`) from the repo-root `mix.lock` plus `examples/friends/mix.lock`, with direct locked package identities for entries such as `ecto_sql`, `postgrex`, and `telemetry` that ScanCode leaves dependency-blind
+- Broader Hex package and dependency extraction (`2` vs `0` packages, `27` vs `0` dependencies): a `pkg:hex/ecto` package and an `examples/friends` app, each pairing `mix.exs` identity with `mix.lock` locked dependencies such as `ecto_sql`, `postgrex`, and `telemetry` that ScanCode leaves dependency-blind
 
 ##### [elixir-plug/plug @ 47649aa](https://github.com/elixir-plug/plug/tree/47649aa7bb910f481b66cc3e98c14b2c3b761c3c) — **10.51× faster**
 
 - Files: 104
 - Run context: 2026-06-15 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.88s`; ScanCode `51.28s`
-- Locked Hex dependency extraction (`9` vs `0`) for `plug_crypto`, `telemetry`, `ex_doc`, and sibling Hex pins that ScanCode leaves at zero, with Unicode-preserving `Loïc Hoguin` holder normalization
+- Direct Hex package and dependency extraction (`1` vs `0` packages, `13` vs `0` dependencies): a `pkg:hex/plug` package from `mix.exs` carrying locked `plug_crypto`, `telemetry`, `ex_doc`, and sibling Hex pins from `mix.lock` that ScanCode leaves at zero, with Unicode-preserving `Loïc Hoguin` holder normalization
 
 ##### [erlang/otp @ 264def5](https://github.com/erlang/otp/tree/264def545b8214ea7100bfede1a4629c676ff1c0) — **33.91× faster**
 
@@ -334,7 +334,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 476
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.49s`; ScanCode `78.97s`
-- Direct Hex package visibility on the repo-root, `installer/mix.lock`, and `integration_test/mix.lock` surfaces (`3` vs `0` file-level package records), while preserving top-level package and dependency parity elsewhere and preserving structured npm party metadata
+- Direct Hex package visibility (`3` vs `0` file-level package records) on the repo-root, `installer/`, and `integration_test/` `mix.exs`/`mix.lock` surfaces — each `pkg:hex` package versioned from its `mix.exs` (`phoenix@1.8.5`, `phx_new@1.8.5`) and merged with its sibling lockfile — while preserving top-level package and dependency parity elsewhere and structured party metadata on the bundled `pkg:npm/phoenix` asset package
 
 ##### [processone/ejabberd @ 87475d8](https://github.com/processone/ejabberd/tree/87475d813b974492f338720eab5c9c3d4646a4ce) — **15.15× faster**
 
@@ -1233,7 +1233,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 13,670
 - Run context: 2026-06-23 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `11.35s`; ScanCode `386.36s`
-- Far broader vcpkg registry package and dependency extraction (`2` vs `1` packages, `13653` vs `39` dependencies) from many committed `ports/*/vcpkg.json` manifests with host, feature, and platform-qualified dependencies, plus standalone Debian copyright package rows on `ports/*/copyright` and explicit vcpkg package identities where ScanCode stays largely manifest-blind
+- Far broader vcpkg registry package and dependency extraction (`2942` vs `1` packages, `13653` vs `39` dependencies): `2940` top-level `pkg:generic/vcpkg` packages, one per committed `ports/*/vcpkg.json` manifest, each owning its host, feature, and platform-qualified dependencies, plus standalone Debian copyright package rows on `ports/*/copyright` where ScanCode stays largely manifest-blind
 
 ##### [OrchardCMS/OrchardCore @ 01386f3](https://github.com/OrchardCMS/OrchardCore/tree/01386f38ee3fef620a93934f05ba1363ff05c291) — **51.92× faster**
 
