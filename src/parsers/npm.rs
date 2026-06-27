@@ -115,14 +115,12 @@ impl PackageParser for NpmParser {
         let peer_dependencies = extract_peer_dependencies(&json, &peer_dependencies_meta);
         let optional_dependencies = extract_optional_dependencies(&json);
         let bundled_dependencies = extract_bundled_dependencies(&json);
+        let resolution_dependencies = extract_resolution_dependencies(&json);
+        let override_dependencies = extract_override_dependencies(&json);
         let purl = create_package_url(&name, &version, &namespace);
         let keywords_vec = extract_keywords_as_vec(&json);
 
         let mut extra_data_map = HashMap::new();
-
-        if let Some(resolutions) = extract_resolutions(&json) {
-            extra_data_map = combine_extra_data(Some(extra_data_map), resolutions);
-        }
 
         if let Some(engines) = extract_engines(&json) {
             extra_data_map.insert("engines".to_string(), engines);
@@ -149,10 +147,6 @@ impl PackageParser for NpmParser {
 
         if let Some(workspaces) = extract_workspaces(&json) {
             extra_data_map.insert("workspaces".to_string(), workspaces);
-        }
-
-        if let Some(overrides) = extract_overrides(&json) {
-            extra_data_map.insert("overrides".to_string(), overrides);
         }
 
         if let Some(private) = extract_private(&json) {
@@ -231,6 +225,8 @@ impl PackageParser for NpmParser {
                 peer_dependencies,
                 optional_dependencies,
                 bundled_dependencies,
+                resolution_dependencies,
+                override_dependencies,
             ]
             .concat(),
             repository_homepage_url,
@@ -881,19 +877,98 @@ fn extract_bundled_list(bundled_array: &[Value]) -> Vec<Dependency> {
         .collect()
 }
 
-/// Extracts Yarn resolutions from the `resolutions` field.
-/// Returns resolutions as a HashMap to be stored in extra_data.
-fn extract_resolutions(json: &Value) -> Option<HashMap<String, serde_json::Value>> {
+/// Extracts Yarn `resolutions` entries as dependency rows.
+///
+/// `resolutions` are version-override pins applied across the transitive
+/// dependency graph (Yarn-specific), not direct declared dependencies. They
+/// prove a pin (a concrete version constraint the project asserts) but do not
+/// prove runtime/optional/direct intent, so `is_pinned` is set while the
+/// intent booleans are left unset per the honest-unknowns guardrail.
+///
+/// Keys may carry Yarn glob prefixes such as `**/` or `pkg/**/`; the trailing
+/// package selector is used to build the purl. Aliased requirements of the
+/// `npm:name@range` form are unwrapped to the real package name, matching the
+/// other npm dependency scopes.
+fn extract_resolution_dependencies(json: &Value) -> Vec<Dependency> {
     json.get(FIELD_RESOLUTIONS)
         .and_then(|resolutions| resolutions.as_object())
-        .map(|resolutions_obj| {
-            let mut extra_data = HashMap::new();
-            extra_data.insert(
-                "resolutions".to_string(),
-                serde_json::Value::Object(resolutions_obj.clone()),
-            );
-            extra_data
+        .map_or_else(Vec::new, |resolutions_obj| {
+            let limit = capped_iteration_limit(resolutions_obj.len(), "npm: resolutions");
+            resolutions_obj
+                .iter()
+                .take(limit)
+                .filter_map(|(selector, requirement)| {
+                    let requirement_str = requirement.as_str()?;
+                    let package_selector = resolution_package_selector(selector);
+                    override_pin_dependency(package_selector, requirement_str, "resolutions")
+                })
+                .collect()
         })
+}
+
+/// Extracts the target package selector from a Yarn `resolutions` key.
+///
+/// Yarn resolution keys can scope a pin to a nested path, e.g.
+/// `**/@scope/pkg`, `parent/**/pkg`, `parent/pkg`, or `@scope/parent/pkg`.
+/// The pin always targets the final package. The target package is the last
+/// path segment, unless the target is itself scoped — in which case it is the
+/// last two segments (`@scope/name`), detected by a second-to-last segment
+/// beginning with `@`. This avoids mistaking a scoped *parent* (e.g. the
+/// `@scope/parent` in `@scope/parent/pkg`) for the target package.
+fn resolution_package_selector(selector: &str) -> &str {
+    let selector = selector.trim();
+    let mut segments = selector.rsplitn(3, '/');
+    let Some(last) = segments.next() else {
+        return selector;
+    };
+    let second_to_last = segments.next();
+
+    match second_to_last {
+        // A scoped target keeps its `@scope/name` pair as the trailing segment.
+        Some(scope) if scope.starts_with('@') => {
+            let scope_start = selector.len() - last.len() - scope.len() - 1;
+            &selector[scope_start..]
+        }
+        _ => last,
+    }
+}
+
+/// Builds a pin dependency row for a `resolutions`/`overrides` entry.
+///
+/// Returns `None` when the selector does not resolve to a usable npm package
+/// name (for example a bare `**` glob with no trailing package).
+fn override_pin_dependency(
+    package_selector: &str,
+    requirement: &str,
+    scope: &str,
+) -> Option<Dependency> {
+    let package_selector = package_selector.trim();
+    if package_selector.is_empty() || package_selector == "**" {
+        return None;
+    }
+
+    // Unwrap `npm:name@range` aliases to the real package name, matching the
+    // behavior of the standard dependency scopes.
+    let package_name =
+        if let Some((actual_package_name, _constraint)) = parse_alias_adapter(requirement) {
+            actual_package_name
+        } else {
+            package_selector
+        };
+
+    let purl = npm_purl(package_name, None)?;
+
+    Some(Dependency {
+        purl: Some(purl),
+        extracted_requirement: Some(truncate_field(requirement.to_string())),
+        scope: Some(scope.to_string()),
+        is_runtime: None,
+        is_optional: None,
+        is_pinned: Some(true),
+        is_direct: None,
+        resolved_package: None,
+        extra_data: None,
+    })
 }
 
 fn extract_peer_dependencies_meta(json: &Value) -> HashMap<String, bool> {
@@ -919,8 +994,81 @@ fn extract_dependencies_meta(json: &Value) -> Option<serde_json::Value> {
     json.get(FIELD_DEPENDENCIES_META).cloned()
 }
 
-fn extract_overrides(json: &Value) -> Option<serde_json::Value> {
-    json.get(FIELD_OVERRIDES).cloned()
+/// Extracts npm `overrides` entries as dependency rows.
+///
+/// `overrides` are version-override pins applied across the transitive
+/// dependency graph (npm-specific), not direct declared dependencies. Like
+/// `resolutions`, they prove a pin but not runtime/optional/direct intent, so
+/// `is_pinned` is set while the intent booleans stay unset.
+///
+/// npm `overrides` support several shapes:
+/// - `"pkg": "1.2.3"` — pin `pkg` to a version everywhere.
+/// - `"pkg@range": "1.2.3"` — pin only matching ranges; the `name@range`
+///   key is unwrapped to the package name for the purl.
+/// - `"pkg": { ".": "1.2.3", "child": "4.5.6" }` — the `.` self-reference
+///   pins `pkg` itself; nested non-`.` keys pin children when nested under
+///   `pkg`.
+///
+/// Common shapes are handled: every top-level key plus the immediate children
+/// of a nested object are emitted. Deeper nesting beyond one level is treated
+/// as a documented limitation and is not recursively expanded, to keep parsing
+/// bounded and avoid guessing transitive scoping semantics.
+fn extract_override_dependencies(json: &Value) -> Vec<Dependency> {
+    json.get(FIELD_OVERRIDES)
+        .and_then(|overrides| overrides.as_object())
+        .map_or_else(Vec::new, |overrides_obj| {
+            let mut dependencies = Vec::new();
+            let limit = capped_iteration_limit(overrides_obj.len(), "npm: overrides");
+            for (selector, value) in overrides_obj.iter().take(limit) {
+                let package_selector = override_package_selector(selector);
+                match value {
+                    Value::String(requirement) => {
+                        if let Some(dep) =
+                            override_pin_dependency(package_selector, requirement, "overrides")
+                        {
+                            dependencies.push(dep);
+                        }
+                    }
+                    Value::Object(nested) => {
+                        let nested_limit =
+                            capped_iteration_limit(nested.len(), "npm: nested overrides");
+                        for (child_key, child_value) in nested.iter().take(nested_limit) {
+                            // The `.` self-reference pins the parent package itself.
+                            let target = if child_key == "." {
+                                package_selector
+                            } else {
+                                override_package_selector(child_key)
+                            };
+                            if let Some(requirement) = child_value.as_str()
+                                && let Some(dep) =
+                                    override_pin_dependency(target, requirement, "overrides")
+                            {
+                                dependencies.push(dep);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            dependencies
+        })
+}
+
+/// Extracts the package name from an npm `overrides` key.
+///
+/// Keys may use the `name@range` form to scope an override to matching
+/// version ranges; the override still targets `name`, so the `@range` suffix
+/// is stripped (while preserving the leading `@` of scoped package names).
+fn override_package_selector(selector: &str) -> &str {
+    let selector = selector.trim();
+    if let Some(at_index) = selector.rfind('@') {
+        // Keep the leading `@` of a scoped package (e.g. `@scope/pkg`), but
+        // strip a trailing `@range` qualifier (e.g. `pkg@^1` or `@scope/pkg@^1`).
+        if at_index > 0 {
+            return &selector[..at_index];
+        }
+    }
+    selector
 }
 
 fn extract_description(json: &Value) -> Option<String> {
@@ -1057,15 +1205,4 @@ fn normalize_npm_registry_tarball_url(url: &str) -> String {
     } else {
         url.to_string()
     }
-}
-
-fn combine_extra_data(
-    extra_data: Option<HashMap<String, serde_json::Value>>,
-    additional_data: HashMap<String, serde_json::Value>,
-) -> HashMap<String, serde_json::Value> {
-    let mut combined = extra_data.unwrap_or_default();
-    for (key, value) in additional_data {
-        combined.insert(key, value);
-    }
-    combined
 }

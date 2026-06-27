@@ -4,7 +4,7 @@
 
 Provenant improves several npm and Yarn behaviors that are missing, incomplete, or buggy in the Python reference:
 
-- `package.json` now preserves npm `overrides` metadata.
+- `package.json` now surfaces Yarn `resolutions` and npm `overrides` as distinctly scoped pin dependencies (see [npm-parser.md](npm-parser.md)).
 - `package.json` now preserves platform and compatibility metadata such as `os`, `cpu`, `libc`, `deprecated`, and `hasBin`.
 - malformed or unreadable `package.json` files now still emit an identified npm parser row instead of disappearing into anonymous fallback output.
 - Empty npm `name` and `version` values no longer generate synthetic registry URLs or dummy PURLs.
@@ -28,9 +28,9 @@ Relevant reference signals from the upstream ScanCode npm/Yarn packagedcode impl
 
 ## Rust Improvements
 
-### 1. Preserve npm `overrides`
+### 1. Surface Yarn `resolutions` and npm `overrides` as pin dependencies
 
-Rust now stores the raw `overrides` mapping in `PackageData.extra_data`, so override intent is preserved for downstream tooling and future dependency analysis.
+Rust now emits Yarn `resolutions` and npm `overrides` entries as distinctly scoped (`"resolutions"` / `"overrides"`) pin dependencies (`is_pinned = true`) with the intent booleans left unset, rather than storing them opaquely in `extra_data`. See [npm-parser.md](npm-parser.md) for the modeling rationale, supported shapes, and scope boundary.
 
 ### 2. Avoid dummy URLs for empty npm metadata
 

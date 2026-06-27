@@ -497,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_overrides_into_extra_data() {
+    fn test_extract_overrides_as_dependencies() {
         let content = r#"
 {
   "name": "override-test",
@@ -505,8 +505,10 @@ mod tests {
   "overrides": {
     "lodash": "4.17.21",
     "react-scripts": {
+      ".": "5.0.1",
       "webpack": "5.74.0"
-    }
+    },
+    "@scope/pkg@^1": "1.2.3"
   }
 }
 "#;
@@ -514,14 +516,85 @@ mod tests {
         let (_temp_file, package_path) = create_temp_package_json(content);
         let package_data = NpmParser::extract_first_package(&package_path);
 
-        let extra_data = package_data.extra_data.expect("expected extra_data");
-        let overrides = extra_data
-            .get("overrides")
-            .expect("expected overrides field");
-        assert_eq!(overrides["lodash"], Value::String("4.17.21".to_string()));
+        // Overrides are now emitted as pin dependency rows, not extra_data.
+        assert!(
+            package_data.extra_data.is_none(),
+            "overrides should not be stored in extra_data"
+        );
+
+        let override_deps: Vec<_> = package_data
+            .dependencies
+            .iter()
+            .filter(|dep| dep.scope.as_deref() == Some("overrides"))
+            .collect();
+
+        let purl_to_req: std::collections::HashMap<_, _> = override_deps
+            .iter()
+            .filter_map(|dep| Some((dep.purl.as_deref()?, dep.extracted_requirement.as_deref()?)))
+            .collect();
+
+        // Top-level string override.
+        assert_eq!(purl_to_req.get("pkg:npm/lodash"), Some(&"4.17.21"));
+        // Self-reference (`.`) pins the parent package itself.
+        assert_eq!(purl_to_req.get("pkg:npm/react-scripts"), Some(&"5.0.1"));
+        // Nested child override.
+        assert_eq!(purl_to_req.get("pkg:npm/webpack"), Some(&"5.74.0"));
+        // `name@range` keyed form strips the range qualifier for the purl.
+        assert_eq!(purl_to_req.get("pkg:npm/%40scope/pkg"), Some(&"1.2.3"));
+
+        for dep in &override_deps {
+            assert_eq!(dep.is_pinned, Some(true));
+            assert_eq!(dep.is_runtime, None);
+            assert_eq!(dep.is_optional, None);
+            assert_eq!(dep.is_direct, None);
+        }
+    }
+
+    #[test]
+    fn test_extract_resolutions_glob_and_alias() {
+        let content = r#"
+{
+  "name": "resolutions-glob",
+  "version": "1.0.0",
+  "resolutions": {
+    "**/@scope/pkg": "^1.1.1",
+    "parent/**/lodash": "4.17.21",
+    "@scope/parent/dep": "2.0.0",
+    "parent/@scope/child": "3.0.0",
+    "left-pad": "npm:string-left-pad@^2.0.0"
+  }
+}
+"#;
+
+        let (_temp_file, package_path) = create_temp_package_json(content);
+        let package_data = NpmParser::extract_first_package(&package_path);
+
+        let resolution_deps: Vec<_> = package_data
+            .dependencies
+            .iter()
+            .filter(|dep| dep.scope.as_deref() == Some("resolutions"))
+            .collect();
+
+        let purl_to_req: std::collections::HashMap<_, _> = resolution_deps
+            .iter()
+            .filter_map(|dep| Some((dep.purl.as_deref()?, dep.extracted_requirement.as_deref()?)))
+            .collect();
+
+        // `**/` glob prefix: the trailing scoped package is the target.
+        assert_eq!(purl_to_req.get("pkg:npm/%40scope/pkg"), Some(&"^1.1.1"));
+        // Nested glob path: the final segment is the target.
+        assert_eq!(purl_to_req.get("pkg:npm/lodash"), Some(&"4.17.21"));
+        // Scoped *parent* with an unscoped child: the target is the final
+        // segment `dep`, not the `@scope/parent` parent path.
+        assert_eq!(purl_to_req.get("pkg:npm/dep"), Some(&"2.0.0"));
+        assert!(!purl_to_req.contains_key("pkg:npm/%40scope/parent"));
+        // Scoped *child* nested under an unscoped parent: the target keeps its
+        // `@scope/child` pair.
+        assert_eq!(purl_to_req.get("pkg:npm/%40scope/child"), Some(&"3.0.0"));
+        // `npm:name@range` alias unwraps to the real package name.
         assert_eq!(
-            overrides["react-scripts"]["webpack"],
-            Value::String("5.74.0".to_string())
+            purl_to_req.get("pkg:npm/string-left-pad"),
+            Some(&"npm:string-left-pad@^2.0.0")
         );
     }
 
@@ -652,27 +725,40 @@ mod tests {
             .unwrap();
         let package_data = NpmParser::extract_first_package(&package_path);
 
-        // Should have resolutions in extra_data
-        let extra_data = package_data
-            .extra_data
-            .expect("extra_data should be present with resolutions");
-
+        // Resolutions are now emitted as pin dependency rows, not extra_data.
         assert!(
-            extra_data.contains_key("resolutions"),
-            "extra_data should contain resolutions field"
+            package_data.extra_data.is_none(),
+            "resolutions should not be stored in extra_data"
         );
 
-        let resolutions = extra_data
-            .get("resolutions")
-            .expect("resolutions should exist");
-        if let serde_json::Value::Object(resolutions_obj) = resolutions {
-            assert_eq!(resolutions_obj.len(), 3);
-            assert!(resolutions_obj.contains_key("typescript"));
-            assert!(resolutions_obj.contains_key("react"));
-            assert!(resolutions_obj.contains_key("@babel/core"));
-        } else {
-            panic!("resolutions should be a JSON object");
+        let resolution_deps: Vec<_> = package_data
+            .dependencies
+            .iter()
+            .filter(|dep| dep.scope.as_deref() == Some("resolutions"))
+            .collect();
+        assert_eq!(resolution_deps.len(), 3);
+
+        for dep in &resolution_deps {
+            // Pins prove a version constraint but not runtime/optional/direct intent.
+            assert_eq!(dep.is_pinned, Some(true));
+            assert_eq!(dep.is_runtime, None);
+            assert_eq!(dep.is_optional, None);
+            assert_eq!(dep.is_direct, None);
         }
+
+        let purls: Vec<_> = resolution_deps
+            .iter()
+            .filter_map(|dep| dep.purl.as_deref())
+            .collect();
+        assert!(purls.contains(&"pkg:npm/typescript"));
+        assert!(purls.contains(&"pkg:npm/react"));
+        assert!(purls.contains(&"pkg:npm/%40babel/core"));
+
+        let typescript = resolution_deps
+            .iter()
+            .find(|dep| dep.purl.as_deref() == Some("pkg:npm/typescript"))
+            .expect("typescript resolution should exist");
+        assert_eq!(typescript.extracted_requirement.as_deref(), Some("^5.0.0"));
     }
 
     #[test]
@@ -731,11 +817,9 @@ mod tests {
             assert_eq!(dep.is_optional, Some(true));
         }
 
-        // Verify resolutions are in extra_data
-        let extra_data = package_data
-            .extra_data
-            .expect("extra_data should be present with resolutions");
-        assert!(extra_data.contains_key("resolutions"));
+        // Verify resolutions are emitted as pin dependencies.
+        let resolution_deps_count = get_count_by_scope(Some("resolutions"));
+        assert_eq!(resolution_deps_count, 2, "Should have 2 resolutions");
     }
 
     #[test]

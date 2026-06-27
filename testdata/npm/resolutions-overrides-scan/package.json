@@ -1,0 +1,14 @@
+{
+  "name": "resolutions-overrides-scan",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.0"
+  },
+  "resolutions": {
+    "typescript": "^5.0.0"
+  },
+  "overrides": {
+    "minimist": "1.2.6"
+  }
+}
