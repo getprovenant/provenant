@@ -64,6 +64,22 @@ fn test_hf_tokenizer_json_suppresses_merges_but_keeps_outside_notice() {
 }
 
 #[test]
+fn test_compact_tokenizer_json_keeps_outside_notice() {
+    // A compact (single-line) tokenizer.json cannot be split by line, so the
+    // merge-span filter is not applied and a real notice on that line is not
+    // dropped. (Junk suppression for genuine merge data still relies on the
+    // per-line fragment checks; preserving a real notice takes priority.)
+    let input = r#"{"copyright":"Copyright 2024 Acme Inc.","model":{"type":"BPE","vocab":{"a":0},"merges":["pok Ã©","Â ©"]}}"#;
+
+    let (copyrights, _holders, _authors) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights.iter().any(|c| c.copyright.contains("Acme Inc")),
+        "compact tokenizer.json must keep the real notice: {copyrights:?}"
+    );
+}
+
+#[test]
 fn test_bpe_merges_table_produces_no_copyrights() {
     // A full BPE merges.txt (header + two-token merge rules) embeds `©` and
     // mojibake byte pairs that are not copyright notices.
