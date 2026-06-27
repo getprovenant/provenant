@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 228 of 228 recorded runs, with a **19.1× median speedup** and **19.1× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.6×** on 10k+ file targets.
+> Provenant is faster on 229 of 229 recorded runs, with a **19.1× median speedup** and **19.1× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -321,6 +321,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `59.99s`; ScanCode `2034.56s`
 - Direct OTP application package visibility (`11` vs `0`) across committed `lib/*/src/*.app.src` templates, with bounded `%PLACEHOLDER%` handling that keeps canonical manifests such as `diameter.app.src` scannable and preserves the same non-stdlib runtime dependency inventory ScanCode finds
+
+##### [livebook-dev/livebook @ 77cbcd9](https://github.com/livebook-dev/livebook/tree/77cbcd98df133045f5a4adf7273e4cd077307714) — **17.14× faster**
+
+- Files: 704
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.33s`; ScanCode `91.33s`
+- Direct Elixir/Hex project package identity (`3` vs `0` `pkg:hex/*` packages) from Provenant's static `mix.exs` parser, which ScanCode does not model — it reports only the Rust NIF's `pkg:cargo/livebook`: each committed `mix.exs` assembles with its sibling `mix.lock` into a `pkg:hex/<app>` package (`livebook`, `livebook_proto`, `livebook_space`) that owns its resolved Hex dependencies (`106` locked hex deps total), with the same Cargo package ScanCode finds plus broader `bun.lock`/`package.json` asset-dependency visibility
 
 ##### [phoenixframework/phoenix @ e7b8081](https://github.com/phoenixframework/phoenix/tree/e7b8081792fa51c9fede6d0fb9ddb610bac3f26f) — **14.38× faster**
 

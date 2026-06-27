@@ -359,6 +359,9 @@ ScanCode: 130.21s</title></rect>
     <rect x="539.99" y="407.44" width="8" height="8" fill="#d97706" rx="1.5"><title>HeapsIO/heaps @ d2992b0
 Files: 666
 ScanCode: 106.46s</title></rect>
+    <rect x="543.81" y="414.69" width="8" height="8" fill="#d97706" rx="1.5"><title>livebook-dev/livebook @ 77cbcd9
+Files: 704
+ScanCode: 91.33s</title></rect>
     <rect x="543.81" y="413.62" width="8" height="8" fill="#d97706" rx="1.5"><title>select2/select2 @ 595494a
 Files: 704
 ScanCode: 93.41s</title></rect>
@@ -1045,6 +1048,9 @@ Provenant: 6.87s</title></circle>
     <circle cx="543.99" cy="556.24" r="4.5" fill="#2563eb"><title>HeapsIO/heaps @ d2992b0
 Files: 666
 Provenant: 4.97s</title></circle>
+    <circle cx="547.81" cy="552.93" r="4.5" fill="#2563eb"><title>livebook-dev/livebook @ 77cbcd9
+Files: 704
+Provenant: 5.33s</title></circle>
     <circle cx="547.81" cy="550.68" r="4.5" fill="#2563eb"><title>select2/select2 @ 595494a
 Files: 704
 Provenant: 5.59s</title></circle>
