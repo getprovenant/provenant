@@ -440,10 +440,14 @@ fn test_promote_legal_notice_low_quality_detections_promotes_apache_notice_fragm
         detection_log: Vec::new(),
         identifier: None,
     };
+    // A genuine notice fragment that lost quality to extra words still covers
+    // most of its rule (coverage at/above the clue threshold).
+    let mut fragment = make_internal_notice_match("apache-2.0", "Apache-2.0", 7, 8);
+    fragment.match_coverage = 88.0;
     let low_quality = InternalLicenseDetection {
         license_expression: None,
         license_expression_spdx: None,
-        matches: vec![make_internal_notice_match("apache-2.0", "Apache-2.0", 7, 8)],
+        matches: vec![fragment],
         detection_log: vec!["low-quality-match-fragments".to_string()],
         identifier: None,
     };
@@ -512,6 +516,43 @@ fn test_promote_legal_notice_low_quality_detections_ignores_true_clue_rules() {
     promote_legal_notice_low_quality_detections(&mut detections, std::path::Path::new("NOTICE"));
 
     assert!(detections[1].license_expression.is_none());
+}
+
+#[test]
+fn test_promote_legal_notice_low_quality_detections_keeps_sub_threshold_partial_as_clue() {
+    // A BSL-1.1 LICENSE partially matches the shared boilerplate of an unrelated
+    // `is_exception` license at sub-threshold coverage. That is a clue, not a
+    // license assertion, and must not be promoted even in a LICENSE file.
+    let concrete = InternalLicenseDetection {
+        license_expression: Some("bsl-1.1".to_string()),
+        license_expression_spdx: Some("BUSL-1.1".to_string()),
+        matches: vec![make_internal_notice_match("bsl-1.1", "BUSL-1.1", 20, 40)],
+        detection_log: Vec::new(),
+        identifier: None,
+    };
+    let mut partial = make_internal_notice_match(
+        "emq-use-grant-for-bsl-1.1",
+        "LicenseRef-scancode-emq-use-grant-for-bsl-1.1",
+        1,
+        12,
+    );
+    partial.match_coverage = 38.01;
+    partial.rule_identifier = "emq-use-grant-for-bsl-1.1.LICENSE".to_string();
+    let low_quality = InternalLicenseDetection {
+        license_expression: None,
+        license_expression_spdx: None,
+        matches: vec![partial],
+        detection_log: vec!["low-quality-match-fragments".to_string()],
+        identifier: None,
+    };
+    let mut detections = vec![concrete, low_quality];
+
+    promote_legal_notice_low_quality_detections(&mut detections, std::path::Path::new("LICENSE"));
+
+    assert!(
+        detections[1].license_expression.is_none(),
+        "sub-threshold partial must stay a clue: {detections:#?}"
+    );
 }
 
 #[test]

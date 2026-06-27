@@ -667,6 +667,21 @@ fn promote_legal_notice_low_quality_detections(
             continue;
         }
 
+        // Only recover fragments that lost quality to extra words, not ones
+        // whose match coverage is itself below the clue threshold. A genuine
+        // notice fragment (e.g. a lightly modified Apache notice) still covers
+        // most of its rule; a sub-threshold partial match is a clue, not an
+        // assertion. Promoting those would re-introduce false positives such as
+        // a BSL-1.1 LICENSE partially matching the shared boilerplate of an
+        // unrelated `is_exception` license at ~38% coverage. ScanCode keeps
+        // those as `license_clues`.
+        if detection.matches.iter().any(|license_match| {
+            license_match.coverage()
+                < crate::license_detection::detection::analysis::CLUES_MATCH_COVERAGE_THR
+        }) {
+            continue;
+        }
+
         let Some(license_expression) =
             crate::utils::spdx::combine_license_expressions_preserving_structure(
                 detection

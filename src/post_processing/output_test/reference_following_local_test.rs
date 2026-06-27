@@ -691,15 +691,16 @@ fn apply_local_file_reference_following_does_not_reuse_followed_license_as_secon
         .iter()
         .find(|file| file.path == "project/ncat/ncat_core.h")
         .expect("source file should exist");
+    // The reference must not resolve to the already-followed license; with no
+    // resolvable target the bare `See LICENSE` reference is a clue, not a
+    // detected license.
+    assert_eq!(source.detected_license_expression, None);
+    assert!(source.license_detections.is_empty());
+    assert_eq!(source.license_clues.len(), 1);
     assert_eq!(
-        source.detected_license_expression.as_deref(),
-        Some("unknown-license-reference")
+        source.license_clues[0].license_expression,
+        "unknown-license-reference"
     );
-    assert_eq!(
-        source.license_detections[0].detection_log,
-        Vec::<String>::new()
-    );
-    assert_eq!(source.license_detections[0].matches.len(), 1);
 }
 
 #[test]
@@ -764,11 +765,12 @@ fn apply_local_file_reference_following_requires_exact_filename_match() {
         .iter()
         .find(|file| file.path == "project/src/notice.js")
         .expect("notice file should exist");
-    assert_eq!(
-        notice.detected_license_expression.as_deref(),
-        Some("unknown-license-reference")
-    );
-    assert_eq!(notice.license_detections[0].matches.len(), 1);
+    // `LICENSE.txt` does not match the sibling `LICENSE`, so the reference does
+    // not resolve and the bare reference stays a clue rather than asserting a
+    // license.
+    assert_eq!(notice.detected_license_expression, None);
+    assert!(notice.license_detections.is_empty());
+    assert_eq!(notice.license_clues.len(), 1);
 }
 
 #[test]
@@ -833,12 +835,11 @@ fn apply_local_file_reference_following_does_not_search_unrelated_top_level_dire
         .iter()
         .find(|file| file.path == "docs/3rd-party-licenses.txt")
         .expect("notice file should exist");
-    assert_eq!(
-        notice.detected_license_expression.as_deref(),
-        Some("unknown-license-reference")
-    );
-    assert_eq!(notice.license_detections[0].matches.len(), 1);
-    assert!(notice.license_detections[0].detection_log.is_empty());
+    // The unrelated top-level `libssh2/COPYING` must not be searched, so the
+    // reference does not resolve and the bare reference stays a clue.
+    assert_eq!(notice.detected_license_expression, None);
+    assert!(notice.license_detections.is_empty());
+    assert_eq!(notice.license_clues.len(), 1);
 }
 
 #[test]
