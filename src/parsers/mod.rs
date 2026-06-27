@@ -68,6 +68,8 @@ mod citation;
 mod citation_test;
 mod clojure;
 #[cfg(test)]
+mod clojure_scan_test;
+#[cfg(test)]
 mod clojure_test;
 #[cfg(test)]
 mod cocoapods_scan_test;

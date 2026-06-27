@@ -510,6 +510,15 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         // many standalone `.pom` files with distinct GAVs; split per identity.
         mode: AssemblyMode::SiblingMergePerIdentity,
     },
+    // Leiningen `project.clj` declares a `defproject` with Maven coordinates, so
+    // each is an independent package that owns its `:dependencies`. One package
+    // per record (the `deps.edn` datasource carries no own identity and stays
+    // unassembled, pending sibling-merge with a co-located project.clj).
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::ClojureProjectClj],
+        sibling_file_patterns: &["project.clj"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PypiWheel, DatasourceId::PypiPipOriginJson],
         sibling_file_patterns: &["*.whl", "origin.json"],
@@ -957,7 +966,6 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::ArchSrcinfo,
     DatasourceId::Axis2ModuleXml,
     DatasourceId::ClojureDepsEdn,
-    DatasourceId::ClojureProjectClj,
     DatasourceId::DebianInstalledFilesList,
     DatasourceId::DebianInstalledMd5Sums,
     DatasourceId::DebianCopyright,
