@@ -338,18 +338,77 @@ pub(super) fn is_handled_by(pkg_data: &PackageData, config: &AssemblerConfig) ->
         .is_some_and(|dsid| config.datasource_ids.contains(&dsid))
 }
 
+/// Decides whether a candidate `PackageData` must NOT be folded into the
+/// directory's package, keyed by the candidate's own `DatasourceId`. This is the
+/// per-record merge-compatibility analog of
+/// [`special_directory_merger_for`](super::assemblers::special_directory_merger_for):
+/// a new ecosystem registers one [`merge_skip_rule_for`] arm rather than
+/// extending a hand-maintained boolean chain in the generic merger.
 pub(super) fn should_skip_assembly_package_data(
     package: Option<&Package>,
     pkg_data: &PackageData,
 ) -> bool {
+    pkg_data
+        .datasource_id
+        .and_then(merge_skip_rule_for)
+        .is_some_and(|rule| rule(package, pkg_data))
+}
+
+/// A merge-skip rule, evaluated against the already-merged directory package (if
+/// any) and the candidate. Rules whose decision does not depend on the existing
+/// package simply ignore it.
+type MergeSkipRule = fn(Option<&Package>, &PackageData) -> bool;
+
+/// Registry mapping a candidate's `DatasourceId` to its merge-skip rule, or
+/// `None` when that datasource has no merge-compatibility constraint.
+fn merge_skip_rule_for(datasource_id: DatasourceId) -> Option<MergeSkipRule> {
+    match datasource_id {
+        DatasourceId::PhpComposerLock => Some(skip_composer_lock_virtual_package),
+        DatasourceId::CocoapodsPodspec => Some(skip_placeholder_only_cocoapods_podspec),
+        DatasourceId::NpmPackageLockJson => Some(skip_npm_lock_identity_mismatch),
+        DatasourceId::BunLock | DatasourceId::BunLockb => Some(skip_bun_lock_identity_mismatch),
+        DatasourceId::PypiUvLock => Some(skip_python_uv_lock_identity_mismatch),
+        DatasourceId::PypiWheel | DatasourceId::PypiPipOriginJson => {
+            Some(skip_python_pip_cache_identity_mismatch)
+        }
+        _ => None,
+    }
+}
+
+// Adapters give every rule the uniform `MergeSkipRule` signature and encode
+// whether the rule needs an existing package to compare against. The underlying
+// predicates below carry the actual logic.
+fn skip_composer_lock_virtual_package(_package: Option<&Package>, pkg_data: &PackageData) -> bool {
     should_skip_composer_lock_virtual_package(pkg_data)
-        || should_skip_placeholder_only_cocoapods_podspec(pkg_data)
-        || package.is_some_and(|existing_package| {
-            should_skip_npm_lock_merge(existing_package, pkg_data)
-                || should_skip_bun_lock_merge(existing_package, pkg_data)
-                || should_skip_python_uv_lock_merge(existing_package, pkg_data)
-                || should_skip_python_pip_cache_merge(existing_package, pkg_data)
-        })
+}
+
+fn skip_placeholder_only_cocoapods_podspec(
+    _package: Option<&Package>,
+    pkg_data: &PackageData,
+) -> bool {
+    should_skip_placeholder_only_cocoapods_podspec(pkg_data)
+}
+
+fn skip_npm_lock_identity_mismatch(package: Option<&Package>, pkg_data: &PackageData) -> bool {
+    package.is_some_and(|existing| should_skip_npm_lock_merge(existing, pkg_data))
+}
+
+fn skip_bun_lock_identity_mismatch(package: Option<&Package>, pkg_data: &PackageData) -> bool {
+    package.is_some_and(|existing| should_skip_bun_lock_merge(existing, pkg_data))
+}
+
+fn skip_python_uv_lock_identity_mismatch(
+    package: Option<&Package>,
+    pkg_data: &PackageData,
+) -> bool {
+    package.is_some_and(|existing| should_skip_python_uv_lock_merge(existing, pkg_data))
+}
+
+fn skip_python_pip_cache_identity_mismatch(
+    package: Option<&Package>,
+    pkg_data: &PackageData,
+) -> bool {
+    package.is_some_and(|existing| should_skip_python_pip_cache_merge(existing, pkg_data))
 }
 
 fn should_skip_composer_lock_virtual_package(pkg_data: &PackageData) -> bool {
