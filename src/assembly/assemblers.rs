@@ -776,11 +776,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &[".gitmodules"],
         mode: AssemblyMode::SiblingMerge,
     },
-    // OCaml/opam ecosystem
+    // OCaml/opam ecosystem. A multi-package opam project ships several
+    // `<name>.opam` files at its root, each a distinct `pkg:opam/<name>`
+    // identity; collapsing the directory into one package loses the others, so
+    // split per identity. A single-package directory falls back unchanged.
     AssemblerConfig {
         datasource_ids: &[DatasourceId::OpamFile],
         sibling_file_patterns: &["opam", "*.opam"],
-        mode: AssemblyMode::SiblingMerge,
+        mode: AssemblyMode::SiblingMergePerIdentity,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::RpmYumdb],

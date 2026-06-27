@@ -70,8 +70,15 @@ impl PackageParser for OpamParser {
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
+        // opam convention: a `<name>.opam` file names its package after the file
+        // stem when the manifest body omits an explicit `name:` field.
+        let name_fallback = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .and_then(|name| name.strip_suffix(".opam"))
+            .filter(|stem| !stem.is_empty());
         vec![match read_file_to_string(path, None) {
-            Ok(text) => parse_opam(&text),
+            Ok(text) => parse_opam(&text, name_fallback),
             Err(e) => {
                 warn!("Failed to read OPAM file {:?}: {}", path, e);
                 default_package_data()
@@ -111,22 +118,27 @@ fn default_package_data() -> PackageData {
 }
 
 /// Parse an OPAM file from text content
-fn parse_opam(text: &str) -> PackageData {
+fn parse_opam(text: &str, name_fallback: Option<&str>) -> PackageData {
     let opam_data = parse_opam_data(text);
+
+    // Most opam manifests omit `name:` and rely on the `<name>.opam` filename.
+    let name = opam_data
+        .name
+        .clone()
+        .or_else(|| name_fallback.map(str::to_string));
 
     let description = build_description(&opam_data.synopsis, &opam_data.description);
     let parties = extract_parties(&opam_data.authors, &opam_data.maintainers);
     let dependencies = extract_dependencies(&opam_data.dependencies);
 
-    let (repository_homepage_url, api_data_url, purl) =
-        build_opam_urls(&opam_data.name, &opam_data.version);
+    let (repository_homepage_url, api_data_url, purl) = build_opam_urls(&name, &opam_data.version);
     let (declared_license_expression, declared_license_expression_spdx, license_detections) =
         normalize_opam_declared_license(opam_data.license.as_deref());
 
     PackageData {
         package_type: Some(OpamParser::PACKAGE_TYPE),
         namespace: None,
-        name: opam_data.name,
+        name,
         version: opam_data.version,
         qualifiers: None,
         subpath: None,
@@ -757,6 +769,7 @@ depends: [
 ]
 dev-repo: "git+https://github.com/ocaml/dune.git"
 "#,
+            None,
         );
 
         assert_eq!(package.name.as_deref(), Some("dune-rpc"));
@@ -817,6 +830,7 @@ depends: [
 ]
 dev-repo: "git+https://github.com/ocaml/dune.git"
 "#,
+            None,
         );
 
         assert_eq!(package.name.as_deref(), Some("chrome-trace"));
