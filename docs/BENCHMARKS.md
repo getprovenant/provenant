@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 219 of 219 recorded runs, with a **19.3× median speedup** and **19.1× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **36.6×** on 10k+ file targets.
+> Provenant is faster on 223 of 223 recorded runs, with a **19.3× median speedup** and **19.2× geometric-mean speedup** overall; the median gap grows from **9.0×** on sub-100-file targets to **36.6×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -266,6 +266,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 
 #### Hugging Face / AI model repositories
 
+##### [segmind/tiny-sd @ cad0bd7](https://huggingface.co/segmind/tiny-sd/tree/cad0bd7495fa6c4bcca01b19a723dc91627fe84f) — **18.6× faster**
+
+- Files: 17
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.96s`; ScanCode `92.04s`
+- Direct Hugging Face Diffusers pipeline package identity (`1` vs `0`) that ScanCode cannot model because it ships no Hugging Face parser: Provenant assembles the repository's `model_index.json` into one `pkg:huggingface/SG161222/Realistic_Vision_V4.0` Stable Diffusion pipeline package anchored on the config's `_name_or_path`, and folds the `text_encoder`, `unet`, and `vae` component `config.json` files into that pipeline instead of surfacing them as separate identity-less packages, with no copyright noise from the CLIP tokenizer's `merges.txt` and `vocab.json`
+
 ##### [sentence-transformers/all-MiniLM-L6-v2 @ 1110a24](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/tree/1110a243fdf4706b3f48f1d95db1a4f5529b4d41) — **9.75× faster**
 
 - Files: 30
@@ -479,6 +486,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-21 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.57s`; ScanCode `425.90s`
 - Matched top-level SBT package coverage (`7` vs `7`) with broader dependency extraction (`49` vs `40`) from the root `build.sbt`, sample applications, and native-image test manifests, plus cleaner rejection of weak actor-name author noise such as `the ActorSystem` and `the ReceiveBuilder`
+
+##### [apache/ant-ivy @ dc35d51](https://github.com/apache/ant-ivy/tree/dc35d510d281ab2ab8fb4486e517e838c72a64d2) — **25.5× faster**
+
+- Files: 2,470
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `14.71s`; ScanCode `374.46s`
+- Far broader package coverage (`248` vs `115`) led by direct Apache Ivy `ivy.xml` extraction that ScanCode cannot model at all — `151` `pkg:ivy/*` packages carrying Ivy configuration-scope dependency mappings — plus distinct-GAV Maven POM handling that emits one package per standalone `.pom` coordinate sharing a directory rather than collapsing them into one, with conservative omission of fixture POMs whose version is an unresolved `${property}` placeholder where ScanCode emits a literal placeholder coordinate
 
 ##### [apache/felix-dev @ 20aee77](https://github.com/apache/felix-dev/tree/20aee77cce8cad21493368403701d9c44c168f62) — **24.00× faster**
 
@@ -1274,6 +1288,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.97s`; ScanCode `106.46s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with cleaner copyright and holder recovery on `hxd/fmt/fbx/Writer.hx` and `samples/text_res/trueTypeFont.ttf` plus safer trailing-slash URL normalization
 
+##### [JetBrains/JetBrainsMono @ 1937130](https://github.com/JetBrains/JetBrainsMono/tree/19371302b95d218af43299bce79ddbddd0bc364d) — **24.1× faster**
+
+- Files: 159
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.23s`; ScanCode `125.87s`
+- Cleaner embedded font legal metadata across 120 committed `.otf`, `.ttf`, and `.woff2` files: Provenant decodes each OpenType `name` record individually to recover the exact `OFL-1.1` license, the `Copyright 2020 The JetBrains Mono Project Authors` notice, holder, and project/OFL URLs, where ScanCode mangles the same copyright into run-on strings padded with font family and version text, plus a more accurate empty declared license on `requirements.txt` where ScanCode conflates detected content licenses into a declaration
+
 ##### [jgm/pandoc @ d9838eb](https://github.com/jgm/pandoc/tree/d9838eba11ae18216f52e233dbbca735f0f97ccb) — **22.54× faster**
 
 - Files: 2,768
@@ -1442,6 +1463,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.65s`; ScanCode `42.30s`
 - Matched standalone Alpine installed-db package and license coverage (`16` vs `16` packages) on the shipped `lib/apk/db/installed` snapshot, with one extra maintainer email recovered from package metadata; the exact bytes are archived as a fixture at [`testdata/alpine/benchmark-minirootfs-3.23.3/rootfs/lib/apk/db/installed`](../testdata/alpine/benchmark-minirootfs-3.23.3/rootfs/lib/apk/db/installed) (extracted via `tar -xzf alpine-minirootfs-3.23.3-x86_64.tar.gz lib/apk/db/installed` from the immutable release tarball), scanned as the `benchmark-minirootfs-3.23.3` directory whose second file is the co-located `SOURCE.md`
+
+##### [Conda base environment conda-meta snapshot @ sha256:7de9956](https://hub.docker.com/r/condaforge/miniforge3) — **14.7× faster**
+
+- Files: 89
+- Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.21s`; ScanCode `76.42s`
+- Matched conda installed-environment package coverage (`87` vs `87`) with one package per `conda-meta/<pkg>.json` record carrying its own license, version, and dependency identity from a `condaforge/miniforge3` base environment, treating the conda environment database like the Alpine, RPM, and Debian installed databases rather than collapsing the whole `conda-meta/` directory into a single package
 
 ##### [debian:bookworm-slim dpkg DB snapshot @ sha256:f065376](https://hub.docker.com/layers/library/debian/bookworm-slim/images/sha256-f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a) — **13.08× faster**
 
