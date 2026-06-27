@@ -519,6 +519,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["project.clj"],
         mode: AssemblyMode::OnePerPackageData,
     },
+    // sbt `build.sbt` declares a project with Maven coordinates and owns its
+    // `libraryDependencies`. One package per record so the project surfaces and
+    // owns its deps instead of orphaning them.
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::SbtBuildSbt],
+        sibling_file_patterns: &["build.sbt"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PypiWheel, DatasourceId::PypiPipOriginJson],
         sibling_file_patterns: &["*.whl", "origin.json"],
@@ -989,7 +997,6 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::PubliccodeYaml,
     DatasourceId::RpmPackageLicenses,
     DatasourceId::RustBinary,
-    DatasourceId::SbtBuildSbt,
     DatasourceId::VcpkgConfigurationJson,
     DatasourceId::VcpkgLockJson,
 ];
