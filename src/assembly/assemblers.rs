@@ -369,6 +369,15 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["rebar.config", "rebar.lock"],
         mode: AssemblyMode::SiblingMerge,
     },
+    // Erlang OTP application resource files (`src/<app>.app.src`). The app name
+    // and version live in the `{application, <name>, [{vsn, ...}]}` tuple, so the
+    // `.app.src` is the app's identity source (`pkg:hex/<app>`); one package per
+    // record. (`rebar.config` carries build config/deps, not the app identity.)
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::ErlangOtpAppSrc],
+        sibling_file_patterns: &["*.app.src"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // Carthage ecosystem
     AssemblerConfig {
         datasource_ids: &[
@@ -603,6 +612,15 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "Gemfile.lock",
         ],
         mode: AssemblyMode::SiblingMerge,
+    },
+    // Installed RubyGems specifications (`specifications/*.gemspec`). A
+    // `vendor/bundle` / gem-home `specifications` directory holds one gemspec
+    // per installed gem, each a distinct `pkg:gem/<name>@<v>` identity, so one
+    // package per record.
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::GemGemspecInstalledSpecifications],
+        sibling_file_patterns: &["**/specifications/*.gemspec"],
+        mode: AssemblyMode::OnePerPackageData,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::GemArchive],
@@ -969,60 +987,182 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
 // This list is runtime-significant: files with these datasource IDs may remain
 // unowned by any Package, while their dependencies are still eligible for
 // top-level hoisting. Tests also use it to enforce explicit assembly accounting.
-pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
-    // Non-package metadata
-    DatasourceId::Readme,
-    DatasourceId::EtcOsRelease,
-    // Binary archives (require external extraction via ExtractCode before scanning)
-    DatasourceId::AlpineApkArchive,
-    DatasourceId::AndroidAab,
-    DatasourceId::AndroidApk,
-    DatasourceId::AndroidManifestXml,
-    DatasourceId::AndroidSoongMetadata,
-    DatasourceId::AppleDmg,
-    DatasourceId::Axis2Mar,
-    DatasourceId::ChromeCrx,
-    DatasourceId::DebianOriginalSourceTarball,
-    DatasourceId::DebianSourceMetadataTarball,
-    DatasourceId::InstallshieldInstaller,
-    DatasourceId::IosIpa,
-    DatasourceId::IsoDiskImage,
-    DatasourceId::JavaEarArchive,
-    DatasourceId::JbossSar,
-    DatasourceId::MicrosoftCabinet,
-    DatasourceId::MozillaXpi,
-    DatasourceId::NsisInstaller,
-    DatasourceId::SharShellArchive,
-    DatasourceId::SquashfsDiskImage,
-    // Supplementary metadata (not primary package definitions)
-    DatasourceId::Axis2ModuleXml,
-    DatasourceId::ClojureDepsEdn,
-    DatasourceId::DebianInstalledFilesList,
-    DatasourceId::DebianInstalledMd5Sums,
-    DatasourceId::DebianCopyright,
-    DatasourceId::DebianCopyrightInPackage,
-    DatasourceId::DebianCopyrightStandalone,
-    DatasourceId::GoBinary,
-    DatasourceId::WindowsExecutable,
-    DatasourceId::Dockerfile,
-    DatasourceId::OciImageIndex,
-    DatasourceId::OciImageManifest,
-    DatasourceId::ErlangOtpAppSrc,
-    DatasourceId::HexMixLock,
-    DatasourceId::AntIvyDependenciesProperties,
-    DatasourceId::JavaEarApplicationXml,
-    DatasourceId::JavaWarWebXml,
-    DatasourceId::JbossServiceXml,
-    DatasourceId::GemGemspecInstalledSpecifications,
-    DatasourceId::NugetDirectoryBuildProps,
-    DatasourceId::NugetDirectoryPackagesProps,
-    DatasourceId::CitationCff,
-    DatasourceId::PubliccodeYaml,
-    DatasourceId::RpmPackageLicenses,
-    DatasourceId::RustBinary,
-    DatasourceId::VcpkgConfigurationJson,
-    DatasourceId::VcpkgLockJson,
+/// Why a `DatasourceId` is intentionally not assembled into a top-level package.
+///
+/// Every entry in [`UNASSEMBLED_DATASOURCE_IDS`] must state one of these reasons.
+/// There is deliberately **no** "deferred"/"TODO" variant: a datasource whose
+/// parser emits a `purl`-bearing package identity with dependencies must be
+/// assembled (an `OnePerPackageData` config for standalone manifests), not
+/// parked here. See `docs/HOW_TO_ADD_A_PARSER.md` and ADR 0006.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum UnassembledReason {
+    /// The file does not describe a package (README, OS-release, deployment- or
+    /// image-descriptor fragment, Dockerfile, …). There is no identity to assemble.
+    NotAPackage,
+    /// A compiled binary or binary archive whose contents are scanned or extracted
+    /// elsewhere (ExtractCode), not a source manifest with its own assembled identity.
+    BinaryArtifact,
+    /// Metadata that enriches another datasource's package, or is consumed by a
+    /// dedicated post-assembly pass, rather than defining a package on its own.
+    SupplementaryMetadata,
+    /// A dependency or lock list with no package identity of its own; its
+    /// dependencies are hoisted, but it cannot become a package.
+    DependenciesOnlyNoIdentity,
+}
+
+pub static UNASSEMBLED_DATASOURCE_IDS: &[(DatasourceId, UnassembledReason)] = &[
+    (DatasourceId::Readme, UnassembledReason::NotAPackage),
+    (DatasourceId::EtcOsRelease, UnassembledReason::NotAPackage),
+    (
+        DatasourceId::AndroidManifestXml,
+        UnassembledReason::NotAPackage,
+    ),
+    (
+        DatasourceId::AndroidSoongMetadata,
+        UnassembledReason::NotAPackage,
+    ),
+    (DatasourceId::Dockerfile, UnassembledReason::NotAPackage),
+    (DatasourceId::OciImageIndex, UnassembledReason::NotAPackage),
+    (
+        DatasourceId::OciImageManifest,
+        UnassembledReason::NotAPackage,
+    ),
+    (DatasourceId::Axis2ModuleXml, UnassembledReason::NotAPackage),
+    (
+        DatasourceId::JavaEarApplicationXml,
+        UnassembledReason::NotAPackage,
+    ),
+    (DatasourceId::JavaWarWebXml, UnassembledReason::NotAPackage),
+    (
+        DatasourceId::JbossServiceXml,
+        UnassembledReason::NotAPackage,
+    ),
+    // Compiled binaries and binary archives (extracted/scanned elsewhere).
+    (
+        DatasourceId::AlpineApkArchive,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (DatasourceId::AndroidAab, UnassembledReason::BinaryArtifact),
+    (DatasourceId::AndroidApk, UnassembledReason::BinaryArtifact),
+    (DatasourceId::AppleDmg, UnassembledReason::BinaryArtifact),
+    (DatasourceId::Axis2Mar, UnassembledReason::BinaryArtifact),
+    (DatasourceId::ChromeCrx, UnassembledReason::BinaryArtifact),
+    (
+        DatasourceId::DebianOriginalSourceTarball,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (
+        DatasourceId::DebianSourceMetadataTarball,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (
+        DatasourceId::InstallshieldInstaller,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (DatasourceId::IosIpa, UnassembledReason::BinaryArtifact),
+    (
+        DatasourceId::IsoDiskImage,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (
+        DatasourceId::JavaEarArchive,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (DatasourceId::JbossSar, UnassembledReason::BinaryArtifact),
+    (
+        DatasourceId::MicrosoftCabinet,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (DatasourceId::MozillaXpi, UnassembledReason::BinaryArtifact),
+    (
+        DatasourceId::NsisInstaller,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (
+        DatasourceId::SharShellArchive,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (
+        DatasourceId::SquashfsDiskImage,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (DatasourceId::GoBinary, UnassembledReason::BinaryArtifact),
+    (
+        DatasourceId::WindowsExecutable,
+        UnassembledReason::BinaryArtifact,
+    ),
+    (DatasourceId::RustBinary, UnassembledReason::BinaryArtifact),
+    // Metadata merged into another datasource's package or a post-assembly pass.
+    (
+        DatasourceId::DebianInstalledFilesList,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::DebianInstalledMd5Sums,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::DebianCopyright,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::DebianCopyrightInPackage,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::DebianCopyrightStandalone,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::AntIvyDependenciesProperties,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::NugetDirectoryBuildProps,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::NugetDirectoryPackagesProps,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::CitationCff,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::PubliccodeYaml,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::RpmPackageLicenses,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::VcpkgConfigurationJson,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    (
+        DatasourceId::VcpkgLockJson,
+        UnassembledReason::SupplementaryMetadata,
+    ),
+    // Dependency/lock lists with no package identity of their own.
+    (
+        DatasourceId::ClojureDepsEdn,
+        UnassembledReason::DependenciesOnlyNoIdentity,
+    ),
+    (
+        DatasourceId::HexMixLock,
+        UnassembledReason::DependenciesOnlyNoIdentity,
+    ),
 ];
+
+/// Whether `datasource_id` is intentionally left unassembled (see
+/// [`UNASSEMBLED_DATASOURCE_IDS`]).
+pub(super) fn is_unassembled_datasource(datasource_id: DatasourceId) -> bool {
+    UNASSEMBLED_DATASOURCE_IDS
+        .iter()
+        .any(|(dsid, _)| *dsid == datasource_id)
+}
 
 #[cfg(test)]
 mod tests {
@@ -1040,7 +1180,12 @@ mod tests {
         }
 
         let unassembled: HashSet<DatasourceId> =
-            UNASSEMBLED_DATASOURCE_IDS.iter().copied().collect();
+            UNASSEMBLED_DATASOURCE_IDS.iter().map(|(d, _)| *d).collect();
+        assert_eq!(
+            unassembled.len(),
+            UNASSEMBLED_DATASOURCE_IDS.len(),
+            "UNASSEMBLED_DATASOURCE_IDS lists a datasource more than once"
+        );
 
         let overlap: Vec<_> = assembled.intersection(&unassembled).collect();
         assert!(

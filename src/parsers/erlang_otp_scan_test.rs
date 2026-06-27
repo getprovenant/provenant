@@ -60,4 +60,33 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn test_erlang_app_src_promotes_to_top_level_package_owning_applications() {
+        // `src/<app>.app.src` carries the app name/version, so it is the app's
+        // identity source and promotes to a top-level package owning its
+        // `applications` dependencies.
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let src = temp_dir.path().join("src");
+        std::fs::create_dir(&src).expect("create src dir");
+        std::fs::write(
+            src.join("demo.app.src"),
+            "{application, demo,\n [{vsn, \"1.0.0\"},\n  {applications, [kernel, stdlib, cowboy]}]}.\n",
+        )
+        .expect("write app.src");
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        let package = result
+            .packages
+            .iter()
+            .find(|p| p.purl.as_deref() == Some("pkg:hex/demo@1.0.0"))
+            .expect(".app.src should promote to a top-level package");
+        let dep = result
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:hex/cowboy"))
+            .expect("applications dependency should be present");
+        assert_eq!(dep.for_package_uid.as_ref(), Some(&package.package_uid));
+    }
 }

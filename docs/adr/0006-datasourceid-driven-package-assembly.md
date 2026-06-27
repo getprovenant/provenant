@@ -34,7 +34,15 @@ We use **`DatasourceId` as the contract between parsers and assembly**, and we r
 2. **Every `DatasourceId` must be explicitly classified.**
    Each datasource is either:
    - listed in an `AssemblerConfig` in `src/assembly/assemblers.rs`, or
-   - listed in `UNASSEMBLED_DATASOURCE_IDS` when it is intentionally not assembled.
+   - listed in `UNASSEMBLED_DATASOURCE_IDS` with a justified `UnassembledReason`.
+
+   `UNASSEMBLED_DATASOURCE_IDS` is **not** a "wire assembly later" placeholder. The only legitimate
+   reasons are `NotAPackage`, `BinaryArtifact`, `SupplementaryMetadata`, and
+   `DependenciesOnlyNoIdentity`; there is deliberately no "deferred"/"TODO" variant. A datasource
+   whose parser emits a `purl`-bearing package identity must be assembled (an `OnePerPackageData`
+   config for standalone manifests, or `SiblingMergePerIdentity` for directories that may hold
+   several identities) — otherwise its dependencies are orphaned and its identity never reaches the
+   assembled `packages[]` or the SBOM exports built from it.
 
 3. **Assembly is a post-scan responsibility, not a parser responsibility.**
    Parsers extract raw `PackageData`; assembly combines related outputs into top-level `Package` objects and hoists dependencies.

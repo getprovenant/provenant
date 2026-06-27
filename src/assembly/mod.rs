@@ -295,7 +295,7 @@ fn should_hoist_unassembled_dependencies(datasource_id: DatasourceId) -> bool {
         return true;
     }
 
-    if !assemblers::UNASSEMBLED_DATASOURCE_IDS.contains(&datasource_id) {
+    if !assemblers::is_unassembled_datasource(datasource_id) {
         return false;
     }
 
