@@ -527,6 +527,57 @@ fn test_looks_like_bpe_merges_table_rejects_ordinary_text() {
     assert!(!looks_like_bpe_merges_table("i n\nt h\n"));
 }
 
+#[test]
+fn test_hf_tokenizer_merges_line_span_rejects_non_tokenizer_content() {
+    // Prose mentioning the words is not the structured tokenizer file.
+    assert_eq!(
+        hf_tokenizer_merges_line_span(
+            "The BPE tokenizer stores its merges and vocab in a JSON file."
+        ),
+        None
+    );
+    // A config.json without the BPE/merges/vocab markers yields no span.
+    assert_eq!(
+        hf_tokenizer_merges_line_span(
+            r#"{"name":"clip","license":"mit","architectures":["CLIPModel"]}"#
+        ),
+        None
+    );
+    // A compact tokenizer.json still resolves a (single-line) merges span.
+    assert_eq!(
+        hf_tokenizer_merges_line_span(
+            r#"{"model":{"type":"BPE","vocab":{"©":102},"merges":["pok Ã©","Â ©"]}}"#
+        ),
+        Some((1, 1))
+    );
+}
+
+#[test]
+fn test_hf_tokenizer_merges_line_span() {
+    // The span covers the `"merges"` array (lines 6-10, 1-based) and nothing
+    // else, so a notice on line 2 stays outside it.
+    let content = concat!(
+        "{\n",                                 // 1
+        "  \"copyright\": \"Copyright x\",\n", // 2
+        "  \"model\": {\n",                    // 3
+        "    \"type\": \"BPE\",\n",            // 4
+        "    \"vocab\": { \"a\": 0 },\n",      // 5
+        "    \"merges\": [\n",                 // 6
+        "      \"pok Ã©\",\n",                 // 7
+        "      \"Â ©\"\n",                     // 8
+        "    ]\n",                             // 9
+        "  }\n",                               // 10
+        "}\n",                                 // 11
+    );
+    assert_eq!(hf_tokenizer_merges_line_span(content), Some((6, 9)));
+
+    // Not a tokenizer file ⇒ no span.
+    assert_eq!(
+        hf_tokenizer_merges_line_span(r#"{"merges":"just a string"}"#),
+        None
+    );
+}
+
 // ── is_junk_copyright ────────────────────────────────────────────
 
 #[test]

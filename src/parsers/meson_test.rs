@@ -223,6 +223,28 @@ endif
     }
 
     #[test]
+    fn test_skips_empty_literal_dependency_name() {
+        let content = r#"
+project('emptydep', 'c')
+
+dependency('')
+dependency('   ')
+dependency('zlib')
+        "#;
+
+        let (_temp_dir, path) = create_temp_meson_build(content);
+        let package_data = MesonParser::extract_first_package(&path);
+
+        // `dependency('')` / whitespace-only names must not emit a nameless
+        // `pkg:generic/meson/` identity; only the real `zlib` dep survives.
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:generic/meson/zlib")
+        );
+    }
+
+    #[test]
     fn test_single_literal_license_uses_shared_normalization() {
         let content = r#"
 project(

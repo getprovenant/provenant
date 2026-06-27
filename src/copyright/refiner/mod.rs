@@ -63,8 +63,8 @@ pub use copyright::refine_copyright;
 pub use holder::{refine_holder, refine_holder_in_copyright_context};
 pub use junk::is_junk_copyright;
 pub(crate) use junk::{
-    has_copyright_year, is_junk_holder, is_path_like_code_fragment, is_tokenizer_data_fragment,
-    looks_like_bpe_merges_table, looks_like_source_code,
+    has_copyright_year, hf_tokenizer_merges_line_span, is_junk_holder, is_path_like_code_fragment,
+    is_tokenizer_data_fragment, looks_like_bpe_merges_table, looks_like_source_code,
 };
 
 /// Compile a static regex literal.

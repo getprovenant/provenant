@@ -79,6 +79,7 @@ struct SetupKeywords {
     license: Option<String>,
     classifiers: Option<Vec<String>>,
     install_requires: Option<Vec<String>>,
+    setup_requires: Option<Vec<String>>,
     tests_require: Option<Vec<String>>,
     extras_require: Option<HashMap<String, Value>>,
     project_urls: Option<HashMap<String, Value>>,
@@ -100,6 +101,7 @@ impl SetupKeywords {
             "license" => self.license = value_to_string(&value),
             "classifiers" => self.classifiers = value_to_string_list(&value),
             "install_requires" => self.install_requires = value_to_string_list(&value),
+            "setup_requires" => self.setup_requires = value_to_string_list(&value),
             "tests_require" => self.tests_require = value_to_string_list(&value),
             "extras_require" => {
                 if let Value::Dict(dict) = value {
@@ -917,11 +919,18 @@ fn build_setup_py_dependencies(kw: &SetupKeywords) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
     if let Some(reqs) = &kw.install_requires {
-        dependencies.extend(build_setup_py_dependency_list(reqs, "install", false));
+        dependencies.extend(build_setup_py_dependency_list(reqs, "install", false, true));
+    }
+
+    if let Some(reqs) = &kw.setup_requires {
+        // `setup_requires` are build-time inputs, not runtime dependencies, so an
+        // SBOM consumer must not treat them as runtime. ScanCode marks them
+        // runtime; preferring correctness, Provenant does not.
+        dependencies.extend(build_setup_py_dependency_list(reqs, "setup", false, false));
     }
 
     if let Some(reqs) = &kw.tests_require {
-        dependencies.extend(build_setup_py_dependency_list(reqs, "test", true));
+        dependencies.extend(build_setup_py_dependency_list(reqs, "test", true, true));
     }
 
     if let Some(extras) = &kw.extras_require {
@@ -932,6 +941,7 @@ fn build_setup_py_dependencies(kw: &SetupKeywords) -> Vec<Dependency> {
                 dependencies.extend(build_setup_py_dependency_list(
                     reqs.as_slice(),
                     extra_name,
+                    true,
                     true,
                 ));
             }
@@ -945,9 +955,14 @@ fn build_setup_py_dependency_list(
     reqs: &[String],
     scope: &str,
     is_optional: bool,
+    is_runtime: bool,
 ) -> Vec<Dependency> {
     reqs.iter()
         .filter_map(|req| build_python_dependency(req, scope, is_optional, None))
+        .map(|mut dependency| {
+            dependency.is_runtime = Some(is_runtime);
+            dependency
+        })
         .collect()
 }
 
