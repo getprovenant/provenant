@@ -15,10 +15,63 @@
 //! Only `PackageData` carrying a Hugging Face datasource id participates, so
 //! generic `README.md`/`config.json` files (which the parsers decline to claim)
 //! never trigger a merge.
+//!
+//! A Diffusers pipeline repository additionally has per-component subdirectories
+//! (`text_encoder/`, `unet/`, `vae/`, ...), each with its own `config.json`. Those
+//! belong to the pipeline described by the repo-root `model_index.json`, not to
+//! standalone models, so a component `config.json` under a `model_index.json`
+//! parent is subsumed into the pipeline package (it emits no package of its own)
+//! rather than surfacing as a purl-less, name-less junk package.
+
+use std::path::Path;
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, TopLevelDependency};
 
 type DirectoryMergeOutput = (Option<Package>, Vec<TopLevelDependency>, Vec<usize>);
+
+/// Subdirectory names that a Diffusers pipeline uses for its component models.
+/// A `config.json` (or other Transformers/Diffusers metadata) inside one of these
+/// directories describes a component of the parent pipeline, not a standalone
+/// model, so it must not surface as its own top-level package. The list mirrors
+/// the components a `model_index.json` references across Diffusers pipeline
+/// families — Stable Diffusion (text encoder, UNet/transformer, VAE, tokenizer,
+/// scheduler, feature extractor, safety checker, image encoder), Kandinsky
+/// (prior, decoder, movq), DeepFloyd IF (stage_1/2/3), and AudioLDM/MusicGen
+/// (vocoder). The two-condition guard (name match plus a parent `model_index.json`)
+/// keeps the list safe to extend, so unknown future component names only risk
+/// leaving a stray purl-less package, never a false subsumption.
+const DIFFUSERS_COMPONENT_DIRECTORIES: &[&str] = &[
+    "text_encoder",
+    "text_encoder_2",
+    "text_encoder_3",
+    "unet",
+    "transformer",
+    "vae",
+    "vae_encoder",
+    "vae_decoder",
+    "tokenizer",
+    "tokenizer_2",
+    "tokenizer_3",
+    "scheduler",
+    "feature_extractor",
+    "safety_checker",
+    "image_encoder",
+    "image_normalizer",
+    "image_noising_scheduler",
+    "controlnet",
+    // Kandinsky
+    "prior",
+    "prior_text_encoder",
+    "prior_tokenizer",
+    "decoder",
+    "movq",
+    // DeepFloyd IF
+    "stage_1",
+    "stage_2",
+    "stage_3",
+    // AudioLDM / MusicGen
+    "vocoder",
+];
 
 struct HuggingfaceSource<'a> {
     file_index: usize,
@@ -66,6 +119,16 @@ pub fn assemble_huggingface_packages(
     }
 
     if sources.is_empty() {
+        return Vec::new();
+    }
+
+    // A component `config.json` sitting in a Diffusers pipeline-component
+    // subdirectory (e.g. `text_encoder/`, `unet/`, `vae/`) whose parent directory
+    // carries the pipeline `model_index.json` is part of that pipeline, not a
+    // standalone model. The pipeline `model_index.json` already produces the one
+    // `pkg:huggingface/...` package for the repository, so emit nothing here
+    // rather than a purl-less, name-less junk package for the component.
+    if is_diffusers_component_directory(&sources, files) {
         return Vec::new();
     }
 
@@ -130,6 +193,49 @@ fn choose_anchor(sources: &[HuggingfaceSource]) -> usize {
         .iter()
         .position(|source| source.package_data.purl.is_some())
         .unwrap_or(0)
+}
+
+/// Decide whether the directory being merged is a Diffusers pipeline component
+/// directory that should be subsumed into its parent pipeline rather than emit
+/// its own package. Two conditions must hold:
+///
+/// 1. The directory's own name is a known pipeline-component name
+///    (`text_encoder`, `unet`, `vae`, ...).
+/// 2. The parent directory contains a `model_index.json` that a Hugging Face
+///    parser claimed (a Diffusers pipeline manifest).
+///
+/// The directory is derived from the merge sources' datafile paths; assembly
+/// groups files by parent directory, so every source here shares one parent.
+fn is_diffusers_component_directory(sources: &[HuggingfaceSource], files: &[FileInfo]) -> bool {
+    let Some(directory) = sources
+        .iter()
+        .find_map(|source| Path::new(&source.datafile_path).parent())
+    else {
+        return false;
+    };
+
+    let is_component_name = directory
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| DIFFUSERS_COMPONENT_DIRECTORIES.contains(&name));
+    if !is_component_name {
+        return false;
+    }
+
+    let Some(parent) = directory.parent() else {
+        return false;
+    };
+
+    files.iter().any(|file| {
+        let path = Path::new(&file.path);
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name == "model_index.json")
+            && path.parent() == Some(parent)
+            && file.package_data.iter().any(|package_data| {
+                package_data.datasource_id == Some(DatasourceId::HuggingfaceModelIndexJson)
+            })
+    })
 }
 
 fn collect_dependencies(
