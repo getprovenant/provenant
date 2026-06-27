@@ -867,12 +867,12 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.24s`; ScanCode `65.39s`
 - Broader native-build package and dependency visibility (`5` vs `0` packages, `3` vs `0` dependencies) from the root `configure`, `MODULE.bazel`, and committed `.csproj` surfaces, with the real `pkg:autotools/zlib` identity instead of ScanCode's generic input placeholder, direct Bazel and NuGet surface coverage, and the more specific `LicenseRef-scancode-info-zip-2009-01 AND Zlib` classification on `contrib/minizip/unzip.c`
 
-##### [mesonbuild/meson @ b300d95](https://github.com/mesonbuild/meson/tree/b300d9578fe62c721afbf4e5c4672ad0c94cb96c) — **18.42× faster**
+##### [mesonbuild/meson @ b300d95](https://github.com/mesonbuild/meson/tree/b300d9578fe62c721afbf4e5c4672ad0c94cb96c) — **18.79× faster**
 
 - Files: 5,425
 - Run context: 2026-06-27 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
-- Timing: Provenant `9.64s`; ScanCode `177.55s`
-- Direct Meson dependency extraction (`323` vs `0` top-level, `291` vs `0` raw `package_data`) that ScanCode cannot model because it ships no Meson parser: Provenant reads `dependency()` calls across the 1,535 committed `meson.build` files into real `pkg:generic/meson/*` identities such as `zlib`, `glib-2.0`, and `boost` while dropping nameless `dependency('')` placeholders rather than emitting empty `pkg:generic/meson/` rows, plus broader Cargo workspace fixture coverage (`22` extra packages) and SPDX-aligned `apache-2.0` declared licensing that avoids ScanCode's spurious `(apache-2.0 OR gpl-2.0-plus) AND unknown` reading of the `setup.cfg` license blob
+- Timing: Provenant `9.45s`; ScanCode `177.55s`
+- Direct Meson package and dependency extraction (`1154` vs `0` `pkg:meson/*` packages, `314` more top-level dependencies) that ScanCode cannot model because it ships no Meson parser: Provenant promotes every `meson.build` declaring a `project()` into a `pkg:meson/<name>` package that owns the `dependency()` calls in that build file (`zlib`, `glib-2.0`, `boost`), skipping subdirectory build files without a `project()` and nameless `dependency('')` placeholders so neither floods the output, plus SPDX-aligned `apache-2.0` declared licensing that avoids ScanCode's spurious `(apache-2.0 OR gpl-2.0-plus) AND unknown` reading of the `setup.cfg` license blob
 
 ##### [moby/moby @ 21bd660](https://github.com/moby/moby/tree/21bd660cd595929275d8f1361d224f663a2cfc44) — **49.68× faster**
 
