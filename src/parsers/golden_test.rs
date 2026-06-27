@@ -91,6 +91,8 @@ mod maven_jar_golden_test;
 mod meson_golden_test;
 #[path = "microsoft_update_manifest_golden_test.rs"]
 mod microsoft_update_manifest_golden_test;
+#[path = "mix_exs_golden_test.rs"]
+mod mix_exs_golden_test;
 #[path = "nix_golden_test.rs"]
 mod nix_golden_test;
 #[path = "npm_golden_test.rs"]

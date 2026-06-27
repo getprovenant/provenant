@@ -210,6 +210,11 @@ mod microsoft_update_manifest_test;
 mod misc;
 #[cfg(test)]
 mod misc_test;
+mod mix_exs;
+#[cfg(test)]
+mod mix_exs_scan_test;
+#[cfg(test)]
+mod mix_exs_test;
 mod nix;
 #[cfg(test)]
 mod nix_scan_test;
@@ -701,6 +706,7 @@ pub use self::misc::{
     MeteorPackageRecognizer, MozillaXpiRecognizer, NsisRecognizer, SharArchiveRecognizer,
     SquashfsRecognizer,
 };
+pub use self::mix_exs::MixExsParser;
 pub use self::nix::{NixDefaultParser, NixFlakeLockParser, NixFlakeParser};
 pub use self::npm::NpmParser;
 pub use self::npm_lock::NpmLockParser;
@@ -993,6 +999,7 @@ register_package_handlers! {
         HelmChartLockParser,
         HaxeParser,
         HexLockParser,
+        MixExsParser,
         HuggingfaceModelCardParser,
         HuggingfaceConfigParser,
         HuggingfaceModelIndexParser,

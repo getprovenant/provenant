@@ -369,6 +369,16 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["rebar.config", "rebar.lock"],
         mode: AssemblyMode::SiblingMerge,
     },
+    // Elixir/Hex ecosystem: `mix.exs` carries the project identity (app + version)
+    // and its direct deps; `mix.lock` contributes the resolved locked deps. They
+    // sibling-merge into one `pkg:hex/<app>` package, the same shape as
+    // Cargo.toml + Cargo.lock. A standalone `mix.lock` with no sibling `mix.exs`
+    // has no identity, so its deps stay hoisted (no package is formed).
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::HexMixExs, DatasourceId::HexMixLock],
+        sibling_file_patterns: &["mix.exs", "mix.lock"],
+        mode: AssemblyMode::SiblingMerge,
+    },
     // Erlang OTP application resource files (`src/<app>.app.src`). The app name
     // and version live in the `{application, <name>, [{vsn, ...}]}` tuple, so the
     // `.app.src` is the app's identity source (`pkg:hex/<app>`); one package per
@@ -1157,10 +1167,6 @@ pub(super) static UNASSEMBLED_DATASOURCE_IDS: &[(DatasourceId, UnassembledReason
     // Dependency/lock lists with no package identity of their own.
     (
         DatasourceId::ClojureDepsEdn,
-        UnassembledReason::DependenciesOnlyNoIdentity,
-    ),
-    (
-        DatasourceId::HexMixLock,
         UnassembledReason::DependenciesOnlyNoIdentity,
     ),
 ];
