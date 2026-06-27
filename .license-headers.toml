@@ -32,6 +32,7 @@ derived = [
   "src/app/scan_pipeline.rs",
   "src/assembly/assemblers.rs",
   "src/assembly/cargo_workspace_merge.rs",
+  "src/assembly/cocoapods_merge.rs",
   "src/assembly/conda_rootfs_merge.rs",
   "src/assembly/debian_source_merge.rs",
   "src/assembly/file_ref_resolve.rs",

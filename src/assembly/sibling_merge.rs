@@ -15,44 +15,38 @@ use super::{
     AssemblerConfig, DirectoryMergeOutput, should_skip_placeholder_only_cocoapods_podspec,
 };
 
-#[derive(Clone, Copy)]
-struct CocoapodsPodspecCandidate {
-    file_idx: usize,
-    package_data_idx: usize,
-}
-
-struct PendingDependency {
+pub(super) struct PendingDependency {
     dependency: crate::models::Dependency,
     datafile_path: String,
     datasource_id: DatasourceId,
 }
 
-/// Assemble a single package from sibling files in a directory.
+/// Assemble a directory of sibling files into one package
+/// ([`AssemblyMode::SiblingMerge`](super::AssemblyMode::SiblingMerge)).
 ///
 /// Iterates over `sibling_file_patterns` in order, finds matching files among
 /// `file_indices`, and merges their package data into a single `Package`.
 /// Dependencies from all matched files are hoisted to the top level.
 ///
-/// Returns `None` if no files with valid package data are found.
+/// This is the generic directory engine — it carries no ecosystem-specific
+/// branching. Layouts that need more than one package per directory opt into a
+/// different strategy instead: [`assemble_siblings_per_identity`] for the generic
+/// "one package per distinct identity" case
+/// ([`AssemblyMode::SiblingMergePerIdentity`](super::AssemblyMode::SiblingMergePerIdentity)),
+/// or a dedicated module registered through
+/// [`special_directory_merger_for`](super::assemblers::special_directory_merger_for)
+/// for bespoke layouts (e.g. CocoaPods).
 pub fn assemble_siblings(
     config: &AssemblerConfig,
     files: &[FileInfo],
     file_indices: &[usize],
 ) -> Vec<DirectoryMergeOutput> {
-    if let Some(results) = assemble_cocoapods_multiple_podspecs(config, files, file_indices) {
-        return results;
-    }
-
-    if let Some(results) = assemble_maven_distinct_gav_packages(config, files, file_indices) {
-        return results;
-    }
-
     assemble_single_sibling_package(config, files, file_indices)
         .into_iter()
         .collect()
 }
 
-fn assemble_single_sibling_package(
+pub(super) fn assemble_single_sibling_package(
     config: &AssemblerConfig,
     files: &[FileInfo],
     file_indices: &[usize],
@@ -155,38 +149,32 @@ fn assemble_single_sibling_package(
     }
 }
 
-/// Assemble a directory holding multiple INDEPENDENT Maven `.pom` files, each
-/// with a distinct group:artifact:version (GAV) identity, into one package per
-/// distinct GAV.
+/// Assemble a directory whose manifests carry multiple distinct package
+/// identities into one package per identity
+/// ([`AssemblyMode::SiblingMergePerIdentity`](super::AssemblyMode::SiblingMergePerIdentity)).
 ///
-/// The Maven sibling assembler exists to fold a single module (one `pom.xml`
-/// plus its sibling `pom.properties` / `META-INF/MANIFEST.MF`, all describing
-/// the SAME package) into one package. But a directory can also hold many
-/// standalone `.pom` fixtures or a local-repo layout where each `.pom` carries a
-/// different GAV. The default single-package sibling merge would collapse all of
-/// them into one top-level package; instead each distinct GAV must stay its own
+/// The default [`assemble_siblings`] engine folds a directory into a single
+/// package, which is correct for one module (e.g. a `pom.xml` plus its
+/// purl-less `pom.properties` / `META-INF/MANIFEST.MF` siblings). But a
+/// directory can also hold several independent manifests — a flat set of
+/// standalone Maven `.pom` fixtures, or a local-repository layout where each
+/// `.pom` carries a different group:artifact:version. Collapsing those into one
+/// package loses identities, so each distinct identity stays its own package.
+///
+/// Identity is keyed off the package `purl`. When fewer than two distinct purls
+/// are present this falls back to the [`assemble_siblings`] single-package
+/// result unchanged, so the ordinary one-module directory (one purled manifest
+/// plus purl-less supplementary siblings) is byte-for-byte identical. Datafiles
+/// sharing the same purl merge into one package (all datafiles attached, so no
+/// duplicate-identity file is orphaned); purl-less supplementary files in a
+/// genuinely multi-identity directory are ambiguous and are not attached to any
 /// package.
-///
-/// Identity is keyed off the package `purl` (the GAV proxy). Datafiles with no
-/// purl (a `pom.properties` or `MANIFEST.MF` carrying only supplementary,
-/// purl-less metadata) are not attached to any package in the multi-GAV path;
-/// this function returns `None` (falling through to the default merge path) only
-/// when fewer than two distinct Maven purls are present, so the single-module
-/// case (one `pom.xml` + purl-less siblings) is byte-for-byte unchanged.
-///
-/// Multiple datafiles that share the SAME purl are still merged into one package
-/// (their datafiles are all attached), so a duplicate-GAV datafile is never left
-/// orphaned.
-fn assemble_maven_distinct_gav_packages(
+pub(super) fn assemble_siblings_per_identity(
     config: &AssemblerConfig,
     files: &[FileInfo],
     file_indices: &[usize],
-) -> Option<Vec<DirectoryMergeOutput>> {
-    if !is_maven_sibling_config(config) {
-        return None;
-    }
-
-    // Collect every Maven datafile carrying a concrete purl identity, keyed by
+) -> Vec<DirectoryMergeOutput> {
+    // Collect every handled datafile carrying a concrete purl identity, keyed by
     // (file_idx, package_data_idx). Distinct purls mean independent packages.
     let mut purled: Vec<(usize, usize, &str)> = Vec::new();
     for &idx in file_indices {
@@ -205,7 +193,9 @@ fn assemble_maven_distinct_gav_packages(
         // Zero or one distinct identity: the default single-package merge already
         // produces the correct result (and keeps supplementary purl-less files
         // merged into the one module package).
-        return None;
+        return assemble_single_sibling_package(config, files, file_indices)
+            .into_iter()
+            .collect();
     }
 
     // Group datafiles by purl, preserving first-seen order for deterministic
@@ -272,207 +262,10 @@ fn assemble_maven_distinct_gav_packages(
         ));
     }
 
-    Some(results)
+    results
 }
 
-/// Recognize the Maven/Java sibling assembler config. Both `MavenPom` and
-/// `MavenPomProperties` are required so this stays bound to that one config even
-/// if a future assembler reuses `MavenPom` alongside unrelated datasource IDs.
-fn is_maven_sibling_config(config: &AssemblerConfig) -> bool {
-    config.datasource_ids.contains(&DatasourceId::MavenPom)
-        && config
-            .datasource_ids
-            .contains(&DatasourceId::MavenPomProperties)
-}
-
-fn assemble_cocoapods_multiple_podspecs(
-    config: &AssemblerConfig,
-    files: &[FileInfo],
-    file_indices: &[usize],
-) -> Option<Vec<DirectoryMergeOutput>> {
-    if !is_cocoapods_sibling_config(config) {
-        return None;
-    }
-
-    let podspec_candidates = collect_cocoapods_podspec_candidates(config, files, file_indices);
-    if podspec_candidates.len() <= 1 {
-        return None;
-    }
-
-    let primary_position = choose_primary_cocoapods_podspec(files, &podspec_candidates);
-    let primary_candidate = podspec_candidates[primary_position];
-    let primary_pkg_data =
-        &files[primary_candidate.file_idx].package_data[primary_candidate.package_data_idx];
-    let primary_datafile_path = files[primary_candidate.file_idx].path.clone();
-    let mut primary_package =
-        Package::from_package_data(primary_pkg_data, primary_datafile_path.clone());
-    let mut primary_pending_dependencies =
-        collect_pending_dependencies(primary_pkg_data, &primary_datafile_path);
-    let mut primary_affected_indices = vec![primary_candidate.file_idx];
-
-    for &pattern in config.sibling_file_patterns {
-        for &idx in file_indices {
-            let file = &files[idx];
-            let file_name = Path::new(&file.path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
-
-            if !matches_pattern(file_name, pattern) {
-                continue;
-            }
-
-            if file.package_data.is_empty() {
-                continue;
-            }
-
-            let mut file_used = false;
-
-            for (package_data_idx, pkg_data) in file.package_data.iter().enumerate() {
-                if !is_handled_by(pkg_data, config) {
-                    continue;
-                }
-
-                let Some(datasource_id) = pkg_data.datasource_id else {
-                    continue;
-                };
-
-                if is_cocoapods_podspec_datasource(datasource_id) {
-                    if idx == primary_candidate.file_idx
-                        && package_data_idx == primary_candidate.package_data_idx
-                    {
-                        continue;
-                    }
-
-                    continue;
-                }
-
-                if should_skip_assembly_package_data(Some(&primary_package), pkg_data) {
-                    continue;
-                }
-
-                let datafile_path = file.path.clone();
-                file_used = true;
-                primary_package.update(pkg_data, datafile_path.clone());
-                primary_pending_dependencies
-                    .extend(collect_pending_dependencies(pkg_data, &datafile_path));
-            }
-
-            if file_used {
-                primary_affected_indices.push(idx);
-            }
-        }
-    }
-
-    primary_affected_indices.sort_unstable();
-    primary_affected_indices.dedup();
-
-    let mut results = vec![build_directory_merge_output(
-        Some(primary_package),
-        primary_pending_dependencies,
-        primary_affected_indices,
-    )];
-
-    for (position, candidate) in podspec_candidates.into_iter().enumerate() {
-        if position == primary_position {
-            continue;
-        }
-
-        let pkg_data = &files[candidate.file_idx].package_data[candidate.package_data_idx];
-        let datafile_path = files[candidate.file_idx].path.clone();
-        let package = Package::from_package_data(pkg_data, datafile_path.clone());
-        let pending_dependencies = collect_pending_dependencies(pkg_data, &datafile_path);
-
-        results.push(build_directory_merge_output(
-            Some(package),
-            pending_dependencies,
-            vec![candidate.file_idx],
-        ));
-    }
-
-    Some(results)
-}
-
-fn collect_cocoapods_podspec_candidates(
-    config: &AssemblerConfig,
-    files: &[FileInfo],
-    file_indices: &[usize],
-) -> Vec<CocoapodsPodspecCandidate> {
-    let mut candidates = Vec::new();
-
-    for &pattern in config.sibling_file_patterns {
-        for &idx in file_indices {
-            let file = &files[idx];
-            let file_name = Path::new(&file.path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
-
-            if !matches_pattern(file_name, pattern) {
-                continue;
-            }
-
-            for (package_data_idx, pkg_data) in file.package_data.iter().enumerate() {
-                if !is_handled_by(pkg_data, config) {
-                    continue;
-                }
-
-                let Some(datasource_id) = pkg_data.datasource_id else {
-                    continue;
-                };
-
-                if !is_cocoapods_podspec_datasource(datasource_id) {
-                    continue;
-                }
-
-                candidates.push(CocoapodsPodspecCandidate {
-                    file_idx: idx,
-                    package_data_idx,
-                });
-            }
-        }
-    }
-
-    candidates
-}
-
-fn choose_primary_cocoapods_podspec(
-    files: &[FileInfo],
-    podspec_candidates: &[CocoapodsPodspecCandidate],
-) -> usize {
-    let sibling_names: HashSet<&str> = podspec_candidates
-        .iter()
-        .filter_map(|candidate| {
-            files[candidate.file_idx].package_data[candidate.package_data_idx]
-                .name
-                .as_deref()
-        })
-        .collect();
-
-    let referenced_sibling_names: HashSet<String> = podspec_candidates
-        .iter()
-        .flat_map(|candidate| {
-            files[candidate.file_idx].package_data[candidate.package_data_idx]
-                .dependencies
-                .iter()
-                .filter_map(|dependency| dependency.purl.as_deref())
-                .filter_map(extract_cocoapods_name_from_purl)
-                .filter(|name| sibling_names.contains(name.as_str()))
-        })
-        .collect();
-
-    podspec_candidates
-        .iter()
-        .position(|candidate| {
-            files[candidate.file_idx].package_data[candidate.package_data_idx]
-                .name
-                .as_deref()
-                .is_some_and(|name| !referenced_sibling_names.contains(name))
-        })
-        .unwrap_or(0)
-}
-
-fn collect_pending_dependencies(
+pub(super) fn collect_pending_dependencies(
     pkg_data: &PackageData,
     datafile_path: &str,
 ) -> Vec<PendingDependency> {
@@ -493,7 +286,7 @@ fn collect_pending_dependencies(
         .collect()
 }
 
-fn build_directory_merge_output(
+pub(super) fn build_directory_merge_output(
     package: Option<Package>,
     pending_dependencies: Vec<PendingDependency>,
     affected_indices: Vec<usize>,
@@ -512,32 +305,6 @@ fn build_directory_merge_output(
         .collect();
 
     (package, dependencies, affected_indices)
-}
-
-fn is_cocoapods_sibling_config(config: &AssemblerConfig) -> bool {
-    config
-        .datasource_ids
-        .contains(&DatasourceId::CocoapodsPodspec)
-        && config
-            .datasource_ids
-            .contains(&DatasourceId::CocoapodsPodfile)
-        && config
-            .datasource_ids
-            .contains(&DatasourceId::CocoapodsPodfileLock)
-}
-
-fn is_cocoapods_podspec_datasource(datasource_id: DatasourceId) -> bool {
-    matches!(
-        datasource_id,
-        DatasourceId::CocoapodsPodspec | DatasourceId::CocoapodsPodspecJson
-    )
-}
-
-fn extract_cocoapods_name_from_purl(purl: &str) -> Option<String> {
-    let after_type = purl.strip_prefix("pkg:cocoapods/")?;
-    let without_query = after_type.split('?').next().unwrap_or(after_type);
-    let name_part = without_query.split('@').next().unwrap_or(without_query);
-    Some(name_part.to_string())
 }
 
 /// Check if a filename matches a pattern. Supports:
@@ -565,13 +332,16 @@ pub(crate) fn matches_pattern(file_name: &str, pattern: &str) -> bool {
 }
 
 /// Check if a PackageData's datasource_id is handled by this assembler config.
-fn is_handled_by(pkg_data: &PackageData, config: &AssemblerConfig) -> bool {
+pub(super) fn is_handled_by(pkg_data: &PackageData, config: &AssemblerConfig) -> bool {
     pkg_data
         .datasource_id
         .is_some_and(|dsid| config.datasource_ids.contains(&dsid))
 }
 
-fn should_skip_assembly_package_data(package: Option<&Package>, pkg_data: &PackageData) -> bool {
+pub(super) fn should_skip_assembly_package_data(
+    package: Option<&Package>,
+    pkg_data: &PackageData,
+) -> bool {
     should_skip_composer_lock_virtual_package(pkg_data)
         || should_skip_placeholder_only_cocoapods_podspec(pkg_data)
         || package.is_some_and(|existing_package| {

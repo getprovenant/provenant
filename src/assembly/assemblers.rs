@@ -20,6 +20,7 @@ use super::{
 #[derive(Clone, Copy)]
 pub(super) enum SpecialDirectoryMergerKind {
     Skip,
+    Cocoapods,
     DebianSource,
     Hackage,
     Huggingface,
@@ -48,6 +49,7 @@ pub(super) fn special_directory_merger_for(
     config_key: DatasourceId,
 ) -> Option<SpecialDirectoryMergerKind> {
     match config_key {
+        DatasourceId::CocoapodsPodspec => Some(SpecialDirectoryMergerKind::Cocoapods),
         DatasourceId::DebianControlInSource => Some(SpecialDirectoryMergerKind::DebianSource),
         DatasourceId::HackageCabal => Some(SpecialDirectoryMergerKind::Hackage),
         DatasourceId::HuggingfaceModelCard => Some(SpecialDirectoryMergerKind::Huggingface),
@@ -197,6 +199,9 @@ impl SpecialDirectoryMergerKind {
     ) -> Vec<DirectoryMergeOutput> {
         match self {
             Self::Skip => Vec::new(),
+            Self::Cocoapods => {
+                super::cocoapods_merge::assemble_cocoapods_packages(config, files, file_indices)
+            }
             Self::DebianSource => {
                 debian_source_merge::assemble_debian_source_packages(config, files, file_indices)
             }
@@ -490,7 +495,9 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "pom.properties",
             "**/META-INF/MANIFEST.MF",
         ],
-        mode: AssemblyMode::SiblingMerge,
+        // A directory can hold one module (pom.xml + supplementary siblings) or
+        // many standalone `.pom` files with distinct GAVs; split per identity.
+        mode: AssemblyMode::SiblingMergePerIdentity,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PypiWheel, DatasourceId::PypiPipOriginJson],
