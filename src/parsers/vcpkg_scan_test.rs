@@ -9,10 +9,16 @@ mod tests {
     use crate::models::DatasourceId;
 
     #[test]
-    fn test_vcpkg_scan_remains_unassembled_and_hoists_dependencies() {
+    fn test_vcpkg_manifest_promotes_to_top_level_package_owning_dependencies() {
         let (files, result) = scan_and_assemble(Path::new("testdata/vcpkg/project"));
 
-        assert!(result.packages.is_empty());
+        // The manifest becomes a top-level package that owns its declared deps,
+        // rather than dropping the identity and orphaning the dependencies.
+        let package = result
+            .packages
+            .iter()
+            .find(|p| p.purl.as_deref() == Some("pkg:generic/vcpkg/sample-project@1.0.0"))
+            .expect("vcpkg.json should promote to a top-level package");
         assert_dependency_present(&result.dependencies, "pkg:generic/vcpkg/fmt", "vcpkg.json");
         assert_dependency_present(
             &result.dependencies,
@@ -23,13 +29,13 @@ mod tests {
             result
                 .dependencies
                 .iter()
-                .all(|dep| dep.for_package_uid.is_none())
+                .all(|dep| dep.for_package_uid.as_ref() == Some(&package.package_uid)),
+            "dependencies must be owned by the promoted package"
         );
         let manifest = files
             .iter()
             .find(|file| file.path.ends_with("/vcpkg.json"))
             .expect("vcpkg.json should be scanned");
-        assert!(manifest.for_packages.is_empty());
         assert!(
             manifest
                 .package_data
@@ -119,10 +125,15 @@ mod tests {
     }
 
     #[test]
-    fn test_vcpkg_control_scan_remains_unassembled_and_hoists_dependencies() {
+    fn test_vcpkg_control_promotes_to_top_level_package_owning_dependencies() {
         let (files, result) = scan_and_assemble(Path::new("testdata/vcpkg/classic"));
 
-        assert!(result.packages.is_empty());
+        let package = result
+            .packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("ace"))
+            .expect("ports/ace/CONTROL should promote to a top-level package");
+        assert_eq!(package.version.as_deref(), Some("6.5.5#2"));
         assert_dependency_present(&result.dependencies, "pkg:generic/vcpkg/zlib", "CONTROL");
         assert_dependency_present(&result.dependencies, "pkg:generic/vcpkg/curl", "CONTROL");
         assert_dependency_present(
@@ -130,20 +141,24 @@ mod tests {
             "pkg:generic/vcpkg/vcpkg-cmake",
             "CONTROL",
         );
+        assert!(
+            result
+                .dependencies
+                .iter()
+                .all(|dep| dep.for_package_uid.as_ref() == Some(&package.package_uid)),
+            "CONTROL dependencies must be owned by the promoted port package"
+        );
 
         let control = files
             .iter()
             .find(|file| file.path.ends_with("/ports/ace/CONTROL"))
             .expect("ports/ace/CONTROL should be scanned");
-        assert!(control.for_packages.is_empty());
-
-        let package = control
+        let package_data = control
             .package_data
             .iter()
             .find(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::VcpkgControl))
             .expect("vcpkg CONTROL package data should be present");
-        assert_eq!(package.name.as_deref(), Some("ace"));
-        assert_eq!(package.version.as_deref(), Some("6.5.5#2"));
+        assert_eq!(package_data.version.as_deref(), Some("6.5.5#2"));
     }
 
     #[test]
@@ -167,8 +182,13 @@ mod tests {
 
         let (files, result) = scan_and_assemble(temp_dir.path());
 
-        // vcpkg datasources stay unassembled, so neither file produces a top-level package.
-        assert!(result.packages.is_empty());
+        // The manifest promotes to a top-level package; the standalone
+        // configuration carries no identity and stays unassembled.
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(
+            result.packages[0].purl.as_deref(),
+            Some("pkg:generic/vcpkg/colocated-sample@1.0.0")
+        );
 
         let manifest = files
             .iter()
