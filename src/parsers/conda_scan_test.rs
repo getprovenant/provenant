@@ -58,6 +58,34 @@ mod tests {
     }
 
     #[test]
+    fn test_conda_meta_records_assemble_one_package_each() {
+        // Each `conda-meta/<pkg>.json` is a distinct installed package. They must
+        // not collapse into a single sibling-merged package just because they
+        // share the `conda-meta/` directory.
+        let (_files, result) = scan_and_assemble(Path::new("testdata/conda/assembly"));
+
+        let conda_meta_purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter(|package| {
+                package
+                    .datasource_ids
+                    .contains(&DatasourceId::CondaMetaJson)
+            })
+            .filter_map(|package| package.purl.as_deref())
+            .collect();
+
+        assert!(
+            conda_meta_purls.contains(&"pkg:conda/requests@2.32.3"),
+            "expected a distinct requests package, got: {conda_meta_purls:?}"
+        );
+        assert!(
+            conda_meta_purls.contains(&"pkg:conda/zlib@1.3.1"),
+            "expected a distinct zlib package, got: {conda_meta_purls:?}"
+        );
+    }
+
+    #[test]
     fn test_conda_hyphenated_environment_alias_scans_and_assembles() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         fs::write(

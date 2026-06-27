@@ -574,13 +574,10 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         sibling_file_patterns: &["*.gem"],
         mode: AssemblyMode::OnePerPackageData,
     },
-    // Conda ecosystem
+    // Conda ecosystem: recipes and environment files describe one package per
+    // directory, so they sibling-merge.
     AssemblerConfig {
-        datasource_ids: &[
-            DatasourceId::CondaMetaYaml,
-            DatasourceId::CondaYaml,
-            DatasourceId::CondaMetaJson,
-        ],
+        datasource_ids: &[DatasourceId::CondaMetaYaml, DatasourceId::CondaYaml],
         sibling_file_patterns: &[
             "meta.yaml",
             "meta.yml",
@@ -601,6 +598,15 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "*.json",
         ],
         mode: AssemblyMode::SiblingMerge,
+    },
+    // Conda installed-environment records: each `conda-meta/<pkg>.json` is one
+    // installed package, like the Alpine/RPM/Debian installed databases below,
+    // so every record becomes its own package rather than collapsing the whole
+    // `conda-meta/` directory into a single sibling-merged package.
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::CondaMetaJson],
+        sibling_file_patterns: &["*.json"],
+        mode: AssemblyMode::OnePerPackageData,
     },
     // RPM specfile (source packages)
     AssemblerConfig {
