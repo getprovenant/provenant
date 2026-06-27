@@ -611,7 +611,12 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "Gemfile",
             "Gemfile.lock",
         ],
-        mode: AssemblyMode::SiblingMerge,
+        // A directory usually holds one gem (its `.gemspec` plus a `Gemfile`/
+        // `Gemfile.lock`), but can hold several independent `.gemspec` files with
+        // distinct identities; collapsing the latter into one package loses the
+        // others, so split per identity. A single-gem directory (one purled
+        // gemspec plus purl-less `Gemfile`/lock siblings) falls back unchanged.
+        mode: AssemblyMode::SiblingMergePerIdentity,
     },
     // Installed RubyGems specifications (`specifications/*.gemspec`). A
     // `vendor/bundle` / gem-home `specifications` directory holds one gemspec

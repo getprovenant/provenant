@@ -152,6 +152,38 @@ mod tests {
     }
 
     #[test]
+    fn test_distinct_gemspecs_in_one_dir_stay_separate_packages() {
+        // A directory holding several independent `.gemspec` files yields one
+        // package per identity, not a single collapsed package.
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        for (name, version) in [("foo", "1.0.0"), ("bar", "2.3.4")] {
+            fs::write(
+                temp_dir.path().join(format!("{name}.gemspec")),
+                format!(
+                    "Gem::Specification.new do |s|\n  s.name = \"{name}\"\n  s.version = \"{version}\"\nend\n"
+                ),
+            )
+            .expect("write gemspec");
+        }
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        let purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|p| p.purl.as_deref())
+            .collect();
+        assert!(
+            purls.contains(&"pkg:gem/foo@1.0.0"),
+            "expected foo gem: {purls:?}"
+        );
+        assert!(
+            purls.contains(&"pkg:gem/bar@2.3.4"),
+            "expected bar gem: {purls:?}"
+        );
+    }
+
+    #[test]
     fn test_installed_specifications_gemspec_promotes_to_top_level_package() {
         // An installed `specifications/*.gemspec` is a real gem identity and
         // promotes to a top-level `pkg:gem/<name>@<v>` package owning its deps.
