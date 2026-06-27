@@ -12,6 +12,40 @@ mod tests {
     use crate::models::{DatasourceId, PackageType};
 
     #[test]
+    fn test_nuget_distinct_nuspecs_in_one_dir_stay_separate_packages() {
+        // A directory holding several distinct `.nuspec` packaging outputs must
+        // yield one package per identity, not collapse them into a single one.
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        for (id, version) in [("Foo", "1.0.0"), ("Bar", "2.3.4")] {
+            fs::write(
+                temp_dir.path().join(format!("{id}.nuspec")),
+                format!(
+                    r#"<?xml version="1.0"?>
+<package><metadata><id>{id}</id><version>{version}</version></metadata></package>
+"#
+                ),
+            )
+            .expect("write nuspec");
+        }
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+
+        let purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|p| p.purl.as_deref())
+            .collect();
+        assert!(
+            purls.contains(&"pkg:nuget/Foo@1.0.0"),
+            "expected Foo package: {purls:?}"
+        );
+        assert!(
+            purls.contains(&"pkg:nuget/Bar@2.3.4"),
+            "expected Bar package: {purls:?}"
+        );
+    }
+
+    #[test]
     fn test_nuget_basic_scan_assembles_csproj_and_packages_config() {
         let (files, result) = scan_and_assemble(Path::new("testdata/assembly-golden/nuget-basic"));
 
