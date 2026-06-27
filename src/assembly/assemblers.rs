@@ -481,6 +481,17 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         mode: AssemblyMode::SiblingMerge,
     },
+    // vcpkg (C/C++) ports and manifests. Each `CONTROL` or `vcpkg.json` that
+    // names a port/project is an independent package, so one package per record:
+    // a ports tree holds hundreds of distinct `CONTROL`/`vcpkg.json` files that
+    // must each surface (and own their `Build-Depends`/`dependencies`) rather
+    // than being dropped. `vcpkg-configuration.json` and `vcpkg-lock.json` carry
+    // no package identity and stay unassembled.
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::VcpkgControl, DatasourceId::VcpkgJson],
+        sibling_file_patterns: &["CONTROL", "vcpkg.json"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // Maven/Java ecosystem (nested merge via META-INF)
     AssemblerConfig {
         datasource_ids: &[
@@ -971,10 +982,8 @@ pub static UNASSEMBLED_DATASOURCE_IDS: &[DatasourceId] = &[
     DatasourceId::RpmPackageLicenses,
     DatasourceId::RustBinary,
     DatasourceId::SbtBuildSbt,
-    DatasourceId::VcpkgJson,
     DatasourceId::VcpkgConfigurationJson,
     DatasourceId::VcpkgLockJson,
-    DatasourceId::VcpkgControl,
 ];
 
 #[cfg(test)]
