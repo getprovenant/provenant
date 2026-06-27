@@ -121,6 +121,160 @@ mod tests {
         );
     }
 
+    fn create_maven_pom_file_info(
+        path: &str,
+        namespace: &str,
+        name: &str,
+        version: &str,
+    ) -> FileInfo {
+        let purl = format!("pkg:maven/{namespace}/{name}@{version}");
+        let mut file = create_test_file_info(
+            path,
+            DatasourceId::MavenPom,
+            Some(&purl),
+            Some(name),
+            Some(version),
+            vec![],
+        );
+        file.package_data[0].namespace = Some(namespace.to_string());
+        file.package_data[0].package_type = Some(PackageType::Maven);
+        file
+    }
+
+    #[test]
+    fn test_maven_distinct_gav_poms_in_one_dir_stay_separate_packages() {
+        // A directory of standalone `.pom` fixtures, each with a distinct GAV,
+        // must NOT collapse into one top-level package.
+        let mut files = vec![
+            create_maven_pom_file_info("fixtures/m2/alpha-1.0.pom", "org.example", "alpha", "1.0"),
+            create_maven_pom_file_info("fixtures/m2/beta-2.0.pom", "org.example", "beta", "2.0"),
+            create_maven_pom_file_info("fixtures/m2/gamma-3.0.pom", "org.other", "gamma", "3.0"),
+        ];
+
+        let result = assemble(&mut files);
+
+        let mut purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        purls.sort_unstable();
+        assert_eq!(
+            purls,
+            vec![
+                "pkg:maven/org.example/alpha@1.0",
+                "pkg:maven/org.example/beta@2.0",
+                "pkg:maven/org.other/gamma@3.0",
+            ],
+            "each distinct-GAV pom must be its own package: {:#?}",
+            result.packages
+        );
+
+        // Each package owns exactly its own datafile.
+        for pkg in &result.packages {
+            assert_eq!(
+                pkg.datafile_paths.len(),
+                1,
+                "package {:?} should own a single datafile",
+                pkg.purl
+            );
+        }
+    }
+
+    #[test]
+    fn test_maven_same_gav_siblings_still_merge_into_one_package() {
+        // A single real module: pom.xml plus a supplementary purl-less
+        // MANIFEST.MF describing the SAME package must merge into one package.
+        let pom =
+            create_maven_pom_file_info("module/pom.xml", "com.example", "test-library", "1.0.0");
+
+        let mut manifest = create_test_file_info(
+            "module/META-INF/MANIFEST.MF",
+            DatasourceId::JavaJarManifest,
+            None,
+            Some("Test Library"),
+            Some("1.0.0"),
+            vec![],
+        );
+        manifest.package_data[0].package_type = Some(PackageType::Maven);
+
+        let mut files = vec![pom, manifest];
+
+        let result = assemble(&mut files);
+
+        assert_eq!(
+            result.packages.len(),
+            1,
+            "same-GAV module siblings must merge: {:#?}",
+            result.packages
+        );
+        let package = &result.packages[0];
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:maven/com.example/test-library@1.0.0")
+        );
+        assert!(
+            package
+                .datasource_ids
+                .contains(&DatasourceId::JavaJarManifest),
+            "supplementary MANIFEST.MF should still merge into the module package: {:?}",
+            package.datasource_ids
+        );
+    }
+
+    #[test]
+    fn test_maven_duplicate_gav_poms_merge_without_orphaning_files() {
+        // Two `.pom` files sharing the SAME GAV alongside a third distinct GAV
+        // still triggers the multi-GAV path (two distinct purls). The duplicate
+        // must merge into one package owning both datafiles, never leaving a file
+        // orphaned (associated with no package).
+        let mut files = vec![
+            create_maven_pom_file_info("dir/alpha-a.pom", "org.example", "alpha", "1.0"),
+            create_maven_pom_file_info("dir/alpha-b.pom", "org.example", "alpha", "1.0"),
+            create_maven_pom_file_info("dir/beta-2.0.pom", "org.example", "beta", "2.0"),
+        ];
+
+        let result = assemble(&mut files);
+
+        let mut purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        purls.sort_unstable();
+        assert_eq!(
+            purls,
+            vec![
+                "pkg:maven/org.example/alpha@1.0",
+                "pkg:maven/org.example/beta@2.0"
+            ],
+            "duplicate-GAV poms must merge into one package: {:#?}",
+            result.packages
+        );
+
+        let alpha = result
+            .packages
+            .iter()
+            .find(|pkg| pkg.purl.as_deref() == Some("pkg:maven/org.example/alpha@1.0"))
+            .expect("alpha package should exist");
+        let mut alpha_datafiles = alpha.datafile_paths.clone();
+        alpha_datafiles.sort();
+        assert_eq!(
+            alpha_datafiles,
+            vec!["dir/alpha-a.pom".to_string(), "dir/alpha-b.pom".to_string()],
+            "both duplicate-GAV datafiles must attach to the merged package"
+        );
+
+        // No scanned `.pom` is left orphaned.
+        for file in &files {
+            assert!(
+                !file.for_packages.is_empty(),
+                "file {} should belong to a package",
+                file.path
+            );
+        }
+    }
+
     fn create_test_dependency(
         purl: &str,
         extracted_requirement: Option<&str>,

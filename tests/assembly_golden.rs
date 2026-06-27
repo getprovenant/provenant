@@ -544,6 +544,17 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_maven_distinct_gav_poms() {
+        match run_assembly_golden_test("maven-distinct-gav-poms") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for maven-distinct-gav-poms: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
     fn test_assembly_deno_basic() {
         match run_assembly_golden_test("deno-basic") {
             Ok(_) => (),
