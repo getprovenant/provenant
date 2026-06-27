@@ -1010,7 +1010,7 @@ pub(super) enum UnassembledReason {
     DependenciesOnlyNoIdentity,
 }
 
-pub static UNASSEMBLED_DATASOURCE_IDS: &[(DatasourceId, UnassembledReason)] = &[
+pub(super) static UNASSEMBLED_DATASOURCE_IDS: &[(DatasourceId, UnassembledReason)] = &[
     (DatasourceId::Readme, UnassembledReason::NotAPackage),
     (DatasourceId::EtcOsRelease, UnassembledReason::NotAPackage),
     (
