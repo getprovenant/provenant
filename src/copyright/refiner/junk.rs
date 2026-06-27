@@ -73,6 +73,23 @@ pub(crate) fn looks_like_bpe_merges_table(content: &str) -> bool {
     sampled > 0
 }
 
+/// Return true if `content` is a Hugging Face `tokenizers` `tokenizer.json`
+/// model file carrying a Byte-Pair-Encoding merges table.
+///
+/// Unlike `merges.txt`, this format has no `#version:` header: it is a single
+/// JSON document whose `"model"` embeds a `"vocab"` map and a `"merges"` array of
+/// space-separated token pairs (often with `©`/mojibake bytes such as
+/// `"pok Ã©"`), none of which is a genuine copyright notice. Requiring all three
+/// quoted JSON markers — `"merges"`, `"vocab"`, and the `"BPE"` model type — in a
+/// `{`-led document keeps the signature specific to tokenizer model files and
+/// away from ordinary JSON or prose that merely mentions those words.
+pub(crate) fn looks_like_hf_tokenizer_json(content: &str) -> bool {
+    content.trim_start().starts_with('{')
+        && content.contains("\"merges\"")
+        && content.contains("\"vocab\"")
+        && content.contains("\"BPE\"")
+}
+
 /// Return true if `s` matches any known junk copyright pattern.
 pub fn is_junk_copyright(s: &str) -> bool {
     if looks_like_structured_copyright_notice_with_year(s) {

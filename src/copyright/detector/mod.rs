@@ -26,9 +26,9 @@ use super::detector_input_normalization::{
 use super::lexer::get_tokens;
 use super::line_tracking::{LineNumberIndex, PreparedLineCache};
 use super::parser::{parse, parse_with_deadline};
-use super::refiner::looks_like_bpe_merges_table;
 #[cfg(test)]
 use super::refiner::refine_copyright;
+use super::refiner::{looks_like_bpe_merges_table, looks_like_hf_tokenizer_json};
 use super::types::{
     AuthorDetection, CopyrightDetection, HolderDetection, ParseNode, PosTag, TreeLabel,
 };
@@ -226,9 +226,10 @@ pub fn detect_copyrights_from_text_with_deadline(
         return (copyrights, holders, authors);
     }
 
-    // BPE tokenizer merge tables (e.g. `merges.txt`) embed the `©` symbol and
-    // mojibake byte pairs as merge rules but carry no genuine copyright notice.
-    if looks_like_bpe_merges_table(content) {
+    // BPE tokenizer merge tables embed the `©` symbol and mojibake byte pairs as
+    // merge rules but carry no genuine copyright notice — whether a standalone
+    // `merges.txt` or the merges array inside a Hugging Face `tokenizer.json`.
+    if looks_like_bpe_merges_table(content) || looks_like_hf_tokenizer_json(content) {
         return (copyrights, holders, authors);
     }
 

@@ -527,6 +527,24 @@ fn test_looks_like_bpe_merges_table_rejects_ordinary_text() {
     assert!(!looks_like_bpe_merges_table("i n\nt h\n"));
 }
 
+#[test]
+fn test_looks_like_hf_tokenizer_json() {
+    let tokenizer = r#"{"version":"1.0","model":{"type":"BPE","vocab":{"©":102},"merges":["pok Ã©","mari e","Â ©"]}}"#;
+    assert!(looks_like_hf_tokenizer_json(tokenizer));
+}
+
+#[test]
+fn test_looks_like_hf_tokenizer_json_rejects_ordinary_json_and_prose() {
+    // Prose mentioning the words is not the structured tokenizer file.
+    assert!(!looks_like_hf_tokenizer_json(
+        "The BPE tokenizer stores its merges and vocab in a JSON file."
+    ));
+    // A config.json without the BPE/merges/vocab markers is not skipped.
+    assert!(!looks_like_hf_tokenizer_json(
+        r#"{"name":"clip","license":"mit","architectures":["CLIPModel"]}"#
+    ));
+}
+
 // ── is_junk_copyright ────────────────────────────────────────────
 
 #[test]
