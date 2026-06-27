@@ -3800,10 +3800,14 @@ mod tests {
     }
 
     #[test]
-    fn test_assemble_python_pip_cache_skips_mismatched_second_wheel() {
+    fn test_assemble_python_distinct_wheels_in_one_dir_stay_separate_packages() {
+        // A wheelhouse-style directory holding several distinct wheels yields one
+        // package per identity. The `construct` wheel and its same-identity
+        // `origin.json` merge into one package; the distinct `otherpkg` wheel
+        // surfaces as its own package rather than being dropped.
         let mut files = vec![
             create_test_file_info(
-                ".cache/pip/wheels/eb/60/37/hash/construct-2.10.68-py3-none-any.whl",
+                "wheelhouse/construct-2.10.68-py3-none-any.whl",
                 DatasourceId::PypiWheel,
                 Some("pkg:pypi/construct@2.10.68?extension=py3-none-any"),
                 Some("construct"),
@@ -3811,7 +3815,7 @@ mod tests {
                 vec![],
             ),
             create_test_file_info(
-                ".cache/pip/wheels/eb/60/37/hash/origin.json",
+                "wheelhouse/origin.json",
                 DatasourceId::PypiPipOriginJson,
                 Some("pkg:pypi/construct@2.10.68?extension=py3-none-any"),
                 Some("construct"),
@@ -3819,7 +3823,7 @@ mod tests {
                 vec![],
             ),
             create_test_file_info(
-                ".cache/pip/wheels/eb/60/37/hash/otherpkg-9.9.9-py3-none-any.whl",
+                "wheelhouse/otherpkg-9.9.9-py3-none-any.whl",
                 DatasourceId::PypiWheel,
                 Some("pkg:pypi/otherpkg@9.9.9?extension=py3-none-any"),
                 Some("otherpkg"),
@@ -3828,27 +3832,24 @@ mod tests {
             ),
         ];
 
-        files[1].package_data[0].download_url = Some(
-            "https://files.pythonhosted.org/packages/source/c/construct/construct-2.10.68.tar.gz"
-                .to_string(),
-        );
-
         let result = assemble(&mut files);
 
-        assert_eq!(result.packages.len(), 1);
-        let package = &result.packages[0];
-        assert_eq!(package.name.as_deref(), Some("construct"));
-        assert_eq!(package.version.as_deref(), Some("2.10.68"));
-        assert_eq!(package.datafile_paths.len(), 2);
-        assert!(
-            package
-                .datafile_paths
-                .iter()
-                .all(|path| !path.contains("otherpkg"))
-        );
-        assert!(files[0].for_packages.contains(&package.package_uid));
-        assert!(files[1].for_packages.contains(&package.package_uid));
-        assert!(files[2].for_packages.is_empty());
+        assert_eq!(result.packages.len(), 2, "packages: {:#?}", result.packages);
+        let construct = result
+            .packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("construct"))
+            .expect("construct package should be present");
+        assert_eq!(construct.datafile_paths.len(), 2);
+        let otherpkg = result
+            .packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("otherpkg"))
+            .expect("distinct otherpkg wheel should surface as its own package");
+
+        assert!(files[0].for_packages.contains(&construct.package_uid));
+        assert!(files[1].for_packages.contains(&construct.package_uid));
+        assert!(files[2].for_packages.contains(&otherpkg.package_uid));
     }
 
     #[test]

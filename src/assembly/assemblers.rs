@@ -539,7 +539,11 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PypiWheel, DatasourceId::PypiPipOriginJson],
         sibling_file_patterns: &["*.whl", "origin.json"],
-        mode: AssemblyMode::SiblingMerge,
+        // A wheelhouse (`pip download -d wheelhouse/`) holds many distinct wheels
+        // in one directory, each a distinct `pkg:pypi/<name>@<v>` identity, so one
+        // package per identity. A pip-cache leaf directory (one wheel plus its
+        // `origin.json`, sharing the wheel's identity) falls back to one package.
+        mode: AssemblyMode::SiblingMergePerIdentity,
     },
     // Python/PyPI ecosystem
     AssemblerConfig {
