@@ -638,4 +638,43 @@ snapshots:
                 .any(|pkg_data| { pkg_data.datasource_id == Some(DatasourceId::YarnPnpCjs) })
         );
     }
+
+    #[test]
+    fn test_npm_resolutions_overrides_hoist_as_pinned_dependencies() {
+        let (_files, result) =
+            scan_and_assemble(Path::new("testdata/npm/resolutions-overrides-scan"));
+
+        // Yarn resolutions and npm overrides surface as top-level dependencies,
+        // distinctly scoped so consumers can tell them apart from declared deps.
+        assert_dependency_present(&result.dependencies, "pkg:npm/lodash", "package.json");
+        assert_dependency_present(&result.dependencies, "pkg:npm/typescript", "package.json");
+        assert_dependency_present(&result.dependencies, "pkg:npm/minimist", "package.json");
+
+        let find = |purl: &str| {
+            result
+                .dependencies
+                .iter()
+                .find(|dep| dep.purl.as_deref() == Some(purl))
+                .unwrap_or_else(|| panic!("expected dependency {purl}"))
+        };
+
+        let resolution = find("pkg:npm/typescript");
+        assert_eq!(resolution.scope.as_deref(), Some("resolutions"));
+        assert_eq!(resolution.is_pinned, Some(true));
+        assert_eq!(resolution.is_runtime, None);
+        assert_eq!(resolution.is_optional, None);
+        assert_eq!(resolution.is_direct, None);
+
+        let r#override = find("pkg:npm/minimist");
+        assert_eq!(r#override.scope.as_deref(), Some("overrides"));
+        assert_eq!(r#override.is_pinned, Some(true));
+        assert_eq!(r#override.is_runtime, None);
+        assert_eq!(r#override.is_optional, None);
+        assert_eq!(r#override.is_direct, None);
+
+        // Declared dependencies keep their existing intent semantics.
+        let declared = find("pkg:npm/lodash");
+        assert_eq!(declared.scope.as_deref(), Some("dependencies"));
+        assert_eq!(declared.is_runtime, Some(true));
+    }
 }

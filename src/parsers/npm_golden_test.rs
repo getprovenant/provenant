@@ -135,6 +135,20 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_resolutions_overrides() {
+        let test_file = PathBuf::from("testdata/npm-golden/resolutions_overrides/package.json");
+        let expected_file =
+            PathBuf::from("testdata/npm-golden/resolutions_overrides/package.json.expected");
+
+        let package_data = NpmParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
+
+    #[test]
     fn test_golden_dist() {
         let test_file = PathBuf::from("testdata/npm-golden/dist/package.json");
         let expected_file = PathBuf::from("testdata/npm-golden/dist/package.json.expected");

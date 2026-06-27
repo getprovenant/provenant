@@ -1,0 +1,169 @@
+[
+  {
+    "type": "npm",
+    "namespace": "@example",
+    "name": "resolutions-overrides",
+    "version": "1.0.0",
+    "qualifiers": {},
+    "subpath": null,
+    "primary_language": "JavaScript",
+    "description": null,
+    "release_date": null,
+    "parties": [],
+    "keywords": [],
+    "homepage_url": null,
+    "download_url": "https://registry.npmjs.org/@example/resolutions-overrides/-/resolutions-overrides-1.0.0.tgz",
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
+    "code_view_url": null,
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": "mit",
+    "declared_license_expression_spdx": "MIT",
+    "license_detections": [
+      {
+        "license_expression": "mit",
+        "license_expression_spdx": "MIT",
+        "matches": [
+          {
+            "license_expression": "mit",
+            "license_expression_spdx": "MIT",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "parser-declared-license",
+            "rule_url": null,
+            "matched_text": "MIT"
+          }
+        ],
+        "identifier": null
+      }
+    ],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": "- MIT\n",
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {},
+    "dependencies": [
+      {
+        "purl": "pkg:npm/lodash",
+        "extracted_requirement": "^4.17.0",
+        "scope": "dependencies",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/typescript",
+        "extracted_requirement": "^5.0.0",
+        "scope": "resolutions",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/%40babel/core",
+        "extracted_requirement": "^7.20.0",
+        "scope": "resolutions",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/%40scope/pkg",
+        "extracted_requirement": "^1.1.1",
+        "scope": "resolutions",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/string-left-pad",
+        "extracted_requirement": "npm:string-left-pad@^2.0.0",
+        "scope": "resolutions",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/minimist",
+        "extracted_requirement": "1.2.6",
+        "scope": "overrides",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/react-scripts",
+        "extracted_requirement": "5.0.1",
+        "scope": "overrides",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/webpack",
+        "extracted_requirement": "5.74.0",
+        "scope": "overrides",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      },
+      {
+        "purl": "pkg:npm/%40scope/other",
+        "extracted_requirement": "1.2.3",
+        "scope": "overrides",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": true,
+        "is_direct": null,
+        "resolved_package": null,
+        "extra_data": {}
+      }
+    ],
+    "repository_homepage_url": "https://www.npmjs.com/package/@example/resolutions-overrides",
+    "repository_download_url": "https://registry.npmjs.org/@example/resolutions-overrides/-/resolutions-overrides-1.0.0.tgz",
+    "api_data_url": "https://registry.npmjs.org/@example%2fresolutions-overrides/1.0.0",
+    "datasource_id": "npm_package_json",
+    "purl": "pkg:npm/%40example/resolutions-overrides@1.0.0"
+  }
+]
