@@ -17,7 +17,9 @@ use crate::models::{
     DatasourceId, FileInfo, FileType, LicenseDetection, Match, Package, PackageData, PackageUid,
     TopLevelLicenseDetection,
 };
-use crate::utils::spdx::combine_license_expressions;
+use crate::utils::spdx::{
+    combine_license_expressions, combine_license_expressions_preserving_structure,
+};
 
 use super::classification::is_legal_file;
 use super::package_file_index::PackageFileIndex;
@@ -1087,7 +1089,12 @@ fn adopt_license_file_from_origin_manifest(
         let Some(declared) = declared else {
             continue;
         };
-        let declared_spdx = combine_license_expressions(
+        // Render the SPDX field with the same operator-preserving combination used for
+        // the key `declared` expression (and for a file's own combined expression in
+        // `FileInfo`), so a referenced `LICENSE.txt` whose expression is `a OR b` cannot
+        // emit `declared_license_expression: a OR b` alongside a contradictory
+        // `declared_license_expression_spdx: A AND B`.
+        let declared_spdx = combine_license_expressions_preserving_structure(
             referenced_file
                 .license_detections
                 .iter()
@@ -2187,6 +2194,11 @@ mod tests {
             Some("apache-2.0 AND ofl-1.1"),
             "the full compound expression from the manifest-referenced LICENSE.txt is adopted verbatim"
         );
+        assert_eq!(
+            pkg.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 AND OFL-1.1"),
+            "the SPDX field mirrors the adopted key expression's structure"
+        );
         assert_eq!(pkg.license_detections.len(), 2);
         assert!(
             pkg.license_detections.iter().all(|detection| detection
@@ -2194,6 +2206,50 @@ mod tests {
                 .iter()
                 .all(|m| m.from_file.as_deref() == Some("superset/LICENSE.txt"))),
             "adopted detections retain the referenced legal file as their from_file provenance"
+        );
+    }
+
+    #[test]
+    fn adopted_spdx_preserves_or_structure_of_referenced_license_file() {
+        // Regression guard (review P1): a manifest-referenced LICENSE.txt whose
+        // expression is a choice (`a OR b`) must not emit a contradictory AND-joined
+        // SPDX field. The key and SPDX declared fields must share operator structure.
+        let manifest = pyproject_with_license_file(
+            "proj/pyproject.toml",
+            Some("pkg:pypi/apache-superset@4.0.0"),
+            "LICENSE.txt",
+        );
+        let mut legal = file("proj/LICENSE.txt");
+        legal.license_detections = vec![detection(
+            "mit OR apache-2.0",
+            "MIT OR Apache-2.0",
+            "proj/LICENSE.txt",
+        )];
+        legal.detected_license_expression = Some("mit OR apache-2.0".to_string());
+
+        let mut pkg = multi_datafile_superset_package();
+        pkg.datafile_paths = vec![
+            "proj/pyproject.toml".to_string(),
+            "proj/requirements/base.txt".to_string(),
+        ];
+
+        let mut files = vec![
+            manifest,
+            legal,
+            requirements_file("proj/requirements/base.txt"),
+        ];
+        let mut packages = vec![pkg];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        let pkg = &packages[0];
+        assert_eq!(
+            pkg.declared_license_expression.as_deref(),
+            Some("mit OR apache-2.0")
+        );
+        assert_eq!(
+            pkg.declared_license_expression_spdx.as_deref(),
+            Some("MIT OR Apache-2.0"),
+            "SPDX must preserve the OR choice, not collapse to `MIT AND Apache-2.0`"
         );
     }
 
