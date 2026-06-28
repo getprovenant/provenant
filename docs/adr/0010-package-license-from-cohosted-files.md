@@ -98,10 +98,13 @@ guards:
   the `for_packages` association that copyright/holder promotion relies on, because
   that link is only populated by ecosystem-specific resource-assign passes and is
   empty for exactly the formats this pass targets (Go, autotools, Swift, Bazel).
-- **Single unambiguous result**: promote only when the co-located legal files
-  resolve to exactly one distinct declared expression; abstain on conflicting
-  results (e.g. dual `LICENSE-APACHE` + `LICENSE-MIT`) rather than guessing an
-  `AND`/`OR` combination.
+- **Single legal file, or agreeing files**: promote when all the promoted
+  detections originate from a _single_ legal file, or when _multiple_ legal files
+  resolve to one shared expression. Abstain only when _multiple separate_ legal
+  files resolve to _differing_ expressions (e.g. dual `LICENSE-APACHE` +
+  `LICENSE-MIT`) rather than guessing an `AND`/`OR` combination. See
+  [Single legal file with a compound license vs. multiple disagreeing files](#single-legal-file-with-a-compound-license-vs-multiple-disagreeing-files)
+  for why a single compound file is promoted but disagreeing separate files are not.
 - **Preserve provenance**: the promoted `license_detections` retain each match's
   `from_file`, so output consumers can distinguish a co-hosted-file-derived license
   from a manifest-declared one.
@@ -125,6 +128,13 @@ parsers.
   `each_package_gets_its_own_colocated_license`, `skips_directory_hosting_multiple_packages`,
   `abstains_when_colocated_legal_files_disagree`) plus an end-to-end `create_output`
   wiring test.
+- ✅ Single-file compound-license coverage: `promotes_single_file_compound_license`
+  (one `LICENSE` → canonical `bsl-1.1 AND mpl-2.0`),
+  `promotes_single_file_alternative_license_without_forcing_and` (an `OR`-shaped file
+  keeps its `OR`), `abstains_when_multiple_files_disagree_even_with_provenance` (dual
+  `LICENSE-APACHE`/`LICENSE-MIT` still abstains), and `promotes_when_multiple_files_agree`
+  (separate agreeing files still promote), plus the end-to-end
+  `create_output_promotes_single_file_compound_license_from_cohosted_legal_file`.
 
 ### Scope note: assembled packages only, not file-level `package_data`
 
@@ -145,6 +155,47 @@ Promoting onto file-level `package_data` (and onto identity-less manifest files
 like the spectator case) is a larger, higher-false-positive expansion left out of
 scope. This pass targets the authoritative, higher-value surface: a package that
 **is** assembled (Go modules, autotools, Swift, Bazel) but declares no license.
+
+### Single legal file with a compound license vs. multiple disagreeing files
+
+The "abstain on ambiguity" guard above must distinguish two cases that both surface
+as _more than one distinct license expression_ among the co-located detections:
+
+1. **One legal file carrying a compound license.** A single `LICENSE` can
+   legitimately declare more than one license — e.g. `hashicorp/terraform`'s
+   repo-root `LICENSE` detects both `mpl-2.0` and `bsl-1.1`, producing two
+   `license_detections` from one file. This is not ambiguity: the file's own
+   `detected_license_expression` (`bsl-1.1 AND mpl-2.0`) is the authoritative combined
+   form, and ScanCode attaches exactly that to the package. The promotion pass
+   therefore adopts that file's own combined expression for the package. It is
+   **adopted as-is, not re-combined under a forced `AND`** — only normalized for
+   canonical operand ordering — so a single file whose own expression is an `OR`
+   (`apache-2.0 OR mit`) is promoted as that `OR`, never silently tightened into an
+   `AND`.
+2. **Multiple separate legal files that disagree.** A directory containing
+   `LICENSE-APACHE` (`apache-2.0`) _and_ `LICENSE-MIT` (`mit`) is genuinely
+   ambiguous — the package is dual-licensed and the choice (`AND` vs. `OR`) is not
+   recoverable from the files alone. The pass keeps abstaining here.
+
+The two are told apart by **detection provenance**: every detection's
+`matches[].from_file` records the legal file it came from, so the pass groups the
+co-located detections by their source legal file. If they all come from a single
+source file, that file's own `detected_license_expression` is promoted verbatim (case
+1). If they come from multiple source files, the pass promotes only when those files
+resolve to one shared expression and otherwise abstains (case 2). This **does not
+reopen** the dual-license-ambiguity abstention: the anti-ambiguity guard now keys on
+_how many distinct legal files disagree_, not on _how many detections a single file
+produced_, so the `LICENSE-APACHE` + `LICENSE-MIT` case is unchanged while a single
+compound `LICENSE` is no longer wrongly abstained on.
+
+Every other ADR 0010 guard is preserved unchanged: genuine-absence trigger,
+`is_legal_file` source only, same-directory + sole-package scope, retained
+`from_file` provenance, and skipping resolved-dependency records.
+
+As with every assembled-package promotion under this ADR, the contributing
+`go.mod`/`go.sum` file-level `package_data` entries stay `null` by design (see
+[Scope note](#scope-note-assembled-packages-only-not-file-level-package_data)); only
+the assembled `pkg:golang/.../terraform` package gains `bsl-1.1 AND mpl-2.0`.
 
 ## Consequences
 
@@ -174,9 +225,12 @@ scope. This pass targets the authoritative, higher-value surface: a package that
   already declare a license are untouched; the assembly, post-processing,
   output-format, scanner-integration, and license-detection golden suites all pass
   unchanged.
-- **Conservative on dual-license dirs**: a directory with `LICENSE-APACHE` +
-  `LICENSE-MIT` is intentionally left unset rather than guessing `OR`/`AND`;
-  recovering those is future work.
+- **Conservative on dual-license dirs**: a directory with _separate_ `LICENSE-APACHE`
+  - `LICENSE-MIT` files is intentionally left unset rather than guessing `OR`/`AND`;
+    recovering those is future work. A _single_ legal file carrying a compound license
+    (e.g. `mpl-2.0 AND bsl-1.1`) is **not** this case and is promoted as its own
+    `AND`-combination — see
+    [Single legal file with a compound license vs. multiple disagreeing files](#single-legal-file-with-a-compound-license-vs-multiple-disagreeing-files).
 
 ## Alternatives Considered
 
