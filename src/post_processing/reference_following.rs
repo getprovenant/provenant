@@ -14,10 +14,12 @@ use crate::license_detection::detection::{
 use crate::license_detection::expression::parse_expression;
 use crate::license_detection::models::RuleId;
 use crate::models::{
-    DatasourceId, FileInfo, FileType, LicenseDetection, Match, Package, PackageUid,
+    DatasourceId, FileInfo, FileType, LicenseDetection, Match, Package, PackageData, PackageUid,
     TopLevelLicenseDetection,
 };
-use crate::utils::spdx::combine_license_expressions;
+use crate::utils::spdx::{
+    combine_license_expressions, combine_license_expressions_preserving_structure,
+};
 
 use super::classification::is_legal_file;
 use super::package_file_index::PackageFileIndex;
@@ -983,9 +985,155 @@ fn sync_packages_from_followed_package_data(
                 break;
             }
         }
+
+        if adopt_license_file_from_origin_manifest(package, files, &package_data_by_path) {
+            modified = true;
+        }
     }
 
     modified
+}
+
+/// Multi-datafile analog of the single-datafile manifest-adopt branch above.
+///
+/// A PyPI (and similar) package assembled from several datafiles — e.g.
+/// `pyproject.toml` + `requirements/*.{in,txt}` + `setup.py` — can declare no
+/// inline license while its origin manifest records a `license_file` reference
+/// (PEP 621 `license = { file = "LICENSE.txt" }`). The single-datafile branch
+/// never fires for such a package, so this step resolves that manifest-declared
+/// pointer onto the assembled package's declared license.
+///
+/// This is reference-following enrichment (ADR 0002's sanctioned post-assembly
+/// stage), NOT a parser backfill and NOT the co-hosted-legal-file promotion of
+/// ADR 0010: it follows ONLY a reference the origin manifest itself declares,
+/// never an arbitrary co-located sibling, and never stamps file-level
+/// `package_data`.
+///
+/// Guards (all required):
+/// - Genuine absence: the package still has no declared license after the normal
+///   sync, and is assembled from more than one datafile.
+/// - Origin/identity manifest only: the `license_file` is read from the datafile
+///   whose `package_data` carries THIS package's identity (matching purl, or
+///   name+version when both purls are absent), never from a coordinate-less
+///   dependency-list datafile such as `requirements/*` (whose `purl` is `None`).
+///   This prevents the #1077-style smear of an unrelated file's detection.
+/// - Manifest-referenced file only: the referenced file must resolve to a real
+///   scanned file that `is_legal_file` accepts and that carries license
+///   detections of its own.
+///
+/// The full `detected_license_expression` of the referenced legal file is adopted
+/// verbatim, including a compound `apache-2.0 AND ofl-1.1` when the file genuinely
+/// bundles both. This is an intentional divergence from ScanCode (which reports
+/// only `apache-2.0`): both licenses are really present, so the complete
+/// expression is the most accurate declared license.
+fn adopt_license_file_from_origin_manifest(
+    package: &mut Package,
+    files: &[FileInfo],
+    package_data_by_path: &HashMap<&str, &[PackageData]>,
+) -> bool {
+    if package.datafile_paths.len() <= 1
+        || package.declared_license_expression.is_some()
+        || package.declared_license_expression_spdx.is_some()
+    {
+        return false;
+    }
+
+    let files_by_path: HashMap<&str, &FileInfo> = files
+        .iter()
+        .map(|file| (file.path.as_str(), file))
+        .collect();
+
+    for datafile_path in &package.datafile_paths {
+        let Some(package_datas) = package_data_by_path.get(datafile_path.as_str()) else {
+            continue;
+        };
+        let Some(identity_package_data) = package_datas
+            .iter()
+            .find(|package_data| package_data_bears_identity(package_data, package))
+        else {
+            continue;
+        };
+
+        let Some(license_file_ref) = identity_package_data
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("license_file"))
+            .and_then(serde_json::Value::as_str)
+            .filter(|reference| !reference.trim().is_empty())
+        else {
+            continue;
+        };
+
+        let resolved_path = join_reference_candidate(
+            &parent_directory(datafile_path),
+            &normalize_referenced_filename(license_file_ref),
+        );
+
+        let Some(referenced_file) =
+            files_by_path
+                .get(resolved_path.as_str())
+                .copied()
+                .filter(|file| {
+                    file.file_type == FileType::File
+                        && is_legal_file(file)
+                        && !file.license_detections.is_empty()
+                })
+        else {
+            continue;
+        };
+
+        // Derive the key and SPDX declared expressions from the SAME detection set with
+        // the SAME operator-preserving combiner, so they are guaranteed to be parallel
+        // renderings of one expression (identical AND/OR/WITH structure and operands)
+        // rather than two independently-sourced values that can diverge in structure or
+        // content. Each detection contributes its own key/SPDX form; a detection without
+        // an SPDX form falls back to its key so the two fields keep matching operands.
+        let declared = combine_license_expressions_preserving_structure(
+            referenced_file
+                .license_detections
+                .iter()
+                .map(|detection| detection.license_expression.clone()),
+        );
+        let Some(declared) = declared else {
+            continue;
+        };
+        let declared_spdx = combine_license_expressions_preserving_structure(
+            referenced_file.license_detections.iter().map(|detection| {
+                if detection.license_expression_spdx.is_empty() {
+                    detection.license_expression.clone()
+                } else {
+                    detection.license_expression_spdx.clone()
+                }
+            }),
+        );
+
+        let adopted_detections: Vec<_> = referenced_file
+            .license_detections
+            .iter()
+            .cloned()
+            .map(|detection| detection_with_match_source(detection, &referenced_file.path))
+            .collect();
+
+        package.declared_license_expression = Some(declared);
+        package.declared_license_expression_spdx = declared_spdx;
+        package.license_detections = adopted_detections;
+        return true;
+    }
+
+    false
+}
+
+/// True when this file-level `package_data` describes the assembled package's own
+/// identity rather than a coordinate-less dependency list. Prefers a matching
+/// purl; falls back to name+version only when both purls are absent.
+fn package_data_bears_identity(package_data: &PackageData, package: &Package) -> bool {
+    match (package_data.purl.as_ref(), package.purl.as_ref()) {
+        (Some(data_purl), Some(package_purl)) => data_purl == package_purl,
+        (None, None) => {
+            package_data.name == package.name && package_data.version == package.version
+        }
+        _ => false,
+    }
 }
 
 fn apply_reference_following_to_detection(
@@ -1706,7 +1854,7 @@ mod tests {
     use super::{apply_package_reference_following, collect_top_level_license_detections};
     use crate::license_detection::MatcherKind;
     use crate::models::{LineNumber, Match, MatchScore};
-    use crate::post_processing::test_utils::file;
+    use crate::post_processing::test_utils::{file, package};
 
     #[test]
     fn collect_top_level_license_detections_prefers_later_logged_representative() {
@@ -1933,5 +2081,259 @@ mod tests {
         assert_eq!(f.license_detections[0].license_expression, "apache-2.0");
         assert_eq!(f.license_clues.len(), 1);
         assert_eq!(f.detected_license_expression.as_deref(), Some("apache-2.0"));
+    }
+
+    fn detection(expression: &str, spdx: &str, from_file: &str) -> crate::models::LicenseDetection {
+        crate::models::LicenseDetection {
+            license_expression: expression.to_string(),
+            license_expression_spdx: spdx.to_string(),
+            matches: vec![Match {
+                license_expression: expression.to_string(),
+                license_expression_spdx: spdx.to_string(),
+                from_file: Some(from_file.to_string()),
+                start_line: LineNumber::ONE,
+                end_line: LineNumber::new(201).unwrap(),
+                matcher: MatcherKind::Hash,
+                score: MatchScore::MAX,
+                matched_length: Some(1500),
+                match_coverage: Some(100.0),
+                rule_relevance: Some(100),
+                rule_identifier: format!("{expression}.LICENSE"),
+                rule_url: None,
+                matched_text: None,
+                referenced_filenames: None,
+                matched_text_diagnostics: None,
+            }],
+            detection_log: vec![],
+            identifier: format!("{expression}-id"),
+        }
+    }
+
+    /// A `LICENSE.txt` whose content yields a compound `apache-2.0 AND ofl-1.1`
+    /// (Apache-2.0 project text plus a small embedded OFL-1.1 font notice).
+    fn superset_license_file(path: &str) -> crate::models::FileInfo {
+        let mut legal = file(path);
+        legal.license_detections = vec![
+            detection("apache-2.0", "Apache-2.0", path),
+            detection("ofl-1.1", "OFL-1.1", path),
+        ];
+        legal.detected_license_expression = Some("apache-2.0 AND ofl-1.1".to_string());
+        legal
+    }
+
+    fn pyproject_with_license_file(
+        path: &str,
+        purl: Option<&str>,
+        license_file: &str,
+    ) -> crate::models::FileInfo {
+        let mut extra = std::collections::HashMap::new();
+        extra.insert(
+            "license_file".to_string(),
+            serde_json::Value::String(license_file.to_string()),
+        );
+        let mut manifest = file(path);
+        manifest.package_data = vec![crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Pypi),
+            name: Some("apache-superset".to_string()),
+            version: Some("4.0.0".to_string()),
+            purl: purl.map(str::to_string),
+            extra_data: Some(extra),
+            ..Default::default()
+        }];
+        manifest
+    }
+
+    /// A `requirements/*.txt` dependency list: package_data with no purl/identity.
+    fn requirements_file(path: &str) -> crate::models::FileInfo {
+        let mut req = file(path);
+        req.package_data = vec![crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Pypi),
+            name: None,
+            version: None,
+            purl: None,
+            ..Default::default()
+        }];
+        req
+    }
+
+    fn multi_datafile_superset_package() -> crate::models::Package {
+        let mut pkg = package(
+            "pkg:pypi/apache-superset@4.0.0?uuid=1",
+            "superset/pyproject.toml",
+        );
+        pkg.package_type = Some(crate::models::PackageType::Pypi);
+        pkg.name = Some("apache-superset".to_string());
+        pkg.version = Some("4.0.0".to_string());
+        pkg.purl = Some("pkg:pypi/apache-superset@4.0.0".to_string());
+        pkg.declared_license_expression = None;
+        pkg.declared_license_expression_spdx = None;
+        pkg.license_detections = vec![];
+        pkg.datafile_paths = vec![
+            "superset/pyproject.toml".to_string(),
+            "superset/requirements/base.txt".to_string(),
+            "superset/requirements/development.txt".to_string(),
+            "superset/setup.py".to_string(),
+        ];
+        pkg
+    }
+
+    #[test]
+    fn multi_datafile_package_adopts_compound_license_from_origin_manifest_license_file() {
+        let manifest = pyproject_with_license_file(
+            "superset/pyproject.toml",
+            Some("pkg:pypi/apache-superset@4.0.0"),
+            "LICENSE.txt",
+        );
+        let legal = superset_license_file("superset/LICENSE.txt");
+        let base_req = requirements_file("superset/requirements/base.txt");
+        let dev_req = requirements_file("superset/requirements/development.txt");
+        let setup = file("superset/setup.py");
+
+        let mut files = vec![manifest, legal, base_req, dev_req, setup];
+        let mut packages = vec![multi_datafile_superset_package()];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        let pkg = &packages[0];
+        assert_eq!(
+            pkg.declared_license_expression.as_deref(),
+            Some("apache-2.0 AND ofl-1.1"),
+            "the full compound expression from the manifest-referenced LICENSE.txt is adopted verbatim"
+        );
+        assert_eq!(
+            pkg.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 AND OFL-1.1"),
+            "the SPDX field mirrors the adopted key expression's structure"
+        );
+        assert_eq!(pkg.license_detections.len(), 2);
+        assert!(
+            pkg.license_detections.iter().all(|detection| detection
+                .matches
+                .iter()
+                .all(|m| m.from_file.as_deref() == Some("superset/LICENSE.txt"))),
+            "adopted detections retain the referenced legal file as their from_file provenance"
+        );
+    }
+
+    #[test]
+    fn adopted_spdx_preserves_or_structure_of_referenced_license_file() {
+        // Regression guard (review P1): a manifest-referenced LICENSE.txt whose
+        // expression is a choice (`a OR b`) must not emit a contradictory AND-joined
+        // SPDX field. The key and SPDX declared fields must share operator structure.
+        let manifest = pyproject_with_license_file(
+            "proj/pyproject.toml",
+            Some("pkg:pypi/apache-superset@4.0.0"),
+            "LICENSE.txt",
+        );
+        let mut legal = file("proj/LICENSE.txt");
+        legal.license_detections = vec![detection(
+            "mit OR apache-2.0",
+            "MIT OR Apache-2.0",
+            "proj/LICENSE.txt",
+        )];
+        legal.detected_license_expression = Some("mit OR apache-2.0".to_string());
+
+        let mut pkg = multi_datafile_superset_package();
+        pkg.datafile_paths = vec![
+            "proj/pyproject.toml".to_string(),
+            "proj/requirements/base.txt".to_string(),
+        ];
+
+        let mut files = vec![
+            manifest,
+            legal,
+            requirements_file("proj/requirements/base.txt"),
+        ];
+        let mut packages = vec![pkg];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        let pkg = &packages[0];
+        assert_eq!(
+            pkg.declared_license_expression.as_deref(),
+            Some("mit OR apache-2.0")
+        );
+        assert_eq!(
+            pkg.declared_license_expression_spdx.as_deref(),
+            Some("MIT OR Apache-2.0"),
+            "SPDX must preserve the OR choice, not collapse to `MIT AND Apache-2.0`"
+        );
+    }
+
+    #[test]
+    fn license_file_is_not_read_from_purl_less_requirements_datafile() {
+        // The origin pyproject declares no license_file at all; only a purl-less
+        // requirements datafile carries one. It must NOT be followed.
+        let manifest = pyproject_with_license_file(
+            "superset/pyproject.toml",
+            Some("pkg:pypi/apache-superset@4.0.0"),
+            "", // no license_file reference on the identity manifest
+        );
+        let mut smuggled = requirements_file("superset/requirements/base.txt");
+        let mut extra = std::collections::HashMap::new();
+        extra.insert(
+            "license_file".to_string(),
+            serde_json::Value::String("LICENSE.txt".to_string()),
+        );
+        smuggled.package_data[0].extra_data = Some(extra);
+        let legal = superset_license_file("superset/LICENSE.txt");
+
+        let mut files = vec![manifest, smuggled, legal];
+        let mut packages = vec![multi_datafile_superset_package()];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression, None,
+            "a license_file on a coordinate-less dependency-list datafile must never be followed"
+        );
+    }
+
+    #[test]
+    fn package_with_existing_declared_license_is_left_untouched() {
+        let manifest = pyproject_with_license_file(
+            "superset/pyproject.toml",
+            Some("pkg:pypi/apache-superset@4.0.0"),
+            "LICENSE.txt",
+        );
+        let legal = superset_license_file("superset/LICENSE.txt");
+
+        let mut pkg = multi_datafile_superset_package();
+        pkg.declared_license_expression = Some("mit".to_string());
+        pkg.declared_license_expression_spdx = Some("MIT".to_string());
+
+        let mut files = vec![manifest, legal];
+        let mut packages = vec![pkg];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("mit")
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+    }
+
+    #[test]
+    fn single_datafile_package_is_not_affected_by_multi_datafile_step() {
+        // Regression guard: the single-datafile case is owned by the existing
+        // branch; the new multi-datafile step must not fire (datafile_paths == 1).
+        let manifest = pyproject_with_license_file(
+            "superset/pyproject.toml",
+            Some("pkg:pypi/apache-superset@4.0.0"),
+            "LICENSE.txt",
+        );
+        let legal = superset_license_file("superset/LICENSE.txt");
+
+        let mut pkg = multi_datafile_superset_package();
+        pkg.datafile_paths = vec!["superset/pyproject.toml".to_string()];
+
+        let mut files = vec![manifest, legal];
+        let mut packages = vec![pkg];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        // The single-datafile manifest-adopt branch only adopts the manifest
+        // file's OWN file-level detections; the pyproject here has none, so the
+        // package stays null — proving the multi-datafile step did not fire.
+        assert_eq!(packages[0].declared_license_expression, None);
     }
 }
