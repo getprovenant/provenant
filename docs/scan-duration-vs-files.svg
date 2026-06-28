@@ -584,6 +584,9 @@ ScanCode: 476.87s</title></rect>
     <rect x="683.64" y="322.63" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/felix-dev @ 20aee77
 Files: 5356
 ScanCode: 640.75s</title></rect>
+    <rect x="684.52" y="350.65" width="8" height="8" fill="#d97706" rx="1.5"><title>hashicorp/terraform @ e02391a
+Files: 5425
+ScanCode: 354.17s</title></rect>
     <rect x="684.52" y="383.27" width="8" height="8" fill="#d97706" rx="1.5"><title>mesonbuild/meson @ b300d95
 Files: 5425
 ScanCode: 177.55s</title></rect>
@@ -650,6 +653,9 @@ ScanCode: 680.60s</title></rect>
     <rect x="725.29" y="281.69" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/onnxruntime @ 97e0a00
 Files: 9802
 ScanCode: 1524.08s</title></rect>
+    <rect x="726.15" y="290.05" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/superset @ cd8ac41
+Files: 9925
+ScanCode: 1276.89s</title></rect>
     <rect x="726.36" y="321.28" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/maven @ 459de76
 Files: 9955
 ScanCode: 659.41s</title></rect>
@@ -692,6 +698,9 @@ ScanCode: 1155.18s</title></rect>
     <rect x="748.21" y="346.54" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/vcpkg @ b21ff8f
 Files: 13670
 ScanCode: 386.36s</title></rect>
+    <rect x="749.92" y="256.61" width="8" height="8" fill="#d97706" rx="1.5"><title>godotengine/godot @ d7c45b1
+Files: 14013
+ScanCode: 2591.46s</title></rect>
     <rect x="751.78" y="274.80" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/vscode @ 0c1e100
 Files: 14398
 ScanCode: 1763.40s</title></rect>
@@ -1273,6 +1282,9 @@ Provenant: 11.06s</title></circle>
     <circle cx="687.64" cy="476.80" r="4.5" fill="#2563eb"><title>apache/felix-dev @ 20aee77
 Files: 5356
 Provenant: 26.70s</title></circle>
+    <circle cx="688.52" cy="523.39" r="4.5" fill="#2563eb"><title>hashicorp/terraform @ e02391a
+Files: 5425
+Provenant: 9.96s</title></circle>
     <circle cx="688.52" cy="525.87" r="4.5" fill="#2563eb"><title>mesonbuild/meson @ b300d95
 Files: 5425
 Provenant: 9.45s</title></circle>
@@ -1339,6 +1351,9 @@ Provenant: 26.73s</title></circle>
     <circle cx="729.29" cy="459.45" r="4.5" fill="#2563eb"><title>microsoft/onnxruntime @ 97e0a00
 Files: 9802
 Provenant: 38.54s</title></circle>
+    <circle cx="730.15" cy="463.67" r="4.5" fill="#2563eb"><title>apache/superset @ cd8ac41
+Files: 9925
+Provenant: 35.25s</title></circle>
     <circle cx="730.36" cy="465.68" r="4.5" fill="#2563eb"><title>apache/maven @ 459de76
 Files: 9955
 Provenant: 33.78s</title></circle>
@@ -1381,6 +1396,9 @@ Provenant: 33.43s</title></circle>
     <circle cx="752.21" cy="517.22" r="4.5" fill="#2563eb"><title>microsoft/vcpkg @ b21ff8f
 Files: 13670
 Provenant: 11.35s</title></circle>
+    <circle cx="753.92" cy="427.16" r="4.5" fill="#2563eb"><title>godotengine/godot @ d7c45b1
+Files: 14013
+Provenant: 76.33s</title></circle>
     <circle cx="755.78" cy="456.66" r="4.5" fill="#2563eb"><title>microsoft/vscode @ 0c1e100
 Files: 14398
 Provenant: 40.89s</title></circle>
