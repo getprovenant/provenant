@@ -94,13 +94,14 @@ pub(super) fn promote_package_metadata_from_key_files(
 ///   exactly the formats this pass targets — Go, autotools, Swift, Bazel.)
 /// - **Single legal file, or agreeing files**: promoted from a *single* legal file —
 ///   which may legitimately carry a compound license (e.g. a repo-root `LICENSE`
-///   detecting `mpl-2.0 AND bsl-1.1`), adopted via that file's own
-///   `detected_license_expression` (its authoritative combined form, preserving its
-///   `AND`/`OR` structure) — or when *multiple* legal files resolve to one shared
-///   expression. *Multiple* legal files that resolve to *differing* expressions (e.g.
-///   dual `LICENSE-APACHE` + `LICENSE-MIT`) are left unset rather than guessing an
-///   `AND`/`OR` combination. See ADR 0010 "Single legal file with a compound license
-///   vs. multiple disagreeing files".
+///   detecting `mpl-2.0 AND bsl-1.1`) — or when *multiple* legal files resolve to one
+///   shared expression. The promoted expression is built from the file's own
+///   `license_detections` (whose `license_expression`/`_spdx` are reliably key and
+///   SPDX form), not from the file's `detected_license_expression` string, which can
+///   already be SPDX-rendered when this pass runs. *Multiple* legal files that resolve
+///   to *differing* expressions (e.g. dual `LICENSE-APACHE` + `LICENSE-MIT`) are left
+///   unset rather than guessing an `AND`/`OR` combination. See ADR 0010 "Single legal
+///   file with a compound license vs. multiple disagreeing files".
 /// - **Provenance preserved**: the legal file's `license_detections` are copied
 ///   onto the package, keeping each detection's `from_file` so consumers can tell a
 ///   co-hosted-file-derived license from a manifest-declared one.
@@ -157,20 +158,11 @@ pub(super) fn promote_package_declared_license_from_legal_files(
             continue;
         }
 
-        // Distinguish "one legal file carrying a compound license" from "multiple
-        // separate legal files that disagree".
-        //
-        // A single `LICENSE` may legitimately produce several detections (e.g.
-        // `mpl-2.0 AND bsl-1.1`); its own `detected_license_expression` is the
-        // authoritative combined form. It is adopted as-is — only normalized through
-        // the structure-preserving combiner so operands are canonically ordered
-        // (`bsl-1.1 AND mpl-2.0`, matching ScanCode) — never re-combined under a forced
-        // `AND`, so a file whose own expression is an `OR` (`apache-2.0 OR mit`) keeps
-        // its `OR` rather than being silently tightened. Multiple *separate* legal
-        // files that resolve to differing expressions (e.g. dual `LICENSE-APACHE` +
-        // `LICENSE-MIT`) remain ambiguous and are left unset rather than guessed; a
-        // shared expression across several files is unambiguous and is promoted.
-        let Some(declared_expression) = single_declared_expression(&source_legal_files) else {
+        // The legal files' agreed expression carries the authoritative operator
+        // structure — crucially an `OR` choice, which must not be tightened to `AND`.
+        // Abstain when separate legal files disagree (e.g. dual `LICENSE-APACHE` +
+        // `LICENSE-MIT`).
+        let Some(file_expression) = single_declared_expression(&source_legal_files) else {
             continue;
         };
 
@@ -179,20 +171,25 @@ pub(super) fn promote_package_declared_license_from_legal_files(
             .flat_map(|file| file.license_detections.iter())
             .cloned()
             .collect();
-        // Combining the single already-formed expression is a no-op on its operator
-        // (one operand) but applies canonical operand ordering, so terraform's
-        // `mpl-2.0 AND bsl-1.1` becomes `bsl-1.1 AND mpl-2.0` (matching ScanCode) while
-        // an `apache-2.0 OR mit` file keeps its `OR`.
-        let Some(declared_key_expression) = combine_license_expressions([declared_expression])
+
+        // Re-render the agreed expression into key and SPDX forms from the per-detection
+        // key<->SPDX correspondence, preserving its `AND`/`OR`/`WITH` structure, then
+        // canonically order operands to match ScanCode. The file's own
+        // `detected_license_expression` string is NOT trusted verbatim for the key field:
+        // it can be SPDX-rendered when this pass runs, which previously leaked
+        // `BUSL-1.1 AND MPL-2.0` into the key field with a null SPDX field. The SPDX field
+        // is rendered strictly — left unset (never key-form text) if any operand lacks an
+        // SPDX id, e.g. a custom/unmapped license.
+        let (token_to_key, token_to_spdx) = detection_token_maps(&detections);
+        let Some(declared_key_expression) =
+            render_license_expression(&file_expression, &token_to_key, false)
+                .and_then(|key_form| combine_license_expressions([key_form]))
         else {
             continue;
         };
-        // Derive the SPDX field from the *same* expression by swapping each license key
-        // for its SPDX id, so the two fields always carry the same operator structure.
-        // Combining the per-detection SPDX values directly would force an `AND` and
-        // contradict an `OR`-shaped declared expression.
         package.declared_license_expression_spdx =
-            spdx_for_key_expression(&declared_key_expression, &detections);
+            render_license_expression(&file_expression, &token_to_spdx, true)
+                .and_then(|spdx_form| combine_license_expressions([spdx_form]));
         package.declared_license_expression = Some(declared_key_expression);
         package.license_detections = detections;
     }
@@ -219,58 +216,75 @@ fn single_declared_expression(legal_files: &[&FileInfo]) -> Option<String> {
     Some(expression.clone())
 }
 
-/// Renders the SPDX form of a license-key expression by replacing each license-key
-/// token with its SPDX id, leaving the `AND`/`OR`/`WITH` operators and parentheses
-/// untouched so the SPDX field carries the same operator structure as the key form.
-///
-/// The key→SPDX map is built from the promoted detections (both each detection's own
-/// `license_expression`/`_spdx` pair and its per-match pairs). Returns `None` if any
-/// license token cannot be mapped, so the package never gets a half-translated SPDX
-/// expression that disagrees with its key form.
-fn spdx_for_key_expression(
-    key_expression: &str,
+/// Builds case-insensitive token maps from a set of detections: license-key token →
+/// canonical key form, and license-key token → SPDX id. Each detection's
+/// `license_expression` and `license_expression_spdx` share the same operator
+/// structure, so their license tokens align positionally. Both the key and the SPDX
+/// spelling of every token are indexed, so an expression in *either* form resolves.
+fn detection_token_maps(
     detections: &[LicenseDetection],
-) -> Option<String> {
-    let mut key_to_spdx: HashMap<String, String> = HashMap::new();
-    // Pair the license tokens of a key expression with those of its SPDX expression
-    // positionally: a detection's two expressions share the same operator structure, so
-    // a compound `gpl-2.0 WITH classpath-exception-2.0` / `GPL-2.0 WITH
-    // Classpath-exception-2.0` pair yields per-operand mappings, not just the whole
-    // string. This lets the renderer below resolve each individual token.
-    let mut record = |key: &str, spdx: &str| {
-        let key_tokens = license_tokens(key);
-        let spdx_tokens = license_tokens(spdx);
-        if key_tokens.len() != spdx_tokens.len() {
-            return;
-        }
-        for (key_token, spdx_token) in key_tokens.into_iter().zip(spdx_tokens) {
-            if !key_token.is_empty() && !spdx_token.is_empty() {
-                key_to_spdx
-                    .entry(key_token.to_string())
-                    .or_insert_with(|| spdx_token.to_string());
-            }
-        }
-    };
+) -> (HashMap<String, String>, HashMap<String, String>) {
+    let mut token_to_key: HashMap<String, String> = HashMap::new();
+    let mut token_to_spdx: HashMap<String, String> = HashMap::new();
     for detection in detections {
-        record(
-            &detection.license_expression,
-            &detection.license_expression_spdx,
-        );
-        for detection_match in &detection.matches {
-            record(
-                &detection_match.license_expression,
-                &detection_match.license_expression_spdx,
-            );
+        let pairs = std::iter::once((
+            detection.license_expression.as_str(),
+            detection.license_expression_spdx.as_str(),
+        ))
+        .chain(detection.matches.iter().map(|match_item| {
+            (
+                match_item.license_expression.as_str(),
+                match_item.license_expression_spdx.as_str(),
+            )
+        }));
+        for (key_expression, spdx_expression) in pairs {
+            let keys = license_tokens(key_expression);
+            let spdxes = license_tokens(spdx_expression);
+            if keys.len() != spdxes.len() {
+                continue;
+            }
+            for (key, spdx) in keys.into_iter().zip(spdxes) {
+                if key.is_empty() || spdx.is_empty() {
+                    continue;
+                }
+                token_to_key
+                    .entry(key.to_ascii_lowercase())
+                    .or_insert_with(|| key.to_string());
+                token_to_key
+                    .entry(spdx.to_ascii_lowercase())
+                    .or_insert_with(|| key.to_string());
+                token_to_spdx
+                    .entry(key.to_ascii_lowercase())
+                    .or_insert_with(|| spdx.to_string());
+                token_to_spdx
+                    .entry(spdx.to_ascii_lowercase())
+                    .or_insert_with(|| spdx.to_string());
+            }
         }
     }
+    (token_to_key, token_to_spdx)
+}
 
-    let mut rendered = String::with_capacity(key_expression.len());
-    for token in tokenize_license_expression(key_expression) {
+/// Re-renders a license expression by mapping each license-key token (case-insensitively)
+/// through `token_map`, leaving `AND`/`OR`/`WITH` operators and parentheses untouched so
+/// the operator structure is preserved. With `strict`, returns `None` if any license
+/// token is unmapped — so an SPDX rendering that cannot fully resolve yields an absent
+/// field rather than leaking key-form text. Without `strict`, an unmapped token passes
+/// through unchanged.
+fn render_license_expression(
+    expression: &str,
+    token_map: &HashMap<String, String>,
+    strict: bool,
+) -> Option<String> {
+    let mut rendered = String::with_capacity(expression.len());
+    for token in tokenize_license_expression(expression) {
         match token {
             ExpressionToken::Operator(text) => rendered.push_str(text),
-            ExpressionToken::License(key) => {
-                rendered.push_str(key_to_spdx.get(key)?);
-            }
+            ExpressionToken::License(key) => match token_map.get(&key.to_ascii_lowercase()) {
+                Some(mapped) => rendered.push_str(mapped),
+                None if strict => return None,
+                None => rendered.push_str(key),
+            },
         }
     }
     Some(rendered)
@@ -279,7 +293,7 @@ fn spdx_for_key_expression(
 enum ExpressionToken<'a> {
     /// Operators, parentheses, and whitespace — emitted verbatim.
     Operator(&'a str),
-    /// A license-key token to be mapped to its SPDX id.
+    /// A license-key token to be mapped through a token map.
     License(&'a str),
 }
 
@@ -314,9 +328,7 @@ fn is_expression_operator(word: &str) -> bool {
     matches!(word.to_ascii_uppercase().as_str(), "AND" | "OR" | "WITH")
 }
 
-/// The license-key tokens of an expression in order, dropping operators and
-/// punctuation. Used to align a key expression with its SPDX expression operand-by-
-/// operand.
+/// The license-key tokens of an expression in order, dropping operators and punctuation.
 fn license_tokens(expression: &str) -> Vec<&str> {
     tokenize_license_expression(expression)
         .into_iter()
@@ -545,14 +557,88 @@ mod tests {
     }
 
     #[test]
-    fn promotes_single_file_alternative_license_without_forcing_and() {
-        // A single legal file whose own combined expression is an `OR` must be
-        // promoted verbatim, NOT silently tightened into a stricter `AND` by
-        // re-combining its individual detections.
+    fn promotes_key_form_even_when_file_expression_is_spdx() {
+        // Regression guard: a legal file's own `detected_license_expression` can be in
+        // SPDX form when this pass runs, while its detections still carry ScanCode keys.
+        // The promoted key field must be derived from the detections (ScanCode keys),
+        // with a matching SPDX field — never the file's SPDX string in the key field
+        // with a null SPDX field.
+        let files = vec![legal_compound(
+            "proj/LICENSE",
+            "BUSL-1.1 AND MPL-2.0", // file expression already rendered in SPDX form
+            &[("mpl-2.0", "MPL-2.0"), ("bsl-1.1", "BUSL-1.1")],
+        )];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("bsl-1.1 AND mpl-2.0"),
+            "key field must be ScanCode keys from the detections, not the file's SPDX string"
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx.as_deref(),
+            Some("BUSL-1.1 AND MPL-2.0"),
+            "SPDX field must be populated and match the key expression's operands"
+        );
+    }
+
+    #[test]
+    fn preserves_file_level_or_even_with_separate_detections() {
+        // The legal file's own expression is an `OR` choice while its licenses are
+        // present as separate detections. The agreed file-level `OR` must be preserved,
+        // NOT tightened to a stricter `AND` by re-combining the detections.
         let files = vec![legal_compound(
             "proj/LICENSE",
             "apache-2.0 OR mit",
-            &[("mit", "MIT"), ("apache-2.0", "Apache-2.0")],
+            &[("apache-2.0", "Apache-2.0"), ("mit", "MIT")],
+        )];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit"),
+            "a file-level OR must not be turned into AND even when its licenses are separate detections"
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT")
+        );
+    }
+
+    #[test]
+    fn leaves_spdx_unset_when_a_license_has_no_spdx_id() {
+        // A co-hosted legal file with a custom/unmapped license (no SPDX id) must still
+        // get a key-form declared expression, but its SPDX field must be left absent —
+        // never filled with key-form text.
+        let files = vec![legal("proj/LICENSE", "custom-vendor-license", "")];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("custom-vendor-license"),
+            "the key field is still promoted for an unmapped license"
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx, None,
+            "the SPDX field is absent rather than carrying key-form text for an unmapped license"
+        );
+    }
+
+    #[test]
+    fn promotes_single_file_alternative_license_without_forcing_and() {
+        // A legal file whose detection is an `OR` choice must be promoted verbatim,
+        // NOT silently tightened into a stricter `AND`. An `OR` license arises from a
+        // single rule, so it is one detection carrying the `OR` expression.
+        let files = vec![legal(
+            "proj/LICENSE",
+            "apache-2.0 OR mit",
+            "Apache-2.0 OR MIT",
         )];
         let mut packages = vec![pkg("a", "proj/go.mod")];
 
