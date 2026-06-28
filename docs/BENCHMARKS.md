@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 229 of 229 recorded runs, with a **19.1× median speedup** and **19.1× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.6×** on 10k+ file targets.
+> Provenant is faster on 232 of 232 recorded runs, with a **19.2× median speedup** and **19.2× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -128,6 +128,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-17 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `50.99s`; ScanCode `1158.57s`
 - Far broader Python/provider package coverage (`142` vs `1`) and dependency extraction (`7599` vs `1014`) from `uv.lock`, provider `pyproject.toml`, and committed `pnpm-lock.yaml` inputs, plus extra Docker and Helm package visibility, safer URL credential stripping, and cleaner copyright/author normalization across large documentation and kernel-style metadata blocks
+
+##### [apache/superset @ cd8ac41](https://github.com/apache/superset/tree/cd8ac41d169dfeced733b7db47b8146fe4667b3a) — **36.2× faster**
+
+- Files: 9,925
+- Run context: 2026-06-29 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `35.25s`; ScanCode `1276.89s`
+- Far broader Python/JS package and dependency extraction (`37` vs `1` packages, `8219` vs `171` dependencies) from `requirements/*.txt`, root and websocket `pyproject.toml`/`package.json`, `uv.lock`, multiple `yarn.lock`/`package-lock.json`, Docker, `.gitmodules` GitHub Actions, and Helm inputs — including Yarn `resolutions` and npm `overrides` surfaced as `is_pinned` dependencies ScanCode omits — with the assembled `pkg:pypi/apache-superset` package carrying the complete `apache-2.0 AND ofl-1.1` declared license from its `LICENSE.txt` where ScanCode reports only `apache-2.0`, plus rejection of the placeholder and binary-noise emails ScanCode emits such as the templated `GITHUB_ACTOR` actor address, the gettext `LL@li.org` placeholder, and `.parquet` byte-pairs
 
 ##### [astral-sh/uv @ 9581f2b](https://github.com/astral-sh/uv/tree/9581f2b0ea65550a3efe28bd7aabde19d98b39ba) — **28.81× faster**
 
@@ -804,6 +811,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `15.66s`; ScanCode `412.03s`
 - Broader package and dependency extraction from `flake.nix`, `flake.lock`, `Dockerfile`, and `uv.lock`, plus a correct root Go module identity on `go.mod` where ScanCode emits the malformed `pkg:golang/%28` package row, with remaining license deltas confined to generated `assets/go-licenses.json` inventory noise and README author prose
 
+##### [godotengine/godot @ d7c45b1](https://github.com/godotengine/godot/tree/d7c45b19ccf6ddadc73d1c8423cd2848f59de437) — **34.0× faster**
+
+- Files: 14,013
+- Run context: 2026-06-29 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `76.33s`; ScanCode `2591.46s`
+- Broader package and dependency extraction (`17` vs `1` packages, `214` vs `187` dependencies) across the `modules/mono` `.csproj` NuGet manifests ScanCode misses, with cleaner license accounting over the large `thirdparty/` tree: deduplicated, flattened compound expressions on multi-license registries such as `COPYRIGHT.txt`, `thirdparty/libjpeg-turbo/LICENSE.md`, and `glslang/LICENSE.txt` where ScanCode emits deeply nested duplicate groups; the more specific `(riverbank-sip OR gpl-2.0 OR gpl-3.0)` over ScanCode's vague `other-copyleft`; the more complete `info-zip-2009-01 AND zlib` on `minizip/unzip.c` where ScanCode reports only `zlib`; and rejection of ScanCode false positives such as `gpl-2.0 WITH universal-foss-exception-1.0` matched at 12.9% coverage against a BSD "see LICENSE" header and `ngpl` matched inside an ICU `.dat` binary
+
 ##### [goharbor/harbor @ eb944bb](https://github.com/goharbor/harbor/tree/eb944bb199211d6ac76fb207cd2ef1bf33ec0030) — **25.16× faster**
 
 - Files: 3,233
@@ -831,6 +845,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `13.06s`; ScanCode `428.07s`
 - Broader Debian source-package and dependency extraction (`23` vs `19` packages, `18` vs `0` dependencies) from the root multi-binary `debian/control` file plus committed `.dsc` fixtures, with explicit package visibility for `dpkg-dev`, `libdpkg-dev`, and `libdpkg-perl` and one extra top-level Autotools package on `configure.ac`
+
+##### [hashicorp/terraform @ e02391a](https://github.com/hashicorp/terraform/tree/e02391ad384c9c38f1d7f40b853c0d2297348094) — **35.6× faster**
+
+- Files: 5,425
+- Run context: 2026-06-29 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.96s`; ScanCode `354.17s`
+- Cleaner URL extraction that rejects `{account}`-templated host placeholders ScanCode emits as navigable URLs, and author capture that drops the README maintainer prose ScanCode records as a party, on otherwise matched Go module package, dependency, and declared-license coverage — the assembled `pkg:golang/github.com/hashicorp/terraform` resolves the repo-root `LICENSE` to the same `bsl-1.1 AND mpl-2.0` ScanCode reports
 
 ##### [kubernetes/autoscaler @ 9045d28](https://github.com/kubernetes/autoscaler/tree/9045d287a3458d6ea7440c3dcf921806bc994224) — **32.10× faster**
 
