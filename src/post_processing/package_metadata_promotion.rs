@@ -92,9 +92,15 @@ pub(super) fn promote_package_metadata_from_key_files(
 ///   down into nested sub-packages. (`for_packages` is not used here: it is only
 ///   populated by ecosystem-specific resource-assign passes, so it is empty for
 ///   exactly the formats this pass targets — Go, autotools, Swift, Bazel.)
-/// - **Single unambiguous result**: promoted only when the legal files resolve to
-///   exactly one distinct declared expression; conflicting results are left unset
-///   rather than guessing an `AND`/`OR` combination.
+/// - **Single legal file, or agreeing files**: promoted from a *single* legal file —
+///   which may legitimately carry a compound license (e.g. a repo-root `LICENSE`
+///   detecting `mpl-2.0 AND bsl-1.1`), adopted via that file's own
+///   `detected_license_expression` (its authoritative combined form, preserving its
+///   `AND`/`OR` structure) — or when *multiple* legal files resolve to one shared
+///   expression. *Multiple* legal files that resolve to *differing* expressions (e.g.
+///   dual `LICENSE-APACHE` + `LICENSE-MIT`) are left unset rather than guessing an
+///   `AND`/`OR` combination. See ADR 0010 "Single legal file with a compound license
+///   vs. multiple disagreeing files".
 /// - **Provenance preserved**: the legal file's `license_detections` are copied
 ///   onto the package, keeping each detection's `from_file` so consumers can tell a
 ///   co-hosted-file-derived license from a manifest-declared one.
@@ -102,18 +108,18 @@ pub(super) fn promote_package_declared_license_from_legal_files(
     files: &[FileInfo],
     packages: &mut [Package],
 ) {
-    // Detections carried by legal files, grouped by their containing directory.
-    let mut detections_by_dir: HashMap<String, Vec<LicenseDetection>> = HashMap::new();
+    // Legal files (with their detections), grouped by their containing directory.
+    let mut legal_files_by_dir: HashMap<String, Vec<&FileInfo>> = HashMap::new();
     for file in files.iter().filter(|file| is_legal_file(file)) {
         if file.license_detections.is_empty() {
             continue;
         }
-        detections_by_dir
+        legal_files_by_dir
             .entry(parent_dir(&file.path).to_string())
             .or_default()
-            .extend(file.license_detections.iter().cloned());
+            .push(file);
     }
-    if detections_by_dir.is_empty() {
+    if legal_files_by_dir.is_empty() {
         return;
     }
 
@@ -140,37 +146,161 @@ pub(super) fn promote_package_declared_license_from_legal_files(
             continue;
         }
 
-        let detections: Vec<LicenseDetection> = package_anchor_dirs(package)
+        let source_legal_files: Vec<&FileInfo> = package_anchor_dirs(package)
             .into_iter()
             .filter(|dir| packages_per_dir.get(dir).copied() == Some(1))
-            .filter_map(|dir| detections_by_dir.get(&dir))
+            .filter_map(|dir| legal_files_by_dir.get(&dir))
             .flatten()
-            .cloned()
+            .copied()
             .collect();
-        if detections.is_empty() {
+        if source_legal_files.is_empty() {
             continue;
         }
 
-        // Promote only when the legal files agree on a single declared expression.
-        let distinct_expressions = unique(
-            &detections
-                .iter()
-                .map(|detection| detection.license_expression.clone())
-                .collect::<Vec<_>>(),
-        );
-        let [expression] = distinct_expressions.as_slice() else {
+        // Distinguish "one legal file carrying a compound license" from "multiple
+        // separate legal files that disagree".
+        //
+        // A single `LICENSE` may legitimately produce several detections (e.g.
+        // `mpl-2.0 AND bsl-1.1`); its own `detected_license_expression` is the
+        // authoritative combined form. It is adopted as-is — only normalized through
+        // the structure-preserving combiner so operands are canonically ordered
+        // (`bsl-1.1 AND mpl-2.0`, matching ScanCode) — never re-combined under a forced
+        // `AND`, so a file whose own expression is an `OR` (`apache-2.0 OR mit`) keeps
+        // its `OR` rather than being silently tightened. Multiple *separate* legal
+        // files that resolve to differing expressions (e.g. dual `LICENSE-APACHE` +
+        // `LICENSE-MIT`) remain ambiguous and are left unset rather than guessed; a
+        // shared expression across several files is unambiguous and is promoted.
+        let Some(declared_expression) = single_declared_expression(&source_legal_files) else {
             continue;
         };
 
-        package.declared_license_expression = Some(expression.clone());
-        package.declared_license_expression_spdx = combine_license_expressions(
-            detections
-                .iter()
-                .map(|detection| detection.license_expression_spdx.clone())
-                .filter(|spdx| !spdx.is_empty()),
-        );
+        let detections: Vec<LicenseDetection> = source_legal_files
+            .iter()
+            .flat_map(|file| file.license_detections.iter())
+            .cloned()
+            .collect();
+        // Combining the single already-formed expression is a no-op on its operator
+        // (one operand) but applies canonical operand ordering, so terraform's
+        // `mpl-2.0 AND bsl-1.1` becomes `bsl-1.1 AND mpl-2.0` (matching ScanCode) while
+        // an `apache-2.0 OR mit` file keeps its `OR`.
+        let Some(declared_key_expression) = combine_license_expressions([declared_expression])
+        else {
+            continue;
+        };
+        // Derive the SPDX field from the *same* expression by swapping each license key
+        // for its SPDX id, so the two fields always carry the same operator structure.
+        // Combining the per-detection SPDX values directly would force an `AND` and
+        // contradict an `OR`-shaped declared expression.
+        package.declared_license_expression_spdx =
+            spdx_for_key_expression(&declared_key_expression, &detections);
+        package.declared_license_expression = Some(declared_key_expression);
         package.license_detections = detections;
     }
+}
+
+/// The unambiguous declared expression to promote from a package's co-located legal
+/// files, or `None` when the result would be ambiguous.
+///
+/// - A *single* legal file contributes its own `detected_license_expression` verbatim
+///   (the authoritative combined form, preserving its `AND`/`OR` structure rather than
+///   re-combining its detections).
+/// - *Multiple* legal files contribute only when they all resolve to the same
+///   expression; otherwise the directory is genuinely dual-licensed and is left unset.
+fn single_declared_expression(legal_files: &[&FileInfo]) -> Option<String> {
+    let distinct_expressions = unique(
+        &legal_files
+            .iter()
+            .filter_map(|file| file.detected_license_expression.clone())
+            .collect::<Vec<_>>(),
+    );
+    let [expression] = distinct_expressions.as_slice() else {
+        return None;
+    };
+    Some(expression.clone())
+}
+
+/// Renders the SPDX form of a license-key expression by replacing each license-key
+/// token with its SPDX id, leaving the `AND`/`OR`/`WITH` operators and parentheses
+/// untouched so the SPDX field carries the same operator structure as the key form.
+///
+/// The key→SPDX map is built from the promoted detections (both each detection's own
+/// `license_expression`/`_spdx` pair and its per-match pairs). Returns `None` if any
+/// license token cannot be mapped, so the package never gets a half-translated SPDX
+/// expression that disagrees with its key form.
+fn spdx_for_key_expression(
+    key_expression: &str,
+    detections: &[LicenseDetection],
+) -> Option<String> {
+    let mut key_to_spdx: HashMap<String, String> = HashMap::new();
+    let mut record = |key: &str, spdx: &str| {
+        let (key, spdx) = (key.trim(), spdx.trim());
+        if !key.is_empty() && !spdx.is_empty() && !is_expression_operator(key) {
+            key_to_spdx
+                .entry(key.to_string())
+                .or_insert_with(|| spdx.to_string());
+        }
+    };
+    for detection in detections {
+        record(
+            &detection.license_expression,
+            &detection.license_expression_spdx,
+        );
+        for detection_match in &detection.matches {
+            record(
+                &detection_match.license_expression,
+                &detection_match.license_expression_spdx,
+            );
+        }
+    }
+
+    let mut rendered = String::with_capacity(key_expression.len());
+    for token in tokenize_license_expression(key_expression) {
+        match token {
+            ExpressionToken::Operator(text) => rendered.push_str(text),
+            ExpressionToken::License(key) => {
+                rendered.push_str(key_to_spdx.get(key)?);
+            }
+        }
+    }
+    Some(rendered)
+}
+
+enum ExpressionToken<'a> {
+    /// Operators, parentheses, and whitespace — emitted verbatim.
+    Operator(&'a str),
+    /// A license-key token to be mapped to its SPDX id.
+    License(&'a str),
+}
+
+/// Splits a license expression into license-key tokens and the operator/punctuation
+/// runs between them, preserving every character so the input can be reconstructed.
+fn tokenize_license_expression(expression: &str) -> Vec<ExpressionToken<'_>> {
+    let is_license_char = |c: char| c.is_alphanumeric() || matches!(c, '-' | '.' | '_' | '+' | ':');
+    let mut tokens = Vec::new();
+    let mut rest = expression;
+    while !rest.is_empty() {
+        let boundary = rest.find(is_license_char).unwrap_or(rest.len());
+        if boundary > 0 {
+            tokens.push(ExpressionToken::Operator(&rest[..boundary]));
+            rest = &rest[boundary..];
+            continue;
+        }
+        let end = rest
+            .find(|c: char| !is_license_char(c))
+            .unwrap_or(rest.len());
+        let word = &rest[..end];
+        if is_expression_operator(word) {
+            tokens.push(ExpressionToken::Operator(word));
+        } else {
+            tokens.push(ExpressionToken::License(word));
+        }
+        rest = &rest[end..];
+    }
+    tokens
+}
+
+fn is_expression_operator(word: &str) -> bool {
+    matches!(word.to_ascii_uppercase().as_str(), "AND" | "OR" | "WITH")
 }
 
 /// The distinct directories a package is anchored in (the parent directory of each
@@ -186,7 +316,8 @@ fn package_anchor_dirs(package: &Package) -> HashSet<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::PackageData;
+    use crate::license_detection::MatcherKind;
+    use crate::models::{LineNumber, Match, MatchScore, PackageData};
 
     fn package_with_datasources(datasources: &[DatasourceId]) -> Package {
         let mut package =
@@ -195,15 +326,57 @@ mod tests {
         package
     }
 
-    fn legal(path: &str, expression: &str, spdx: &str) -> FileInfo {
-        let mut file = crate::post_processing::test_utils::file(path);
-        file.license_detections = vec![LicenseDetection {
+    /// A match whose `from_file` records the legal file it came from, matching the
+    /// provenance real detections carry (see `FileInfo` license-detection plumbing).
+    fn match_from(from_file: &str, expression: &str, spdx: &str) -> Match {
+        Match {
             license_expression: expression.to_string(),
             license_expression_spdx: spdx.to_string(),
-            matches: Vec::new(),
+            from_file: Some(from_file.to_string()),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::ONE,
+            matcher: MatcherKind::default(),
+            score: MatchScore::MAX,
+            matched_length: Some(1),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: String::new(),
+            rule_url: None,
+            matched_text: None,
+            matched_text_diagnostics: None,
+            referenced_filenames: None,
+        }
+    }
+
+    fn detection(path: &str, expression: &str, spdx: &str) -> LicenseDetection {
+        LicenseDetection {
+            license_expression: expression.to_string(),
+            license_expression_spdx: spdx.to_string(),
+            matches: vec![match_from(path, expression, spdx)],
             detection_log: Vec::new(),
             identifier: String::new(),
-        }];
+        }
+    }
+
+    fn legal(path: &str, expression: &str, spdx: &str) -> FileInfo {
+        let mut file = crate::post_processing::test_utils::file(path);
+        file.license_detections = vec![detection(path, expression, spdx)];
+        file.detected_license_expression = Some(expression.to_string());
+        file
+    }
+
+    /// A single legal file carrying a *compound* license: several detections that all
+    /// originate from the same file. `combined` is the file's own
+    /// `detected_license_expression` (the authoritative combined form, e.g.
+    /// `bsl-1.1 AND mpl-2.0` or `mit OR apache-2.0`), which need not be the
+    /// `AND`-combination of the individual detections.
+    fn legal_compound(path: &str, combined: &str, expressions: &[(&str, &str)]) -> FileInfo {
+        let mut file = crate::post_processing::test_utils::file(path);
+        file.license_detections = expressions
+            .iter()
+            .map(|(expression, spdx)| detection(path, expression, spdx))
+            .collect();
+        file.detected_license_expression = Some(combined.to_string());
         file
     }
 
@@ -316,6 +489,96 @@ mod tests {
         assert_eq!(
             packages[0].declared_license_expression, None,
             "conflicting co-hosted licenses are left unset rather than guessed"
+        );
+    }
+
+    #[test]
+    fn promotes_single_file_compound_license() {
+        // One legal file (terraform's repo-root `LICENSE`) legitimately detects a
+        // compound license. Its own combined expression must be promoted rather than
+        // abstained on as if it were separate disagreeing files.
+        let files = vec![legal_compound(
+            "proj/LICENSE",
+            // The file's own detected expression in detection order; promotion should
+            // canonically reorder it to match ScanCode.
+            "mpl-2.0 AND bsl-1.1",
+            &[("mpl-2.0", "MPL-2.0"), ("bsl-1.1", "BUSL-1.1")],
+        )];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("bsl-1.1 AND mpl-2.0"),
+            "a single legal file's compound license is promoted as its own canonically ordered expression"
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx.as_deref(),
+            Some("BUSL-1.1 AND MPL-2.0")
+        );
+        assert_eq!(packages[0].license_detections.len(), 2);
+    }
+
+    #[test]
+    fn promotes_single_file_alternative_license_without_forcing_and() {
+        // A single legal file whose own combined expression is an `OR` must be
+        // promoted verbatim, NOT silently tightened into a stricter `AND` by
+        // re-combining its individual detections.
+        let files = vec![legal_compound(
+            "proj/LICENSE",
+            "apache-2.0 OR mit",
+            &[("mit", "MIT"), ("apache-2.0", "Apache-2.0")],
+        )];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit"),
+            "an OR-shaped single-file expression must not be turned into an AND"
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT"),
+            "the SPDX field must carry the same OR operator as the key expression"
+        );
+    }
+
+    #[test]
+    fn abstains_when_multiple_files_disagree_even_with_provenance() {
+        // Two *separate* legal files disagreeing remains ambiguous: unlike a single
+        // compound file, their union must not be guessed into an `AND` expression.
+        let files = vec![
+            legal("proj/LICENSE-APACHE", "apache-2.0", "Apache-2.0"),
+            legal("proj/LICENSE-MIT", "mit", "MIT"),
+        ];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression, None,
+            "two disagreeing legal files stay ambiguous even though each match has a from_file"
+        );
+    }
+
+    #[test]
+    fn promotes_when_multiple_files_agree() {
+        // Two separate legal files that resolve to the *same* expression are not
+        // ambiguous, so promotion still proceeds.
+        let files = vec![
+            legal("proj/LICENSE", "apache-2.0", "Apache-2.0"),
+            legal("proj/COPYING", "apache-2.0", "Apache-2.0"),
+        ];
+        let mut packages = vec![pkg("a", "proj/go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("apache-2.0")
         );
     }
 

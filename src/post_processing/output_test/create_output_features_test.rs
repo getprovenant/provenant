@@ -828,3 +828,107 @@ fn create_output_promotes_declared_license_from_cohosted_legal_file() {
         "promoted detection retains its co-hosted LICENSE provenance"
     );
 }
+
+#[test]
+fn create_output_promotes_single_file_compound_license_from_cohosted_legal_file() {
+    // hashicorp/terraform shape: a Go module declaring no license sits next to a
+    // single repo-root LICENSE that detects a compound license (mpl-2.0 AND bsl-1.1).
+    // ADR 0010's pass must adopt the AND-combined expression, not abstain as it would
+    // for two *separate* disagreeing legal files.
+    let license_rel = "module/LICENSE".to_string();
+    let compound_match = |expression: &str, spdx: &str| Match {
+        license_expression: expression.to_string(),
+        license_expression_spdx: spdx.to_string(),
+        from_file: Some(license_rel.clone()),
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+        matcher: MatcherKind::Hash,
+        score: MatchScore::MAX,
+        matched_length: Some(100),
+        match_coverage: Some(100.0),
+        rule_relevance: Some(100),
+        rule_identifier: String::new(),
+        rule_url: None,
+        matched_text: None,
+        referenced_filenames: None,
+        matched_text_diagnostics: None,
+    };
+    let mut license = file(&license_rel);
+    license.detected_license_expression = Some("mpl-2.0 AND bsl-1.1".to_string());
+    license.license_detections = vec![
+        crate::models::LicenseDetection {
+            license_expression: "mpl-2.0".to_string(),
+            license_expression_spdx: "MPL-2.0".to_string(),
+            matches: vec![compound_match("mpl-2.0", "MPL-2.0")],
+            identifier: String::new(),
+            detection_log: vec![],
+        },
+        crate::models::LicenseDetection {
+            license_expression: "bsl-1.1".to_string(),
+            license_expression_spdx: "BUSL-1.1".to_string(),
+            matches: vec![compound_match("bsl-1.1", "BUSL-1.1")],
+            identifier: String::new(),
+            detection_log: vec![],
+        },
+    ];
+
+    let mut package = crate::post_processing::test_utils::package("uid-gomod", "module/go.mod");
+    package.package_type = Some(PackageType::Golang);
+    package.purl = Some("pkg:golang/github.com/hashicorp/terraform".to_string());
+    package.declared_license_expression = None;
+    package.declared_license_expression_spdx = None;
+
+    let start = Utc::now();
+    let end = start;
+    let output = create_output(
+        start,
+        end,
+        crate::scanner::ProcessResult {
+            files: vec![dir("module"), file("module/go.mod"), license],
+            excluded_count: 0,
+        },
+        CreateOutputContext {
+            total_dirs: 1,
+            assembly_result: assembly::AssemblyResult {
+                packages: vec![package],
+                dependencies: vec![],
+            },
+            license_detections: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+            spdx_license_list_version: "3.27".to_string(),
+            license_index_provenance: None,
+            extra_errors: vec![],
+            extra_warnings: vec![],
+            header_options: serde_json::Map::new(),
+            options: CreateOutputOptions {
+                facet_rules: &[],
+                include_classify: false,
+                include_tallies_by_facet: false,
+                include_summary: false,
+                include_license_clarity_score: false,
+                include_tallies: false,
+                include_tallies_with_details: false,
+                include_tallies_of_key_files: false,
+                include_generated: false,
+                verbose: false,
+            },
+        },
+    );
+
+    let package = output.packages.first().expect("package present");
+    assert_eq!(
+        package.declared_license_expression.as_deref(),
+        Some("bsl-1.1 AND mpl-2.0"),
+        "the single LICENSE's compound license is promoted as its AND-combination"
+    );
+    assert_eq!(
+        package.declared_license_expression_spdx.as_deref(),
+        Some("BUSL-1.1 AND MPL-2.0")
+    );
+    assert_eq!(
+        package.license_detections.len(),
+        2,
+        "both compound detections are promoted onto the package"
+    );
+}
