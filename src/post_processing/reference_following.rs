@@ -1082,24 +1082,29 @@ fn adopt_license_file_from_origin_manifest(
             continue;
         };
 
-        let declared = referenced_file
-            .detected_license_expression
-            .clone()
-            .or_else(|| combine_detection_expressions(&referenced_file.license_detections));
-        let Some(declared) = declared else {
-            continue;
-        };
-        // Render the SPDX field with the same operator-preserving combination used for
-        // the key `declared` expression (and for a file's own combined expression in
-        // `FileInfo`), so a referenced `LICENSE.txt` whose expression is `a OR b` cannot
-        // emit `declared_license_expression: a OR b` alongside a contradictory
-        // `declared_license_expression_spdx: A AND B`.
-        let declared_spdx = combine_license_expressions_preserving_structure(
+        // Derive the key and SPDX declared expressions from the SAME detection set with
+        // the SAME operator-preserving combiner, so they are guaranteed to be parallel
+        // renderings of one expression (identical AND/OR/WITH structure and operands)
+        // rather than two independently-sourced values that can diverge in structure or
+        // content. Each detection contributes its own key/SPDX form; a detection without
+        // an SPDX form falls back to its key so the two fields keep matching operands.
+        let declared = combine_license_expressions_preserving_structure(
             referenced_file
                 .license_detections
                 .iter()
-                .filter(|detection| !detection.license_expression_spdx.is_empty())
-                .map(|detection| detection.license_expression_spdx.clone()),
+                .map(|detection| detection.license_expression.clone()),
+        );
+        let Some(declared) = declared else {
+            continue;
+        };
+        let declared_spdx = combine_license_expressions_preserving_structure(
+            referenced_file.license_detections.iter().map(|detection| {
+                if detection.license_expression_spdx.is_empty() {
+                    detection.license_expression.clone()
+                } else {
+                    detection.license_expression_spdx.clone()
+                }
+            }),
         );
 
         let adopted_detections: Vec<_> = referenced_file
