@@ -11,7 +11,7 @@ use crate::utils::path::parent_dir;
 use crate::utils::spdx::combine_license_expressions;
 
 use super::PackageIx;
-use super::classification::is_legal_file;
+use super::classification::{is_legal_file, is_license_family_file};
 use super::license_expression_render::{detection_token_maps, render_license_expression};
 use super::output_indexes::OutputIndexes;
 use super::summary_helpers::unique;
@@ -93,16 +93,26 @@ pub(super) fn promote_package_metadata_from_key_files(
 ///   down into nested sub-packages. (`for_packages` is not used here: it is only
 ///   populated by ecosystem-specific resource-assign passes, so it is empty for
 ///   exactly the formats this pass targets — Go, autotools, Swift, Bazel.)
-/// - **Single legal file, or agreeing files**: promoted from a *single* legal file —
-///   which may legitimately carry a compound license (e.g. a repo-root `LICENSE`
-///   detecting `mpl-2.0 AND bsl-1.1`) — or when *multiple* legal files resolve to one
-///   shared expression. The promoted expression is built from the file's own
-///   `license_detections` (whose `license_expression`/`_spdx` are reliably key and
-///   SPDX form), not from the file's `detected_license_expression` string, which can
-///   already be SPDX-rendered when this pass runs. *Multiple* legal files that resolve
-///   to *differing* expressions (e.g. dual `LICENSE-APACHE` + `LICENSE-MIT`) are left
-///   unset rather than guessing an `AND`/`OR` combination. See ADR 0010 "Single legal
-///   file with a compound license vs. multiple disagreeing files".
+/// - **`LICENSE` over `NOTICE` precedence**: when the co-located legal files
+///   disagree, the canonically-named license file(s) (`LICENSE`/`LICENCE`/`COPYING`
+///   family) take precedence over `NOTICE`/`COPYRIGHT`/`AUTHORS` files, and promotion
+///   runs against that license-family subset. A `NOTICE` commonly lists the licenses
+///   of *bundled third-party* code (e.g. prometheus's `NOTICE` →
+///   `mit AND apache-2.0 AND bsd-new`), which is not the package's own declared
+///   license (its `LICENSE` → `apache-2.0`). The full legal set is used only when no
+///   canonical license file is present, preserving the prior `NOTICE`/`COPYING`-only
+///   behavior. See ADR 0010 "LICENSE-over-NOTICE precedence".
+/// - **Single legal file, or agreeing files**: within the chosen subset, promoted
+///   from a *single* legal file — which may legitimately carry a compound license
+///   (e.g. a repo-root `LICENSE` detecting `mpl-2.0 AND bsl-1.1`) — or when *multiple*
+///   legal files resolve to one shared expression. The promoted expression is built
+///   from the file's own `license_detections` (whose `license_expression`/`_spdx` are
+///   reliably key and SPDX form), not from the file's `detected_license_expression`
+///   string, which can already be SPDX-rendered when this pass runs. *Multiple* legal
+///   files that resolve to *differing* expressions (e.g. dual `LICENSE-APACHE` +
+///   `LICENSE-MIT`) are left unset rather than guessing an `AND`/`OR` combination. See
+///   ADR 0010 "Single legal file with a compound license vs. multiple disagreeing
+///   files".
 /// - **Provenance preserved**: the legal file's `license_detections` are copied
 ///   onto the package, keeping each detection's `from_file` so consumers can tell a
 ///   co-hosted-file-derived license from a manifest-declared one.
@@ -148,22 +158,34 @@ pub(super) fn promote_package_declared_license_from_legal_files(
             continue;
         }
 
-        let source_legal_files: Vec<&FileInfo> = package_anchor_dirs(package)
+        let colocated_legal_files: Vec<&FileInfo> = package_anchor_dirs(package)
             .into_iter()
             .filter(|dir| packages_per_dir.get(dir).copied() == Some(1))
             .filter_map(|dir| legal_files_by_dir.get(&dir))
             .flatten()
             .copied()
             .collect();
-        if source_legal_files.is_empty() {
+        if colocated_legal_files.is_empty() {
             continue;
         }
 
         // The legal files' agreed expression carries the authoritative operator
         // structure — crucially an `OR` choice, which must not be tightened to `AND`.
-        // Abstain when separate legal files disagree (e.g. dual `LICENSE-APACHE` +
-        // `LICENSE-MIT`).
-        let Some(file_expression) = single_declared_expression(&source_legal_files) else {
+        //
+        // When the co-located legal files *disagree*, prefer the canonically-named
+        // license file(s) (`LICENSE`/`LICENCE`/`COPYING` family) over `NOTICE`/
+        // `COPYRIGHT`/`AUTHORS` and resolve against that subset. A `NOTICE` typically
+        // enumerates the licenses of *bundled third-party* code (e.g. prometheus's
+        // `NOTICE` → `mit AND apache-2.0 AND bsd-new`), which must not drive (or block)
+        // the package's own declared license (its `LICENSE` → `apache-2.0`). The
+        // narrowing applies only on disagreement, and only when a canonical license
+        // file is actually present, so an agreeing set (including its `NOTICE`
+        // detections) and a `NOTICE`/`COPYRIGHT`/`AUTHORS`-only directory keep their
+        // prior behavior. A subset that *still* disagrees (e.g. dual `LICENSE-APACHE` +
+        // `LICENSE-MIT`) abstains. See ADR 0010 "LICENSE-over-NOTICE precedence".
+        let Some((source_legal_files, file_expression)) =
+            select_legal_files_and_expression(colocated_legal_files)
+        else {
             continue;
         };
 
@@ -214,6 +236,36 @@ fn single_declared_expression(legal_files: &[&FileInfo]) -> Option<String> {
         return None;
     };
     Some(expression.clone())
+}
+
+/// Chooses the legal files to promote from and their agreed expression, applying the
+/// `LICENSE`-over-`NOTICE` precedence (ADR 0010).
+///
+/// - If the full co-located set already agrees on one expression, it is used as-is
+///   (its `NOTICE`/`COPYRIGHT`/`AUTHORS` detections included).
+/// - If the set disagrees, the canonical `LICENSE`/`LICENCE`/`COPYING` family takes
+///   precedence and the agreement test is re-run on that subset; a subset that still
+///   disagrees (dual `LICENSE-*`) abstains.
+/// - If no canonical license file is present, the full set is kept, so a sole
+///   `NOTICE` (or `COPYRIGHT`/`AUTHORS`) still promotes as before.
+///
+/// Returns `None` (abstain) when the chosen set has no single agreed expression.
+fn select_legal_files_and_expression(
+    colocated_legal_files: Vec<&FileInfo>,
+) -> Option<(Vec<&FileInfo>, String)> {
+    if let Some(expression) = single_declared_expression(&colocated_legal_files) {
+        return Some((colocated_legal_files, expression));
+    }
+    let license_family_files: Vec<&FileInfo> = colocated_legal_files
+        .iter()
+        .copied()
+        .filter(|file| is_license_family_file(file))
+        .collect();
+    if license_family_files.is_empty() {
+        return None;
+    }
+    let expression = single_declared_expression(&license_family_files)?;
+    Some((license_family_files, expression))
 }
 
 /// The distinct directories a package is anchored in (the parent directory of each
@@ -592,6 +644,102 @@ mod tests {
         assert_eq!(
             packages[0].declared_license_expression.as_deref(),
             Some("apache-2.0")
+        );
+    }
+
+    #[test]
+    fn promotes_when_license_and_notice_agree() {
+        // Agreeing-path branch: a `LICENSE` and a `NOTICE` that resolve to the *same*
+        // expression are not ambiguous, so the full set is used as-is (no narrowing)
+        // and both detections are promoted. Guards the `Some(_)` arm of the selection
+        // for a mixed license-family + attribution set.
+        let files = vec![
+            legal("LICENSE", "apache-2.0", "Apache-2.0"),
+            legal("NOTICE", "apache-2.0", "Apache-2.0"),
+        ];
+        let mut packages = vec![pkg("a", "go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("apache-2.0")
+        );
+        assert_eq!(
+            packages[0].license_detections.len(),
+            2,
+            "an agreeing LICENSE+NOTICE set keeps both detections (no narrowing)"
+        );
+    }
+
+    #[test]
+    fn prefers_license_over_disagreeing_notice() {
+        // prometheus shape: the canonical `LICENSE` carries the project's own license
+        // (`apache-2.0`) while `NOTICE` enumerates bundled third-party licenses
+        // (`mit AND apache-2.0 AND bsd-new`). The two disagree; the package's declared
+        // license must come from `LICENSE`, never the bundled-attribution `NOTICE`.
+        let files = vec![
+            legal("LICENSE", "apache-2.0", "Apache-2.0"),
+            legal(
+                "NOTICE",
+                "mit AND apache-2.0 AND bsd-new",
+                "MIT AND Apache-2.0 AND BSD-3-Clause",
+            ),
+        ];
+        let mut packages = vec![pkg("a", "go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("apache-2.0"),
+            "the canonical LICENSE wins over a bundled-attribution NOTICE"
+        );
+        assert_eq!(
+            packages[0].declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0")
+        );
+        assert_eq!(
+            packages[0].license_detections.len(),
+            1,
+            "only the LICENSE detection is promoted, not the NOTICE detections"
+        );
+    }
+
+    #[test]
+    fn license_family_precedence_does_not_override_dual_license_files() {
+        // Precedence operates within the license-family subset: genuine dual-licensing
+        // expressed as separate `LICENSE-APACHE` + `LICENSE-MIT` files (both in the
+        // license family) still disagrees, so the dual-license guard still abstains.
+        let files = vec![
+            legal("LICENSE-APACHE", "apache-2.0", "Apache-2.0"),
+            legal("LICENSE-MIT", "mit", "MIT"),
+            legal("NOTICE", "apache-2.0", "Apache-2.0"),
+        ];
+        let mut packages = vec![pkg("a", "go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression, None,
+            "two disagreeing LICENSE-* files stay ambiguous; NOTICE does not break the tie"
+        );
+    }
+
+    #[test]
+    fn promotes_from_notice_when_no_license_family_file_present() {
+        // No canonical LICENSE-family file: the full legal set is used, so a sole
+        // `NOTICE` (or `COPYRIGHT`/`AUTHORS`) still promotes as before. This preserves
+        // the prior behavior for directories that carry only a NOTICE.
+        let files = vec![legal("NOTICE", "apache-2.0", "Apache-2.0")];
+        let mut packages = vec![pkg("a", "go.mod")];
+
+        promote_package_declared_license_from_legal_files(&files, &mut packages);
+
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("apache-2.0"),
+            "a NOTICE-only directory still promotes when no LICENSE family file exists"
         );
     }
 

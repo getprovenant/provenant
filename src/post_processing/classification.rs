@@ -40,6 +40,15 @@ const LEGAL_STARTS_ENDS: &[&str] = &[
     "patents",
 ];
 
+/// The canonically-named license-file family within the broader legal set: a
+/// `LICENSE`/`LICENCE`/`COPYING` file (including `LICENSE.txt`, `LICENSE.md`, and
+/// the `LICENSE-*`/`COPYING-*` variants). Deliberately excludes `NOTICE`,
+/// `COPYRIGHT`, `AUTHORS`, `LEGAL`, `EULA`, and `PATENT(S)`: those carry bundled
+/// third-party attribution or related metadata, not the package's *own* declared
+/// license (see ADR 0010). `copying` cannot match `copyright` because `copyright`
+/// neither starts nor ends with `copying`.
+const LICENSE_FAMILY_STARTS_ENDS: &[&str] = &["license", "licence", "copying"];
+
 const MANIFEST_ENDS: &[&str] = &[
     ".about",
     "/bower.json",
@@ -110,6 +119,14 @@ fn name_or_base_name_matches(file: &FileInfo, patterns: &[&str]) -> bool {
 
 pub(super) fn is_legal_file(file: &FileInfo) -> bool {
     name_or_base_name_matches(file, LEGAL_STARTS_ENDS)
+}
+
+/// Whether `file` is a canonically-named license file (`LICENSE`/`LICENCE`/`COPYING`
+/// family), as opposed to a `NOTICE`/`COPYRIGHT`/`AUTHORS` attribution file. Used to
+/// give the package's own license file precedence over a `NOTICE` (which lists
+/// bundled third-party licenses) when co-located legal files disagree — see ADR 0010.
+pub(super) fn is_license_family_file(file: &FileInfo) -> bool {
+    name_or_base_name_matches(file, LICENSE_FAMILY_STARTS_ENDS)
 }
 
 pub(super) fn is_manifest_file(path: &str) -> bool {

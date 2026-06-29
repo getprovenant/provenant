@@ -98,11 +98,24 @@ guards:
   the `for_packages` association that copyright/holder promotion relies on, because
   that link is only populated by ecosystem-specific resource-assign passes and is
   empty for exactly the formats this pass targets (Go, autotools, Swift, Bazel).
+- **`LICENSE` over `NOTICE` precedence**: when the co-located legal files
+  _disagree_, prefer the canonically-named license file(s) — the
+  `LICENSE`/`LICENCE`/`COPYING` family (including `LICENSE.txt`, `LICENSE.md`, and
+  the `LICENSE-*`/`COPYING-*` variants) — over `NOTICE`/`COPYRIGHT`/`AUTHORS` files,
+  and promote from that license-family subset. A `NOTICE` typically enumerates the
+  licenses of _bundled third-party_ code, not the package's own declared license, so
+  it must not drive (or block) the package's declared expression. The full legal set
+  is used only when no canonical license file is present, preserving the prior
+  `NOTICE`/`COPYING`-only behavior. See
+  [LICENSE-over-NOTICE precedence](#license-over-notice-precedence).
 - **Single legal file, or agreeing files**: promote when all the promoted
   detections originate from a _single_ legal file, or when _multiple_ legal files
   resolve to one shared expression. Abstain only when _multiple separate_ legal
   files resolve to _differing_ expressions (e.g. dual `LICENSE-APACHE` +
-  `LICENSE-MIT`) rather than guessing an `AND`/`OR` combination. See
+  `LICENSE-MIT`) rather than guessing an `AND`/`OR` combination. When the
+  `LICENSE`-over-`NOTICE` precedence above applies, this single-file / agreeing-files
+  test runs against the chosen license-family subset, so a genuine dual-license pair
+  of `LICENSE-*` files still abstains. See
   [Single legal file with a compound license vs. multiple disagreeing files](#single-legal-file-with-a-compound-license-vs-multiple-disagreeing-files)
   for why a single compound file is promoted but disagreeing separate files are not.
 - **Preserve provenance**: the promoted `license_detections` retain each match's
@@ -135,6 +148,14 @@ parsers.
   `LICENSE-APACHE`/`LICENSE-MIT` still abstains), and `promotes_when_multiple_files_agree`
   (separate agreeing files still promote), plus the end-to-end
   `create_output_promotes_single_file_compound_license_from_cohosted_legal_file`.
+- ✅ LICENSE-over-NOTICE precedence coverage:
+  `prefers_license_over_disagreeing_notice` (prometheus shape — `LICENSE` →
+  `apache-2.0` wins over a bundled-attribution `NOTICE` →
+  `mit AND apache-2.0 AND bsd-new`),
+  `license_family_precedence_does_not_override_dual_license_files` (dual `LICENSE-*`
+  still abstains even with a co-located `NOTICE`), and
+  `promotes_from_notice_when_no_license_family_file_present` (a `NOTICE`-only
+  directory is unchanged).
 
 ### Scope note: assembled packages only, not file-level `package_data`
 
@@ -253,6 +274,60 @@ assembled-`Package` pass, and the file-level remainder is all false-positive ris
 - No code change ships from this decision; the existing
   `promote_package_declared_license_from_legal_files` pass and its
   assembled-package-only scope are retained verbatim.
+
+### LICENSE-over-NOTICE precedence
+
+The original abstain-on-disagreement guard treated every `is_legal_file` match in a
+package's directory as equally authoritative. That conflates two semantically
+different kinds of legal file:
+
+- A **canonical license file** — `LICENSE`, `LICENSE.txt`, `LICENSE.md`, `LICENCE`,
+  `COPYING`, and their `LICENSE-*`/`COPYING-*` variants — states _the package's own_
+  license.
+- A **`NOTICE`** (and, by the same reasoning, `COPYRIGHT`/`AUTHORS`) file most often
+  enumerates the licenses of _bundled or third-party_ code that the package
+  redistributes. This is the standard Apache-style `NOTICE`: attribution for
+  dependencies, not a declaration of the package's own license.
+
+When both are present and they **disagree**, blindly abstaining throws away a
+high-confidence signal. The motivating case is `prometheus/prometheus`: its repo-root
+`LICENSE` detects `apache-2.0` (the project's real license), while its `NOTICE`
+detects `mit AND apache-2.0 AND bsd-new` (the licenses of vendored third-party code).
+The two disagree, so the original pass abstained and left
+`pkg:golang/github.com/prometheus/prometheus` with `declared_license_expression:
+null`. ScanCode, conversely, over-aggregates both files into a noisy
+`apache-2.0 AND bsd-new AND mit`. Neither is the right answer: the package's declared
+license is `apache-2.0`, taken from the canonical `LICENSE`.
+
+**Decision: prefer the license-family subset.** When the co-located legal files
+disagree, the pass now promotes from the canonical `LICENSE`/`LICENCE`/`COPYING`
+family alone, ignoring `NOTICE`/`COPYRIGHT`/`AUTHORS` for the purpose of the declared
+license. This makes Provenant **more correct than ScanCode** on the ubiquitous
+`LICENSE` + `NOTICE` pattern: it reports the package's own license and does not smear
+bundled-dependency licenses into the declared expression.
+
+Preserved behaviors:
+
+- **Dual-license `LICENSE-*` files still abstain.** The license-family subset can
+  itself be genuinely ambiguous — `LICENSE-APACHE` (`apache-2.0`) + `LICENSE-MIT`
+  (`mit`) are both canonical license files and they disagree. The single-file /
+  agreeing-files test runs _within_ the chosen subset, so this dual-license case is
+  unchanged and still left unset. A co-located `NOTICE` does not break the tie.
+- **`NOTICE`/`COPYRIGHT`-only directories are unchanged.** If a directory has _no_
+  canonical license-family file, the pass falls back to the full legal set, so a sole
+  `NOTICE` (or `COPYRIGHT`/`AUTHORS`) still promotes exactly as before. (`COPYING` is
+  itself in the license family, so a `COPYING`-only directory takes the license-family
+  path, not this fallback.) The precedence only re-prioritizes; it never removes a
+  previously-available signal.
+- **A single canonical `LICENSE` still promotes**, and a directory whose legal files
+  already agree is unaffected (the subset filter is a no-op when there is no
+  disagreement to resolve).
+
+The classifier is `is_license_family_file` in
+`src/post_processing/classification.rs`; it matches the `LICENSE`/`LICENCE`/`COPYING`
+family by name and deliberately excludes `NOTICE`/`COPYRIGHT`/`AUTHORS`/`LEGAL`/
+`EULA`/`PATENT`. (`copying` cannot match `copyright`: `copyright` neither starts nor
+ends with `copying`.)
 
 ### Single legal file with a compound license vs. multiple disagreeing files
 
