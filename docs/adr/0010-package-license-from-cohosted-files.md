@@ -151,10 +151,108 @@ entries on the contributing files. Two consequences, both verified and accepted:
   `pkg:golang/.../logrus` package gains `declared: mit` (matching ScanCode), while
   the `go.mod`/`go.sum` file-level `package_data` stay null.
 
-Promoting onto file-level `package_data` (and onto identity-less manifest files
-like the spectator case) is a larger, higher-false-positive expansion left out of
-scope. This pass targets the authoritative, higher-value surface: a package that
-**is** assembled (Go modules, autotools, Swift, Bazel) but declares no license.
+### Decision: file-level `package_data` license stamping is **Rejected**
+
+ScanCode also writes the declared license onto each contributing datafile's
+file-level `package_data` rows, via two mechanisms in
+`packagedcode/plugin_package.py` / `licensing.py`:
+
+- **`add_license_from_file`** — stamps the **datafile's own file-content license
+  detections** (`resource.license_detections`) onto that same datafile's
+  `package_data` rows when they carry no license.
+- **`add_license_from_sibling_file`** (and the `add_referenced_license_*` family) —
+  pulls a **sibling file's** license (`LICENSE`, but also `README`, `NOTICE`) onto a
+  datafile's `package_data` rows.
+
+The earlier revision of this ADR left this "out of scope" as a deferred expansion.
+This revision upgrades that to a **definitive rejection**: Provenant will **not**
+stamp declared licenses onto file-level `package_data`. The assembled-`Package`
+pass above already captures the entire safe, high-value subset; the file-level
+extension adds only false-positive surface. This was confirmed empirically against
+the two largest recorded ScanCode-better file-level deltas, `hashicorp/terraform`
+and `apache/superset` (`.provenant/compare-runs/*terraform*`, `*superset*`).
+
+**The assembled-package delta is already closed.** On both targets the assembled
+`Package` already matches or exceeds ScanCode: terraform's root
+`pkg:golang/.../terraform` carries `bsl-1.1 AND mpl-2.0` (matching ScanCode), and
+superset's `pkg:pypi/apache-superset` carries `apache-2.0 AND ofl-1.1` — _more_
+accurate than ScanCode's `apache-2.0` (the documented intentional divergence in
+[ADR 0002](0002-extraction-vs-detection.md)). Only the **file-level `package_data`**
+rows still differ, and every remaining difference is a false positive a
+correctness-preserving pass must not reproduce.
+
+#### Concrete FP / smear risk cases (from the benchmark data)
+
+1. **Multi-entry database/lockfile own-content smear.** ScanCode's
+   `add_license_from_file` reads every license detected _inside_ a lockfile's own
+   text and collapses it into one declared expression for the file. superset's
+   `superset-websocket/.../package-lock.json` has **31** file-level license
+   detections (one per vendored dependency's license string) and is stamped
+   `mit AND isc`. terraform's root `go.sum` carries **619** dependency entries and
+   `go.mod` **307**; stamping a single declared license onto a 619-entry resolved
+   database misrepresents it as one declared license. These files are inventories of
+   _other_ packages' licenses, not a declaration of the datafile's own license.
+
+2. **`README`/`NOTICE` sibling-derived stamping.** superset's `docs/yarn.lock`
+   (`apache-2.0`, sourced from `docs/README.md` + `NOTICE`) and
+   `superset-websocket/.../client-ws-app/package.json` (`apache-2.0`, sourced from a
+   sibling `README.md`) get their license from non-legal prose siblings — there is
+   **no** `LICENSE` file in either directory. This is exactly the high-false-positive
+   `README`-derived source this ADR's parent decision already rejected (see
+   Alternatives §3).
+
+3. **Reference-following own-text + multi-source compound garbage.** superset's
+   `pyproject.toml` is stamped
+   `apache-2.0 AND (apache-2.0 AND ofl-1.1) AND (afl-2.1 AND … AND unlicense)` — an
+   11-license expression with **duplicated `apache-2.0` operands** and parenthesized
+   sub-expressions, assembled from the file's own classifier/dependency text plus
+   `LICENSE.txt` and `NOTICE`. This is not a declared license; it is detection noise.
+
+4. **A datafile contributing to / co-located with multiple datafiles.** Even the
+   cleanest target fails a sole-datafile guard: terraform's root directory hosts
+   **two** package datafiles (`go.mod` _and_ `go.sum`), so the directory is not the
+   single-datafile, sole-package scope ADR 0010's assembled-package guards rely on.
+   A file-level pass would have to stamp both, including the 619-entry `go.sum`.
+
+5. **A `package_data` row that already declares its own license** must never be
+   overridden — ScanCode itself only fills empty rows, but at the file level the
+   "empty" rows include multi-entry inventory files (case 1), so "genuine absence"
+   is not a sufficient guard the way it is for an assembled package.
+
+#### Why guards cannot rescue a safe subset
+
+The assembled-`Package` guards (genuine absence, `is_legal_file` source,
+same-directory + sole-package, single/agreeing expression, retained `from_file`)
+work because an assembled package is a single identity anchored in one directory.
+At the file level those guards do **not** map cleanly:
+
+- "Sole package in the directory" does not bound a _datafile_: terraform's root has
+  two datafiles for one package, and lockfiles are multi-entry by nature.
+- Restricting to same-directory `LICENSE`-only would **not reproduce any** of the
+  recorded deltas — superset's deltas are all `README`/`NOTICE`/own-text sourced
+  (no co-located `LICENSE`), and terraform's only same-dir `LICENSE`
+  (`mpl-2.0 AND bsl-1.1`) lands on multi-entry `go.mod`/`go.sum` databases.
+
+So the only deltas a guarded file-level pass _could_ close are precisely the unsafe
+ones (README-derived, multi-entry smears), and the only safe candidate
+(terraform's same-dir `LICENSE`) targets multi-entry database files. There is no
+residual safe subset: the safe, high-value surface is fully covered by the
+assembled-`Package` pass, and the file-level remainder is all false-positive risk.
+
+#### Consequences of the rejection
+
+- **Benchmark deltas stay open by design.** terraform's `go.mod`/`go.sum` and
+  superset's `setup.py`/`pyproject.toml`/`docs/yarn.lock`/`client-ws-app` file-level
+  `package_data` declared-license fields remain `null`. These are recorded as
+  **justified Provenant advantages / accepted divergences**, not bugs: Provenant
+  declines to assert a declared license on a datafile (especially a multi-entry
+  database) that does not itself declare one.
+- **The authoritative surface is unaffected.** Consumers that want the package's
+  declared license read the assembled `Package`, which is already correct (and on
+  superset, more accurate than ScanCode).
+- No code change ships from this decision; the existing
+  `promote_package_declared_license_from_legal_files` pass and its
+  assembled-package-only scope are retained verbatim.
 
 ### Single legal file with a compound license vs. multiple disagreeing files
 
@@ -246,6 +344,15 @@ the assembled `pkg:golang/.../terraform` package gains `bsl-1.1 AND mpl-2.0`.
    has detections).
    - Rejected for now: highest false-positive surface (README prose), and it
      overrides manifest-declared data, which conflicts most strongly with ADR 0002.
+4. **File-level `package_data` license stamping** (ScanCode's `add_license_from_file`
+   / `add_license_from_sibling_file` onto each datafile's `package_data` rows).
+   - **Rejected** (see [Decision: file-level `package_data` license stamping is
+     Rejected](#decision-file-level-package_data-license-stamping-is-rejected)).
+     Empirically every recorded ScanCode-better file-level delta on `terraform` and
+     `apache/superset` is a false positive (multi-entry lockfile own-content smear,
+     `README`/`NOTICE` sibling derivation, or a multi-source compound expression with
+     duplicated operands), and the assembled-`Package` pass already closes the entire
+     safe, high-value subset.
 
 ## Related ADRs
 
