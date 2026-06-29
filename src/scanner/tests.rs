@@ -482,7 +482,7 @@ fn scanner_keeps_source_headers_when_pem_blocks_are_embedded() {
     );
     assert_eq!(
         scanned.detected_license_expression.as_deref(),
-        Some("Apache-2.0")
+        Some("apache-2.0")
     );
 }
 
@@ -562,7 +562,7 @@ fn scanner_uses_or_for_alternative_license_header() {
 
     assert_eq!(
         scanned.detected_license_expression.as_deref(),
-        Some("Apache-2.0 OR BSL-1.0")
+        Some("apache-2.0 OR boost-1.0")
     );
     assert!(
         scanned.license_clues.is_empty(),
@@ -1876,7 +1876,7 @@ fn scanner_prefers_dual_license_readme_expression_over_supplemental_mentions() {
     assert!(
         matches!(
             scanned.detected_license_expression.as_deref(),
-            Some("Apache-2.0 OR MIT") | Some("MIT OR Apache-2.0")
+            Some("apache-2.0 OR mit") | Some("mit OR apache-2.0")
         ),
         "license expression: {:?}",
         scanned.detected_license_expression
@@ -1932,7 +1932,7 @@ fn scanner_drops_unknown_placeholder_from_dual_license_readme_notice() {
     assert!(
         matches!(
             scanned.detected_license_expression.as_deref(),
-            Some("Apache-2.0 OR MIT") | Some("MIT OR Apache-2.0")
+            Some("apache-2.0 OR mit") | Some("mit OR apache-2.0")
         ),
         "license expression: {:?}",
         scanned.detected_license_expression

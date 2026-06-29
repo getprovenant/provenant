@@ -600,6 +600,7 @@ mod tests {
             programming_language: Some("Rust".to_string()),
             package_data: vec![sample_package_data()],
             license_expression: Some("MIT".to_string()),
+            license_expression_spdx: Some("MIT".to_string()),
             license_detections: vec![sample_license_detection()],
             license_clues: vec![sample_match()],
             percentage_of_license_text: Some(50.0),

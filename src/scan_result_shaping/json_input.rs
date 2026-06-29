@@ -439,6 +439,7 @@ fn directory_output_json_file(path: &str) -> OutputFileInfo {
         programming_language: None,
         package_data: Vec::new(),
         license_expression: None,
+        license_expression_spdx: None,
         license_detections: Vec::new(),
         license_clues: Vec::new(),
         percentage_of_license_text: None,

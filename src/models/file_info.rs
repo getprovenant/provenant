@@ -71,6 +71,13 @@ pub struct FileInfo {
     #[builder(default)]
     #[serde(default)]
     pub detected_license_expression: Option<String>,
+    /// SPDX-form counterpart of [`Self::detected_license_expression`]. Both carry
+    /// the same operator structure; this one spells license operands as SPDX ids
+    /// (e.g. `MPL-2.0 AND BUSL-1.1`) while `detected_license_expression` uses
+    /// ScanCode keys (e.g. `mpl-2.0 AND bsl-1.1`).
+    #[builder(default)]
+    #[serde(default)]
+    pub detected_license_expression_spdx: Option<String>,
     #[builder(default)]
     #[serde(default)]
     pub license_detections: Vec<LicenseDetection>,
@@ -261,18 +268,17 @@ impl FileInfo {
         }
 
         // Combine license expressions from license detections if detected_license_expression is still None
-        if detected_license_expression.is_none() && !license_detections.is_empty() {
-            let expressions = license_detections
-                .iter()
-                .map(|detection| detection.license_expression.clone());
-            let expressions: Vec<String> = expressions.collect();
-            detected_license_expression = crate::utils::spdx::select_primary_license_expression(
-                expressions.clone(),
-            )
-            .or_else(|| {
-                crate::utils::spdx::combine_license_expressions_preserving_structure(expressions)
-            });
+        if detected_license_expression.is_none() {
+            detected_license_expression =
+                detected_license_expression_from_detections(&license_detections);
         }
+
+        // The SPDX-form expression mirrors the key form's grouping but spells operands
+        // as SPDX ids, derived from the same detections via the strict combiner. This
+        // keeps `detected_license_expression_spdx` in lockstep with the key field for
+        // every path that resolves it from detections.
+        let detected_license_expression_spdx =
+            detected_license_expression_spdx_from_detections(&license_detections);
 
         let mut file_info = FileInfo {
             name,
@@ -291,6 +297,7 @@ impl FileInfo {
             programming_language,
             package_data,
             detected_license_expression,
+            detected_license_expression_spdx,
             license_detections,
             license_clues,
             percentage_of_license_text: None,
@@ -352,6 +359,54 @@ impl FileInfo {
                 || diagnostic.severity == DiagnosticSeverity::Timeout
         })
     }
+}
+
+/// Derive the key-form file-level expression from a file's license detections,
+/// using the same selection/combination the scanner and `FileInfo::new` apply to
+/// each detection's `license_expression`. Returns `None` when there are no
+/// detections — the key form cannot be recovered from SPDX-only carried text.
+pub(crate) fn detected_license_expression_from_detections(
+    detections: &[LicenseDetection],
+) -> Option<String> {
+    if detections.is_empty() {
+        return None;
+    }
+    let expressions: Vec<String> = detections
+        .iter()
+        .map(|detection| detection.license_expression.clone())
+        .collect();
+    crate::utils::spdx::select_primary_license_expression(expressions.clone()).or_else(|| {
+        crate::utils::spdx::combine_license_expressions_preserving_structure(expressions)
+    })
+}
+
+/// Derive the SPDX-form file-level expression from a file's license detections,
+/// combining each detection's `license_expression_spdx` with the strict combiner.
+/// Returns `None` when no detection carries an SPDX form, so the field is left
+/// absent rather than holding key-form text. This mirrors the key-form derivation
+/// in [`FileInfo::new`] and the scanner's per-file combination.
+pub(crate) fn detected_license_expression_spdx_from_detections(
+    detections: &[LicenseDetection],
+) -> Option<String> {
+    if detections.is_empty() {
+        return None;
+    }
+    let expressions: Option<Vec<String>> = detections
+        .iter()
+        .map(|detection| {
+            (!detection.license_expression_spdx.is_empty())
+                .then(|| detection.license_expression_spdx.clone())
+        })
+        .collect();
+    expressions.and_then(|expressions| {
+        crate::utils::spdx::select_primary_license_expression_strict(expressions.clone()).or_else(
+            || {
+                crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
+                    expressions,
+                )
+            },
+        )
+    })
 }
 
 fn enrich_package_data_license_provenance(package_data: &mut PackageData, path: &str) {
@@ -1328,6 +1383,72 @@ mod tests {
             !file_info.package_data[0].license_detections[0]
                 .identifier
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn file_info_new_separates_key_and_spdx_detected_expressions() {
+        // The key field carries ScanCode keys; the SPDX field carries SPDX ids, both
+        // derived from the same detections, even when the two spellings differ.
+        let detection = LicenseDetection {
+            license_expression: "bsl-1.1".to_string(),
+            license_expression_spdx: "BUSL-1.1".to_string(),
+            matches: vec![],
+            detection_log: vec![],
+            identifier: String::new(),
+        };
+
+        let file_info = FileInfo::new(
+            "LICENSE".to_string(),
+            "LICENSE".to_string(),
+            String::new(),
+            "project/LICENSE".to_string(),
+            FileType::File,
+            None,
+            None,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            vec![],
+            None,
+            vec![detection],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        );
+
+        assert_eq!(
+            file_info.detected_license_expression.as_deref(),
+            Some("bsl-1.1")
+        );
+        assert_eq!(
+            file_info.detected_license_expression_spdx.as_deref(),
+            Some("BUSL-1.1")
+        );
+    }
+
+    #[test]
+    fn detected_license_expression_spdx_absent_when_no_detection_spdx() {
+        // A detection whose SPDX form is empty (e.g. a custom/unmapped license) leaves
+        // the SPDX field absent rather than echoing the key form.
+        let detection = LicenseDetection {
+            license_expression: "proprietary-license".to_string(),
+            license_expression_spdx: String::new(),
+            matches: vec![],
+            detection_log: vec![],
+            identifier: String::new(),
+        };
+        assert_eq!(
+            detected_license_expression_spdx_from_detections(&[detection]),
+            None
         );
     }
 

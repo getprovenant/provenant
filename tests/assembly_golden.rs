@@ -125,6 +125,7 @@ mod tests {
                 programming_language: None,
                 package_data: package_data_vec,
                 detected_license_expression: None,
+                detected_license_expression_spdx: None,
                 license_detections: vec![],
                 license_clues: vec![],
                 percentage_of_license_text: None,

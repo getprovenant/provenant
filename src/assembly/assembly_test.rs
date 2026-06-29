@@ -46,6 +46,7 @@ mod tests {
                 ..Default::default()
             }],
             detected_license_expression: None,
+            detected_license_expression_spdx: None,
             license_detections: vec![],
             license_clues: vec![],
             percentage_of_license_text: None,
@@ -4391,6 +4392,7 @@ mod tests {
                 },
             ],
             detected_license_expression: None,
+            detected_license_expression_spdx: None,
             license_detections: vec![],
             license_clues: vec![],
             percentage_of_license_text: None,

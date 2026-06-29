@@ -43,6 +43,12 @@ pub struct OutputFileInfo {
     pub package_data: Vec<OutputPackageData>,
     #[serde(rename = "detected_license_expression_spdx")]
     pub license_expression: Option<String>,
+    /// Carried SPDX-form counterpart of [`Self::license_expression`], used as the
+    /// final fallback by [`Self::detected_license_expression_spdx`] when no
+    /// detection supplies an SPDX form. Not serialized directly; the SPDX JSON
+    /// field is produced by the accessor.
+    #[serde(skip)]
+    pub license_expression_spdx: Option<String>,
     #[serde(default)]
     pub license_detections: Vec<OutputLicenseDetection>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -205,7 +211,11 @@ impl OutputFileInfo {
             })
         })
         .or_else(|| {
-            self.license_expression
+            // Final fallback: the carried SPDX-form expression. The key-form
+            // `license_expression` is not run through the SPDX combiner here, as a
+            // key token (e.g. `bsd-new`) is not a valid SPDX id and would leak
+            // key-form text into the SPDX field.
+            self.license_expression_spdx
                 .clone()
                 .filter(|expression| !expression.is_empty())
                 .and_then(|expression| {
@@ -354,6 +364,7 @@ impl OutputFileInfo {
                 .map(OutputPackageData::from)
                 .collect(),
             license_expression: value.detected_license_expression.clone(),
+            license_expression_spdx: value.detected_license_expression_spdx.clone(),
             license_detections: value
                 .license_detections
                 .iter()
@@ -489,7 +500,20 @@ impl TryFrom<&OutputFileInfo> for crate::models::FileInfo {
                 .map_err(|e| format!("invalid sha1_git: {}", e))?,
             programming_language: value.programming_language.clone(),
             package_data,
-            detected_license_expression: value.license_expression.clone(),
+            // `value.license_expression` carries the renamed `detected_license_expression_spdx`
+            // JSON field, i.e. the SPDX form. The key form is recovered only from the
+            // recombined detections (never from that SPDX string, which would leak SPDX
+            // text into the key field for a detection-less input); the SPDX field falls
+            // back to the carried SPDX string when no detection supplies one.
+            detected_license_expression:
+                crate::models::file_info::detected_license_expression_from_detections(
+                    &license_detections,
+                ),
+            detected_license_expression_spdx:
+                crate::models::file_info::detected_license_expression_spdx_from_detections(
+                    &license_detections,
+                )
+                .or_else(|| value.license_expression.clone()),
             license_detections,
             license_clues,
             percentage_of_license_text: value.percentage_of_license_text,
@@ -608,6 +632,7 @@ mod tests {
             programming_language: None,
             package_data: Vec::new(),
             license_expression: None,
+            license_expression_spdx: None,
             license_detections: Vec::new(),
             license_clues: Vec::new(),
             percentage_of_license_text: None,
@@ -644,8 +669,12 @@ mod tests {
 
     #[test]
     fn detected_license_expression_spdx_does_not_recombine_partial_detection_spdx() {
+        // When the per-detection SPDX forms are partial (one operand lacks an SPDX id),
+        // the SPDX accessor does not recombine them; it falls back to the carried
+        // SPDX-form expression, never to the key-form `license_expression`.
         let mut file_info = base_output_file_info();
-        file_info.license_expression = Some("Apache-2.0 AND MIT".to_string());
+        file_info.license_expression = Some("apache-2.0 AND mit".to_string());
+        file_info.license_expression_spdx = Some("Apache-2.0 AND MIT".to_string());
         file_info.license_detections = vec![
             OutputLicenseDetection {
                 license_expression: "apache-2.0".to_string(),
@@ -670,11 +699,77 @@ mod tests {
     }
 
     #[test]
-    fn detected_license_expression_spdx_rejects_invalid_fallback_expression() {
+    fn detected_license_expression_spdx_does_not_fall_back_to_key_form() {
+        // The key-form `license_expression` must never leak into the SPDX field. With
+        // no SPDX-form fallback set and no detection SPDX, the SPDX accessor is absent.
         let mut file_info = base_output_file_info();
-        file_info.license_expression = Some("MIT\" or malformed".to_string());
+        file_info.license_expression = Some("bsd-new".to_string());
+        file_info.license_expression_spdx = None;
 
         assert_eq!(file_info.detected_license_expression_spdx(), None);
+        assert_eq!(
+            file_info.detected_license_expression().as_deref(),
+            Some("bsd-new")
+        );
+    }
+
+    #[test]
+    fn detected_license_expression_spdx_rejects_invalid_fallback_expression() {
+        let mut file_info = base_output_file_info();
+        file_info.license_expression_spdx = Some("MIT\" or malformed".to_string());
+
+        assert_eq!(file_info.detected_license_expression_spdx(), None);
+    }
+
+    #[test]
+    fn from_json_reshape_with_spdx_but_no_detections_keeps_forms_separated() {
+        // A reshaped (`--from-json`) record whose carried `license_expression` holds
+        // the SPDX JSON value but has no usable detections must NOT leak that SPDX text
+        // into the internal key-form field. The key field stays absent (no key form is
+        // recoverable from SPDX-only text); the SPDX field keeps the SPDX value.
+        let mut output = base_output_file_info();
+        output.license_expression = Some("Apache-2.0 AND MIT".to_string());
+        output.license_detections = Vec::new();
+
+        let internal = crate::models::FileInfo::try_from(&output).expect("reshape succeeds");
+        assert_eq!(internal.detected_license_expression, None);
+        assert_eq!(
+            internal.detected_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 AND MIT")
+        );
+
+        // Re-serializing must not emit SPDX text in the key-form output field.
+        let reshaped = OutputFileInfo::from(&internal);
+        assert_eq!(reshaped.detected_license_expression(), None);
+        assert_eq!(
+            reshaped.detected_license_expression_spdx().as_deref(),
+            Some("Apache-2.0 AND MIT")
+        );
+    }
+
+    #[test]
+    fn from_json_reshape_recovers_key_form_from_detections() {
+        // With usable detections, the reshape recovers the key form from them (not from
+        // the SPDX carrier), and the SPDX field from the detections' SPDX form.
+        let mut output = base_output_file_info();
+        output.license_expression = Some("BUSL-1.1".to_string());
+        output.license_detections = vec![OutputLicenseDetection {
+            license_expression: "bsl-1.1".to_string(),
+            license_expression_spdx: "BUSL-1.1".to_string(),
+            matches: Vec::new(),
+            detection_log: Vec::new(),
+            identifier: None,
+        }];
+
+        let internal = crate::models::FileInfo::try_from(&output).expect("reshape succeeds");
+        assert_eq!(
+            internal.detected_license_expression.as_deref(),
+            Some("bsl-1.1")
+        );
+        assert_eq!(
+            internal.detected_license_expression_spdx.as_deref(),
+            Some("BUSL-1.1")
+        );
     }
 
     #[test]
