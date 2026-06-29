@@ -22,6 +22,7 @@ use crate::utils::spdx::{
 };
 
 use super::classification::is_legal_file;
+use super::license_expression_render::spdx_expression_mirroring_key;
 use super::package_file_index::PackageFileIndex;
 
 const INHERIT_LICENSE_FROM_PACKAGE_REFERENCE: &str = "INHERIT_LICENSE_FROM_PACKAGE";
@@ -631,26 +632,28 @@ fn follow_references_for_file(file: &mut FileInfo, snapshot: &ReferenceFollowSna
                     .iter()
                     .map(|detection| detection.license_expression.clone()),
             );
-            package_data.declared_license_expression_spdx = combine_license_expressions(
-                package_data
-                    .license_detections
-                    .iter()
-                    .filter(|detection| !detection.license_expression_spdx.is_empty())
-                    .map(|detection| detection.license_expression_spdx.clone()),
-            );
+            // Mirror the SPDX field on the key expression's structure rather than
+            // independently AND-combining each detection's `license_expression_spdx`,
+            // which would tighten a detection's own `OR`/`WITH` into `AND` and could
+            // leak key-form text when an operand has no SPDX id (see #1187).
+            package_data.declared_license_expression_spdx = package_data
+                .declared_license_expression
+                .as_deref()
+                .and_then(|key| {
+                    spdx_expression_mirroring_key(key, &package_data.license_detections)
+                });
             package_data.other_license_expression = combine_license_expressions(
                 package_data
                     .other_license_detections
                     .iter()
                     .map(|detection| detection.license_expression.clone()),
             );
-            package_data.other_license_expression_spdx = combine_license_expressions(
-                package_data
-                    .other_license_detections
-                    .iter()
-                    .filter(|detection| !detection.license_expression_spdx.is_empty())
-                    .map(|detection| detection.license_expression_spdx.clone()),
-            );
+            package_data.other_license_expression_spdx = package_data
+                .other_license_expression
+                .as_deref()
+                .and_then(|key| {
+                    spdx_expression_mirroring_key(key, &package_data.other_license_detections)
+                });
         }
     }
 
@@ -674,12 +677,12 @@ fn follow_references_for_file(file: &mut FileInfo, snapshot: &ReferenceFollowSna
                     .iter()
                     .map(|detection| detection.license_expression.clone()),
             );
-            package_data.declared_license_expression_spdx = combine_license_expressions(
-                own_detections
-                    .iter()
-                    .filter(|detection| !detection.license_expression_spdx.is_empty())
-                    .map(|detection| detection.license_expression_spdx.clone()),
-            );
+            // Render the SPDX field to mirror the key expression's structure (see #1187),
+            // not by independently combining each detection's SPDX form.
+            package_data.declared_license_expression_spdx = package_data
+                .declared_license_expression
+                .as_deref()
+                .and_then(|key| spdx_expression_mirroring_key(key, &own_detections));
             package_data.license_detections = own_detections;
             modified = true;
         }
@@ -896,12 +899,12 @@ fn sync_packages_from_followed_package_data(
                             .iter()
                             .map(|detection| detection.license_expression.clone()),
                     );
-                    next_declared_license_expression_spdx = combine_license_expressions(
-                        merged_detections
-                            .iter()
-                            .filter(|detection| !detection.license_expression_spdx.is_empty())
-                            .map(|detection| detection.license_expression_spdx.clone()),
-                    );
+                    // Mirror the SPDX field on the merged key expression's structure
+                    // rather than independently AND-combining each target's SPDX form,
+                    // which would lose an `OR`/`WITH` operand or leak key-form text (#1187).
+                    next_declared_license_expression_spdx = next_declared_license_expression
+                        .as_deref()
+                        .and_then(|key| spdx_expression_mirroring_key(key, &merged_detections));
                     next_license_detections = merged_detections;
                 }
                 if !merged_other_detections.is_empty() {
@@ -910,12 +913,10 @@ fn sync_packages_from_followed_package_data(
                             .iter()
                             .map(|detection| detection.license_expression.clone()),
                     );
-                    next_other_license_expression_spdx = combine_license_expressions(
-                        merged_other_detections
-                            .iter()
-                            .filter(|detection| !detection.license_expression_spdx.is_empty())
-                            .map(|detection| detection.license_expression_spdx.clone()),
-                    );
+                    next_other_license_expression_spdx =
+                        next_other_license_expression.as_deref().and_then(|key| {
+                            spdx_expression_mirroring_key(key, &merged_other_detections)
+                        });
                     next_other_license_detections = merged_other_detections;
                 }
             }
@@ -955,13 +956,15 @@ fn sync_packages_from_followed_package_data(
                     .or_else(|| manifest_file.detected_license_expression.clone());
                 }
                 if next_declared_license_expression_spdx.is_none() {
-                    next_declared_license_expression_spdx = combine_license_expressions(
-                        manifest_file
-                            .license_detections
-                            .iter()
-                            .filter(|detection| !detection.license_expression_spdx.is_empty())
-                            .map(|detection| detection.license_expression_spdx.clone()),
-                    );
+                    // Mirror the SPDX field on the adopted key expression's structure
+                    // (see #1187). The key may itself carry an `OR`/`WITH`, so independently
+                    // AND-combining each detection's SPDX form would lose it; the token map
+                    // also resolves a key already spelled in SPDX form (the
+                    // `detected_license_expression` fallback above).
+                    next_declared_license_expression_spdx =
+                        next_declared_license_expression.as_deref().and_then(|key| {
+                            spdx_expression_mirroring_key(key, &manifest_file.license_detections)
+                        });
                 }
             }
 
@@ -2335,5 +2338,149 @@ mod tests {
         // file's OWN file-level detections; the pyproject here has none, so the
         // package stays null — proving the multi-datafile step did not fire.
         assert_eq!(packages[0].declared_license_expression, None);
+    }
+
+    /// A package_data with no purl and no detections on a single-package manifest
+    /// file whose own file-level detection is an `OR` choice. The reference-following
+    /// per-file enrichment (the `file.package_data.len() == 1` branch) adopts that
+    /// detection. The `_spdx` field must mirror the key expression's `OR`, not collapse
+    /// it to `AND`.
+    #[test]
+    fn file_package_data_adopt_preserves_or_structure_in_spdx() {
+        let mut manifest = file("proj/build.gradle");
+        manifest.license_detections = vec![detection(
+            "mit OR apache-2.0",
+            "MIT OR Apache-2.0",
+            "proj/build.gradle",
+        )];
+        manifest.detected_license_expression = Some("mit OR apache-2.0".to_string());
+        manifest.package_data = vec![crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Maven),
+            datasource_id: Some(crate::models::DatasourceId::BuildGradle),
+            ..Default::default()
+        }];
+
+        let mut files = vec![manifest];
+        let mut packages: Vec<crate::models::Package> = vec![];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        let package_data = &files[0].package_data[0];
+        // `combine_license_expressions` canonically reorders OR operands; the point of
+        // the assertion is that the OR survives and the SPDX field mirrors it operand
+        // for operand, not the operand order.
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT"),
+            "the package_data SPDX field must keep the OR choice, never `AND`"
+        );
+    }
+
+    /// The single-datafile manifest-adopt path in `sync_packages_from_followed_package_data`:
+    /// a package with no detections adopts its manifest file's own `OR`-shaped detection.
+    /// The promoted `_spdx` must mirror the key `OR`, not an AND-join of the operands.
+    #[test]
+    fn sync_manifest_adopt_preserves_or_structure_in_spdx() {
+        let mut manifest = file("proj/go.mod");
+        manifest.license_detections = vec![detection(
+            "mit OR apache-2.0",
+            "MIT OR Apache-2.0",
+            "proj/go.mod",
+        )];
+        manifest.detected_license_expression = Some("mit OR apache-2.0".to_string());
+        manifest.package_data = vec![crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Golang),
+            datasource_id: Some(crate::models::DatasourceId::GoMod),
+            name: Some("tfx".to_string()),
+            ..Default::default()
+        }];
+
+        let mut pkg = package("pkg:golang/example/tfx?uuid=1", "proj/go.mod");
+        pkg.package_type = Some(crate::models::PackageType::Golang);
+        pkg.name = Some("tfx".to_string());
+        pkg.purl = None;
+        pkg.declared_license_expression = None;
+        pkg.declared_license_expression_spdx = None;
+        pkg.license_detections = vec![];
+        pkg.datafile_paths = vec!["proj/go.mod".to_string()];
+
+        let mut files = vec![manifest];
+        let mut packages = vec![pkg];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        let pkg = &packages[0];
+        assert_eq!(
+            pkg.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            pkg.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT"),
+            "the adopted package SPDX field must preserve the OR choice"
+        );
+    }
+
+    /// The Bazel/Buck multi-target merge path: a directory's BUILD targets are
+    /// collapsed into one component and their resolved licenses are unioned. When one
+    /// target carries an `OR` choice, the merged `_spdx` must keep that `OR` rather than
+    /// AND-joining every operand of every target.
+    #[test]
+    fn bazel_merge_preserves_or_structure_in_spdx() {
+        let mut build = file("proj/BUILD");
+        build.package_data = vec![
+            crate::models::PackageData {
+                package_type: Some(crate::models::PackageType::Bazel),
+                datasource_id: Some(crate::models::DatasourceId::BazelBuild),
+                name: Some("lib_a".to_string()),
+                declared_license_expression: Some("mit OR apache-2.0".to_string()),
+                declared_license_expression_spdx: Some("MIT OR Apache-2.0".to_string()),
+                license_detections: vec![detection(
+                    "mit OR apache-2.0",
+                    "MIT OR Apache-2.0",
+                    "proj/BUILD",
+                )],
+                ..Default::default()
+            },
+            crate::models::PackageData {
+                package_type: Some(crate::models::PackageType::Bazel),
+                datasource_id: Some(crate::models::DatasourceId::BazelBuild),
+                name: Some("lib_b".to_string()),
+                declared_license_expression: Some("bsd-new".to_string()),
+                declared_license_expression_spdx: Some("BSD-3-Clause".to_string()),
+                license_detections: vec![detection("bsd-new", "BSD-3-Clause", "proj/BUILD")],
+                ..Default::default()
+            },
+        ];
+
+        let mut pkg = package("pkg:bazel/lib?uuid=1", "proj/BUILD");
+        pkg.package_type = Some(crate::models::PackageType::Bazel);
+        pkg.purl = None;
+        pkg.declared_license_expression = None;
+        pkg.declared_license_expression_spdx = None;
+        pkg.license_detections = vec![];
+        pkg.datafile_paths = vec!["proj/BUILD".to_string()];
+
+        let mut files = vec![build];
+        let mut packages = vec![pkg];
+        apply_package_reference_following(&mut files, &mut packages);
+
+        let spdx = packages[0].declared_license_expression_spdx.as_deref();
+        assert_eq!(
+            packages[0].declared_license_expression.as_deref(),
+            Some("(apache-2.0 OR mit) AND bsd-new")
+        );
+        assert_eq!(
+            spdx,
+            Some("(Apache-2.0 OR MIT) AND BSD-3-Clause"),
+            "the merged SPDX must keep lib_a's OR choice instead of flattening to all-AND"
+        );
+        let spdx = spdx.unwrap_or_default();
+        assert!(
+            spdx.contains(" OR "),
+            "the OR operator must survive the Bazel target merge in the SPDX field"
+        );
     }
 }

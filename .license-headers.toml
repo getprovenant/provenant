@@ -197,6 +197,7 @@ derived = [
   "src/parsers/windows_executable.rs",
   "src/parsers/yarn_lock.rs",
   "src/post_processing/classification.rs",
+  "src/post_processing/license_expression_render.rs",
   "src/post_processing/license_policy.rs",
   "src/post_processing/license_references.rs",
   "src/post_processing/mod.rs",

@@ -64,6 +64,7 @@ mod font_policy;
 mod generated_test;
 #[cfg(feature = "golden-tests")]
 pub mod golden_helpers;
+mod license_expression_render;
 mod license_policy;
 mod license_references;
 mod output_indexes;
