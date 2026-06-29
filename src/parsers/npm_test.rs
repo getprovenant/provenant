@@ -284,6 +284,51 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_slash_separated_dual_license() {
+        // npm's legacy informal slash convention: `MIT/Apache2` means dual
+        // licensed (MIT OR Apache-2.0), with `Apache2` an informal Apache-2.0.
+        let slash_dual_content = r#"
+{
+  "name": "start-mobile-example",
+  "version": "1.0.0",
+  "license": "MIT/Apache2"
+}
+"#;
+
+        let (_temp_file, path) = create_temp_package_json(slash_dual_content);
+        let package_data = NpmParser::extract_first_package(&path);
+
+        assert_eq!(
+            package_data.declared_license_expression.as_deref(),
+            Some("apache-2.0 OR mit")
+        );
+        assert_eq!(
+            package_data.declared_license_expression_spdx.as_deref(),
+            Some("Apache-2.0 OR MIT")
+        );
+        assert_eq!(package_data.license_detections.len(), 1);
+
+        // A plain single SPDX license is unaffected by the slash handling.
+        let single_content = r#"
+{
+  "name": "single-license",
+  "version": "1.0.0",
+  "license": "MIT"
+}
+"#;
+        let (_single_file, single_path) = create_temp_package_json(single_content);
+        let single_data = NpmParser::extract_first_package(&single_path);
+        assert_eq!(
+            single_data.declared_license_expression.as_deref(),
+            Some("mit")
+        );
+        assert_eq!(
+            single_data.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+    }
+
+    #[test]
     fn test_extract_repository_formats() {
         // Test repository as string
         let repo_string_content = r#"

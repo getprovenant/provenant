@@ -41,6 +41,11 @@ expression = "apache-2.0"
 reason = "SPDX deprecated the bare 'Apache' identifier in favor of Apache-2.0; a declared `license: \"Apache\"` is conventionally Apache-2.0, and ScanCode resolves it the same. Observed in apache/hadoop's hadoop-yarn-ui package.json."
 
 [[alias]]
+names = ["apache2", "apache-2"]
+expression = "apache-2.0"
+reason = "Informal spellings of Apache-2.0 used as operands in npm's legacy slash-separated dual-license convention (e.g. `license: \"MIT/Apache2\"`); npm packages historically wrote the Apache 2.0 license this way before SPDX expressions. Conventionally Apache-2.0 with no other meaning. Observed in bevy's .github/start-mobile-example/package.json (`\"license\": \"MIT/Apache2\"`). Declared-field-only, so it cannot misfire on file content."
+
+[[alias]]
 names = ["boost"]
 expression = "boost-1.0"
 reason = "Boost ships a single license, the Boost Software License 1.0 (SPDX BSL-1.0; ScanCode key boost-1.0); a declared 'Boost' has no other meaning. Observed in pyodide's bundled libboost conda metadata."

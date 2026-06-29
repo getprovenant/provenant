@@ -37,7 +37,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::PackageParser;
-use super::license_normalization::normalize_spdx_declared_license;
+use super::license_normalization::normalize_npm_declared_license;
 use super::metadata::ParserMetadata;
 
 const FIELD_NAME: &str = "name";
@@ -108,7 +108,7 @@ impl PackageParser for NpmParser {
 
         let extracted_license_statement = extract_license_statement(&json);
         let (declared_license_expression, declared_license_expression_spdx, license_detections) =
-            normalize_spdx_declared_license(extract_declared_license_candidate(&json).as_deref());
+            normalize_npm_declared_license(extract_declared_license_candidate(&json).as_deref());
         let peer_dependencies_meta = extract_peer_dependencies_meta(&json);
         let dependencies = extract_dependencies(&json, false);
         let dev_dependencies = extract_dependencies(&json, true);

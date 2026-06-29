@@ -141,6 +141,86 @@ pub(crate) fn normalize_spdx_declared_license(
     )
 }
 
+/// Normalizes an npm package's declared `license` string, including the legacy
+/// informal slash-separated dual-license convention (e.g. `"MIT/Apache2"`,
+/// `"BSD/MIT"`, `"MIT/X11"`).
+///
+/// npm's `license` field historically allowed a `/`-separated list of license
+/// names to mean "dual licensed under either" before SPDX expressions were
+/// standardized. SPDX expression parsing does not understand `/` (it is not an
+/// SPDX operator), so these strings would otherwise fall through to an honest
+/// `null`. Here, scoped strictly to the bounded, trustworthy declared field,
+/// the `/` is treated as `OR`: each operand is normalized independently — via
+/// SPDX-expression normalization, then the declared-license key/alias table
+/// (which resolves informal single tokens such as `Apache2`) — and the results
+/// are joined with `OR`.
+///
+/// This never touches file-content detection, so a `/` appearing in arbitrary
+/// prose or a URL cannot trigger it. Statements that are already valid SPDX
+/// (including parenthesized forms like `"(MIT OR Apache-2.0)"`) normalize
+/// through the standard path first and never reach the slash handling. If any
+/// operand fails to resolve, the slash handling yields nothing so the field
+/// stays an honest `null` rather than a partial guess.
+pub(crate) fn normalize_npm_declared_license(
+    statement: Option<&str>,
+) -> (Option<String>, Option<String>, Vec<LicenseDetection>) {
+    let standard = normalize_spdx_declared_license(statement);
+    if standard.0.is_some() {
+        return standard;
+    }
+
+    let Some(statement) = statement.map(str::trim).filter(|value| !value.is_empty()) else {
+        return empty_declared_license_data();
+    };
+
+    let Some(normalized) = normalize_npm_slash_dual_license(statement) else {
+        return empty_declared_license_data();
+    };
+
+    build_declared_license_data(
+        normalized,
+        DeclaredLicenseMatchMetadata::single_line(statement),
+    )
+}
+
+/// Resolves the npm informal slash-separated dual-license convention into an
+/// `OR` expression, or `None` when the statement is not that form or any
+/// operand fails to resolve.
+fn normalize_npm_slash_dual_license(statement: &str) -> Option<NormalizedDeclaredLicense> {
+    // A `/` inside a URL (e.g. `http://x/y`) is not a license separator. Only
+    // treat the statement as a slash list when it is purely `/`-joined license
+    // names with no URL token.
+    if statement.contains("://") || !statement.contains('/') {
+        return None;
+    }
+
+    let mut operands = Vec::new();
+    for raw_operand in statement.split('/') {
+        let operand = raw_operand.trim();
+        if operand.is_empty() {
+            return None;
+        }
+        // Resolve each operand the same bounded, declared-field way the rest of
+        // this module does: try SPDX-expression normalization, then the
+        // key/alias table (informal single tokens such as `Apache2`), then
+        // declared free-text detection (which promotes a bare-name clue such as
+        // `BSD` to its conventional declared expression).
+        let normalized = normalize_spdx_expression(operand)
+            .or_else(|| normalize_declared_license_key(operand))
+            .or_else(|| detect_declared_license_name(operand))?;
+        operands.push(normalized);
+    }
+
+    // Only a genuine multi-operand list is the dual-license form. In practice this
+    // guard always holds: the `contains('/')` entry-check guarantees at least one
+    // separator, and every empty-operand path returns `None` above.
+    if operands.len() < 2 {
+        return None;
+    }
+
+    combine_normalized_licenses(operands, " OR ")
+}
+
 /// Resolve a declared license statement through the curated declared-license
 /// alias table (`resources/license_detection/declared_license_aliases.toml`).
 ///
@@ -1339,6 +1419,95 @@ mod tests {
         assert_eq!(declared.as_deref(), Some("mit"));
         assert_eq!(declared_spdx.as_deref(), Some("MIT"));
         assert_eq!(detections.len(), 1);
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_slash_dual_mit_apache2() {
+        let (declared, declared_spdx, detections) =
+            normalize_npm_declared_license(Some("MIT/Apache2"));
+
+        assert_eq!(declared.as_deref(), Some("apache-2.0 OR mit"));
+        assert_eq!(declared_spdx.as_deref(), Some("Apache-2.0 OR MIT"));
+        assert_eq!(detections.len(), 1);
+        assert_eq!(
+            detections[0].matches[0].matcher,
+            crate::license_detection::MatcherKind::Declared
+        );
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_slash_dual_forms() {
+        for statement in ["MIT/Apache-2.0", "MIT / Apache-2.0", "Apache2/MIT"] {
+            let (declared, declared_spdx, _) = normalize_npm_declared_license(Some(statement));
+            assert_eq!(
+                declared.as_deref(),
+                Some("apache-2.0 OR mit"),
+                "statement: {statement}"
+            );
+            assert_eq!(
+                declared_spdx.as_deref(),
+                Some("Apache-2.0 OR MIT"),
+                "statement: {statement}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_slash_dual_mit_x11() {
+        let (declared, declared_spdx, _) = normalize_npm_declared_license(Some("MIT/X11"));
+
+        // X11 normalizes to the ScanCode `x11-xconsortium` key (SPDX `X11`).
+        assert_eq!(declared.as_deref(), Some("mit OR x11-xconsortium"));
+        assert_eq!(declared_spdx.as_deref(), Some("MIT OR X11"));
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_slash_dual_bsd_mit() {
+        let (declared, declared_spdx, _) = normalize_npm_declared_license(Some("BSD/MIT"));
+
+        assert_eq!(declared.as_deref(), Some("bsd-new OR mit"));
+        assert_eq!(declared_spdx.as_deref(), Some("BSD-3-Clause OR MIT"));
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_parenthesized_spdx_uses_standard_path() {
+        // A valid SPDX expression (even parenthesized) must normalize through the
+        // standard SPDX path and never reach the slash handling.
+        let (declared, declared_spdx, _) =
+            normalize_npm_declared_license(Some("(MIT OR Apache-2.0)"));
+
+        assert_eq!(declared.as_deref(), Some("apache-2.0 OR mit"));
+        assert_eq!(declared_spdx.as_deref(), Some("Apache-2.0 OR MIT"));
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_plain_single_unaffected() {
+        let (declared, declared_spdx, _) = normalize_npm_declared_license(Some("MIT"));
+
+        assert_eq!(declared.as_deref(), Some("mit"));
+        assert_eq!(declared_spdx.as_deref(), Some("MIT"));
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_slash_with_unresolvable_operand_is_none() {
+        // If any operand fails to resolve, prefer an honest null over a partial guess.
+        let (declared, declared_spdx, detections) =
+            normalize_npm_declared_license(Some("MIT/NotARealLicenseXyz"));
+
+        assert_eq!(declared, None);
+        assert_eq!(declared_spdx, None);
+        assert!(detections.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_npm_declared_license_url_slash_not_treated_as_dual() {
+        // A `/` inside a URL is not a license separator.
+        let (declared, _, _) = normalize_npm_declared_license(Some("https://example.com/LICENSE"));
+
+        assert!(
+            declared.as_deref() != Some("apache-2.0 OR mit"),
+            "URL slash must not be parsed as a dual-license list"
+        );
     }
 
     #[test]
