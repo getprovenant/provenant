@@ -511,25 +511,22 @@ fn process_successful_detections(
     model_detections = collapse_repeated_sourcemap_license_detections(path, model_detections);
 
     if !model_detections.is_empty() {
-        let expressions: Option<Vec<String>> = model_detections
+        // `detected_license_expression` holds the ScanCode-key form (matching its
+        // name, the JSON output, and every downstream post-processing consumer).
+        // The SPDX-form counterpart is derived from the same detections in
+        // `FileInfo::new` and stored in `detected_license_expression_spdx`.
+        let key_expressions: Vec<String> = model_detections
             .iter()
-            .map(|detection| {
-                (!detection.license_expression_spdx.is_empty())
-                    .then(|| detection.license_expression_spdx.clone())
-            })
+            .map(|detection| detection.license_expression.clone())
             .collect();
-
-        if let Some(expressions) = expressions {
-            let combined =
-                crate::utils::spdx::select_primary_license_expression_strict(expressions.clone())
-                    .or_else(|| {
-                        crate::utils::spdx::combine_license_expressions_preserving_structure_strict(
-                            expressions,
-                        )
-                    });
-            if let Some(expr) = combined {
-                file_info_builder.detected_license_expression(Some(expr));
-            }
+        let combined = crate::utils::spdx::select_primary_license_expression(
+            key_expressions.clone(),
+        )
+        .or_else(|| {
+            crate::utils::spdx::combine_license_expressions_preserving_structure(key_expressions)
+        });
+        if let Some(expr) = combined {
+            file_info_builder.detected_license_expression(Some(expr));
         }
     }
 

@@ -87,6 +87,7 @@ pub(super) fn process_directory(
         programming_language: None,
         package_data: Vec::new(),
         detected_license_expression: None,
+        detected_license_expression_spdx: None,
         license_detections: Vec::new(),
         license_clues: Vec::new(),
         percentage_of_license_text: license_enabled.then_some(0.0),

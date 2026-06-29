@@ -175,11 +175,10 @@ pub(super) fn promote_package_declared_license_from_legal_files(
 
         // Re-render the agreed expression into key and SPDX forms from the per-detection
         // key<->SPDX correspondence, preserving its `AND`/`OR`/`WITH` structure, then
-        // canonically order operands to match ScanCode. The file's own
-        // `detected_license_expression` string is NOT trusted verbatim for the key field:
-        // it can be SPDX-rendered when this pass runs, which previously leaked
-        // `BUSL-1.1 AND MPL-2.0` into the key field with a null SPDX field. The SPDX field
-        // is rendered strictly — left unset (never key-form text) if any operand lacks an
+        // canonically order operands to match ScanCode. `detected_license_expression`
+        // now reliably holds key form, but the token maps index both spellings, so this
+        // remains robust regardless of the source expression's form. The SPDX field is
+        // rendered strictly — left unset (never key-form text) if any operand lacks an
         // SPDX id, e.g. a custom/unmapped license.
         let (token_to_key, token_to_spdx) = detection_token_maps(&detections);
         let Some(declared_key_expression) =
