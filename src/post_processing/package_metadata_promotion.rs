@@ -12,6 +12,7 @@ use crate::utils::spdx::combine_license_expressions;
 
 use super::PackageIx;
 use super::classification::is_legal_file;
+use super::license_expression_render::{detection_token_maps, render_license_expression};
 use super::output_indexes::OutputIndexes;
 use super::summary_helpers::unique;
 
@@ -214,129 +215,6 @@ fn single_declared_expression(legal_files: &[&FileInfo]) -> Option<String> {
         return None;
     };
     Some(expression.clone())
-}
-
-/// Builds case-insensitive token maps from a set of detections: license-key token →
-/// canonical key form, and license-key token → SPDX id. Each detection's
-/// `license_expression` and `license_expression_spdx` share the same operator
-/// structure, so their license tokens align positionally. Both the key and the SPDX
-/// spelling of every token are indexed, so an expression in *either* form resolves.
-fn detection_token_maps(
-    detections: &[LicenseDetection],
-) -> (HashMap<String, String>, HashMap<String, String>) {
-    let mut token_to_key: HashMap<String, String> = HashMap::new();
-    let mut token_to_spdx: HashMap<String, String> = HashMap::new();
-    for detection in detections {
-        let pairs = std::iter::once((
-            detection.license_expression.as_str(),
-            detection.license_expression_spdx.as_str(),
-        ))
-        .chain(detection.matches.iter().map(|match_item| {
-            (
-                match_item.license_expression.as_str(),
-                match_item.license_expression_spdx.as_str(),
-            )
-        }));
-        for (key_expression, spdx_expression) in pairs {
-            let keys = license_tokens(key_expression);
-            let spdxes = license_tokens(spdx_expression);
-            if keys.len() != spdxes.len() {
-                continue;
-            }
-            for (key, spdx) in keys.into_iter().zip(spdxes) {
-                if key.is_empty() || spdx.is_empty() {
-                    continue;
-                }
-                token_to_key
-                    .entry(key.to_ascii_lowercase())
-                    .or_insert_with(|| key.to_string());
-                token_to_key
-                    .entry(spdx.to_ascii_lowercase())
-                    .or_insert_with(|| key.to_string());
-                token_to_spdx
-                    .entry(key.to_ascii_lowercase())
-                    .or_insert_with(|| spdx.to_string());
-                token_to_spdx
-                    .entry(spdx.to_ascii_lowercase())
-                    .or_insert_with(|| spdx.to_string());
-            }
-        }
-    }
-    (token_to_key, token_to_spdx)
-}
-
-/// Re-renders a license expression by mapping each license-key token (case-insensitively)
-/// through `token_map`, leaving `AND`/`OR`/`WITH` operators and parentheses untouched so
-/// the operator structure is preserved. With `strict`, returns `None` if any license
-/// token is unmapped — so an SPDX rendering that cannot fully resolve yields an absent
-/// field rather than leaking key-form text. Without `strict`, an unmapped token passes
-/// through unchanged.
-fn render_license_expression(
-    expression: &str,
-    token_map: &HashMap<String, String>,
-    strict: bool,
-) -> Option<String> {
-    let mut rendered = String::with_capacity(expression.len());
-    for token in tokenize_license_expression(expression) {
-        match token {
-            ExpressionToken::Operator(text) => rendered.push_str(text),
-            ExpressionToken::License(key) => match token_map.get(&key.to_ascii_lowercase()) {
-                Some(mapped) => rendered.push_str(mapped),
-                None if strict => return None,
-                None => rendered.push_str(key),
-            },
-        }
-    }
-    Some(rendered)
-}
-
-enum ExpressionToken<'a> {
-    /// Operators, parentheses, and whitespace — emitted verbatim.
-    Operator(&'a str),
-    /// A license-key token to be mapped through a token map.
-    License(&'a str),
-}
-
-/// Splits a license expression into license-key tokens and the operator/punctuation
-/// runs between them, preserving every character so the input can be reconstructed.
-fn tokenize_license_expression(expression: &str) -> Vec<ExpressionToken<'_>> {
-    let is_license_char = |c: char| c.is_alphanumeric() || matches!(c, '-' | '.' | '_' | '+' | ':');
-    let mut tokens = Vec::new();
-    let mut rest = expression;
-    while !rest.is_empty() {
-        let boundary = rest.find(is_license_char).unwrap_or(rest.len());
-        if boundary > 0 {
-            tokens.push(ExpressionToken::Operator(&rest[..boundary]));
-            rest = &rest[boundary..];
-            continue;
-        }
-        let end = rest
-            .find(|c: char| !is_license_char(c))
-            .unwrap_or(rest.len());
-        let word = &rest[..end];
-        if is_expression_operator(word) {
-            tokens.push(ExpressionToken::Operator(word));
-        } else {
-            tokens.push(ExpressionToken::License(word));
-        }
-        rest = &rest[end..];
-    }
-    tokens
-}
-
-fn is_expression_operator(word: &str) -> bool {
-    matches!(word.to_ascii_uppercase().as_str(), "AND" | "OR" | "WITH")
-}
-
-/// The license-key tokens of an expression in order, dropping operators and punctuation.
-fn license_tokens(expression: &str) -> Vec<&str> {
-    tokenize_license_expression(expression)
-        .into_iter()
-        .filter_map(|token| match token {
-            ExpressionToken::License(license) => Some(license),
-            ExpressionToken::Operator(_) => None,
-        })
-        .collect()
 }
 
 /// The distinct directories a package is anchored in (the parent directory of each
