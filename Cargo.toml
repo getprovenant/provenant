@@ -187,7 +187,6 @@ tera = { version = "1.20.1", default-features = false }
 thiserror = "2.0.18"
 tiny_http = "0.12.0"
 toml = { workspace = true }
-ttf-parser = "0.25.1"
 url = { workspace = true }
 uuid = { version = "1.23.1", features = ["v4"] }
 yaml_serde = { workspace = true }
