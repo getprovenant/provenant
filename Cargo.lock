@@ -3500,7 +3500,6 @@ dependencies = [
  "thiserror",
  "tiny_http",
  "toml",
- "ttf-parser",
  "url",
  "uuid",
  "yaml_serde",

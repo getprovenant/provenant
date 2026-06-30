@@ -16,6 +16,9 @@ yanked = "deny"
 unmaintained = "workspace"
 unsound = "workspace"
 ignore = [
+    # Still pulled transitively by pdf_oxide. Provenant no longer depends on
+    # ttf-parser directly; remove this once pdf_oxide migrates away.
+    "RUSTSEC-2026-0192",
 ]
 
 [bans]

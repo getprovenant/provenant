@@ -6,8 +6,9 @@ use std::path::Path;
 
 use allsorts::binary::read::ReadScope;
 use allsorts::font_data::FontData;
+use allsorts::tables::os2::Os2;
 use allsorts::tables::{FontTableProvider, NameTable, OpenTypeData};
-use ttf_parser::{Face, Permissions, fonts_in_collection, name_id};
+use allsorts::tag;
 
 use crate::parsers::metadata::ParserMetadata;
 
@@ -29,6 +30,10 @@ const OFL_URL_CANONICALIZATIONS: &[(&str, &str)] = &[
     ("https://openfontlicense.org", "http://scripts.sil.org/OFL"),
 ];
 const ALLSORTS_NAME_TABLE_TAG: u32 = u32::from_be_bytes(*b"name");
+const OS2_PERMISSIONS_MASK: u16 = 0xF;
+const OS2_RESTRICTED_LICENSE_EMBEDDING: u16 = 0x2;
+const OS2_PREVIEW_AND_PRINT_EMBEDDING: u16 = 0x4;
+const OS2_EDITABLE_EMBEDDING: u16 = 0x8;
 
 pub(crate) static FONT_METADATA: &[ParserMetadata] = &[ParserMetadata {
     description: "Embedded font legal metadata (native fonts, webfonts, and collections)",
@@ -78,15 +83,7 @@ fn extract_sfnt_font_metadata_text(bytes: &[u8], include_permissions: bool) -> O
     }
 
     if include_permissions {
-        let face_count = fonts_in_collection(bytes).unwrap_or(1);
-        for face_index in 0..face_count {
-            let Some(permissions) = Face::parse(bytes, face_index).ok()?.permissions() else {
-                continue;
-            };
-            let line = format!(
-                "Embedding permissions: {}",
-                font_permission_label(permissions)
-            );
+        for line in extract_font_embedding_permission_lines(bytes) {
             if seen.insert(line.clone()) {
                 lines.push(line);
             }
@@ -166,15 +163,15 @@ fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
     let mut lines = Vec::new();
     let mut seen = BTreeSet::new();
     for_each_name_table(bytes, |name_table| {
-        for (source_name_id, target_name_id) in [
-            (NameTable::COPYRIGHT_NOTICE, name_id::COPYRIGHT_NOTICE),
-            (NameTable::LICENSE_DESCRIPTION, name_id::LICENSE),
-            (NameTable::LICENSE_INFO_URL, name_id::LICENSE_URL),
+        for name_id in [
+            NameTable::COPYRIGHT_NOTICE,
+            NameTable::LICENSE_DESCRIPTION,
+            NameTable::LICENSE_INFO_URL,
         ] {
-            let Some(value) = name_table.string_for_id(source_name_id) else {
+            let Some(value) = name_table.string_for_id(name_id) else {
                 continue;
             };
-            let Some(line) = build_font_metadata_line(target_name_id, value) else {
+            let Some(line) = build_font_metadata_line(name_id, value) else {
                 continue;
             };
             if seen.insert(line.clone()) {
@@ -182,6 +179,32 @@ fn extract_allsorts_name_table_lines(bytes: &[u8]) -> Vec<String> {
             }
         }
     });
+    lines
+}
+
+fn extract_font_embedding_permission_lines(bytes: &[u8]) -> Vec<String> {
+    let mut lines = Vec::new();
+    let Some(font_data) = ReadScope::new(bytes).read::<FontData<'_>>().ok() else {
+        return lines;
+    };
+
+    for face_index in 0..allsorts_face_count(&font_data) {
+        let Ok(provider) = font_data.table_provider(face_index) else {
+            continue;
+        };
+        let Ok(os2_data) = provider.read_table_data(tag::OS_2) else {
+            continue;
+        };
+        let os2_scope = ReadScope::new(os2_data.as_ref());
+        let Ok(os2) = os2_scope.read_dep::<Os2>(os2_scope.data().len()) else {
+            continue;
+        };
+        let Some(label) = font_permission_label(os2.version, os2.fs_type) else {
+            continue;
+        };
+        lines.push(format!("Embedding permissions: {label}"));
+    }
+
     lines
 }
 
@@ -372,7 +395,7 @@ fn build_font_metadata_line(name_id_value: u16, value: String) -> Option<String>
         return None;
     }
 
-    if name_id_value == name_id::COPYRIGHT_NOTICE {
+    if name_id_value == NameTable::COPYRIGHT_NOTICE {
         return Some(value);
     }
 
@@ -382,8 +405,8 @@ fn build_font_metadata_line(name_id_value: u16, value: String) -> Option<String>
 
 fn font_name_label(name_id_value: u16) -> Option<&'static str> {
     match name_id_value {
-        name_id::LICENSE => Some("License Description"),
-        name_id::LICENSE_URL => Some("License Info URL"),
+        NameTable::LICENSE_DESCRIPTION => Some("License Description"),
+        NameTable::LICENSE_INFO_URL => Some("License Info URL"),
         _ => None,
     }
 }
@@ -397,8 +420,8 @@ fn normalize_font_value(name_id_value: u16, value: String) -> String {
         .to_string();
 
     match name_id_value {
-        name_id::COPYRIGHT_NOTICE => strip_reserved_font_name_clause(normalized),
-        name_id::LICENSE | name_id::LICENSE_URL => {
+        NameTable::COPYRIGHT_NOTICE => strip_reserved_font_name_clause(normalized),
+        NameTable::LICENSE_DESCRIPTION | NameTable::LICENSE_INFO_URL => {
             canonicalize_ofl_license_reference_urls(normalized)
         }
         _ => normalized,
@@ -431,12 +454,27 @@ fn canonicalize_ofl_license_reference_urls(mut value: String) -> String {
     value
 }
 
-fn font_permission_label(permission: Permissions) -> &'static str {
-    match permission {
-        Permissions::Installable => "Installable",
-        Permissions::Restricted => "Restricted",
-        Permissions::PreviewAndPrint => "Preview and Print",
-        Permissions::Editable => "Editable",
+fn font_permission_label(os2_version: u16, fs_type: u16) -> Option<&'static str> {
+    let permission_bits = fs_type & OS2_PERMISSIONS_MASK;
+
+    if os2_version <= 2 {
+        return Some(if permission_bits == 0 {
+            "Installable"
+        } else if permission_bits & OS2_EDITABLE_EMBEDDING != 0 {
+            "Editable"
+        } else if permission_bits & OS2_PREVIEW_AND_PRINT_EMBEDDING != 0 {
+            "Preview and Print"
+        } else {
+            "Restricted"
+        });
+    }
+
+    match permission_bits {
+        0 => Some("Installable"),
+        OS2_RESTRICTED_LICENSE_EMBEDDING => Some("Restricted"),
+        OS2_PREVIEW_AND_PRINT_EMBEDDING => Some("Preview and Print"),
+        OS2_EDITABLE_EMBEDDING => Some("Editable"),
+        _ => None,
     }
 }
 
@@ -445,15 +483,17 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
+    use allsorts::tables::NameTable;
+
     use crate::copyright::detect_copyrights;
     use crate::license_detection::LicenseDetectionEngine;
-    use ttf_parser::name_id;
 
     use crate::finder::{DetectionConfig, find_urls};
 
     use super::{
+        OS2_EDITABLE_EMBEDDING, OS2_PREVIEW_AND_PRINT_EMBEDDING, OS2_RESTRICTED_LICENSE_EMBEDDING,
         build_font_metadata_line, canonicalize_ofl_license_reference_urls,
-        extract_font_metadata_text, extract_font_name_table_strings,
+        extract_font_metadata_text, extract_font_name_table_strings, font_permission_label,
     };
 
     #[test]
@@ -502,22 +542,62 @@ mod tests {
     }
 
     #[test]
+    fn legacy_os2_embedding_permissions_use_least_restrictive_bit() {
+        assert_eq!(font_permission_label(2, 0), Some("Installable"));
+        assert_eq!(
+            font_permission_label(2, OS2_RESTRICTED_LICENSE_EMBEDDING),
+            Some("Restricted")
+        );
+        assert_eq!(
+            font_permission_label(
+                2,
+                OS2_RESTRICTED_LICENSE_EMBEDDING | OS2_PREVIEW_AND_PRINT_EMBEDDING
+            ),
+            Some("Preview and Print")
+        );
+        assert_eq!(
+            font_permission_label(2, OS2_RESTRICTED_LICENSE_EMBEDDING | OS2_EDITABLE_EMBEDDING),
+            Some("Editable")
+        );
+    }
+
+    #[test]
+    fn os2_version_3_embedding_permissions_require_exclusive_bits() {
+        assert_eq!(
+            font_permission_label(3, OS2_RESTRICTED_LICENSE_EMBEDDING),
+            Some("Restricted")
+        );
+        assert_eq!(
+            font_permission_label(3, OS2_PREVIEW_AND_PRINT_EMBEDDING),
+            Some("Preview and Print")
+        );
+        assert_eq!(
+            font_permission_label(3, OS2_EDITABLE_EMBEDDING),
+            Some("Editable")
+        );
+        assert_eq!(
+            font_permission_label(3, OS2_RESTRICTED_LICENSE_EMBEDDING | OS2_EDITABLE_EMBEDDING),
+            None
+        );
+    }
+
+    #[test]
     fn font_metadata_lines_detect_noto_ofl_text_without_trademark_noise() {
         let metadata_text = [
             build_font_metadata_line(
-                name_id::COPYRIGHT_NOTICE,
+                NameTable::COPYRIGHT_NOTICE,
                 "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)".to_string(),
             ),
             build_font_metadata_line(
-                name_id::TRADEMARK,
+                NameTable::TRADEMARK,
                 "Noto is a trademark of Google LLC.".to_string(),
             ),
             build_font_metadata_line(
-                name_id::LICENSE,
+                NameTable::LICENSE_DESCRIPTION,
                 "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL".to_string(),
             ),
             build_font_metadata_line(
-                name_id::LICENSE_URL,
+                NameTable::LICENSE_INFO_URL,
                 "https://scripts.sil.org/OFL".to_string(),
             ),
         ]
