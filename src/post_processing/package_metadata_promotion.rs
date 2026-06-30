@@ -246,8 +246,10 @@ fn single_declared_expression(legal_files: &[&FileInfo]) -> Option<String> {
 /// - If the set disagrees, the canonical `LICENSE`/`LICENCE`/`COPYING` family takes
 ///   precedence and the agreement test is re-run on that subset; a subset that still
 ///   disagrees (dual `LICENSE-*`) abstains.
-/// - If no canonical license file is present, the full set is kept, so a sole
-///   `NOTICE` (or `COPYRIGHT`/`AUTHORS`) still promotes as before.
+/// - A *sole* or *agreeing* `NOTICE`/`COPYRIGHT`/`AUTHORS` set still promotes via the
+///   first branch. Only a *disagreeing* set with no canonical license file abstains
+///   (returns `None`) — matching prior behavior, where a `NOTICE`-vs-`COPYRIGHT`
+///   disagreement was never promoted either.
 ///
 /// Returns `None` (abstain) when the chosen set has no single agreed expression.
 fn select_legal_files_and_expression(
