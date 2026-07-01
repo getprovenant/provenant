@@ -314,6 +314,9 @@ ScanCode: 59.75s</title></rect>
     <rect x="516.85" y="421.56" width="8" height="8" fill="#d97706" rx="1.5"><title>phoenixframework/phoenix @ e7b8081
 Files: 476
 ScanCode: 78.97s</title></rect>
+    <rect x="518.98" y="419.34" width="8" height="8" fill="#d97706" rx="1.5"><title>KDE/kirigami @ 0ff3ed5
+Files: 491
+ScanCode: 82.76s</title></rect>
     <rect x="522.27" y="434.69" width="8" height="8" fill="#d97706" rx="1.5"><title>nix-community/dream2nix @ 69eb01f
 Files: 515
 ScanCode: 59.81s</title></rect>
@@ -491,6 +494,9 @@ ScanCode: 348.59s</title></rect>
     <rect x="624.61" y="369.98" width="8" height="8" fill="#d97706" rx="1.5"><title>chef/chef @ 0e353ff
 Files: 2274
 ScanCode: 235.22s</title></rect>
+    <rect x="626.96" y="343.70" width="8" height="8" fill="#d97706" rx="1.5"><title>ethereum/go-ethereum @ 59e89e8
+Files: 2353
+ScanCode: 410.23s</title></rect>
     <rect x="627.17" y="395.75" width="8" height="8" fill="#d97706" rx="1.5"><title>bazelbuild/rules_python @ ee53e46
 Files: 2360
 ScanCode: 136.34s</title></rect>
@@ -587,6 +593,9 @@ ScanCode: 285.98s</title></rect>
     <rect x="681.62" y="343.50" width="8" height="8" fill="#d97706" rx="1.5"><title>go-gitea/gitea @ 47fdf3e2
 Files: 5201
 ScanCode: 412.03s</title></rect>
+    <rect x="682.21" y="308.91" width="8" height="8" fill="#d97706" rx="1.5"><title>apache/arrow @ f10c93c
+Files: 5246
+ScanCode: 856.72s</title></rect>
     <rect x="682.57" y="336.59" width="8" height="8" fill="#d97706" rx="1.5"><title>AvaloniaUI/Avalonia @ b7e95c2
 Files: 5273
 ScanCode: 476.87s</title></rect>
@@ -1021,6 +1030,9 @@ Provenant: 5.21s</title></circle>
     <circle cx="520.85" cy="551.53" r="4.5" fill="#2563eb"><title>phoenixframework/phoenix @ e7b8081
 Files: 476
 Provenant: 5.49s</title></circle>
+    <circle cx="522.98" cy="550.94" r="4.5" fill="#2563eb"><title>KDE/kirigami @ 0ff3ed5
+Files: 491
+Provenant: 5.56s</title></circle>
     <circle cx="526.27" cy="527.92" r="4.5" fill="#2563eb"><title>nix-community/dream2nix @ 69eb01f
 Files: 515
 Provenant: 9.05s</title></circle>
@@ -1198,6 +1210,9 @@ Provenant: 10.87s</title></circle>
     <circle cx="628.61" cy="514.47" r="4.5" fill="#2563eb"><title>chef/chef @ 0e353ff
 Files: 2274
 Provenant: 12.03s</title></circle>
+    <circle cx="630.96" cy="505.42" r="4.5" fill="#2563eb"><title>ethereum/go-ethereum @ 59e89e8
+Files: 2353
+Provenant: 14.57s</title></circle>
     <circle cx="631.17" cy="538.14" r="4.5" fill="#2563eb"><title>bazelbuild/rules_python @ ee53e46
 Files: 2360
 Provenant: 7.29s</title></circle>
@@ -1294,6 +1309,9 @@ Provenant: 8.27s</title></circle>
     <circle cx="685.62" cy="502.01" r="4.5" fill="#2563eb"><title>go-gitea/gitea @ 47fdf3e2
 Files: 5201
 Provenant: 15.66s</title></circle>
+    <circle cx="686.21" cy="481.52" r="4.5" fill="#2563eb"><title>apache/arrow @ f10c93c
+Files: 5246
+Provenant: 24.16s</title></circle>
     <circle cx="686.57" cy="518.44" r="4.5" fill="#2563eb"><title>AvaloniaUI/Avalonia @ b7e95c2
 Files: 5273
 Provenant: 11.06s</title></circle>

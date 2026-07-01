@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 235 of 235 recorded runs, with a **19.4× median speedup** and **19.4× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 238 of 238 recorded runs, with a **19.5× median speedup** and **19.4× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -643,6 +643,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.71s`; ScanCode `43.86s`
 - Matched Cargo package and dependency coverage (`1` vs `1` packages, `5` vs `5` dependencies) while preserving the repository's `Apache-2.0 OR MIT` README license semantics and normalizing docs.rs and Keep a Changelog links without trailing-slash drift
 
+##### [apache/arrow @ f10c93c](https://github.com/apache/arrow/tree/f10c93c000775c5fb30ca230f540358611091589) — **35.5× faster**
+
+- Files: 5,246
+- Run context: 2026-07-02 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `24.16s`; ScanCode `856.72s`
+- Far broader cross-ecosystem package assembly across the polyglot monorepo (`19` vs `10` packages, `315` vs `112` dependencies): Provenant additionally models the `pkg:cran/arrow` R package, `pkg:pypi/pyarrow`, and the C++ `pkg:meson/*` and `pkg:generic/vcpkg/*` build/dependency manifests that ScanCode leaves unmodeled, while keeping declared-license metadata honest — `dev/archery/setup.py`, which carries only an Apache header comment and no `license`/classifier field, resolves to no package-declared license (the Apache-2.0 is still captured as a file-level detection) where ScanCode conflates that header into the package's declared license
+
 ##### [bazelbuild/bazel @ eb5aeaa](https://github.com/bazelbuild/bazel/tree/eb5aeaaa23d52601a2aca11ff6fd1a74ea97f0d6) — **28.81× faster**
 
 - Files: 11,495
@@ -776,6 +783,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.21s`; ScanCode `45.03s`
 - Broader BitBake package visibility (`4` vs `0` packages) from committed `.bb` and `.bbappend` metadata, with `linuxconsoletools_1.6.0.bb` carrying source URL/checksum plus local file-reference evidence and wildcard append manifests such as `u-boot%.bbappend` and `linux-yocto_%.bbappend` retained as package records instead of scanner-silent inputs
 
+##### [ethereum/go-ethereum @ 59e89e8](https://github.com/ethereum/go-ethereum/tree/59e89e81e57814a96c429c5cdcaa6ca2e0d6b143) — **28.2× faster**
+
+- Files: 2,353
+- Run context: 2026-07-02 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `14.57s`; ScanCode `410.23s`
+- Accurate split-copyleft handling on the repo's GPL-binary / LGPL-library layout — per-file detection matches ScanCode (`cmd/*` → `gpl-3.0-plus`, library sources → `lgpl-3.0-plus`) — while the assembled `pkg:golang/github.com/ethereum/go-ethereum` abstains from a package-level declared expression because the co-hosted `COPYING` (GPL-3.0) and `COPYING.LESSER` (LGPL-3.0) disagree, where ScanCode emits a malformed, duplicated `gpl-3.0 AND lgpl-3.0 AND (lgpl-3.0 AND gpl-3.0)`; Provenant also assembles the vendored `pkg:autotools/libsecp256k1` (`mit`) that ScanCode misses and flattens ScanCode's duplicated, over-parenthesized operands (e.g. `(cc0-1.0 AND gpl-3.0) AND isc` → `cc0-1.0 AND gpl-3.0 AND isc`)
+
 ##### [facebook/buck2 @ 3359f75](https://github.com/facebook/buck2/tree/3359f75abe3c7b6f543fdb2c7a775d47347b8897) — **25.46× faster**
 
 - Files: 9,600
@@ -859,6 +873,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-29 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `9.96s`; ScanCode `354.17s`
 - Cleaner URL extraction that rejects `{account}`-templated host placeholders ScanCode emits as navigable URLs, and author capture that drops the README maintainer prose ScanCode records as a party, on otherwise matched Go module package, dependency, and declared-license coverage — the assembled `pkg:golang/github.com/hashicorp/terraform` resolves the repo-root `LICENSE` to the same `bsl-1.1 AND mpl-2.0` ScanCode reports
+
+##### [KDE/kirigami @ 0ff3ed5](https://github.com/KDE/kirigami/tree/0ff3ed59f8e3a7883a3e88b7bc487f55365fb0ff) — **14.9× faster**
+
+- Files: 491
+- Run context: 2026-07-02 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.56s`; ScanCode `82.76s`
+- Faithful handling of the REUSE licensing model: the `LICENSES/` directory (including the KDE-specific `LicenseRef-KDE-Accepted-LGPL`) and the pervasive per-file `SPDX-License-Identifier` tags across the C++/QML sources resolve to the same expressions as ScanCode (`lgpl-2.0-plus`, `lgpl-2.1-plus`, …), while Provenant preserves each `SPDX-FileCopyrightText:` line verbatim where ScanCode rewrites it to `Copyright`, and surfaces the project-template `android` and `maven` manifests as package data that ScanCode does not
 
 ##### [kubernetes/autoscaler @ 9045d28](https://github.com/kubernetes/autoscaler/tree/9045d287a3458d6ea7440c3dcf921806bc994224) — **32.10× faster**
 
