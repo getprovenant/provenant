@@ -2278,3 +2278,48 @@ fn test_notice_file_multiple_copyrights() {
         cr_texts
     );
 }
+
+#[test]
+fn test_multiholder_with_obfuscated_emails_keeps_all_holders() {
+    // hiredis.c header: two comma-separated holders, each followed by an
+    // obfuscated email. The continuation must not stop at the first email +
+    // comma; both holders and both emails belong to the copyright.
+    let text = "Copyright (c) 2015, Matt Stancliff <matt at genges dot com>, Jan-Erik Rediger <janerik at fnordig dot com>";
+    let (c, h, _a) = detect_copyrights_from_text(text);
+    assert_eq!(c.len(), 1, "one copyright statement: {c:?}");
+    let cr = c[0].copyright.as_str();
+    assert!(cr.contains("Matt Stancliff"), "first holder kept: {cr}");
+    assert!(
+        cr.contains("matt at genges dot com"),
+        "first obfuscated email kept: {cr}"
+    );
+    assert!(
+        cr.contains("Jan-Erik Rediger"),
+        "second holder must not be dropped: {cr}"
+    );
+    assert!(
+        cr.contains("janerik at fnordig dot com"),
+        "second obfuscated email kept: {cr}"
+    );
+    let holders: Vec<&str> = h.iter().map(|x| x.holder.as_str()).collect();
+    assert!(
+        holders.iter().any(|x| x.contains("Matt Stancliff"))
+            && holders.iter().any(|x| x.contains("Jan-Erik Rediger")),
+        "both holders captured: {holders:?}"
+    );
+}
+
+#[test]
+fn test_single_holder_obfuscated_email_kept_in_copyright() {
+    // dict.c header: the obfuscated email must stay in the copyright statement
+    // rather than being truncated at the holder name.
+    let text = "Copyright (c) 2006-2010, Salvatore Sanfilippo antirez at gmail dot com";
+    let (c, h, _a) = detect_copyrights_from_text(text);
+    assert_eq!(c.len(), 1, "{c:?}");
+    assert_eq!(
+        c[0].copyright,
+        "Copyright (c) 2006-2010, Salvatore Sanfilippo antirez at gmail dot com"
+    );
+    assert_eq!(h.len(), 1);
+    assert_eq!(h[0].holder, "Salvatore Sanfilippo");
+}

@@ -218,3 +218,43 @@ fn test_quoted_plain_key_is_junk_for_structured_literals() {
         .expect("data token should exist");
     assert_eq!(token.tag, PosTag::Junk, "tokens: {tokens:?}");
 }
+
+#[test]
+fn test_composes_lowercase_obfuscated_email_into_single_token() {
+    // `matt at genges dot com` tokenizes as Nnp Cc(at) Nn Dot(dot) Nn; it must
+    // collapse to one Email leaf so downstream NAME rules chain past it.
+    let lines = vec![(1, "Matt Stancliff matt at genges dot com".to_string())];
+    let tokens = get_tokens(&lines);
+    let email = tokens
+        .iter()
+        .find(|t| t.tag == PosTag::Email)
+        .expect("obfuscated email should compose to an Email token");
+    assert_eq!(email.value, "matt at genges dot com", "tokens: {tokens:?}");
+    assert!(
+        !tokens.iter().any(|t| t.tag == PosTag::Dot),
+        "the `dot` separator must be consumed into the Email token: {tokens:?}"
+    );
+}
+
+#[test]
+fn test_composes_uppercase_at_obfuscated_email() {
+    // `joe AT foo DOT com` uses At/Dot tags (uppercase connectors).
+    let lines = vec![(1, "Jane Doe joe AT foo DOT com".to_string())];
+    let tokens = get_tokens(&lines);
+    let email = tokens
+        .iter()
+        .find(|t| t.tag == PosTag::Email)
+        .expect("uppercase AT/DOT obfuscated email should compose");
+    assert_eq!(email.value, "joe AT foo DOT com", "tokens: {tokens:?}");
+}
+
+#[test]
+fn test_does_not_compose_plain_prose_without_dot_separator() {
+    // No obfuscated `dot` separator: ordinary prose must not collapse to an email.
+    let lines = vec![(1, "the cat sat at the mat".to_string())];
+    let tokens = get_tokens(&lines);
+    assert!(
+        !tokens.iter().any(|t| t.tag == PosTag::Email),
+        "plain prose must not compose into an email: {tokens:?}"
+    );
+}

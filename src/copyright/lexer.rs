@@ -115,8 +115,79 @@ pub fn get_tokens(numbered_lines: &[(usize, String)]) -> Vec<Token> {
     }
 
     retag_camel_case_junk_before_company_suffix_in_copyright_context(&mut tokens);
+    compose_obfuscated_emails(&mut tokens);
 
     tokens
+}
+
+/// Collapse a space-separated obfuscated email such as
+/// `matt at genges dot com` into a single [`PosTag::Email`] token.
+///
+/// Mirrors the ScanCode `EMAIL` grammar rules for obfuscated forms
+/// (`copyrights.py` rules `# foo at bat dot com` and `#350.3`): a word, the
+/// literal connector `at`, a word, the literal `dot`, and a final word. The
+/// connector tokenizes as either [`PosTag::At`] (from `AT`) or [`PosTag::Cc`]
+/// (from lowercase `at`); the separator tokenizes as [`PosTag::Dot`]. Composing
+/// in the token stream — rather than as grammar rules — keeps `Email` a leaf
+/// tag, so the existing `NAME`/`NAME-EMAIL` rules chain holders across the
+/// obfuscated email and the trailing comma instead of stopping at it.
+fn compose_obfuscated_emails(tokens: &mut Vec<Token>) {
+    if tokens.len() < 5 {
+        return;
+    }
+
+    // A local/domain word of the obfuscated-email pattern. `PosTag::Pn` (dotted
+    // initials such as `j.` or `DMTF.`) is intentionally excluded: a dotted
+    // local-part like `j.doe at example dot com` is vanishingly rare in real
+    // copyright headers and not worth the over-composition risk.
+    let is_word = |t: &Token| {
+        matches!(
+            t.tag,
+            PosTag::Nn | PosTag::Nnp | PosTag::Caps | PosTag::MixedCap
+        )
+    };
+    let is_at_connector = |t: &Token| {
+        t.tag == PosTag::At || (t.tag == PosTag::Cc && t.value.eq_ignore_ascii_case("at"))
+    };
+
+    let mut i = 0;
+    while i + 5 <= tokens.len() {
+        // A parenthesis-wrapped obfuscated email such as `(pdimov at gmail dot
+        // com)` is left to the existing single-token bracket pattern and stays
+        // inline in the holder, matching ScanCode. Only the angle-bracketed and
+        // bare forms (whose brackets were already stripped upstream) compose
+        // here, where ScanCode also lifts the email out of the holder.
+        // Checking only the first and last token's line is sufficient: a blank
+        // line between tokens injects an `EmptyLine` token (which fails `is_word`
+        // /`is_at_connector` below), and a gapless continuation is treated as one
+        // logical line — so the three inner tokens cannot straddle lines here.
+        let has_paren_boundary =
+            tokens[i].value.starts_with('(') || tokens[i + 4].value.ends_with(')');
+        if !has_paren_boundary
+            && tokens[i].start_line == tokens[i + 4].start_line
+            && is_word(&tokens[i])
+            && is_at_connector(&tokens[i + 1])
+            && is_word(&tokens[i + 2])
+            && tokens[i + 3].tag == PosTag::Dot
+            && is_word(&tokens[i + 4])
+        {
+            let value = tokens[i..i + 5]
+                .iter()
+                .map(|t| t.value.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
+            let start_line = tokens[i].start_line;
+            tokens.splice(
+                i..i + 5,
+                std::iter::once(Token {
+                    value,
+                    tag: PosTag::Email,
+                    start_line,
+                }),
+            );
+        }
+        i += 1;
+    }
 }
 
 fn retag_camel_case_junk_before_company_suffix_in_copyright_context(tokens: &mut [Token]) {

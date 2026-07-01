@@ -316,6 +316,15 @@ fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
         if refine_copyright(rendered).as_deref() == Some(fallback) {
             return preserve_native_suffix_for_semantic_match(rendered, fallback);
         }
+        // The normalized notice was not found verbatim (e.g. punctuation differs)
+        // and the span does not refine to it. A faithful raw projection stays
+        // close in length to the normalized value; a span dramatically longer is
+        // the notice embedded in a run-on blob — common in font name-table records
+        // that pack a whole licence onto one line — so prefer the trustworthy
+        // normalized value rather than emitting the blob.
+        if rendered.len() > fallback.len().saturating_mul(2) + 64 {
+            return fallback.to_string();
+        }
         return rendered.to_string();
     };
     let end = start + fallback.len();
