@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    extract_comment_author_supplements, extract_copyright_information,
-    extract_patch_header_author_supplements, is_binary_garbage_party_value,
-    is_binary_string_copyright_candidate, is_font_metadata_label_copyright,
+    collapse_angle_bracket_padding, extract_comment_author_supplements,
+    extract_copyright_information, extract_patch_header_author_supplements,
+    is_binary_garbage_party_value, is_binary_string_copyright_candidate,
+    is_font_metadata_label_copyright,
 };
 use crate::copyright;
 use crate::models::{FileInfoBuilder, FileType};
@@ -1223,4 +1224,62 @@ fn test_html_copyright_entity_is_detected_not_treated_as_source_code() {
             .collect::<Vec<_>>(),
         vec!["Natural Earth"]
     );
+}
+
+#[test]
+fn test_collapse_angle_bracket_padding() {
+    // Padding on both sides, one side, and none.
+    assert_eq!(
+        collapse_angle_bracket_padding("Foo < a at b dot c > Bar"),
+        "Foo <a at b dot c> Bar"
+    );
+    assert_eq!(
+        collapse_angle_bracket_padding("Foo <a at b dot c > Bar"),
+        "Foo <a at b dot c> Bar"
+    );
+    assert_eq!(
+        collapse_angle_bracket_padding("Foo < a at b dot c> Bar"),
+        "Foo <a at b dot c> Bar"
+    );
+    assert_eq!(
+        collapse_angle_bracket_padding("Foo <a@b.c> Bar"),
+        "Foo <a@b.c> Bar"
+    );
+    // Unbalanced comparison operators are left alone.
+    assert_eq!(collapse_angle_bracket_padding("if a < b"), "if a < b");
+    assert_eq!(collapse_angle_bracket_padding("a > b and c"), "a > b and c");
+}
+
+#[test]
+fn test_extract_copyright_obfuscated_email_in_spaced_angle_brackets() {
+    // The fpconv/redis header form: an obfuscated email padded inside angle
+    // brackets. The email is retained and the brackets render without inner
+    // spaces, matching the unspaced `<email>` form real notices normally use.
+    let text = "/*\n * Copyright (c) 2009, Florian Loitsch < florian.loitsch at inria dot fr >\n * All rights reserved.\n */\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("fpconv.c"), text, 120.0, false);
+
+    let file = builder
+        .name("fpconv.c".to_string())
+        .base_name("fpconv".to_string())
+        .extension(".c".to_string())
+        .path("fpconv.c".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright (c) 2009, Florian Loitsch <florian.loitsch at inria dot fr> All rights reserved."
+    );
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(file.holders[0].holder, "Florian Loitsch");
 }

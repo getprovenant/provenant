@@ -179,6 +179,12 @@ fn render_raw_copyright_from_text(
     // are left untouched and still preserved natively.
     let rendered = normalize_html_copyright_entity(&rendered);
     let rendered = rendered.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Collapse padding immediately inside a `<...>` pair so a source-spaced
+    // contact such as `< florian.loitsch at inria dot fr >` renders as
+    // `<florian.loitsch at inria dot fr>`, matching the unspaced `<email>` form
+    // real notices normally use. Only balanced pairs are touched, so stray `<`
+    // and `>` comparison operators are left alone.
+    let rendered = collapse_angle_bracket_padding(&rendered);
 
     if rendered.is_empty() {
         fallback.to_string()
@@ -189,6 +195,29 @@ fn render_raw_copyright_from_text(
     } else {
         project_native_copyright_value(&rendered, fallback)
     }
+}
+
+/// Collapse whitespace immediately inside a balanced `<...>` pair, leaving the
+/// inner text otherwise intact. `< a b >` becomes `<a b>`; unbalanced `<` / `>`
+/// (comparison operators) are untouched because the pattern requires a closing
+/// `>` with no intervening angle bracket.
+fn collapse_angle_bracket_padding(text: &str) -> String {
+    static ANGLE_PADDING_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"<[ \t]+([^<>]*?)[ \t]*>|<([^<>]*?)[ \t]+>").expect("valid regex")
+    });
+    if !text.contains('<') {
+        return text.to_string();
+    }
+    ANGLE_PADDING_RE
+        .replace_all(text, |caps: &regex::Captures| {
+            let inner = caps
+                .get(1)
+                .or_else(|| caps.get(2))
+                .map(|m| m.as_str())
+                .unwrap_or("");
+            format!("<{inner}>")
+        })
+        .into_owned()
 }
 
 /// Render the raw source span backing a detection so it can be tested for
