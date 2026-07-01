@@ -627,6 +627,15 @@ fn test_is_junk_copyright_trade_secrets_fragments() {
 }
 
 #[test]
+fn test_is_junk_copyright_sspl_licensing_copyright_or_other_notices() {
+    // SSPL/Elastic-style prose "any licensing, copyright, or other notices"
+    // leaves the bare fragment "copyright, or other" after refinement; it is
+    // license-body prose, not a real copyright statement.
+    assert!(is_junk_copyright("copyright, or other"));
+    assert!(is_junk_copyright("COPYRIGHT, OR OTHER"));
+}
+
+#[test]
 fn test_is_junk_copyright_all_caps_placeholders() {
     assert!(is_junk_copyright(
         "Copyright (c) 1999-2008 MODULEAUTHOR endif"
