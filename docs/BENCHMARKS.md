@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 232 of 232 recorded runs, with a **19.2× median speedup** and **19.2× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 235 of 235 recorded runs, with a **19.4× median speedup** and **19.4× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -657,6 +657,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `7.29s`; ScanCode `136.34s`
 - Far broader Bazel module coverage (`29` vs `5` `pkg:bazel/*` packages, `1362` vs `736` dependencies) from the repo's `MODULE.bazel` bzlmod manifests, `WORKSPACE`, and `BUILD` files across the example and test trees that ScanCode largely leaves unmodeled, with the assembled `pkg:bazel/py_toolchains` carrying both `apache-2.0` declared licensing and the `The Bazel Authors` holder where ScanCode attaches neither to its top-level package, plus extension-qualified installed-wheel PURLs and clean canonical PyPI dependency identities where ScanCode appends `file_name` archive qualifiers
 
+##### [bevyengine/bevy @ d227783](https://github.com/bevyengine/bevy/tree/d22778325fd1fdec484109d0c0074b70524ab0f9) — **47.5× faster**
+
+- Files: 2,897
+- Run context: 2026-07-01 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.64s`; ScanCode `362.89s`
+- Structure-preserving dual-license identity across the Cargo workspace — the `pkg:cargo/bevy*` crates carry `apache-2.0 OR mit` with the `OR` intact — plus normalization of the informal npm `"MIT/Apache2"` declared string to `apache-2.0 OR mit` where ScanCode reports only `mit`, and source-faithful URL extraction that preserves author-written trailing slashes (for example `https://bevy.org/donate/`) that ScanCode strips inconsistently, on matched package and dependency coverage (`94` packages, `1679` dependencies)
+
 ##### [boostorg/boost @ 4f1cbeb](https://github.com/boostorg/boost/tree/4f1cbeb724d9f3c08a826fbcee5a3db2f5480441) — **14.47× faster**
 
 - Files: 241
@@ -944,6 +951,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `21.79s`; ScanCode `841.78s`
 - Broader package and dependency visibility (`1` vs `0` packages, `41` vs `0` dependencies) from bundled `external/perl/Text-Template-1.56` CPAN metadata plus committed `.gitmodules` and `test/quic-openssl-docker/Dockerfile` surfaces, with stronger `Written by ...` author recovery on OpenSSL-style comment headers and cleaner rejection of weak CPAL or MIT overcalls on standard OpenSSL license footers
 
+##### [prometheus/prometheus @ 351447a](https://github.com/prometheus/prometheus/tree/351447a44b0887c959b74996d2d3367f31293cba) — **30.1× faster**
+
+- Files: 1,637
+- Run context: 2026-07-01 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.99s`; ScanCode `300.33s`
+- Broader Go package and dependency extraction (`9` vs `7` packages, `3995` vs `2324` dependencies) across the workspace `go.mod`/`go.sum`/`go.work` and nested module manifests, with the assembled `pkg:golang/github.com/prometheus/prometheus` carrying a clean `apache-2.0` declared license from the repo-root `LICENSE` where ScanCode conflates the sibling `NOTICE`'s bundled-dependency licensing into an `apache-2.0 AND mit AND bsd-new AND (apache-2.0 AND unknown-license-reference)` aggregate, plus author capture that rejects the README prose and Go test-code fragments ScanCode records as parties
+
 ##### [pulseaudio/pulseaudio @ b096704](https://github.com/pulseaudio/pulseaudio/tree/b096704c0d42c5e784deb781a07b23cfb5286a82) — **29.70× faster**
 
 - Files: 867
@@ -964,6 +978,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `32.26s`; ScanCode `1488.40s`
 - Broader Meson and package-adjacent dependency extraction (`22` vs `21` packages, `260` vs `176` dependencies) from the root `.gitmodules`, `python/tests/minreqs.txt`, and many committed `subprojects/**/meson.build` manifests, with the real `pkg:autotools/qemu` root identity instead of ScanCode's generic input placeholder
+
+##### [redis/redis @ 5b5c326](https://github.com/redis/redis/tree/5b5c32663b09e5e5c6d8918207d35d82d79ab0a5) — **24.4× faster**
+
+- Files: 1,803
+- Run context: 2026-07-01 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `11.16s`; ScanCode `272.71s`
+- Direct `pkg:autotools/jemalloc` package identity (`bsd-simplified`) assembled from the vendored `deps/jemalloc` build manifests where ScanCode surfaces no package at all, cleaner per-file license expressions — the vendored `deps/jemalloc/test` SFMT sources resolve to a clean `bsd-new` where ScanCode bolts on the whole repo-license blob (`bsd-new AND (bsd-new AND generic-cla AND mongodb-sspl-1.0 AND agpl-3.0 AND unknown-license-reference …)`) — and source-faithful copyright capture that keeps complete multi-holder notices and their obfuscated-email contacts across the vendored `deps/hiredis` and `deps/fpconv` sources where ScanCode truncates to a single holder
 
 ##### [restic/restic @ 29446b0](https://github.com/restic/restic/tree/29446b0fd853b7765f652584ff90e817890ee389) — **8.47× faster**
 
