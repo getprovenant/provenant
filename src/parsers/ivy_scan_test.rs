@@ -80,4 +80,60 @@ mod tests {
                     == Some(DatasourceId::AntIvyDependenciesProperties))
         );
     }
+
+    #[test]
+    fn test_dependencies_properties_attach_to_colocated_ivy_xml_package() {
+        let (files, result) = scan_and_assemble(Path::new("testdata/ivy-golden/assembly"));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("assembly-demo"))
+            .expect("ivy.xml should assemble into a package");
+
+        assert!(
+            package
+                .datasource_ids
+                .contains(&DatasourceId::AntIvyDependenciesProperties)
+        );
+        assert!(
+            package
+                .datafile_paths
+                .iter()
+                .any(|path| path.ends_with("/dependencies.properties"))
+        );
+
+        let dependencies_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/dependencies.properties"))
+            .expect("dependencies.properties should be scanned");
+        assert!(
+            dependencies_file
+                .for_packages
+                .contains(&package.package_uid)
+        );
+
+        let resolved_dep = result
+            .dependencies
+            .iter()
+            .find(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:maven/org.slf4j/slf4j-api@2.0.13")
+                    && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+            })
+            .expect("dependencies.properties resolved dependency should be visible");
+        assert_eq!(
+            resolved_dep.for_package_uid.as_ref(),
+            Some(&package.package_uid)
+        );
+        assert_eq!(resolved_dep.is_pinned, Some(true));
+        assert_eq!(resolved_dep.is_direct, Some(true));
+
+        assert!(
+            result.dependencies.iter().any(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:ivy/commons-lang/commons-lang")
+                    && dependency.for_package_uid.as_ref() == Some(&package.package_uid)
+            }),
+            "ivy.xml dependencies should remain assigned to the owning package"
+        );
+    }
 }

@@ -17,6 +17,7 @@ mod debian_source_merge;
 pub mod file_ref_resolve;
 mod hackage_merge;
 mod huggingface_merge;
+mod ivy_dependencies_properties_assign;
 mod nested_merge;
 mod nix_flake_compat_merge;
 mod npm_resource_assign;

@@ -13,8 +13,8 @@ use strum::EnumIter;
 use super::{
     AssemblerConfig, AssemblyMode, DirectoryMergeOutput, bazel_prune, cargo_resource_assign,
     composer_resource_assign, conda_rootfs_merge, debian_source_merge, file_ref_resolve,
-    hackage_merge, nix_flake_compat_merge, npm_resource_assign, nuget_cpm_resolve,
-    python_requirements_assign, ruby_resource_assign, swift_merge, topology,
+    hackage_merge, ivy_dependencies_properties_assign, nix_flake_compat_merge, npm_resource_assign,
+    nuget_cpm_resolve, python_requirements_assign, ruby_resource_assign, swift_merge, topology,
 };
 
 #[derive(Clone, Copy)]
@@ -33,6 +33,7 @@ pub(super) enum PostAssemblyPassKind {
     CondaRootfsMerge,
     NpmResourceAssign,
     PythonRequirementsAssign,
+    IvyDependenciesPropertiesAssign,
     FileReferenceResolve,
     RpmYumdbMerge,
     NpmWorkspaceMerge,
@@ -64,6 +65,7 @@ pub(super) static POST_ASSEMBLY_PASSES: &[PostAssemblyPassKind] = &[
     PostAssemblyPassKind::CondaRootfsMerge,
     PostAssemblyPassKind::NpmResourceAssign,
     PostAssemblyPassKind::PythonRequirementsAssign,
+    PostAssemblyPassKind::IvyDependenciesPropertiesAssign,
     PostAssemblyPassKind::FileReferenceResolve,
     PostAssemblyPassKind::RpmYumdbMerge,
     PostAssemblyPassKind::NpmWorkspaceMerge,
@@ -230,6 +232,10 @@ impl PostAssemblyPassKind {
                 inputs.has_package_type(PackageType::Pypi)
                     && inputs.has_any_file_datasource(&[DatasourceId::PipRequirements])
             }
+            Self::IvyDependenciesPropertiesAssign => {
+                inputs.has_package_type(PackageType::Ivy)
+                    && inputs.has_any_file_datasource(&[DatasourceId::AntIvyDependenciesProperties])
+            }
             Self::FileReferenceResolve => {
                 file_ref_resolve::has_relevant_file_reference_datasource_ids(
                     &inputs.file_datasource_ids,
@@ -276,6 +282,13 @@ impl PostAssemblyPassKind {
             }
             Self::PythonRequirementsAssign => {
                 python_requirements_assign::assign_python_requirements_to_projects(
+                    files,
+                    packages,
+                    dependencies,
+                )
+            }
+            Self::IvyDependenciesPropertiesAssign => {
+                ivy_dependencies_properties_assign::assign_ivy_dependencies_properties_to_projects(
                     files,
                     packages,
                     dependencies,
