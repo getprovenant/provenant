@@ -16,9 +16,16 @@ yanked = "deny"
 unmaintained = "workspace"
 unsound = "workspace"
 ignore = [
-    # Still pulled transitively by pdf_oxide. Provenant no longer depends on
-    # ttf-parser directly; remove this once pdf_oxide migrates away.
-    "RUSTSEC-2026-0192",
+    # RUSTSEC-2026-0194 (quadratic duplicate-attribute check) and
+    # RUSTSEC-2026-0195 (unbounded namespace-declaration allocation) are both
+    # DoS advisories against quick-xml < 0.41.0. The fix is in quick-xml
+    # >= 0.41.0, but the vulnerable versions are held below it by transitive
+    # requirements we cannot resolve: office_oxide 0.1.2 (via pdf_oxide) pins
+    # quick-xml "0.40" and rusty-axml 0.2.1 pins "0.38", both of which exclude
+    # 0.41. No compatible fixed version is resolvable until those crates bump
+    # their quick-xml requirement. Remove once they do.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
 ]
 
 [bans]
