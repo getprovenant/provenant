@@ -69,14 +69,20 @@ pub fn assign_ivy_dependencies_properties_to_projects(
                 continue;
             }
 
-            dependencies.extend(pkg_data.dependencies.iter().map(|dep| {
-                TopLevelDependency::from_dependency(
-                    dep,
-                    file.path.clone(),
-                    DatasourceId::AntIvyDependenciesProperties,
-                    Some(project_root.package_uid.clone()),
-                )
-            }));
+            dependencies.extend(
+                pkg_data
+                    .dependencies
+                    .iter()
+                    .filter(|dep| dep.purl.is_some())
+                    .map(|dep| {
+                        TopLevelDependency::from_dependency(
+                            dep,
+                            file.path.clone(),
+                            DatasourceId::AntIvyDependenciesProperties,
+                            Some(project_root.package_uid.clone()),
+                        )
+                    }),
+            );
         }
     }
 }

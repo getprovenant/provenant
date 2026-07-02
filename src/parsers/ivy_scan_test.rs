@@ -128,6 +128,19 @@ mod tests {
         assert_eq!(resolved_dep.is_pinned, Some(true));
         assert_eq!(resolved_dep.is_direct, Some(true));
 
+        let second_resolved_dep = result
+            .dependencies
+            .iter()
+            .find(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:maven/javax.ws.rs/javax.ws.rs-api@2.1")
+                    && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+            })
+            .expect("second dependencies.properties resolved dependency should be visible");
+        assert_eq!(
+            second_resolved_dep.for_package_uid.as_ref(),
+            Some(&package.package_uid)
+        );
+
         assert!(
             result.dependencies.iter().any(|dependency| {
                 dependency.purl.as_deref() == Some("pkg:ivy/commons-lang/commons-lang")
