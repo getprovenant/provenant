@@ -26,7 +26,7 @@
   "gitIgnoredAuthors": ["github-actions[bot] <github-actions[bot]@users.noreply.github.com>"],
   "prConcurrentLimit": 5,
   "prCreation": "not-pending",
-  "rangeStrategy": "bump",
+  "rangeStrategy": "pin",
   "minimumReleaseAge": "3 days",
   "vulnerabilityAlerts": {
     "enabled": true,
