@@ -1,15 +1,10 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::models::{DatasourceId, FileInfo, Package, PackageType, PackageUid, TopLevelDependency};
-
-struct IvyProjectRoot {
-    root: PathBuf,
-    package_index: usize,
-    package_uid: PackageUid,
-}
+use super::project_dependency_assign::{ProjectFileAssignment, ProjectRoot, assign_project_files};
+use crate::models::{DatasourceId, Dependency, FileInfo, Package, PackageType, TopLevelDependency};
 
 pub fn assign_ivy_dependencies_properties_to_projects(
     files: &mut [FileInfo],
@@ -21,73 +16,27 @@ pub fn assign_ivy_dependencies_properties_to_projects(
         return;
     }
 
-    for file in files.iter_mut() {
-        if !is_ivy_dependencies_properties_file(file) || !file.for_packages.is_empty() {
-            continue;
-        }
-
-        let path = Path::new(&file.path);
-        let Some(project_root) = find_colocated_project_root(path, &project_roots) else {
-            continue;
-        };
-
-        if !file.for_packages.contains(&project_root.package_uid) {
-            file.for_packages.push(project_root.package_uid.clone());
-        }
-
-        let package = &mut packages[project_root.package_index];
-        if !package.datafile_paths.contains(&file.path) {
-            package.datafile_paths.push(file.path.clone());
-        }
-        if !package
-            .datasource_ids
-            .contains(&DatasourceId::AntIvyDependenciesProperties)
-        {
-            package
-                .datasource_ids
-                .push(DatasourceId::AntIvyDependenciesProperties);
-        }
-
-        for dependency in dependencies.iter_mut() {
-            if dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
-                && dependency.datafile_path == file.path
-                && dependency.for_package_uid.is_none()
-            {
-                dependency.for_package_uid = Some(project_root.package_uid.clone());
-            }
-        }
-
-        if dependencies.iter().any(|dependency| {
-            dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
-                && dependency.datafile_path == file.path
-        }) {
-            continue;
-        }
-
-        for pkg_data in &file.package_data {
-            if pkg_data.datasource_id != Some(DatasourceId::AntIvyDependenciesProperties) {
-                continue;
-            }
-
-            dependencies.extend(
-                pkg_data
-                    .dependencies
-                    .iter()
-                    .filter(|dep| dep.purl.is_some())
-                    .map(|dep| {
-                        TopLevelDependency::from_dependency(
-                            dep,
-                            file.path.clone(),
-                            DatasourceId::AntIvyDependenciesProperties,
-                            Some(project_root.package_uid.clone()),
-                        )
-                    }),
-            );
-        }
-    }
+    assign_project_files(
+        files,
+        packages,
+        dependencies,
+        ProjectFileAssignment {
+            datasource_id: DatasourceId::AntIvyDependenciesProperties,
+            project_roots: &project_roots,
+            is_relevant_file: is_ivy_dependencies_properties_file,
+            find_root: find_colocated_project_root,
+            // Keep any coordinate that names a dependency, matching the unowned
+            // hoist path: `build_maven_dependency` always records the version as
+            // an `extracted_requirement`, so an entry whose purl fails to build
+            // is still attached rather than silently dropped.
+            include_dependency: |dep: &Dependency| {
+                dep.purl.is_some() || dep.extracted_requirement.is_some()
+            },
+        },
+    );
 }
 
-fn collect_ivy_project_roots(packages: &[Package]) -> Vec<IvyProjectRoot> {
+fn collect_ivy_project_roots(packages: &[Package]) -> Vec<ProjectRoot> {
     packages
         .iter()
         .enumerate()
@@ -105,7 +54,7 @@ fn collect_ivy_project_roots(packages: &[Package]) -> Vec<IvyProjectRoot> {
                 .and_then(|path| Path::new(path).parent())?
                 .to_path_buf();
 
-            Some(IvyProjectRoot {
+            Some(ProjectRoot {
                 root,
                 package_index,
                 package_uid: package.package_uid.clone(),
@@ -126,8 +75,8 @@ fn is_ivy_dependencies_properties_file(file: &FileInfo) -> bool {
 
 fn find_colocated_project_root<'a>(
     path: &Path,
-    project_roots: &'a [IvyProjectRoot],
-) -> Option<&'a IvyProjectRoot> {
+    project_roots: &'a [ProjectRoot],
+) -> Option<&'a ProjectRoot> {
     let parent = path.parent()?;
     let mut matches = project_roots.iter().filter(|root| root.root == parent);
     let first = matches.next();

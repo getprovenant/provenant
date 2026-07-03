@@ -149,4 +149,47 @@ mod tests {
             "ivy.xml dependencies should remain assigned to the owning package"
         );
     }
+
+    #[test]
+    fn test_dependencies_properties_not_attached_when_not_colocated() {
+        // ivy.xml lives in `module/`, while dependencies.properties sits in the
+        // parent directory, so the colocation guard must leave it unattached.
+        let (files, result) = scan_and_assemble(Path::new("testdata/ivy-golden/non-colocated"));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("non-colocated-demo"))
+            .expect("ivy.xml should assemble into a package");
+
+        assert!(
+            !package
+                .datasource_ids
+                .contains(&DatasourceId::AntIvyDependenciesProperties),
+            "non-colocated dependencies.properties must not be recorded on the package"
+        );
+
+        let dependencies_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/dependencies.properties"))
+            .expect("dependencies.properties should be scanned");
+        assert!(
+            dependencies_file.for_packages.is_empty(),
+            "non-colocated dependencies.properties must remain unowned"
+        );
+
+        // Its Maven dependencies stay hoisted as unowned rather than assigned to
+        // the sibling-directory Ivy package.
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+                && dependency.for_package_uid.is_none()
+        }));
+        assert!(
+            !result.dependencies.iter().any(|dependency| {
+                dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+                    && dependency.for_package_uid.as_ref() == Some(&package.package_uid)
+            }),
+            "no properties dependency should be assigned to the non-colocated package"
+        );
+    }
 }

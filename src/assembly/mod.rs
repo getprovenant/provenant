@@ -23,6 +23,7 @@ mod nix_flake_compat_merge;
 mod npm_resource_assign;
 mod npm_workspace_merge;
 mod nuget_cpm_resolve;
+mod project_dependency_assign;
 mod python_requirements_assign;
 mod ruby_resource_assign;
 mod sibling_merge;
