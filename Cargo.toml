@@ -183,7 +183,7 @@ starlark_syntax = "0.14.2"
 strum = { version = "0.28.0", features = ["derive"] }
 tar = "0.4.45"
 tempfile = { workspace = true }
-tera = { version = "1.20.1", default-features = false }
+tera = { version = "2.0.0", default-features = false }
 thiserror = "2.0.18"
 tiny_http = "0.12.0"
 toml = { workspace = true }
