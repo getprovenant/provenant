@@ -152,7 +152,7 @@ packageurl = "0.6.0"
 pdf_oxide = "0.3.69"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
-quick-xml = "0.40.1"
+quick-xml = "0.41.0"
 rancor = "0.1.1"
 rayon = { workspace = true }
 regex = { workspace = true }
