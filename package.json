@@ -31,6 +31,6 @@
   "devDependencies": {
     "lefthook": "2.1.9",
     "markdownlint-cli2": "0.22.1",
-    "prettier": "3.9.0"
+    "prettier": "3.9.4"
   }
 }
