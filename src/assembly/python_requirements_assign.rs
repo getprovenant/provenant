@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::models::{DatasourceId, FileInfo, Package, PackageType, PackageUid, TopLevelDependency};
+use super::project_dependency_assign::{ProjectFileAssignment, ProjectRoot, assign_project_files};
+use crate::models::{DatasourceId, Dependency, FileInfo, Package, PackageType, TopLevelDependency};
 
 const PYTHON_PROJECT_ROOT_FILENAMES: &[&str] = &[
     "pyproject.toml",
@@ -16,12 +17,6 @@ const PYTHON_PROJECT_ROOT_FILENAMES: &[&str] = &[
     "uv.lock",
 ];
 
-struct PythonProjectRoot {
-    root: PathBuf,
-    package_index: usize,
-    package_uid: PackageUid,
-}
-
 pub fn assign_python_requirements_to_projects(
     files: &mut [FileInfo],
     packages: &mut [Package],
@@ -32,69 +27,21 @@ pub fn assign_python_requirements_to_projects(
         return;
     }
 
-    for file in files.iter_mut() {
-        if !is_requirements_subdir_file(file) || !file.for_packages.is_empty() {
-            continue;
-        }
-
-        let path = Path::new(&file.path);
-        let Some(project_root) = find_nearest_project_root(path, &project_roots) else {
-            continue;
-        };
-
-        if !file.for_packages.contains(&project_root.package_uid) {
-            file.for_packages.push(project_root.package_uid.clone());
-        }
-
-        let package = &mut packages[project_root.package_index];
-        if !package.datafile_paths.contains(&file.path) {
-            package.datafile_paths.push(file.path.clone());
-        }
-        if !package
-            .datasource_ids
-            .contains(&DatasourceId::PipRequirements)
-        {
-            package.datasource_ids.push(DatasourceId::PipRequirements);
-        }
-
-        for dependency in dependencies.iter_mut() {
-            if dependency.datasource_id == DatasourceId::PipRequirements
-                && dependency.datafile_path == file.path
-                && dependency.for_package_uid.is_none()
-            {
-                dependency.for_package_uid = Some(project_root.package_uid.clone());
-            }
-        }
-
-        if !dependencies.iter().any(|dependency| {
-            dependency.datasource_id == DatasourceId::PipRequirements
-                && dependency.datafile_path == file.path
-        }) {
-            for pkg_data in &file.package_data {
-                if pkg_data.datasource_id != Some(DatasourceId::PipRequirements) {
-                    continue;
-                }
-
-                dependencies.extend(
-                    pkg_data
-                        .dependencies
-                        .iter()
-                        .filter(|dep| dep.purl.is_some())
-                        .map(|dep| {
-                            TopLevelDependency::from_dependency(
-                                dep,
-                                file.path.clone(),
-                                DatasourceId::PipRequirements,
-                                Some(project_root.package_uid.clone()),
-                            )
-                        }),
-                );
-            }
-        }
-    }
+    assign_project_files(
+        files,
+        packages,
+        dependencies,
+        ProjectFileAssignment {
+            datasource_id: DatasourceId::PipRequirements,
+            project_roots: &project_roots,
+            is_relevant_file: is_requirements_subdir_file,
+            find_root: find_nearest_project_root,
+            include_dependency: |dep: &Dependency| dep.purl.is_some(),
+        },
+    );
 }
 
-fn collect_python_project_roots(packages: &[Package]) -> Vec<PythonProjectRoot> {
+fn collect_python_project_roots(packages: &[Package]) -> Vec<ProjectRoot> {
     packages
         .iter()
         .enumerate()
@@ -111,7 +58,7 @@ fn collect_python_project_roots(packages: &[Package]) -> Vec<PythonProjectRoot> 
                 .and_then(|path| Path::new(path).parent())?
                 .to_path_buf();
 
-            Some(PythonProjectRoot {
+            Some(ProjectRoot {
                 root,
                 package_index,
                 package_uid: package.package_uid.clone(),
@@ -147,8 +94,8 @@ fn is_requirements_subdir_file(file: &FileInfo) -> bool {
 
 fn find_nearest_project_root<'a>(
     path: &Path,
-    project_roots: &'a [PythonProjectRoot],
-) -> Option<&'a PythonProjectRoot> {
+    project_roots: &'a [ProjectRoot],
+) -> Option<&'a ProjectRoot> {
     let mut current_dir = path.parent().and_then(|parent| parent.parent());
 
     while let Some(dir) = current_dir {

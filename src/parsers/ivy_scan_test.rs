@@ -80,4 +80,116 @@ mod tests {
                     == Some(DatasourceId::AntIvyDependenciesProperties))
         );
     }
+
+    #[test]
+    fn test_dependencies_properties_attach_to_colocated_ivy_xml_package() {
+        let (files, result) = scan_and_assemble(Path::new("testdata/ivy-golden/assembly"));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("assembly-demo"))
+            .expect("ivy.xml should assemble into a package");
+
+        assert!(
+            package
+                .datasource_ids
+                .contains(&DatasourceId::AntIvyDependenciesProperties)
+        );
+        assert!(
+            package
+                .datafile_paths
+                .iter()
+                .any(|path| path.ends_with("/dependencies.properties"))
+        );
+
+        let dependencies_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/dependencies.properties"))
+            .expect("dependencies.properties should be scanned");
+        assert!(
+            dependencies_file
+                .for_packages
+                .contains(&package.package_uid)
+        );
+
+        let resolved_dep = result
+            .dependencies
+            .iter()
+            .find(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:maven/org.slf4j/slf4j-api@2.0.13")
+                    && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+            })
+            .expect("dependencies.properties resolved dependency should be visible");
+        assert_eq!(
+            resolved_dep.for_package_uid.as_ref(),
+            Some(&package.package_uid)
+        );
+        assert_eq!(resolved_dep.is_pinned, Some(true));
+        assert_eq!(resolved_dep.is_direct, Some(true));
+
+        let second_resolved_dep = result
+            .dependencies
+            .iter()
+            .find(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:maven/javax.ws.rs/javax.ws.rs-api@2.1")
+                    && dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+            })
+            .expect("second dependencies.properties resolved dependency should be visible");
+        assert_eq!(
+            second_resolved_dep.for_package_uid.as_ref(),
+            Some(&package.package_uid)
+        );
+
+        assert!(
+            result.dependencies.iter().any(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:ivy/commons-lang/commons-lang")
+                    && dependency.for_package_uid.as_ref() == Some(&package.package_uid)
+            }),
+            "ivy.xml dependencies should remain assigned to the owning package"
+        );
+    }
+
+    #[test]
+    fn test_dependencies_properties_not_attached_when_not_colocated() {
+        // ivy.xml lives in `module/`, while dependencies.properties sits in the
+        // parent directory, so the colocation guard must leave it unattached.
+        let (files, result) = scan_and_assemble(Path::new("testdata/ivy-golden/non-colocated"));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("non-colocated-demo"))
+            .expect("ivy.xml should assemble into a package");
+
+        assert!(
+            !package
+                .datasource_ids
+                .contains(&DatasourceId::AntIvyDependenciesProperties),
+            "non-colocated dependencies.properties must not be recorded on the package"
+        );
+
+        let dependencies_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/dependencies.properties"))
+            .expect("dependencies.properties should be scanned");
+        assert!(
+            dependencies_file.for_packages.is_empty(),
+            "non-colocated dependencies.properties must remain unowned"
+        );
+
+        // Its Maven dependencies stay hoisted as unowned rather than assigned to
+        // the sibling-directory Ivy package.
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+                && dependency.for_package_uid.is_none()
+        }));
+        assert!(
+            !result.dependencies.iter().any(|dependency| {
+                dependency.datasource_id == DatasourceId::AntIvyDependenciesProperties
+                    && dependency.for_package_uid.as_ref() == Some(&package.package_uid)
+            }),
+            "no properties dependency should be assigned to the non-colocated package"
+        );
+    }
 }
