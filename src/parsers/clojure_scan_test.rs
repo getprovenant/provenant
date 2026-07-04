@@ -5,6 +5,8 @@
 mod tests {
     use std::fs;
 
+    use crate::models::DatasourceId;
+
     use super::super::scan_test_utils::scan_and_assemble;
 
     #[test]
@@ -61,7 +63,7 @@ mod tests {
         assert!(
             package
                 .datasource_ids
-                .contains(&crate::models::DatasourceId::ClojureDepsEdn)
+                .contains(&DatasourceId::ClojureDepsEdn)
         );
         assert!(
             package
@@ -76,23 +78,48 @@ mod tests {
             .expect("deps.edn should be scanned");
         assert!(deps_file.for_packages.contains(&package.package_uid));
 
-        let deps_edn_dep = result
-            .dependencies
-            .iter()
-            .find(|dependency| {
-                dependency.purl.as_deref() == Some("pkg:maven/com.cognitect/transit-clj@1.0.333")
-                    && dependency.datasource_id == crate::models::DatasourceId::ClojureDepsEdn
-            })
-            .expect("deps.edn dependency should be visible");
-        assert_eq!(
-            deps_edn_dep.for_package_uid.as_ref(),
-            Some(&package.package_uid)
-        );
+        for (purl, scope, is_runtime, is_optional) in [
+            (
+                "pkg:maven/com.cognitect/transit-clj@1.0.333",
+                None,
+                Some(true),
+                Some(false),
+            ),
+            (
+                "pkg:maven/org.clojure/tools.logging@1.3.0",
+                None,
+                Some(true),
+                Some(false),
+            ),
+            (
+                "pkg:maven/io.github.cognitect-labs/test-runner@0.5.1",
+                Some("test"),
+                Some(false),
+                Some(true),
+            ),
+        ] {
+            let dependency = result
+                .dependencies
+                .iter()
+                .find(|dependency| {
+                    dependency.purl.as_deref() == Some(purl)
+                        && dependency.datasource_id == DatasourceId::ClojureDepsEdn
+                })
+                .unwrap_or_else(|| panic!("deps.edn dependency {purl} should be visible"));
+            assert_eq!(
+                dependency.for_package_uid.as_ref(),
+                Some(&package.package_uid)
+            );
+            assert_eq!(dependency.scope.as_deref(), scope);
+            assert_eq!(dependency.is_runtime, is_runtime);
+            assert_eq!(dependency.is_optional, is_optional);
+            assert_eq!(dependency.is_direct, Some(true));
+        }
 
         assert!(
             result.dependencies.iter().any(|dependency| {
                 dependency.purl.as_deref() == Some("pkg:maven/org.clojure/clojure@1.11.1")
-                    && dependency.datasource_id == crate::models::DatasourceId::ClojureProjectClj
+                    && dependency.datasource_id == DatasourceId::ClojureProjectClj
                     && dependency.for_package_uid.as_ref() == Some(&package.package_uid)
             }),
             "project.clj dependencies should remain assigned to the owning package"
