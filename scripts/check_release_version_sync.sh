@@ -4,15 +4,27 @@
 
 set -euo pipefail
 
+# Enforces that four version facts stay consistent, treating rust-toolchain.toml
+# as the single human-edited source of truth for the Rust version:
+#   1. Cargo.toml `rust-version` (MSRV) matches the pinned toolchain channel.
+#   2. The lockfile's `provenant-cli` version matches the Cargo.toml root version.
+#   3. CITATION.cff version matches the Cargo.toml root version.
+#
+# The no-argument invocation is a read-only gate run in CI. `--update-lockfile`
+# is passed by the cargo-release pre-release hook to rewrite the synced values.
+#
+# Note on overlap with Renovate: the `rust`/Cargo.toml `rust-version` custom
+# manager in renovate.json bumps MSRV alongside the toolchain so routine bumps
+# do not fail check (1). That is best-effort prevention at PR-creation time;
+# this script remains the enforcement gate and additionally owns checks (2) and
+# (3), which Renovate does not touch. Keep both.
+
 ROOT_MANIFEST="Cargo.toml"
 XTASK_LOCKFILE_CANDIDATE="xtask/Cargo.lock"
 WORKSPACE_LOCKFILE="Cargo.lock"
 CITATION_FILE="CITATION.cff"
 RUST_TOOLCHAIN_FILE="rust-toolchain.toml"
 
-# The no-argument invocation behaves as a read-only check. `--update-lockfile`
-# is passed by the cargo-release pre-release-hook and additionally rewrites the
-# lockfile and the synced `rust-version`.
 update_lockfile="false"
 for arg in "$@"; do
     case "$arg" in
