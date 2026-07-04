@@ -47,6 +47,17 @@
     },
     {
       "customType": "regex",
+      "description": "Keep Cargo.toml rust-version (MSRV, major.minor) in lockstep with the pinned toolchain so toolchain bumps do not fail the release version sync check",
+      "managerFilePatterns": ["/(^|/)Cargo\\.toml$/"],
+      "matchStrings": ["rust-version\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+      "packageNameTemplate": "rust-lang/rust",
+      "depNameTemplate": "rust",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["/(^|/)\\.github/workflows/release\\.yml$/"],
       "matchStrings": ["tool:\\s*cargo-about@(?<currentValue>[0-9][^\\s\"]*)"],
       "depNameTemplate": "cargo-about",
