@@ -125,6 +125,44 @@ That is useful when you want to inspect a quick result in the terminal or pipe i
 
 When you need to interpret JSON output fields and presence rules, see the [Output Field Reference](OUTPUT_FIELD_REFERENCE.md).
 
+## Custom Templates
+
+`--custom-output <FILE>` renders the scan through a template you supply with `--custom-template <FILE>`:
+
+```sh
+provenant scan --custom-output report.txt --custom-template report.j2 --license --copyright /path/to/project
+```
+
+Templates use [MiniJinja](https://docs.rs/minijinja), a Jinja2-compatible engine, so the syntax matches the templates you would write for Jinja2 tools (including ScanCode).
+
+The template receives a **Provenant-native context** that mirrors the JSON output schema:
+
+- `output` — the full output object (same shape as `--json`)
+- `headers` — the scan headers (e.g. `headers[0].tool_version`)
+- `files` — the list of scanned files
+- `packages` — top-level detected packages
+- `dependencies` — top-level dependencies
+
+For example, to list each file and its detected license expression:
+
+```jinja
+{% for file in files %}
+{{ file.path }}: {{ file.detected_license_expression_spdx }}
+{% endfor %}
+```
+
+### ScanCode compatibility (`scancode` namespace)
+
+For porting templates written against ScanCode Toolkit's `--custom-template`, the same variables ScanCode exposes are available under the `scancode` namespace:
+
+- `scancode.files.license_copyright` — path-keyed map of `{start, end, what, value}` license and copyright entries; as in ScanCode, files with no license or copyright detections are omitted
+- `scancode.files.infos` — path-keyed map of per-file metadata (one entry per scanned file)
+- `scancode.files.package_data` — path-keyed map of package data (one entry per scanned file, `[]` when a file has no packages)
+- `scancode.license_references` — the license reference list
+- `scancode.version` — the tool version string
+
+A ScanCode template that referenced top-level `files`, `license_references`, and `version` is ported by prefixing those variables with `scancode.` (for example `files.infos` becomes `scancode.files.infos`).
+
 ## Common Workflows
 
 The examples below are organized by the question a user is trying to answer.

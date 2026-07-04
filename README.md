@@ -161,7 +161,7 @@ Implemented output formats include:
 - SPDX, Tag-Value and RDF/XML
 - CycloneDX, JSON and XML
 - HTML report
-- Custom template rendering
+- Custom template rendering (Jinja2-compatible, with a ScanCode compatibility context)
 
 ## Documentation
 

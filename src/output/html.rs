@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::io::{self, Write};
 
-use tera::{Context, Tera};
+use minijinja::{Environment, context};
 
 use crate::output_schema::{Output, OutputFileType};
 
@@ -176,16 +176,20 @@ pub(crate) fn write_html_report(output: &Output, writer: &mut dyn Write) -> io::
     url_rows.sort_by(|a, b| a["path"].cmp(&b["path"]).then(a["start"].cmp(&b["start"])));
     package_rows.sort_by(|a, b| a["path"].cmp(&b["path"]).then(a["type"].cmp(&b["type"])));
 
-    let mut context = Context::new();
-    context.insert("license_copyright_rows", &license_copyright_rows);
-    context.insert("file_rows", &file_rows);
-    context.insert("holder_rows", &holder_rows);
-    context.insert("author_rows", &author_rows);
-    context.insert("email_rows", &email_rows);
-    context.insert("url_rows", &url_rows);
-    context.insert("package_rows", &package_rows);
-
-    let rendered = Tera::one_off(HTML_REPORT_TEMPLATE, &context, false).map_err(io_other)?;
+    let rendered = Environment::new()
+        .render_str(
+            HTML_REPORT_TEMPLATE,
+            context! {
+                license_copyright_rows,
+                file_rows,
+                holder_rows,
+                author_rows,
+                email_rows,
+                url_rows,
+                package_rows,
+            },
+        )
+        .map_err(io_other)?;
     writer.write_all(rendered.as_bytes())
 }
 

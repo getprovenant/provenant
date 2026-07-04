@@ -141,6 +141,10 @@ liblzma = "0.4.6"
 log = "0.4.33"
 md-5 = "0.11.0"
 mime_guess = "2.0.5"
+minijinja = { version = "2.21.0", default-features = false, features = [
+    "builtins",
+    "serde",
+] }
 object = { version = "0.39.1", default-features = false, features = [
     "read_core",
     "elf",
@@ -183,7 +187,6 @@ starlark_syntax = "0.14.2"
 strum = { version = "0.28.0", features = ["derive"] }
 tar = "0.4.45"
 tempfile = { workspace = true }
-tera = { version = "1.20.1", default-features = false }
 thiserror = "2.0.18"
 tiny_http = "0.12.0"
 toml = { workspace = true }

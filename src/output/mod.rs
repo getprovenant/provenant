@@ -1522,6 +1522,50 @@ mod tests {
         assert!(rendered.contains("files=1"));
     }
 
+    #[test]
+    fn test_custom_template_writer_exposes_scancode_namespace() {
+        let output = Output::from(&sample_internal_output());
+        let temp_dir = tempfile::tempdir().expect("tempdir should be created");
+        let template_path = temp_dir.path().join("template.j2");
+        // ScanCode's custom-template contract: path-keyed `files` reshape plus
+        // top-level `version`, all reachable under the `scancode` namespace.
+        fs::write(
+            &template_path,
+            concat!(
+                r#"lc={{ scancode.files.license_copyright["src/main.rs"] | length }} "#,
+                r#"first={{ scancode.files.license_copyright["src/main.rs"][0].what }} "#,
+                r#"name={{ scancode.files.infos["src/main.rs"].name }} "#,
+                r#"pkg={{ scancode.files.package_data["src/main.rs"] | length }} "#,
+                r#"ver={{ scancode.version }}"#,
+            ),
+        )
+        .expect("template should be written");
+
+        let mut bytes = Vec::new();
+        writer_for_format(OutputFormat::CustomTemplate)
+            .write(
+                &output,
+                &mut bytes,
+                &OutputWriteConfig {
+                    format: OutputFormat::CustomTemplate,
+                    custom_template: Some(template_path.to_string_lossy().to_string()),
+                    scanned_path: None,
+                },
+            )
+            .expect("custom template write should succeed");
+
+        let rendered = String::from_utf8(bytes).expect("template output should be utf-8");
+        // One copyright + one license match, copyright sorts first (same line).
+        assert!(rendered.contains("lc=2"), "rendered: {rendered}");
+        assert!(rendered.contains("first=copyright"), "rendered: {rendered}");
+        assert!(rendered.contains("name=main"), "rendered: {rendered}");
+        assert!(rendered.contains("pkg=1"), "rendered: {rendered}");
+        assert!(
+            rendered.contains(&format!("ver={}", crate::version::BUILD_VERSION)),
+            "rendered: {rendered}"
+        );
+    }
+
     fn sample_internal_output() -> crate::models::Output {
         crate::models::Output {
             summary: None,
