@@ -151,6 +151,15 @@ See also:
 - [CLI Guide](CLI_GUIDE.md)
 - [CLI Workflows](improvements/cli-workflows.md)
 
+### 8. Custom templates expose ScanCode variables under a `scancode` namespace
+
+If you drive `--custom-output`/`--custom-template` with your own report templates, note two things.
+
+- The engine is [MiniJinja](https://docs.rs/minijinja), which is Jinja2-compatible, so ScanCode Jinja2 template _syntax_ works unchanged.
+- The template _context_ differs. Provenant exposes a native context at the top level (`files` is the scan file list, alongside `output`, `headers`, `packages`, `dependencies`). The variables ScanCode passes — the path-keyed `files` reshape, `license_references`, and `version` — live under the `scancode` namespace instead.
+
+So an existing ScanCode template ports by prefixing those variables with `scancode.`, for example `files.license_copyright` becomes `scancode.files.license_copyright` and `version` becomes `scancode.version`. See [Custom Templates](CLI_GUIDE.md#custom-templates) for the full variable list.
+
 ## Practical evaluation advice
 
 ### Compare one representative target first

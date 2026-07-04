@@ -124,6 +124,7 @@ derived = [
   "src/output/html.rs",
   "src/output/mod.rs",
   "src/output/spdx.rs",
+  "src/output/template.rs",
   "src/parsers/about.rs",
   "src/parsers/alpine.rs",
   "src/parsers/autotools.rs",

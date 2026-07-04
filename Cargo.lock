@@ -1611,30 +1611,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
-name = "globset"
-version = "0.4.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52dfc19153a48bde0cbd630453615c8151bce3a5adfac7a0aebfbf0a1e1f57e3"
-dependencies = [
- "aho-corasick",
- "bstr",
- "log",
- "regex-automata",
- "regex-syntax",
-]
-
-[[package]]
-name = "globwalk"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bf760ebf69878d9fd8f110c89703d90ce35095324d1f1edcb595c63945ee757"
-dependencies = [
- "bitflags 2.11.1",
- "ignore",
- "walkdir",
-]
-
-[[package]]
 name = "glyph-names"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1997,22 +1973,6 @@ checksum = "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
-]
-
-[[package]]
-name = "ignore"
-version = "0.4.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3d782a365a015e0f5c04902246139249abf769125006fbe7649e2ee88169b4a"
-dependencies = [
- "crossbeam-deque",
- "globset",
- "log",
- "memchr",
- "regex-automata",
- "same-file",
- "walkdir",
- "winapi-util",
 ]
 
 [[package]]
@@ -2508,6 +2468,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 
 [[package]]
+name = "memo-map"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38d1115007560874e373613744c6fba374c17688327a71c1476d1a5954cc857b"
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2521,6 +2487,16 @@ checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
 dependencies = [
  "mime",
  "unicase",
+]
+
+[[package]]
+name = "minijinja"
+version = "2.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb3d648e68cea56d9858d535ee28f9538404e2dd8cb08ed0bd05dca379477f39"
+dependencies = [
+ "memo-map",
+ "serde",
 ]
 
 [[package]]
@@ -3114,49 +3090,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
-name = "pest"
-version = "2.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0848c601009d37dfa3430c4666e147e49cdcf1b92ecd3e63657d8a5f19da662"
-dependencies = [
- "memchr",
- "ucd-trie",
-]
-
-[[package]]
-name = "pest_derive"
-version = "2.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11f486f1ea21e6c10ed15d5a7c77165d0ee443402f0780849d1768e7d9d6fe77"
-dependencies = [
- "pest",
- "pest_generator",
-]
-
-[[package]]
-name = "pest_generator"
-version = "2.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8040c4647b13b210a963c1ed407c1ff4fdfa01c31d6d2a098218702e6664f94f"
-dependencies = [
- "pest",
- "pest_meta",
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "pest_meta"
-version = "2.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89815c69d36021a140146f26659a81d6c2afa33d216d736dd4be5381a7362220"
-dependencies = [
- "pest",
- "sha2 0.10.9",
-]
-
-[[package]]
 name = "phf"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3468,6 +3401,7 @@ dependencies = [
  "log",
  "md-5",
  "mime_guess",
+ "minijinja",
  "object",
  "os_info",
  "packageurl",
@@ -3496,7 +3430,6 @@ dependencies = [
  "strum",
  "tar",
  "tempfile",
- "tera",
  "thiserror",
  "tiny_http",
  "toml",
@@ -4794,22 +4727,6 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "tera"
-version = "1.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8004bca281f2d32df3bacd59bc67b312cb4c70cea46cbd79dbe8ac5ed206722"
-dependencies = [
- "globwalk",
- "lazy_static",
- "pest",
- "pest_derive",
- "regex",
- "serde",
- "serde_json",
- "unicode-segmentation",
 ]
 
 [[package]]
