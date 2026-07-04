@@ -125,4 +125,54 @@ mod tests {
             "project.clj dependencies should remain assigned to the owning package"
         );
     }
+
+    #[test]
+    fn test_dynamic_defproject_promotes_and_attaches_colocated_deps_edn() {
+        // A `project.clj` whose version is a runtime `(or …)` form and whose
+        // dependencies use `~`-unquoted `def` bindings must still promote to a
+        // package, which in turn lets the co-located `deps.edn` attach its deps.
+        let (files, result) = scan_and_assemble(std::path::Path::new(
+            "testdata/clojure-golden/assembly-dynamic",
+        ));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("dynamic-demo"))
+            .expect("dynamic-version project.clj should still promote to a package");
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:maven/org.example/dynamic-demo@2.0.0")
+        );
+        assert!(
+            package
+                .datasource_ids
+                .contains(&DatasourceId::ClojureDepsEdn),
+            "co-located deps.edn should attach once the package promotes"
+        );
+
+        // The `~netty-version` dependency resolves from the file-local `def`.
+        let netty = result
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:maven/io.netty/netty-transport@4.1.135.Final"))
+            .expect("~def-resolved project.clj dependency should be present");
+        assert_eq!(netty.datasource_id, DatasourceId::ClojureProjectClj);
+        assert_eq!(netty.for_package_uid.as_ref(), Some(&package.package_uid));
+
+        // The co-located deps.edn dependency is now owned rather than orphaned.
+        let deps_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/deps.edn"))
+            .expect("deps.edn should be scanned");
+        assert!(deps_file.for_packages.contains(&package.package_uid));
+
+        let transit = result
+            .dependencies
+            .iter()
+            .find(|d| d.purl.as_deref() == Some("pkg:maven/com.cognitect/transit-clj@1.0.333"))
+            .expect("deps.edn dependency should be visible");
+        assert_eq!(transit.datasource_id, DatasourceId::ClojureDepsEdn);
+        assert_eq!(transit.for_package_uid.as_ref(), Some(&package.package_uid));
+    }
 }
