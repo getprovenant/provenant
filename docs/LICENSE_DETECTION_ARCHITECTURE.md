@@ -75,6 +75,19 @@ instead of minting a tool-specific variant. This applies across detection output
 fallbacks such as `unknown-spdx`, and parser-side declared-license normalization for keys such as
 `public-domain`, `proprietary-license`, and `unknown-license-reference`.
 
+Because a `LicenseRef-scancode-<key>` identifier is by definition the license `key` with the
+namespace prefix, the identifier must mirror the key. Upstream ScanCode enforces an arbitrary
+"spdx_license_key must be 50 characters or less" lint, which forced dozens of keys to be squashed
+or truncated (for example `LicenseRef-scancode-openssl-exception-lgpl3.0plus` instead of the
+canonical `LicenseRef-scancode-openssl-exception-lgpl-3.0-plus`; see ScanCode PR
+[#5221](https://github.com/aboutcode-org/scancode-toolkit/pull/5221)). Provenant applies no such
+length limit, so `spdx_key_canonicalization` restores the canonical form at index-build time and
+keeps the previous value in `other_spdx_license_keys` for backward compatibility. The rare case
+where the license `key` itself is misspelled (the SPDX key already being correct) is exempted by an
+explicit, justified entry: mirroring the key would regress the correct SPDX key, so the entry is
+left exactly as upstream has it (the license key stays ScanCode-compatible and its SPDX key stays
+right).
+
 Parser-side declared-license normalization also maps bare, informal license names that are not
 valid SPDX but resolve to a license by strong convention (for example `Apache`, `PSF`, `Python`).
 These mappings live in a curated config, `resources/license_detection/declared_license_aliases.toml`,
@@ -141,6 +154,7 @@ The loading process is split into two distinct stages:
 - Apply the checked-in license-index build policy
 - Apply any checked-in downstream overlay files from `resources/license_detection/overlay/`
 - Fail fast if an ignore id no longer exists upstream, an overlay-reason entry is stale or missing, or an overlay file becomes identical to upstream data
+- Canonicalize `LicenseRef-scancode-*` SPDX keys so each mirrors its license key (see the `LicenseRef-*` namespace convention above)
 - Sort embedded rules and licenses deterministically
 - Serialize the embedded loader snapshot with MessagePack
 - Compress the serialized bytes with zstd

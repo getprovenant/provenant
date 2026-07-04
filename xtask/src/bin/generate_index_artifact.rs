@@ -17,6 +17,7 @@ use provenant::license_detection::embedded::schema::{EmbeddedLoaderSnapshot, SCH
 use provenant::license_detection::rules::{
     load_loaded_licenses_from_directory, load_loaded_rules_from_directory,
 };
+use provenant::license_detection::spdx_key_canonicalization::canonicalize_license_spdx_keys;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -62,6 +63,17 @@ fn main() -> Result<()> {
         apply_default_index_build_policy(loaded_rules, loaded_licenses)?;
     loaded_rules = filtered_rules;
     loaded_licenses = filtered_licenses;
+
+    // Restore canonical LicenseRef-scancode-<key> SPDX keys that upstream squashed
+    // to satisfy its 50-character lint (see spdx_key_canonicalization docs).
+    let spdx_canonicalization = canonicalize_license_spdx_keys(&mut loaded_licenses);
+    if !spdx_canonicalization.is_empty() {
+        println!(
+            "Canonicalized {} LicenseRef-scancode SPDX keys",
+            spdx_canonicalization.canonicalized_spdx_keys.len()
+        );
+    }
+
     let dataset_fingerprint = compute_dataset_fingerprint_string(&loaded_rules, &loaded_licenses)?;
     let license_index_provenance = policy_report
         .to_license_index_provenance(EMBEDDED_LICENSE_INDEX_SOURCE, dataset_fingerprint);
