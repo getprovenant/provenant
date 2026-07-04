@@ -93,7 +93,10 @@ fn build_pattern_list() -> Vec<(String, PosTag)> {
     let year_short_punct = &format!("{}{}", year_short, punct);
     let year_or_year_year = &format!("({}|{})", year_punct, year_year_punct);
     let year_then_short = &format!("({}({})*)", year_or_year_year, year_short_punct);
-    let year_dash_present = &format!(r"{}[\-~]? ?[Pp]resent\.?,?", year);
+    // Provenant extension: also accept "now" as an open-ended range end, e.g.
+    // "2013-NOW". ScanCode only handles "present" here; "now" is commonly
+    // uppercase in the wild, so match it case-insensitively.
+    let year_dash_present = &format!(r"{}[\-~]? ?([Pp]resent|(?i:now))\.?,?", year);
 
     let mut patterns: Vec<(String, PosTag)> = Vec::with_capacity(1200);
 

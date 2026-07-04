@@ -195,6 +195,14 @@ fn test_year_ranges() {
     assert_eq!(p.match_token("2010-202x"), PosTag::Yr);
     assert_eq!(p.match_token("1999,2000"), PosTag::Yr);
     assert_eq!(p.match_token("2020-present"), PosTag::Yr);
+    // Open-ended range ending in "now" (scancode-toolkit#5220), including the
+    // common uppercase form.
+    assert_eq!(p.match_token("2013-NOW"), PosTag::Yr);
+    assert_eq!(p.match_token("2013-now"), PosTag::Yr);
+    assert_eq!(p.match_token("2013now"), PosTag::Yr);
+    // A year attached to an unrelated word must NOT become a year range.
+    assert_ne!(p.match_token("2013-final"), PosTag::Yr);
+    assert_ne!(p.match_token("2020-Jinzhu"), PosTag::Yr);
 }
 
 #[test]
