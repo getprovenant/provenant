@@ -12,9 +12,10 @@ use strum::EnumIter;
 
 use super::{
     AssemblerConfig, AssemblyMode, DirectoryMergeOutput, bazel_prune, cargo_resource_assign,
-    composer_resource_assign, conda_rootfs_merge, debian_source_merge, file_ref_resolve,
-    hackage_merge, ivy_dependencies_properties_assign, nix_flake_compat_merge, npm_resource_assign,
-    nuget_cpm_resolve, python_requirements_assign, ruby_resource_assign, swift_merge, topology,
+    clojure_deps_assign, composer_resource_assign, conda_rootfs_merge, debian_source_merge,
+    file_ref_resolve, hackage_merge, ivy_dependencies_properties_assign, nix_flake_compat_merge,
+    npm_resource_assign, nuget_cpm_resolve, python_requirements_assign, ruby_resource_assign,
+    swift_merge, topology,
 };
 
 #[derive(Clone, Copy)]
@@ -34,6 +35,7 @@ pub(super) enum PostAssemblyPassKind {
     NpmResourceAssign,
     PythonRequirementsAssign,
     IvyDependenciesPropertiesAssign,
+    ClojureDepsEdnAssign,
     FileReferenceResolve,
     RpmYumdbMerge,
     NpmWorkspaceMerge,
@@ -66,6 +68,7 @@ pub(super) static POST_ASSEMBLY_PASSES: &[PostAssemblyPassKind] = &[
     PostAssemblyPassKind::NpmResourceAssign,
     PostAssemblyPassKind::PythonRequirementsAssign,
     PostAssemblyPassKind::IvyDependenciesPropertiesAssign,
+    PostAssemblyPassKind::ClojureDepsEdnAssign,
     PostAssemblyPassKind::FileReferenceResolve,
     PostAssemblyPassKind::RpmYumdbMerge,
     PostAssemblyPassKind::NpmWorkspaceMerge,
@@ -236,6 +239,13 @@ impl PostAssemblyPassKind {
                 inputs.has_package_type(PackageType::Ivy)
                     && inputs.has_any_file_datasource(&[DatasourceId::AntIvyDependenciesProperties])
             }
+            Self::ClojureDepsEdnAssign => {
+                inputs.has_package_type(PackageType::Maven)
+                    && inputs.has_all_file_datasources(&[
+                        DatasourceId::ClojureProjectClj,
+                        DatasourceId::ClojureDepsEdn,
+                    ])
+            }
             Self::FileReferenceResolve => {
                 file_ref_resolve::has_relevant_file_reference_datasource_ids(
                     &inputs.file_datasource_ids,
@@ -294,6 +304,11 @@ impl PostAssemblyPassKind {
                     dependencies,
                 )
             }
+            Self::ClojureDepsEdnAssign => clojure_deps_assign::assign_clojure_deps_edn_to_projects(
+                files,
+                packages,
+                dependencies,
+            ),
             Self::FileReferenceResolve => {
                 file_ref_resolve::resolve_file_references(files, packages, dependencies)
             }
@@ -544,8 +559,8 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
     },
     // Leiningen `project.clj` declares a `defproject` with Maven coordinates, so
     // each is an independent package that owns its `:dependencies`. One package
-    // per record (the `deps.edn` datasource carries no own identity and stays
-    // unassembled, pending sibling-merge with a co-located project.clj).
+    // per record; a co-located `deps.edn` is attached by a post-assembly pass,
+    // while standalone `deps.edn` manifests keep their unowned hoisted deps.
     AssemblerConfig {
         datasource_ids: &[DatasourceId::ClojureProjectClj],
         sibling_file_patterns: &["project.clj"],

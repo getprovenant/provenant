@@ -43,4 +43,59 @@ mod tests {
             Some(&package.package_uid)
         );
     }
+
+    #[test]
+    fn test_deps_edn_attach_to_colocated_project_clj_package() {
+        let (files, result) =
+            scan_and_assemble(std::path::Path::new("testdata/clojure-golden/assembly"));
+
+        let package = result
+            .packages
+            .iter()
+            .find(|p| p.name.as_deref() == Some("assembly-demo"))
+            .expect("project.clj should promote to a top-level package");
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:maven/org.example/assembly-demo@1.0.0")
+        );
+        assert!(
+            package
+                .datasource_ids
+                .contains(&crate::models::DatasourceId::ClojureDepsEdn)
+        );
+        assert!(
+            package
+                .datafile_paths
+                .iter()
+                .any(|path| path.ends_with("/deps.edn"))
+        );
+
+        let deps_file = files
+            .iter()
+            .find(|file| file.path.ends_with("/deps.edn"))
+            .expect("deps.edn should be scanned");
+        assert!(deps_file.for_packages.contains(&package.package_uid));
+
+        let deps_edn_dep = result
+            .dependencies
+            .iter()
+            .find(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:maven/com.cognitect/transit-clj@1.0.333")
+                    && dependency.datasource_id == crate::models::DatasourceId::ClojureDepsEdn
+            })
+            .expect("deps.edn dependency should be visible");
+        assert_eq!(
+            deps_edn_dep.for_package_uid.as_ref(),
+            Some(&package.package_uid)
+        );
+
+        assert!(
+            result.dependencies.iter().any(|dependency| {
+                dependency.purl.as_deref() == Some("pkg:maven/org.clojure/clojure@1.11.1")
+                    && dependency.datasource_id == crate::models::DatasourceId::ClojureProjectClj
+                    && dependency.for_package_uid.as_ref() == Some(&package.package_uid)
+            }),
+            "project.clj dependencies should remain assigned to the owning package"
+        );
+    }
 }
