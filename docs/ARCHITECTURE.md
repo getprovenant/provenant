@@ -609,7 +609,7 @@ Centralized `ScanProgress` struct manages mode-aware progress output via `indica
 2. **SPDX load phase**: Startup message and timing capture around license DB load.
 3. **Scan phase**: Main progress bar (default mode, TTY only) with ETA, elapsed time, and `{per_sec}` throughput; verbose mode keeps file-by-file paths on TTY and degrades to bounded scan lifecycle messages plus per-file warning/error context when stderr is not a TTY.
 4. **Assembly and output phases**: Phase messages/spinners with timing capture.
-5. **Scan summary**: Files/sec, bytes/sec, error count, initial/final counts (including sizes), package assembly counts, and per-phase timings.
+5. **Scan summary**: Files/sec, bytes/sec, error count, initial/final counts (including sizes), package assembly counts, ScanCode-style scan timestamps, and total wall time; the full per-phase timing breakdown is shown only under `--verbose`.
 
 Verbosity behavior is implemented in `src/progress.rs` and wired through `src/main.rs`: quiet suppresses stderr output, default shows progress/summary, and verbose stays detailed without flooding redirected logs by limiting successful per-file path output to TTY runs while still surfacing per-file warnings/errors in non-TTY environments.
 

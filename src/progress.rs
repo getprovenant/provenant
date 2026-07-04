@@ -397,7 +397,12 @@ impl ScanProgress {
         } else if stats.warning_count > 0 {
             self.message("Some files reported recoverable scan warnings:");
         }
-        for line in build_summary_messages(&stats, scan_start, scan_end) {
+        for line in build_summary_messages(
+            &stats,
+            scan_start,
+            scan_end,
+            self.mode == ProgressMode::Verbose,
+        ) {
             self.message(&line);
         }
         if stats.incremental_reused > 0 {
@@ -643,7 +648,12 @@ fn supports_color(stderr_is_tty: bool) -> bool {
     !matches!(env::var("TERM"), Ok(term) if term == "dumb")
 }
 
-fn build_summary_messages(stats: &ScanStats, scan_start: &str, scan_end: &str) -> Vec<String> {
+fn build_summary_messages(
+    stats: &ScanStats,
+    scan_start: &str,
+    scan_end: &str,
+    verbose: bool,
+) -> Vec<String> {
     let total = stats
         .top_level_timings
         .iter()
@@ -708,30 +718,35 @@ fn build_summary_messages(stats: &ScanStats, scan_start: &str, scan_end: &str) -
         format!("  scan_end:   {scan_end}"),
     ];
 
-    for (name, value) in &stats.top_level_timings {
-        lines.push(format!("  {name}: {value:.2}s"));
+    // The per-phase breakdown is developer-facing diagnostic detail; keep the
+    // default summary compact (counts, ScanCode-style timestamps, and total) and
+    // surface the full tree only under --verbose.
+    if verbose {
+        for (name, value) in &stats.top_level_timings {
+            lines.push(format!("  {name}: {value:.2}s"));
 
-        let detail_timings = stats
-            .detail_timings
-            .iter()
-            .filter(|(detail_name, _)| detail_parent_phase(detail_name) == Some(name.as_str()));
+            let detail_timings = stats
+                .detail_timings
+                .iter()
+                .filter(|(detail_name, _)| detail_parent_phase(detail_name) == Some(name.as_str()));
 
-        if name == "scan" {
-            let scan_breakdown: Vec<_> = detail_timings.collect();
-            if !scan_breakdown.is_empty() {
-                lines.push("  scan breakdown (cumulative worker time):".to_string());
-                lines.extend(
-                    scan_breakdown
-                        .into_iter()
-                        .map(|(detail_name, detail_value)| {
-                            format!("    {detail_name}: {detail_value:.2}s")
-                        }),
-                );
+            if name == "scan" {
+                let scan_breakdown: Vec<_> = detail_timings.collect();
+                if !scan_breakdown.is_empty() {
+                    lines.push("  scan breakdown (cumulative worker time):".to_string());
+                    lines.extend(
+                        scan_breakdown
+                            .into_iter()
+                            .map(|(detail_name, detail_value)| {
+                                format!("    {detail_name}: {detail_value:.2}s")
+                            }),
+                    );
+                }
+            } else {
+                lines.extend(detail_timings.map(|(detail_name, detail_value)| {
+                    format!("    {detail_name}: {detail_value:.2}s")
+                }));
             }
-        } else {
-            lines.extend(detail_timings.map(|(detail_name, detail_value)| {
-                format!("    {detail_name}: {detail_value:.2}s")
-            }));
         }
     }
     lines.push(format!("  total: {total:.2}s"));
@@ -838,7 +853,7 @@ mod tests {
             ],
         };
 
-        let lines = build_summary_messages(&stats, "start", "end");
+        let lines = build_summary_messages(&stats, "start", "end", true);
         let line_index = |needle: &str| {
             lines
                 .iter()
@@ -875,9 +890,33 @@ mod tests {
             ..ScanStats::default()
         };
 
-        let lines = build_summary_messages(&stats, "start", "end");
+        let lines = build_summary_messages(&stats, "start", "end", false);
 
         assert!(lines.contains(&"Scan Speed:     5.00 files/sec. 512 Bytes/sec.".to_string()));
+    }
+
+    #[test]
+    fn default_summary_keeps_total_but_omits_phase_breakdown() {
+        let stats = ScanStats {
+            final_files: 10,
+            total_bytes_scanned: 800,
+            top_level_timings: vec![("setup".to_string(), 1.0), ("scan".to_string(), 3.0)],
+            detail_timings: vec![("scan:packages".to_string(), 1.25)],
+            ..ScanStats::default()
+        };
+
+        let lines = build_summary_messages(&stats, "start", "end", false);
+
+        // Compact default: counts, ScanCode-style timestamps, and total wall time.
+        assert!(lines.contains(&"Timings:".to_string()));
+        assert!(lines.contains(&"  scan_start: start".to_string()));
+        assert!(lines.contains(&"  scan_end:   end".to_string()));
+        assert!(lines.contains(&"  total: 4.00s".to_string()));
+        // No per-phase breakdown without --verbose.
+        assert!(!lines.contains(&"  setup: 1.00s".to_string()));
+        assert!(!lines.contains(&"  scan: 3.00s".to_string()));
+        assert!(!lines.iter().any(|line| line.contains("scan breakdown")));
+        assert!(!lines.contains(&"    scan:packages: 1.25s".to_string()));
     }
 
     #[test]
