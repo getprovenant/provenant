@@ -313,6 +313,7 @@ pub struct ScanArgs {
     #[arg(short, long, conflicts_with = "verbose")]
     pub quiet: bool,
 
+    /// Emit verbose diagnostics, including the per-phase timing breakdown and, on a TTY, per-file scan detail.
     #[arg(short, long, conflicts_with = "quiet")]
     pub verbose: bool,
 

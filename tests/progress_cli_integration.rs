@@ -1347,7 +1347,7 @@ fn default_mode_emits_summary_to_stderr() {
 }
 
 #[test]
-fn default_mode_emits_hierarchical_timing_summary() {
+fn verbose_mode_emits_hierarchical_timing_summary() {
     let (temp, scan_dir) = create_scan_fixture();
     let output_file = temp.path().join("out.json");
 
@@ -1355,6 +1355,7 @@ fn default_mode_emits_hierarchical_timing_summary() {
         .args([
             "--json-pp",
             output_file.to_str().expect("utf8 output path"),
+            "--verbose",
             "--only-findings",
             "--package",
             &scan_dir,
@@ -1374,6 +1375,34 @@ fn default_mode_emits_hierarchical_timing_summary() {
     assert!(stderr.contains("  total:"));
     assert!(stderr.contains("    scan:packages:"));
     assert!(stderr.contains("    output-filter:only-findings:"));
+}
+
+#[test]
+fn default_mode_summary_keeps_total_but_omits_phase_breakdown() {
+    let (temp, scan_dir) = create_scan_fixture();
+    let output_file = temp.path().join("out.json");
+
+    let output = provenant_command()
+        .args([
+            "--json-pp",
+            output_file.to_str().expect("utf8 output path"),
+            "--package",
+            &scan_dir,
+        ])
+        .output()
+        .expect("failed to run provenant");
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Compact default summary: header, ScanCode-style timestamps, and total wall time.
+    assert!(stderr.contains("Timings:"));
+    assert!(stderr.contains("  scan_start:"));
+    assert!(stderr.contains("  scan_end:"));
+    assert!(stderr.contains("  total:"));
+    // The per-phase breakdown is verbose-only.
+    assert!(!stderr.contains("  setup:"));
+    assert!(!stderr.contains("scan breakdown"));
+    assert!(!stderr.contains("    scan:packages:"));
 }
 
 #[test]
