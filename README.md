@@ -11,9 +11,13 @@ Provenant is a fast, Rust-based code scanner for licenses, copyrights, package m
 
 Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit), whose scanning engine it ports to Rust and builds on, while also offering broader package and dependency metadata extraction, documented parser and detection improvements that reduce noisy results, and practical workflows such as incremental rescans, selected-file scans, and long-lived HTTP service use.
 
+![Provenant and ScanCode racing the same astral-sh/uv scan side by side](docs/provenant-demo.gif)
+
+_The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flags (`--license --package`), one process each: Provenant finishes in seconds while ScanCode is still going. Full comparisons: [benchmarks](docs/BENCHMARKS.md)._
+
 > [!IMPORTANT]
-> **Project status:** production-usable, compatibility-focused, and steadily improving.
-> Provenant targets parity for documented ScanCode-compatible workflows and output formats. Ongoing work focuses on improving Provenant's performance, quality, and coverage across supported workflows.
+> **Project status:** production-usable and compatibility-focused.
+> Provenant targets parity for documented ScanCode-compatible workflows and output formats, and adds broader package, dependency, and provenance extraction on top.
 
 ## Quick Start
 
