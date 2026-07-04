@@ -165,6 +165,139 @@ mod tests {
     }
 
     #[test]
+    fn test_project_clj_resolves_dynamic_version_and_def_unquote_deps() {
+        let content = r#"
+(def netty-version "4.1.135.Final")
+
+(defproject aleph (or (System/getenv "PROJECT_VERSION") "0.9.9")
+  :description "Async communication"
+  :dependencies [[org.clojure/clojure "1.12.5"]
+                 [io.netty/netty-transport ~netty-version]
+                 [io.netty/netty-handler ~netty-version :classifier "shaded"]])
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("project.clj", content);
+        let package_data = ClojureProjectCljParser::extract_first_package(&path);
+
+        // Bare-symbol name defaults its group; the `(or …)` version resolves to
+        // its string-literal fallback rather than discarding the manifest.
+        assert_eq!(package_data.namespace.as_deref(), Some("aleph"));
+        assert_eq!(package_data.name.as_deref(), Some("aleph"));
+        assert_eq!(package_data.version.as_deref(), Some("0.9.9"));
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:maven/aleph/aleph@0.9.9")
+        );
+        // `~netty-version` deps resolve from the file-local `def`.
+        assert_eq!(package_data.dependencies.len(), 3);
+        assert!(
+            package_data
+                .dependencies
+                .iter()
+                .any(|dep| dep.purl.as_deref()
+                    == Some("pkg:maven/io.netty/netty-transport@4.1.135.Final"))
+        );
+        assert!(package_data.dependencies.iter().any(
+            |dep| dep.purl.as_deref() == Some("pkg:maven/io.netty/netty-handler@4.1.135.Final")
+        ));
+    }
+
+    #[test]
+    fn test_project_clj_or_version_prefers_first_statically_known_value() {
+        // `or` short-circuits to the first truthy value; an unresolvable
+        // `(System/getenv …)` is skipped, and a bare `def` symbol resolves in
+        // the evaluated version slot before any later literal fallback.
+        let content = r#"
+(def project-version "2.0.0")
+
+(defproject org.example/orfirst (or (System/getenv "VERSION") project-version "1.0.0")
+  :dependencies [[org.clojure/clojure "1.12.0"]])
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("project.clj", content);
+        let package_data = ClojureProjectCljParser::extract_first_package(&path);
+
+        assert_eq!(package_data.version.as_deref(), Some("2.0.0"));
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:maven/org.example/orfirst@2.0.0")
+        );
+    }
+
+    #[test]
+    fn test_project_clj_or_version_falls_through_to_first_literal() {
+        let content = r#"
+(defproject my/lib (or (System/getenv "VERSION") "1.0.0" "0.5.0")
+  :dependencies [[org.clojure/clojure "1.12.0"]])
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("project.clj", content);
+        let package_data = ClojureProjectCljParser::extract_first_package(&path);
+
+        assert_eq!(package_data.version.as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn test_project_clj_quoted_and_bare_dep_versions_are_not_resolved() {
+        // Inside the quoted `:dependencies` body only a `~` unquote names a
+        // `def` value; a `'`-quoted or bare symbol is literal data, so those
+        // deps are dropped even though `(def dep-version …)` exists.
+        let content = r#"
+(def dep-version "1.2.3")
+
+(defproject org.example/quoted "1.0.0"
+  :dependencies [[org.clojure/clojure "1.12.0"]
+                 [foo/bar 'dep-version]
+                 [baz/qux dep-version]
+                 [ok/unquoted ~dep-version]])
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("project.clj", content);
+        let package_data = ClojureProjectCljParser::extract_first_package(&path);
+
+        // clojure (literal) + ok/unquoted (~def) resolve; quoted/bare are dropped.
+        assert_eq!(package_data.dependencies.len(), 2);
+        assert!(
+            package_data
+                .dependencies
+                .iter()
+                .any(|dep| dep.purl.as_deref() == Some("pkg:maven/ok/unquoted@1.2.3"))
+        );
+        assert!(!package_data.dependencies.iter().any(|dep| {
+            (dep.purl.as_deref().unwrap_or_default()).contains("foo/bar")
+                || (dep.purl.as_deref().unwrap_or_default()).contains("baz/qux")
+        }));
+    }
+
+    #[test]
+    fn test_project_clj_unresolvable_version_degrades_without_dropping_manifest() {
+        // A version that cannot be resolved statically must not discard the
+        // recoverable name and dependencies; it is simply left unset.
+        let content = r#"
+(defproject org.example/degraded (str "1." (build-number))
+  :dependencies [[org.clojure/clojure "1.11.1"]
+                 [foo/bar undefined-symbol]])
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("project.clj", content);
+        let package_data = ClojureProjectCljParser::extract_first_package(&path);
+
+        assert_eq!(package_data.namespace.as_deref(), Some("org.example"));
+        assert_eq!(package_data.name.as_deref(), Some("degraded"));
+        assert!(package_data.version.is_none());
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:maven/org.example/degraded")
+        );
+        // The literal dep is kept; the undefined-symbol version is still dropped.
+        assert_eq!(package_data.dependencies.len(), 1);
+        assert_eq!(
+            package_data.dependencies[0].purl.as_deref(),
+            Some("pkg:maven/org.clojure/clojure@1.11.1")
+        );
+    }
+
+    #[test]
     fn test_graceful_error_handling_for_invalid_forms() {
         let (_temp_dir, deps_path) = create_temp_file("deps.edn", "{:deps {foo/bar");
         let deps_package = ClojureDepsEdnParser::extract_first_package(&deps_path);
@@ -383,6 +516,64 @@ mod tests {
         assert_eq!(package_data.name.as_deref(), Some("var-quote"));
         assert_eq!(package_data.version.as_deref(), Some("1.0.0"));
         assert_eq!(package_data.dependencies.len(), 1);
+    }
+
+    #[test]
+    fn test_project_clj_tolerates_discard_before_closing_delimiter() {
+        // A `#_` discard immediately before a closing bracket (as real manifests
+        // such as aleph's `:jvm-opts` use) must not fail the whole-file parse.
+        let content = r#"
+(defproject org.example/discard "1.0.0"
+  :dependencies [[org.clojure/clojure "1.12.0"]]
+  :jvm-opts ^:replace ["-server"
+                       "-Xmx2g"
+                       #_"-XX:+PrintCompilation"
+                       #_"-XX:+PrintInlining"]
+  :global-vars {*warn-on-reflection* true})
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("project.clj", content);
+        let result = capture_parser_diagnostics(
+            || ClojureProjectCljParser::extract_packages(&path),
+            "ClojureProjectCljParser",
+            &path,
+            None,
+        );
+
+        assert!(result.scan_diagnostics.is_empty());
+        assert_eq!(result.packages.len(), 1);
+
+        let package_data = &result.packages[0];
+        assert_eq!(package_data.namespace.as_deref(), Some("org.example"));
+        assert_eq!(package_data.name.as_deref(), Some("discard"));
+        assert_eq!(package_data.version.as_deref(), Some("1.0.0"));
+        assert_eq!(package_data.dependencies.len(), 1);
+    }
+
+    #[test]
+    fn test_deps_edn_splits_classifier_suffix_into_extra_data() {
+        // tools.deps `artifact$classifier` syntax must yield a clean purl with
+        // the classifier captured in extra_data, not mangled into the artifact.
+        let content = r#"
+{:deps {io.netty/netty-transport-native-epoll$linux-x86_64 {:mvn/version "4.1.135.Final"}}}
+        "#;
+
+        let (_temp_dir, path) = create_temp_file("deps.edn", content);
+        let package_data = ClojureDepsEdnParser::extract_first_package(&path);
+
+        assert_eq!(package_data.dependencies.len(), 1);
+        let dep = &package_data.dependencies[0];
+        assert_eq!(
+            dep.purl.as_deref(),
+            Some("pkg:maven/io.netty/netty-transport-native-epoll@4.1.135.Final")
+        );
+        assert_eq!(
+            dep.extra_data
+                .as_ref()
+                .and_then(|data| data.get("classifier"))
+                .and_then(|value| value.as_str()),
+            Some("linux-x86_64")
+        );
     }
 
     #[test]

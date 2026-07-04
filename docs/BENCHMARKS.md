@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 238 of 238 recorded runs, with a **19.5× median speedup** and **19.4× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 239 of 239 recorded runs, with a **19.4× median speedup** and **19.4× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -556,6 +556,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-16 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `33.78s`; ScanCode `659.41s`
 - Broader Maven package coverage (`2969` vs `2518`) with richer dependency extraction (`2550` vs `2267`) from parent/module inheritance, `dependencyManagement`, and committed `.pom` fixtures, plus more specific classifier-bearing Maven identities where ScanCode flattens coordinates and quieter unresolved-placeholder handling that preserves Maven semantics without flooding the scan with property/cycle noise
+
+##### [clj-commons/aleph @ c930db6](https://github.com/clj-commons/aleph/tree/c930db61fe4a0f7b91e5eb20a13c221e86377a29) — **9.81× faster**
+
+- Files: 94
+- Run context: 2026-07-04 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.07s`; ScanCode `49.73s`
+- Direct Leiningen and tools.deps package identity (`2` vs `0` packages, `68` vs `0` dependencies) that ScanCode cannot model because it ships no `project.clj`/`deps.edn` parser: the root `pkg:maven/aleph/aleph` assembles its `project.clj` with the co-located generated `deps.edn`, resolving `def`-bound `~netty-version`/`~brotli-version` dependency versions and a runtime `(or (System/getenv …) …)` project version into concrete coordinates and normalizing tools.deps `artifact$classifier` deps into clean purls with classifier metadata, plus source-faithful `©` copyright recovery on `README.md` where ScanCode renders `(c)` and rejection of the `${…}`-templated CircleCI status URL ScanCode emits as a broken percent-encoded fragment
 
 ##### [elastic/elasticsearch @ a414f3d](https://github.com/elastic/elasticsearch/tree/a414f3d06c7ab59a5a0b350e80e5674bf9864688) — **38.84× faster**
 
