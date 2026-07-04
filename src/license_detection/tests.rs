@@ -429,6 +429,37 @@ fn test_engine_spdx_mapping() {
 }
 
 #[test]
+fn test_embedded_licenseref_spdx_keys_are_canonicalized() {
+    let engine = get_engine();
+    let mapping = engine.spdx_mapping();
+
+    // The squashed 50-char-limit form is restored to the canonical dashed form
+    // in the embedded artifact (ScanCode PR #5221 and the wider audit).
+    assert_eq!(
+        mapping
+            .scancode_to_spdx("openssl-exception-lgpl-3.0-plus")
+            .as_deref(),
+        Some("LicenseRef-scancode-openssl-exception-lgpl-3.0-plus"),
+    );
+    assert_eq!(
+        mapping.scancode_to_spdx("bash-exception-gpl").as_deref(),
+        Some("LicenseRef-scancode-bash-exception-gpl"),
+    );
+
+    // The `tgc-spec-license-v2` key carries an upstream typo, but its SPDX key is
+    // already correct (`tcg`). It is exempted from canonicalization so the key
+    // stays ScanCode-compatible and the correct SPDX key is not regressed.
+    assert_eq!(
+        mapping.scancode_to_spdx("tgc-spec-license-v2").as_deref(),
+        Some("LicenseRef-scancode-tcg-spec-license-v2"),
+    );
+    assert!(
+        mapping.scancode_to_spdx("tcg-spec-license-v2").is_none(),
+        "the license key is left as upstream has it; no renamed key is introduced",
+    );
+}
+
+#[test]
 fn test_engine_detect_no_license() {
     let engine = get_engine();
 

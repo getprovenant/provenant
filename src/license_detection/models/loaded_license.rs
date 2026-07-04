@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 /// This struct contains parsed and normalized data from a .LICENSE file.
 /// It is serialized at build time and deserialized at runtime, then converted
 /// to a runtime `License` during the build stage.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LoadedLicense {
     pub key: String,
     pub short_name: Option<String>,
