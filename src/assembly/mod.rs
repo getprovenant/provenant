@@ -10,6 +10,7 @@ mod assembly_test;
 mod bazel_prune;
 mod cargo_resource_assign;
 mod cargo_workspace_merge;
+mod clojure_deps_assign;
 mod cocoapods_merge;
 mod composer_resource_assign;
 mod conda_rootfs_merge;
