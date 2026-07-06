@@ -11,8 +11,8 @@ use anyhow::{Result, anyhow};
 
 use crate::app::request::ScanRequest;
 use crate::cache::{CACHE_DIR_ENV_VAR, CacheConfig};
-use crate::license_detection::LicenseDetectionEngine;
 use crate::license_detection::license_cache::LicenseCacheConfig;
+use crate::license_detection::{ColdBuildNotify, LicenseDetectionEngine};
 use crate::scan_result_shaping::{
     SelectedPath, resolve_native_scan_inputs, resolve_paths_file_entries,
 };
@@ -110,6 +110,7 @@ pub(crate) fn build_license_cache_config(
 pub(crate) fn init_license_engine(
     cache_root: &CacheConfig,
     request: &ScanRequest,
+    on_cold_build: Option<ColdBuildNotify<'_>>,
 ) -> Result<Arc<LicenseDetectionEngine>> {
     let cache_config = build_license_cache_config(cache_root, request);
 
@@ -119,11 +120,16 @@ pub(crate) fn init_license_engine(
             if !path.exists() {
                 return Err(anyhow!("License dataset path does not exist: {:?}", path));
             }
-            let engine = LicenseDetectionEngine::from_directory_with_cache(&path, &cache_config)?;
+            let engine = LicenseDetectionEngine::from_directory_with_cache(
+                &path,
+                &cache_config,
+                on_cold_build,
+            )?;
             Ok(Arc::new(engine))
         }
         None => {
-            let engine = LicenseDetectionEngine::from_embedded_with_cache(&cache_config)?;
+            let engine =
+                LicenseDetectionEngine::from_embedded_with_cache(&cache_config, on_cold_build)?;
             Ok(Arc::new(engine))
         }
     }

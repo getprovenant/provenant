@@ -30,7 +30,7 @@ pub(crate) const PARSER_DECLARED_MATCHER: &str = "parser-declared-license";
 static PARSER_LICENSE_ENGINE: LazyLock<Option<Arc<LicenseDetectionEngine>>> = LazyLock::new(|| {
     let cache_config =
         LicenseCacheConfig::new(LicenseCacheConfig::default_root_dir(), false, false);
-    match LicenseDetectionEngine::from_embedded_with_cache(&cache_config) {
+    match LicenseDetectionEngine::from_embedded_with_cache(&cache_config, None) {
         Ok(engine) => Some(Arc::new(engine)),
         Err(error) => {
             warn!(
