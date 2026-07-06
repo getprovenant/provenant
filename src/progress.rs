@@ -521,6 +521,42 @@ fn build_env_logger() -> env_logger::Logger {
     builder.build()
 }
 
+/// Install a plain global logger for CLI subcommands other than `scan`.
+///
+/// `scan` installs an indicatif-aware bridge via [`ScanProgress::init_logging_bridge`]
+/// so log lines never corrupt its progress bars; the other subcommands have no
+/// bars and use this simpler logger. `default_level` sets the baseline filter
+/// (derived from `-q`/`-v`); an explicit `RUST_LOG` still overrides it. Safe to
+/// call at most once — a second call, or a call after a bridge is installed, is
+/// a no-op.
+pub fn init_cli_logger(default_level: LevelFilter) {
+    let default_filter = match default_level {
+        LevelFilter::Off => "off",
+        LevelFilter::Error => "error",
+        LevelFilter::Warn => "warn",
+        LevelFilter::Info => "info",
+        LevelFilter::Debug => "debug",
+        LevelFilter::Trace => "trace",
+    };
+    let mut builder =
+        env_logger::Builder::from_env(Env::default().default_filter_or(default_filter));
+    apply_default_log_filters(&mut builder);
+    // Concise CLI-facing format: informational lines print bare, warnings and
+    // errors carry a prefix, and debug/trace keep their module target.
+    builder.format(|buf, record| {
+        use std::io::Write as _;
+        match record.level() {
+            log::Level::Error => writeln!(buf, "error: {}", record.args()),
+            log::Level::Warn => writeln!(buf, "warning: {}", record.args()),
+            log::Level::Info => writeln!(buf, "{}", record.args()),
+            log::Level::Debug | log::Level::Trace => {
+                writeln!(buf, "[{}] {}", record.target(), record.args())
+            }
+        }
+    });
+    let _ = builder.try_init();
+}
+
 fn apply_default_log_filters(builder: &mut env_logger::Builder) {
     apply_default_log_filters_from(builder, env::var("RUST_LOG").ok().as_deref());
 }
