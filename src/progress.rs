@@ -154,7 +154,14 @@ impl ScanProgress {
 
     pub fn start_license_detection_engine_creation(&self) {
         self.start_phase("license_detection_engine_creation");
-        self.message("Loading SPDX data, this may take a while...");
+    }
+
+    /// Surface the one-time cold-build latency notice. Invoked by the engine
+    /// initializer only when it actually rebuilds the index (cache miss,
+    /// `--reindex`, or an invalidated cache); the common warm path loads the
+    /// rkyv cache in a fraction of a second and stays silent.
+    pub fn notify_license_index_cold_build(&self) {
+        self.message("Building license index (first run may take a few seconds)...");
     }
 
     pub fn finish_license_detection_engine_creation(&self, detail_name: impl Into<String>) {

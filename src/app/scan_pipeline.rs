@@ -390,13 +390,16 @@ pub(crate) fn build_output_model(
                 && !session.preloaded_license_references.is_empty()));
 
     if should_recompute_license_references && session.active_license_engine.is_none() {
+        let cache_config = session
+            .shared_cache_config
+            .as_ref()
+            .expect("cache config should be prepared before license engine init");
         progress.start_license_detection_engine_creation();
+        let notify_cold_build = || progress.notify_license_index_cold_build();
         session.active_license_engine = Some(init_license_engine(
-            session
-                .shared_cache_config
-                .as_ref()
-                .expect("cache config should be prepared before license engine init"),
+            cache_config,
             request,
+            Some(&notify_cold_build),
         )?);
         progress.finish_license_detection_engine_creation("finalize:license-engine-creation");
     }
@@ -580,13 +583,12 @@ fn load_native_scan_session(
 
     let license_engine = if request.license {
         progress.start_setup();
+        let cache_config = shared_cache_config
+            .as_ref()
+            .expect("cache config should be prepared before license engine init");
         progress.start_license_detection_engine_creation();
-        let engine = init_license_engine(
-            shared_cache_config
-                .as_ref()
-                .expect("cache config should be prepared before license engine init"),
-            request,
-        )?;
+        let notify_cold_build = || progress.notify_license_index_cold_build();
+        let engine = init_license_engine(cache_config, request, Some(&notify_cold_build))?;
         progress.finish_license_detection_engine_creation("setup_scan:licenses");
         progress.finish_setup();
         progress.output_written(&describe_license_engine_source(

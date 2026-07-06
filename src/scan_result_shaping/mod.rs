@@ -267,11 +267,11 @@ pub(crate) fn prepare_filter_clue_rule_lookup(
 
     let fallback_engine = match (rules_path, license_cache_config) {
         (Some(path), Some(cache_config)) => {
-            LicenseDetectionEngine::from_directory_with_cache(Path::new(path), cache_config)?
+            LicenseDetectionEngine::from_directory_with_cache(Path::new(path), cache_config, None)?
         }
         (Some(path), None) => LicenseDetectionEngine::from_directory(Path::new(path))?,
         (None, Some(cache_config)) => {
-            LicenseDetectionEngine::from_embedded_with_cache(cache_config)?
+            LicenseDetectionEngine::from_embedded_with_cache(cache_config, None)?
         }
         (None, None) => LicenseDetectionEngine::from_embedded()?,
     };

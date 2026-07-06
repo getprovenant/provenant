@@ -554,6 +554,12 @@ fn collect_regular_seq_matches(
     ))
 }
 
+/// Callback invoked once when engine initialization begins a cold index build
+/// (cache miss, `--reindex`, or an invalidated cache) rather than loading the
+/// rkyv cache. Lets the caller surface a one-time latency notice at exactly the
+/// right moment without the detection layer depending on the CLI progress type.
+pub type ColdBuildNotify<'a> = &'a dyn Fn();
+
 impl LicenseDetectionEngine {
     /// Create a new license detection engine from a pre-built license index.
     ///
@@ -597,7 +603,7 @@ impl LicenseDetectionEngine {
     pub fn from_embedded() -> Result<Self> {
         let cache_config =
             LicenseCacheConfig::new(LicenseCacheConfig::default_root_dir(), false, true);
-        Self::from_embedded_with_cache(&cache_config)
+        Self::from_embedded_with_cache(&cache_config, None)
     }
 
     /// Create a new license detection engine from the embedded license index.
@@ -611,10 +617,15 @@ impl LicenseDetectionEngine {
     ///
     /// # Arguments
     /// * `cache_config` - Cache configuration (directory and reindex flag)
+    /// * `on_cold_build` - Optional callback fired once if the index is rebuilt
+    ///   from scratch instead of loaded from cache (see [`ColdBuildNotify`])
     ///
     /// # Returns
     /// A Result containing the engine or an error
-    pub fn from_embedded_with_cache(cache_config: &LicenseCacheConfig) -> Result<Self> {
+    pub fn from_embedded_with_cache(
+        cache_config: &LicenseCacheConfig,
+        on_cold_build: Option<ColdBuildNotify<'_>>,
+    ) -> Result<Self> {
         let artifact_bytes = include_bytes!("../../resources/license_detection/license_index.zst");
         let fingerprint = compute_artifact_fingerprint(artifact_bytes);
         let artifact_metadata = load_embedded_artifact_metadata_from_bytes(artifact_bytes)
@@ -633,7 +644,7 @@ impl LicenseDetectionEngine {
             if let Some(cached) =
                 load_cached_index(cache_config, LicenseCacheNamespace::Embedded, &fingerprint)?
             {
-                eprintln!(
+                log::debug!(
                     "License index loaded from rkyv cache in {:.2}s",
                     start.elapsed().as_secs_f64()
                 );
@@ -643,6 +654,11 @@ impl LicenseDetectionEngine {
             delete_cache(cache_config, LicenseCacheNamespace::Embedded, &fingerprint)?;
         }
 
+        // Cache miss (or forced reindex): a cold build is about to happen.
+        if let Some(notify) = on_cold_build {
+            notify();
+        }
+
         let snapshot = load_loader_snapshot_from_bytes(artifact_bytes)
             .map_err(|e| anyhow::anyhow!("Failed to load embedded license index: {}", e))?;
         let spdx_version = Some(snapshot.metadata.spdx_license_list_version.clone());
@@ -650,7 +666,7 @@ impl LicenseDetectionEngine {
 
         let start = Instant::now();
         let index = build_index_from_loaded(snapshot.rules, snapshot.licenses, false);
-        eprintln!(
+        log::debug!(
             "License index built from embedded artifact in {:.2}s",
             start.elapsed().as_secs_f64()
         );
@@ -663,11 +679,11 @@ impl LicenseDetectionEngine {
             &index,
             &fingerprint,
         ) {
-            eprintln!("Warning: failed to save license index cache: {}", e);
+            log::warn!("Failed to save license index cache: {e}");
         } else if let Some(size) =
             cache_file_size(cache_config, LicenseCacheNamespace::Embedded, &fingerprint)
         {
-            eprintln!(
+            log::debug!(
                 "License index cache saved ({:.1} MB)",
                 size as f64 / 1_048_576.0
             );
@@ -683,7 +699,7 @@ impl LicenseDetectionEngine {
     pub fn from_directory(rules_path: &Path) -> Result<Self> {
         let cache_config =
             LicenseCacheConfig::new(LicenseCacheConfig::default_root_dir(), false, true);
-        Self::from_directory_with_cache(rules_path, &cache_config)
+        Self::from_directory_with_cache(rules_path, &cache_config, None)
     }
 
     /// Create a new license detection engine from a directory of license rules.
@@ -694,12 +710,15 @@ impl LicenseDetectionEngine {
     /// # Arguments
     /// * `rules_path` - Path to dataset root containing rules/ and licenses/
     /// * `cache_config` - Cache configuration (directory and reindex flag)
+    /// * `on_cold_build` - Optional callback fired once if the index is rebuilt
+    ///   from scratch instead of loaded from cache (see [`ColdBuildNotify`])
     ///
     /// # Returns
     /// A Result containing the engine or an error
     pub fn from_directory_with_cache(
         rules_path: &Path,
         cache_config: &LicenseCacheConfig,
+        on_cold_build: Option<ColdBuildNotify<'_>>,
     ) -> Result<Self> {
         let LoadedLicenseDataset {
             manifest,
@@ -724,13 +743,13 @@ impl LicenseDetectionEngine {
         });
 
         if !cache_config.reindex {
+            let start = Instant::now();
             if let Some(cached) = load_cached_index(
                 cache_config,
                 LicenseCacheNamespace::CustomRules,
                 &fingerprint,
             )? {
-                let start = Instant::now();
-                eprintln!(
+                log::debug!(
                     "License index loaded from rkyv cache in {:.2}s",
                     start.elapsed().as_secs_f64()
                 );
@@ -748,9 +767,14 @@ impl LicenseDetectionEngine {
             )?;
         }
 
+        // Cache miss (or forced reindex): a cold build is about to happen.
+        if let Some(notify) = on_cold_build {
+            notify();
+        }
+
         let start = Instant::now();
         let index = build_index_from_loaded(loaded_rules, loaded_licenses, false);
-        eprintln!(
+        log::debug!(
             "License index built from custom dataset in {:.2}s",
             start.elapsed().as_secs_f64()
         );
@@ -761,13 +785,13 @@ impl LicenseDetectionEngine {
             &index,
             &fingerprint,
         ) {
-            eprintln!("Warning: failed to save license index cache: {}", e);
+            log::warn!("Failed to save license index cache: {e}");
         } else if let Some(size) = cache_file_size(
             cache_config,
             LicenseCacheNamespace::CustomRules,
             &fingerprint,
         ) {
-            eprintln!(
+            log::debug!(
                 "License index cache saved ({:.1} MB)",
                 size as f64 / 1_048_576.0
             );
