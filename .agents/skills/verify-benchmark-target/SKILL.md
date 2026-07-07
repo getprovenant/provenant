@@ -216,9 +216,9 @@ Keep validation tightly scoped. Prefer the narrowest useful owning test target/f
    For license golden YAML fixtures, first do a parity precheck, then choose the update mode that matches the intent:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --list-mismatches --show-diff --filter <pattern>
-   cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --filter <pattern> --write
-   cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --sync-actual --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --list-mismatches --show-diff --filter <pattern>
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --sync-actual --filter <pattern> --write
    ```
 
    Use plain `--write` for parity-safe syncs from the Python reference. Use `--sync-actual --write` only when the Rust-owned expectation is intentionally diverging.
@@ -226,9 +226,9 @@ Keep validation tightly scoped. Prefer the narrowest useful owning test target/f
    For copyright golden YAML fixtures, use the same precheck-then-update flow:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- copyrights --list-mismatches --show-diff --filter <pattern>
-   cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- copyrights --filter <pattern> --write
-   cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- copyrights --sync-actual --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- copyrights --list-mismatches --show-diff --filter <pattern>
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- copyrights --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- copyrights --sync-actual --filter <pattern> --write
    ```
 
    Use plain `--write` for parity-safe syncs from the Python reference. Use `--sync-actual --write` only when the Rust-owned expectation is intentionally diverging.

@@ -369,10 +369,14 @@ Always review the resulting diff before committing.
 
 `update-copyright-golden` syncs and updates copyright golden YAML fixtures (authors / ics / copyrights).
 
+> This tool and `update-license-golden` require the `golden` feature (they use the
+> `provenant` `golden-tests` API), so their commands pass `--features golden`. The other
+> xtask bins do not, which lets them share the main workspace's compiled `provenant-cli`.
+
 Show CLI help:
 
 ```bash
-cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- --help
+cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- --help
 ```
 
 CLI arguments:
@@ -393,19 +397,19 @@ Expected workflow:
 1. Check Python-reference parity impact first:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- copyrights --list-mismatches --show-diff
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- copyrights --list-mismatches --show-diff
    ```
 
 2. If parity is acceptable for a fixture, sync from Python reference:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- copyrights --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- copyrights --filter <pattern> --write
    ```
 
 3. If divergence is intentional or Rust-specific, update to Rust actuals:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-copyright-golden -- copyrights --sync-actual --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-copyright-golden -- copyrights --sync-actual --filter <pattern> --write
    ```
 
 ## `update-license-golden`
@@ -415,7 +419,7 @@ Expected workflow:
 Show CLI help:
 
 ```bash
-cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --help
+cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --help
 ```
 
 CLI arguments:
@@ -432,19 +436,19 @@ Expected workflow:
 1. Check Python-reference parity impact first:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --list-mismatches --show-diff
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --list-mismatches --show-diff
    ```
 
 2. If parity is acceptable for a fixture, sync from Python reference:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --suite lic1 --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --suite lic1 --filter <pattern> --write
    ```
 
 3. If divergence is intentional or Rust-specific, update to Rust actuals:
 
    ```bash
-   cargo run --manifest-path xtask/Cargo.toml --bin update-license-golden -- --sync-actual --suite unknown --filter <pattern> --write
+   cargo run --manifest-path xtask/Cargo.toml --features golden --bin update-license-golden -- --sync-actual --suite unknown --filter <pattern> --write
    ```
 
 ## `validate-urls`

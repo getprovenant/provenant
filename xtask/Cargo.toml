@@ -12,6 +12,7 @@ path = "src/bin/update_parser_golden.rs"
 [[bin]]
 name = "update-copyright-golden"
 path = "src/bin/update_copyright_golden.rs"
+required-features = ["golden"]
 
 [[bin]]
 name = "validate-urls"
@@ -24,6 +25,7 @@ path = "src/bin/generate_supported_formats.rs"
 [[bin]]
 name = "update-license-golden"
 path = "src/bin/update_license_golden.rs"
+required-features = ["golden"]
 
 [[bin]]
 name = "generate-index-artifact"
@@ -65,13 +67,19 @@ path = "src/bin/generate_legalese_artifact/main.rs"
 name = "classify-rule-overmatch"
 path = "src/bin/classify_rule_overmatch.rs"
 
+[features]
+# Only the golden-fixture update tools need the provenant `golden-tests` API.
+# Scoping it here (instead of enabling it on the dependency crate-wide) lets the
+# other xtask bins — notably generate-index-artifact — build provenant-cli with
+# the same default feature set as the main workspace, so they share compiled
+# artifacts instead of triggering a separate feature-configured rebuild.
+golden = ["provenant/golden-tests"]
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
 postcard = { workspace = true }
-provenant = { path = "..", package = "provenant-cli", features = [
-    "golden-tests",
-] }
+provenant = { path = "..", package = "provenant-cli" }
 rayon = { workspace = true }
 regex = { workspace = true }
 rkyv = { workspace = true }
