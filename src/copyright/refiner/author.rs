@@ -35,6 +35,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = strip_trailing_version(&a);
     a = strip_trailing_comma_email_matching_name(&a);
     a = truncate_trailing_from_clause_after_angle_contact(&a);
+    a = truncate_trailing_website_url_clause(&a);
     a = truncate_trailing_clause_after_contact(&a);
     a = strip_trailing_comma_and(&a);
     a = truncate_bug_reports_clause(&a);
@@ -1207,6 +1208,37 @@ fn truncate_trailing_clause_after_contact(s: &str) -> String {
         return prefix.to_string();
     }
 
+    s.to_string()
+}
+
+/// Truncate a trailing website/homepage label followed by a URL.
+///
+/// Structured file headers such as
+/// ```text
+/// Author: Valerii Hiora <valerii.hiora@gmail.com>
+/// Contributors: Angel G. Olloqui <angelgarcia.mail@gmail.com>, ...
+/// Website: https://developer.apple.com/documentation/objectivec
+/// ```
+/// let the following `Website: <url>` line bleed into the collected author. The
+/// label word plus an explicit `http(s)://` URL is unambiguous metadata, never
+/// part of a person or organization name, so drop it.
+fn truncate_trailing_website_url_clause(s: &str) -> String {
+    static WEBSITE_URL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        // `[\s:]+` tolerates the colon-preserved header form (`Website: https://`,
+        // `Website:https://`) as well as the colon-stripped `Website https://`.
+        Regex::new(
+            r"(?i)^(?P<prefix>.+?)\s+(?:Website|Homepage|Web\s?site|URL)[\s:]+https?://\S+\s*$",
+        )
+        .expect("valid trailing website-url clause regex")
+    });
+
+    let trimmed = s.trim();
+    if let Some(cap) = WEBSITE_URL_RE.captures(trimmed) {
+        let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+        if !prefix.is_empty() {
+            return prefix.to_string();
+        }
+    }
     s.to_string()
 }
 
