@@ -1,35 +1,14 @@
-# Regenerate docs/provenant-demo.gif — a side-by-side race of Provenant vs. ScanCode
-# scanning the same repository with the same flags. Uses vhs (https://github.com/charmbracelet/vhs).
+# vhs script for docs/provenant-demo.gif — a side-by-side race of Provenant vs. ScanCode
+# scanning the same repository with the same flags (https://github.com/charmbracelet/vhs).
 #
-# Prerequisites (maintainer environment). Everything the tape scans lives under
-# .provenant/ (already gitignored), so regenerating never touches tracked files:
-#   brew install vhs tmux
-#   cargo build --release
-#   mkdir -p .provenant/demo
-#   git clone --depth 1 https://github.com/astral-sh/uv .provenant/demo/uv && rm -rf .provenant/demo/uv/.git
+# Do not run this directly. Regenerate the GIF with:
+#   docs/demo/record.sh
+# which builds provenant, clones astral-sh/uv, builds the ScanCode Docker image, puts the
+# docs/demo/scancode wrapper on PATH (with SCANCODE_IMAGE / SCANCODE_OUT), then runs vhs.
+# Everything transient lives under .provenant/ (gitignored), so it never touches tracked files.
 #
-#   # Build the local ScanCode Docker image (the same one xtask compare-outputs uses):
-#   cargo run --manifest-path xtask/Cargo.toml --bin compare-outputs -- --target-path .provenant/demo/uv --profile common
-#   # note the built tag, e.g. provenant-scancode-local:<commit>-<platform>
-#
-#   # Put a thin `scancode` wrapper on PATH so the race pane shows the same args as
-#   # Provenant (no raw `docker run`). It maps the trailing path (uv/) to /input and
-#   # the --json-pp output into the writable /out mount. Replace <IMAGE> and <OUT>:
-#   #   #!/usr/bin/env bash
-#   #   all=("$@"); target_index=$(( ${#all[@]} - 1 )); pass=(); i=0
-#   #   while [ $i -lt $target_index ]; do
-#   #     if [ "${all[i]}" = "--json-pp" ]; then
-#   #       pass+=(--json-pp "/out/$(basename "${all[i+1]}")"); i=$(( i + 2 ))
-#   #     else pass+=("${all[i]}"); i=$(( i + 1 )); fi
-#   #   done
-#   #   exec docker run --rm -t -e SCANCODE_CACHE=/tmp/sc \
-#   #     -v "$PWD/uv":/input:ro -v <OUT>:/out <IMAGE> "${pass[@]}" /input
-#
-# Run from the repo root (with ./uv present, `scancode` + `provenant` on PATH):
-#   vhs docs/demo.tape
-#
-# Both scanners are throttled to a single process (-n 1) so the progress bars are
-# visible and the comparison is apples-to-apples; Provenant uses every core by default.
+# Both scanners are throttled to a single process (-n 1) so the progress bars are visible
+# and the comparison is apples-to-apples; Provenant uses every core by default.
 Output "docs/provenant-demo.gif"
 
 Set Shell "bash"

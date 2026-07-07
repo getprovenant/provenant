@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Thin ScanCode wrapper for the README demo race (docs/demo.tape).
+#
+# It runs ScanCode from the locally-built `provenant-scancode-local` Docker image so the
+# demo's left pane can show the *same* CLI args as Provenant (`scancode --json-pp
+# results.json --license --package -n 1 uv/`) instead of a raw `docker run`. It maps the
+# trailing path argument to the container's read-only /input mount and rewrites any
+# `--json-pp <file>` to land in the writable /out mount.
+#
+# Driven by docs/demo/record.sh, which exports:
+#   SCANCODE_IMAGE  a provenant-scancode-local:<commit>-<platform> tag
+#   SCANCODE_OUT    a writable host directory for ScanCode's JSON output
+set -euo pipefail
+
+: "${SCANCODE_IMAGE:?set SCANCODE_IMAGE to a provenant-scancode-local:* tag (see docs/demo/record.sh)}"
+: "${SCANCODE_OUT:?set SCANCODE_OUT to a writable output directory (see docs/demo/record.sh)}"
+
+if [ "$#" -lt 1 ]; then
+  echo "usage: scancode [scancode-args...] <path-to-scan>" >&2
+  exit 2
+fi
+
+args=("$@")
+last=$(( ${#args[@]} - 1 ))
+target="${args[$last]}"
+
+passthrough=()
+i=0
+while [ "$i" -lt "$last" ]; do
+  if [ "${args[$i]}" = "--json-pp" ]; then
+    passthrough+=(--json-pp "/out/$(basename "${args[$((i + 1))]}")")
+    i=$(( i + 2 ))
+  else
+    passthrough+=("${args[$i]}")
+    i=$(( i + 1 ))
+  fi
+done
+
+# A run label (set by docs/demo/record.sh) lets the recorder clean up only this
+# container, never a concurrent compare run or manual scan on the same image.
+label=()
+[ -n "${SCANCODE_RUN_LABEL:-}" ] && label=(--label "$SCANCODE_RUN_LABEL")
+
+# Note: ${arr[@]+"${arr[@]}"} expands safely when the array is empty, even on the
+# bash 3.2 that ships with macOS (where a bare "${arr[@]}" trips `set -u`).
+exec docker run --rm -t ${label[@]+"${label[@]}"} -e SCANCODE_CACHE=/tmp/sc \
+  -v "$(cd "$target" && pwd)":/input:ro \
+  -v "$SCANCODE_OUT":/out \
+  "$SCANCODE_IMAGE" \
+  ${passthrough[@]+"${passthrough[@]}"} /input
