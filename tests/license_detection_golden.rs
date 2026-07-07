@@ -359,6 +359,27 @@ mod golden_tests {
         assert_eq!(result.failed, 0, "lic1 had {} failures", result.failed);
     }
 
+    // Regression coverage for the bundled downstream overlays under
+    // resources/license_detection/overlay/. Each fixture pins the detection an
+    // overlay is responsible for so a bad expression or malformed overlay body
+    // cannot silently pass. Positive overlays assert their corrected expression;
+    // clue-only / false-positive overlays assert that the notice does not
+    // hard-detect (empty license_expressions).
+    #[test]
+    fn test_golden_overlays() {
+        let result = run_suite(
+            "overlays",
+            &PathBuf::from(format!("{}/overlays", GOLDEN_DIR)),
+        );
+        if result.failed > 0 {
+            println!("\n{} failures:", result.failed);
+            for (name, err) in &result.failures {
+                println!("  - {}: {}", name, err.lines().next().unwrap_or(err));
+            }
+        }
+        assert_eq!(result.failed, 0, "overlays had {} failures", result.failed);
+    }
+
     #[test]
     fn test_golden_lic2_part1() {
         let result = run_suite_range(
