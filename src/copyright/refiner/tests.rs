@@ -87,6 +87,41 @@ fn test_refine_author_discards_laboriously_took_the_trouble_junk() {
 }
 
 #[test]
+fn test_refine_author_strips_trailing_website_url_clause() {
+    // A `Website: <url>` header line following an `Author:`/`Contributors:`
+    // line bleeds into the collected author; the label + URL is dropped.
+    assert_eq!(
+        refine_author(
+            "Angel G. Olloqui <angelgarcia.mail@gmail.com>, Matt Diephouse <matt@diephouse.com> Website https://developer.apple.com/documentation/objectivec"
+        ),
+        Some(
+            "Angel G. Olloqui <angelgarcia.mail@gmail.com>, Matt Diephouse <matt@diephouse.com>"
+                .to_string()
+        )
+    );
+    // `Homepage`/`URL` label variants are handled too.
+    assert_eq!(
+        refine_author("Jane Doe <jane@example.com> Homepage https://example.com/"),
+        Some("Jane Doe <jane@example.com>".to_string())
+    );
+    // The colon-preserved header form (label punctuation not stripped) is also
+    // truncated, including when an email contact is present.
+    assert_eq!(
+        refine_author("Jane Doe <jane@example.com> Website: https://example.com/"),
+        Some("Jane Doe <jane@example.com>".to_string())
+    );
+    assert_eq!(
+        refine_author("Jane Doe <jane@example.com> Website:https://example.com/"),
+        Some("Jane Doe <jane@example.com>".to_string())
+    );
+    // A bare name that merely contains the word "Website" (no URL) is preserved.
+    assert_eq!(
+        refine_author("Acme Website Team"),
+        Some("Acme Website Team".to_string())
+    );
+}
+
+#[test]
 fn test_refine_author_strips_xcode_on_date_suffix() {
     // Xcode/IDE headers `Created by <Name> on M/D/YY` yield a date-suffixed
     // author variant; the suffix is stripped so it dedupes to the bare name.
