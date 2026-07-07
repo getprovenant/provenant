@@ -230,12 +230,11 @@ pub(crate) fn run(args: &ServeArgs) -> Result<()> {
         .map_err(|e| anyhow!("Failed to bind provenant serve to {}: {e}", config.bind))?;
     let local_addr = server.server_addr();
 
-    eprintln!(
-        "Starting provenant serve on http://{} (api {API_VERSION})",
-        local_addr
-    );
+    log::info!("Starting provenant serve on http://{local_addr} (api {API_VERSION})");
     if !config.ingest_policy.privileged_inputs_allowed() {
-        eprintln!(
+        // Warn (not info) so this security-boundary notice still surfaces under
+        // `serve --quiet`, which raises the log level to warn.
+        log::warn!(
             "Privileged serve inputs (paths, url, repository) are disabled for this non-loopback bind; use --allow-privileged-inputs only for trusted deployments."
         );
     }
@@ -252,7 +251,7 @@ fn serve_forever(server: Server, state: ServeState) -> Result<()> {
     let dispatcher = RequestDispatcher::start(state, RequestWorkerConfig::default());
     for request in server.incoming_requests() {
         if let Err(error) = dispatcher.dispatch(request) {
-            eprintln!("serve request dispatch error: {error}");
+            log::error!("serve request dispatch error: {error}");
         }
     }
 
@@ -342,7 +341,7 @@ fn request_worker_loop(
         match request {
             Ok(request) => {
                 if let Err(error) = handle_request(request, &state) {
-                    eprintln!("serve {label} worker {index} request handling error: {error}");
+                    log::error!("serve {label} worker {index} request handling error: {error}");
                 }
             }
             Err(_) => break,
@@ -650,11 +649,11 @@ fn spawn_dispatches(
 
             let outcome = match result {
                 Ok(result_body) => {
-                    eprintln!("serve async job {} succeeded", dispatched.job_id);
+                    log::info!("serve async job {} succeeded", dispatched.job_id);
                     JobOutcome::Succeeded { result_body }
                 }
                 Err(error) => {
-                    eprintln!("serve async job {} failed: {error}", dispatched.job_id);
+                    log::error!("serve async job {} failed: {error}", dispatched.job_id);
                     JobOutcome::Failed {
                         message: "async scan job failed".to_string(),
                         status_code: error.http_status_code().0,
@@ -771,6 +770,7 @@ mod tests {
         let args = ServeArgs {
             bind: String::new(),
             allow_privileged_inputs: false,
+            verbosity: crate::cli::VerbosityFlags::default(),
         };
 
         let error = ServeConfig::try_from(&args).expect_err("empty bind should fail");
@@ -782,6 +782,7 @@ mod tests {
         let args = ServeArgs {
             bind: "127.0.0.1:8080".to_string(),
             allow_privileged_inputs: false,
+            verbosity: crate::cli::VerbosityFlags::default(),
         };
 
         let config = ServeConfig::try_from(&args).expect("loopback bind should configure");
@@ -793,6 +794,7 @@ mod tests {
         let args = ServeArgs {
             bind: "localhost:8080".to_string(),
             allow_privileged_inputs: false,
+            verbosity: crate::cli::VerbosityFlags::default(),
         };
 
         let config = ServeConfig::try_from(&args).expect("localhost bind should configure");
@@ -804,6 +806,7 @@ mod tests {
         let args = ServeArgs {
             bind: "0.0.0.0:8080".to_string(),
             allow_privileged_inputs: false,
+            verbosity: crate::cli::VerbosityFlags::default(),
         };
 
         let config = ServeConfig::try_from(&args).expect("non-loopback bind should configure");
@@ -815,6 +818,7 @@ mod tests {
         let args = ServeArgs {
             bind: "0.0.0.0:8080".to_string(),
             allow_privileged_inputs: true,
+            verbosity: crate::cli::VerbosityFlags::default(),
         };
 
         let config = ServeConfig::try_from(&args).expect("non-loopback bind should configure");

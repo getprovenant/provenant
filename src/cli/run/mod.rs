@@ -7,7 +7,7 @@ use crate::cli::{Cli, Command, ScanArgs};
 use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
 use crate::output::{OutputWriteConfig, write_output_file};
-use crate::progress::ScanProgress;
+use crate::progress::{ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
 use anyhow::{Result, anyhow};
@@ -21,6 +21,20 @@ pub fn run() -> Result<()> {
     touch_license_golden_symbols();
 
     let cli = Cli::parse();
+
+    // Every subcommand except `scan` installs a plain global logger here so its
+    // `log::*` diagnostics are actually emitted (respecting `-q`/`-v`). `scan`
+    // installs an indicatif-aware bridge later, once its progress system exists.
+    match &cli.command {
+        Command::Scan(_) => {}
+        Command::Serve(args) => init_cli_logger(args.verbosity.verbosity().log_level()),
+        Command::Compare(args) => init_cli_logger(args.verbosity.verbosity().log_level()),
+        Command::ExportLicenseDataset(args) => {
+            init_cli_logger(args.verbosity.verbosity().log_level())
+        }
+        Command::ShowAttribution => init_cli_logger(crate::cli::Verbosity::Normal.log_level()),
+    }
+
     match &cli.command {
         Command::ShowAttribution => {
             print!("{}", include_str!("../../../NOTICE"));
@@ -30,6 +44,11 @@ pub fn run() -> Result<()> {
             return run_serve_shell(args);
         }
         Command::Compare(args) => {
+            log::info!(
+                "Comparing ScanCode JSON {} against Provenant JSON {}...",
+                args.scancode_json.display(),
+                args.provenant_json.display()
+            );
             let result = compare_json_files(
                 &args.scancode_json,
                 &args.provenant_json,
@@ -47,7 +66,19 @@ pub fn run() -> Result<()> {
             return Ok(());
         }
         Command::ExportLicenseDataset(args) => {
-            export_embedded_license_dataset(Path::new(&args.dir))?;
+            let dir = Path::new(&args.dir);
+            log::info!("Exporting built-in license dataset to {}...", dir.display());
+
+            let started = Instant::now();
+            let outcome = export_embedded_license_dataset(dir)?;
+
+            log::info!(
+                "Exported {} license dataset files to {} in {:.1}s (SPDX list {})",
+                outcome.files_written,
+                dir.display(),
+                started.elapsed().as_secs_f64(),
+                outcome.manifest.spdx_license_list_version
+            );
             return Ok(());
         }
         Command::Scan(_) => {}

@@ -16,7 +16,7 @@ pub use incremental::{
     load_incremental_manifest, manifest_entry_matches_path, metadata_fingerprint,
     write_incremental_manifest,
 };
-pub(crate) use io::{create_dir_all_private, write_bytes_atomically};
+pub(crate) use io::{create_dir_all_private, write_bytes_atomically, write_bytes_owner_only};
 
 pub fn build_collection_exclude_patterns(scan_root: &Path, cache_root: &Path) -> Vec<Pattern> {
     let mut patterns = Vec::new();

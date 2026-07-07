@@ -159,6 +159,54 @@ pub enum Command {
     ExportLicenseDataset(ExportLicenseDatasetArgs),
 }
 
+/// Requested output verbosity for a subcommand.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Verbosity {
+    /// Warnings and errors only.
+    Quiet,
+    /// Progress and informational output (the default).
+    #[default]
+    Normal,
+    /// Everything, including debug-level diagnostics.
+    Verbose,
+}
+
+impl Verbosity {
+    /// Default global log level for this verbosity. `RUST_LOG` still overrides.
+    pub fn log_level(self) -> log::LevelFilter {
+        match self {
+            Self::Quiet => log::LevelFilter::Warn,
+            Self::Normal => log::LevelFilter::Info,
+            Self::Verbose => log::LevelFilter::Debug,
+        }
+    }
+}
+
+/// Reusable `-q/-v` verbosity flags, flattened into subcommands other than
+/// `scan` (which has its own richer progress modes tied to its output header).
+#[derive(Args, Debug, Clone, Default)]
+pub struct VerbosityFlags {
+    /// Suppress progress and informational output; show warnings and errors only.
+    #[arg(short = 'q', long = "quiet", conflicts_with = "verbose")]
+    pub quiet: bool,
+
+    /// Emit verbose diagnostics, including debug-level logging.
+    #[arg(short = 'v', long = "verbose", conflicts_with = "quiet")]
+    pub verbose: bool,
+}
+
+impl VerbosityFlags {
+    pub fn verbosity(&self) -> Verbosity {
+        if self.quiet {
+            Verbosity::Quiet
+        } else if self.verbose {
+            Verbosity::Verbose
+        } else {
+            Verbosity::Normal
+        }
+    }
+}
+
 #[derive(Args, Debug, Clone)]
 pub struct CompareArgs {
     /// Path to an existing ScanCode JSON output file.
@@ -172,12 +220,18 @@ pub struct CompareArgs {
     /// Directory where comparison artifacts should be written. Defaults to a timestamped directory in the current working directory.
     #[arg(long = "artifact-dir", value_name = "DIR")]
     pub artifact_dir: Option<PathBuf>,
+
+    #[command(flatten)]
+    pub verbosity: VerbosityFlags,
 }
 
 #[derive(Args, Debug, Clone)]
 pub struct ExportLicenseDatasetArgs {
     #[arg(value_name = "DIR")]
     pub dir: String,
+
+    #[command(flatten)]
+    pub verbosity: VerbosityFlags,
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -205,6 +259,9 @@ pub struct ServeArgs {
     /// Allow paths, URL, and repository inputs when bound beyond localhost.
     #[arg(long = "allow-privileged-inputs")]
     pub allow_privileged_inputs: bool,
+
+    #[command(flatten)]
+    pub verbosity: VerbosityFlags,
 }
 
 #[derive(Args, Debug, Clone)]

@@ -5,9 +5,10 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use anyhow::{Context, Result, anyhow};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::cache::write_bytes_atomically;
+use crate::cache::{create_dir_all_private, write_bytes_atomically, write_bytes_owner_only};
 use crate::license_detection::embedded::index::load_loader_snapshot_from_bytes;
 use crate::license_detection::embedded::schema::EmbeddedArtifactMetadata;
 use crate::license_detection::license_cache::compute_rules_fingerprint;
@@ -39,7 +40,15 @@ pub struct LoadedLicenseDataset {
     pub licenses: Vec<LoadedLicense>,
 }
 
-pub fn export_embedded_license_dataset(target_root: &Path) -> Result<LicenseDatasetManifest> {
+/// Result of a dataset export: the manifest plus the number of `.RULE`/`.LICENSE`
+/// files written (excluding the manifest and README), for a caller's summary.
+#[derive(Debug, Clone)]
+pub struct ExportOutcome {
+    pub manifest: LicenseDatasetManifest,
+    pub files_written: usize,
+}
+
+pub fn export_embedded_license_dataset(target_root: &Path) -> Result<ExportOutcome> {
     let artifact_bytes = include_bytes!("../../resources/license_detection/license_index.zst");
     let snapshot = load_loader_snapshot_from_bytes(artifact_bytes)
         .map_err(|error| anyhow!("Failed to load embedded license dataset: {}", error))?;
@@ -57,8 +66,12 @@ pub fn export_license_dataset_to_root(
     rules: &[LoadedRule],
     licenses: &[LoadedLicense],
     metadata: &EmbeddedArtifactMetadata,
-) -> Result<LicenseDatasetManifest> {
+) -> Result<ExportOutcome> {
     ensure_export_target_is_empty(target_root)?;
+    // Reject duplicate output names up front: the parallel writers would
+    // otherwise race two workers onto the same path (truncate-and-write), and a
+    // dataset with colliding rule identifiers / license keys is malformed anyway.
+    ensure_unique_export_names(rules, licenses)?;
 
     let manifest = LicenseDatasetManifest {
         schema_version: LICENSE_DATASET_SCHEMA_VERSION,
@@ -68,12 +81,41 @@ pub fn export_license_dataset_to_root(
         exported_by_version: BUILD_VERSION.to_string(),
     };
 
-    write_dataset_manifest(target_root, &manifest)?;
-    write_dataset_readme(target_root, &manifest)?;
     write_rule_files(target_root, rules)?;
     write_license_files(target_root, licenses)?;
+    write_dataset_readme(target_root, &manifest)?;
+    // Write the manifest last: the loader requires `manifest.json`, so its
+    // presence marks a complete export. If the process is interrupted mid-write
+    // the manifest is absent and the loader rejects the partial directory rather
+    // than silently loading an incomplete license index.
+    write_dataset_manifest(target_root, &manifest)?;
 
-    Ok(manifest)
+    Ok(ExportOutcome {
+        manifest,
+        files_written: rules.len() + licenses.len(),
+    })
+}
+
+fn ensure_unique_export_names(rules: &[LoadedRule], licenses: &[LoadedLicense]) -> Result<()> {
+    let mut rule_ids = std::collections::HashSet::with_capacity(rules.len());
+    for rule in rules {
+        if !rule_ids.insert(rule.identifier.as_str()) {
+            return Err(anyhow!(
+                "Duplicate rule identifier in license dataset export: {}",
+                rule.identifier
+            ));
+        }
+    }
+    let mut license_keys = std::collections::HashSet::with_capacity(licenses.len());
+    for license in licenses {
+        if !license_keys.insert(license.key.as_str()) {
+            return Err(anyhow!(
+                "Duplicate license key in license dataset export: {}",
+                license.key
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub fn load_license_dataset_from_root(root: &Path) -> Result<LoadedLicenseDataset> {
@@ -180,35 +222,32 @@ fn write_dataset_readme(root: &Path, manifest: &LicenseDatasetManifest) -> Resul
 }
 
 fn write_rule_files(root: &Path, rules: &[LoadedRule]) -> Result<()> {
-    let mut sorted = rules.iter().collect::<Vec<_>>();
-    sorted.sort_by_key(|rule| &rule.identifier);
+    // Create the target directory once, then write files directly (no per-file
+    // fsync/temp-rename): the target is a freshly emptied export dir, so per-file
+    // durability is unnecessary and its fsync cost dominates at this file count.
+    let rules_dir = root.join(LICENSE_DATASET_RULES_DIR);
+    create_dir_all_private(&rules_dir)?;
 
-    for rule in sorted {
+    rules.par_iter().try_for_each(|rule| -> Result<()> {
         validate_dataset_filename_component(&rule.identifier, "rule identifier")?;
         let rendered = render_rule(rule)?;
-        let output_path = root.join(LICENSE_DATASET_RULES_DIR).join(&rule.identifier);
-        write_bytes_atomically(&output_path, rendered.as_bytes())
-            .with_context(|| format!("Write rule dataset file {}", output_path.display()))?;
-    }
-
-    Ok(())
+        let output_path = rules_dir.join(&rule.identifier);
+        write_bytes_owner_only(&output_path, rendered.as_bytes())
+            .with_context(|| format!("Write rule dataset file {}", output_path.display()))
+    })
 }
 
 fn write_license_files(root: &Path, licenses: &[LoadedLicense]) -> Result<()> {
-    let mut sorted = licenses.iter().collect::<Vec<_>>();
-    sorted.sort_by_key(|license| &license.key);
+    let licenses_dir = root.join(LICENSE_DATASET_LICENSES_DIR);
+    create_dir_all_private(&licenses_dir)?;
 
-    for license in sorted {
+    licenses.par_iter().try_for_each(|license| -> Result<()> {
         validate_dataset_filename_component(&license.key, "license key")?;
         let rendered = render_license(license)?;
-        let output_path = root
-            .join(LICENSE_DATASET_LICENSES_DIR)
-            .join(format!("{}.LICENSE", license.key));
-        write_bytes_atomically(&output_path, rendered.as_bytes())
-            .with_context(|| format!("Write license dataset file {}", output_path.display()))?;
-    }
-
-    Ok(())
+        let output_path = licenses_dir.join(format!("{}.LICENSE", license.key));
+        write_bytes_owner_only(&output_path, rendered.as_bytes())
+            .with_context(|| format!("Write license dataset file {}", output_path.display()))
+    })
 }
 
 fn load_strict_loaded_rules_from_directory(dir: &Path) -> Result<Vec<LoadedRule>> {
@@ -617,6 +656,75 @@ mod tests {
             error
                 .to_string()
                 .contains("Invalid rule identifier for exported license dataset")
+        );
+    }
+
+    #[test]
+    fn export_reports_file_count_and_roundtrips() {
+        let metadata = EmbeddedArtifactMetadata {
+            spdx_license_list_version: "3.27".to_string(),
+            license_index_provenance: crate::models::LicenseIndexProvenance {
+                source: "embedded-artifact".to_string(),
+                dataset_fingerprint: "abc123".to_string(),
+                ignored_rules: vec![],
+                ignored_licenses: vec![],
+                ignored_rules_due_to_licenses: vec![],
+                added_rules: vec![],
+                replaced_rules: vec![],
+                added_licenses: vec![],
+                replaced_licenses: vec![],
+            },
+        };
+        let rules = vec![
+            LoadedRule {
+                identifier: "first.RULE".to_string(),
+                ..create_loaded_rule()
+            },
+            LoadedRule {
+                identifier: "second.RULE".to_string(),
+                ..create_loaded_rule()
+            },
+        ];
+        let licenses = vec![create_loaded_license()];
+        let temp = TempDir::new().expect("temp dir");
+
+        let outcome = export_license_dataset_to_root(temp.path(), &rules, &licenses, &metadata)
+            .expect("export should succeed");
+
+        // Counts the rule and license files written (manifest/README excluded).
+        assert_eq!(outcome.files_written, 3);
+
+        // The written tree must reload through the dataset loader unchanged.
+        let reloaded =
+            load_license_dataset_from_root(temp.path()).expect("reload exported dataset");
+        assert_eq!(reloaded.rules.len(), 2);
+        assert_eq!(reloaded.licenses.len(), 1);
+    }
+
+    #[test]
+    fn export_rejects_duplicate_rule_identifiers() {
+        let metadata = EmbeddedArtifactMetadata {
+            spdx_license_list_version: "3.27".to_string(),
+            license_index_provenance: crate::models::LicenseIndexProvenance {
+                source: "embedded-artifact".to_string(),
+                dataset_fingerprint: "abc123".to_string(),
+                ignored_rules: vec![],
+                ignored_licenses: vec![],
+                ignored_rules_due_to_licenses: vec![],
+                added_rules: vec![],
+                replaced_rules: vec![],
+                added_licenses: vec![],
+                replaced_licenses: vec![],
+            },
+        };
+        let rules = vec![create_loaded_rule(), create_loaded_rule()];
+        let temp = TempDir::new().expect("temp dir");
+
+        let error = export_license_dataset_to_root(temp.path(), &rules, &[], &metadata)
+            .expect_err("duplicate rule identifiers should be rejected before any parallel write");
+        assert!(
+            error.to_string().contains("Duplicate rule identifier"),
+            "unexpected error: {error}"
         );
     }
 }

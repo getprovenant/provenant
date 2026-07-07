@@ -60,6 +60,30 @@ pub fn write_bytes_atomically(path: &Path, payload: &[u8]) -> io::Result<()> {
     result
 }
 
+/// Write `payload` to `path`, creating the file owner-only (`0600`) on Unix,
+/// **without** the fsync + temp-file-rename durability of
+/// [`write_bytes_atomically`].
+///
+/// Intended for bulk one-shot writes such as dataset export, where the target
+/// directory is freshly created/empty and per-file durability is unnecessary:
+/// if the process is interrupted the caller simply re-runs the export. Skipping
+/// the per-file `fsync` (which is an `F_FULLFSYNC` media barrier on macOS)
+/// turns a multi-minute export of tens of thousands of small files into a
+/// few-second operation. The resulting file permissions match
+/// `write_bytes_atomically`, so this is purely a durability/atomicity tradeoff.
+pub fn write_bytes_owner_only(path: &Path, payload: &[u8]) -> io::Result<()> {
+    let mut options = OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path)?;
+    file.write_all(payload)?;
+    Ok(())
+}
+
 fn write_bytes_to_temp(temp_path: &Path, payload: &[u8]) -> io::Result<()> {
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
