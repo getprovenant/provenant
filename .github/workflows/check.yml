@@ -116,6 +116,13 @@ jobs:
       - name: Check compilation
         run: cargo check --all --verbose
 
+      # `cargo check --all` uses default features, which excludes xtask bins gated
+      # behind the non-default `golden` feature (update-license-golden,
+      # update-copyright-golden). Check xtask with all features so those bins stay
+      # compile-checked.
+      - name: Check xtask (all features)
+        run: cargo check --manifest-path xtask/Cargo.toml --all-targets --all-features --verbose
+
       - name: Check dependency policy
         uses: EmbarkStudios/cargo-deny-action@44db170f6a7d12a6e90340e9e0fca1f650d34b14
         with:
