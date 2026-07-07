@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+
+name: ScanCode weekly triage
+
+# Weekly triage of upstream ScanCode Toolkit issues for relevance to Provenant.
+# Uses GitHub Models (free tier) for the judgment and a freshly built binary for
+# ground-truth reproduction. Each actionable finding becomes a deduplicated
+# Provenant issue; the full run summary lives in this workflow's run output.
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Mondays 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Issue-creation window in days"
+        required: false
+        default: "8"
+
+# GITHUB_TOKEN needs models:read to call GitHub Models inference and issues:write
+# to open per-finding issues.
+permissions:
+  contents: read
+  models: read
+  issues: write
+
+concurrency:
+  group: scancode-triage
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build from main rather than downloading a release: a published release
+      # can lag main, which would falsely flag already-fixed issues as live bugs.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build provenant and the triage tool
+        run: |
+          cargo build --release --bin provenant
+          cargo build --release -p provenant-xtask --bin scancode-triage
+
+      - name: Run triage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed via env (never interpolated into the run script) so a dispatch
+          # input cannot break out of the shell command. The tool also validates
+          # it is a positive integer.
+          TRIAGE_DAYS: ${{ github.event.inputs.days || '8' }}
+          # Set the model in repo Settings -> Variables (SCANCODE_TRIAGE_MODEL).
+          # It is required — the tool errors out if it is unset.
+          SCANCODE_TRIAGE_MODEL: ${{ vars.SCANCODE_TRIAGE_MODEL }}
+        run: |
+          ./target/release/scancode-triage \
+            --days "${TRIAGE_DAYS}" \
+            --binary target/release/provenant \
+            --repo-root . \
+            --post-to "${{ github.repository }}"

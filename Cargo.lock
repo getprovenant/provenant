@@ -3461,6 +3461,7 @@ dependencies = [
  "provenant-cli",
  "rayon",
  "regex",
+ "reqwest",
  "rkyv",
  "serde",
  "serde_json",

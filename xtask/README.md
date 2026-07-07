@@ -29,6 +29,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 | `generate-benchmark-chart`        | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
 | `generate-index-artifact`         | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
 | `classify-rule-overmatch`         | Classify upstream license rules by overmatch-risk class and rank un-covered overlay candidates.                                             |
+| `scancode-triage`                 | Weekly triage of upstream ScanCode issues for Provenant relevance, via GitHub Models with real reproduction scans.                          |
 
 ## `benchmark-target`
 
@@ -582,3 +583,68 @@ cargo run --manifest-path xtask/Cargo.toml --bin classify-rule-overmatch
 # Machine-readable output for further analysis.
 cargo run --manifest-path xtask/Cargo.toml --bin classify-rule-overmatch -- --json
 ```
+
+## `scancode-triage`
+
+### Purpose
+
+`scancode-triage` checks recent [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit)
+issues for ones that also affect Provenant and are worth fixing. The binary does
+the plumbing; a [GitHub Models](https://docs.github.com/github-models) LLM does
+the judgment. It is normally run on a weekly schedule by
+[`.github/workflows/scancode-triage.yml`](../.github/workflows/scancode-triage.yml),
+but is a plain xtask bin you can also run locally.
+
+### Model and token
+
+- Inference runs on GitHub Models via a GitHub token that carries `models:read`
+  (in CI, the built-in `GITHUB_TOKEN` with `permissions: models: read`; locally,
+  `gh auth token`).
+- The model is **required and has no built-in default**: supply it via `--model`
+  or the `SCANCODE_TRIAGE_MODEL` env var. In CI it comes from the
+  `SCANCODE_TRIAGE_MODEL` repository variable (Settings → Variables); the tool
+  errors out if it is unset. Choose a model whose free-tier limits cover a weekly
+  run.
+
+### Usage
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml --bin scancode-triage -- --help
+
+# Report to stdout over the last N days (requires target/release/provenant built):
+SCANCODE_TRIAGE_MODEL=<model-id> cargo run --release --manifest-path xtask/Cargo.toml \
+  --bin scancode-triage -- --days 8 --binary target/release/provenant
+
+# Cheap check over a few recent candidates:
+SCANCODE_TRIAGE_MODEL=<model-id> cargo run --release --manifest-path xtask/Cargo.toml \
+  --bin scancode-triage -- --days 21 --max-issues 5 --binary target/release/provenant
+
+# Open a deduplicated Provenant issue per actionable finding:
+SCANCODE_TRIAGE_MODEL=<model-id> cargo run --release --manifest-path xtask/Cargo.toml \
+  --bin scancode-triage -- --days 8 --binary target/release/provenant --post-to <owner>/<repo>
+```
+
+CLI arguments:
+
+- `--days N`: issue-creation window (must be `>= 1`); ignored when `--since` is given.
+- `--since YYYY-MM-DD`: explicit lower bound on issue creation date.
+- `--binary PATH`: the provenant binary used for reproduction scans (default `target/release/provenant`).
+- `--repo-root PATH`: Provenant repo root, used by the `list_parsers` tool.
+- `--model ID`: GitHub Models model id (env `SCANCODE_TRIAGE_MODEL`).
+- `--max-issues N`: cap candidates triaged (`0` = no cap).
+- `--out PATH`: also write the run summary to a file (it is always printed to stdout).
+- `--post-to owner/name`: open a deduplicated issue per actionable finding in that repo.
+
+### What It Does
+
+1. Fetches ScanCode issues created in the window and drops the `New license request:` tickets (license-catalog data, not detection bugs); the count is reported.
+2. For each remaining candidate, runs a bounded tool-loop where the model classifies the issue and, via a `run_provenant` tool, reproduces detection bugs with real scans and checks parser coverage via `list_parsers`.
+3. Emits a verdict per issue (`reproduces - worth fixing`, `already fixed/better in PV`, `not relevant`, `needs manual check`). The full run summary is printed to stdout (and, under Actions, the job step summary) — not filed as an issue.
+4. With `--post-to`, opens one Provenant issue per `reproduces - worth fixing` finding, labeled `scancode-triage` and titled `[ScanCode #N] …`. Findings are deduplicated by that `#N` prefix, so re-runs never open a duplicate for a finding that still reproduces. Stale findings are left untouched — the tool only creates, never edits or closes.
+
+### Notes
+
+- It builds/uses a binary from the current tree rather than a published release: a release can lag `main`, so a release-based run could report issues already fixed on `main` as live bugs.
+- Every value the model passes to a tool is treated as untrusted (the model is steered by attacker-controllable issue text): fixture fetches are restricted to GitHub hosts with a size cap and no cross-host redirects, and only read-only detection flags are allowed on the scanner.
+- To stay within model input-size and rate limits, issues are triaged one at a time and license-request noise is filtered before any model call.
+- Verdicts are model-assisted; treat `needs manual check` as "reproduce by hand."
