@@ -137,5 +137,7 @@ mod swift_golden_test;
 mod uv_lock_golden_test;
 #[path = "vcpkg_golden_test.rs"]
 mod vcpkg_golden_test;
+#[path = "vscode_extension_golden_test.rs"]
+mod vscode_extension_golden_test;
 #[path = "yarn_pnp_golden_test.rs"]
 mod yarn_pnp_golden_test;

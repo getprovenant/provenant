@@ -1,0 +1,65 @@
+[
+  {
+    "type": "vscode-extension",
+    "namespace": "ms-python",
+    "name": "python",
+    "version": "2023.25.10292213",
+    "qualifiers": {
+      "platform": "linux-x64"
+    },
+    "subpath": null,
+    "primary_language": null,
+    "description": "Python language support for VS Code",
+    "release_date": null,
+    "parties": [
+      {
+        "type": "organization",
+        "role": "publisher",
+        "name": "ms-python",
+        "email": null,
+        "url": null
+      }
+    ],
+    "keywords": ["python", "linting", "debugging"],
+    "homepage_url": "https://marketplace.visualstudio.com/items?itemName=ms-python.python",
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
+    "code_view_url": null,
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": null,
+    "declared_license_expression_spdx": null,
+    "license_detections": [],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": null,
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {
+      "extension_type": "VSSDK",
+      "release_notes": "CHANGELOG.md",
+      "icon": "images/icon.png",
+      "display_name": "Python",
+      "preview_image": "images/preview.png",
+      "license_file": "LICENSE.txt",
+      "identity_language": "en-US",
+      "target_platform": "linux-x64"
+    },
+    "dependencies": [],
+    "repository_homepage_url": null,
+    "repository_download_url": null,
+    "api_data_url": null,
+    "datasource_id": "vscode_extension_vsixmanifest",
+    "purl": "pkg:vscode-extension/ms-python/python@2023.25.10292213?platform=linux-x64"
+  }
+]

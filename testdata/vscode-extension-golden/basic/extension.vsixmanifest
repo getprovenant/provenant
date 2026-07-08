@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Id="python" Version="2023.25.10292213" Language="en-US" Publisher="ms-python" TargetPlatform="linux-x64" />
+    <DisplayName>Python</DisplayName>
+    <Description>Python language support for VS Code</Description>
+    <MoreInfo>https://marketplace.visualstudio.com/items?itemName=ms-python.python</MoreInfo>
+    <License>LICENSE.txt</License>
+    <ReleaseNotes>CHANGELOG.md</ReleaseNotes>
+    <Icon>images/icon.png</Icon>
+    <PreviewImage>images/preview.png</PreviewImage>
+    <Tags>python; linting; debugging</Tags>
+    <ExtensionType>VSSDK</ExtensionType>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Code" Version="[1.80.0,)" />
+  </Installation>
+</PackageManifest>
