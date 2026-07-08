@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 239 of 239 recorded runs, with a **19.4× median speedup** and **19.4× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 240 of 240 recorded runs, with a **19.3× median speedup** and **19.3× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1719,6 +1719,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `8.76s`; ScanCode `42.90s`
 - Matched NSIS installer plus Windows PE package visibility (`2` vs `2` file-level package records), with a concrete `pkg:winexe/nsis-3.12-setup@3.12` identity on the executable metadata record and cleaner rejection of ScanCode's spurious `LicenseRef-scancode-unknown` license inferred only from the `LegalCopyright` URL
+
+##### [VS Code extensions extracted VSIX snapshot (Open VSX: esbenp.prettier-vscode 11.0.0, redhat.vscode-yaml 1.14.0, ms-python.python 2024.0.1)](https://open-vsx.org/) — **8.01× faster**
+
+- Files: 3,054
+- Run context: 2026-07-08 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `56.47s`; ScanCode `452.20s`
+- Broader package and dependency visibility across an extracted VS Code extension tree (`29` vs `3` packages, `487` vs `185` dependencies): dedicated `pkg:vscode-extension/<publisher>/<id>` identities for all three bundled extensions — carrying publisher, marketplace, source, and engine metadata from each `extension.vsixmanifest` — plus the npm and vendored-PyPI package metadata inside them that ScanCode's extension-tree model does not reach
 
 #### Generated dependency lock manifests
 
