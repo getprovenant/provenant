@@ -41,7 +41,9 @@ struct VsixManifestMetadata {
     icon: Option<String>,
     preview_image: Option<String>,
     tags: Option<String>,
+    categories: Option<String>,
     extension_type: Option<String>,
+    properties: HashMap<String, String>,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -54,8 +56,18 @@ enum MetadataTextElement {
     Icon,
     PreviewImage,
     Tags,
+    Categories,
     ExtensionType,
 }
+
+// `<Property Id="..." Value="..."/>` entries carry the marketplace-facing links
+// and engine constraints that VS Code / Open VSX manifests use instead of the
+// Visual Studio schema's top-level elements.
+const PROPERTY_SOURCE: &str = "Microsoft.VisualStudio.Services.Links.Source";
+const PROPERTY_GITHUB: &str = "Microsoft.VisualStudio.Services.Links.GitHub";
+const PROPERTY_SUPPORT: &str = "Microsoft.VisualStudio.Services.Links.Support";
+const PROPERTY_LEARN: &str = "Microsoft.VisualStudio.Services.Links.Learn";
+const PROPERTY_ENGINE: &str = "Microsoft.VisualStudio.Code.Engine";
 
 impl PackageParser for VscodeExtensionManifestParser {
     const PACKAGE_TYPE: PackageType = PACKAGE_TYPE;
@@ -128,6 +140,7 @@ fn parse_vscode_extension_manifest(content: &str, path: &Path) -> PackageData {
                 match name.as_str() {
                     "Metadata" => in_metadata = true,
                     "Identity" if in_metadata => parse_identity(&element, &mut metadata),
+                    "Property" if in_metadata => parse_property(&element, &mut metadata),
                     _ if in_metadata => {
                         if let Some(element) = metadata_text_element(name.as_str()) {
                             current_text = Some((element, String::new()));
@@ -137,8 +150,12 @@ fn parse_vscode_extension_manifest(content: &str, path: &Path) -> PackageData {
                 }
             }
             Ok(Event::Empty(element)) => {
-                if in_metadata && local_xml_name(element.name().as_ref()) == "Identity" {
-                    parse_identity(&element, &mut metadata);
+                if in_metadata {
+                    match local_xml_name(element.name().as_ref()).as_str() {
+                        "Identity" => parse_identity(&element, &mut metadata),
+                        "Property" => parse_property(&element, &mut metadata),
+                        _ => {}
+                    }
                 }
             }
             Ok(Event::Text(text)) => {
@@ -194,6 +211,12 @@ fn parse_identity(element: &BytesStart, metadata: &mut VsixManifestMetadata) {
         .map(truncate_field);
 }
 
+fn parse_property(element: &BytesStart, metadata: &mut VsixManifestMetadata) {
+    if let (Some(id), Some(value)) = (attr_value(element, b"Id"), attr_value(element, b"Value")) {
+        metadata.properties.insert(id, truncate_field(value));
+    }
+}
+
 fn attr_value(element: &BytesStart, key: &[u8]) -> Option<String> {
     element
         .attributes()
@@ -223,6 +246,7 @@ fn metadata_text_element(name: &str) -> Option<MetadataTextElement> {
         "Icon" => Some(MetadataTextElement::Icon),
         "PreviewImage" => Some(MetadataTextElement::PreviewImage),
         "Tags" => Some(MetadataTextElement::Tags),
+        "Categories" => Some(MetadataTextElement::Categories),
         "ExtensionType" => Some(MetadataTextElement::ExtensionType),
         _ => None,
     }
@@ -247,6 +271,7 @@ fn apply_metadata_text(
         MetadataTextElement::Icon => metadata.icon = Some(value),
         MetadataTextElement::PreviewImage => metadata.preview_image = Some(value),
         MetadataTextElement::Tags => metadata.tags = Some(value),
+        MetadataTextElement::Categories => metadata.categories = Some(value),
         MetadataTextElement::ExtensionType => metadata.extension_type = Some(value),
     }
 }
@@ -262,12 +287,33 @@ fn append_decoded_metadata_text(
     }
 }
 
-fn package_data_from_metadata(metadata: VsixManifestMetadata) -> PackageData {
+fn package_data_from_metadata(mut metadata: VsixManifestMetadata) -> PackageData {
+    // VS Code / Open VSX marketplace manifests use comma-separated `<Tags>` and
+    // `<Categories>`; the Visual Studio schema uses semicolons, so accept both.
     let keywords = metadata
         .tags
         .as_deref()
-        .map(parse_semicolon_list)
+        .map(parse_delimited_list)
         .unwrap_or_default();
+
+    let categories = metadata
+        .categories
+        .as_deref()
+        .map(parse_delimited_list)
+        .unwrap_or_default();
+
+    // Marketplace links and the engine constraint live in `<Properties>` on real
+    // VS Code / Open VSX manifests, not in top-level Visual Studio schema elements.
+    let vcs_url = metadata
+        .properties
+        .remove(PROPERTY_SOURCE)
+        .or_else(|| metadata.properties.remove(PROPERTY_GITHUB));
+    let bug_tracking_url = metadata.properties.remove(PROPERTY_SUPPORT);
+    let learn_url = metadata.properties.remove(PROPERTY_LEARN);
+    let engine = metadata.properties.remove(PROPERTY_ENGINE);
+    // `<MoreInfo>` is a Visual Studio schema element; VS Code manifests instead
+    // expose the marketplace page via the `Learn` link property.
+    let homepage_url = metadata.more_info.take().or(learn_url);
 
     let mut extra_data = HashMap::new();
     insert_extra_string(
@@ -306,6 +352,13 @@ fn package_data_from_metadata(metadata: VsixManifestMetadata) -> PackageData {
         "extension_type",
         metadata.extension_type.clone(),
     );
+    insert_extra_string(&mut extra_data, "engine", engine);
+    if !categories.is_empty() {
+        extra_data.insert(
+            "categories".to_string(),
+            JsonValue::Array(categories.into_iter().map(JsonValue::String).collect()),
+        );
+    }
 
     let qualifiers = metadata
         .target_platform
@@ -347,7 +400,9 @@ fn package_data_from_metadata(metadata: VsixManifestMetadata) -> PackageData {
         description: metadata.description,
         parties,
         keywords,
-        homepage_url: metadata.more_info,
+        homepage_url,
+        bug_tracking_url,
+        vcs_url,
         extra_data: (!extra_data.is_empty()).then_some(extra_data),
         datasource_id: Some(DATASOURCE_ID),
         purl,
@@ -365,9 +420,9 @@ fn insert_extra_string(
     }
 }
 
-fn parse_semicolon_list(value: &str) -> Vec<String> {
+fn parse_delimited_list(value: &str) -> Vec<String> {
     value
-        .split(';')
+        .split([',', ';'])
         .map(str::trim)
         .filter(|item| !item.is_empty())
         .map(|item| truncate_field(item.to_string()))

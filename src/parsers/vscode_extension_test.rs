@@ -53,6 +53,14 @@ fn test_extracts_identity_and_metadata() {
         Some("https://marketplace.visualstudio.com/items?itemName=ms-python.python")
     );
     assert_eq!(
+        package_data.vcs_url.as_deref(),
+        Some("https://github.com/microsoft/vscode-python.git")
+    );
+    assert_eq!(
+        package_data.bug_tracking_url.as_deref(),
+        Some("https://github.com/microsoft/vscode-python/issues")
+    );
+    assert_eq!(
         package_data
             .qualifiers
             .as_ref()
@@ -64,7 +72,8 @@ fn test_extracts_identity_and_metadata() {
         vec![
             "python".to_string(),
             "linting".to_string(),
-            "debugging".to_string()
+            "debugging".to_string(),
+            "multi-root ready".to_string()
         ]
     );
 
@@ -96,7 +105,77 @@ fn test_extracts_identity_and_metadata() {
         extra_data
             .get("license_file")
             .and_then(|value| value.as_str()),
-        Some("LICENSE.txt")
+        Some("extension/LICENSE.txt")
+    );
+    assert_eq!(
+        extra_data.get("engine").and_then(|value| value.as_str()),
+        Some("^1.82.0")
+    );
+    assert_eq!(
+        extra_data
+            .get("categories")
+            .and_then(|value| value.as_array()),
+        Some(&vec![
+            serde_json::json!("Programming Languages"),
+            serde_json::json!("Debuggers"),
+            serde_json::json!("Linters"),
+        ])
+    );
+}
+
+/// Real VS Code / Open VSX marketplace manifests use comma-separated `<Tags>`
+/// and expose links through `<Properties>`, not the Visual Studio schema's
+/// top-level elements. This is the shape that regressed the original parser.
+#[test]
+fn test_parses_marketplace_comma_tags_and_properties() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let path = dir.path().join("extension.vsixmanifest");
+    std::fs::write(
+        &path,
+        r#"<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="prettier-vscode" Version="11.0.0" Publisher="esbenp" />
+    <DisplayName>Prettier - Code formatter</DisplayName>
+    <Description xml:space="preserve">Code formatter using prettier</Description>
+    <Tags>prettier,formatter,javascript,multi-root ready</Tags>
+    <Categories>Formatters</Categories>
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.80.0" />
+      <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="https://github.com/prettier/prettier-vscode.git" />
+      <Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="https://github.com/prettier/prettier-vscode/issues" />
+    </Properties>
+    <License>extension/LICENSE.txt</License>
+  </Metadata>
+</PackageManifest>"#,
+    )
+    .expect("write manifest");
+
+    let package_data = VscodeExtensionManifestParser::extract_first_package(&path);
+
+    assert_eq!(
+        package_data.keywords,
+        vec![
+            "prettier".to_string(),
+            "formatter".to_string(),
+            "javascript".to_string(),
+            "multi-root ready".to_string(),
+        ]
+    );
+    assert_eq!(
+        package_data.vcs_url.as_deref(),
+        Some("https://github.com/prettier/prettier-vscode.git")
+    );
+    assert_eq!(
+        package_data.bug_tracking_url.as_deref(),
+        Some("https://github.com/prettier/prettier-vscode/issues")
+    );
+    // No `<MoreInfo>`/`Learn` link present, so homepage stays honestly empty.
+    assert_eq!(package_data.homepage_url, None);
+    let extra_data = package_data.extra_data.as_ref().expect("extra_data");
+    assert_eq!(
+        extra_data.get("engine").and_then(|value| value.as_str()),
+        Some("^1.80.0")
     );
 }
 

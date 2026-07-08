@@ -20,7 +20,7 @@
         "url": null
       }
     ],
-    "keywords": ["python", "linting", "debugging"],
+    "keywords": ["python", "linting", "debugging", "multi-root ready"],
     "homepage_url": "https://marketplace.visualstudio.com/items?itemName=ms-python.python",
     "download_url": null,
     "size": null,
@@ -28,9 +28,9 @@
     "md5": null,
     "sha256": null,
     "sha512": null,
-    "bug_tracking_url": null,
+    "bug_tracking_url": "https://github.com/microsoft/vscode-python/issues",
     "code_view_url": null,
-    "vcs_url": null,
+    "vcs_url": "https://github.com/microsoft/vscode-python.git",
     "copyright": null,
     "holder": null,
     "declared_license_expression": null,
@@ -46,14 +46,13 @@
     "is_private": false,
     "is_virtual": false,
     "extra_data": {
-      "extension_type": "VSSDK",
-      "release_notes": "CHANGELOG.md",
-      "icon": "images/icon.png",
-      "display_name": "Python",
-      "preview_image": "images/preview.png",
-      "license_file": "LICENSE.txt",
       "identity_language": "en-US",
-      "target_platform": "linux-x64"
+      "license_file": "extension/LICENSE.txt",
+      "engine": "^1.82.0",
+      "categories": ["Programming Languages", "Debuggers", "Linters"],
+      "display_name": "Python",
+      "target_platform": "linux-x64",
+      "icon": "extension/icon.png"
     },
     "dependencies": [],
     "repository_homepage_url": null,
