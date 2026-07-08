@@ -67,6 +67,10 @@ path = "src/bin/generate_legalese_artifact/main.rs"
 name = "classify-rule-overmatch"
 path = "src/bin/classify_rule_overmatch.rs"
 
+[[bin]]
+name = "scancode-triage"
+path = "src/bin/scancode-triage.rs"
+
 [features]
 # Only the golden-fixture update tools need the provenant `golden-tests` API.
 # Scoping it here (instead of enabling it on the dependency crate-wide) lets the
@@ -82,10 +86,12 @@ postcard = { workspace = true }
 provenant = { path = "..", package = "provenant-cli" }
 rayon = { workspace = true }
 regex = { workspace = true }
+reqwest = { workspace = true }
 rkyv = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+tempfile = { workspace = true }
 url = { workspace = true }
 yaml_serde = { workspace = true }
 zstd = { workspace = true }
