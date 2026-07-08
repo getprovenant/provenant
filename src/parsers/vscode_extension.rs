@@ -141,12 +141,18 @@ fn parse_vscode_extension_manifest(content: &str, path: &Path) -> PackageData {
                 }
             }
             Ok(Event::Text(text)) => {
-                if let Some(element) = current_text_element
-                    && let Some(value) = text.decode().ok().map(|value| value.trim().to_string())
-                    && !value.is_empty()
-                {
-                    apply_metadata_text(&mut metadata, element, value);
-                }
+                apply_decoded_metadata_text(
+                    &mut metadata,
+                    current_text_element,
+                    text.decode().ok().map(|value| value.trim().to_string()),
+                );
+            }
+            Ok(Event::CData(text)) => {
+                apply_decoded_metadata_text(
+                    &mut metadata,
+                    current_text_element,
+                    text.decode().ok().map(|value| value.trim().to_string()),
+                );
             }
             Ok(Event::End(element)) => {
                 let name = local_xml_name(element.name().as_ref());
@@ -232,6 +238,19 @@ fn apply_metadata_text(
         MetadataTextElement::PreviewImage => metadata.preview_image = Some(value),
         MetadataTextElement::Tags => metadata.tags = Some(value),
         MetadataTextElement::ExtensionType => metadata.extension_type = Some(value),
+    }
+}
+
+fn apply_decoded_metadata_text(
+    metadata: &mut VsixManifestMetadata,
+    element: Option<MetadataTextElement>,
+    value: Option<String>,
+) {
+    if let Some(element) = element
+        && let Some(value) = value
+        && !value.is_empty()
+    {
+        apply_metadata_text(metadata, element, value);
     }
 }
 

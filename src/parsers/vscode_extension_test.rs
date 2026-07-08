@@ -131,3 +131,36 @@ fn test_missing_identity_still_reports_datasource() {
         Some("No identity")
     );
 }
+
+#[test]
+fn test_extracts_cdata_metadata_text() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let path = dir.path().join("extension.vsixmanifest");
+    std::fs::write(
+        &path,
+        r#"<PackageManifest Version="2.0.0">
+  <Metadata>
+    <Identity Id="sample" Version="1.0.0" Publisher="example" />
+    <DisplayName><![CDATA[Sample Extension]]></DisplayName>
+    <Description><![CDATA[Adds <VS Code> helpers]]></Description>
+  </Metadata>
+</PackageManifest>"#,
+    )
+    .expect("write manifest");
+
+    let package_data = VscodeExtensionManifestParser::extract_first_package(&path);
+
+    assert_eq!(package_data.name.as_deref(), Some("sample"));
+    assert_eq!(
+        package_data.description.as_deref(),
+        Some("Adds <VS Code> helpers")
+    );
+    assert_eq!(
+        package_data
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("display_name"))
+            .and_then(|value| value.as_str()),
+        Some("Sample Extension")
+    );
+}
