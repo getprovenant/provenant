@@ -44,7 +44,7 @@ struct VsixManifestMetadata {
     extension_type: Option<String>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 enum MetadataTextElement {
     DisplayName,
     Description,
@@ -104,11 +104,11 @@ fn default_package_data() -> PackageData {
 
 fn parse_vscode_extension_manifest(content: &str, path: &Path) -> PackageData {
     let mut reader = Reader::from_str(content);
-    reader.config_mut().trim_text(true);
+    reader.config_mut().trim_text(false);
 
     let mut metadata = VsixManifestMetadata::default();
     let mut in_metadata = false;
-    let mut current_text_element = None;
+    let mut current_text = None;
     let mut buf = Vec::new();
     let mut iteration_count = 0usize;
 
@@ -128,11 +128,12 @@ fn parse_vscode_extension_manifest(content: &str, path: &Path) -> PackageData {
                 match name.as_str() {
                     "Metadata" => in_metadata = true,
                     "Identity" if in_metadata => parse_identity(&element, &mut metadata),
-                    _ => {
-                        current_text_element = in_metadata
-                            .then(|| metadata_text_element(name.as_str()))
-                            .flatten();
+                    _ if in_metadata => {
+                        if let Some(element) = metadata_text_element(name.as_str()) {
+                            current_text = Some((element, String::new()));
+                        }
                     }
+                    _ => {}
                 }
             }
             Ok(Event::Empty(element)) => {
@@ -141,25 +142,30 @@ fn parse_vscode_extension_manifest(content: &str, path: &Path) -> PackageData {
                 }
             }
             Ok(Event::Text(text)) => {
-                apply_decoded_metadata_text(
-                    &mut metadata,
-                    current_text_element,
-                    text.decode().ok().map(|value| value.trim().to_string()),
+                append_decoded_metadata_text(
+                    &mut current_text,
+                    text.decode().ok().map(|value| value.to_string()),
                 );
             }
             Ok(Event::CData(text)) => {
-                apply_decoded_metadata_text(
-                    &mut metadata,
-                    current_text_element,
-                    text.decode().ok().map(|value| value.trim().to_string()),
+                append_decoded_metadata_text(
+                    &mut current_text,
+                    text.decode().ok().map(|value| value.to_string()),
                 );
             }
             Ok(Event::End(element)) => {
                 let name = local_xml_name(element.name().as_ref());
+                if let Some((text_element, value)) = current_text.take() {
+                    if metadata_text_element(name.as_str()) == Some(text_element) {
+                        apply_metadata_text(&mut metadata, text_element, value);
+                    } else if name != "Metadata" {
+                        current_text = Some((text_element, value));
+                    }
+                }
                 if name == "Metadata" {
                     in_metadata = false;
+                    current_text = None;
                 }
-                current_text_element = None;
             }
             Ok(Event::Eof) => break,
             Err(error) => {
@@ -227,7 +233,11 @@ fn apply_metadata_text(
     element: MetadataTextElement,
     value: String,
 ) {
-    let value = truncate_field(value);
+    let value = value.trim();
+    if value.is_empty() {
+        return;
+    }
+    let value = truncate_field(value.to_string());
     match element {
         MetadataTextElement::DisplayName => metadata.display_name = Some(value),
         MetadataTextElement::Description => metadata.description = Some(value),
@@ -241,16 +251,14 @@ fn apply_metadata_text(
     }
 }
 
-fn apply_decoded_metadata_text(
-    metadata: &mut VsixManifestMetadata,
-    element: Option<MetadataTextElement>,
+fn append_decoded_metadata_text(
+    current_text: &mut Option<(MetadataTextElement, String)>,
     value: Option<String>,
 ) {
-    if let Some(element) = element
+    if let Some((_, text)) = current_text
         && let Some(value) = value
-        && !value.is_empty()
     {
-        apply_metadata_text(metadata, element, value);
+        text.push_str(&value);
     }
 }
 

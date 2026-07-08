@@ -164,3 +164,35 @@ fn test_extracts_cdata_metadata_text() {
         Some("Sample Extension")
     );
 }
+
+#[test]
+fn test_combines_mixed_text_and_cdata_metadata() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let path = dir.path().join("extension.vsixmanifest");
+    std::fs::write(
+        &path,
+        r#"<PackageManifest Version="2.0.0">
+  <Metadata>
+    <Identity Id="sample" Version="1.0.0" Publisher="example" />
+    <DisplayName>Sample <![CDATA[Extension]]></DisplayName>
+    <Description>Uses <![CDATA[<VS Code>]]> helpers</Description>
+  </Metadata>
+</PackageManifest>"#,
+    )
+    .expect("write manifest");
+
+    let package_data = VscodeExtensionManifestParser::extract_first_package(&path);
+
+    assert_eq!(
+        package_data.description.as_deref(),
+        Some("Uses <VS Code> helpers")
+    );
+    assert_eq!(
+        package_data
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("display_name"))
+            .and_then(|value| value.as_str()),
+        Some("Sample Extension")
+    );
+}
