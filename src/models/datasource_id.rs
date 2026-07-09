@@ -352,6 +352,9 @@ pub enum DatasourceId {
     SwiftPackageResolved,
     SwiftPackageShowDependencies,
 
+    // ── VS Code ──
+    VscodeExtensionVsixManifest,
+
     PubliccodeYaml,
 
     // ── vcpkg ──
@@ -661,6 +664,9 @@ impl DatasourceId {
             Self::SwiftPackageResolved => "swift_package_resolved",
             Self::SwiftPackageShowDependencies => "swift_package_show_dependencies",
 
+            // VS Code
+            Self::VscodeExtensionVsixManifest => "vscode_extension_vsixmanifest",
+
             Self::PubliccodeYaml => "publiccode_yaml",
 
             // vcpkg
@@ -734,6 +740,10 @@ mod tests {
         assert_eq!(DatasourceId::CitationCff.as_str(), "citation_cff");
         assert_eq!(DatasourceId::PubliccodeYaml.as_str(), "publiccode_yaml");
         assert_eq!(DatasourceId::YarnPnpCjs.as_str(), "yarn_pnp_cjs");
+        assert_eq!(
+            DatasourceId::VscodeExtensionVsixManifest.as_str(),
+            "vscode_extension_vsixmanifest"
+        );
     }
 
     #[test]

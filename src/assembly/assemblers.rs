@@ -820,6 +820,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         mode: AssemblyMode::SiblingMerge,
     },
+    // VS Code extension VSIX manifests. An extracted `extension.vsixmanifest`
+    // carries the extension identity (`Publisher`, `Id`, `Version`) and maps
+    // directly to one `pkg:vscode-extension/<publisher>/<id>` package.
+    AssemblerConfig {
+        datasource_ids: &[DatasourceId::VscodeExtensionVsixManifest],
+        sibling_file_patterns: &["extension.vsixmanifest"],
+        mode: AssemblyMode::OnePerPackageData,
+    },
     // ── Standalone assemblers (single file → single package) ──
     //
     // These ecosystems have only one manifest file type with no sibling merging.

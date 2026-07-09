@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="python" Version="2023.25.10292213" Publisher="ms-python" TargetPlatform="linux-x64" />
+    <DisplayName>Python</DisplayName>
+    <Description xml:space="preserve">Python language support for VS Code</Description>
+    <Tags>python,linting,debugging,multi-root ready</Tags>
+    <Categories>Programming Languages,Debuggers,Linters</Categories>
+    <GalleryFlags>Public</GalleryFlags>
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.82.0" />
+      <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="https://github.com/microsoft/vscode-python.git" />
+      <Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="https://github.com/microsoft/vscode-python/issues" />
+      <Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="https://marketplace.visualstudio.com/items?itemName=ms-python.python" />
+    </Properties>
+    <License>extension/LICENSE.txt</License>
+    <Icon>extension/icon.png</Icon>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Code" Version="[1.82.0,)" />
+  </Installation>
+  <Dependencies />
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.txt" Addressable="true" />
+  </Assets>
+</PackageManifest>

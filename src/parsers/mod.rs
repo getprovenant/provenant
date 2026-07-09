@@ -333,6 +333,11 @@ mod vcpkg;
 mod vcpkg_scan_test;
 #[cfg(test)]
 mod vcpkg_test;
+mod vscode_extension;
+#[cfg(test)]
+mod vscode_extension_scan_test;
+#[cfg(test)]
+mod vscode_extension_test;
 pub(crate) mod windows_executable;
 #[cfg(test)]
 mod windows_executable_golden_test;
@@ -752,6 +757,7 @@ pub use self::uv_lock::UvLockParser;
 pub use self::vcpkg::{
     VcpkgConfigurationParser, VcpkgControlParser, VcpkgLockParser, VcpkgManifestParser,
 };
+pub use self::vscode_extension::VscodeExtensionManifestParser;
 pub use self::yarn_lock::YarnLockParser;
 pub use self::yarn_pnp::YarnPnpParser;
 
@@ -1049,6 +1055,7 @@ register_package_handlers! {
         VcpkgControlParser,
         VcpkgLockParser,
         VcpkgManifestParser,
+        VscodeExtensionManifestParser,
         ReadmeParser,
         RequirementsTxtParser,
         RpmBdbDatabaseParser,

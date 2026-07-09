@@ -93,6 +93,7 @@ mod parsers {
         swift_resolved,
         swift_show_dependencies,
         vcpkg,
+        vscode_extension,
         yarn_lock,
     );
 

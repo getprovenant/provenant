@@ -98,6 +98,7 @@ pub enum PackageType {
     Squashfs,
     Swift,
     Vcpkg,
+    VscodeExtension,
     War,
     Winexe,
     WindowsUpdate,
@@ -176,6 +177,7 @@ impl PackageType {
             Self::Squashfs => "squashfs",
             Self::Swift => "swift",
             Self::Vcpkg => "vcpkg",
+            Self::VscodeExtension => "vscode-extension",
             Self::War => "war",
             Self::Winexe => "winexe",
             Self::WindowsUpdate => "windows-update",
@@ -267,6 +269,7 @@ impl FromStr for PackageType {
             "squashfs" => Ok(Self::Squashfs),
             "swift" => Ok(Self::Swift),
             "vcpkg" => Ok(Self::Vcpkg),
+            "vscode-extension" => Ok(Self::VscodeExtension),
             "war" => Ok(Self::War),
             "winexe" => Ok(Self::Winexe),
             "windows-update" => Ok(Self::WindowsUpdate),
@@ -301,6 +304,7 @@ mod tests {
         assert_eq!(PackageType::Pypi.as_str(), "pypi");
         assert_eq!(PackageType::Alpm.as_str(), "alpm");
         assert_eq!(PackageType::Vcpkg.as_str(), "vcpkg");
+        assert_eq!(PackageType::VscodeExtension.as_str(), "vscode-extension");
         assert_eq!(PackageType::Hackage.as_str(), "hackage");
         assert_eq!(PackageType::Hex.as_str(), "hex");
     }
@@ -324,6 +328,7 @@ mod tests {
         assert_eq!(PackageType::PnpmLock.as_str(), "pnpm-lock");
         assert_eq!(PackageType::Winexe.as_str(), "winexe");
         assert_eq!(PackageType::WindowsUpdate.as_str(), "windows-update");
+        assert_eq!(PackageType::VscodeExtension.as_str(), "vscode-extension");
 
         let json = serde_json::to_string(&PackageType::JbossService).unwrap();
         assert_eq!(json, r#""JbossService""#);
@@ -339,6 +344,9 @@ mod tests {
 
         let json = serde_json::to_string(&PackageType::WindowsUpdate).unwrap();
         assert_eq!(json, r#""WindowsUpdate""#);
+
+        let json = serde_json::to_string(&PackageType::VscodeExtension).unwrap();
+        assert_eq!(json, r#""VscodeExtension""#);
     }
 
     #[test]
@@ -365,5 +373,8 @@ mod tests {
 
         let pt: PackageType = serde_json::from_str(r#""WindowsUpdate""#).unwrap();
         assert_eq!(pt, PackageType::WindowsUpdate);
+
+        let pt: PackageType = serde_json::from_str(r#""VscodeExtension""#).unwrap();
+        assert_eq!(pt, PackageType::VscodeExtension);
     }
 }
