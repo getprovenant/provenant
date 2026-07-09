@@ -542,6 +542,9 @@ ScanCode: 157.23s</title></rect>
     <rect x="643.66" y="334.70" width="8" height="8" fill="#d97706" rx="1.5"><title>scipy/scipy @ 8a4633f
 Files: 2998
 ScanCode: 496.36s</title></rect>
+    <rect x="644.93" y="339.10" width="8" height="8" fill="#d97706" rx="1.5"><title>VS Code extensions extracted VSIX snapshot (Open VSX: esbenp.prettier-vscode 11.0.0, redhat.vscode-yaml 1.14.0, ms-python.python 2024.0.1)
+Files: 3054
+ScanCode: 452.20s</title></rect>
     <rect x="646.82" y="368.39" width="8" height="8" fill="#d97706" rx="1.5"><title>laravel/framework @ a3960e8
 Files: 3139
 ScanCode: 243.30s</title></rect>
@@ -1261,6 +1264,9 @@ Provenant: 5.81s</title></circle>
     <circle cx="647.66" cy="516.43" r="4.5" fill="#2563eb"><title>scipy/scipy @ 8a4633f
 Files: 2998
 Provenant: 11.54s</title></circle>
+    <circle cx="648.93" cy="441.40" r="4.5" fill="#2563eb"><title>VS Code extensions extracted VSIX snapshot (Open VSX: esbenp.prettier-vscode 11.0.0, redhat.vscode-yaml 1.14.0, ms-python.python 2024.0.1)
+Files: 3054
+Provenant: 56.47s</title></circle>
     <circle cx="650.82" cy="539.65" r="4.5" fill="#2563eb"><title>laravel/framework @ a3960e8
 Files: 3139
 Provenant: 7.06s</title></circle>
