@@ -14,6 +14,7 @@ use crate::license_detection::models::{LicenseMatch, MatcherKind};
 use crate::license_detection::position_set::PositionSet;
 use crate::license_detection::query::Query;
 use crate::license_detection::tokenize::tokenize_without_stopwords;
+use std::collections::HashMap;
 use std::path::Path;
 
 const INHERIT_LICENSE_FROM_PACKAGE_REFERENCE: &str = "INHERIT_LICENSE_FROM_PACKAGE";
@@ -154,12 +155,11 @@ pub(crate) fn filter_short_matches_scattered_on_too_many_lines(
 /// occur as a contiguous token run. This keeps the referenced-filename evidence guard
 /// intact — `COPYING` still requires a `copying` token — without discarding otherwise
 /// perfect matches over a `-` vs `_` difference.
-fn referenced_filename_tokens_present(matched_text: &str, name: &str) -> bool {
+fn referenced_filename_tokens_present(haystack: &[String], name: &str) -> bool {
     let needle = tokenize_without_stopwords(name);
     if needle.is_empty() {
         return false;
     }
-    let haystack = tokenize_without_stopwords(matched_text);
     haystack
         .windows(needle.len())
         .any(|w| w == needle.as_slice())
@@ -187,6 +187,10 @@ pub(crate) fn filter_matches_missing_required_phrases(
 
     let mut kept = Vec::new();
     let mut discarded = Vec::new();
+    // Cache of tokenized matched text keyed by (start_line, end_line); a match's
+    // referenced-filename haystack depends only on its line range, so many
+    // candidate matches over the same (often very long) line share one tokenization.
+    let mut haystack_token_cache: HashMap<(usize, usize), Vec<String>> = HashMap::new();
 
     for m in matches {
         let rid = m.rid;
@@ -237,13 +241,31 @@ pub(crate) fn filter_matches_missing_required_phrases(
                     && m.coverage() >= 50.0;
 
                 if !skip_referenced_filename_check {
-                    let matched_text = match &m.matched_text {
-                        Some(text) => text.clone(),
-                        None => query.matched_text(m.start_line.get(), m.end_line.get()),
+                    // The referenced-filename check tokenizes the match's text and
+                    // scans it for the filename token run. For files with very long
+                    // lines (minified JS) a single line can be megabytes, and a file
+                    // can produce thousands of candidate matches over the same line;
+                    // re-extracting and re-tokenizing that text per match is
+                    // quadratic. Tokenize each distinct line-range's matched text once
+                    // and reuse it across matches and referenced filenames — the token
+                    // result is a pure function of the line range, so this is
+                    // output-preserving.
+                    let owned_haystack;
+                    let haystack: &[String] = match &m.matched_text {
+                        Some(text) => {
+                            owned_haystack = tokenize_without_stopwords(text);
+                            &owned_haystack
+                        }
+                        None => {
+                            let key = (m.start_line.get(), m.end_line.get());
+                            haystack_token_cache.entry(key).or_insert_with(|| {
+                                tokenize_without_stopwords(&query.matched_text(key.0, key.1))
+                            })
+                        }
                     };
                     let has_referenced_filename =
                         concrete_referenced_filenames.iter().any(|filename| {
-                            if referenced_filename_tokens_present(&matched_text, filename) {
+                            if referenced_filename_tokens_present(haystack, filename) {
                                 return true;
                             }
 
@@ -256,7 +278,7 @@ pub(crate) fn filter_matches_missing_required_phrases(
 
                             is_path_like
                                 && basename.contains('.')
-                                && referenced_filename_tokens_present(&matched_text, basename)
+                                && referenced_filename_tokens_present(haystack, basename)
                         });
                     if !has_referenced_filename {
                         discarded.push(m.clone());
@@ -698,22 +720,23 @@ mod tests {
         // A rule referencing `LICENSE_MIT` is satisfied by the real-world hyphenated
         // and dotted spellings, and is case-insensitive, because filenames tokenize
         // identically regardless of separator punctuation.
+        let haystack = |text: &str| tokenize_without_stopwords(text);
         assert!(referenced_filename_tokens_present(
-            "licensed under the MIT license found in the LICENSE-MIT file",
+            &haystack("licensed under the MIT license found in the LICENSE-MIT file"),
             "LICENSE_MIT"
         ));
         assert!(referenced_filename_tokens_present(
-            "see the license.mit file",
+            &haystack("see the license.mit file"),
             "LICENSE_MIT"
         ));
         // The referenced name must still actually appear: a GPL notice that never
         // mentions COPYING does not satisfy a COPYING reference (the FP guard).
         assert!(!referenced_filename_tokens_present(
-            "under the terms of the GNU General Public License version 2 or later",
+            &haystack("under the terms of the GNU General Public License version 2 or later"),
             "COPYING"
         ));
         assert!(referenced_filename_tokens_present(
-            "see the file COPYING for details",
+            &haystack("see the file COPYING for details"),
             "COPYING"
         ));
     }
