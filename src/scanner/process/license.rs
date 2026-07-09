@@ -26,6 +26,13 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
+/// Maximum source-line length for which the contextual short-reference prune
+/// applies its prose heuristics. Lines longer than this are treated as
+/// minified/generated content rather than prose, so a stray phrase elsewhere on
+/// a very long line cannot prune a genuine short license reference. See
+/// [`should_prune_contextual_short_reference_match`].
+const MAX_CONTEXTUAL_PRUNE_LINE_LEN: usize = 1_000;
+
 const MAX_OUTPUT_MATCHED_TEXT_LINE_LENGTH: usize = 10_000;
 const MAX_OUTPUT_MATCHED_TEXT_BYTES: usize = 128 * 1024;
 const MATCHED_TEXT_TRUNCATION_MARKER: &str = "… [truncated]";
@@ -890,8 +897,19 @@ fn should_prune_contextual_short_reference_match(
     }
 
     (start_line..=end_line).any(|line_number| {
+        let line = source_lines[line_number - 1];
+        // These heuristics recognize human-authored prose context (README license
+        // tables, comparative "unlike X"/"no restriction" sentences). On minified
+        // or generated files a single line can be megabytes long, so an unrelated
+        // phrase anywhere on that line would misclassify the whole line as prose
+        // and prune a genuine short license reference elsewhere on it. Real prose,
+        // table, and comment lines are far shorter than this bound, so lines above
+        // it are not prose context and are left untouched.
+        if line.len() > MAX_CONTEXTUAL_PRUNE_LINE_LEN {
+            return false;
+        }
         is_markdown_license_table_row(line_number, source_lines)
-            || is_negative_or_comparative_license_mention_line(source_lines[line_number - 1])
+            || is_negative_or_comparative_license_mention_line(line)
     })
 }
 

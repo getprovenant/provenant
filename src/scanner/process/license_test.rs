@@ -689,6 +689,40 @@ fn test_prune_contextual_short_reference_matches_drops_negative_policy_lines() {
 }
 
 #[test]
+fn test_prune_contextual_short_reference_matches_keeps_short_reference_on_minified_long_line() {
+    // A minified/generated single line (megabytes in the wild) that happens to
+    // contain a stray standalone `no`, a `/`, and uppercase letters trips the
+    // negated-shorthand prose heuristic used to prune comparative mentions. Such
+    // a line is far too long to be prose, so a genuine short MIT reference on it
+    // (here an inlined dependency's `"license":"MIT"`) must be kept, not pruned.
+    let text = format!(
+        "var a={{no:1}};var B=x/y;{}\"license\":\"MIT\";{}\n",
+        "z".repeat(1100),
+        "q".repeat(64),
+    );
+    let mut detections = vec![make_public_detection_with_matches(
+        "mit",
+        "MIT",
+        vec![make_public_match("mit", "MIT", 1, 1, 2, "mit_30.RULE")],
+    )];
+    let mut clues = Vec::new();
+
+    prune_contextual_short_reference_matches(
+        Path::new("extension.js"),
+        &text,
+        false,
+        &mut detections,
+        &mut clues,
+    );
+
+    assert_eq!(
+        detections.len(),
+        1,
+        "short MIT reference on a minified long line must be kept: {detections:#?}"
+    );
+}
+
+#[test]
 fn test_prune_contextual_short_reference_matches_keeps_dual_license_choice_but_drops_comparative_suffix()
  {
     let text = "Dual-licensed under MIT or Apache-2.0 at your option. Unlike AGPL-licensed alternatives, this project is permissive.\n";
