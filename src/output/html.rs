@@ -201,11 +201,12 @@ fn html_bool(value: bool) -> &'static str {
     if value { "True" } else { "False" }
 }
 
-const HTML_REPORT_TEMPLATE: &str = r#"<!doctype html>
+const HTML_REPORT_TEMPLATE: &str = r##"<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Provenant HTML Report</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iIzE3MUIyNCIvPjxnIHN0cm9rZT0iI0YxRUNFNCIgc3Ryb2tlLXdpZHRoPSI3LjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTYwIDgyIFY2MyIvPjxwYXRoIGQ9Ik02MCA2MyBMNDAgNDEiLz48cGF0aCBkPSJNNjAgNjMgTDgwIDQxIi8+PHBhdGggZD0iTTYwIDYzIFYzOSIvPjwvZz48Y2lyY2xlIGN4PSI0MCIgY3k9IjM3IiByPSI4IiBmaWxsPSIjRjFFQ0U0Ii8+PGNpcmNsZSBjeD0iODAiIGN5PSIzNyIgcj0iOCIgZmlsbD0iI0YxRUNFNCIvPjxjaXJjbGUgY3g9IjYwIiBjeT0iMzUiIHI9IjgiIGZpbGw9IiNGMUVDRTQiLz48Y2lyY2xlIGN4PSI2MCIgY3k9Ijg2IiByPSI5LjUiIGZpbGw9IiNFMDhBM0MiLz48L3N2Zz4=" />
     <style type="text/css">
       table {
         border-collapse: collapse;
@@ -241,10 +242,48 @@ const HTML_REPORT_TEMPLATE: &str = r#"<!doctype html>
         font-weight: normal;
         font-size: 12px;
       }
+      .report-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 22px;
+      }
+      .report-header .brand-mark {
+        width: 40px;
+        height: 40px;
+        flex: none;
+      }
+      .report-header .brand-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: #171b24;
+      }
+      .report-header .brand-sub {
+        font-size: 12px;
+        color: #5b6472;
+      }
     </style>
   </head>
   <body>
-    <p>Scanned with Provenant</p>
+    <header class="report-header">
+      <svg class="brand-mark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="120" height="120" rx="26" fill="#171b24" />
+        <g stroke="#f1ece4" stroke-width="7.5" stroke-linecap="round" fill="none">
+          <path d="M60 82 V63" />
+          <path d="M60 63 L40 41" />
+          <path d="M60 63 L80 41" />
+          <path d="M60 63 V39" />
+        </g>
+        <circle cx="40" cy="37" r="8" fill="#f1ece4" />
+        <circle cx="80" cy="37" r="8" fill="#f1ece4" />
+        <circle cx="60" cy="35" r="8" fill="#f1ece4" />
+        <circle cx="60" cy="86" r="9.5" fill="#e08a3c" />
+      </svg>
+      <div class="brand-text">
+        <div class="brand-name">Provenant</div>
+        <div class="brand-sub">License &amp; copyright scan report</div>
+      </div>
+    </header>
 
     <table>
       <caption>Copyrights and Licenses Information</caption>
@@ -439,4 +478,4 @@ const HTML_REPORT_TEMPLATE: &str = r#"<!doctype html>
     </p>
   </footer>
 </html>
-"#;
+"##;
