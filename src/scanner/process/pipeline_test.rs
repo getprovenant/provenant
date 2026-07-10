@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES, cap_non_source_json_license_text,
+    LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES, MAX_CONTENT_DETECTION_BYTES,
+    cap_content_detection_text, cap_non_source_json_license_text,
     cap_non_source_text_dump_license_text, has_line_rich_json_prefix,
     maybe_record_processing_timeout, merge_parse_results, process_file,
 };
@@ -332,6 +333,37 @@ fn test_cap_non_source_text_dump_license_text_keeps_generic_large_plain_text() {
 
     assert!(large_text.len() > LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES);
     assert_eq!(capped.as_ref(), large_text);
+}
+
+#[test]
+fn test_cap_content_detection_text_keeps_small_text_untouched() {
+    let text = "Copyright (c) 2024 Acme Corp\nLicensed under the MIT License.\n".to_string();
+    let mut diagnostics = Vec::new();
+    let capped = cap_content_detection_text(&mut diagnostics, text.clone());
+
+    assert_eq!(capped, text);
+    assert!(diagnostics.is_empty());
+}
+
+#[test]
+fn test_cap_content_detection_text_truncates_oversized_text_and_records_info() {
+    let header = "Copyright (c) 2024 Acme Corp\n";
+    let mut text = String::with_capacity(MAX_CONTENT_DETECTION_BYTES + header.len() + 4096);
+    text.push_str(header);
+    while text.len() <= MAX_CONTENT_DETECTION_BYTES + 2048 {
+        text.push_str("row_a,row_b,row_c,1234,5678\n");
+    }
+    let original_len = text.len();
+
+    let mut diagnostics = Vec::new();
+    let capped = cap_content_detection_text(&mut diagnostics, text);
+
+    assert!(capped.len() <= MAX_CONTENT_DETECTION_BYTES);
+    assert!(original_len > MAX_CONTENT_DETECTION_BYTES);
+    // The header (where notices live) is preserved for detection.
+    assert!(capped.starts_with(header));
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].severity, DiagnosticSeverity::Info);
 }
 
 #[test]
