@@ -21,7 +21,7 @@ Before running the bootstrap flow, install:
 A typical local setup on Linux, macOS, or WSL is:
 
 ```sh
-git clone https://github.com/mstykow/provenant.git
+git clone https://github.com/getprovenant/provenant.git
 cd provenant
 npm run setup
 ```

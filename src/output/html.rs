@@ -472,7 +472,7 @@ const HTML_REPORT_TEMPLATE: &str = r##"<!doctype html>
       ANY KIND, either express or implied. No content created from Provenant should be considered or
       used as legal advice. Consult an attorney for legal advice. Provenant is a free software code
       scanning tool. Visit
-      <a href="https://github.com/mstykow/provenant/">https://github.com/mstykow/provenant/</a>
+      <a href="https://github.com/getprovenant/provenant/">https://github.com/getprovenant/provenant/</a>
       for support and download.
     </p>
   </footer>

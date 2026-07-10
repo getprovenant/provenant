@@ -17,7 +17,7 @@ const DEBIAN_DOCUMENT_NOTICE: &[&str] = &[
     "Provenant should be considered or used as legal advice. Consult an attorney",
     "for legal advice.",
     "Provenant is a free software code scanning tool.",
-    "Visit https://github.com/mstykow/provenant/ for support and download.",
+    "Visit https://github.com/getprovenant/provenant/ for support and download.",
 ];
 
 pub(crate) fn write_debian_copyright(output: &Output, writer: &mut dyn Write) -> io::Result<()> {

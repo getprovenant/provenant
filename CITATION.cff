@@ -4,8 +4,8 @@ title: "Provenant"
 version: "0.2.2"
 type: software
 license: Apache-2.0
-repository-code: "https://github.com/mstykow/provenant"
-url: "https://github.com/mstykow/provenant"
+repository-code: "https://github.com/getprovenant/provenant"
+url: "https://github.com/getprovenant/provenant"
 authors:
   - name: "The Provenant contributors"
 abstract: >-

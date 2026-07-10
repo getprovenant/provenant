@@ -38,7 +38,7 @@ This index helps you find the right documentation for your needs.
 
 - **[RELEASING.md](RELEASING.md)** - Release prerequisites, workflow, and verification steps
 - **[BENCHMARKS.md](BENCHMARKS.md)** - Maintained verification records and recorded package-detection compare runs
-- **[Package-detection issue tracker](https://github.com/mstykow/provenant/issues?q=is%3Aissue%20state%3Aopen%20label%3Apackage-parsing)** - Open future package-detection work
+- **[Package-detection issue tracker](https://github.com/getprovenant/provenant/issues?q=is%3Aissue%20state%3Aopen%20label%3Apackage-parsing)** - Open future package-detection work
 - **[../xtask/README.md](../xtask/README.md)** - Maintainer commands for compare runs, golden maintenance, and generated artifacts
 
 ### Document Organization
@@ -77,7 +77,7 @@ docs/
 → [HOW_TO_ADD_A_PARSER.md](HOW_TO_ADD_A_PARSER.md)
 
 **...see future package-detection work**
-→ [Package-detection issue tracker](https://github.com/mstykow/provenant/issues?q=is%3Aissue%20state%3Aopen%20label%3Apackage-parsing)
+→ [Package-detection issue tracker](https://github.com/getprovenant/provenant/issues?q=is%3Aissue%20state%3Aopen%20label%3Apackage-parsing)
 
 **...understand testing strategy**
 → [TESTING_STRATEGY.md](TESTING_STRATEGY.md)
