@@ -40,6 +40,20 @@ use std::time::{Duration, Instant};
 const LARGE_NON_SOURCE_JSON_LICENSE_TEXT_BYTES: usize = 128 * 1024;
 const LARGE_NON_SOURCE_JSON_MIN_PREFIX_LINES_TO_KEEP: usize = 256;
 
+/// Upper bound on the amount of extracted text handed to content detection
+/// (copyright, license, email, and URL). The license matcher already truncates
+/// its own input at this size (`license_detection::MAX_DETECTION_SIZE`); copyright
+/// and contact detection previously scanned the full file, so a multi-gigabyte
+/// data file (e.g. a 1.5 GB CSV) drove the whole scan past its timeout even
+/// though license detection ignored everything past the first 10 MB anyway.
+///
+/// Legal notices live in a file's header (or, rarely, its footer); a genuine
+/// notice does not first appear 10 MB deep in a data file. Bounding every content
+/// detector to the same prefix keeps detection consistent with the license
+/// matcher and makes huge non-legal data files finish quickly instead of timing
+/// out. Files at or below this size are completely unaffected.
+const MAX_CONTENT_DETECTION_BYTES: usize = 10 * 1024 * 1024;
+
 pub(super) fn process_file(
     path: &Path,
     metadata: &fs::Metadata,
@@ -299,6 +313,8 @@ fn extract_information_from_content(
         return Ok((is_generated, classification.is_source));
     }
 
+    let text_content = cap_content_detection_text(scan_diagnostics, text_content);
+
     if text_options.detect_copyrights {
         let copyrights_started = Instant::now();
         extract_copyright_information(
@@ -386,6 +402,29 @@ fn extract_information_from_content(
     }
 
     Ok((is_generated, classification.is_source))
+}
+
+/// Truncate the extracted detection text to `MAX_CONTENT_DETECTION_BYTES` so
+/// copyright, license, email, and URL detection never scan gigabytes of a large
+/// non-legal data file. Records an informational diagnostic (which does not count
+/// as an error or warning) so the truncation stays auditable in verbose output.
+fn cap_content_detection_text(
+    scan_diagnostics: &mut Vec<ScanDiagnostic>,
+    mut text_content: String,
+) -> String {
+    if text_content.len() <= MAX_CONTENT_DETECTION_BYTES {
+        return text_content;
+    }
+
+    let original_len = text_content.len();
+    let boundary = text_content.floor_char_boundary(MAX_CONTENT_DETECTION_BYTES);
+    text_content.truncate(boundary);
+    scan_diagnostics.push(ScanDiagnostic::info(format!(
+        "Content size {original_len} bytes exceeds the {MAX_CONTENT_DETECTION_BYTES}-byte \
+         detection limit; only the first {boundary} bytes were scanned for \
+         license, copyright, email, and URL detection"
+    )));
+    text_content
 }
 
 fn prepare_license_detection_text(
