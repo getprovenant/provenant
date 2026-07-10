@@ -111,7 +111,7 @@ allsorts = { version = "0.17.0", default-features = false, features = [
 anyhow = { workspace = true }
 ar = "0.9" # Unix ar archive format (for .deb)
 base64 = "0.22.1"
-bit-set = "0.10.0"
+bit-set = "0.11.0"
 bzip2 = "0.6.1"
 chrono = "0.4.45"
 clap = { workspace = true }
