@@ -16,7 +16,7 @@ This skill owns only the operational loop and the non-obvious `gh`/GraphQL mecha
 - `.github/pull_request_template.md` — required PR body structure.
 - `ci-failure-triage` skill — map any red CI check to its owning surface and local reproduction.
 
-The repo is `mstykow/provenant`; use that owner/name in every `gh api` and GraphQL call below.
+The repo is `getprovenant/provenant`; use that owner/name in every `gh api` and GraphQL call below.
 
 ## 1. Open the PR
 
@@ -39,18 +39,18 @@ Opening a PR does **not** obligate you to block on CI or review — it is fine t
 ## 3. Fetch Comments
 
 ```bash
-gh api repos/mstykow/provenant/issues/<num>/comments   # summary + human top-level
-gh api repos/mstykow/provenant/pulls/<num>/comments    # inline review comments
-gh api repos/mstykow/provenant/pulls/<num>/reviews     # review bodies/state
+gh api repos/getprovenant/provenant/issues/<num>/comments   # summary + human top-level
+gh api repos/getprovenant/provenant/pulls/<num>/comments    # inline review comments
+gh api repos/getprovenant/provenant/pulls/<num>/reviews     # review bodies/state
 ```
 
 **CRITICAL — distinguish FRESH from STALE.** The inline-comments API returns ALL comments ever made, including ones from earlier reviews that GitHub carried forward onto the new commit. A comment is current only if it targets the PR head; treat the rest as stale.
 
 ```bash
-head=$(gh api repos/mstykow/provenant/pulls/<num> --jq '.head.sha')
+head=$(gh api repos/getprovenant/provenant/pulls/<num> --jq '.head.sha')
 # Only comments on the PR head are current; the rest were carried forward and are stale.
 # `gh api --jq` uses gojq (no `--arg`), so inject the value via the environment (env.HEAD).
-HEAD="$head" gh api repos/mstykow/provenant/pulls/<num>/comments \
+HEAD="$head" gh api repos/getprovenant/provenant/pulls/<num>/comments \
   --jq '.[] | select(.commit_id == env.HEAD) | {id, path, line, commit: .commit_id, body}'
 ```
 
@@ -74,7 +74,7 @@ git push --force-with-lease origin <branch>
 - **Always reply to every actionable thread — Greptile's included — with a short comment** saying what you changed (cite the commit) or, if you disagree, why. The reply is the transparency record that the feedback was considered; never address feedback silently. Post a threaded reply:
 
 ```bash
-gh api repos/mstykow/provenant/pulls/<num>/comments \
+gh api repos/getprovenant/provenant/pulls/<num>/comments \
   -f body='Addressed in <sha>: <what changed>.' -F in_reply_to=<comment_id>
 ```
 

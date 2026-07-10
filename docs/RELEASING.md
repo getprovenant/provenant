@@ -86,7 +86,7 @@ If the tag contains `-`, GitHub marks the release as a prerelease.
 
 ## After Starting the Release
 
-Monitor the [GitHub Actions release workflow](https://github.com/mstykow/provenant/actions) and the resulting [GitHub Releases page](https://github.com/mstykow/provenant/releases).
+Monitor the [GitHub Actions release workflow](https://github.com/getprovenant/provenant/actions) and the resulting [GitHub Releases page](https://github.com/getprovenant/provenant/releases).
 
 Verify:
 

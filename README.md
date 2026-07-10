@@ -2,9 +2,9 @@
 
 [Why Provenant?](#why-provenant) · [Choose a Workflow](#choose-a-workflow) · [Install](#install) · [CLI Guide](docs/CLI_GUIDE.md) · [Benchmarks](docs/BENCHMARKS.md) · [Supported Formats](docs/SUPPORTED_FORMATS.md) · [Architecture](docs/ARCHITECTURE.md)
 
-[![Latest Release](https://img.shields.io/github/v/release/mstykow/provenant?display_name=tag)](https://github.com/mstykow/provenant/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/getprovenant/provenant?display_name=tag)](https://github.com/getprovenant/provenant/releases/latest)
 [![Crates.io](https://img.shields.io/crates/v/provenant-cli.svg)](https://crates.io/crates/provenant-cli)
-[![CI](https://github.com/mstykow/provenant/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/mstykow/provenant/actions/workflows/check.yml)
+[![CI](https://github.com/getprovenant/provenant/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/getprovenant/provenant/actions/workflows/check.yml)
 [![License](https://img.shields.io/crates/l/provenant-cli.svg)](LICENSE)
 
 Provenant is a fast, Rust-based code scanner for licenses, copyrights, package metadata, file metadata, and related provenance data, focused on correctness, safe static parsing, and native execution.
@@ -26,7 +26,7 @@ cargo install provenant-cli
 provenant scan --json-pp - --license --package /path/to/repo
 ```
 
-Prefer release binaries? Download precompiled archives from [GitHub Releases](https://github.com/mstykow/provenant/releases).
+Prefer release binaries? Download precompiled archives from [GitHub Releases](https://github.com/getprovenant/provenant/releases).
 
 ## Why Provenant?
 
@@ -75,7 +75,7 @@ This installs the `provenant` command-line binary.
 
 ### Download Precompiled Binary
 
-Download the release archive for your platform from the [GitHub Releases](https://github.com/mstykow/provenant/releases) page.
+Download the release archive for your platform from the [GitHub Releases](https://github.com/getprovenant/provenant/releases) page.
 
 Extract the archive and place the binary somewhere on your `PATH`.
 
@@ -93,7 +93,7 @@ On Windows, extract the `.zip` release and add `provenant.exe` to your `PATH`.
 For a normal source build, you only need the Rust toolchain:
 
 ```sh
-git clone https://github.com/mstykow/provenant.git
+git clone https://github.com/getprovenant/provenant.git
 cd provenant
 cargo build --release
 ```

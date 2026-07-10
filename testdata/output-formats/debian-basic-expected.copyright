@@ -4,7 +4,7 @@ Comment: Generated with Provenant and provided on an "AS IS" BASIS, WITHOUT WARR
          Provenant should be considered or used as legal advice. Consult an attorney
          for legal advice.
          Provenant is a free software code scanning tool.
-         Visit https://github.com/mstykow/provenant/ for support and download.
+         Visit https://github.com/getprovenant/provenant/ for support and download.
 
 Files: scan/src/main.rs
 Copyright: Example Org

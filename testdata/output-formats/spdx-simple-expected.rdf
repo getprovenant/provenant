@@ -59,7 +59,7 @@
         "@rdf:resource": "http://spdx.org/licenses/CC0-1.0"
       },
       "@rdf:about": "#SPDXRef-DOCUMENT",
-      "rdfs:comment": "Generated with Provenant and provided on an \"AS IS\" BASIS, WITHOUT WARRANTIES\nOR CONDITIONS OF ANY KIND, either express or implied. No content created from\nProvenant should be considered or used as legal advice. Consult an attorney\nfor legal advice.\nProvenant is a free software code scanning tool.\nVisit https://github.com/mstykow/provenant/ for support and download.\nSPDX License List: 3.27",
+      "rdfs:comment": "Generated with Provenant and provided on an \"AS IS\" BASIS, WITHOUT WARRANTIES\nOR CONDITIONS OF ANY KIND, either express or implied. No content created from\nProvenant should be considered or used as legal advice. Consult an attorney\nfor legal advice.\nProvenant is a free software code scanning tool.\nVisit https://github.com/getprovenant/provenant/ for support and download.\nSPDX License List: 3.27",
       "spdx:name": "SPDX Document created by Provenant",
       "spdx:specVersion": "SPDX-2.2"
     },
