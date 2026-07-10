@@ -14,6 +14,6 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cargo deny \
     --manifest-path "$repo_root/Cargo.toml" \
-    check \
     --config "$repo_root/deny.toml" \
+    check \
     advisories bans licenses sources
