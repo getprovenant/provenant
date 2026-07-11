@@ -66,7 +66,7 @@ The action exposes `license-policy` and `fail-on` inputs that map to the CLI fla
 
 - **Positive**: CI can gate on license policy with a single flag; SARIF makes violations visible in pull requests and the code-scanning UI; the policy file gains a documented, machine-readable severity; all three features share one model and one source of truth. Non-gating, informational use is unchanged (severity is optional).
 - **Negative / cost**: a new output format and a new exit-code path to maintain and test; a small, Provenant-specific extension to the policy schema that ScanCode does not understand (harmless — ScanCode ignores unknown keys, and Provenant ignores the field when no gate/SARIF is requested).
-- **Scope boundary**: severity is evaluated against **file-level** detected license expressions (matching the existing `--license-policy` behavior). Extending gating to package/dependency declared licenses is a natural follow-up and is intentionally out of scope here.
+- **Scope boundary**: the `--fail-on` gate evaluates **file-level detected** licenses _and_ **package/dependency declared** licenses, so a disallowed dependency license fails CI too (SCA-style). SARIF results remain file-level (the most actionable inline surface); package/dependency violations surface through the gate and logged summary rather than SARIF.
 - Using the code-scanning UI for license findings is slightly off-label (it targets security), but it is an established pattern (Trivy/Grype upload license and misconfiguration findings the same way).
 
 ## Alternatives Considered

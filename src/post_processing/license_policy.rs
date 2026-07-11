@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -12,7 +12,7 @@ use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::license_detection::expression::{LicenseExpression, parse_expression};
-use crate::models::{FileInfo, LicensePolicyEntry};
+use crate::models::{ComplianceAlert, FileInfo, LicensePolicyEntry, Package, TopLevelDependency};
 
 #[derive(Debug, Deserialize)]
 struct LicensePolicyFile {
@@ -128,10 +128,126 @@ fn collect_expression_keys(expression: &LicenseExpression, keys: &mut BTreeSet<S
     }
 }
 
+/// Count top-level packages and dependencies whose **declared** license matches a
+/// policy entry with a `compliance_alert` at or above `threshold`. This lets the
+/// `--fail-on` gate act on package/dependency licenses (SCA-style), not just
+/// file-level detections. Returns 0 if the policy carries no severities or cannot
+/// be loaded (file findings are gated separately, and an unevaluable policy under
+/// `--fail-on` already fails the run before this point).
+pub(crate) fn count_declared_license_policy_violations(
+    policy_path: &Path,
+    packages: &[Package],
+    dependencies: &[TopLevelDependency],
+    threshold: ComplianceAlert,
+) -> Result<usize> {
+    // Fail closed: a read/parse failure here (e.g. the policy file was replaced or
+    // removed mid-scan) propagates as an error rather than being treated as zero
+    // violations. A soft error (empty/duplicate keys) under `--fail-on` already
+    // failed the run in the pipeline, so treat it as no declared violations here.
+    let policies = match load_license_policy(policy_path)? {
+        PolicyFileStatus::Ready(policies) => policies,
+        PolicyFileStatus::SoftError(_) => return Ok(0),
+    };
+
+    let mut severity: BTreeMap<String, ComplianceAlert> = BTreeMap::new();
+    for policy in &policies {
+        if let Some(alert) = policy.compliance_alert {
+            severity
+                .entry(policy.license_key.clone())
+                .and_modify(|current| {
+                    if alert > *current {
+                        *current = alert;
+                    }
+                })
+                .or_insert(alert);
+        }
+    }
+    if severity.is_empty() {
+        return Ok(0);
+    }
+
+    let violates = |expression: &Option<String>| -> bool {
+        expression
+            .as_deref()
+            .is_some_and(|expr| declared_expression_violates(expr, &severity, threshold))
+    };
+
+    let package_hits = packages
+        .iter()
+        .filter(|package| violates(&package.declared_license_expression))
+        .count();
+    let dependency_hits = dependencies
+        .iter()
+        .filter(|dependency| {
+            dependency
+                .resolved_package
+                .as_ref()
+                .is_some_and(|resolved| violates(&resolved.declared_license_expression))
+        })
+        .count();
+
+    Ok(package_hits + dependency_hits)
+}
+
+/// True when any license key in `expression` maps to a severity at or above `threshold`.
+fn declared_expression_violates(
+    expression: &str,
+    severity: &BTreeMap<String, ComplianceAlert>,
+    threshold: ComplianceAlert,
+) -> bool {
+    let mut keys = BTreeSet::new();
+    if collect_license_keys(expression, &mut keys).is_err() {
+        return false;
+    }
+    keys.iter()
+        .any(|key| severity.get(key).is_some_and(|alert| *alert >= threshold))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::apply_license_policy_from_file;
-    use crate::models::{FileInfo, FileType, LicenseDetection};
+    use super::{apply_license_policy_from_file, declared_expression_violates};
+    use crate::models::{ComplianceAlert, FileInfo, FileType, LicenseDetection};
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn declared_expression_violates_respects_keys_and_threshold() {
+        let severity: BTreeMap<String, ComplianceAlert> = [
+            ("gpl-3.0".to_string(), ComplianceAlert::Error),
+            ("lgpl-2.1".to_string(), ComplianceAlert::Warning),
+        ]
+        .into_iter()
+        .collect();
+
+        // Error-severity key trips both thresholds.
+        assert!(declared_expression_violates(
+            "gpl-3.0",
+            &severity,
+            ComplianceAlert::Error
+        ));
+        // Present in a compound expression.
+        assert!(declared_expression_violates(
+            "mit OR gpl-3.0",
+            &severity,
+            ComplianceAlert::Error
+        ));
+        // Warning key trips `warning` but not `error`.
+        assert!(declared_expression_violates(
+            "lgpl-2.1",
+            &severity,
+            ComplianceAlert::Warning
+        ));
+        assert!(!declared_expression_violates(
+            "lgpl-2.1",
+            &severity,
+            ComplianceAlert::Error
+        ));
+        // Unlisted / approved license never violates.
+        assert!(!declared_expression_violates(
+            "mit",
+            &severity,
+            ComplianceAlert::Warning
+        ));
+    }
 
     #[test]
     fn apply_license_policy_populates_matching_file_entries() {
