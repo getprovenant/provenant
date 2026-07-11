@@ -108,7 +108,7 @@ pub(super) const MATCH_FIELDS: &[OutputFieldDoc] = &[
         rust_field: "from_file",
         value_shape: "string | null",
         presence: "Always emitted.",
-        meaning: "Origin file path associated with the match record.",
+        meaning: "Repo-relative path of the file the match came from (same value as the resource `path`).",
     },
     OutputFieldDoc {
         json_name: "start_line",
