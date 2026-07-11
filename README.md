@@ -92,7 +92,7 @@ On Windows, extract the `.zip` release and add `provenant.exe` to your `PATH`.
 
 ### Container Image
 
-Prebuilt, statically linked multi-arch images (`linux/amd64`, `linux/arm64`) are published to the GitHub Container Registry as [`ghcr.io/getprovenant/provenant`](https://github.com/getprovenant/provenant/pkgs/container/provenant), tagged by version (for example `1.0`, `1.0.0`) and `latest`:
+Prebuilt, statically linked multi-arch images (`linux/amd64`, `linux/arm64`) are published to the GitHub Container Registry as [`ghcr.io/getprovenant/provenant`](https://github.com/getprovenant/provenant/pkgs/container/provenant), tagged by release version (major and major.minor) and `latest`:
 
 ```sh
 docker run --rm -v "$PWD:/src" ghcr.io/getprovenant/provenant:latest \
