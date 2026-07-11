@@ -189,6 +189,13 @@ impl IngestError {
         Self::Validation(msg.into())
     }
 
+    fn upstream(msg: impl Into<String>) -> Self {
+        Self::Upstream {
+            message: msg.into(),
+            source: None,
+        }
+    }
+
     fn upstream_with_source(
         source: impl std::error::Error + Send + Sync + 'static,
         msg: impl Into<String>,
@@ -305,28 +312,56 @@ fn fetch_repository_ref(url: &str, reference: &str, repo_dir: &Path) -> Result<(
     let repo_url = gix::url::parse(url.into())
         .map_err(|_| IngestError::validation("repository.url must be a valid URL"))?;
 
-    let mut prepare = gix::prepare_clone(repo_url, repo_dir)
-        .map_err(|e| IngestError::upstream_with_source(e, "failed to prepare repository clone"))?
-        .with_shallow(gix::remote::fetch::Shallow::DepthAtRemote(
-            NonZeroU32::new(1).expect("shallow depth is nonzero"),
-        ))
-        .with_ref_name(Some(reference))
-        .map_err(|_| IngestError::validation("repository.ref is not a valid ref name"))?
-        .with_in_memory_config_overrides([
-            // SSRF hardening: never follow HTTP redirects (a redirect could escape
-            // the SSRF-validated host), and use no credential helper.
-            "http.followRedirects=false",
-            "credential.helper=",
-        ]);
+    // gix's clone path maps `ref_name` by name only and panics on a bare object id
+    // ("no object-id in refspec"). Reject SHA-shaped refs with a clear error rather
+    // than fetch by commit id, which git servers only allow with allowAnySHA1InWant.
+    if looks_like_object_id(reference) {
+        return Err(IngestError::validation(
+            "repository.ref must be a branch or tag name, not a commit id",
+        ));
+    }
 
-    let (mut checkout, _) = prepare
-        .fetch_then_checkout(gix::progress::Discard, &gix::interrupt::IS_INTERRUPTED)
-        .map_err(|e| IngestError::upstream_with_source(e, "failed to fetch repository ref"))?;
-    checkout
-        .main_worktree(gix::progress::Discard, &gix::interrupt::IS_INTERRUPTED)
-        .map_err(|e| IngestError::upstream_with_source(e, "failed to check out repository ref"))?;
+    // Untrusted input: gix can still panic on other malformed refs, so contain any
+    // unwinding here and turn it into an error instead of taking down the worker.
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<()> {
+        let mut prepare = gix::prepare_clone(repo_url, repo_dir)
+            .map_err(|e| {
+                IngestError::upstream_with_source(e, "failed to prepare repository clone")
+            })?
+            .with_shallow(gix::remote::fetch::Shallow::DepthAtRemote(
+                NonZeroU32::new(1).expect("shallow depth is nonzero"),
+            ))
+            .with_ref_name(Some(reference))
+            .map_err(|_| IngestError::validation("repository.ref is not a valid ref name"))?
+            .with_in_memory_config_overrides([
+                // SSRF hardening: never follow HTTP redirects (a redirect could escape
+                // the SSRF-validated host), and use no credential helper.
+                "http.followRedirects=false",
+                "credential.helper=",
+            ]);
 
-    Ok(())
+        let (mut checkout, _) = prepare
+            .fetch_then_checkout(gix::progress::Discard, &gix::interrupt::IS_INTERRUPTED)
+            .map_err(|e| IngestError::upstream_with_source(e, "failed to fetch repository ref"))?;
+        checkout
+            .main_worktree(gix::progress::Discard, &gix::interrupt::IS_INTERRUPTED)
+            .map_err(|e| {
+                IngestError::upstream_with_source(e, "failed to check out repository ref")
+            })?;
+        Ok(())
+    }));
+
+    match result {
+        Ok(inner) => inner,
+        Err(_) => Err(IngestError::upstream(
+            "repository fetch failed (unresolvable or unsupported ref)",
+        )),
+    }
+}
+
+/// True when `reference` is a bare Git object id (40 hex for SHA-1, 64 for SHA-256).
+fn looks_like_object_id(reference: &str) -> bool {
+    matches!(reference.len(), 40 | 64) && reference.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 /// Reject repository URLs that use a transport other than the safe network
@@ -1437,6 +1472,42 @@ mod tests {
         assert!(
             repo_dir.join("README").exists() || repo_dir.join("README.md").exists(),
             "checked-out worktree should contain the repo's README"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires network access"]
+    fn gix_fetch_by_commit_sha_does_not_panic() {
+        // A bare commit SHA is a valid `reference`. It must resolve or return an
+        // error — never panic (a panic would unwind the serve worker; DoS).
+        let result = std::panic::catch_unwind(|| {
+            let temp = tempfile::tempdir().expect("temp dir");
+            fetch_repository_ref(
+                "https://github.com/octocat/Hello-World.git",
+                "7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+                &temp.path().join("repo"),
+            )
+        });
+        assert!(
+            result.is_ok(),
+            "fetching by commit SHA must not panic (got a panic)"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires network access"]
+    fn gix_fetch_by_tag_checks_out_the_tag() {
+        // Guards the shallow + tag-ref resolution: a tag name must check out the
+        // tagged commit, not fail or fall back to the default branch.
+        let (paths, _staging) = prepare_repository_input(
+            "https://github.com/actions/checkout.git",
+            "v7.0.0",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect("gix should fetch and check out a tag");
+        assert!(
+            paths[0].join("action.yml").exists(),
+            "tag checkout should contain the tagged tree (action.yml)"
         );
     }
 }
