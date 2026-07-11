@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# Post-release platform verification: installs the published crate on each OS and
+# runs it, so per-OS install/link/runtime regressions are caught outside the normal
+# PR matrix. Manual (workflow_dispatch) plus a weekly schedule.
+name: Platform Verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "provenant-cli version to install (blank = latest)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-install:
+    name: cargo install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
+        with:
+          cache: false
+          rustflags: ""
+
+      - name: cargo install provenant-cli
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            cargo install --locked provenant-cli --version "${{ inputs.version }}"
+          else
+            cargo install --locked provenant-cli
+          fi
+
+      - name: Run the installed binary
+        shell: bash
+        run: |
+          provenant --version
+          provenant scan --help >/dev/null
+          # A real scan of a tiny tree, exercising the installed binary end to end.
+          mkdir -p sample/src
+          printf '// SPDX-License-Identifier: MIT\n// Copyright (c) 2021 X\nint main(void){return 0;}\n' > sample/src/app.c
+          provenant scan sample --license --copyright --json-pp - | grep -q '"detected_license_expression_spdx": "MIT"'
+          echo "OK: installed provenant scans on ${{ matrix.os }}"
