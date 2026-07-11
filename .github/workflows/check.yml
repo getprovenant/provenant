@@ -255,6 +255,48 @@ jobs:
           cargo run --quiet --locked --bin provenant -- serve --help > /dev/null
           cargo run --quiet --locked --bin provenant -- compare --help > /dev/null
 
+  linux-musl-build-smoke:
+    name: Linux musl Build Smoke Test (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    if: |
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
+        with:
+          cache: false
+          rustflags: ""
+          target: ${{ matrix.target }}
+
+      - name: Install musl build tools
+        run: sudo apt-get update && sudo apt-get install --assume-yes musl-tools
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: linux-musl-build-smoke-${{ matrix.target }}
+
+      # Builds and runs the statically-linked musl binary, so a musl-specific
+      # allocator, bundled-C, linker, or startup failure surfaces here rather than
+      # only when a release tag publishes artifacts.
+      - name: Build and run static musl CLI smoke check
+        run: |
+          cargo run --quiet --locked --target ${{ matrix.target }} --bin provenant -- show-attribution > /dev/null
+          cargo run --quiet --locked --target ${{ matrix.target }} --bin provenant -- scan --help > /dev/null
+
   rust-sharded-tests:
     name: Tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
