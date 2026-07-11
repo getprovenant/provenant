@@ -1127,6 +1127,70 @@ mod tests {
         assert!(error.to_string().contains("must not begin with '-'"));
     }
 
+    // SSRF hardening: the in-process gix fetch must not follow HTTP redirects, so a
+    // redirect returned by an attacker-controlled origin cannot escape to another
+    // (e.g. internal) host. Uses two localhost servers: a redirector that 302s to a
+    // canary, and the canary that records whether it was ever contacted.
+    #[test]
+    fn repository_fetch_does_not_follow_http_redirects() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let canary_hit = Arc::new(AtomicBool::new(false));
+        let canary = TcpListener::bind("127.0.0.1:0").expect("bind canary");
+        let canary_port = canary.local_addr().unwrap().port();
+        {
+            let canary_hit = Arc::clone(&canary_hit);
+            std::thread::spawn(move || {
+                if let Ok((mut stream, _)) = canary.accept() {
+                    canary_hit.store(true, Ordering::SeqCst);
+                    let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+                }
+            });
+        }
+
+        let redirect = TcpListener::bind("127.0.0.1:0").expect("bind redirector");
+        let redirect_port = redirect.local_addr().unwrap().port();
+        let location = format!("http://127.0.0.1:{canary_port}/info/refs?service=git-upload-pack");
+        std::thread::spawn(move || {
+            for _ in 0..4 {
+                match redirect.accept() {
+                    Ok((mut stream, _)) => {
+                        let mut buf = [0u8; 1024];
+                        let _ = stream.read(&mut buf);
+                        let _ = stream.write_all(
+                            format!(
+                                "HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\n\r\n"
+                            )
+                            .as_bytes(),
+                        );
+                    }
+                    Err(_) => break,
+                }
+            }
+        });
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        // Exercise the gix fetch directly (bypassing the https-only URL policy) to
+        // isolate redirect behavior; it must fail without ever hitting the canary.
+        let result = fetch_repository_ref(
+            &format!("http://127.0.0.1:{redirect_port}/repo.git"),
+            "main",
+            &temp.path().join("repo"),
+        );
+
+        assert!(
+            result.is_err(),
+            "fetch of a redirect-only origin should fail"
+        );
+        assert!(
+            !canary_hit.load(Ordering::SeqCst),
+            "gix must not follow the HTTP redirect to the canary host (SSRF hardening)"
+        );
+    }
+
     #[test]
     fn disallowed_ip_classification() {
         let disallowed = [
