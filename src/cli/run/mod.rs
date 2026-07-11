@@ -13,10 +13,15 @@ use crate::time::format_scancode_timestamp;
 use anyhow::{Result, anyhow};
 use chrono::Utc;
 use std::path::Path;
+use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Instant;
 
-pub fn run() -> Result<()> {
+/// Exit code returned when the `--fail-on` license-policy gate trips, distinct from
+/// the code used for scan/runtime errors (see ADR 0011).
+const POLICY_GATE_EXIT_CODE: u8 = 3;
+
+pub fn run() -> Result<ExitCode> {
     #[cfg(feature = "golden-tests")]
     touch_license_golden_symbols();
 
@@ -38,10 +43,10 @@ pub fn run() -> Result<()> {
     match &cli.command {
         Command::ShowAttribution => {
             print!("{}", include_str!("../../../NOTICE"));
-            return Ok(());
+            return Ok(ExitCode::SUCCESS);
         }
         Command::Serve(args) => {
-            return run_serve_shell(args);
+            return run_serve_shell(args).map(|()| ExitCode::SUCCESS);
         }
         Command::Compare(args) => {
             log::info!(
@@ -63,7 +68,7 @@ pub fn run() -> Result<()> {
             println!("  Summary JSON:       {}", result.summary_json.display());
             println!("  Summary TSV:        {}", result.summary_tsv.display());
             println!("  Sample artifacts:   {}", result.samples_dir.display());
-            return Ok(());
+            return Ok(ExitCode::SUCCESS);
         }
         Command::ExportLicenseDataset(args) => {
             let dir = Path::new(&args.dir);
@@ -79,7 +84,7 @@ pub fn run() -> Result<()> {
                 started.elapsed().as_secs_f64(),
                 outcome.manifest.spdx_license_list_version
             );
-            return Ok(());
+            return Ok(ExitCode::SUCCESS);
         }
         Command::Scan(_) => {}
     }
@@ -129,7 +134,38 @@ pub fn run() -> Result<()> {
         &format_scancode_timestamp(&summary_end),
     );
 
-    Ok(())
+    // License-policy gate: evaluated after the report is written so the artifact is
+    // never lost to a failing gate (ADR 0011).
+    if let Some(threshold) = request.fail_on {
+        let violations = count_policy_violations(&output.files, threshold);
+        if violations > 0 {
+            log::error!(
+                "License policy gate: {violations} file(s) match a policy at or above `{threshold:?}` severity; failing with exit code {POLICY_GATE_EXIT_CODE}."
+            );
+            return Ok(ExitCode::from(POLICY_GATE_EXIT_CODE));
+        }
+    }
+
+    Ok(ExitCode::SUCCESS)
+}
+
+/// Count files whose license policy carries a `compliance_alert` at or above `threshold`.
+fn count_policy_violations(
+    files: &[crate::models::FileInfo],
+    threshold: crate::models::ComplianceAlert,
+) -> usize {
+    files
+        .iter()
+        .filter(|file| {
+            file.license_policy.as_ref().is_some_and(|entries| {
+                entries.iter().any(|entry| {
+                    entry
+                        .compliance_alert
+                        .is_some_and(|alert| alert >= threshold)
+                })
+            })
+        })
+        .count()
 }
 
 #[cfg(feature = "golden-tests")]

@@ -9,9 +9,12 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-fn main() {
-    if let Err(err) = provenant::cli::run() {
-        eprintln!("Error: {}", err);
-        std::process::exit(1);
+fn main() -> std::process::ExitCode {
+    match provenant::cli::run() {
+        Ok(code) => code,
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            std::process::ExitCode::from(1)
+        }
     }
 }

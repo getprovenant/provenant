@@ -14,6 +14,7 @@ mod debian;
 mod html;
 mod jsonl;
 mod public_serialize;
+mod sarif;
 mod shared;
 mod spdx;
 mod template;
@@ -35,6 +36,7 @@ pub enum OutputFormat {
     SpdxRdf,
     CycloneDxJson,
     CycloneDxXml,
+    Sarif,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -88,6 +90,7 @@ impl OutputWriter for FormatWriter {
             OutputFormat::SpdxRdf => spdx::write_spdx_rdf_xml(output, writer, config),
             OutputFormat::CycloneDxJson => cyclonedx::write_cyclonedx_json(output, writer),
             OutputFormat::CycloneDxXml => cyclonedx::write_cyclonedx_xml(output, writer),
+            OutputFormat::Sarif => sarif::write_sarif(output, writer),
         }
     }
 }

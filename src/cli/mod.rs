@@ -234,6 +234,23 @@ pub struct ExportLicenseDatasetArgs {
     pub verbosity: VerbosityFlags,
 }
 
+/// Minimum license-policy compliance severity that fails the build (`--fail-on`).
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FailOn {
+    Warning,
+    Error,
+}
+
+impl FailOn {
+    /// Lowest `ComplianceAlert` severity that should trip the gate.
+    pub fn threshold(self) -> crate::models::ComplianceAlert {
+        match self {
+            Self::Warning => crate::models::ComplianceAlert::Warning,
+            Self::Error => crate::models::ComplianceAlert::Error,
+        }
+    }
+}
+
 #[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CompatibilityMode {
     #[default]
@@ -339,6 +356,10 @@ pub struct ScanArgs {
         allow_hyphen_values = true
     )]
     pub output_cyclonedx_xml: Option<String>,
+
+    /// Write license-policy violations as SARIF 2.1.0 to FILE (needs --license-policy)
+    #[arg(long = "sarif", value_name = "FILE", allow_hyphen_values = true)]
+    pub output_sarif: Option<String>,
 
     /// Write scan output to FILE formatted with the custom template
     #[arg(
@@ -556,6 +577,11 @@ pub struct ScanArgs {
     )]
     pub license_policy: Option<String>,
 
+    /// Exit non-zero (code 3) when a scanned file matches a license policy whose
+    /// compliance_alert is at or above this level. Requires --license-policy.
+    #[arg(long = "fail-on", value_enum, requires = "license_policy")]
+    pub fail_on: Option<FailOn>,
+
     #[arg(long)]
     pub tallies: bool,
 
@@ -760,6 +786,14 @@ impl ScanArgs {
         if let Some(file) = &self.output_cyclonedx_xml {
             targets.push(OutputTarget {
                 format: OutputFormat::CycloneDxXml,
+                file: file.clone(),
+                custom_template: None,
+            });
+        }
+
+        if let Some(file) = &self.output_sarif {
+            targets.push(OutputTarget {
+                format: OutputFormat::Sarif,
                 file: file.clone(),
                 custom_template: None,
             });
@@ -1007,6 +1041,7 @@ impl From<&ScanArgs> for ScanRequest {
             license_clarity_score: cli.license_clarity_score,
             license_references: cli.license_references,
             license_policy: cli.license_policy.clone(),
+            fail_on: cli.fail_on.map(FailOn::threshold),
             tallies: cli.tallies,
             tallies_key_files: cli.tallies_key_files,
             tallies_with_details: cli.tallies_with_details,

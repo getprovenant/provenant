@@ -249,12 +249,13 @@ Grouped license detection record used on file, package_data, package, and resolv
 
 Policy decoration entry attached to file-level license-policy output.
 
-| JSON field    | Value shape | Key presence    | Meaning                                              |
-| ------------- | ----------- | --------------- | ---------------------------------------------------- |
-| `license_key` | `string`    | Always emitted. | License key this policy entry applies to.            |
-| `label`       | `string`    | Always emitted. | Human-facing policy label for the license.           |
-| `color_code`  | `string`    | Always emitted. | Color code used by policy-aware outputs or UIs.      |
-| `icon`        | `string`    | Always emitted. | Icon identifier used by policy-aware outputs or UIs. |
+| JSON field         | Value shape                     | Key presence                                                   | Meaning                                                                    |
+| ------------------ | ------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `license_key`      | `string`                        | Always emitted.                                                | License key this policy entry applies to.                                  |
+| `label`            | `string`                        | Always emitted.                                                | Human-facing policy label for the license.                                 |
+| `color_code`       | `string`                        | Always emitted.                                                | Color code used by policy-aware outputs or UIs.                            |
+| `icon`             | `string`                        | Always emitted.                                                | Icon identifier used by policy-aware outputs or UIs.                       |
+| `compliance_alert` | `string ("error" \| "warning")` | Emitted only when the policy entry sets a compliance severity. | Provenant compliance severity driving the --fail-on gate and SARIF output. |
 
 ## `OutputPackageData`
 

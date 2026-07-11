@@ -36,6 +36,7 @@ Each ADR follows a consistent structure:
 | [0008](0008-output-schema-separation.md)                 | Output Schema Type Separation                         | Accepted | 2026-04-10 |
 | [0009](0009-parser-submodule-structure.md)               | Parser Submodule Structure for Large Ecosystems       | Accepted | 2026-04-17 |
 | [0010](0010-package-license-from-cohosted-files.md)      | Package Declared License From Co-hosted License Files | Accepted | 2026-06-25 |
+| [0011](0011-license-compliance-gating-and-sarif.md)      | License Compliance Gating and SARIF Output            | Accepted | 2026-07-11 |
 
 ## When to Create a New ADR
 
