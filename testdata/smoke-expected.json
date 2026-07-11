@@ -1,0 +1,112 @@
+{
+  "files": [
+    {
+      "copyrights": [],
+      "detected_license_expression": null,
+      "detected_license_expression_spdx": null,
+      "extension": "",
+      "file_type": null,
+      "holders": [],
+      "is_binary": false,
+      "is_script": false,
+      "is_source": false,
+      "is_text": false,
+      "mime_type": null,
+      "name": "smoke",
+      "path": "testdata/smoke",
+      "percentage_of_license_text": 0.0,
+      "programming_language": null,
+      "scan_errors": [],
+      "sha1": null,
+      "size": 0,
+      "type": "directory"
+    },
+    {
+      "copyrights": [
+        {
+          "copyright": "Copyright (c) 2021 Example Corp.",
+          "end_line": 3,
+          "start_line": 3
+        }
+      ],
+      "detected_license_expression": "mit",
+      "detected_license_expression_spdx": "MIT",
+      "extension": "",
+      "file_type": "UTF-8 Unicode text",
+      "holders": [
+        {
+          "end_line": 3,
+          "holder": "Example Corp.",
+          "start_line": 3
+        }
+      ],
+      "is_binary": false,
+      "is_script": false,
+      "is_source": false,
+      "is_text": true,
+      "mime_type": "text/plain",
+      "name": "LICENSE",
+      "path": "testdata/smoke/LICENSE",
+      "percentage_of_license_text": 0.0,
+      "programming_language": null,
+      "scan_errors": [],
+      "sha1": "26d7c7a90da16ec93ff023113ad7dedead2d5d70",
+      "size": 1070,
+      "type": "file"
+    },
+    {
+      "copyrights": [],
+      "detected_license_expression": null,
+      "detected_license_expression_spdx": null,
+      "extension": "",
+      "file_type": null,
+      "holders": [],
+      "is_binary": false,
+      "is_script": false,
+      "is_source": false,
+      "is_text": false,
+      "mime_type": null,
+      "name": "src",
+      "path": "testdata/smoke/src",
+      "percentage_of_license_text": 0.0,
+      "programming_language": null,
+      "scan_errors": [],
+      "sha1": null,
+      "size": 0,
+      "type": "directory"
+    },
+    {
+      "copyrights": [
+        {
+          "copyright": "Copyright (c) 2021 Example Corp.",
+          "end_line": 2,
+          "start_line": 2
+        }
+      ],
+      "detected_license_expression": "mit",
+      "detected_license_expression_spdx": "MIT",
+      "extension": ".c",
+      "file_type": "C source, UTF-8 Unicode text",
+      "holders": [
+        {
+          "end_line": 2,
+          "holder": "Example Corp.",
+          "start_line": 2
+        }
+      ],
+      "is_binary": false,
+      "is_script": false,
+      "is_source": true,
+      "is_text": true,
+      "mime_type": "text/plain",
+      "name": "app.c",
+      "path": "testdata/smoke/src/app.c",
+      "percentage_of_license_text": 0.0,
+      "programming_language": "C",
+      "scan_errors": [],
+      "sha1": "aa048030d15c660cd547bc482632446c8e8c347e",
+      "size": 102,
+      "type": "file"
+    }
+  ]
+}
