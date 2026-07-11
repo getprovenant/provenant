@@ -1,0 +1,131 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# THROWAWAY, one-time platform probes. This workflow is intentionally not on a
+# schedule and only runs on its own PR; the PR is closed (not merged) once the
+# probes are green, so the file never reaches main. It exercises two runtime
+# concerns against the *published* v0.2.4 artifacts:
+#   1. Windows MAX_PATH (>260) traversal + symlink handling (cycle, out-of-root).
+#   2. TLS trust for outbound HTTPS from the distroless/musl container image.
+name: One-time platform checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/one-time-checks.yml]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  windows-fs:
+    name: Windows MAX_PATH + symlink behavior
+    runs-on: windows-latest
+    steps:
+      - name: Download published Windows binary (v0.2.4)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://github.com/getprovenant/provenant/releases/download/v0.2.4/provenant-windows-x86_64.zip"
+          Invoke-WebRequest -Uri $url -OutFile provenant.zip
+          Expand-Archive provenant.zip -DestinationPath bin -Force
+          $exe = (Get-ChildItem -Recurse -Filter provenant.exe bin | Select-Object -First 1).FullName
+          Write-Host "binary: $exe"
+          & $exe --version
+          "PROVENANT_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build a hostile tree (deep >260 path, symlink cycle, out-of-root symlink)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $base = Join-Path $PWD "scanroot"
+          New-Item -ItemType Directory -Force $base | Out-Null
+
+          # Deep path well past MAX_PATH (260). The \\?\ extended-length prefix keeps
+          # *creation* from being blocked; the scanner must still walk it from the
+          # short "scanroot" root, which is the actual thing under test.
+          $deep = $base
+          for ($i = 0; $i -lt 12; $i++) { $deep = Join-Path $deep ("segment_directory_long_enough_" + $i) }
+          New-Item -ItemType Directory -Force ("\\?\" + $deep) | Out-Null
+          Set-Content -LiteralPath ("\\?\" + (Join-Path $deep "deep.c")) `
+            -Value "// SPDX-License-Identifier: MIT`n// Copyright (c) 2021 Example`nint main(void){return 0;}"
+          Write-Host ("absolute deep-path length: " + $deep.Length + " (MAX_PATH is 260)")
+
+          # Symlink cycle: cyc/self -> cyc. The walker must not loop forever.
+          $cyc = Join-Path $base "cyc"
+          New-Item -ItemType Directory -Force $cyc | Out-Null
+          New-Item -ItemType SymbolicLink -Path (Join-Path $cyc "self") -Target $cyc | Out-Null
+
+          # Out-of-root symlink: scanroot/escape -> a directory outside the scan root.
+          $outside = Join-Path $PWD "outside"
+          New-Item -ItemType Directory -Force $outside | Out-Null
+          Set-Content -LiteralPath (Join-Path $outside "secret.c") -Value "// SPDX-License-Identifier: GPL-3.0-only`nint x;"
+          New-Item -ItemType SymbolicLink -Path (Join-Path $base "escape") -Target $outside | Out-Null
+
+      - name: Scan the hostile tree (must terminate, exit 0, emit valid JSON)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $p = Start-Process -FilePath $env:PROVENANT_EXE `
+            -ArgumentList @("scan", "scanroot", "--license", "--copyright", "--json-pp", "scan.json") `
+            -PassThru -NoNewWindow
+          if (-not $p.WaitForExit(180000)) {
+            $p.Kill()
+            throw "scan did not terminate within 180s — possible symlink-cycle loop"
+          }
+          Write-Host ("exit code: " + $p.ExitCode)
+          if ($p.ExitCode -ne 0) { throw ("scan exited non-zero: " + $p.ExitCode) }
+
+          $json = Get-Content scan.json -Raw | ConvertFrom-Json
+          $deepSeen = ($json.files | Where-Object { $_.path -like "*deep.c" }).Count
+          $escapeLeak = ($json.files | Where-Object { $_.path -like "*secret.c" }).Count
+          Write-Host ("files reported: " + $json.files.Count)
+          Write-Host ("BEHAVIOR: >260-char path traversed (deep.c seen): " + $deepSeen)
+          Write-Host ("BEHAVIOR: out-of-root symlink target leaked (secret.c seen): " + $escapeLeak)
+          Write-Host "OK: scan terminated cleanly on the hostile Windows tree"
+
+  container-tls:
+    name: Container TLS (outbound HTTPS from distroless)
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ghcr.io/getprovenant/provenant:0.2.4
+      PORT: "8788"
+    steps:
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Start the distroless image in serve mode
+        run: |
+          docker run -d --name provenant-serve -p 127.0.0.1:${PORT}:${PORT} \
+            "${IMAGE}" serve --bind 0.0.0.0:${PORT} --allow-privileged-inputs
+
+      - name: Wait for serve to accept connections
+        run: |
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              "http://127.0.0.1:${PORT}/v1/scans" -H 'content-type: application/json' -d '{}' || echo 000)
+            if [ "$code" != "000" ]; then echo "serve is up (HTTP $code to an empty body)"; exit 0; fi
+            sleep 1
+          done
+          echo "serve never accepted a connection"; docker logs provenant-serve || true; exit 1
+
+      - name: URL ingest over HTTPS (proves CA roots are trusted in distroless)
+        run: |
+          code=$(curl -s -o resp.json -w '%{http_code}' -X POST \
+            "http://127.0.0.1:${PORT}/v1/scans" \
+            -H 'content-type: application/json' \
+            -d '{"input":{"type":"url","url":"https://raw.githubusercontent.com/octocat/Hello-World/master/README"}}')
+          echo "HTTP ${code}"; echo "--- response ---"; cat resp.json; echo
+          # A missing or untrusted CA store surfaces as an upstream fetch error naming the
+          # certificate/TLS layer. Treat any such signature as a hard failure.
+          if grep -qiE 'certificate|tls|unable to get local issuer|self.signed|invalid peer|UnknownIssuer|CaUsedAsEndEntity' resp.json; then
+            echo "FAIL: TLS/certificate error from inside the container (CA store not trusted)"; exit 1
+          fi
+          test "${code}" = "200"
+          echo "OK: HTTPS fetch from distroless succeeded — rustls found the container CA roots"
+
+      - name: Server logs
+        if: always()
+        run: docker logs provenant-serve || true
