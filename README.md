@@ -46,6 +46,7 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 | ----------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | Run a one-off CLI scan                                | `provenant scan --json-pp - --license --package /path/to/repo`     | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
 | Scan explicit changed files in CI or automation       | Use `--paths-file` with one native scan root                       | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
+| Run a scan from a GitHub Actions workflow             | `uses: getprovenant/provenant-action@v1`                           | [provenant-action](https://github.com/getprovenant/provenant-action)                       |
 | Reuse a warm process through HTTP                     | `provenant serve --help`                                           | [Serve API Guide](docs/SERVE_API_GUIDE.md)                                                 |
 | Embed Provenant in a Rust application                 | Use the `provenant` library target from `provenant-cli`            | [Library Guide](docs/LIBRARY_GUIDE.md)                                                     |
 | Evaluate Provenant with an existing ScanCode workflow | Start from Provenant's compatibility and workflow-difference notes | [Evaluating Provenant with ScanCode workflows](docs/EVALUATING_WITH_SCANCODE_WORKFLOWS.md) |
@@ -147,6 +148,19 @@ provenant serve --help
 `provenant serve` runs Provenant as a long-lived HTTP service with warm process reuse, synchronous and asynchronous scan endpoints, and job polling for automation-friendly integrations.
 
 For the HTTP request/response contract and examples, see the [Serve API Guide](docs/SERVE_API_GUIDE.md).
+
+### GitHub Action
+
+To run Provenant from a GitHub Actions workflow, use the
+[`getprovenant/provenant-action`](https://github.com/getprovenant/provenant-action)
+action, which wraps the published container image:
+
+```yaml
+- uses: actions/checkout@v5
+- uses: getprovenant/provenant-action@v1
+```
+
+See the [action README](https://github.com/getprovenant/provenant-action) for inputs and examples.
 
 ### Rust Library
 
