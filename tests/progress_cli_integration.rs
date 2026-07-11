@@ -168,21 +168,6 @@ fn git(dir: &Path, args: &[&str]) {
     );
 }
 
-fn git_output(dir: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
-        .current_dir(dir)
-        .args(args)
-        .output()
-        .expect("failed to execute git command");
-    assert!(
-        output.status.success(),
-        "git {:?} failed: {}",
-        args,
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8_lossy(&output.stdout).trim().to_string()
-}
-
 fn create_repository_fixture() -> (TempDir, String, String) {
     let temp = TempDir::new().expect("failed to create repo temp dir");
     let repo_dir = temp.path().join("repo");
@@ -194,8 +179,15 @@ fn create_repository_fixture() -> (TempDir, String, String) {
         .expect("failed to write repo fixture");
     git(&repo_dir, &["add", "README.md"]);
     git(&repo_dir, &["commit", "-m", "initial"]);
-    let sha = git_output(&repo_dir, &["rev-parse", "HEAD"]);
-    (temp, format!("file://{}", repo_dir.display()), sha)
+    // Fetch by a deterministic branch name, not the commit SHA: serve ingestion
+    // rejects bare object-id refs (gix cannot map them without allowAnySHA1InWant,
+    // and mapping them by name panics). `-M` forces the name across git defaults.
+    git(&repo_dir, &["branch", "-M", "main"]);
+    (
+        temp,
+        format!("file://{}", repo_dir.display()),
+        "main".to_string(),
+    )
 }
 
 fn create_mit_license_fixture() -> (TempDir, String) {
@@ -837,7 +829,7 @@ fn serve_shell_exposes_health_and_version_endpoints() {
 
 #[test]
 fn serve_shell_scans_repository_input() {
-    let (_repo_temp, repo_url, repo_sha) = create_repository_fixture();
+    let (_repo_temp, repo_url, repo_ref) = create_repository_fixture();
     let port = reserve_local_port();
     let mut child = provenant_command()
         .args([
@@ -856,7 +848,7 @@ fn serve_shell_scans_repository_input() {
         "input": {
             "type": "repository",
             "url": repo_url,
-            "ref": repo_sha,
+            "ref": repo_ref,
         },
         "options": {
             "collect_info": true,
