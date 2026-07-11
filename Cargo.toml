@@ -197,6 +197,9 @@ yaml_serde = { workspace = true }
 zip = "8.6.0"
 zstd = { workspace = true }
 
+[target.'cfg(target_env = "musl")'.dependencies]
+mimalloc = "0.1.52"
+
 [build-dependencies]
 rkyv = { workspace = true }
 
