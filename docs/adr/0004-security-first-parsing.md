@@ -47,6 +47,20 @@ Parsers **NEVER** execute user-provided code, regardless of ecosystem convention
 - Even benign code may have side effects (network calls, file writes)
 - AST parsing provides same metadata without execution risk
 
+**In-process remote ingestion (no external `git`)**: `provenant serve` repository
+ingestion fetches untrusted remote repositories. It does **not** shell out to the
+system `git` binary; it uses the pure-Rust `gix` library in-process. This extends
+the no-external-process principle to the one path that fetches untrusted input,
+and additionally: removes the hidden runtime dependency on a `git` binary (so the
+self-contained static binary works on minimal/distroless hosts), eliminates
+ambient-git-environment nondeterminism (`~/.gitconfig`, credential helpers,
+`includeIf`, `core.sshCommand`), and runs no git hooks. `gix` (pure Rust, rustls
+transport) is required over `git2`/libgit2, which would reintroduce a C + OpenSSL
+dependency and undo the musl-static/rustls posture. The in-process fetch **MUST**
+preserve the existing hardening: SSRF host validation before fetch, **no HTTP
+redirect following**, shallow (`depth=1`) fetch of the requested ref only, and no
+ambient credentials.
+
 #### 2. **DoS Protection** (MANDATORY)
 
 All parsers enforce explicit limits:

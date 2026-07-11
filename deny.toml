@@ -59,5 +59,8 @@ allow = [
     "bzip2-1.0.6",
 ]
 exceptions = [
-    { crate = "option-ext", allow = ["MPL-2.0"] }
+    { crate = "option-ext", allow = ["MPL-2.0"] },
+    # LRU cache used by gix's object database (serve repository ingestion). MPL-2.0
+    # is weak, file-level copyleft with no viral effect on Provenant's Apache-2.0 code.
+    { crate = "uluru", allow = ["MPL-2.0"] },
 ]
