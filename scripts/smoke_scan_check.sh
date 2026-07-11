@@ -64,11 +64,19 @@ if [ "${UPDATE_GOLDEN:-}" = "1" ]; then
     exit 0
 fi
 
-# Highest-value invariant, checked explicitly for a clear failure message: output
-# paths must use POSIX '/', never a Windows backslash.
-if jq -r '.files[].path' "$got" | grep -q '\\'; then
-    echo "FAIL: scan output paths contain backslashes; expected POSIX '/' separators:"
-    jq -r '.files[].path' "$got"
+# Highest-value invariant, checked explicitly for a clear failure message: every
+# path-bearing string must use POSIX '/', never a Windows backslash. This covers the
+# resource path AND each license match's `from_file` (a distinct, absolute-path
+# emission site the golden projection can't pin because it embeds the workspace path).
+path_fields="$(jq -r '
+    [ .files[].path ]
+    + [ .files[].license_detections[]?.matches[]?.from_file // empty ]
+    + [ .files[].license_clues[]?.matches[]?.from_file // empty ]
+    + [ .license_detections[]?.reference_matches[]?.from_file // empty ]
+    | .[]' "$raw")"
+if printf '%s\n' "$path_fields" | grep -q '\\'; then
+    echo "FAIL: output path fields contain backslashes; expected POSIX '/' separators:"
+    printf '%s\n' "$path_fields" | grep '\\'
     exit 1
 fi
 

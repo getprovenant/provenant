@@ -72,7 +72,7 @@ pub(super) fn extract_license_information(
                 &text_content,
                 license_options.unknown_licenses,
                 from_binary_strings,
-                &path.to_string_lossy(),
+                &crate::utils::path::to_posix_string(path),
                 license_options.enable_sequence_matching,
                 deadline,
             )
@@ -87,7 +87,10 @@ pub(super) fn extract_license_information(
                     deadline,
                 )
                 .map(|mut detections| {
-                    attach_source_path_to_detections(&mut detections, &path.to_string_lossy());
+                    attach_source_path_to_detections(
+                        &mut detections,
+                        &crate::utils::path::to_posix_string(path),
+                    );
                     detections
                 })
         };
@@ -125,7 +128,7 @@ pub(super) fn extract_license_information(
                 &text_content,
                 license_options.unknown_licenses,
                 from_binary_strings,
-                &path.to_string_lossy(),
+                &crate::utils::path::to_posix_string(path),
                 license_options.enable_sequence_matching,
             )
         } else {
@@ -133,7 +136,7 @@ pub(super) fn extract_license_information(
                 &text_content,
                 license_options.unknown_licenses,
                 from_binary_strings,
-                &path.to_string_lossy(),
+                &crate::utils::path::to_posix_string(path),
                 license_options.enable_sequence_matching,
                 f32::from(license_options.min_score),
             )
@@ -876,7 +879,7 @@ fn refresh_public_detection_after_context_prune(
     }
     crate::models::file_info::enrich_license_detection_provenance(
         detection,
-        &path.to_string_lossy(),
+        &crate::utils::path::to_posix_string(path),
     );
 }
 
