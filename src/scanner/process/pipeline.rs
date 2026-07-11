@@ -103,7 +103,7 @@ pub(super) fn process_file(
             path.extension()
                 .map_or("".to_string(), |ext| format!(".{}", ext.to_string_lossy())),
         )
-        .path(path.to_string_lossy().to_string())
+        .path(crate::utils::path::to_posix_string(path))
         .file_type(FileType::File)
         .size(metadata.len())
         .date(

@@ -1,0 +1,5 @@
+# Pin the cross-platform smoke fixture to LF so it checks out byte-identical on
+# every OS. Without this, Windows autocrlf would rewrite line endings and change
+# file sizes, hashes, and detection line spans, desyncing the smoke golden. The
+# fixture is meant to test scanner behavior, not git's EOL handling.
+testdata/smoke/** text eol=lf

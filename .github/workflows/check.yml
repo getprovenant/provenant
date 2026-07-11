@@ -225,6 +225,12 @@ jobs:
           cargo run --quiet --locked --bin provenant -- serve --help | Out-Null
           cargo run --quiet --locked --bin provenant -- compare --help | Out-Null
 
+      # Real scan + golden diff, so Windows-specific output behavior (path
+      # separators, file_type, detection line spans) is verified, not just startup.
+      - name: Cross-platform scan smoke check
+        shell: bash
+        run: ./scripts/smoke_scan_check.sh
+
   intel-macos-build-smoke:
     name: Intel macOS Build Smoke Test
     runs-on: macos-15-intel
@@ -254,6 +260,11 @@ jobs:
           cargo run --quiet --locked --bin provenant -- scan --help > /dev/null
           cargo run --quiet --locked --bin provenant -- serve --help > /dev/null
           cargo run --quiet --locked --bin provenant -- compare --help > /dev/null
+
+      # Real scan + golden diff, so macOS-specific output behavior (path separators,
+      # file_type, detection line spans) is verified, not just startup.
+      - name: Cross-platform scan smoke check
+        run: ./scripts/smoke_scan_check.sh
 
   linux-musl-build-smoke:
     name: Linux musl Build Smoke Test (${{ matrix.target }})
@@ -296,6 +307,11 @@ jobs:
         run: |
           cargo run --quiet --locked --target ${{ matrix.target }} --bin provenant -- show-attribution > /dev/null
           cargo run --quiet --locked --target ${{ matrix.target }} --bin provenant -- scan --help > /dev/null
+
+      # Real scan + golden diff against the shipped static musl binary, so its
+      # output behavior (not just startup) is verified before a release ships it.
+      - name: Cross-platform scan smoke check
+        run: ./scripts/smoke_scan_check.sh ${{ matrix.target }}
 
   rust-sharded-tests:
     name: Tests (${{ matrix.shard }})
