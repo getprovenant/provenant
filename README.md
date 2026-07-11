@@ -46,6 +46,7 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 | ----------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | Run a one-off CLI scan                                | `provenant scan --json-pp - --license --package /path/to/repo`     | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
 | Scan explicit changed files in CI or automation       | Use `--paths-file` with one native scan root                       | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
+| Run a scan in a container                             | `docker run ghcr.io/getprovenant/provenant scan ...`               | [Container Image](#container-image)                                                        |
 | Run a scan from a GitHub Actions workflow             | `uses: getprovenant/provenant-action@v1`                           | [provenant-action](https://github.com/getprovenant/provenant-action)                       |
 | Reuse a warm process through HTTP                     | `provenant serve --help`                                           | [Serve API Guide](docs/SERVE_API_GUIDE.md)                                                 |
 | Embed Provenant in a Rust application                 | Use the `provenant` library target from `provenant-cli`            | [Library Guide](docs/LIBRARY_GUIDE.md)                                                     |
@@ -88,6 +89,17 @@ sudo mv provenant /usr/local/bin/
 ```
 
 On Windows, extract the `.zip` release and add `provenant.exe` to your `PATH`.
+
+### Container Image
+
+Prebuilt, statically linked multi-arch images (`linux/amd64`, `linux/arm64`) are published to the GitHub Container Registry as [`ghcr.io/getprovenant/provenant`](https://github.com/getprovenant/provenant/pkgs/container/provenant), tagged by version (for example `1.0`, `1.0.0`) and `latest`:
+
+```sh
+docker run --rm -v "$PWD:/src" ghcr.io/getprovenant/provenant:latest \
+  scan /src --json-pp - --license --package
+```
+
+The image entrypoint is the `provenant` binary, so any CLI arguments can follow the image reference. To scan a project, mount it into the container and pass the mounted path as the scan target.
 
 ### Build from Source
 
@@ -156,7 +168,7 @@ To run Provenant from a GitHub Actions workflow, use the
 action, which wraps the published container image:
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v7
 - uses: getprovenant/provenant-action@v1
 ```
 
