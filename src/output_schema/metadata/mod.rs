@@ -395,6 +395,7 @@ mod tests {
             label: "Allowed".to_string(),
             color_code: "#00ff00".to_string(),
             icon: "check".to_string(),
+            compliance_alert: None,
         }
     }
 

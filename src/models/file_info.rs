@@ -1600,9 +1600,25 @@ pub struct OutputURL {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct LicensePolicyEntry {
     pub license_key: String,
+    #[serde(default)]
     pub label: String,
+    #[serde(default)]
     pub color_code: String,
+    #[serde(default)]
     pub icon: String,
+    /// Provenant extension: optional machine-readable compliance severity used by
+    /// the `--fail-on` build gate and SARIF output. Absent means informational.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compliance_alert: Option<ComplianceAlert>,
+}
+
+/// Severity attached to a license policy entry. Ordered `Error` > `Warning`.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
+pub enum ComplianceAlert {
+    // Ordering matters: derived Ord ranks later variants higher, so Warning < Error.
+    Warning,
+    Error,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

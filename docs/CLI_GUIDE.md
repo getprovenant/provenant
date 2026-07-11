@@ -105,6 +105,7 @@ Use other outputs when you need a specific consumer or review format:
 - `--html` for a browsable report
 - `--spdx-tv`, `--spdx-rdf`, `--cyclonedx`, `--cyclonedx-xml` for downstream compliance or SBOM workflows
 - `--debian` for a machine-readable Debian copyright file
+- `--sarif` for SARIF 2.1.0 output of license-policy violations, for pull-request checks and the code-scanning UI (see [policy-aware license review](#17-i-want-policy-aware-license-review))
 - `--custom-output` with `--custom-template` for custom report generation
 
 You can write more than one output format in the same run. For example:
@@ -547,6 +548,41 @@ Why it is useful:
 
 This workflow is also useful with `--from-json` when you want to reshape an existing scan instead of rescanning the original inputs.
 
+#### The license policy file
+
+`--license-policy` takes a YAML file with a top-level `license_policies:` list. Each entry maps a license key to display metadata (`label`, `color_code`, `icon`, all optional) and, as a Provenant extension, an optional `compliance_alert` severity of `error` or `warning`:
+
+```yaml
+license_policies:
+  - license_key: gpl-3.0
+    label: Prohibited License
+    compliance_alert: error
+  - license_key: gpl-2.0
+    label: Copyleft License
+    compliance_alert: warning
+  - license_key: mit
+    label: Approved License
+    # no compliance_alert => informational only
+```
+
+For each scanned file, Provenant collects the license keys from its detected expressions, matches them against the policy, and attaches the matching entries (including `compliance_alert`) to that file's `license_policy` output field. Entries without a `compliance_alert` are informational and never fail a build.
+
+#### Failing CI on a policy violation
+
+Add `--fail-on <error|warning>` to turn the policy into a build gate. The scan exits with code **3** when any file matches a policy whose `compliance_alert` is at or above the given level (`warning` trips on warning and error; `error` trips only on error). The report is still written before the process exits, so the artifact is never lost. `--fail-on` requires `--license-policy`.
+
+```sh
+provenant scan --json-pp scan.json --license --license-policy policy.yml --fail-on error /path/to/project
+```
+
+#### Surfacing violations in pull requests (SARIF)
+
+`--sarif <FILE>` writes the policy violations as SARIF 2.1.0, which GitHub can render as pull-request annotations and code-scanning alerts (upload it with `github/codeql-action/upload-sarif`). Each severity-carrying policy match becomes a result at the file's detection line; with no policy the run has zero results, so SARIF stays quiet unless you opt into a policy.
+
+```sh
+provenant scan --sarif provenant.sarif --license --license-policy policy.yml /path/to/project
+```
+
 ### 18. "I want tallies, facets, or clarity scoring"
 
 ```sh
@@ -644,6 +680,8 @@ These are worth learning early because they change what the output means:
 - `--tallies-key-files` requires `--tallies` and `--classify`
 - `--tallies-by-facet` requires `--facet` and `--tallies`
 - `--debian <FILE>` requires `--license`, `--copyright`, and `--license-text`
+- `--fail-on <LEVEL>` requires `--license-policy`; a violation exits with code 3
+- `--sarif <FILE>` only emits results for `--license-policy` entries that carry a `compliance_alert`
 - `--paths-file <FILE>` requires exactly one native scan root and is currently native-scan only (no `--from-json`)
 - `--reindex` only matters when the license engine is initialized (`--license` and some `--from-json` reference-recompute flows)
 - `--no-license-index-cache` only matters when the license engine is initialized
@@ -675,7 +713,7 @@ If you are not sure where to start, use this rule of thumb:
 - Want a narrower file-level package-data pass across application and installed-package inputs without normal top-level assembly? → `--package-only`
 - Want SBOM-oriented output? → add `--cyclonedx` or `--spdx-*`, usually with `--package`
 - Want browser-friendly review? → `--html`
-- Want policy-aware license review? → add `--license-references`, `--filter-clues`, and optionally `--license-policy`
+- Want policy-aware license review? → add `--license-references`, `--filter-clues`, and `--license-policy` (add `--fail-on` to gate CI, `--sarif` for pull-request alerts)
 - Want summary/tally/facet review? → add `--classify`, `--summary`, and optionally `--tallies*` / `--facet`
 - Want glob-style file filtering inside one scan root? → add one or more `--include` patterns
 - Want an explicit rooted list of files/directories? → use `--paths-file`

@@ -69,6 +69,8 @@ pub(crate) struct ScanRequest {
     pub(crate) license_clarity_score: bool,
     pub(crate) license_references: bool,
     pub(crate) license_policy: Option<String>,
+    /// Minimum compliance severity that fails the run (`--fail-on`); `None` disables gating.
+    pub(crate) fail_on: Option<crate::models::ComplianceAlert>,
     pub(crate) tallies: bool,
     pub(crate) tallies_key_files: bool,
     pub(crate) tallies_with_details: bool,

@@ -309,6 +309,7 @@ fn request_for_native_paths(input_paths: Vec<String>, options: &ScanOptions) -> 
             .license_policy
             .as_ref()
             .map(|path| path.to_string_lossy().to_string()),
+        fail_on: None,
         tallies: options.tallies,
         tallies_key_files: options.tallies_key_files,
         tallies_with_details: options.tallies_with_details,

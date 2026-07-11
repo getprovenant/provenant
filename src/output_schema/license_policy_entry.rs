@@ -3,12 +3,16 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::ComplianceAlert;
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct OutputLicensePolicyEntry {
     pub license_key: String,
     pub label: String,
     pub color_code: String,
     pub icon: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compliance_alert: Option<ComplianceAlert>,
 }
 
 impl From<&crate::models::LicensePolicyEntry> for OutputLicensePolicyEntry {
@@ -18,6 +22,7 @@ impl From<&crate::models::LicensePolicyEntry> for OutputLicensePolicyEntry {
             label: value.label.clone(),
             color_code: value.color_code.clone(),
             icon: value.icon.clone(),
+            compliance_alert: value.compliance_alert,
         }
     }
 }
@@ -30,6 +35,7 @@ impl TryFrom<&OutputLicensePolicyEntry> for crate::models::LicensePolicyEntry {
             label: value.label.clone(),
             color_code: value.color_code.clone(),
             icon: value.icon.clone(),
+            compliance_alert: value.compliance_alert,
         })
     }
 }
