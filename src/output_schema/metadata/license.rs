@@ -623,4 +623,11 @@ pub(super) const LICENSE_POLICY_ENTRY_FIELDS: &[OutputFieldDoc] = &[
         presence: "Always emitted.",
         meaning: "Icon identifier used by policy-aware outputs or UIs.",
     },
+    OutputFieldDoc {
+        json_name: "compliance_alert",
+        rust_field: "compliance_alert",
+        value_shape: "string (\"error\" | \"warning\")",
+        presence: "Emitted only when the policy entry sets a compliance severity.",
+        meaning: "Provenant compliance severity driving the --fail-on gate and SARIF output.",
+    },
 ];

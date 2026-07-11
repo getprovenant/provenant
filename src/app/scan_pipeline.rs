@@ -270,6 +270,14 @@ pub(crate) fn build_output_model(
                     Path::new(policy_path),
                 )
             })?;
+        // Fail closed: if a gate was requested but the policy could not be
+        // evaluated (empty file, duplicate keys), refuse to pass silently.
+        if request.fail_on.is_some() && !license_policy_errors.is_empty() {
+            return Err(anyhow!(
+                "--fail-on was requested but the license policy could not be evaluated: {}",
+                license_policy_errors.join("; ")
+            ));
+        }
         for err in &license_policy_errors {
             progress.record_additional_error(err);
         }

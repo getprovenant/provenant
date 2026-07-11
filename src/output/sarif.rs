@@ -63,7 +63,7 @@ fn build_sarif(output: &Output) -> Value {
                 .or_insert((entry.label.clone(), alert));
 
             let mut physical_location = json!({
-                "artifactLocation": { "uri": file.path }
+                "artifactLocation": { "uri": path_to_uri(&file.path) }
             });
             if let Some((start_line, end_line)) = region_for_key(file, &entry.license_key) {
                 physical_location["region"] = json!({
@@ -115,6 +115,22 @@ fn build_sarif(output: &Output) -> Value {
 
 fn display_label<'a>(label: &'a str, license_key: &'a str) -> &'a str {
     if label.is_empty() { license_key } else { label }
+}
+
+/// Percent-encode a scan path into a valid SARIF `artifactLocation.uri` reference.
+/// Paths are already POSIX (`/`-separated), so `/` and RFC 3986 unreserved bytes are
+/// kept and everything else (spaces, `#`, `?`, `%`, non-ASCII) is `%`-escaped.
+fn path_to_uri(path: &str) -> String {
+    let mut uri = String::with_capacity(path.len());
+    for &byte in path.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
+                uri.push(byte as char);
+            }
+            _ => uri.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    uri
 }
 
 /// Find a line region to anchor a policy result: the first license-detection match
