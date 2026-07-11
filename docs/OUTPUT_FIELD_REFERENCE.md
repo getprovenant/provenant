@@ -211,23 +211,23 @@ File-level holder evidence record.
 
 Match record used for clue output, grouped detections, and top-level representative references.
 
-| JSON field                 | Value shape             | Key presence                 | Meaning                                                            |
-| -------------------------- | ----------------------- | ---------------------------- | ------------------------------------------------------------------ |
-| `license_expression`       | `string`                | Always emitted.              | License expression assigned to this individual match.              |
-| `license_expression_spdx`  | `string`                | Always emitted.              | SPDX-form expression assigned to this individual match.            |
-| `from_file`                | `string \| null`        | Always emitted.              | Origin file path associated with the match record.                 |
-| `start_line`               | `integer`               | Always emitted.              | First line covered by the match.                                   |
-| `end_line`                 | `integer`               | Always emitted.              | Last line covered by the match.                                    |
-| `matcher`                  | `string \| null`        | Emitted only when available. | Matcher kind that produced the match.                              |
-| `score`                    | `number`                | Always emitted.              | Match score on the public output scale.                            |
-| `matched_length`           | `integer \| null`       | Emitted only when available. | Matched token/text length when tracked.                            |
-| `match_coverage`           | `number \| null`        | Emitted only when available. | Coverage ratio for the match when tracked.                         |
-| `rule_relevance`           | `integer \| null`       | Emitted only when available. | Rule relevance score when tracked.                                 |
-| `rule_identifier`          | `string \| null`        | Emitted only when available. | Identifier of the matched rule when available.                     |
-| `rule_url`                 | `string \| null`        | Always emitted.              | Rule URL when available.                                           |
-| `matched_text`             | `string \| null`        | Emitted only when available. | Matched text payload when text output is enabled.                  |
-| `matched_text_diagnostics` | `string \| null`        | Emitted only when available. | Diagnostic rendering of the matched text when enabled.             |
-| `referenced_filenames`     | `array<string> \| null` | Emitted only when available. | Referenced filenames captured on the matched rule when applicable. |
+| JSON field                 | Value shape             | Key presence                 | Meaning                                                                                 |
+| -------------------------- | ----------------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
+| `license_expression`       | `string`                | Always emitted.              | License expression assigned to this individual match.                                   |
+| `license_expression_spdx`  | `string`                | Always emitted.              | SPDX-form expression assigned to this individual match.                                 |
+| `from_file`                | `string \| null`        | Always emitted.              | Repo-relative path of the file the match came from (same value as the resource `path`). |
+| `start_line`               | `integer`               | Always emitted.              | First line covered by the match.                                                        |
+| `end_line`                 | `integer`               | Always emitted.              | Last line covered by the match.                                                         |
+| `matcher`                  | `string \| null`        | Emitted only when available. | Matcher kind that produced the match.                                                   |
+| `score`                    | `number`                | Always emitted.              | Match score on the public output scale.                                                 |
+| `matched_length`           | `integer \| null`       | Emitted only when available. | Matched token/text length when tracked.                                                 |
+| `match_coverage`           | `number \| null`        | Emitted only when available. | Coverage ratio for the match when tracked.                                              |
+| `rule_relevance`           | `integer \| null`       | Emitted only when available. | Rule relevance score when tracked.                                                      |
+| `rule_identifier`          | `string \| null`        | Emitted only when available. | Identifier of the matched rule when available.                                          |
+| `rule_url`                 | `string \| null`        | Always emitted.              | Rule URL when available.                                                                |
+| `matched_text`             | `string \| null`        | Emitted only when available. | Matched text payload when text output is enabled.                                       |
+| `matched_text_diagnostics` | `string \| null`        | Emitted only when available. | Diagnostic rendering of the matched text when enabled.                                  |
+| `referenced_filenames`     | `array<string> \| null` | Emitted only when available. | Referenced filenames captured on the matched rule when applicable.                      |
 
 ## `OutputLicenseDetection`
 

@@ -1353,3 +1353,54 @@ fn test_scanner_respects_email_url_thresholds() {
     assert_eq!(file.emails.len(), 2);
     assert_eq!(file.urls.len(), 2);
 }
+
+#[test]
+fn crlf_files_report_correct_line_spans() {
+    // testdata/crlf/app.c uses CRLF line endings (byte-pinned via .gitattributes):
+    // the SPDX license is on line 1 and the copyright on line 3. Guards against
+    // miscounting CRLF lines when computing detection line spans.
+    let patterns: Vec<Pattern> = vec![];
+    let engine = create_license_detection_engine();
+    let options = TextDetectionOptions {
+        collect_info: false,
+        detect_packages: false,
+        detect_application_packages: false,
+        detect_system_packages: false,
+        detect_packages_in_compiled: false,
+        detect_copyrights: true,
+        detect_generated: false,
+        detect_emails: false,
+        detect_urls: false,
+        max_emails: 50,
+        max_urls: 50,
+        timeout_seconds: 120.0,
+    };
+
+    let result = scan(
+        "testdata/crlf",
+        10,
+        &patterns,
+        engine,
+        false,
+        Some(&options),
+    );
+    let file = result
+        .files
+        .iter()
+        .find(|f| f.file_type == FileType::File && f.path.ends_with("app.c"))
+        .expect("should find the CRLF fixture file");
+
+    // Copyright is on the third CRLF line.
+    assert_eq!(file.copyrights.len(), 1);
+    assert_eq!(file.copyrights[0].start_line, LineNumber::new(3).unwrap());
+    assert_eq!(file.copyrights[0].end_line, LineNumber::new(3).unwrap());
+
+    // SPDX MIT identifier is on the first line.
+    let mit_match = file
+        .license_detections
+        .iter()
+        .flat_map(|detection| detection.matches.iter())
+        .find(|m| m.license_expression == "mit")
+        .expect("should detect MIT on the CRLF file");
+    assert_eq!(mit_match.start_line, LineNumber::ONE);
+}

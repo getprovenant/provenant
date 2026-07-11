@@ -3,3 +3,6 @@
 # file sizes, hashes, and detection line spans, desyncing the smoke golden. The
 # fixture is meant to test scanner behavior, not git's EOL handling.
 testdata/smoke/** text eol=lf
+
+# CRLF line-span test fixture: preserve exact bytes (do not normalize EOL).
+testdata/crlf/** -text
