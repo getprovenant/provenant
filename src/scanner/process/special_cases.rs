@@ -74,7 +74,7 @@ pub(super) fn process_directory(
         name,
         base_name,
         extension: "".to_string(),
-        path: path.to_string_lossy().to_string(),
+        path: crate::utils::path::to_posix_string(path),
         file_type: FileType::Directory,
         mime_type: None,
         file_type_label: None,
