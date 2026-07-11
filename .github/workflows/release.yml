@@ -285,11 +285,14 @@ jobs:
 
   create-release:
     name: Create Release
+    # Depends only on `build`: the GitHub Release publishes the built binaries and
+    # their provenance attestation, which do not depend on crates.io or GHCR. Gating
+    # this on `publish-crate`/`publish-image` meant a transient crates.io outage (even
+    # one that failed only the post-publish token revoke) skipped the Release entirely.
+    # Those jobs still run in parallel; their failures no longer block the binaries.
     if: github.repository == 'getprovenant/provenant'
     needs:
       - build
-      - publish-crate
-      - publish-image
     runs-on: ubuntu-latest
     permissions:
       contents: write
