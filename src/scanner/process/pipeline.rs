@@ -368,7 +368,9 @@ fn extract_information_from_content(
             file_info_builder,
             scan_diagnostics,
             LicenseExtractionInput {
-                path: &filesystem_path,
+                // Relative scan path (matches the resource `path`) so match `from_file`
+                // is repo-relative, not an absolute host path (better parity + SARIF).
+                path,
                 text_content: text_content_for_license_detection.clone(),
                 license_engine,
                 license_options,
@@ -383,7 +385,9 @@ fn extract_information_from_content(
             file_info_builder,
             scan_diagnostics,
             LicenseExtractionInput {
-                path: &filesystem_path,
+                // Relative scan path (matches the resource `path`) so match `from_file`
+                // is repo-relative, not an absolute host path (better parity + SARIF).
+                path,
                 text_content: text_content_for_license_detection,
                 license_engine,
                 license_options,
