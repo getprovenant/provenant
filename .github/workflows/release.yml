@@ -86,17 +86,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
+          # Linux binaries target musl and link statically, so a single artifact runs on
+          # any glibc/musl distro (and in the distroless/static container). musl-tools
+          # provides musl-gcc for the bundled-SQLite C build.
+          - target: x86_64-unknown-linux-musl
             os: ubuntu-24.04
             asset_name: provenant-linux-x86_64
             archive_format: tar.gz
-            packages: pkg-config libsqlite3-dev
+            packages: musl-tools
 
-          - target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-musl
             os: ubuntu-24.04-arm
             asset_name: provenant-linux-aarch64
             archive_format: tar.gz
-            packages: pkg-config libsqlite3-dev
+            packages: musl-tools
 
           - target: x86_64-apple-darwin
             os: macos-15-intel

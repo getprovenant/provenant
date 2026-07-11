@@ -7,15 +7,16 @@
 # published image ships the exact same binary as the GitHub release — no in-container
 # recompile, and multi-arch (amd64/arm64) needs no QEMU emulation (COPY only).
 #
-# The binary is self-contained: SQLite is statically linked (rusqlite "bundled"), TLS is
-# rustls (no OpenSSL), and the license index is embedded. So distroless/cc — glibc,
-# libgcc, and CA certificates — is all it needs at runtime.
+# The binary is fully static: SQLite is statically linked (rusqlite "bundled"), TLS is
+# rustls (no OpenSSL), libc is statically linked musl, and the license index is embedded.
+# So distroless/static — no libc, just CA certificates and /etc scaffolding — is all it
+# needs at runtime.
 #
-# To build locally, stage the binary for your arch first, e.g.:
-#   cargo build --release
-#   mkdir -p dist/amd64 && cp target/release/provenant dist/amd64/
-#   docker build --build-arg TARGETARCH=amd64 -t provenant .
-FROM gcr.io/distroless/cc-debian12@sha256:a90cf0f046efb32466b38b0972fef3a95e7c580e392e79ff1b7ac08c15fed0bc
+# To build locally, stage a statically-linked binary for your arch first, e.g.:
+#   cargo build --release --target aarch64-unknown-linux-musl
+#   mkdir -p dist/arm64 && cp target/aarch64-unknown-linux-musl/release/provenant dist/arm64/
+#   docker build --build-arg TARGETARCH=arm64 -t provenant .
+FROM gcr.io/distroless/static-debian12@sha256:22fd79fd75eab2372585b44517f8a094349938919dc613aafc37e4bdc9967c82
 
 # TARGETARCH is set automatically by BuildKit per target platform (amd64, arm64).
 ARG TARGETARCH
