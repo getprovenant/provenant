@@ -139,14 +139,17 @@ pub fn run() -> Result<ExitCode> {
     // package/dependency declared licenses.
     if let Some(threshold) = request.fail_on {
         let file_violations = count_policy_violations(&output.files, threshold);
-        let declared_violations = request.license_policy.as_deref().map_or(0, |policy_path| {
-            crate::post_processing::count_declared_license_policy_violations(
+        // Fail closed: propagate a policy re-evaluation failure instead of treating
+        // it as zero package/dependency violations.
+        let declared_violations = match request.license_policy.as_deref() {
+            Some(policy_path) => crate::post_processing::count_declared_license_policy_violations(
                 Path::new(policy_path),
                 &output.packages,
                 &output.dependencies,
                 threshold,
-            )
-        });
+            )?,
+            None => 0,
+        };
         let violations = file_violations + declared_violations;
         if violations > 0 {
             log::error!(

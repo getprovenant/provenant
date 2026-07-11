@@ -139,10 +139,14 @@ pub(crate) fn count_declared_license_policy_violations(
     packages: &[Package],
     dependencies: &[TopLevelDependency],
     threshold: ComplianceAlert,
-) -> usize {
-    let policies = match load_license_policy(policy_path) {
-        Ok(PolicyFileStatus::Ready(policies)) => policies,
-        _ => return 0,
+) -> Result<usize> {
+    // Fail closed: a read/parse failure here (e.g. the policy file was replaced or
+    // removed mid-scan) propagates as an error rather than being treated as zero
+    // violations. A soft error (empty/duplicate keys) under `--fail-on` already
+    // failed the run in the pipeline, so treat it as no declared violations here.
+    let policies = match load_license_policy(policy_path)? {
+        PolicyFileStatus::Ready(policies) => policies,
+        PolicyFileStatus::SoftError(_) => return Ok(0),
     };
 
     let mut severity: BTreeMap<String, ComplianceAlert> = BTreeMap::new();
@@ -159,7 +163,7 @@ pub(crate) fn count_declared_license_policy_violations(
         }
     }
     if severity.is_empty() {
-        return 0;
+        return Ok(0);
     }
 
     let violates = |expression: &Option<String>| -> bool {
@@ -182,7 +186,7 @@ pub(crate) fn count_declared_license_policy_violations(
         })
         .count();
 
-    package_hits + dependency_hits
+    Ok(package_hits + dependency_hits)
 }
 
 /// True when any license key in `expression` maps to a severity at or above `threshold`.
