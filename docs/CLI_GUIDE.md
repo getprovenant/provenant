@@ -569,7 +569,7 @@ For each scanned file, Provenant collects the license keys from its detected exp
 
 #### Failing CI on a policy violation
 
-Add `--fail-on <error|warning>` to turn the policy into a build gate. The scan exits with code **3** when any file matches a policy whose `compliance_alert` is at or above the given level (`warning` trips on warning and error; `error` trips only on error). The report is still written before the process exits, so the artifact is never lost. `--fail-on` requires `--license-policy`.
+Add `--fail-on <error|warning>` to turn the policy into a build gate. The scan exits with code **3** when a file's detected license — or a top-level package's or dependency's **declared** license — matches a policy whose `compliance_alert` is at or above the given level (`warning` trips on warning and error; `error` trips only on error). The report is still written before the process exits, so the artifact is never lost. `--fail-on` requires `--license-policy`.
 
 ```sh
 provenant scan --json-pp scan.json --license --license-policy policy.yml --fail-on error /path/to/project

@@ -14,7 +14,9 @@ use glob::Pattern;
 use serde_json::{Map, Value};
 
 use self::classification::apply_file_classification;
-pub(crate) use self::license_policy::apply_license_policy_from_file;
+pub(crate) use self::license_policy::{
+    apply_license_policy_from_file, count_declared_license_policy_violations,
+};
 pub(crate) use self::license_references::collect_top_level_license_references;
 use self::output_indexes::{OutputIndexMode, OutputIndexes};
 use self::package_file_index::PackageFileIndex;

@@ -135,12 +135,22 @@ pub fn run() -> Result<ExitCode> {
     );
 
     // License-policy gate: evaluated after the report is written so the artifact is
-    // never lost to a failing gate (ADR 0011).
+    // never lost to a failing gate (ADR 0011). Covers file-level detections plus
+    // package/dependency declared licenses.
     if let Some(threshold) = request.fail_on {
-        let violations = count_policy_violations(&output.files, threshold);
+        let file_violations = count_policy_violations(&output.files, threshold);
+        let declared_violations = request.license_policy.as_deref().map_or(0, |policy_path| {
+            crate::post_processing::count_declared_license_policy_violations(
+                Path::new(policy_path),
+                &output.packages,
+                &output.dependencies,
+                threshold,
+            )
+        });
+        let violations = file_violations + declared_violations;
         if violations > 0 {
             log::error!(
-                "License policy gate: {violations} file(s) match a policy at or above `{threshold:?}` severity; failing with exit code {POLICY_GATE_EXIT_CODE}."
+                "License policy gate: {file_violations} file(s) and {declared_violations} package/dependency license(s) match a policy at or above `{threshold:?}` severity; failing with exit code {POLICY_GATE_EXIT_CODE}."
             );
             return Ok(ExitCode::from(POLICY_GATE_EXIT_CODE));
         }
