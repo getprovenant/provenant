@@ -4,8 +4,8 @@
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::{IpAddr, ToSocketAddrs};
+use std::num::NonZeroU32;
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 
 use base64::Engine;
@@ -189,13 +189,6 @@ impl IngestError {
         Self::Validation(msg.into())
     }
 
-    fn upstream(msg: impl Into<String>) -> Self {
-        Self::Upstream {
-            message: msg.into(),
-            source: None,
-        }
-    }
-
     fn upstream_with_source(
         source: impl std::error::Error + Send + Sync + 'static,
         msg: impl Into<String>,
@@ -282,17 +275,15 @@ fn prepare_repository_input(
     if reference.trim().is_empty() {
         return Err(IngestError::validation("repository.ref must not be empty"));
     }
-
-    // A `reference` beginning with `-` would be parsed by git as an option
-    // rather than a refspec; the `--` terminator below stops option parsing,
-    // but reject it outright so a leading-dash value can never reach git. This
-    // runs before URL validation so the fast string check does not depend on
-    // host resolution.
+    // A ref beginning with '-' is malformed; reject it defensively before any
+    // network/host validation. (The in-process gix fetch never invokes a git CLI,
+    // so option injection is impossible, but an invalid ref should still fail fast.)
     if reference.starts_with('-') {
         return Err(IngestError::validation(
             "repository.ref must not begin with '-'",
         ));
     }
+
     validate_repository_url(url, policy)?;
 
     let staging_dir = TempDir::new().map_err(|e| {
@@ -300,57 +291,42 @@ fn prepare_repository_input(
     })?;
     let repo_dir = staging_dir.path().join("repository");
 
-    run_git(
-        Command::new("git").arg("init").arg(&repo_dir),
-        "failed to initialize repository staging checkout",
-    )?;
-    run_git(
-        hardened_git(&repo_dir, policy)
-            .args(["remote", "add", "origin", "--"])
-            .arg(url),
-        "failed to configure repository staging remote",
-    )?;
-    run_git(
-        hardened_git(&repo_dir, policy)
-            .args(["fetch", "--depth", "1", "origin", "--"])
-            .arg(reference),
-        "failed to fetch repository ref for remote ingestion",
-    )?;
-    run_git(
-        hardened_git(&repo_dir, policy).args(["checkout", "--detach", "FETCH_HEAD"]),
-        "failed to checkout fetched repository ref",
-    )?;
+    fetch_repository_ref(url, reference, &repo_dir)?;
 
     Ok((vec![repo_dir], Some(staging_dir)))
 }
 
-/// Build a `git` invocation in `repo_dir` with risky remote transports disabled.
-///
-/// Uses a deny-by-default transport allowlist (`protocol.allow=never`) and then
-/// re-enables only the safe network transports. This blocks the `ext::` remote
-/// helper (arbitrary command execution) and any other transport not explicitly
-/// allowed. `http.followRedirects=false` stops git's own libcurl from following
-/// an HTTP redirect into an internal address, which would otherwise bypass our
-/// reqwest-side SSRF checks. `file://` is local-only and is enabled exclusively
-/// when the operator has explicitly trusted local targets.
-fn hardened_git(repo_dir: &Path, policy: IngestPolicy) -> Command {
-    let mut command = Command::new("git");
-    command.current_dir(repo_dir).args([
-        "-c",
-        "protocol.allow=never",
-        "-c",
-        "protocol.https.allow=always",
-        "-c",
-        "protocol.git.allow=always",
-        "-c",
-        "protocol.ssh.allow=always",
-        "-c",
-        "http.followRedirects=false",
-    ]);
-    if policy.local_targets_allowed() {
-        command.args(["-c", "protocol.file.allow=always"]);
-    }
-    command
+/// Fetch and check out a single ref of a remote repository fully in-process with
+/// gix (pure Rust — no external `git` binary, no shell, no hooks). See ADR 0004:
+/// the caller SSRF-validates the host first; HTTP redirects are disabled so a
+/// redirect cannot escape to an internal address; the fetch is shallow (depth 1)
+/// and carries no ambient credentials.
+fn fetch_repository_ref(url: &str, reference: &str, repo_dir: &Path) -> Result<()> {
+    let repo_url = gix::url::parse(url.into())
+        .map_err(|_| IngestError::validation("repository.url must be a valid URL"))?;
+
+    let mut prepare = gix::prepare_clone(repo_url, repo_dir)
+        .map_err(|e| IngestError::upstream_with_source(e, "failed to prepare repository clone"))?
+        .with_shallow(gix::remote::fetch::Shallow::DepthAtRemote(
+            NonZeroU32::new(1).expect("shallow depth is nonzero"),
+        ))
+        .with_ref_name(Some(reference))
+        .map_err(|_| IngestError::validation("repository.ref is not a valid ref name"))?
+        .with_in_memory_config_overrides([
+            // SSRF hardening: never follow HTTP redirects (a redirect could escape
+            // the SSRF-validated host), and use no credential helper.
+            "http.followRedirects=false",
+            "credential.helper=",
+        ]);
+
+    let (mut checkout, _) = prepare
+        .fetch_then_checkout(gix::progress::Discard, &gix::interrupt::IS_INTERRUPTED)
+        .map_err(|e| IngestError::upstream_with_source(e, "failed to fetch repository ref"))?;
+    checkout
+        .main_worktree(gix::progress::Discard, &gix::interrupt::IS_INTERRUPTED)
+        .map_err(|e| IngestError::upstream_with_source(e, "failed to check out repository ref"))?;
+
+    Ok(())
 }
 
 /// Reject repository URLs that use a transport other than the safe network
@@ -359,17 +335,16 @@ fn validate_repository_url(url: &str, policy: IngestPolicy) -> Result<()> {
     let parsed = Url::parse(url)
         .map_err(|_| IngestError::validation("repository.url must be a valid URL"))?;
 
-    // scp-like syntax (`git@host:path`) parses with an unusual scheme; only
-    // accept the explicit, host-bearing transports git supports safely here.
-    // `file` is local-only and is permitted exclusively when the operator has
-    // explicitly trusted local targets (`--allow-privileged-inputs`), matching
-    // the transport allowlist applied in `hardened_git`.
-    let scheme_allowed = matches!(parsed.scheme(), "https" | "git" | "ssh")
-        || (parsed.scheme() == "file" && policy.local_targets_allowed());
+    // In-process gix fetch uses the rustls HTTP transport, so only `https` is
+    // supported over the network (encrypted, no ambient credentials). `git://`
+    // and `ssh://` are intentionally not accepted: `git://` is unauthenticated
+    // and cleartext, and `ssh://` would need an external ssh client and keys we
+    // never provide. `file` is local-only and permitted exclusively when the
+    // operator has explicitly trusted local targets (`--allow-privileged-inputs`).
+    let scheme_allowed =
+        parsed.scheme() == "https" || (parsed.scheme() == "file" && policy.local_targets_allowed());
     if !scheme_allowed {
-        return Err(IngestError::validation(
-            "repository.url must use https, git, or ssh",
-        ));
+        return Err(IngestError::validation("repository.url must use https"));
     }
 
     if let Some(host) = parsed.host_str() {
@@ -979,21 +954,6 @@ fn normalize_archive_path(path: &Path) -> Option<PathBuf> {
     (!normalized.as_os_str().is_empty()).then_some(normalized)
 }
 
-fn run_git(command: &mut Command, context_message: &str) -> Result<()> {
-    let output = command
-        .output()
-        .map_err(|e| IngestError::upstream_with_source(e, context_message))?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(IngestError::upstream(format!(
-            "{}: {}",
-            context_message,
-            String::from_utf8_lossy(&output.stderr).trim()
-        )))
-    }
-}
-
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum ScanError {
     #[error(transparent)]
@@ -1121,7 +1081,7 @@ mod tests {
         let error =
             validate_repository_url("ext::sh -c id", IngestPolicy::allow_privileged_inputs())
                 .expect_err("ext:: transport should be rejected");
-        assert!(error.to_string().contains("https, git, or ssh"));
+        assert!(error.to_string().contains("https"));
     }
 
     #[test]
@@ -1131,7 +1091,7 @@ mod tests {
             IngestPolicy::allow_privileged_inputs(),
         )
         .expect_err("file:// transport should be rejected");
-        assert!(error.to_string().contains("https, git, or ssh"));
+        assert!(error.to_string().contains("https"));
     }
 
     #[test]
@@ -1394,6 +1354,25 @@ mod tests {
             error
                 .to_string()
                 .contains("archive exceeds max extracted size")
+        );
+    }
+
+    // Real network fetch — ignored by default (no network in CI). Run manually with
+    // `cargo test -p provenant-cli --lib serve::ingest::gix_https_fetch -- --ignored`
+    // to verify the in-process gix HTTPS clone happy path end to end.
+    #[test]
+    #[ignore = "requires network access"]
+    fn gix_https_fetch_checks_out_a_public_repo() {
+        let (paths, _staging) = prepare_repository_input(
+            "https://github.com/octocat/Hello-World.git",
+            "master",
+            IngestPolicy::allow_privileged_inputs(),
+        )
+        .expect("gix should fetch and check out a public HTTPS repo");
+        let repo_dir = &paths[0];
+        assert!(
+            repo_dir.join("README").exists() || repo_dir.join("README.md").exists(),
+            "checked-out worktree should contain the repo's README"
         );
     }
 }
