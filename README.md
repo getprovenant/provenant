@@ -9,7 +9,7 @@
 
 Provenant is a fast, Rust-based code scanner for licenses, copyrights, package metadata, file metadata, and related provenance data, focused on correctness, safe static parsing, and native execution.
 
-Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit), whose scanning engine it ports to Rust and builds on, while also offering broader package and dependency metadata extraction, documented parser and detection improvements that reduce noisy results, and practical workflows such as incremental rescans, selected-file scans, and long-lived HTTP service use.
+Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit), whose scanning engine it ports to Rust and builds on. On top of that it adds broader package and dependency extraction, cleaner results, and CI-ready compliance gating — see [Why Provenant?](#why-provenant).
 
 ![Provenant and ScanCode racing the same astral-sh/uv scan side by side](docs/provenant-demo.gif)
 
@@ -17,7 +17,7 @@ _The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flag
 
 > [!IMPORTANT]
 > **Project status:** production-usable and compatibility-focused.
-> Provenant targets parity for documented ScanCode-compatible workflows and output formats, and adds broader package, dependency, and provenance extraction on top.
+> Provenant targets parity for documented ScanCode-compatible workflows and output formats.
 
 ## Quick Start
 
@@ -30,15 +30,15 @@ Prefer release binaries? Download precompiled archives from [GitHub Releases](ht
 
 ## Why Provenant?
 
-- [Benchmark-backed](docs/BENCHMARKS.md) scan speedups that are frequently about an order of magnitude faster than ScanCode on recorded same-host runs
-- Broader package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), including parsers with intentional improvements on some surfaces and improvements in overlapping parser families
-- [Documented parser and detection fixes](docs/improvements/README.md) that reduce noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
+- [Benchmark-backed](docs/BENCHMARKS.md) speedups — frequently about an order of magnitude faster than ScanCode on recorded same-host runs
+- Broader package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), with intentional parser improvements on surfaces that overlap ScanCode
+- [Documented parser and detection fixes](docs/improvements/README.md) that cut noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
 - Package assembly for sibling, nested, and workspace-style inputs
-- Native workflows such as `--incremental` cache reuse, `--paths-file` rooted file lists for CI or changed-file scans, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
-- Single self-contained binary with parallel native execution for simpler installation and CI use
-- ScanCode-compatible workflows and output formats, including ScanCode-style JSON, SPDX, CycloneDX, YAML, JSON Lines, HTML, and custom templates
-- [Security-first](docs/adr/0004-security-first-parsing.md) static parsing with explicit safeguards and compatibility-focused tradeoffs where needed
-- Built on upstream ScanCode license and rule data maintained by experts
+- CI license-compliance gating — policy severities with a build-failing [`--fail-on`](docs/CLI_GUIDE.md#17-i-want-policy-aware-license-review) gate and SARIF output for the code-scanning UI, neither of which ScanCode provides
+- Native workflows: `--incremental` cache reuse, `--paths-file` changed-file scans, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
+- Single self-contained binary with parallel native execution
+- ScanCode-compatible workflows and output formats (JSON, SPDX, CycloneDX, HTML, and [more](#output-formats))
+- [Security-first](docs/adr/0004-security-first-parsing.md) static parsing — no execution of scanned code or package-manager code, with bounded resource use
 
 ## Choose a Workflow
 
