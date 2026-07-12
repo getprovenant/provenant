@@ -1170,6 +1170,32 @@ fn test_msbuild_xml_copyright_element_strips_tags_and_keeps_holder() {
 }
 
 #[test]
+fn test_html_small_wrapper_tags_stripped_from_native_copyright() {
+    // A notice wrapped in presentational `<small>…</small>` tags must render
+    // without the markup, while the literal `©` glyph is preserved natively.
+    let text = "<small>Copyright \u{00A9} 1999 ImageMagick Studio LLC</small>\n";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("index.html"), text, 120.0, false);
+    let file = build_named_file(builder, "index.html", ".html");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright \u{00A9} 1999 ImageMagick Studio LLC"
+    );
+    assert!(
+        !file.copyrights[0].copyright.contains('<'),
+        "wrapper tag leaked: {:?}",
+        file.copyrights[0].copyright
+    );
+}
+
+#[test]
 fn test_csharp_assembly_copyright_attribute_unwraps_to_notice() {
     // `[assembly: AssemblyCopyright("…")]` is C# attribute syntax; only the inner
     // notice should be reported as the copyright.

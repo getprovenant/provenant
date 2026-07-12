@@ -171,6 +171,11 @@ fn render_raw_copyright_from_text(
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
         .join(" ");
+    // Drop HTML/XML tags wrapping the notice (e.g. `<small>Copyright © 1999
+    // Acme</small>`); the source-faithful projection otherwise carries the markup
+    // into the value. Only edge tags are removed, so `©`, angle-bracket emails,
+    // URLs, and `<year>` markers inside the notice are preserved.
+    let rendered = strip_edge_html_tags(&rendered);
     // Normalize the HTML copyright entity to `(c)` so an `&copy;`-encoded notice
     // does not survive verbatim and split into a near-duplicate value. `(c)` is
     // used (rather than the `©` glyph) so the entity renders identically whether
@@ -195,6 +200,37 @@ fn render_raw_copyright_from_text(
     } else {
         project_native_copyright_value(&rendered, fallback)
     }
+}
+
+/// Strip presentational HTML tags that wrap the edges of a source-faithful
+/// copyright value, e.g. `<small>Copyright © 1999 Acme</small>` →
+/// `Copyright © 1999 Acme`.
+///
+/// Only an allowlist of attribute-free formatting tags is removed. That is
+/// deliberately narrow: it excludes attributed tags (`<label text="©...">`,
+/// whose notice lives in the attribute), the semantic `<copyright>`/`<author>`
+/// wrappers handled by the projection helpers below (which also normalize the
+/// sign), and angle-bracket emails/URLs/domains/`<year>` markers — none of
+/// which are bare formatting tag names. The interior (including a literal `©`)
+/// is untouched.
+fn strip_edge_html_tags(text: &str) -> String {
+    static EDGE_FORMATTING_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)
+            ^(?:\s*<\s*/?\s*(?:small|span|b|i|em|strong|u|s|sub|sup|font|big|tt|code|pre|p|div|br|blockquote|q|mark|cite|abbr|samp|kbd|var|h[1-6]|li|ul|ol|td|th|tr|nav|header|footer|section|article)\s*/?\s*>\s*)+
+            |
+            (?:\s*<\s*/?\s*(?:small|span|b|i|em|strong|u|s|sub|sup|font|big|tt|code|pre|p|div|br|blockquote|q|mark|cite|abbr|samp|kbd|var|h[1-6]|li|ul|ol|td|th|tr|nav|header|footer|section|article)\s*/?\s*>\s*)+$
+            ",
+        )
+        .expect("valid regex")
+    });
+    if !text.contains('<') {
+        return text.to_string();
+    }
+    EDGE_FORMATTING_TAG_RE
+        .replace_all(text, " ")
+        .trim()
+        .to_string()
 }
 
 /// Collapse whitespace immediately inside a balanced `<...>` pair, leaving the

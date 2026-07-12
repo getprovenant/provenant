@@ -246,6 +246,22 @@ static BASH_ARRAY_EXPANSION_RE: LazyLock<Regex> =
 static JOIN_REGISTERED_MARK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?P<head>[A-Za-z0-9])\s+\(r\)").unwrap());
 
+/// Matches a `(c)`/`(C)`/`[c]`/`[C]` copyright-sign token glued directly onto a
+/// preceding identifier word, capturing that word, e.g. `max(c)`, `avg(C)`,
+/// `arr[c]`, `Copyright(c)`.
+///
+/// A genuine standalone copyright sign is preceded by whitespace, start-of-line,
+/// or an opening delimiter (`Copyright (c) 2024`, `(c) Acme`). Glued onto an
+/// identifier it is normally a function call or array index in source code, not
+/// a notice, so it must be dropped before symbol normalization expands it into a
+/// standalone ` (c) ` anchor the detector would read as a copyright (e.g. SQL
+/// `max(c) OVER (...)`). The one exception is when the glued word *is* the
+/// copyright word itself (`Copyright(c)`), where the sign is a real — if
+/// redundant — notice mark and must be preserved. The captured word lets the
+/// replacement closure distinguish the two.
+static GLUED_C_SIGN_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?P<word>[A-Za-z0-9]+)[\(\[][cC][\)\]]").unwrap());
+
 static REGISTERED_SIGN_AFTER_ASCII_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?P<head>[A-Za-z0-9])(?:®|\u{00AE})").unwrap());
 
@@ -440,6 +456,40 @@ pub fn prepare_text_line(line: &str) -> String {
     // source, so the `contains` guard skips the allocation for most lines.
     if s.contains('|') {
         s = s.replace("|copy|", " (c) ").replace('|', " ");
+    }
+
+    // Drop `(c)`/`[c]` copyright signs glued onto a preceding identifier
+    // (`max(c)`, `arr[c]`): those are code, not notices. This must run before
+    // symbol normalization expands `(c)` into a standalone ` (c) ` anchor. The
+    // sign is preserved when the glued word is the copyright word itself
+    // (`Copyright(c)`), a real notice mark. Only touch lines that actually
+    // contain a paren/bracket-c so the common case skips the allocation.
+    if s.contains("(c)") || s.contains("(C)") || s.contains("[c]") || s.contains("[C]") {
+        s = GLUED_C_SIGN_RE
+            .replace_all(&s, |caps: &regex::Captures| {
+                let word = &caps["word"];
+                let word_lower = word.to_ascii_lowercase();
+                // A glued sign is a code artifact only when the word looks like a
+                // function/variable name: it starts with a lowercase letter
+                // (`max(c)`, `avg(c)`, `arr[c]`). A word starting uppercase is a
+                // proper noun — a product or company whose glued sign is a real
+                // notice mark (`Coventive(C), Inc.`, `VBE(C) 2003`, the typo
+                // `Copytight(C)`). The copyright word in any case (`copyright(c)`,
+                // `Copyright(c)`) is also a real mark. Preserve all of those.
+                let is_copyright_word = word_lower.ends_with("copyright")
+                    || word_lower.ends_with("copyrighted")
+                    || word_lower.ends_with("copr");
+                let starts_lowercase = word.chars().next().is_some_and(|c| c.is_ascii_lowercase());
+                if starts_lowercase && !is_copyright_word {
+                    // Code artifact: drop the sign, keep the identifier word.
+                    format!("{word} ")
+                } else {
+                    // Real (possibly redundant) sign: keep it so symbol
+                    // normalization spaces it out to ` (c) ` as usual.
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
     }
 
     // All copyright-sign variants → `(c)` in a single forward pass instead of a
@@ -1621,6 +1671,76 @@ mod tests {
     fn test_strip_o_template_element_content() {
         let result = prepare_text_line("<o:Template>techdoc.dot</o:Template>");
         assert!(!result.to_ascii_lowercase().contains("techdoc.dot"));
+    }
+
+    #[test]
+    fn test_glued_c_sign_from_function_call_dropped() {
+        // `max(c)` is a SQL aggregate call, not a copyright sign: the `(c)` must
+        // not survive as a standalone anchor.
+        let result = prepare_text_line(
+            "SELECT a, max(c) OVER (ORDER BY a ROWS BETWEEN 1 PRECEDING AND 2 PRECEDING)",
+        );
+        assert!(
+            !result.contains("(c)"),
+            "glued function-call (c) leaked a copyright sign: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_glued_c_sign_array_index_dropped() {
+        let result = prepare_text_line("value = arr[c] + arr[C];");
+        assert!(
+            !result.contains("(c)"),
+            "glued array-index [c]/[C] leaked a copyright sign: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_spaced_c_sign_still_expands() {
+        // A real, space-preceded sign must be untouched.
+        let result = prepare_text_line("Copyright (c) 2024 Acme");
+        assert!(result.contains("(c)"), "real sign lost: {result:?}");
+        assert!(result.contains("2024"));
+    }
+
+    #[test]
+    fn test_leading_bracket_c_sign_still_expands() {
+        // `[C]` not glued to an identifier stays a copyright sign.
+        let result = prepare_text_line("[C] The Regents 2024");
+        assert!(result.contains("(c)"), "leading [C] lost: {result:?}");
+    }
+
+    #[test]
+    fn test_glued_copyright_word_keeps_notice() {
+        // `Copyright(c) 2024` glues the sign onto the word, but the "Copyright"
+        // anchor and year remain, so the notice is still recoverable.
+        let result = prepare_text_line("Copyright(c) 2024 Acme");
+        assert!(result.contains("Copyright"), "word anchor lost: {result:?}");
+        assert!(result.contains("(c)"), "redundant sign lost: {result:?}");
+        assert!(result.contains("2024"));
+    }
+
+    #[test]
+    fn test_glued_c_sign_after_proper_noun_kept() {
+        // A product/company name glued to the sign is a real notice mark, not a
+        // code call: `VBE(C) 2003`, `Coventive(C), Inc.` keep the sign.
+        assert!(
+            prepare_text_line("VBE(C) 2003 http://example.com").contains("(c)"),
+            "product-glued sign dropped"
+        );
+        assert!(
+            prepare_text_line("Coventive(C), Inc.").contains("(c)"),
+            "company-glued sign dropped"
+        );
+    }
+
+    #[test]
+    fn test_glued_c_sign_after_lowercase_copyright_word_kept() {
+        // The lowercase copyright word glued to the sign is still a real mark.
+        assert!(
+            prepare_text_line("copyright(c) ADIONYSOS 2006").contains("(c)"),
+            "lowercase copyright-word sign dropped"
+        );
     }
 
     #[test]
