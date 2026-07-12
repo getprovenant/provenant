@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 245 of 245 recorded runs, with a **19.5× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 246 of 246 recorded runs, with a **19.5× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1090,6 +1090,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.34s`; ScanCode `688.10s`
 - Clean copyright output on the SQL-heavy public-domain tree — `(c)` tokens inside expressions such as `max(c) OVER (...)` and `avg(c) FILTER (...)` are treated as code rather than notices, yielding `43` copyrights against ScanCode's `40` — with richer author capture (`19` vs `13`), rejection of ScanCode's own grammar and fuzz/binary copyright noise (`(c) JOIN` in `parse.y`, byte runs in `fuzzdata2.db`), and a deduplicated `public-domain AND blessing AND bsd-new` expression on `LICENSE.md` more compact than ScanCode's repeated form
+
+##### [syncthing/syncthing @ 5277033](https://github.com/syncthing/syncthing/tree/527703390608d743788f464ada8d422bfa933993) — **22.41× faster**
+
+- Files: 1,132
+- Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.90s`; ScanCode `154.60s`
+- Author extraction captures the project's full `AUTHORS` contributor roster (`279` authors against ScanCode's `7`), and `OFL-1.1` is detected in the vendored fork-awesome fonts — the `LICENSE.txt` plus the `.woff`/`.ttf`/`.eot`/`.svg` binaries — that ScanCode leaves as bare license clues; copyright rendering preserves the source `©`/`(C)` where ScanCode normalizes to `(c)`, over a slightly larger dependency set (`355` vs `352`). ScanCode reports cleaner holders in the `gui/default/syncthing/core/aboutModalView.html` "included software" credits list, where Provenant retains adjacent-entry fragments (`Alec Thomas. beorn7/perks`)
 
 ##### [systemd/systemd @ 89d705a](https://github.com/systemd/systemd/tree/89d705a892b3476de14e548f3f9b0af96207d4b0) — **42.92× faster**
 

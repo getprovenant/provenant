@@ -422,6 +422,9 @@ ScanCode: 85.71s</title></rect>
     <rect x="575.87" y="395.19" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/regorus @ 7f42115
 Files: 1121
 ScanCode: 137.98s</title></rect>
+    <rect x="576.54" y="389.81" width="8" height="8" fill="#d97706" rx="1.5"><title>syncthing/syncthing @ 5277033
+Files: 1132
+ScanCode: 154.60s</title></rect>
     <rect x="577.87" y="402.80" width="8" height="8" fill="#d97706" rx="1.5"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
 ScanCode: 117.46s</title></rect>
@@ -1159,6 +1162,9 @@ Provenant: 5.17s</title></circle>
     <circle cx="579.87" cy="543.92" r="4.5" fill="#2563eb"><title>microsoft/regorus @ 7f42115
 Files: 1121
 Provenant: 6.45s</title></circle>
+    <circle cx="580.54" cy="540.73" r="4.5" fill="#2563eb"><title>syncthing/syncthing @ 5277033
+Files: 1132
+Provenant: 6.90s</title></circle>
     <circle cx="581.87" cy="542.91" r="4.5" fill="#2563eb"><title>tidyverse/ggplot2 @ 7d79c95
 Files: 1154
 Provenant: 6.59s</title></circle>
