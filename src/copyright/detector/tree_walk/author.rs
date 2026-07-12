@@ -271,27 +271,22 @@ pub(super) fn try_extract_by_name_email_author(
         _ => return None,
     };
 
+    // Require a "<contribution phrase> by ..." lead-in on the same line (e.g.
+    // "Extensions by", "inotify back-end by"). A bare line-initial "by <name>"
+    // with nothing before it is left out, matching the curated expectation that
+    // isolated mid-comment attributions are not authors.
     let by_line = by_token.start_line;
-
-    let mut same_line_preceding = 0;
-    for j in (0..idx).rev() {
-        let leaves = detector::token_utils::collect_all_leaves(&tree[j]);
-        for leaf in &leaves {
-            if leaf.start_line == by_line {
-                same_line_preceding += 1;
-            }
-        }
-    }
-    if same_line_preceding < 2 {
+    let same_line_preceding = tree[..idx]
+        .iter()
+        .flat_map(detector::collect_all_leaves)
+        .filter(|leaf| leaf.start_line == by_line)
+        .count();
+    if same_line_preceding < 1 {
         return None;
     }
 
     let name_idx = idx + 1;
-    if name_idx >= tree.len() {
-        return None;
-    }
-
-    let name_node = &tree[name_idx];
+    let name_node = tree.get(name_idx)?;
     match name_node.label() {
         Some(
             TreeLabel::NameYear | TreeLabel::NameEmail | TreeLabel::Name | TreeLabel::NameCaps,
@@ -299,20 +294,55 @@ pub(super) fn try_extract_by_name_email_author(
         _ => return None,
     }
 
-    let all_leaves = detector::token_utils::collect_all_leaves(name_node);
-    let has_email = all_leaves.iter().any(|t| t.tag == PosTag::Email);
-    if !has_email {
-        return None;
-    }
+    let name_line = detector::token_utils::collect_all_leaves(name_node)
+        .first()
+        .map(|t| t.start_line)?;
 
-    let author_tokens: Vec<&Token> = detector::token_utils::collect_filtered_leaves(
+    let mut author_tokens: Vec<&Token> = detector::token_utils::collect_filtered_leaves(
         name_node,
         &[TreeLabel::YrRange, TreeLabel::YrAnd],
         detector::NON_AUTHOR_POS_TAGS,
     );
+    let mut last_consumed = name_idx;
+
+    match author_tokens.iter().position(|t| t.tag == PosTag::Email) {
+        // A personal name ends at its email address, so drop any trailing proper
+        // nouns the grammar over-merged from the following clause (this is the
+        // cross-line "<name> <email>. <NextWord> by ..." bleed).
+        Some(pos) => author_tokens.truncate(pos + 1),
+        // `<name>, <email>` shape: the email trails the name as a sibling leaf
+        // rather than being folded into the NAME node.
+        None => {
+            let mut j = name_idx + 1;
+            while let Some(ParseNode::Leaf(tok)) = tree.get(j) {
+                if tok.start_line != name_line {
+                    break;
+                }
+                match tok.tag {
+                    PosTag::Cc if tok.value == "," => {
+                        last_consumed = j;
+                        j += 1;
+                    }
+                    PosTag::Email => {
+                        author_tokens.push(tok);
+                        last_consumed = j;
+                        break;
+                    }
+                    _ => break,
+                }
+            }
+        }
+    }
+
+    // Require an email as the strong authorship signal, mirroring ScanCode's
+    // `AUTHOR: {<BY> <NAME-EMAIL>+}` / `AUTHOR: {<BY> <EMAIL>}` productions. The
+    // email keeps this bare `by <name>` extraction from firing on ordinary prose.
+    if !author_tokens.iter().any(|t| t.tag == PosTag::Email) {
+        return None;
+    }
 
     let det = detector::token_utils::build_author_from_tokens(&author_tokens)?;
-    Some((det, 1))
+    Some((det, last_consumed - idx))
 }
 
 pub(super) fn build_author_with_trailing(
