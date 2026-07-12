@@ -2268,3 +2268,59 @@ fn exported_dataset_can_be_reused_via_license_dataset_path() {
         Some("custom-license-dataset")
     );
 }
+
+#[test]
+fn scan_excludes_the_license_policy_file_from_its_own_detection() {
+    // A policy file that lists an error-level license (gpl-3.0) and lives inside
+    // the scanned tree must not be scanned as source: otherwise the scanner
+    // detects "gpl-3.0" written in it and self-trips the --fail-on gate.
+    let temp = TempDir::new().expect("temp dir");
+    let root = temp.path().join("proj");
+    fs::create_dir_all(root.join(".provenant")).expect("mkdir");
+    fs::write(
+        root.join(".provenant/policy.yml"),
+        "license_policies:\n  - license_key: gpl-3.0\n    label: Prohibited\n    compliance_alert: error\n  - license_key: mit\n    label: OK\n    compliance_alert: warning\n",
+    )
+    .expect("write policy");
+    fs::write(
+        root.join("app.c"),
+        "// SPDX-License-Identifier: MIT\nint main(void){return 0;}\n",
+    )
+    .expect("write src");
+
+    let policy = root.join(".provenant/policy.yml");
+    let output = provenant_command()
+        .args([
+            "--license",
+            "--license-policy",
+            policy.to_str().unwrap(),
+            "--fail-on",
+            "error",
+            "--json-pp",
+            "-",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to run provenant policy scan");
+
+    assert!(
+        output.status.success(),
+        "the gate must not trip on the policy file's own license keys (stderr: {})",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: Value = serde_json::from_slice(&output.stdout).expect("stdout should be valid json");
+    let files = json["files"].as_array().expect("files array");
+    assert!(
+        !files.iter().any(|f| f["path"]
+            .as_str()
+            .is_some_and(|p| p.ends_with("policy.yml"))),
+        "the --license-policy file must be excluded from the scan"
+    );
+    assert!(
+        !files.iter().any(|f| f["detected_license_expression_spdx"]
+            .as_str()
+            .is_some_and(|e| e.to_uppercase().contains("GPL"))),
+        "no scanned file should report GPL: the only GPL text was in the excluded policy file"
+    );
+}
