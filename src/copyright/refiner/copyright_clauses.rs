@@ -191,6 +191,24 @@ pub(super) fn strip_trailing_authors_clause(s: &str) -> String {
         return s.to_string();
     }
 
+    // `<Holder> Project Authors (https://...)` is the SIL OFL copyright holder
+    // plus its contact URL, not a trailing author-list clause — ScanCode keeps it
+    // whole. When the text after `Authors` is only such a URL (optionally
+    // parenthesized, no other prose), leave the statement intact so the OFL holder
+    // is not truncated. Restricted to URLs: `http(s)://` is an unambiguous contact,
+    // whereas a bare email after `Authors` cannot be distinguished from a genuine
+    // trailing author-contact clause without a verified reference.
+    let rest_contact = rest
+        .trim()
+        .trim_start_matches('(')
+        .trim_end_matches(')')
+        .trim();
+    let rest_is_only_url = !rest_contact.contains(char::is_whitespace)
+        && (rest_contact.starts_with("http://") || rest_contact.starts_with("https://"));
+    if rest_is_only_url {
+        return s.to_string();
+    }
+
     let rest_for_count = if let Some(email_idx) = rest.find('@') {
         rest[..email_idx].trim()
     } else {
