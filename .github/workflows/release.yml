@@ -387,6 +387,8 @@ jobs:
               --pattern "provenant-${arch}.tar.gz.sha256" --dir shas
           done
           sha() { awk '{print $1}' "shas/provenant-$1.tar.gz.sha256"; }
+          # Render to a temp file (not into the tap checkout): the push step
+          # re-syncs the tap on each attempt and re-applies this rendered formula.
           sed \
             -e "s|@@VERSION@@|${version}|g" \
             -e "s|@@TAG@@|${TAG}|g" \
@@ -394,26 +396,54 @@ jobs:
             -e "s|@@SHA_MACOS_INTEL@@|$(sha macos-x86_64)|" \
             -e "s|@@SHA_LINUX_ARM@@|$(sha linux-aarch64)|" \
             -e "s|@@SHA_LINUX_INTEL@@|$(sha linux-x86_64)|" \
-            .github/homebrew/provenant.rb.tmpl > tap/Formula/provenant.rb
+            .github/homebrew/provenant.rb.tmpl > "${RUNNER_TEMP}/provenant.rb"
           # Fail before pushing if the rendered formula is not valid Ruby or still
           # carries an unresolved placeholder.
-          ruby -c tap/Formula/provenant.rb
-          if grep -q '@@' tap/Formula/provenant.rb; then
+          ruby -c "${RUNNER_TEMP}/provenant.rb"
+          if grep -q '@@' "${RUNNER_TEMP}/provenant.rb"; then
             echo "Unresolved placeholder in rendered formula:" >&2
-            grep -n '@@' tap/Formula/provenant.rb >&2
+            grep -n '@@' "${RUNNER_TEMP}/provenant.rb" >&2
             exit 1
           fi
 
       - name: Commit and push to the tap
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          version="${TAG#v}"
           cd tap
-          if git diff --quiet -- Formula/provenant.rb; then
-            echo "Formula already at ${GITHUB_REF_NAME#v}; nothing to push."
-            exit 0
-          fi
           git config user.name "provenant-release-bot[bot]"
           git config user.email "provenant-release-bot[bot]@users.noreply.github.com"
-          git add Formula/provenant.rb
-          git commit -m "provenant ${GITHUB_REF_NAME#v}"
-          git push
+          formula="Formula/provenant.rb"
+          # Concurrent stable releases push to the same branch. Re-sync and retry on
+          # a rejected (non-fast-forward) push, and never downgrade the formula: if
+          # the tap already carries a newer version (another release won the race),
+          # skip instead of clobbering it.
+          for attempt in 1 2 3 4 5; do
+            git fetch --quiet origin main
+            git reset --quiet --hard origin/main
+            current="$(sed -nE 's/^  version "([^"]+)"/\1/p' "$formula" | head -1)"
+            if [ -n "$current" ] && [ "$current" != "$version" ]; then
+              newest="$(printf '%s\n%s\n' "$current" "$version" | sort -V | tail -1)"
+              if [ "$newest" = "$current" ]; then
+                echo "Tap already at $current (newer than $version); leaving it."
+                exit 0
+              fi
+            fi
+            cp "${RUNNER_TEMP}/provenant.rb" "$formula"
+            if git diff --quiet -- "$formula"; then
+              echo "Tap already at $version; nothing to push."
+              exit 0
+            fi
+            git add "$formula"
+            git commit --quiet -m "provenant ${version}"
+            if git push; then
+              echo "Bumped tap to $version."
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}); re-syncing and retrying." >&2
+            sleep 3
+          done
+          echo "Failed to push formula bump after retries." >&2
+          exit 1
