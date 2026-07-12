@@ -3035,6 +3035,17 @@ fn test_refine_copyright_strips_leading_component_descriptor_before_marker() {
         ),
         Some("Copyright (c) 2011 Lynn Ochs".to_string())
     );
+    // Bare sign markers (`©` / `(c)`) without the spelled-out word are also
+    // anchored — the marker is followed by whitespace, which a trailing `\b`
+    // on the alternation could not match.
+    assert_eq!(
+        refine_copyright("The component (src/foo.c) is \u{00a9} 2024 Acme Corp"),
+        Some("\u{00a9} 2024 Acme Corp".to_string())
+    );
+    assert_eq!(
+        refine_copyright("The widget (lib/bar.c) is (c) 2024 Acme Corp"),
+        Some("(c) 2024 Acme Corp".to_string())
+    );
 }
 
 #[test]

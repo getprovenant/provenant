@@ -150,7 +150,7 @@ pub(super) fn strip_leading_prose_clause_before_copyright(s: &str) -> String {
         compile_static_regex(
             r"(?ix)
             ^(?P<lead>.+?\b(?:is|was|are))\s+
-            (?P<copy>(?:copyright|copr\.?|\u{00a9}|\(c\))\b.*)$
+            (?P<copy>(?:(?:copyright|copr\.?)\b|\u{00a9}|\(c\)).*)$
             ",
         )
     });
