@@ -29,31 +29,42 @@ use crate::copyright::types::{
 /// mentions the word "copyright".
 fn span_has_strong_holder_or_year(span: &[&Token]) -> bool {
     span.iter().any(|t| {
-        detector::token_utils::is_year_like_token(t)
-            || matches!(
-                t.tag,
-                PosTag::Nnp
-                    | PosTag::Pn
-                    | PosTag::Caps
-                    | PosTag::MixedCap
-                    | PosTag::Comp
-                    | PosTag::Uni
-                    | PosTag::Email
-                    | PosTag::Url
-                    | PosTag::Url2
-            )
-            || is_acronym_like(&t.value)
+        // The copyright marker itself is never the holder; excluding it stops an
+        // all-uppercase `COPYRIGHT` token from validating its own span.
+        t.tag != PosTag::Copy
+            && (detector::token_utils::is_year_like_token(t)
+                || matches!(
+                    t.tag,
+                    PosTag::Nnp
+                        | PosTag::Pn
+                        | PosTag::Caps
+                        | PosTag::MixedCap
+                        | PosTag::Comp
+                        | PosTag::Uni
+                        | PosTag::Email
+                        | PosTag::Url
+                        | PosTag::Url2
+                )
+                || is_acronym_like(&t.value))
     })
 }
 
-/// An all-uppercase organization acronym (`CERN`, `INRIA-ENPC`) that the POS
+/// A compound organization acronym (`INRIA-ENPC`, `AT&T`, `K3D`) that the POS
 /// tagger left as a bare `<NN>` still names a real holder, so treat it as a
-/// strong anchor. Requires at least two uppercase letters and no lowercase
-/// letter; internal `-`/`.`/digits are allowed (`INRIA-ENPC.`).
+/// strong anchor. Requires two-plus uppercase letters, no lowercase, and at
+/// least one internal `-`/`&`/digit. The compound-marker requirement is what
+/// separates a real acronym from an all-uppercase English word (`AND`, `THE`,
+/// `SOURCE`), which would otherwise let all-caps prose satisfy the guard.
+/// Single-word acronyms such as `CERN` are already tagged `<Pn>`/`<Caps>` and
+/// matched above.
 fn is_acronym_like(value: &str) -> bool {
     let trimmed = value.trim_matches(['.', ',', '\'', '"', ' ']);
     let uppercase = trimmed.chars().filter(|c| c.is_ascii_uppercase()).count();
+    let has_compound_marker = trimmed
+        .chars()
+        .any(|c| c.is_ascii_digit() || matches!(c, '-' | '&'));
     uppercase >= 2
+        && has_compound_marker
         && !trimmed.chars().any(|c| c.is_ascii_lowercase())
         && trimmed.chars().all(|c| {
             c.is_ascii_uppercase() || c.is_ascii_digit() || matches!(c, '-' | '.' | '&' | '\'')

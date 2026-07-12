@@ -470,17 +470,19 @@ pub fn prepare_text_line(line: &str) -> String {
                 let word = &caps["word"];
                 let word_lower = word.to_ascii_lowercase();
                 // A glued sign is a code artifact only when the word looks like a
-                // function/variable name: it starts with a lowercase letter
-                // (`max(c)`, `avg(c)`, `arr[c]`). A word starting uppercase is a
-                // proper noun — a product or company whose glued sign is a real
-                // notice mark (`Coventive(C), Inc.`, `VBE(C) 2003`, the typo
-                // `Copytight(C)`). The copyright word in any case (`copyright(c)`,
+                // plain function/variable name: entirely lowercase, no interior
+                // capital (`max(c)`, `avg(c)`, `arr[c]`). Any uppercase letter
+                // means a proper noun or mixed-case product whose glued sign is a
+                // real notice mark — `Coventive(C), Inc.`, `VBE(C) 2003`, the typo
+                // `Copytight(C)`, and lowercase-initial brands like `iText(c)` /
+                // `eCos(C)`. The copyright word in any case (`copyright(c)`,
                 // `Copyright(c)`) is also a real mark. Preserve all of those.
                 let is_copyright_word = word_lower.ends_with("copyright")
                     || word_lower.ends_with("copyrighted")
                     || word_lower.ends_with("copr");
-                let starts_lowercase = word.chars().next().is_some_and(|c| c.is_ascii_lowercase());
-                if starts_lowercase && !is_copyright_word {
+                let is_all_lowercase = !word.chars().any(|c| c.is_ascii_uppercase())
+                    && word.chars().next().is_some_and(|c| c.is_ascii_lowercase());
+                if is_all_lowercase && !is_copyright_word {
                     // Code artifact: drop the sign, keep the identifier word.
                     format!("{word} ")
                 } else {
@@ -1741,6 +1743,19 @@ mod tests {
             prepare_text_line("copyright(c) ADIONYSOS 2006").contains("(c)"),
             "lowercase copyright-word sign dropped"
         );
+    }
+
+    #[test]
+    fn test_glued_c_sign_after_lowercase_initial_product_kept() {
+        // Lowercase-initial mixed-case brands (`iText`, `eCos`, `jQuery`) carry an
+        // internal capital, so their glued sign is a real notice mark, not a
+        // function call, and must be preserved.
+        for input in ["Portions (c) 2000 iText Group", "eCos(C) 2001 Red Hat"] {
+            assert!(
+                prepare_text_line(input).contains("(c)"),
+                "mixed-case product sign dropped for {input:?}"
+            );
+        }
     }
 
     #[test]

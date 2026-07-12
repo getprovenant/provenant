@@ -1196,6 +1196,32 @@ fn test_html_small_wrapper_tags_stripped_from_native_copyright() {
 }
 
 #[test]
+fn test_nested_html_wrapper_tags_fully_stripped_from_native_copyright() {
+    // Nested presentational wrappers must not leave an unbalanced interior tag:
+    // `<small>Copyright © 1999 <b>Acme</b></small>` renders with no `<`/`>`.
+    let text = "<small>Copyright \u{00A9} 1999 <b>ImageMagick Studio LLC</b></small>\n";
+    let mut builder = FileInfoBuilder::default();
+    extract_copyright_information(&mut builder, Path::new("index.html"), text, 120.0, false);
+    let file = build_named_file(builder, "index.html", ".html");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright \u{00A9} 1999 ImageMagick Studio LLC"
+    );
+    assert!(
+        !file.copyrights[0].copyright.contains('<') && !file.copyrights[0].copyright.contains('>'),
+        "markup leaked: {:?}",
+        file.copyrights[0].copyright
+    );
+}
+
+#[test]
 fn test_csharp_assembly_copyright_attribute_unwraps_to_notice() {
     // `[assembly: AssemblyCopyright("…")]` is C# attribute syntax; only the inner
     // notice should be reported as the copyright.
