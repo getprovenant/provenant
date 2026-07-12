@@ -3105,3 +3105,23 @@ fn test_refine_author_strips_trailing_role_qualifier() {
         Some("Felker, Rich".to_string())
     );
 }
+
+#[test]
+fn test_refine_copyright_keeps_ofl_project_authors_contact() {
+    // SIL OFL header: `<Holder> Project Authors (<url>)` is the holder plus its
+    // contact, not a trailing author-list clause — keep it whole.
+    assert_eq!(
+        refine_copyright("Copyright (c) 2014, The Fira Code Project Authors (https://github.com/tonsky/FiraCode)"),
+        Some("Copyright (c) 2014, The Fira Code Project Authors (https://github.com/tonsky/FiraCode)".to_string())
+    );
+    assert_eq!(
+        refine_copyright("Copyright 2014-2021 The Fira Code Project Authors (https://github.com/tonsky/FiraCode)"),
+        Some("Copyright 2014-2021 The Fira Code Project Authors (https://github.com/tonsky/FiraCode)".to_string())
+    );
+    // A genuine trailing authors clause (short non-contact rest after a
+    // comma-bearing prefix) is still stripped.
+    assert_eq!(
+        refine_copyright("Copyright 2001, 2002 Foo Authors bar"),
+        Some("Copyright 2001, 2002 Foo".to_string())
+    );
+}
