@@ -230,6 +230,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # Required to mint the keyless Sigstore identity and attach the image
+      # build-provenance attestation.
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -275,6 +279,7 @@ jobs:
             latest=${{ !contains(github.ref, '-') }}
 
       - name: Build and push multi-arch image
+        id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: docker-context
@@ -282,6 +287,17 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # SLSA build provenance for the pushed image index, matching what
+      # create-release attaches to the release archives. push-to-registry stores
+      # it in GHCR so `gh attestation verify oci://ghcr.io/getprovenant/provenant`
+      # works against the published image.
+      - name: Attest image build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-name: ghcr.io/getprovenant/provenant
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
 
   create-release:
     name: Create Release
