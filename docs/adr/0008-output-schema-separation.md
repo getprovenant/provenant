@@ -32,7 +32,7 @@ Separate the ScanCode-compatible output schema from internal types:
 
 2. **Internal types** (`src/models/`) retain serde for cache round-tripping and `--from-json` deserialization. Output-specific attributes (`skip_serializing_if`, `serialize_with`, custom `Serialize` impls) are removed from internal types.
 
-3. **Conversion boundary** — `From<&InternalType>` converts internal → output at the serialization boundary in `main.rs`. `TryFrom<&OutputType>` converts output → internal for the `--from-json` path, with validation at the conversion boundary.
+3. **Conversion boundary** — `From<&InternalType>` converts internal → output at the serialization boundary in `src/cli/run/mod.rs`. `TryFrom<&OutputType>` converts output → internal for the `--from-json` path, with validation at the conversion boundary.
 
 4. **Shared enums** (`FileType`, `DatasourceId`, `PackageType`) are reused directly in output types — not widened to `String`. These enums have their own serde impls that are shared between internal and output contexts.
 
@@ -49,7 +49,7 @@ Separate the ScanCode-compatible output schema from internal types:
 
 ### Scope boundaries
 
-- License detection internal types (`src/license_detection/`) still have serde for the embedded index artifact (MessagePack). That is a separate serialization concern and is out of scope for this ADR.
+- License detection internal types (`src/license_detection/`) still have serde for the embedded index artifact (postcard). That is a separate serialization concern and is out of scope for this ADR.
 - Parser-private deserialization types are out of scope — they parse external file formats, not the Provenant output schema.
 
 ## Consequences
@@ -89,6 +89,6 @@ Would ensure schema consistency but adds a build-time code generation step and m
 ## References
 
 - Output schema module: `src/output_schema/`
-- Conversion boundary: `src/main.rs` (where `models::Output` → `output_schema::Output`)
+- Conversion boundary: `src/cli/run/mod.rs` (where `models::Output` → `output_schema::Output`)
 - `--from-json` deserialization: `src/scan_result_shaping/json_input.rs`
 - Cache serialization: `src/cache/incremental.rs`

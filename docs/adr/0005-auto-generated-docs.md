@@ -183,7 +183,7 @@ The generator iterates the registered parser metadata, renders a normalized Mark
 3. **Rust Doc Comments Required**
    - Contributors must write `///` comments
    - More verbose than Python docstrings
-   - **Acceptable**: Standard Rust practice, enforced by `#![deny(missing_docs)]`
+   - **Acceptable**: Standard Rust practice, kept as a contributor convention
 
 ## Alternatives Considered
 

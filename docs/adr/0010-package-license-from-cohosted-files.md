@@ -24,13 +24,13 @@ ScanCode `apache-2.0` from the repo's root `LICENSE`; Provenant `null`). It is
   that co-located key-file promotion "promotes only copyright/holder, never the
   declared license."
 - The post-assembly pass `apply_package_reference_following`
-  (`src/post_processing/reference_following.rs:856-899`) **does** adopt a license
+  (`src/post_processing/reference_following.rs`) **does** adopt a license
   into the package declared expression, but only the manifest's **own** file-level
   detection or a file the manifest **references** (e.g. a `license-file` / "see
   LICENSE" pointer). Its comment is explicit: it "never adopts arbitrary
   co-located files."
 - `promote_package_metadata_from_key_files`
-  (`src/post_processing/package_metadata_promotion.rs:28-61`) already promotes
+  (`src/post_processing/package_metadata_promotion.rs`) already promotes
   `copyright` and `holder` from co-located key files when the package lacks them —
   but intentionally **not** the declared license.
 
@@ -439,9 +439,9 @@ the assembled `pkg:golang/.../terraform` package gains `bsl-1.1 AND mpl-2.0`.
 
 ## References
 
-- `src/post_processing/reference_following.rs:856-899` — existing manifest-referenced
+- `src/post_processing/reference_following.rs` — existing manifest-referenced
   license adoption ("never adopts arbitrary co-located files").
-- `src/post_processing/package_metadata_promotion.rs:28-61` — co-located key-file
+- `src/post_processing/package_metadata_promotion.rs` — co-located key-file
   promotion of copyright/holder (excludes declared license).
 - `src/parsers/go.rs`, `src/parsers/autotools.rs`, `src/parsers/swift_manifest_json.rs`,
   `src/parsers/bazel.rs` — formats with no declared-license field.
