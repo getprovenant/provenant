@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 240 of 240 recorded runs, with a **19.3× median speedup** and **19.3× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 243 of 243 recorded runs, with a **19.4× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -755,6 +755,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `22.05s`; ScanCode `771.98s`
 - Matched Go package coverage (`2` vs `2`) with slightly richer dependency extraction (`652` vs `651`) from vendored `mkdocs-reqs.txt` and committed Python sidecar requirements, while preserving Go module inventory parity on the root `go.mod` and `go.sum` surfaces
 
+##### [coreutils/coreutils @ fb631c3](https://github.com/coreutils/coreutils/tree/fb631c3e6dd29d89e4c65b8e3969deb1db2bcb98) — **19.26× faster**
+
+- Files: 1,310
+- Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `10.16s`; ScanCode `195.66s`
+- Broader author coverage (`142` vs `136`) from multi-author `<contribution> by <Name>` headers and texinfo `@c`-comment attributions such as `Assaf Gordon` that ScanCode leaves unrecovered, with clean four-author capture on `src/tail.c` (Paul Rubin, David MacKenzie, Ian Lance Taylor, Giuseppe Scrivano) and reorganization-credit authors on `cksum_crc.c`; ScanCode holds a slim copyright edge on two prose lines that embed both the word `copyright` and a real name — a shell `grep` pattern in `cfg.mk` and a credits sentence in `shred.c`
+
 ##### [curl/curl @ 2bb5c9b](https://github.com/curl/curl/tree/2bb5c9b5552d37f08a439f2bec400009321d325c) — **26.33× faster**
 
 - Files: 4,266
@@ -880,6 +887,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-29 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `9.96s`; ScanCode `354.17s`
 - Cleaner URL extraction that rejects `{account}`-templated host placeholders ScanCode emits as navigable URLs, and author capture that drops the README maintainer prose ScanCode records as a party, on otherwise matched Go module package, dependency, and declared-license coverage — the assembled `pkg:golang/github.com/hashicorp/terraform` resolves the repo-root `LICENSE` to the same `bsl-1.1 AND mpl-2.0` ScanCode reports
+
+##### [ImageMagick/ImageMagick @ 55e52c4](https://github.com/ImageMagick/ImageMagick/tree/55e52c44752eec35d893f4edbf7f7fa2dbe247ce) — **37.07× faster**
+
+- Files: 2,256
+- Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `12.41s`; ScanCode `459.99s`
+- Source-faithful copyright rendering that preserves the literal `©` glyph and strips presentational HTML wrappers such as `<small>…</small>` from notices like `Copyright © 1999 ImageMagick Studio LLC`, with richer package and dependency extraction (`8` vs `5` file-level `package_data` records, `16` vs `13` dependencies) and rejection of ScanCode's `MagickCore (c)`-style code false positives; ScanCode keeps a copyright-count edge (`1315` vs `1114`) concentrated in generated Doxygen HTML API pages under `www/api/**`, whose notices duplicate the ones Provenant already captures in the underlying C++ sources
 
 ##### [KDE/kirigami @ 0ff3ed5](https://github.com/KDE/kirigami/tree/0ff3ed59f8e3a7883a3e88b7bc487f55365fb0ff) — **14.9× faster**
 
@@ -1062,6 +1076,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.88s`; ScanCode `51.37s`
 - Matched Cargo workspace package and dependency coverage (`14` vs `14` packages, `209` vs `209` dependencies) while preserving the member-crate `Apache-2.0 OR MIT` README semantics, keeping archived NCC Group review URLs intact in `aes-gcm` and `chacha20poly1305`, surfacing a concrete `mgm` lockfile package identity where ScanCode stays anonymous, and filtering weak `team of volunteers` SECURITY.md maintainer prose out of author output
+
+##### [sqlite/sqlite @ f2e2b82](https://github.com/sqlite/sqlite/tree/f2e2b8202350341ef5798a7672ce18957cc952c0) — **66.55× faster**
+
+- Files: 2,217
+- Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `10.34s`; ScanCode `688.10s`
+- Clean copyright output on the SQL-heavy public-domain tree — `(c)` tokens inside expressions such as `max(c) OVER (...)` and `avg(c) FILTER (...)` are treated as code rather than notices, yielding `43` copyrights against ScanCode's `40` — with richer author capture (`19` vs `13`), rejection of ScanCode's own grammar and fuzz/binary copyright noise (`(c) JOIN` in `parse.y`, byte runs in `fuzzdata2.db`), and a deduplicated `public-domain AND blessing AND bsd-new` expression on `LICENSE.md` more compact than ScanCode's repeated form
 
 ##### [systemd/systemd @ 89d705a](https://github.com/systemd/systemd/tree/89d705a892b3476de14e548f3f9b0af96207d4b0) — **42.92× faster**
 
