@@ -519,7 +519,7 @@ static CREDIT_FILE_REFERENCE_TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
     compile_static_regex(
         r"(?ix)
         ^(?P<prefix>.+?)
-        \s*\(?\s*
+        (?:\s+|\s*\(\s*)
         (?:see|refer\s+to|consult)\s+
         (?:the\s+)?
         (?:authors?|credits?|contributors?)\s+file

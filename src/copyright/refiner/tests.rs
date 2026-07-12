@@ -3139,6 +3139,12 @@ fn test_refine_copyright_strips_contributors_file_reference() {
         refine_copyright("Copyright (c) 2018 Foo Bar see authors file"),
         Some("Copyright (c) 2018 Foo Bar".to_string())
     );
+    // The `see` directive requires a real separator, so it never matches inside a
+    // holder word (`Tennessee`).
+    assert_eq!(
+        refine_copyright("Copyright 2024 Tennessee authors file"),
+        Some("Copyright 2024 Tennessee authors file".to_string())
+    );
 }
 
 #[test]
