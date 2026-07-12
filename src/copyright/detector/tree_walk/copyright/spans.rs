@@ -16,6 +16,50 @@ use crate::copyright::types::{
     AuthorDetection, CopyrightDetection, HolderDetection, ParseNode, PosTag, Token,
 };
 
+/// Whether a fallback copyright span carries a real holder anchor: a proper
+/// noun, company/university token, email/URL, or a year.
+///
+/// The grammar productions never build a copyright from `<Copy>` plus only
+/// common-noun (`<NN>`) prose — a holder must be an `<NNP>`/`<NAME>`/`<COMPANY>`
+/// or a year must be present. The span fallbacks run only when the grammar
+/// produced no copyright node, and they otherwise sweep in common nouns, so a
+/// bare `copyright paperwork` / `copyright and the source code` prose fragment
+/// slips through. Requiring the same holder anchor the grammar demands keeps the
+/// fallback from manufacturing copyrights out of ordinary prose that merely
+/// mentions the word "copyright".
+fn span_has_strong_holder_or_year(span: &[&Token]) -> bool {
+    span.iter().any(|t| {
+        detector::token_utils::is_year_like_token(t)
+            || matches!(
+                t.tag,
+                PosTag::Nnp
+                    | PosTag::Pn
+                    | PosTag::Caps
+                    | PosTag::MixedCap
+                    | PosTag::Comp
+                    | PosTag::Uni
+                    | PosTag::Email
+                    | PosTag::Url
+                    | PosTag::Url2
+            )
+            || is_acronym_like(&t.value)
+    })
+}
+
+/// An all-uppercase organization acronym (`CERN`, `INRIA-ENPC`) that the POS
+/// tagger left as a bare `<NN>` still names a real holder, so treat it as a
+/// strong anchor. Requires at least two uppercase letters and no lowercase
+/// letter; internal `-`/`.`/digits are allowed (`INRIA-ENPC.`).
+fn is_acronym_like(value: &str) -> bool {
+    let trimmed = value.trim_matches(['.', ',', '\'', '"', ' ']);
+    let uppercase = trimmed.chars().filter(|c| c.is_ascii_uppercase()).count();
+    uppercase >= 2
+        && !trimmed.chars().any(|c| c.is_ascii_lowercase())
+        && trimmed.chars().all(|c| {
+            c.is_ascii_uppercase() || c.is_ascii_digit() || matches!(c, '-' | '.' | '&' | '\'')
+        })
+}
+
 pub fn extract_from_spans(
     tree: &[ParseNode],
     allow_not_copyrighted_prefix: bool,
@@ -197,7 +241,9 @@ pub fn extract_from_spans(
                     .iter()
                     .any(|t| detector::token_utils::is_year_like_token(t));
                 let filtered = detector::token_utils::strip_all_rights_reserved_slice(span);
-                if let Some(det) = detector::token_utils::build_copyright_from_tokens(&filtered) {
+                if span_has_strong_holder_or_year(&filtered)
+                    && let Some(det) = detector::token_utils::build_copyright_from_tokens(&filtered)
+                {
                     copyrights.push(det);
                 }
 
@@ -445,7 +491,9 @@ pub fn extract_copyrights_from_spans(
                     .any(|t| detector::token_utils::is_year_like_token(t));
 
                 let filtered = detector::token_utils::strip_all_rights_reserved_slice(span);
-                if let Some(det) = detector::token_utils::build_copyright_from_tokens(&filtered) {
+                if span_has_strong_holder_or_year(&filtered)
+                    && let Some(det) = detector::token_utils::build_copyright_from_tokens(&filtered)
+                {
                     copyrights.push(det);
                 }
 

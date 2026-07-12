@@ -7,6 +7,49 @@
 use super::*;
 
 #[test]
+fn test_prose_copyright_word_without_proper_holder_is_not_detected() {
+    // Prose that merely uses the word "copyright" as a common noun, with no
+    // proper-noun/company/year holder, must not become a copyright — mirroring
+    // ScanCode's grammar, which has no `<COPY> <NN>` production. The span
+    // fallbacks (which run when the grammar builds no node) must not sweep the
+    // surrounding common-noun prose into a copyright.
+    for prose in [
+        "Thanks to Jim Meyering for doing the copyright paperwork.",
+        "The whole point is that the copyright and the source code would then be shared.",
+        "2. E. I. du Pont de Nemours and Company copyright (ImageMagick was originally based on their code).",
+    ] {
+        let (copyrights, _holders, _authors) = detect_copyrights_from_text(prose);
+        assert!(
+            copyrights.is_empty(),
+            "prose produced copyrights: {copyrights:?} for {prose:?}"
+        );
+    }
+}
+
+#[test]
+fn test_lowercase_copyright_with_proper_holder_still_detected() {
+    // The span guard must not suppress legitimate lowercase notices that carry a
+    // real holder: proper noun, company, "by <name>", or an all-caps acronym.
+    for (text, expected) in [
+        (
+            "This program is copyrighted by the Free Software Foundation.",
+            "Free Software Foundation",
+        ),
+        ("This code is copyright CERN.", "CERN"),
+        (
+            "The following reference appears in all the copies: Scilab (c)INRIA-ENPC.",
+            "INRIA-ENPC",
+        ),
+    ] {
+        let (copyrights, _holders, _authors) = detect_copyrights_from_text(text);
+        assert!(
+            copyrights.iter().any(|c| c.copyright.contains(expected)),
+            "expected holder {expected:?} missing in {copyrights:?} for {text:?}"
+        );
+    }
+}
+
+#[test]
 fn test_bpe_tokenizer_data_lines_do_not_produce_copyrights_or_holders() {
     // Hugging Face subword-tokenizer artifacts: merges.txt BPE pairs and
     // vocab.json token:id entries embed the `©` symbol and the literal
