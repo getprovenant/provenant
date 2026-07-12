@@ -18,9 +18,9 @@ provenant serve --bind 127.0.0.1:8080
 
 By default, `provenant serve` is intended for same-host use and binds to loopback. On loopback binds, all input modes listed below are enabled.
 
-When the service is bound beyond localhost, requests may come from other machines. In that mode, local-path, remote-URL, and repository inputs are disabled unless the operator explicitly starts the service with `--allow-privileged-inputs`. Upload input remains available because the caller supplies the content to scan instead of asking the service host to read local paths, fetch URLs, or run `git fetch`.
+When the service is bound beyond localhost, requests may come from other machines. In that mode, local-path, remote-URL, and repository inputs are disabled unless the operator explicitly starts the service with `--allow-privileged-inputs`. Upload input remains available because the caller supplies the content to scan instead of asking the service host to read local paths, fetch URLs, or fetch a repository.
 
-Remote-URL and repository fetches are protected against server-side request forgery (SSRF). Regardless of bind, the service refuses to fetch targets that resolve to private, loopback, link-local (including the `169.254.169.254` cloud-metadata address), unique-local, or other non-public addresses, and it re-validates the target on every HTTP redirect. Repository URLs are restricted to the `https`, `git`, and `ssh` transports, and `git` runs with a deny-by-default transport allowlist so remote helpers such as `ext::` cannot execute. This SSRF protection stays on by default even on a loopback bind. Passing `--allow-privileged-inputs` additionally trusts the operator to reach local or private targets (for example internal mirrors), relaxing the address filter and permitting the local `file://` git transport.
+Remote-URL and repository fetches are protected against server-side request forgery (SSRF). Regardless of bind, the service refuses to fetch targets that resolve to private, loopback, link-local (including the `169.254.169.254` cloud-metadata address), unique-local, or other non-public addresses. Remote-URL fetches re-validate the target on every HTTP redirect; repository fetches do not follow redirects at all. Repositories are fetched in-process with a pure-Rust git client (no external `git` binary, so no git hooks or remote helpers such as `ext::` can execute), and repository URLs are restricted to the `https` transport. This SSRF protection stays on by default even on a loopback bind. Passing `--allow-privileged-inputs` additionally trusts the operator to reach local or private targets (for example internal mirrors), relaxing the address filter and permitting the local `file://` transport.
 
 Use `--allow-privileged-inputs` only for trusted deployments with their own network access controls:
 
@@ -33,9 +33,9 @@ provenant serve --bind 0.0.0.0:8080 --allow-privileged-inputs
 `provenant serve` has **no built-in authentication or authorization**. Any client that can reach the listening port can submit scans and read results; there are no users, API keys, or per-request credentials. The service's only built-in protections are the bind address and the privileged-input gate described above:
 
 - The default `127.0.0.1:8080` bind keeps the service reachable only from the same host.
-- Privileged inputs (local paths, remote URLs, repositories) make the host read files, fetch URLs, or run `git fetch` on behalf of the caller. They are enabled on a loopback bind and disabled on a non-loopback bind unless you pass `--allow-privileged-inputs`.
+- Privileged inputs (local paths, remote URLs, repositories) make the host read files, fetch URLs, or fetch a repository on behalf of the caller. They are enabled on a loopback bind and disabled on a non-loopback bind unless you pass `--allow-privileged-inputs`.
 
-If you bind beyond loopback, treat the deployment as unauthenticated and put it behind your own access controls — a reverse proxy that enforces authentication, a network policy, or a firewall. Enable `--allow-privileged-inputs` only for trusted deployments with their own network access controls, since it lets any reachable caller drive sensitive server-side filesystem, network, and `git` access. The bounded request, upload, remote-download, and archive-extraction sizes the service enforces are denial-of-service mitigations, not access control.
+If you bind beyond loopback, treat the deployment as unauthenticated and put it behind your own access controls — a reverse proxy that enforces authentication, a network policy, or a firewall. Enable `--allow-privileged-inputs` only for trusted deployments with their own network access controls, since it lets any reachable caller drive sensitive server-side filesystem and network access. The bounded request, upload, remote-download, and archive-extraction sizes the service enforces are denial-of-service mitigations, not access control.
 
 An optional request-credential (for example bearer-token) gate for exposed deployments is possible future work but is intentionally not implemented today.
 
@@ -99,7 +99,7 @@ That means the service can:
 - download a bounded remote HTTP(S) artifact or text resource into temporary local staging before scanning it
 - accept a bounded JSON upload payload and materialize it locally before scanning it
 
-Local-path, repository, and remote URL inputs are privileged input modes: they use the service host's filesystem, network, or `git` client on behalf of the caller. They are best suited to same-host or operator-controlled deployments where callers are already trusted to make those host-side accesses.
+Local-path, repository, and remote URL inputs are privileged input modes: they use the service host's filesystem or network on behalf of the caller. They are best suited to same-host or operator-controlled deployments where callers are already trusted to make those host-side accesses.
 
 ### Local-path input
 
@@ -126,7 +126,7 @@ curl -sS \
 
 ### Repository input
 
-Repository input is the simplest way to say “scan this repo at this ref” over the current sync API.
+Repository input is the simplest way to say “scan this repo at this ref” over the current sync API. By default `url` must be an `https` URL (`file://` is additionally permitted under `--allow-privileged-inputs`, per the [security posture](#security-posture) above). `ref` must be a branch or tag **name** — bare commit ids are rejected (a shallow fetch cannot resolve an arbitrary object id without server support). The repository is shallow-fetched (`depth=1`) at that ref.
 
 ```sh
 curl -sS \
