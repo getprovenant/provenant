@@ -44,9 +44,9 @@ use crate::scan_result_shaping::{
     prepare_filter_clue_rule_lookup, trim_preloaded_assembly_to_files,
 };
 use crate::scanner::{
-    CollectionLimits, ProcessResult, collect_paths_with_limits, collect_selected_paths_with_limits,
-    process_collected_with_memory_limit, process_collected_with_memory_limit_sequential,
-    scan_options_fingerprint,
+    CollectedPaths, CollectionLimits, ProcessResult, collect_paths_with_limits,
+    collect_selected_paths_with_limits, process_collected_with_memory_limit,
+    process_collected_with_memory_limit_sequential, scan_options_fingerprint,
 };
 use crate::utils::hash::calculate_sha256;
 
@@ -556,6 +556,8 @@ fn load_native_scan_session(
             &collection_limits,
         )
     };
+    let policy_excluded_count =
+        exclude_license_policy_file(&mut collected, request.license_policy.as_deref());
     let user_excluded_count = apply_user_path_filters_to_collected(
         &mut collected,
         Path::new(&scan_path),
@@ -566,7 +568,7 @@ fn load_native_scan_session(
     let total_files = collected.file_count();
     let total_dirs = collected.directory_count();
     let total_size = collected.total_file_bytes;
-    let excluded_count = collected.excluded_count + user_excluded_count;
+    let excluded_count = collected.excluded_count + user_excluded_count + policy_excluded_count;
     let all_collected_files = collected.files.clone();
     let ordered_file_paths: Vec<PathBuf> = collected
         .files
@@ -941,6 +943,42 @@ fn normalize_relative_scan_path(path: &Path, scan_root: &Path) -> String {
         .replace('\\', "/")
 }
 
+/// Drop the `--license-policy` file itself from the collected set when it falls
+/// inside the scan tree. The policy file lists license keys (e.g. `gpl-3.0`),
+/// which the detector would otherwise report as licenses *in that file* — a
+/// self-inflicted match that can trip the `--fail-on` gate and pollute SARIF.
+/// Matched by canonical-path equality; canonicalization is only paid for files
+/// whose basename matches the policy file, so a scan of unrelated files is
+/// unaffected. Removing a file also decrements the collection's byte total so
+/// the discovery stats stay consistent. Returns the number of files removed
+/// (0 or 1). Applies to native scans only; `--from-json` takes its input file
+/// set as authoritative.
+fn exclude_license_policy_file(collected: &mut CollectedPaths, policy: Option<&str>) -> usize {
+    let Some(policy) = policy else {
+        return 0;
+    };
+    let Ok(policy_canonical) = std::fs::canonicalize(policy) else {
+        return 0;
+    };
+    let policy_name = Path::new(policy).file_name();
+    let before = collected.files.len();
+    let mut removed_bytes: u64 = 0;
+    collected.files.retain(|(path, metadata)| {
+        if path.file_name() != policy_name {
+            return true;
+        }
+        let keep = std::fs::canonicalize(path)
+            .map(|canonical| canonical != policy_canonical)
+            .unwrap_or(true);
+        if !keep {
+            removed_bytes = removed_bytes.saturating_add(metadata.len());
+        }
+        keep
+    });
+    collected.total_file_bytes = collected.total_file_bytes.saturating_sub(removed_bytes);
+    before - collected.files.len()
+}
+
 #[cfg(test)]
 mod incremental_manifest_tests {
     use std::collections::BTreeMap;
@@ -1177,5 +1215,87 @@ mod incremental_manifest_tests {
                 .expect("paranoid compare"),
             "after re-scan the manifest must stop flagging the unchanged file"
         );
+    }
+}
+
+#[cfg(test)]
+mod license_policy_exclusion_tests {
+    use super::*;
+
+    fn meta(path: &Path) -> std::fs::Metadata {
+        std::fs::metadata(path).expect("metadata")
+    }
+
+    fn collected_of(files: &[PathBuf]) -> CollectedPaths {
+        let entries: Vec<_> = files.iter().map(|p| (p.clone(), meta(p))).collect();
+        let total_file_bytes = entries.iter().map(|(_, m)| m.len()).sum();
+        CollectedPaths {
+            files: entries,
+            directories: Vec::new(),
+            excluded_count: 0,
+            total_file_bytes,
+            collection_errors: Vec::new(),
+            limit_reached: false,
+        }
+    }
+
+    #[test]
+    fn drops_only_the_policy_file_by_canonical_path() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let root = dir.path();
+        let policy = root.join("policy.yml");
+        std::fs::write(&policy, "license_policies: []\n").expect("write policy");
+        let src = root.join("app.c");
+        std::fs::write(&src, "int main(){return 0;}\n").expect("write src");
+        // Same basename, different file: must be kept (equality is by canonical path, not name).
+        let sub = root.join("sub");
+        std::fs::create_dir(&sub).expect("mkdir");
+        let other = sub.join("policy.yml");
+        std::fs::write(&other, "not the policy\n").expect("write other");
+
+        let mut collected = collected_of(&[policy.clone(), src.clone(), other.clone()]);
+        let total_before = collected.total_file_bytes;
+        let policy_size = meta(&policy).len();
+        let removed = exclude_license_policy_file(&mut collected, policy.to_str());
+
+        assert_eq!(removed, 1);
+        let kept: Vec<_> = collected.files.iter().map(|(p, _)| p.clone()).collect();
+        assert!(!kept.contains(&policy), "the policy file must be dropped");
+        assert!(kept.contains(&src), "source files are kept");
+        assert!(
+            kept.contains(&other),
+            "a same-named file elsewhere must be kept (canonical-path match, not basename)"
+        );
+        assert_eq!(
+            collected.total_file_bytes,
+            total_before - policy_size,
+            "the byte total must drop by exactly the removed policy file's size"
+        );
+    }
+
+    #[test]
+    fn no_policy_removes_nothing() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let src = dir.path().join("app.c");
+        std::fs::write(&src, "x\n").expect("write");
+        let mut collected = collected_of(std::slice::from_ref(&src));
+        assert_eq!(exclude_license_policy_file(&mut collected, None), 0);
+        assert_eq!(collected.files.len(), 1);
+    }
+
+    #[test]
+    fn policy_outside_scan_set_removes_nothing() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let src = dir.path().join("app.c");
+        std::fs::write(&src, "x\n").expect("write");
+        let policy = dir.path().join("elsewhere-policy.yml");
+        std::fs::write(&policy, "license_policies: []\n").expect("write");
+        // `policy` exists but is not among the collected files.
+        let mut collected = collected_of(std::slice::from_ref(&src));
+        assert_eq!(
+            exclude_license_policy_file(&mut collected, policy.to_str()),
+            0
+        );
+        assert_eq!(collected.files.len(), 1);
     }
 }

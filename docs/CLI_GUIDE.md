@@ -575,6 +575,8 @@ Add `--fail-on <error|warning>` to turn the policy into a build gate. The scan e
 provenant scan --json-pp scan.json --license --license-policy policy.yml --fail-on error /path/to/project
 ```
 
+When scanning, the `--license-policy` file is automatically excluded from detection. It lists license keys (for example `gpl-3.0`), which the detector would otherwise report as licenses found _in that file_ and could self-trip the gate — so a policy file living inside the scanned tree is skipped for content detection. (With `--from-json`, the reshaped result's file set is taken as-is; nothing is re-scanned.)
+
 #### Surfacing violations in pull requests (SARIF)
 
 `--sarif <FILE>` writes the policy violations as SARIF 2.1.0, which GitHub can render as pull-request annotations and code-scanning alerts (upload it with `github/codeql-action/upload-sarif`). Each severity-carrying policy match becomes a result at the file's detection line; with no policy the run has zero results, so SARIF stays quiet unless you opt into a policy.
