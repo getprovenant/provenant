@@ -40,16 +40,16 @@ On macOS or Linux you can also `brew install getprovenant/tap/provenant`. Prefer
 
 ## Choose a Workflow
 
-| If you need to...                                      | Start here                                                         | Next doc                                                                                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Run a one-off CLI scan                                 | `provenant scan --json-pp - --license --package /path/to/repo`     | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
-| Scan explicit changed files in CI or automation        | Use `--paths-file` with one native scan root                       | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
-| Run a scan in a container                              | `docker run ghcr.io/getprovenant/provenant scan ...`               | [Container Image](#container-image)                                                        |
-| Run a scan from a GitHub Actions workflow              | `uses: getprovenant/provenant-action@v1`                           | [provenant-action](https://github.com/getprovenant/provenant-action)                       |
-| Gate CI on disallowed licenses (fail the build, SARIF) | `--license-policy policy.yml --fail-on error`                      | [CLI Guide](docs/CLI_GUIDE.md#17-i-want-policy-aware-license-review)                       |
-| Reuse a warm process through HTTP                      | `provenant serve --help`                                           | [Serve API Guide](docs/SERVE_API_GUIDE.md)                                                 |
-| Embed Provenant in a Rust application                  | Use the `provenant` library target from `provenant-cli`            | [Library Guide](docs/LIBRARY_GUIDE.md)                                                     |
-| Evaluate Provenant with an existing ScanCode workflow  | Start from Provenant's compatibility and workflow-difference notes | [Evaluating Provenant with ScanCode workflows](docs/EVALUATING_WITH_SCANCODE_WORKFLOWS.md) |
+| If you need to...                                      | Start here                                                                       | Next doc                                                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Run a one-off CLI scan                                 | `provenant scan --json-pp - --license --package /path/to/repo`                   | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
+| Scan explicit changed files in CI or automation        | Use `--paths-file` with one native scan root                                     | [CLI Guide](docs/CLI_GUIDE.md)                                                             |
+| Run a scan in a container                              | `docker run -v "$PWD:/src" ghcr.io/getprovenant/provenant scan /src --json-pp -` | [Container Image](#container-image)                                                        |
+| Run a scan from a GitHub Actions workflow              | `uses: getprovenant/provenant-action@v1`                                         | [provenant-action](https://github.com/getprovenant/provenant-action)                       |
+| Gate CI on disallowed licenses (fail the build, SARIF) | `--license-policy policy.yml --fail-on error`                                    | [CLI Guide](docs/CLI_GUIDE.md#17-i-want-policy-aware-license-review)                       |
+| Reuse a warm process through HTTP                      | `provenant serve --help`                                                         | [Serve API Guide](docs/SERVE_API_GUIDE.md)                                                 |
+| Embed Provenant in a Rust application                  | Use the `provenant` library target from `provenant-cli`                          | [Library Guide](docs/LIBRARY_GUIDE.md)                                                     |
+| Evaluate Provenant with an existing ScanCode workflow  | Start from Provenant's compatibility and workflow-difference notes               | [Evaluating Provenant with ScanCode workflows](docs/EVALUATING_WITH_SCANCODE_WORKFLOWS.md) |
 
 ## Relationship to ScanCode
 
@@ -99,7 +99,7 @@ On Windows, extract the `.zip` release and add `provenant.exe` to your `PATH`.
 
 ### Container Image
 
-Prebuilt, statically linked multi-arch images (`linux/amd64`, `linux/arm64`) are published to the GitHub Container Registry as [`ghcr.io/getprovenant/provenant`](https://github.com/getprovenant/provenant/pkgs/container/provenant), tagged by release version (major and major.minor) and `latest`:
+Prebuilt, statically linked multi-arch images (`linux/amd64`, `linux/arm64`) are published to the GitHub Container Registry as [`ghcr.io/getprovenant/provenant`](https://github.com/getprovenant/provenant/pkgs/container/provenant), tagged with the full version (e.g. `0.2.5`), the `major.minor` series (e.g. `0.2`), and `latest`:
 
 ```sh
 docker run --rm -v "$PWD:/src" ghcr.io/getprovenant/provenant:latest \
