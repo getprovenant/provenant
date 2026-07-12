@@ -26,7 +26,7 @@ cargo install provenant-cli
 provenant scan --json-pp - --license --package /path/to/repo
 ```
 
-Prefer release binaries? Download precompiled archives from [GitHub Releases](https://github.com/getprovenant/provenant/releases).
+On macOS or Linux you can also `brew install getprovenant/tap/provenant`. Prefer release binaries? Download precompiled archives from [GitHub Releases](https://github.com/getprovenant/provenant/releases).
 
 ## Why Provenant?
 
@@ -63,6 +63,14 @@ Provenant is an independent project and is not affiliated with, endorsed by, or 
 | Evaluation path    | For teams evaluating Provenant against existing compatible workflows, see the [evaluation guide](docs/EVALUATING_WITH_SCANCODE_WORKFLOWS.md) for notes and differences |
 
 ## Install
+
+### Homebrew (macOS and Linux)
+
+```sh
+brew install getprovenant/tap/provenant
+```
+
+Installs a prebuilt `provenant` binary from the [Provenant tap](https://github.com/getprovenant/homebrew-tap); covers macOS (Apple Silicon and Intel) and Linux (arm64 and x86_64).
 
 ### From Crates.io
 

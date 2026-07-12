@@ -1,0 +1,37 @@
+class Provenant < Formula
+  desc "Fast Rust code scanner for licenses, copyrights, and package provenance"
+  homepage "https://github.com/getprovenant/provenant"
+  version "@@VERSION@@"
+  license "Apache-2.0"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/getprovenant/provenant/releases/download/@@TAG@@/provenant-macos-aarch64.tar.gz"
+      sha256 "@@SHA_MACOS_ARM@@"
+    end
+    on_intel do
+      url "https://github.com/getprovenant/provenant/releases/download/@@TAG@@/provenant-macos-x86_64.tar.gz"
+      sha256 "@@SHA_MACOS_INTEL@@"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "https://github.com/getprovenant/provenant/releases/download/@@TAG@@/provenant-linux-aarch64.tar.gz"
+      sha256 "@@SHA_LINUX_ARM@@"
+    end
+    on_intel do
+      url "https://github.com/getprovenant/provenant/releases/download/@@TAG@@/provenant-linux-x86_64.tar.gz"
+      sha256 "@@SHA_LINUX_INTEL@@"
+    end
+  end
+
+  def install
+    bin.install "provenant"
+    prefix.install "LICENSE", "NOTICE", "THIRD-PARTY-NOTICES.md"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/provenant --version")
+  end
+end
