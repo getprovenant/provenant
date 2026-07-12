@@ -4,6 +4,78 @@
 use super::*;
 
 #[test]
+fn test_multi_author_by_chain_recovers_all_and_does_not_bleed() {
+    // coreutils src/tail.c header: each contribution line is "<phrase> by
+    // <Name> <email>.". All four authors must be recovered, and the first must
+    // not absorb the leading word of the next line ("Extensions").
+    let input = "\
+   Original version by Paul Rubin <phr@ocf.berkeley.edu>.
+   Extensions by David MacKenzie <djm@gnu.ai.mit.edu>.
+   tail -f for multiple files by Ian Lance Taylor <ian@airs.com>.
+   inotify back-end by Giuseppe Scrivano <gscrivano@gnu.org>.  */";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+    let authors: Vec<&str> = authors.iter().map(|a| a.author.as_str()).collect();
+
+    assert!(
+        authors.contains(&"Paul Rubin <phr@ocf.berkeley.edu>"),
+        "first author bled or missing: {authors:?}"
+    );
+    assert!(
+        authors.contains(&"David MacKenzie <djm@gnu.ai.mit.edu>"),
+        "single-word-lead-in author dropped: {authors:?}"
+    );
+    assert!(
+        authors.contains(&"Ian Lance Taylor <ian@airs.com>"),
+        "authors: {authors:?}"
+    );
+    assert!(
+        authors.contains(&"Giuseppe Scrivano <gscrivano@gnu.org>"),
+        "authors: {authors:?}"
+    );
+    assert!(
+        !authors.iter().any(|a| a.contains("Extensions")),
+        "cross-line bleed into author name: {authors:?}"
+    );
+}
+
+#[test]
+fn test_by_name_with_trailing_comma_email_recovers_author() {
+    // coreutils src/cksum_crc.c: "<phrase> by <Name>, <bare-email>." The email
+    // trails the name as a sibling token rather than being folded into the name.
+    let input = "/* Written by Q. Frank Xia, qx@math.columbia.edu.\n   Cosmetic changes and reorganization by David MacKenzie, djm@gnu.ai.mit.edu.  */";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+    assert!(
+        authors.iter().any(|a| a.author.contains("David MacKenzie")),
+        "trailing-comma-email author dropped: {authors:?}"
+    );
+}
+
+#[test]
+fn test_line_initial_by_name_email_is_not_an_author() {
+    // A bare, line-initial "by <Name> <email>" with no contribution phrase in
+    // front is intentionally left out (matches curated behavior for isolated
+    // mid-comment attributions such as posix-timers "by George Anzinger ...").
+    let input = "by George Anzinger <george@mvista.com>";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+    assert!(
+        authors.is_empty(),
+        "line-initial bare `by` should not yield an author: {authors:?}"
+    );
+}
+
+#[test]
+fn test_texinfo_comment_written_by_is_candidate_author() {
+    // doc/sort-version.texi: a `@c` texinfo comment carrying "Written by <name>"
+    // must survive the `@directive` skip and yield the author.
+    let input = "@c Written by Assaf Gordon";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+    assert!(
+        authors.iter().any(|a| a.author == "Assaf Gordon"),
+        "texinfo `@c Written by` author missed: {authors:?}"
+    );
+}
+
+#[test]
 fn test_camelcase_provider_not_author_false_positive() {
     let input = "A meter implementation is created by a MeterProvider in this system.\nA trace implementation is created by a TracerProvider in this system.";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
