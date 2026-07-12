@@ -338,3 +338,82 @@ jobs:
           artifactErrorsFailBuild: true
           generateReleaseNotes: true
           prerelease: ${{ contains(github.ref, '-') }}
+
+  bump-homebrew:
+    name: Bump Homebrew formula
+    # Runs after the release exists (needs its assets + checksums). Stable tags
+    # only: the tap tracks releases, not prereleases. Skipped on forks.
+    needs: create-release
+    if: github.repository == 'getprovenant/provenant' && !contains(github.ref, '-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out provenant (for the formula template)
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          submodules: false
+          lfs: false
+
+      # Least-privilege, short-lived token scoped to the tap repo only. Requires
+      # the provenant-release-bot GitHub App (RELEASE_BOT_APP_ID /
+      # RELEASE_BOT_PRIVATE_KEY secrets) installed on getprovenant/homebrew-tap.
+      - name: Mint a token for the tap repository
+        id: tap_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+          owner: getprovenant
+          repositories: homebrew-tap
+
+      - name: Check out the tap
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          repository: getprovenant/homebrew-tap
+          token: ${{ steps.tap_token.outputs.token }}
+          path: tap
+
+      - name: Render the formula for this release
+        env:
+          # The app token is scoped to the tap; fetch the release checksums with
+          # the workflow's own repo token instead.
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          mkdir -p shas
+          for arch in macos-aarch64 macos-x86_64 linux-aarch64 linux-x86_64; do
+            gh release download "$TAG" --repo "${{ github.repository }}" \
+              --pattern "provenant-${arch}.tar.gz.sha256" --dir shas
+          done
+          sha() { awk '{print $1}' "shas/provenant-$1.tar.gz.sha256"; }
+          sed \
+            -e "s|@@VERSION@@|${version}|g" \
+            -e "s|@@TAG@@|${TAG}|g" \
+            -e "s|@@SHA_MACOS_ARM@@|$(sha macos-aarch64)|" \
+            -e "s|@@SHA_MACOS_INTEL@@|$(sha macos-x86_64)|" \
+            -e "s|@@SHA_LINUX_ARM@@|$(sha linux-aarch64)|" \
+            -e "s|@@SHA_LINUX_INTEL@@|$(sha linux-x86_64)|" \
+            .github/homebrew/provenant.rb.tmpl > tap/Formula/provenant.rb
+          # Fail before pushing if the rendered formula is not valid Ruby or still
+          # carries an unresolved placeholder.
+          ruby -c tap/Formula/provenant.rb
+          if grep -q '@@' tap/Formula/provenant.rb; then
+            echo "Unresolved placeholder in rendered formula:" >&2
+            grep -n '@@' tap/Formula/provenant.rb >&2
+            exit 1
+          fi
+
+      - name: Commit and push to the tap
+        run: |
+          set -euo pipefail
+          cd tap
+          if git diff --quiet -- Formula/provenant.rb; then
+            echo "Formula already at ${GITHUB_REF_NAME#v}; nothing to push."
+            exit 0
+          fi
+          git config user.name "provenant-release-bot[bot]"
+          git config user.email "provenant-release-bot[bot]@users.noreply.github.com"
+          git add Formula/provenant.rb
+          git commit -m "provenant ${GITHUB_REF_NAME#v}"
+          git push

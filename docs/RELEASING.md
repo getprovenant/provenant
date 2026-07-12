@@ -81,11 +81,14 @@ That workflow:
 - Generates SHA256 checksum files
 - Creates a GitHub Release, attaches SLSA build-provenance attestation for the release archives, and uploads all generated assets
 - Publishes `provenant-cli` to crates.io via trusted publishing
-- Publishes a multi-arch container image to `ghcr.io/getprovenant/provenant`
+- Publishes a multi-arch container image to `ghcr.io/getprovenant/provenant`, with its own SLSA build-provenance attestation
+- On a stable (non-prerelease) tag, bumps the Homebrew formula in [`getprovenant/homebrew-tap`](https://github.com/getprovenant/homebrew-tap) to the new version and checksums
 
 The GitHub Release (binaries + attestation) is produced independently of the crates.io and GHCR publishes: those jobs run in parallel and depend only on the build, so a crates.io or GHCR outage does not fail or skip the Release.
 
 If the tag contains `-`, GitHub marks the release as a prerelease.
+
+The Homebrew bump renders [`.github/homebrew/provenant.rb.tmpl`](../.github/homebrew/provenant.rb.tmpl) with the release version and per-arch checksums, validates it, and commits it directly to the tap. It authenticates with the `provenant-release-bot` GitHub App (via the `RELEASE_BOT_APP_ID` and `RELEASE_BOT_PRIVATE_KEY` repository secrets); the app is installed on the tap repo with only `contents: write`.
 
 ## After Starting the Release
 
