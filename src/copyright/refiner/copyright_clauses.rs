@@ -103,6 +103,78 @@ pub(super) fn strip_leading_version_number_before_c(s: &str) -> String {
     }
 }
 
+/// Strip a trailing dangling pronoun left after a copyright/holder span ran one
+/// token into the following sentence, e.g. `Copyright © 1994 David Burren. It`
+/// or a holder `David Burren. It` (from "... David Burren. It is licensed ...",
+/// where the node stopped at the pronoun). Only a subject pronoun sitting at the
+/// very end after a sentence period is removed — no holder ends in a bare
+/// pronoun — so determiner/proper-noun continuations that ScanCode keeps
+/// (`Copyright (c) 1994-1999. The MITRE Corporation`) are untouched.
+pub(super) fn strip_trailing_dangling_pronoun(s: &str) -> String {
+    static DANGLING_PRONOUN_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?x)
+            ^(?P<prefix>.+?)\.\s+
+            (?:It|Its|This|These|Those|They|We|You|He|She|Their)
+            \s*$
+            ",
+        )
+    });
+    let trimmed = s.trim();
+    let Some(cap) = DANGLING_PRONOUN_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str().trim()).unwrap_or("");
+    if prefix.is_empty() {
+        return s.to_string();
+    }
+    prefix.to_string()
+}
+
+/// Strip a leading file/component descriptor that ends in a linking verb
+/// immediately before the copyright marker, e.g.
+/// `The ARM memcpy code (src/string/arm/memcpy.S) is Copyright (c) 2008 ...`
+/// or `src/regex/tre*) is Copyright (c) 2001-2008 Ville Laurikari`.
+///
+/// A holder name never ends in `is`/`was`/`are`, so anchoring the statement at
+/// the copyright marker mirrors ScanCode, whose grammar never folds a run of
+/// common-noun prose ahead of `<COPY>`. Two guards keep it narrow: the discarded
+/// lead must not itself contain a copyright marker, and it must carry a
+/// path/parenthetical descriptor (`(`, `)`, `/`, `*`). The path requirement is
+/// what distinguishes musl's `The <component> (<path>) is Copyright ...` from a
+/// standard notice preamble such as MPL's `Portions created by the Initial
+/// Developer are Copyright ...`, which ScanCode keeps verbatim and which has no
+/// such descriptor.
+pub(super) fn strip_leading_prose_clause_before_copyright(s: &str) -> String {
+    static LEADING_PROSE_BEFORE_COPY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?ix)
+            ^(?P<lead>.+?\b(?:is|was|are))\s+
+            (?P<copy>(?:(?:copyright|copr\.?)\b|\u{00a9}|\(c\)).*)$
+            ",
+        )
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = LEADING_PROSE_BEFORE_COPY_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let lead = cap.name("lead").map(|m| m.as_str()).unwrap_or("");
+    let copy = cap.name("copy").map(|m| m.as_str()).unwrap_or("").trim();
+    let lead_lower = lead.to_ascii_lowercase();
+    let lead_has_path_descriptor = lead.contains(['(', ')', '/', '*']);
+    if copy.is_empty()
+        || !lead_has_path_descriptor
+        || lead_lower.contains("copyright")
+        || lead_lower.contains("copr")
+        || lead.contains("(c)")
+        || lead.contains('\u{00a9}')
+    {
+        return s.to_string();
+    }
+    copy.to_string()
+}
+
 pub(super) fn strip_trailing_authors_clause(s: &str) -> String {
     static AUTHORS_CLAUSE_RE: LazyLock<Regex> =
         LazyLock::new(|| compile_static_regex(r"^(?P<prefix>.+?)\s+Authors?\b\s+(?P<rest>.+)$"));
@@ -618,6 +690,7 @@ pub(super) fn truncate_trailing_boilerplate(s: &str) -> String {
             r"(?i)\bDublin\s+\d\b",
             r"(?i)\band\s+Bob\s+Dougherty\b",
             r"(?i)\band\s+is\s+licensed\s+under\b",
+            r"(?i)\band\s+it\s+is\s+hereby\s+released\b",
             r"(?i)\bBEGIN\s+LICENSE\s+BLOCK\b",
             r"(?i)^NOTICE,\s*DISCLAIMER,\s*and\s*LICENSE\b",
             r"(?i)\bIn\s+the\s+event\s+of\b",

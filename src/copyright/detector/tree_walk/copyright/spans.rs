@@ -262,7 +262,7 @@ pub fn extract_from_spans(
                     continue;
                 }
 
-                if !skip_holder_from_span {
+                if !skip_holder_from_span && span_has_strong_holder_or_year(&filtered) {
                     let holder_span = filtered.as_slice();
                     let holder_tokens: Vec<&Token> = holder_span
                         .iter()
@@ -512,7 +512,7 @@ pub fn extract_copyrights_from_spans(
                     continue;
                 }
 
-                if !skip_holder_from_span {
+                if !skip_holder_from_span && span_has_strong_holder_or_year(&filtered) {
                     let holder_span = filtered.as_slice();
                     let holder_tokens: Vec<&Token> = holder_span
                         .iter()
