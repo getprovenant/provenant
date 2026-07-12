@@ -126,7 +126,7 @@ curl -sS \
 
 ### Repository input
 
-Repository input is the simplest way to say “scan this repo at this ref” over the current sync API. `url` must be an `https` URL, and `ref` must be a branch or tag **name** — bare commit ids are rejected (a shallow fetch cannot resolve an arbitrary object id without server support). The repository is shallow-fetched (`depth=1`) at that ref.
+Repository input is the simplest way to say “scan this repo at this ref” over the current sync API. By default `url` must be an `https` URL (`file://` is additionally permitted under `--allow-privileged-inputs`, per the [security posture](#security-posture) above). `ref` must be a branch or tag **name** — bare commit ids are rejected (a shallow fetch cannot resolve an arbitrary object id without server support). The repository is shallow-fetched (`depth=1`) at that ref.
 
 ```sh
 curl -sS \
