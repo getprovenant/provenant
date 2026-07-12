@@ -230,6 +230,72 @@ fn test_extract_copyright_information_keeps_raw_notice_and_holder_for_no_year_c_
 }
 
 #[test]
+fn test_extract_copyright_projects_source_faithful_slice_without_prose_bleed() {
+    // musl COPYRIGHT third-party notice: a `©` sign, a leading file/component
+    // descriptor, and a trailing prose sentence. The projected `copyright` must
+    // be the clean source-faithful slice (the literal `©` preserved) with the
+    // leading descriptor and trailing sentence dropped.
+    let text = "The TRE implementation (src/regex/tre.c) is Copyright \u{00a9} 2001-2008 Ville Laurikari and licensed under a 2-clause BSD license.\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("COPYRIGHT"), text, 120.0, false);
+
+    let file = builder
+        .name("COPYRIGHT".to_string())
+        .base_name("COPYRIGHT".to_string())
+        .extension(String::new())
+        .path("COPYRIGHT".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert_eq!(
+        file.copyrights.len(),
+        1,
+        "copyrights: {:?}",
+        file.copyrights
+    );
+    assert_eq!(
+        file.copyrights[0].copyright,
+        "Copyright \u{00a9} 2001-2008 Ville Laurikari"
+    );
+    assert_eq!(file.holders.len(), 1, "holders: {:?}", file.holders);
+    assert_eq!(file.holders[0].holder, "Ville Laurikari");
+}
+
+#[test]
+fn test_extract_copyright_skips_c_variable_control_flow_as_holder() {
+    // `if (c) goto ilseq;` tags the C variable `(c)` as a copyright marker; the
+    // following lowercase identifier must not be manufactured into a holder.
+    let text = "\tif (c) goto ilseq;\n\tif (c) return 0;\n";
+    let mut builder = FileInfoBuilder::default();
+
+    extract_copyright_information(&mut builder, Path::new("mbrtowc.c"), text, 120.0, false);
+
+    let file = builder
+        .name("mbrtowc.c".to_string())
+        .base_name("mbrtowc".to_string())
+        .extension(".c".to_string())
+        .path("mbrtowc.c".to_string())
+        .file_type(FileType::File)
+        .size(text.len() as u64)
+        .build()
+        .expect("builder should produce file info");
+
+    assert!(
+        file.holders.is_empty(),
+        "expected no holders from C control flow, got: {:?}",
+        file.holders
+    );
+    assert!(
+        file.copyrights.is_empty(),
+        "expected no copyrights from C control flow, got: {:?}",
+        file.copyrights
+    );
+}
+
+#[test]
 fn test_extract_copyright_information_uses_embedded_sourcemap_sources_for_parties() {
     let text = r#"{"version":3,"comment":"Copyright 1999 Wrong Corp.","sourcesContent":["/* Copyright 2024 Example Corp. */\n"]}"#;
     let mut builder = FileInfoBuilder::default();

@@ -374,6 +374,17 @@ fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
     let rendered_lower = rendered.to_ascii_lowercase();
     let fallback_lower = fallback.to_ascii_lowercase();
     let Some(start) = rendered_lower.find(&fallback_lower) else {
+        // The normalized notice differs from the source only in how the
+        // copyright sign is written — the refiner emits `(c)` while the source
+        // carries a literal `©` (or vice versa). Relocate the notice
+        // sign-insensitively and project the source-faithful raw slice, so the
+        // leading/trailing prose the refiner already trimmed is not re-attached
+        // by falling back to the whole raw line.
+        if let Some((s, len)) = locate_ignoring_copyright_sign(&rendered_lower, &fallback_lower) {
+            let base = rendered[s..s + len].trim().to_string();
+            let native_suffix = rendered[s + len..].trim();
+            return join_native_suffix(&base, native_suffix);
+        }
         if refine_copyright(rendered).as_deref() == Some(fallback) {
             return preserve_native_suffix_for_semantic_match(rendered, fallback);
         }
@@ -390,21 +401,53 @@ fn project_native_copyright_value(rendered: &str, fallback: &str) -> String {
     };
     let end = start + fallback.len();
     let suffix = rendered[end..].trim();
-    let Some(native_suffix) = normalize_native_suffix(suffix) else {
-        return fallback.to_string();
-    };
+    join_native_suffix(fallback, suffix)
+}
 
+/// Append a source-faithful trailing suffix to a projected copyright `base`,
+/// keeping only the suffix shapes `normalize_native_suffix` sanctions (bare
+/// punctuation, an `All rights reserved` tail, a confidentiality note). Any
+/// other trailing text — ordinary prose the refiner already trimmed — is
+/// dropped, so `base` is returned unchanged.
+fn join_native_suffix(base: &str, suffix: &str) -> String {
+    let Some(native_suffix) = normalize_native_suffix(suffix) else {
+        return base.to_string();
+    };
     if native_suffix.is_empty() {
-        fallback.to_string()
+        base.to_string()
     } else if native_suffix
         .chars()
         .next()
         .is_some_and(|ch| matches!(ch, '.' | ',' | ';' | ':'))
     {
-        format!("{fallback}{native_suffix}")
+        format!("{base}{native_suffix}")
     } else {
-        format!("{fallback} {native_suffix}")
+        format!("{base} {native_suffix}")
     }
+}
+
+/// Locate `fallback_lower` inside `rendered_lower` when the two differ only in
+/// how the copyright sign is spelled — the refiner emits `(c)` while the source
+/// may carry a literal `©` (or the reverse). Returns the byte offset and length
+/// of the match **within `rendered_lower`** (whose offsets align with the
+/// original mixed-case `rendered`, since ASCII case folding and the `©` glyph
+/// are byte-length preserving), so the caller can slice the source-faithful
+/// span. Returns `None` when no sign substitution locates the notice.
+fn locate_ignoring_copyright_sign(
+    rendered_lower: &str,
+    fallback_lower: &str,
+) -> Option<(usize, usize)> {
+    for candidate in [
+        fallback_lower.replace("(c)", "\u{00a9}"),
+        fallback_lower.replace('\u{00a9}', "(c)"),
+    ] {
+        if candidate != fallback_lower
+            && let Some(index) = rendered_lower.find(&candidate)
+        {
+            return Some((index, candidate.len()));
+        }
+    }
+    None
 }
 
 fn preserve_native_suffix_for_semantic_match(rendered: &str, fallback: &str) -> String {

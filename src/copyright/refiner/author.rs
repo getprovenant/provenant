@@ -38,6 +38,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     a = truncate_trailing_website_url_clause(&a);
     a = truncate_trailing_clause_after_contact(&a);
     a = strip_trailing_comma_and(&a);
+    a = strip_trailing_role_qualifier(&a);
     a = truncate_bug_reports_clause(&a);
     a = truncate_caller_specificaly_clause(&a);
     a = truncate_json_metadata_tail(&a);
@@ -814,6 +815,32 @@ fn truncate_bug_reports_clause(s: &str) -> String {
     }
 
     s.to_string()
+}
+
+/// Strip a trailing `, <role qualifier>` left dangling after the author keyword
+/// was removed, e.g. `Rich Felker, primary` (from "modified by Rich Felker,
+/// primary author and maintainer of ..."). Only a fixed allowlist of role words
+/// that follow "author"/"maintainer"/"contributor" is stripped, so ordinary
+/// `Last, First` names and name particles are untouched.
+fn strip_trailing_role_qualifier(s: &str) -> String {
+    static TRAILING_ROLE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"(?ix)^(?P<prefix>.+?),\s+
+              (?:primary|secondary|principal|lead|main|original|current|former|
+                 corresponding|sole|chief|additional|initial|co)
+              \s*$",
+        )
+        .unwrap()
+    });
+    let trimmed = s.trim();
+    let Some(cap) = TRAILING_ROLE_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str().trim()).unwrap_or("");
+    if prefix.is_empty() || !prefix.chars().any(|c| c.is_ascii_uppercase()) {
+        return s.to_string();
+    }
+    prefix.to_string()
 }
 
 fn strip_trailing_comma_and(s: &str) -> String {

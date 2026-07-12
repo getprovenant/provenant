@@ -39,6 +39,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = normalize_b_dot_angle_emails(&c);
     c = strip_nickname_quotes(&c);
     c = strip_leading_author_label_in_copyright(&c);
+    c = strip_leading_prose_clause_before_copyright(&c);
     c = strip_leading_duplicate_phrase_before_embedded_copyright(&c);
     c = strip_leading_licensed_material_of(&c);
     c = strip_leading_version_number_before_c(&c);
@@ -88,6 +89,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_trailing_paren_at_without_domain(&c);
     c = strip_trailing_inc_after_today_year_placeholder(&c);
     c = truncate_trailing_boilerplate(&c);
+    c = strip_trailing_dangling_pronoun(&c);
     c = strip_trailing_everyone_is_permitted_to_copy_clause(&c);
     c = strip_trailing_all_rights_reserved_clause(&c);
     c = strip_trailing_reserved_font_name_clause(&c);

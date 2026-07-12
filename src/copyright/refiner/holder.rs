@@ -125,6 +125,7 @@ pub(super) fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<
     h = strip_trailing_x509_dn_fields_from_holder(&h);
     h = strip_leading_js_project_version(&h);
     h = truncate_trailing_boilerplate(&h);
+    h = strip_trailing_dangling_pronoun(&h);
     h = strip_trailing_isc_after_inc(&h);
     h = strip_trailing_caps_after_company_suffix(&h);
     h = strip_trailing_javadoc_tags(&h);

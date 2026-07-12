@@ -3019,3 +3019,78 @@ fn test_refine_copyright_rejects_source_code() {
         Some("Copyright (c) 2020 Acme, Inc.".to_string())
     );
 }
+
+#[test]
+fn test_refine_copyright_strips_leading_component_descriptor_before_marker() {
+    // musl COPYRIGHT third-party notices: `The <component> (<path>) is Copyright`.
+    assert_eq!(
+        refine_copyright(
+            "The ARM memcpy code (src/string/arm/memcpy.S) is Copyright (c) 2008 The Android Open Source Project"
+        ),
+        Some("Copyright (c) 2008 The Android Open Source Project".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            "The smoothsort implementation (src/stdlib/qsort.c) is Copyright (c) 2011 Lynn Ochs"
+        ),
+        Some("Copyright (c) 2011 Lynn Ochs".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_leading_strip_preserves_notice_preamble_without_path() {
+    // The MPL preamble ends in `are` before `Copyright` but carries no path
+    // descriptor, so it must be kept verbatim (ScanCode parity).
+    assert_eq!(
+        refine_copyright(
+            "Portions created by the Initial Developer are Copyright (c) 1998 the Initial Developer"
+        ),
+        Some(
+            "Portions created by the Initial Developer are Copyright (c) 1998 the Initial Developer"
+                .to_string()
+        )
+    );
+}
+
+#[test]
+fn test_refine_copyright_strips_dangling_trailing_pronoun() {
+    assert_eq!(
+        refine_copyright("Copyright (c) 1994 David Burren. It"),
+        Some("Copyright (c) 1994 David Burren".to_string())
+    );
+    // A determiner-led proper-noun continuation is a second holder, not prose,
+    // and is kept (ScanCode parity).
+    assert_eq!(
+        refine_copyright("Copyright (c) 1994-1999. The MITRE Corporation"),
+        Some("Copyright (c) 1994-1999. The MITRE Corporation".to_string())
+    );
+}
+
+#[test]
+fn test_refine_copyright_truncates_hereby_released_prose() {
+    assert_eq!(
+        refine_copyright("Copyright (c) 1998-2014 Solar Designer and it is hereby released to the"),
+        Some("Copyright (c) 1998-2014 Solar Designer".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_strips_dangling_trailing_pronoun() {
+    assert_eq!(
+        refine_holder("David Burren. It"),
+        Some("David Burren".to_string())
+    );
+}
+
+#[test]
+fn test_refine_author_strips_trailing_role_qualifier() {
+    assert_eq!(
+        refine_author("Rich Felker, primary"),
+        Some("Rich Felker".to_string())
+    );
+    // A genuine `Last, First` name is untouched.
+    assert_eq!(
+        refine_author("Felker, Rich"),
+        Some("Felker, Rich".to_string())
+    );
+}
