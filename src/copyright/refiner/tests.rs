@@ -3125,3 +3125,26 @@ fn test_refine_copyright_keeps_ofl_project_authors_contact() {
         Some("Copyright 2001, 2002 Foo".to_string())
     );
 }
+
+#[test]
+fn test_refine_copyright_strips_contributors_file_reference() {
+    assert_eq!(
+        refine_copyright(
+            "Copyright (C) 2015 Audrius Butkevicius and Contributors (see the CONTRIBUTORS file)."
+        ),
+        Some("Copyright (C) 2015 Audrius Butkevicius and Contributors".to_string())
+    );
+    // Existing unparenthesized AUTHORS/CREDITS references still strip.
+    assert_eq!(
+        refine_copyright("Copyright (c) 2018 Foo Bar see authors file"),
+        Some("Copyright (c) 2018 Foo Bar".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_strips_contributors_file_reference() {
+    assert_eq!(
+        refine_holder("Audrius Butkevicius and Contributors (see the CONTRIBUTORS file)"),
+        Some("Audrius Butkevicius and Contributors".to_string())
+    );
+}

@@ -153,6 +153,7 @@ pub(super) fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<
 
     h = remove_some_extra_words_and_punct(&h);
     h = strip_trailing_incomplete_as_represented_by(&h);
+    h = strip_trailing_credit_file_reference_in_holder(&h);
     h = strip_trailing_contributor_clause(&h);
     h = strip_trailing_contact_clause(&h);
     h = strip_trailing_holder_prose_clause(&h);

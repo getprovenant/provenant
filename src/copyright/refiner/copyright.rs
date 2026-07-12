@@ -512,33 +512,62 @@ pub(super) fn strip_trailing_heavily_based_clause(s: &str) -> String {
     s.to_string()
 }
 
+/// Trailing "see/refer to/consult (the) <authors|credits|contributors> file"
+/// reference, optionally parenthesized, e.g. `... and Contributors (see the
+/// CONTRIBUTORS file).`. Captures the statement prefix before the reference.
+static CREDIT_FILE_REFERENCE_TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    compile_static_regex(
+        r"(?ix)
+        ^(?P<prefix>.+?)
+        \s*\(?\s*
+        (?:see|refer\s+to|consult)\s+
+        (?:the\s+)?
+        (?:authors?|credits?|contributors?)\s+file
+        \s*\)?\.?\s*$
+        ",
+    )
+});
+
 pub(super) fn strip_trailing_credit_file_reference_clause(s: &str) -> String {
     let trimmed = s.trim();
     let lower = trimmed.to_ascii_lowercase();
     if !(lower.starts_with("copyright") || lower.starts_with("(c)")) {
         return s.to_string();
     }
-
-    for marker in [
-        " see authors file",
-        " see author file",
-        " see credits file",
-        " see credit file",
-        " refer to authors file",
-        " refer to credits file",
-        " consult authors file",
-        " consult credits file",
-    ] {
-        if let Some(index) = lower.find(marker) {
-            let prefix = trimmed[..index]
-                .trim_end_matches(&[',', ';', ':', ' '][..])
-                .trim();
-            if prefix.chars().any(|ch| ch.is_ascii_digit()) {
-                return prefix.to_string();
-            }
-        }
+    let Some(cap) = CREDIT_FILE_REFERENCE_TAIL_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap
+        .name("prefix")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim_end_matches(&[',', ';', ':', ' '][..])
+        .trim();
+    if prefix.chars().any(|ch| ch.is_ascii_digit()) {
+        return prefix.to_string();
     }
+    s.to_string()
+}
 
+/// Holder-side counterpart of [`strip_trailing_credit_file_reference_clause`]:
+/// strips a trailing `(see the CONTRIBUTORS file)`-style reference from a holder
+/// such as `Audrius Butkevicius and Contributors (see the CONTRIBUTORS file)`.
+/// Guarded on the prefix looking like a real holder rather than a copyright
+/// statement, since a holder carries no `Copyright`/`(c)` marker.
+pub(super) fn strip_trailing_credit_file_reference_in_holder(s: &str) -> String {
+    let trimmed = s.trim();
+    let Some(cap) = CREDIT_FILE_REFERENCE_TAIL_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap
+        .name("prefix")
+        .map(|m| m.as_str())
+        .unwrap_or("")
+        .trim_end_matches(&[',', ';', ':', ' '][..])
+        .trim();
+    if !prefix.is_empty() && prefix_has_holder_words(prefix) {
+        return prefix.to_string();
+    }
     s.to_string()
 }
 
