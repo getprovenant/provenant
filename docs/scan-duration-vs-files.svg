@@ -248,6 +248,9 @@ ScanCode: 54.22s</title></rect>
     <rect x="462.40" y="443.56" width="8" height="8" fill="#d97706" rx="1.5"><title>ReactiveCocoa/ReactiveCocoa @ f2d9bd5
 Files: 216
 ScanCode: 49.57s</title></rect>
+    <rect x="467.92" y="412.86" width="8" height="8" fill="#d97706" rx="1.5"><title>tonsky/FiraCode @ 727682c
+Files: 234
+ScanCode: 94.92s</title></rect>
     <rect x="469.95" y="423.83" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/boost @ 4f1cbeb
 Files: 241
 ScanCode: 75.26s</title></rect>
@@ -982,6 +985,9 @@ Provenant: 5.17s</title></circle>
     <circle cx="466.40" cy="559.28" r="4.5" fill="#2563eb"><title>ReactiveCocoa/ReactiveCocoa @ f2d9bd5
 Files: 216
 Provenant: 4.66s</title></circle>
+    <circle cx="471.92" cy="559.38" r="4.5" fill="#2563eb"><title>tonsky/FiraCode @ 727682c
+Files: 234
+Provenant: 4.65s</title></circle>
     <circle cx="473.95" cy="554.10" r="4.5" fill="#2563eb"><title>boostorg/boost @ 4f1cbeb
 Files: 241
 Provenant: 5.20s</title></circle>

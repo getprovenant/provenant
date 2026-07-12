@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 244 of 244 recorded runs, with a **19.5× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 245 of 245 recorded runs, with a **19.5× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -893,7 +893,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Files: 2,660
 - Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.12s`; ScanCode `100.58s`
-- Clean copyright, holder, and author extraction across musl's `COPYRIGHT` third-party-notice roster: statements anchor at the copyright marker with no leading file-descriptor (`Copyright (c) 2008 The Android Open Source Project`, not `The ARM memcpy code (…) is Copyright …`) or trailing license-prose bleed, the source `©` glyph is preserved (`Copyright © 1994 David Burren`), and C control flow such as `if (c) goto ilseq;` no longer manufactures a holder — holders match exactly (`148` vs `148`) and the bare word `BSD` surfaces as a `bsd-new` clue rather than a detection, with no spurious `pkg:autotools/input` package invented from the hand-written `configure` script; ScanCode keeps a marginal author edge (`13` vs `12`) from one multi-contributor `by`-chain that Provenant reports as a single merged attribution
+- Copyright rendering preserves the literal `©` glyph (`Copyright © 1994 David Burren`) where ScanCode normalizes it to `(c)`; the bare word `BSD` in musl's `COPYRIGHT` roster is reported as a `bsd-new` license clue where ScanCode emits none; and the hand-written `configure` script yields no package where ScanCode names a degenerate `pkg:autotools/input` after the scan-root directory. ScanCode holds a marginal author edge (`13` vs `12`) from one multi-contributor `by`-chain Provenant reports as a single merged attribution
 
 ##### [ImageMagick/ImageMagick @ 55e52c4](https://github.com/ImageMagick/ImageMagick/tree/55e52c44752eec35d893f4edbf7f7fa2dbe247ce) — **37.07× faster**
 
@@ -1125,6 +1125,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.55s`; ScanCode `103.73s`
 - Matched Cargo workspace package and dependency coverage (`12` vs `12` packages, `83` vs `83` dependencies) while preserving collective manifest-author names like `Tokio Contributors <team@tokio.rs>`, plus cleaner rejection of ScanCode's weak `(c)`-plus-URL copyright and holder noise and normalized docs.rs URL variants
+
+##### [tonsky/FiraCode @ 727682c](https://github.com/tonsky/FiraCode/tree/727682c24c33fb0bbc7ab0ed9b7a8d0d9745a198) — **20.41× faster**
+
+- Files: 234
+- Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.65s`; ScanCode `94.92s`
+- Author extraction reports only the real author (`Nikita Prokopov <niki@tonsky.me>`) against ScanCode's `30`, which include OpenType glyph and feature names (`greater_equal_end.seq`, `greater_greater_hyphen_start.seq`, …) and a `package.json` author value with the manifest's `license`/`bugs`/`url` fields bled in; package extraction is broader (`5` vs `3` file-level `package_data`, `6` more dependencies) and the SIL OFL holder keeps its `Authors (https://…)` contact in the repo-root `LICENSE`. ScanCode reports cleaner copyright holders in a `.glyphs`-internal OFL notice and the generated `googlefonts-qa/*.checks.md` QA reports, where Provenant retains a `Project Authors (git url) …` prose fragment
 
 ##### [xiph/opus @ 22244de](https://github.com/xiph/opus/tree/22244de5a79bd1d6d623c32e72bf1954b56235be) — **15.24× faster**
 
