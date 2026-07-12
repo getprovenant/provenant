@@ -407,20 +407,40 @@ fn is_noncopyright_at_directive_line(prepared: &str) -> bool {
         && !hints::has_year(trimmed)
         && !trimmed.contains("://")
         && !has_copyright_indicators(trimmed)
-        && !has_author_attribution(trimmed)
+        && !is_authorship_directive_line(trimmed)
+}
+
+/// Whether an `@`-directive line is itself an authorship directive whose content
+/// must survive the structural-directive skip in
+/// [`is_noncopyright_at_directive_line`].
+///
+/// Only the `@author` directive and a texinfo comment directive (`@c` /
+/// `@comment`) carrying an attribution phrase qualify — e.g. the texinfo
+/// `@c Written by <name>`. A structural directive such as
+/// `@param formatter Developed by John Smith` merely *mentions* an attribution
+/// phrase in its prose and must stay filtered, so the phrase check is gated on
+/// the directive being a comment/author directive rather than applied to any
+/// `@` line.
+fn is_authorship_directive_line(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    if contains_ascii_ci(trimmed.as_bytes(), b"@author") {
+        return true;
+    }
+    let directive: String = trimmed
+        .strip_prefix('@')
+        .unwrap_or("")
+        .chars()
+        .take_while(|c| c.is_ascii_alphabetic())
+        .collect();
+    (directive.eq_ignore_ascii_case("c") || directive.eq_ignore_ascii_case("comment"))
+        && has_author_attribution(trimmed)
 }
 
 /// Detect an explicit authorship attribution phrase (`written by`, `authored
-/// by`, `maintained by`, `developed by`, `contributed by`, `@author`).
-///
-/// Texinfo comment directives such as `@c Written by <name>` carry real author
-/// attribution and must survive the `@directive` skip in
-/// [`is_noncopyright_at_directive_line`], unlike structural directives
-/// (`@node`, `@chapter`, ...).
+/// by`, `maintained by`, `developed by`, `contributed by`).
 fn has_author_attribution(line: &str) -> bool {
     let bytes = line.as_bytes();
-    contains_ascii_ci(bytes, b"@author")
-        || contains_ascii_ci(bytes, b"written by")
+    contains_ascii_ci(bytes, b"written by")
         || contains_ascii_ci(bytes, b"authored by")
         || contains_ascii_ci(bytes, b"maintained by")
         || contains_ascii_ci(bytes, b"developed by")

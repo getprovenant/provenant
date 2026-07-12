@@ -76,6 +76,19 @@ fn test_texinfo_comment_written_by_is_candidate_author() {
 }
 
 #[test]
+fn test_structural_at_directive_mentioning_by_phrase_is_not_author() {
+    // A structural directive (`@param`, `@brief`, ...) that merely mentions an
+    // attribution phrase in its prose must stay filtered — only the `@c`/
+    // `@comment` texinfo directive and `@author` carry real authorship.
+    let input = "@param formatter Developed by John Smith";
+    let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
+    assert!(
+        authors.is_empty(),
+        "structural @param directive leaked an author: {authors:?}"
+    );
+}
+
+#[test]
 fn test_camelcase_provider_not_author_false_positive() {
     let input = "A meter implementation is created by a MeterProvider in this system.\nA trace implementation is created by a TracerProvider in this system.";
     let (_copyrights, _holders, authors) = detect_copyrights_from_text(input);
