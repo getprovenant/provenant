@@ -7,7 +7,7 @@ This guide documents the maintainer release flow for `provenant`.
 Releases are split into two phases:
 
 1. local release preparation with `release.sh`, which refreshes the embedded license data, runs the release-time sync checks, prepares the release commit, and pushes the release tag
-2. tag-triggered GitHub Actions publication, which publishes `provenant-cli` to crates.io via trusted publishing and creates the GitHub Release assets
+2. tag-triggered GitHub Actions publication, which creates the GitHub Release assets, publishes `provenant-cli` to crates.io via trusted publishing, and pushes a container image to GHCR
 
 The published crate name is `provenant-cli`, while the installed binary and product name remain `provenant` / Provenant.
 
@@ -75,12 +75,15 @@ Pushing the `vX.Y.Z` tag triggers `.github/workflows/release.yml`.
 That workflow:
 
 - verifies release invariants on the tagged commit, including version/tag alignment and crates.io dry-run packaging
-- Builds release binaries for Linux, macOS (Intel and Apple Silicon), and Windows
-- publishes `provenant-cli` to crates.io via trusted publishing
 - Re-runs embedded license index verification as a final release-time safeguard before building artifacts
+- Builds release binaries for Linux, macOS (Intel and Apple Silicon), and Windows
 - Packages each build under the `provenant-<platform>-<arch>` naming scheme
 - Generates SHA256 checksum files
-- Creates a GitHub Release and uploads all generated assets
+- Creates a GitHub Release, attaches SLSA build-provenance attestation for the release archives, and uploads all generated assets
+- Publishes `provenant-cli` to crates.io via trusted publishing
+- Publishes a multi-arch container image to `ghcr.io/getprovenant/provenant`
+
+The GitHub Release (binaries + attestation) is produced independently of the crates.io and GHCR publishes: those jobs run in parallel and depend only on the build, so a crates.io or GHCR outage does not fail or skip the Release.
 
 If the tag contains `-`, GitHub marks the release as a prerelease.
 
@@ -90,11 +93,11 @@ Monitor the [GitHub Actions release workflow](https://github.com/getprovenant/pr
 
 Verify:
 
-- The crates.io publish job in the GitHub Actions release workflow succeeded
 - The tag and release commit are present on the remote
 - The GitHub Release contains all expected Linux, macOS (Intel and Apple Silicon), and Windows archives and checksum files
+- The crates.io publish job succeeded and the container image was pushed to GHCR
 
-If the GitHub Release asset step fails after crates.io publish has already succeeded, rerun only the failed downstream jobs. Do not rerun the successful crates.io publish job for the same version.
+The crates.io and GHCR publish jobs are independent of the GitHub Release: if one fails, rerun only that failed job for the same version. The Release itself does not depend on them, so a publish failure never requires re-cutting the Release.
 
 ## Common Failure Points
 

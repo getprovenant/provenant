@@ -102,7 +102,7 @@ verify the target key resolves in the index).
 ### Initialization Flow
 
 ```text
-main.rs::init_license_engine()
+scan_runtime::init_license_engine()
     │
     ├── No --license-dataset-path specified (default)
     │       ↓
@@ -112,7 +112,7 @@ main.rs::init_license_engine()
     │       ├── Yes → Load CachedLicenseIndex from rkyv cache
     │       │         → Convert to LicenseIndex
     │       └── No  → Decompress embedded artifact (zstd)
-    │                 → Deserialize LoadedRule/LoadedLicense (MessagePack)
+    │                 → Deserialize LoadedRule/LoadedLicense (postcard)
     │                 → Build LicenseIndex
     │                 → Save rkyv cache with fingerprint prefix
     │
@@ -140,7 +140,7 @@ main.rs::init_license_engine()
 The binary includes a pre-built license index embedded at compile time:
 
 - **Location**: `resources/license_detection/license_index.zst`
-- **Format**: MessagePack serialization, zstd compression
+- **Format**: postcard serialization, zstd compression
 - **Contents**: sorted `LoadedRule` and `LoadedLicense` values derived from the ScanCode rules dataset
 
 ### Loader/Build Stage Separation
@@ -156,7 +156,7 @@ The loading process is split into two distinct stages:
 - Fail fast if an ignore id no longer exists upstream, an overlay-reason entry is stale or missing, or an overlay file becomes identical to upstream data
 - Canonicalize `LicenseRef-scancode-*` SPDX keys so each mirrors its license key (see the `LicenseRef-*` namespace convention above)
 - Sort embedded rules and licenses deterministically
-- Serialize the embedded loader snapshot with MessagePack
+- Serialize the embedded loader snapshot with postcard
 - Compress the serialized bytes with zstd
 
 **Build Stage** (runtime):
@@ -212,25 +212,28 @@ The orchestrator that coordinates the detection pipeline. Its durable responsibi
 
 Pre-computed data structures for efficient matching:
 
-| Field                   | Purpose                                      |
-| ----------------------- | -------------------------------------------- |
-| `dictionary`            | Token → ID mapping                           |
-| `len_legalese`          | Count of high-value legalese tokens          |
-| `digit_only_tids`       | Set of digit-only token IDs                  |
-| `rules_by_rid`          | Rules indexed by ID                          |
-| `tids_by_rid`           | Token ID sequences per rule                  |
-| `rid_by_hash`           | SHA1 hash → rule ID (exact match)            |
-| `rules_automaton`       | Aho-Corasick automaton for all rules         |
-| `unknown_automaton`     | Automaton for unknown license detection      |
-| `sets_by_rid`           | Unique token sets per rule                   |
-| `msets_by_rid`          | Token frequency maps per rule                |
-| `high_postings_by_rid`  | Inverted index for candidate selection       |
-| `regular_rids`          | Set of regular (non-false-positive) rule IDs |
-| `false_positive_rids`   | Set of false-positive rule IDs               |
-| `approx_matchable_rids` | Set of approx-matchable rule IDs             |
-| `licenses_by_key`       | ScanCode key → License mapping               |
-| `rid_by_spdx_key`       | SPDX license key → rule ID                   |
-| `unknown_spdx_rid`      | Rule ID for unknown-spdx fallback            |
+Representative fields (see the `LicenseIndex` struct for the full set):
+
+| Field                         | Purpose                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `dictionary`                  | Token → ID mapping                                 |
+| `len_legalese`                | Count of high-value legalese tokens                |
+| `rules_by_rid`                | Rules indexed by ID                                |
+| `tids_by_rid`                 | Token ID sequences per rule                        |
+| `rid_by_hash`                 | SHA1 hash → rule ID (exact match)                  |
+| `rules_automaton`             | Aho-Corasick automaton for all rules               |
+| `unknown_automaton`           | Automaton for unknown license detection            |
+| `sets_by_rid`                 | Unique token sets per rule                         |
+| `msets_by_rid`                | Token frequency maps per rule                      |
+| `high_sets_by_rid`            | High/legalese-token sets per rule                  |
+| `high_bitsets_by_rid`         | Bitset form of the high-token sets per rule        |
+| `high_postings_by_rid`        | Inverted index for candidate selection             |
+| `rids_by_high_tid`            | Rules containing each high token                   |
+| `rule_metadata_by_identifier` | Rule metadata keyed by rule identifier             |
+| `licenses_by_key`             | ScanCode key → License mapping                     |
+| `rid_by_spdx_key`             | SPDX license key → rule ID                         |
+| `unknown_spdx_rid`            | Rule ID for unknown-spdx fallback                  |
+| `spdx_license_list_version`   | SPDX license-list version the index was built from |
 
 ### Query
 

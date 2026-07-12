@@ -548,7 +548,7 @@ Provenant separates internal domain types from the ScanCode-compatible JSON outp
 
 - **Internal types** (`src/models/`) carry domain invariants (e.g., `LineNumber` wraps `NonZeroUsize`, `Sha1Digest` validates hex length). They retain serde only for cache round-tripping and `--from-json` deserialization.
 - **Output schema types** (`src/output_schema/`) are dedicated serde-enabled types that define the public JSON schema: field renames, conditional omission, type widening (`LineNumber` → `u64`, digests → `Option<String>`), and the `FileInfo` info-surface gating logic.
-- **Conversion boundary** in `main.rs` converts `models::Output` → `output_schema::Output` before serialization. The `--from-json` path deserializes into output schema types and converts back via `TryFrom`.
+- **Conversion boundary** in `src/cli/run/mod.rs` converts `models::Output` → `output_schema::Output` before serialization. The `--from-json` path deserializes into output schema types and converts back via `TryFrom`.
 
 See [ADR 0008: Output Schema Type Separation](adr/0008-output-schema-separation.md) for the full decision record.
 
@@ -611,7 +611,7 @@ Centralized `ScanProgress` struct manages mode-aware progress output via `indica
 4. **Assembly and output phases**: Phase messages/spinners with timing capture.
 5. **Scan summary**: Files/sec, bytes/sec, error count, initial/final counts (including sizes), package assembly counts, ScanCode-style scan timestamps, and total wall time; the full per-phase timing breakdown is shown only under `--verbose`.
 
-Verbosity behavior is implemented in `src/progress.rs` and wired through `src/main.rs`: quiet suppresses stderr output, default shows progress/summary, and verbose stays detailed without flooding redirected logs by limiting successful per-file path output to TTY runs while still surfacing per-file warnings/errors in non-TTY environments.
+Verbosity behavior is implemented in `src/progress.rs` and wired through `src/cli/run/mod.rs`: quiet suppresses stderr output, default shows progress/summary, and verbose stays detailed without flooding redirected logs by limiting successful per-file path output to TTY runs while still surfacing per-file warnings/errors in non-TTY environments.
 
 Logging integration uses `indicatif-log-bridge` for startup and global warnings, while parser and other file-scoped scan failures are attached to `FileInfo.scan_diagnostics` in the scanner process pipeline under `src/scanner/process/` (primarily `pipeline.rs`). That keeps serialized output, CI logs, and the quiet/default/verbose progress modes aligned: default mode shows concise failing paths, verbose mode shows the underlying per-file error details.
 
@@ -636,7 +636,7 @@ The binary ships with a built-in license index embedded at compile time. This el
 - **Embedded artifact**: `resources/license_detection/license_index.zst`
 - **Embedded build policy**: compile-time-bundled from `resources/license_detection/index_build_policy.toml`
 - **Embedded overlay files**: compile-time-bundled from `resources/license_detection/overlay/`
-- **Format**: MessagePack-serialized, zstd-compressed `EmbeddedLoaderSnapshot` data
+- **Format**: postcard-serialized, zstd-compressed `EmbeddedLoaderSnapshot` data
 - **Contents**: Sorted `LoadedRule` and `LoadedLicense` values derived from the ScanCode rules dataset
 - **Structured provenance surface**: `headers[0].extra_data.license_index_provenance`
 - **Exported custom dataset root**: `manifest.json` + `rules/` + `licenses/`
