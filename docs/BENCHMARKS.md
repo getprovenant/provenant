@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 243 of 243 recorded runs, with a **19.4× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 244 of 244 recorded runs, with a **19.5× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -887,6 +887,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-29 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `9.96s`; ScanCode `354.17s`
 - Cleaner URL extraction that rejects `{account}`-templated host placeholders ScanCode emits as navigable URLs, and author capture that drops the README maintainer prose ScanCode records as a party, on otherwise matched Go module package, dependency, and declared-license coverage — the assembled `pkg:golang/github.com/hashicorp/terraform` resolves the repo-root `LICENSE` to the same `bsl-1.1 AND mpl-2.0` ScanCode reports
+
+##### [ifduyue/musl @ b306b16](https://github.com/ifduyue/musl/tree/b306b16af15c89a04d8e0c55cac2dadbeb39c083) — **19.65× faster**
+
+- Files: 2,660
+- Run context: 2026-07-12 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.12s`; ScanCode `100.58s`
+- Clean copyright, holder, and author extraction across musl's `COPYRIGHT` third-party-notice roster: statements anchor at the copyright marker with no leading file-descriptor (`Copyright (c) 2008 The Android Open Source Project`, not `The ARM memcpy code (…) is Copyright …`) or trailing license-prose bleed, the source `©` glyph is preserved (`Copyright © 1994 David Burren`), and C control flow such as `if (c) goto ilseq;` no longer manufactures a holder — holders match exactly (`148` vs `148`) and the bare word `BSD` surfaces as a `bsd-new` clue rather than a detection, with no spurious `pkg:autotools/input` package invented from the hand-written `configure` script; ScanCode keeps a marginal author edge (`13` vs `12`) from one multi-contributor `by`-chain that Provenant reports as a single merged attribution
 
 ##### [ImageMagick/ImageMagick @ 55e52c4](https://github.com/ImageMagick/ImageMagick/tree/55e52c44752eec35d893f4edbf7f7fa2dbe247ce) — **37.07× faster**
 
