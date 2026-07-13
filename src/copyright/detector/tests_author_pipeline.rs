@@ -928,3 +928,63 @@ fn test_markup_authors_section_collective_author_detected() {
         "authors: {authors:?}"
     );
 }
+
+#[test]
+fn test_second_by_chain_splits_into_separate_author() {
+    // musl COPYRIGHT: a single coordinated sentence with two `by` clauses.
+    // ScanCode makes each distinct `by` clause its own author, so both names
+    // must be recovered as separate authors (previously John Spencer was
+    // dropped when the second clause was left unattached).
+    let input = "The powerpc port was also originally written by Richard \
+Pennington, and later supplemented and integrated by John Spencer. It is \
+licensed under the standard MIT terms.\n";
+
+    let (_c, _h, authors) = detect_copyrights_from_text(input);
+    let values: Vec<&str> = authors.iter().map(|a| a.author.as_str()).collect();
+
+    assert!(
+        values.contains(&"Richard Pennington"),
+        "first by-clause author missing: {values:?}"
+    );
+    assert!(
+        values.contains(&"John Spencer"),
+        "second by-clause author missing: {values:?}"
+    );
+}
+
+#[test]
+fn test_second_by_chain_splits_across_wrapped_lines() {
+    // Same coordination as above but line-wrapped mid-name, as in the real
+    // musl COPYRIGHT file.
+    let input = "The powerpc port was also originally written by Richard\n\
+Pennington, and later supplemented and integrated by John Spencer. It is licensed\n\
+under the standard MIT terms.\n";
+
+    let (_c, _h, authors) = detect_copyrights_from_text(input);
+    let values: Vec<&str> = authors.iter().map(|a| a.author.as_str()).collect();
+
+    assert!(
+        values.contains(&"Richard Pennington") && values.contains(&"John Spencer"),
+        "wrapped two-author split failed: {values:?}"
+    );
+}
+
+#[test]
+fn test_single_by_conjoined_name_list_stays_one_author() {
+    // A single `by` clause with a conjoined name list must remain one author
+    // string (matching the curated multi-name author expectations); only a
+    // *second* `by` clause introduces a new author.
+    let input = "/* Written by David Ihnat, David MacKenzie, and Jim Meyering.  */\n";
+
+    let (_c, _h, authors) = detect_copyrights_from_text(input);
+    let values: Vec<&str> = authors.iter().map(|a| a.author.as_str()).collect();
+
+    assert!(
+        !values.contains(&"David MacKenzie") && !values.contains(&"Jim Meyering"),
+        "single-by conjoined list was wrongly split: {values:?}"
+    );
+    assert!(
+        values.iter().any(|a| a.contains("David Ihnat")),
+        "primary author missing: {values:?}"
+    );
+}

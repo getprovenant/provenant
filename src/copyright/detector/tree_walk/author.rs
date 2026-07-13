@@ -262,6 +262,92 @@ fn is_author_tail_preposition(token: &Token) -> bool {
         )
 }
 
+/// Capture additional coordinated `by <Name>` chains that follow a `by`-style
+/// AUTHOR node on the same physical line, e.g. musl's
+/// "written by Richard Pennington, and later ... integrated by John Spencer".
+///
+/// This mirrors ScanCode's `AUTHOR: {<BY> <NAME-EMAIL>+}`, which makes each
+/// distinct `by` clause its own author. It deliberately fires only on a *second*
+/// `by` clause introduced by a coordinating conjunction (`,`/`and`) so that a
+/// single-`by` conjoined name list ("by A, B and C") is left as one author
+/// string, matching the curated multi-name author expectations. Returns the new
+/// authors plus the number of trailing sibling nodes consumed (relative to
+/// `author_idx`).
+pub(super) fn extract_conjoined_by_authors(
+    tree: &[ParseNode],
+    author_idx: usize,
+) -> (Vec<AuthorDetection>, usize) {
+    let node = &tree[author_idx];
+    let node_leaves = detector::token_utils::collect_all_leaves(node);
+    // Only extend genuine `by`-style author clauses, and anchor to the line of
+    // the author node's last leaf so the whole coordination stays one sentence.
+    if !node_leaves.iter().any(|t| t.tag == PosTag::By) {
+        return (Vec::new(), 0);
+    }
+    let Some(anchor_line) = node_leaves.last().map(|t| t.start_line) else {
+        return (Vec::new(), 0);
+    };
+
+    let mut authors: Vec<AuthorDetection> = Vec::new();
+    let mut consumed = 0usize;
+    let mut seen_conjunction = false;
+
+    let mut j = author_idx + 1;
+    while j < tree.len() {
+        match &tree[j] {
+            ParseNode::Leaf(tok) if tok.start_line == anchor_line => match tok.tag {
+                PosTag::Cc => {
+                    if tok.value == "and" || tok.value == "," {
+                        seen_conjunction = true;
+                    }
+                    consumed = j - author_idx;
+                    j += 1;
+                }
+                // Connective prose inside the coordinated clause
+                // ("later supplemented and integrated").
+                PosTag::Nn | PosTag::Junk | PosTag::To => {
+                    consumed = j - author_idx;
+                    j += 1;
+                }
+                PosTag::By => {
+                    if !seen_conjunction {
+                        break;
+                    }
+                    let name_idx = j + 1;
+                    match tree.get(name_idx).and_then(|n| n.label()) {
+                        Some(
+                            TreeLabel::Name
+                            | TreeLabel::NameEmail
+                            | TreeLabel::NameYear
+                            | TreeLabel::NameCaps,
+                        ) => {
+                            let name_leaves = detector::token_utils::collect_filtered_leaves(
+                                &tree[name_idx],
+                                &[TreeLabel::YrRange, TreeLabel::YrAnd],
+                                detector::NON_AUTHOR_POS_TAGS,
+                            );
+                            if let Some(det) =
+                                detector::token_utils::build_author_from_tokens(&name_leaves)
+                            {
+                                authors.push(det);
+                            }
+                            // A further chain needs its own coordinating conjunction.
+                            seen_conjunction = false;
+                            consumed = name_idx - author_idx;
+                            j = name_idx + 1;
+                        }
+                        _ => break,
+                    }
+                }
+                _ => break,
+            },
+            _ => break,
+        }
+    }
+
+    (authors, consumed)
+}
+
 pub(super) fn try_extract_by_name_email_author(
     tree: &[ParseNode],
     idx: usize,
