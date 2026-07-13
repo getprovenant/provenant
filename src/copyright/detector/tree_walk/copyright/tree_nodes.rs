@@ -730,6 +730,11 @@ pub fn extract_from_tree_nodes(
                 i += skip;
             } else if let Some(det) = detector::token_utils::build_author_from_node(node) {
                 authors.push(det);
+                let (extra, extra_skip) = author::extract_conjoined_by_authors(tree, i);
+                if !extra.is_empty() {
+                    authors.extend(extra);
+                    i += extra_skip;
+                }
             }
         } else if let ParseNode::Leaf(token) = node
             && token.tag == PosTag::Copy
