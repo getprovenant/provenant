@@ -32,6 +32,19 @@ pub fn find_emails(text: &str, config: &DetectionConfig) -> Vec<EmailDetection> 
         let normalized_line = line.replace("\\r\\n", "\\n").replace("\\r", "\\n");
         for segment in normalized_line.split("\\n") {
             for matched in EMAILS_REGEX.find_iter(segment) {
+                // Skip SSH remotes such as `git@github.com:org/repo.git` and
+                // `user@host:port` URL authorities. Only a `:` followed by a
+                // path segment (contains `/`) or a bare numeric port qualifies —
+                // so structured text like `owner=admin@corp.com:active` keeps its
+                // email.
+                if let Some(after_colon) = segment[matched.end()..].strip_prefix(':') {
+                    let suffix = after_colon.split_whitespace().next().unwrap_or("");
+                    let is_ssh_path = suffix.contains('/');
+                    let is_port = !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit());
+                    if is_ssh_path || is_port {
+                        continue;
+                    }
+                }
                 let email = matched.as_str().to_lowercase();
                 if !is_good_email_domain(&email) {
                     continue;
@@ -66,4 +79,39 @@ pub fn find_emails(text: &str, config: &DetectionConfig) -> Vec<EmailDetection> 
     }
 
     detections
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn emails(text: &str) -> Vec<String> {
+        find_emails(text, &DetectionConfig::default())
+            .into_iter()
+            .map(|d| d.email)
+            .collect()
+    }
+
+    #[test]
+    fn test_find_emails_skips_ssh_remote_and_authority() {
+        // `git@github.com:org/repo.git` SSH remote (colon + path) is not an email.
+        assert!(emails("clone: git clone git@github.com:tonsky/FiraCode.git").is_empty());
+        // `user@host:port` URL authority (colon + numeric port) is not an email.
+        assert!(emails("connect admin@dbhost.io:5432 now").is_empty());
+        // A real email followed by a colon + non-path text is still captured.
+        assert_eq!(
+            emails("owner=admin@corp.com:active"),
+            vec!["admin@corp.com"]
+        );
+        // A real email followed by a colon and a space is still captured.
+        assert_eq!(
+            emails("Contact real@corp.com: for help"),
+            vec!["real@corp.com"]
+        );
+        // Plain email untouched.
+        assert_eq!(
+            emails("mail jane@realcorp.io today"),
+            vec!["jane@realcorp.io"]
+        );
+    }
 }
