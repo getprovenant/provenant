@@ -53,6 +53,29 @@ fn test_prose_copyright_spanning_a_sentence_boundary_is_not_detected() {
 }
 
 #[test]
+fn test_notices_before_a_following_sentence_are_kept() {
+    // The sentence-boundary junk rule must keep genuine notices whose holder is
+    // named before the boundary: a year-range notice (`1994-1999. The MITRE ...`),
+    // and a lowercase collective-agent holder (`by the original authors. ...`).
+    for (text, expected) in [
+        (
+            "Copyright (c) 1994-1999. The MITRE Corporation makes no representations.",
+            "MITRE",
+        ),
+        (
+            "Copyright by the original authors. Redistribution is permitted.",
+            "original authors",
+        ),
+    ] {
+        let (copyrights, _holders, _authors) = detect_copyrights_from_text(text);
+        assert!(
+            copyrights.iter().any(|c| c.copyright.contains(expected)),
+            "expected {expected:?} kept in {copyrights:?} for {text:?}"
+        );
+    }
+}
+
+#[test]
 fn test_notice_with_trailing_email_tld_and_second_copyright_is_kept() {
     // A period after an email TLD that precedes a second `Copyright` clause is not
     // a prose sentence boundary; the whole notice must survive.

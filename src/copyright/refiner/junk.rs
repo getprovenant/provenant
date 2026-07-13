@@ -161,31 +161,54 @@ pub(super) fn spans_prose_sentence_boundary(s: &str) -> bool {
     // genuine multi-clause notice — which names a proper noun before this point —
     // from being classified as prose.
     static SENTENCE_BOUNDARY_RE: LazyLock<Regex> = LazyLock::new(|| {
-        compile_static_regex(r"(?:^|\s)(?:\p{Ll}[\p{Ll}']+|\p{Lu}{2,})\)?\.\s+\p{Lu}")
+        compile_static_regex(r"(?:^|\s)(?P<word>\p{Ll}[\p{Ll}']+|\p{Lu}{2,})\)?\.\s+\p{Lu}")
     });
-    let Some(m) = SENTENCE_BOUNDARY_RE.find(s) else {
+    let Some(caps) = SENTENCE_BOUNDARY_RE.captures(s) else {
         return false;
     };
-    !prefix_names_holder(&s[..m.start()])
+    // Check the text up to and including the sentence-closing word, so a
+    // collective-agent holder that is itself that word (`... the original
+    // authors. Redistribution ...`) still counts as a named holder.
+    let word_end = caps.name("word").expect("word group").end();
+    !prefix_names_holder(&s[..word_end])
 }
 
-/// Whether the text before the first sentence boundary names a proper-noun
-/// holder — any capitalized word once the leading copyright-marker words are
-/// removed. Marker words are excluded so a leading `Copyright`/`Portions` does
-/// not masquerade as the holder.
+/// Whether the text before the first sentence boundary names a holder: a
+/// capitalized proper noun, or a lowercase collective-agent word (`authors`,
+/// `contributors`, ...). The leading copyright-marker words are excluded so a
+/// bare `Copyright`/`Portions` does not masquerade as the holder. The collective
+/// clause keeps a real lowercase notice — `Copyright by the original authors.
+/// Redistribution is permitted.` — from being classified as prose, mirroring the
+/// `allow_single_word_contributors` holder rule. `holders` is deliberately not a
+/// collective agent: `copyright holders. If you're the sole ...` is prose.
 fn prefix_names_holder(prefix: &str) -> bool {
+    const COLLECTIVE_AGENTS: &[&str] = &[
+        "authors",
+        "contributors",
+        "developers",
+        "maintainers",
+        "committers",
+        "team",
+        "project",
+        "community",
+        "foundation",
+    ];
     prefix
         .split_whitespace()
-        .filter(|w| {
+        .filter_map(|w| {
             let lw = w
                 .trim_matches(|c: char| !c.is_alphanumeric())
                 .to_ascii_lowercase();
-            !matches!(
+            (!matches!(
                 lw.as_str(),
                 "copyright" | "copyrighted" | "copr" | "copyrights" | "c" | "portions" | "portion"
-            )
+            ))
+            .then_some((w, lw))
         })
-        .any(|w| w.chars().next().is_some_and(|c| c.is_uppercase()))
+        .any(|(w, lw)| {
+            w.chars().next().is_some_and(|c| c.is_uppercase())
+                || COLLECTIVE_AGENTS.contains(&lw.as_str())
+        })
 }
 
 /// Return true if `s` matches any known junk copyright pattern.
