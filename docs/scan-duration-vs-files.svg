@@ -422,6 +422,9 @@ ScanCode: 85.71s</title></rect>
     <rect x="575.87" y="395.19" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/regorus @ 7f42115
 Files: 1121
 ScanCode: 137.98s</title></rect>
+    <rect x="576.24" y="403.13" width="8" height="8" fill="#d97706" rx="1.5"><title>github/opensource.guide @ 38d739c
+Files: 1127
+ScanCode: 116.63s</title></rect>
     <rect x="576.54" y="389.81" width="8" height="8" fill="#d97706" rx="1.5"><title>syncthing/syncthing @ 5277033
 Files: 1132
 ScanCode: 154.60s</title></rect>
@@ -710,6 +713,9 @@ ScanCode: 1149.65s</title></rect>
     <rect x="729.11" y="306.35" width="8" height="8" fill="#d97706" rx="1.5"><title>grpc/grpc @ f87c29f
 Files: 10361
 ScanCode: 904.39s</title></rect>
+    <rect x="731.02" y="347.17" width="8" height="8" fill="#d97706" rx="1.5"><title>mastodon/mastodon @ 95d3b70
+Files: 10652
+ScanCode: 381.20s</title></rect>
     <rect x="733.17" y="282.81" width="8" height="8" fill="#d97706" rx="1.5"><title>qemu/qemu @ da6c4fe
 Files: 10989
 ScanCode: 1488.40s</title></rect>
@@ -740,6 +746,9 @@ ScanCode: 1155.18s</title></rect>
     <rect x="748.21" y="346.54" width="8" height="8" fill="#d97706" rx="1.5"><title>microsoft/vcpkg @ b21ff8f
 Files: 13670
 ScanCode: 386.36s</title></rect>
+    <rect x="748.63" y="286.93" width="8" height="8" fill="#d97706" rx="1.5"><title>unicode-org/icu4x @ 9827052
+Files: 13754
+ScanCode: 1364.11s</title></rect>
     <rect x="749.92" y="256.61" width="8" height="8" fill="#d97706" rx="1.5"><title>godotengine/godot @ d7c45b1
 Files: 14013
 ScanCode: 2591.46s</title></rect>
@@ -1162,6 +1171,9 @@ Provenant: 5.17s</title></circle>
     <circle cx="579.87" cy="543.92" r="4.5" fill="#2563eb"><title>microsoft/regorus @ 7f42115
 Files: 1121
 Provenant: 6.45s</title></circle>
+    <circle cx="580.24" cy="540.80" r="4.5" fill="#2563eb"><title>github/opensource.guide @ 38d739c
+Files: 1127
+Provenant: 6.89s</title></circle>
     <circle cx="580.54" cy="540.73" r="4.5" fill="#2563eb"><title>syncthing/syncthing @ 5277033
 Files: 1132
 Provenant: 6.90s</title></circle>
@@ -1450,6 +1462,9 @@ Provenant: 29.14s</title></circle>
     <circle cx="733.11" cy="469.28" r="4.5" fill="#2563eb"><title>grpc/grpc @ f87c29f
 Files: 10361
 Provenant: 31.30s</title></circle>
+    <circle cx="735.02" cy="524.64" r="4.5" fill="#2563eb"><title>mastodon/mastodon @ 95d3b70
+Files: 10652
+Provenant: 9.70s</title></circle>
     <circle cx="737.17" cy="467.86" r="4.5" fill="#2563eb"><title>qemu/qemu @ da6c4fe
 Files: 10989
 Provenant: 32.26s</title></circle>
@@ -1480,6 +1495,9 @@ Provenant: 33.43s</title></circle>
     <circle cx="752.21" cy="517.22" r="4.5" fill="#2563eb"><title>microsoft/vcpkg @ b21ff8f
 Files: 13670
 Provenant: 11.35s</title></circle>
+    <circle cx="752.63" cy="463.02" r="4.5" fill="#2563eb"><title>unicode-org/icu4x @ 9827052
+Files: 13754
+Provenant: 35.74s</title></circle>
     <circle cx="753.92" cy="427.16" r="4.5" fill="#2563eb"><title>godotengine/godot @ d7c45b1
 Files: 14013
 Provenant: 76.33s</title></circle>
