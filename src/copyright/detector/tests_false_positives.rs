@@ -90,6 +90,41 @@ fn test_lowercase_copyright_with_proper_holder_still_detected() {
 }
 
 #[test]
+fn test_unicode_break_test_data_lines_do_not_produce_holders() {
+    // Unicode Character Database segmentation-test data (unicode-org/icu4x
+    // WordBreakTest.txt / GraphemeBreakTest.txt) embeds the copyright codepoint
+    // `00A9`/`©` as literal test input on lines dense with the break markers
+    // `÷`/`×`. The genuine file header notice is kept; the data lines are not
+    // turned into holders/copyrights.
+    let input = concat!(
+        "# \u{00a9} 2025 Unicode\u{00ae}, Inc.\n",
+        "\u{00f7} 0009 \u{00d7} 0308 \u{00f7} 00A9 \u{00f7} # \u{00f7} [0.2] SIGN (ExtPict) \u{00d7} [9.0] COMBINING DIAERESIS\n",
+        "\u{00f7} 000D \u{00f7} 00A9 \u{00f7} # \u{00f7} [0.2] (CR) \u{00f7} [3.1] COPYRIGHT SIGN (ExtPict)\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    // The real header notice survives.
+    assert!(
+        holders.iter().any(|h| h.holder.contains("Unicode")),
+        "expected the header holder to survive: {holders:?}"
+    );
+    // No break-test data line becomes a holder or copyright.
+    assert!(
+        !holders
+            .iter()
+            .any(|h| h.holder.contains('\u{00f7}') || h.holder.contains('\u{00d7}')),
+        "segmentation data leaked into holders: {holders:?}"
+    );
+    assert!(
+        !copyrights
+            .iter()
+            .any(|c| c.copyright.contains('\u{00f7}') || c.copyright.contains('\u{00d7}')),
+        "segmentation data leaked into copyrights: {copyrights:?}"
+    );
+}
+
+#[test]
 fn test_bpe_tokenizer_data_lines_do_not_produce_copyrights_or_holders() {
     // Hugging Face subword-tokenizer artifacts: merges.txt BPE pairs and
     // vocab.json token:id entries embed the `©` symbol and the literal

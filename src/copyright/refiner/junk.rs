@@ -201,7 +201,19 @@ pub fn is_junk_copyright(s: &str) -> bool {
         || is_junk_c_sign_path_fragment(s)
         || is_creative_commons_license_prose(s)
         || spans_prose_sentence_boundary(s)
+        || contains_unicode_segmentation_markers(s)
         || looks_like_source_code(s)
+}
+
+/// Return true if a candidate carries Unicode segmentation-test markers — the
+/// division sign `÷` (U+00F7) or multiplication sign `×` (U+00D7). Unicode
+/// Character Database break-test data (`WordBreakTest.txt`,
+/// `GraphemeBreakTest.txt`) embeds the copyright codepoint `00A9`/`©` as literal
+/// test input on lines dense with these break markers; the detector otherwise
+/// manufactures a holder from the surrounding data. These markers never occur in
+/// a real copyright notice, so their presence alone identifies the data line.
+pub(super) fn contains_unicode_segmentation_markers(s: &str) -> bool {
+    s.contains('\u{00f7}') || s.contains('\u{00d7}')
 }
 
 /// Return true if `s` is a fragment of Creative Commons (or cited treaty)
@@ -367,6 +379,7 @@ pub(crate) fn is_junk_holder(s: &str) -> bool {
         || is_creative_commons_license_prose(s)
         || looks_like_source_code(s)
         || starts_with_sentence_connective(s)
+        || contains_unicode_segmentation_markers(s)
         || s.eq_ignore_ascii_case("MIT")
 }
 
