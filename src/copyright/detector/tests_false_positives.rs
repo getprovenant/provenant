@@ -27,6 +27,46 @@ fn test_prose_copyright_word_without_proper_holder_is_not_detected() {
 }
 
 #[test]
+fn test_prose_copyright_spanning_a_sentence_boundary_is_not_detected() {
+    // Article prose that discusses copyright (github/opensource.guide legal.md and
+    // its translations) has a bare `copyright` token sweep the rest of the
+    // sentence — and across the sentence period into the next one — into a
+    // copyright/holder. ScanCode emits nothing. A real notice never crosses a
+    // sentence boundary (`... by default. That is ...`).
+    for prose in [
+        "that work is under exclusive copyright by default. That is, the law assumes you have a say.",
+        "who holds copyright can get complicated and confusing very quickly. Switching to a new license.",
+        "you aren't the sole copyright holder. If you're the sole contributor you own it.",
+        "hai una licenza copyright esclusivo per impostazione predefinita. Cioè, la legge presuppone.",
+        "non puoi semplicemente cambiare la licenza del tuo progetto MIT. In sostanza vale questo.",
+    ] {
+        let (copyrights, holders, _authors) = detect_copyrights_from_text(prose);
+        assert!(
+            copyrights.is_empty(),
+            "prose produced copyrights: {copyrights:?} for {prose:?}"
+        );
+        assert!(
+            holders.is_empty(),
+            "prose produced holders: {holders:?} for {prose:?}"
+        );
+    }
+}
+
+#[test]
+fn test_notice_with_trailing_email_tld_and_second_copyright_is_kept() {
+    // A period after an email TLD that precedes a second `Copyright` clause is not
+    // a prose sentence boundary; the whole notice must survive.
+    let text = "Pascal Andre, andre@chimay.via.ecp.fr. Copyright (c) 1995, Pascal Andre";
+    let (copyrights, _holders, _authors) = detect_copyrights_from_text(text);
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright.contains("Pascal Andre")),
+        "expected the Pascal Andre notice to survive: {copyrights:?}"
+    );
+}
+
+#[test]
 fn test_lowercase_copyright_with_proper_holder_still_detected() {
     // The span guard must not suppress legitimate lowercase notices that carry a
     // real holder: proper noun, company, "by <name>", or an all-caps acronym.

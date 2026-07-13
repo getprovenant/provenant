@@ -143,6 +143,51 @@ pub(crate) fn hf_tokenizer_merges_line_span(content: &str) -> Option<(usize, usi
     None
 }
 
+/// Return true if a candidate is running article prose that a bare `copyright`
+/// token swept across a sentence boundary: a lowercase word closed by a period
+/// and followed by a capitalized word (`... by default. That is ...`).
+///
+/// A genuine multi-clause notice names a proper-noun holder *before* that first
+/// sentence boundary (`(c) Example Corp. and affiliates. Confidential ...`);
+/// article prose that merely discusses copyright does not (`copyright by
+/// default. That is ...`). Only the latter is treated as junk. The
+/// leading-whitespace requirement also keeps email/URL TLDs
+/// (`...ecp.fr. Copyright`) and company/initial abbreviations (`Inc.`, `A.`)
+/// out of scope, since those are not whitespace-delimited all-lowercase words.
+pub(super) fn spans_prose_sentence_boundary(s: &str) -> bool {
+    // The word closing the sentence is either an all-lowercase prose word
+    // (`... by default. That ...`) or an all-caps acronym (`... to MIT. In ...`,
+    // `... MIT). Ma ...`). The following prefix-holder check is what keeps a
+    // genuine multi-clause notice — which names a proper noun before this point —
+    // from being classified as prose.
+    static SENTENCE_BOUNDARY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(r"(?:^|\s)(?:\p{Ll}[\p{Ll}']+|\p{Lu}{2,})\)?\.\s+\p{Lu}")
+    });
+    let Some(m) = SENTENCE_BOUNDARY_RE.find(s) else {
+        return false;
+    };
+    !prefix_names_holder(&s[..m.start()])
+}
+
+/// Whether the text before the first sentence boundary names a proper-noun
+/// holder — any capitalized word once the leading copyright-marker words are
+/// removed. Marker words are excluded so a leading `Copyright`/`Portions` does
+/// not masquerade as the holder.
+fn prefix_names_holder(prefix: &str) -> bool {
+    prefix
+        .split_whitespace()
+        .filter(|w| {
+            let lw = w
+                .trim_matches(|c: char| !c.is_alphanumeric())
+                .to_ascii_lowercase();
+            !matches!(
+                lw.as_str(),
+                "copyright" | "copyrighted" | "copr" | "copyrights" | "c" | "portions" | "portion"
+            )
+        })
+        .any(|w| w.chars().next().is_some_and(|c| c.is_uppercase()))
+}
+
 /// Return true if `s` matches any known junk copyright pattern.
 pub fn is_junk_copyright(s: &str) -> bool {
     if looks_like_structured_copyright_notice_with_year(s) {
@@ -155,6 +200,7 @@ pub fn is_junk_copyright(s: &str) -> bool {
         || is_junk_copyright_symbol_garbage(s)
         || is_junk_c_sign_path_fragment(s)
         || is_creative_commons_license_prose(s)
+        || spans_prose_sentence_boundary(s)
         || looks_like_source_code(s)
 }
 
@@ -320,7 +366,50 @@ pub(crate) fn is_junk_holder(s: &str) -> bool {
         || is_junk_holder_symbol_garbage(s)
         || is_creative_commons_license_prose(s)
         || looks_like_source_code(s)
+        || starts_with_sentence_connective(s)
         || s.eq_ignore_ascii_case("MIT")
+}
+
+/// Whether a holder opens with a subordinating conjunction or clause pronoun
+/// (`If you're the sole`, `When the ...`, `This is ...`). These begin a sentence
+/// clause, never a party name, so a holder that starts with one is running prose
+/// the copyright marker swept in. Determiners that legitimately open real
+/// holders (`The Regents`, `A. Person`) are deliberately excluded.
+fn starts_with_sentence_connective(s: &str) -> bool {
+    const CONNECTIVES: &[&str] = &[
+        "if",
+        "when",
+        "while",
+        "because",
+        "although",
+        "though",
+        "since",
+        "whether",
+        "unless",
+        "however",
+        "therefore",
+        "thus",
+        "hence",
+        "moreover",
+        "furthermore",
+        "otherwise",
+        "nevertheless",
+        "this",
+        "that",
+        "these",
+        "those",
+    ];
+    let Some(first) = s.split_whitespace().next() else {
+        return false;
+    };
+    let word = first.trim_matches(|c: char| !c.is_alphanumeric());
+    // A single capitalized connective word is not itself a holder; require a
+    // following word so `This`/`That` used as a real (rare) token is still safe.
+    if s.split_whitespace().count() < 2 {
+        return false;
+    }
+    CONNECTIVES.contains(&word.to_ascii_lowercase().as_str())
+        && word.chars().next().is_some_and(|c| c.is_uppercase())
 }
 
 pub(super) fn is_junk_holder_code_fragment(s: &str) -> bool {
