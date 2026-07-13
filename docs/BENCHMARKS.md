@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 246 of 246 recorded runs, with a **19.5× median speedup** and **19.5× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **36.2×** on 10k+ file targets.
+> Provenant is faster on 249 of 249 recorded runs, with a **19.6× median speedup** and **19.6× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -400,6 +400,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `4.74s`; ScanCode `45.20s`
 - Broader mixed Docker/npm/Python package extraction (`2` vs `1` packages, `111` vs `0` dependencies) from the integration-test `package-lock.json`, `uv.lock`, and committed service Dockerfiles, plus the more specific `Apache-2.0 AND FSL-1.1-ALv2` license classification on `LICENSE.md` where ScanCode reports only `FSL-1.1-ALv2`
+
+##### [github/opensource.guide @ 38d739c](https://github.com/github/opensource.guide/tree/38d739c84dd6768039596c3ded87a057123b0e8d) — **16.93× faster**
+
+- Files: 1,127
+- Run context: 2026-07-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.89s`; ScanCode `116.63s`
+- Reads copyright notices embedded in the bundled `.woff`/`.woff2` fonts (Inter, Vazirmatn) that ScanCode leaves undetected, and rejects ScanCode's author false positives mined from the localized `_articles/*/legal.md` guides (bare GitHub URLs, the word `did`, sentence fragments) along with its `LicenseRef-scancode-free-unknown` matches on prose that merely mentions being free; the npm and gem manifests report an empty declared license where they declare none, rather than the repo-wide detected-license aggregate ScanCode assigns as `declared_license_expression`
 
 ##### [iTowns/itowns @ 08e08f5](https://github.com/iTowns/itowns/tree/08e08f512983b6f3d60d04d431b67b3c5e2e1584) — **19.11× faster**
 
@@ -1140,6 +1147,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.65s`; ScanCode `94.92s`
 - Author extraction reports only the real author (`Nikita Prokopov <niki@tonsky.me>`) against ScanCode's `30`, which include OpenType glyph and feature names (`greater_equal_end.seq`, `greater_greater_hyphen_start.seq`, …) and a `package.json` author value with the manifest's `license`/`bugs`/`url` fields bled in; package extraction is broader (`5` vs `3` file-level `package_data`, `6` more dependencies) and the SIL OFL holder keeps its `Authors (https://…)` contact in the repo-root `LICENSE`. ScanCode reports cleaner copyright holders in a `.glyphs`-internal OFL notice and the generated `googlefonts-qa/*.checks.md` QA reports, where Provenant retains a `Project Authors (git url) …` prose fragment
 
+##### [unicode-org/icu4x @ 9827052](https://github.com/unicode-org/icu4x/tree/98270524781fdcd9465d2c58a4883c92a7d5233f) — **38.17× faster**
+
+- Files: 13,754
+- Run context: 2026-07-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `35.74s`; ScanCode `1364.11s`
+- Matches ScanCode's `Unicode-3.0` declared license on the workspace's published crates via Cargo `license.workspace = true` inheritance, while the non-publishing fuzz and tooling crates report an empty declared license where ScanCode over-attributes the workspace `Unicode-3.0` to crates that declare none; author detection rejects ScanCode's false positives mined from Rust, SQL, and localization data (`statuses.id`, `type Person`, `TermDefinition.new`) and from calendar prose (`the Thai`, `the Indian`), and copyright/holder output on the Unicode break-test and character-database data files keeps only the genuine `© Unicode, Inc.` header notice
+
 ##### [xiph/opus @ 22244de](https://github.com/xiph/opus/tree/22244de5a79bd1d6d623c32e72bf1954b56235be) — **15.24× faster**
 
 - Files: 754
@@ -1383,6 +1397,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.01s`; ScanCode `47.52s`
 - Direct CPAN package identity and broader dependency extraction (`1` vs `0` packages, `44` vs `0` dependencies) from `META.json` prereq scopes, with repository and homepage metadata preserved from CPAN resources
+
+##### [mastodon/mastodon @ 95d3b70](https://github.com/mastodon/mastodon/tree/95d3b704f61ff8ea4682676b3e87dd27386a7c38) — **39.30× faster**
+
+- Files: 10,652
+- Run context: 2026-07-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.70s`; ScanCode `381.20s`
+- Reads copyright and OFL-1.1/Apache-2.0 license notices embedded in the bundled `.woff`/`.woff2`/`.ttf` fonts (Inter, Silkscreen, Roboto) that ScanCode leaves undetected, and rejects ScanCode's author false positives mined from Ruby, SQL, and localization JSON (`statuses.id`, `type Person`, `param Account`, `dadau(-la) Vas`); both report the top-level `AGPL-3.0` license from the repository `LICENSE`
 
 ##### [PerlDancer/Dancer2 @ a1faa22](https://github.com/PerlDancer/Dancer2/tree/a1faa22a78ff6f3c40ef5b71424dbe3f2c4a13a8) — **12.84× faster**
 
