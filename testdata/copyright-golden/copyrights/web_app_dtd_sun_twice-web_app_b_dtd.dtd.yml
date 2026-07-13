@@ -4,16 +4,12 @@ what:
   - holders_summary
 copyrights:
   - Copyright (c) 2000 Sun Microsystems, Inc.
-  - copyright et distribue avec des licences qui en restreignent l'utilisation, la copie, la distribution, et la de'compilation. Ce documention associe n peut
   - copyright et licencie par des fournisseurs de Sun
 holders:
   - Sun Microsystems, Inc.
-  - et distribue avec des licences qui en restreignent l'utilisation, la copie, la distribution, et la de'compilation. Ce documention associe n peut
   - et licencie par des fournisseurs de Sun
 holders_summary:
   - value: Sun Microsystems
-    count: 1
-  - value: et distribue avec des licences qui en restreignent l'utilisation, la copie, la distribution, et la de'compilation. Ce documention associe n peut
     count: 1
   - value: et licencie par des fournisseurs de Sun
     count: 1

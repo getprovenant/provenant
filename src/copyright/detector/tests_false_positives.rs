@@ -27,6 +27,69 @@ fn test_prose_copyright_word_without_proper_holder_is_not_detected() {
 }
 
 #[test]
+fn test_prose_copyright_spanning_a_sentence_boundary_is_not_detected() {
+    // Article prose that discusses copyright (github/opensource.guide legal.md and
+    // its translations) has a bare `copyright` token sweep the rest of the
+    // sentence — and across the sentence period into the next one — into a
+    // copyright/holder. ScanCode emits nothing. A real notice never crosses a
+    // sentence boundary (`... by default. That is ...`).
+    for prose in [
+        "that work is under exclusive copyright by default. That is, the law assumes you have a say.",
+        "who holds copyright can get complicated and confusing very quickly. Switching to a new license.",
+        "you aren't the sole copyright holder. If you're the sole contributor you own it.",
+        "hai una licenza copyright esclusivo per impostazione predefinita. Cioè, la legge presuppone.",
+        "non puoi semplicemente cambiare la licenza del tuo progetto MIT. In sostanza vale questo.",
+    ] {
+        let (copyrights, holders, _authors) = detect_copyrights_from_text(prose);
+        assert!(
+            copyrights.is_empty(),
+            "prose produced copyrights: {copyrights:?} for {prose:?}"
+        );
+        assert!(
+            holders.is_empty(),
+            "prose produced holders: {holders:?} for {prose:?}"
+        );
+    }
+}
+
+#[test]
+fn test_notices_before_a_following_sentence_are_kept() {
+    // The sentence-boundary junk rule must keep genuine notices whose holder is
+    // named before the boundary: a year-range notice (`1994-1999. The MITRE ...`),
+    // and a lowercase collective-agent holder (`by the original authors. ...`).
+    for (text, expected) in [
+        (
+            "Copyright (c) 1994-1999. The MITRE Corporation makes no representations.",
+            "MITRE",
+        ),
+        (
+            "Copyright by the original authors. Redistribution is permitted.",
+            "original authors",
+        ),
+    ] {
+        let (copyrights, _holders, _authors) = detect_copyrights_from_text(text);
+        assert!(
+            copyrights.iter().any(|c| c.copyright.contains(expected)),
+            "expected {expected:?} kept in {copyrights:?} for {text:?}"
+        );
+    }
+}
+
+#[test]
+fn test_notice_with_trailing_email_tld_and_second_copyright_is_kept() {
+    // A period after an email TLD that precedes a second `Copyright` clause is not
+    // a prose sentence boundary; the whole notice must survive.
+    let text = "Pascal Andre, andre@chimay.via.ecp.fr. Copyright (c) 1995, Pascal Andre";
+    let (copyrights, _holders, _authors) = detect_copyrights_from_text(text);
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright.contains("Pascal Andre")),
+        "expected the Pascal Andre notice to survive: {copyrights:?}"
+    );
+}
+
+#[test]
 fn test_lowercase_copyright_with_proper_holder_still_detected() {
     // The span guard must not suppress legitimate lowercase notices that carry a
     // real holder: proper noun, company, "by <name>", or an all-caps acronym.
@@ -47,6 +110,41 @@ fn test_lowercase_copyright_with_proper_holder_still_detected() {
             "expected holder {expected:?} missing in {copyrights:?} for {text:?}"
         );
     }
+}
+
+#[test]
+fn test_unicode_break_test_data_lines_do_not_produce_holders() {
+    // Unicode Character Database segmentation-test data (unicode-org/icu4x
+    // WordBreakTest.txt / GraphemeBreakTest.txt) embeds the copyright codepoint
+    // `00A9`/`©` as literal test input on lines dense with the break markers
+    // `÷`/`×`. The genuine file header notice is kept; the data lines are not
+    // turned into holders/copyrights.
+    let input = concat!(
+        "# \u{00a9} 2025 Unicode\u{00ae}, Inc.\n",
+        "\u{00f7} 0009 \u{00d7} 0308 \u{00f7} 00A9 \u{00f7} # \u{00f7} [0.2] SIGN (ExtPict) \u{00d7} [9.0] COMBINING DIAERESIS\n",
+        "\u{00f7} 000D \u{00f7} 00A9 \u{00f7} # \u{00f7} [0.2] (CR) \u{00f7} [3.1] COPYRIGHT SIGN (ExtPict)\n",
+    );
+
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+
+    // The real header notice survives.
+    assert!(
+        holders.iter().any(|h| h.holder.contains("Unicode")),
+        "expected the header holder to survive: {holders:?}"
+    );
+    // No break-test data line becomes a holder or copyright.
+    assert!(
+        !holders
+            .iter()
+            .any(|h| h.holder.contains('\u{00f7}') || h.holder.contains('\u{00d7}')),
+        "segmentation data leaked into holders: {holders:?}"
+    );
+    assert!(
+        !copyrights
+            .iter()
+            .any(|c| c.copyright.contains('\u{00f7}') || c.copyright.contains('\u{00d7}')),
+        "segmentation data leaked into copyrights: {copyrights:?}"
+    );
 }
 
 #[test]
