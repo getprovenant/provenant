@@ -239,6 +239,9 @@ ScanCode: 125.87s</title></rect>
     <rect x="441.29" y="409.83" width="8" height="8" fill="#d97706" rx="1.5"><title>lodash/lodash @ cb0b9b9
 Files: 159
 ScanCode: 101.22s</title></rect>
+    <rect x="448.68" y="416.02" width="8" height="8" fill="#d97706" rx="1.5"><title>glfw/glfw @ ed6452b
+Files: 177
+ScanCode: 88.79s</title></rect>
     <rect x="450.98" y="426.44" width="8" height="8" fill="#d97706" rx="1.5"><title>Carthage/Carthage @ e33e133
 Files: 183
 ScanCode: 71.21s</title></rect>
@@ -413,6 +416,9 @@ ScanCode: 113.37s</title></rect>
     <rect x="572.02" y="412.37" width="8" height="8" fill="#d97706" rx="1.5"><title>commercialhaskell/stack @ cb6070f
 Files: 1060
 ScanCode: 95.91s</title></rect>
+    <rect x="573.24" y="398.71" width="8" height="8" fill="#d97706" rx="1.5"><title>mozilla/glean @ a4166fa
+Files: 1079
+ScanCode: 128.06s</title></rect>
     <rect x="573.49" y="377.40" width="8" height="8" fill="#d97706" rx="1.5"><title>jquery/jquery-ui @ eda7aa3
 Files: 1083
 ScanCode: 201.04s</title></rect>
@@ -470,6 +476,9 @@ ScanCode: 300.33s</title></rect>
     <rect x="603.42" y="377.17" width="8" height="8" fill="#d97706" rx="1.5"><title>PX4/eigen @ 7cf1c01
 Files: 1672
 ScanCode: 202.03s</title></rect>
+    <rect x="606.64" y="378.96" width="8" height="8" fill="#d97706" rx="1.5"><title>eclipse-vertx/vert.x @ 78ade62
+Files: 1752
+ScanCode: 194.51s</title></rect>
     <rect x="607.19" y="341.69" width="8" height="8" fill="#d97706" rx="1.5"><title>guillemj/dpkg @ 0061122
 Files: 1766
 ScanCode: 428.07s</title></rect>
@@ -988,6 +997,9 @@ Provenant: 5.23s</title></circle>
     <circle cx="445.29" cy="556.81" r="4.5" fill="#2563eb"><title>lodash/lodash @ cb0b9b9
 Files: 159
 Provenant: 4.91s</title></circle>
+    <circle cx="452.68" cy="554.28" r="4.5" fill="#2563eb"><title>glfw/glfw @ ed6452b
+Files: 177
+Provenant: 5.18s</title></circle>
     <circle cx="454.98" cy="556.52" r="4.5" fill="#2563eb"><title>Carthage/Carthage @ e33e133
 Files: 183
 Provenant: 4.94s</title></circle>
@@ -1162,6 +1174,9 @@ Provenant: 6.40s</title></circle>
     <circle cx="576.02" cy="544.29" r="4.5" fill="#2563eb"><title>commercialhaskell/stack @ cb6070f
 Files: 1060
 Provenant: 6.40s</title></circle>
+    <circle cx="577.24" cy="545.33" r="4.5" fill="#2563eb"><title>mozilla/glean @ a4166fa
+Files: 1079
+Provenant: 6.26s</title></circle>
     <circle cx="577.49" cy="542.12" r="4.5" fill="#2563eb"><title>jquery/jquery-ui @ eda7aa3
 Files: 1083
 Provenant: 6.70s</title></circle>
@@ -1219,6 +1234,9 @@ Provenant: 9.99s</title></circle>
     <circle cx="607.42" cy="537.36" r="4.5" fill="#2563eb"><title>PX4/eigen @ 7cf1c01
 Files: 1672
 Provenant: 7.41s</title></circle>
+    <circle cx="610.64" cy="526.68" r="4.5" fill="#2563eb"><title>eclipse-vertx/vert.x @ 78ade62
+Files: 1752
+Provenant: 9.29s</title></circle>
     <circle cx="611.19" cy="510.59" r="4.5" fill="#2563eb"><title>guillemj/dpkg @ 0061122
 Files: 1766
 Provenant: 13.06s</title></circle>
