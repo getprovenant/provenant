@@ -669,9 +669,7 @@ pub fn prepare_text_line(line: &str) -> String {
     // the marker and the name and break author extraction). Scoped to an author
     // marker and to http(s) hrefs so copyright anchors and mailto/email contact
     // anchors — which keep their address — are unaffected.
-    if AUTHOR_HTTP_ANCHOR_RE.is_match(&s) {
-        s = AUTHOR_HTTP_ANCHOR_RE.replace_all(&s, "$1$2 ").into_owned();
-    }
+    s = AUTHOR_HTTP_ANCHOR_RE.replace_all(&s, "$1$2 ").into_owned();
 
     s = HTTP_ANCHOR_RE.replace_all(&s, "$1 $2").into_owned();
 
