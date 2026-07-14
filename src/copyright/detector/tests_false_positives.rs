@@ -847,3 +847,28 @@ fn test_xml_copyright_element_tag_is_not_detected_as_copyright() {
         "expected the real notice to survive: {copyrights:?}"
     );
 }
+
+#[test]
+fn test_javadoc_author_with_html_anchor_is_extracted() {
+    // Java Javadoc `@author` tags frequently wrap the name in an HTML anchor with
+    // an http(s) href (eclipse-vertx/vert.x uses
+    // `@author <a href="http://tfox.org">Tim Fox</a>` across hundreds of files).
+    // The href is a homepage link, not the name; the author resolves to the name.
+    for (text, expected) in [
+        (
+            " * @author <a href=\"http://tfox.org\">Tim Fox</a>",
+            "Tim Fox",
+        ),
+        (
+            " * @author <a href=\"https://github.com/cescoffier\">Clement Escoffier</a>",
+            "Clement Escoffier",
+        ),
+    ] {
+        let (_c, _h, authors) = detect_copyrights_from_text(text);
+        let vals: Vec<&String> = authors.iter().map(|a| &a.author).collect();
+        assert!(
+            vals.iter().any(|a| a.as_str() == expected),
+            "expected {expected:?} in {vals:?} for {text:?}"
+        );
+    }
+}

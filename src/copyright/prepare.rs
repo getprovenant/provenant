@@ -222,6 +222,15 @@ static HTTP_ANCHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?is)<a\s+href=['\"](https?://[^'\"]+)['\"][^>]*>\s*([^<]+?)\s*</a>"#).unwrap()
 });
 
+/// A Javadoc `@author`/`@authors` tag whose name is wrapped in an HTML anchor
+/// with an http(s) href (`@author <a href="http://tfox.org">Tim Fox</a>`).
+/// Group 1 is the author marker, group 2 the link text (the name); the href is
+/// dropped as a homepage link, not part of the name.
+static AUTHOR_HTTP_ANCHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?is)(@?authors?[:\s]+)<a\s+href=['\"]https?://[^>]*>\s*([^<]+?)\s*</a>"#)
+        .unwrap()
+});
+
 static TAG_VALUE_ATTR_DQ_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?is)\bvalue\s*=\s*\"([^\"]+)\""#).unwrap());
 
@@ -652,6 +661,17 @@ pub fn prepare_text_line(line: &str) -> String {
     s = MAILTO_ANCHOR_RE.replace_all(&s, "$1 $2").into_owned();
 
     s = EMAIL_ANCHOR_RE.replace_all(&s, "$1 $2").into_owned();
+
+    // A Javadoc `@author <a href="http://tfox.org">Tim Fox</a>` names the author
+    // in the link text; the http(s) href is a homepage link, not the name. Drop
+    // the href so the author marker is immediately followed by the name (the
+    // generic http-anchor handling below would otherwise leave the URL between
+    // the marker and the name and break author extraction). Scoped to an author
+    // marker and to http(s) hrefs so copyright anchors and mailto/email contact
+    // anchors — which keep their address — are unaffected.
+    if AUTHOR_HTTP_ANCHOR_RE.is_match(&s) {
+        s = AUTHOR_HTTP_ANCHOR_RE.replace_all(&s, "$1$2 ").into_owned();
+    }
 
     s = HTTP_ANCHOR_RE.replace_all(&s, "$1 $2").into_owned();
 
