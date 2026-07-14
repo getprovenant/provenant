@@ -822,3 +822,28 @@ fn test_pulseaudio_ladspa_rfc_and_contact_fragments_do_not_emit_junk() {
         "holders: {holder_values:?}"
     );
 }
+
+#[test]
+fn test_xml_copyright_element_tag_is_not_detected_as_copyright() {
+    // Wayland protocol descriptions (glfw's vendored deps/wayland/*.xml) wrap
+    // notices in a `<copyright>` element. The bare tag opener must not itself be
+    // surfaced as a copyright/holder, while the real notices inside it are kept.
+    let input = concat!(
+        "  <copyright>\n",
+        "    Copyright \u{00a9} 2014 Jonas \u{00c5}dahl\n",
+        "  </copyright>\n",
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    assert!(
+        !copyrights.iter().any(|c| c.copyright == "<copyright>"),
+        "bare XML tag leaked into copyrights: {copyrights:?}"
+    );
+    assert!(
+        !holders.iter().any(|h| h.holder == "<copyright>"),
+        "bare XML tag leaked into holders: {holders:?}"
+    );
+    assert!(
+        copyrights.iter().any(|c| c.copyright.contains("Jonas")),
+        "expected the real notice to survive: {copyrights:?}"
+    );
+}
