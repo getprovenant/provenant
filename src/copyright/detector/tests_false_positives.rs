@@ -822,3 +822,53 @@ fn test_pulseaudio_ladspa_rfc_and_contact_fragments_do_not_emit_junk() {
         "holders: {holder_values:?}"
     );
 }
+
+#[test]
+fn test_xml_copyright_element_tag_is_not_detected_as_copyright() {
+    // Wayland protocol descriptions (glfw's vendored deps/wayland/*.xml) wrap
+    // notices in a `<copyright>` element. The bare tag opener must not itself be
+    // surfaced as a copyright/holder, while the real notices inside it are kept.
+    let input = concat!(
+        "  <copyright>\n",
+        "    Copyright \u{00a9} 2014 Jonas \u{00c5}dahl\n",
+        "  </copyright>\n",
+    );
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(input);
+    assert!(
+        !copyrights.iter().any(|c| c.copyright == "<copyright>"),
+        "bare XML tag leaked into copyrights: {copyrights:?}"
+    );
+    assert!(
+        !holders.iter().any(|h| h.holder == "<copyright>"),
+        "bare XML tag leaked into holders: {holders:?}"
+    );
+    assert!(
+        copyrights.iter().any(|c| c.copyright.contains("Jonas")),
+        "expected the real notice to survive: {copyrights:?}"
+    );
+}
+
+#[test]
+fn test_javadoc_author_with_html_anchor_is_extracted() {
+    // Java Javadoc `@author` tags frequently wrap the name in an HTML anchor with
+    // an http(s) href (eclipse-vertx/vert.x uses
+    // `@author <a href="http://tfox.org">Tim Fox</a>` across hundreds of files).
+    // The href is a homepage link, not the name; the author resolves to the name.
+    for (text, expected) in [
+        (
+            " * @author <a href=\"http://tfox.org\">Tim Fox</a>",
+            "Tim Fox",
+        ),
+        (
+            " * @author <a href=\"https://github.com/cescoffier\">Clement Escoffier</a>",
+            "Clement Escoffier",
+        ),
+    ] {
+        let (_c, _h, authors) = detect_copyrights_from_text(text);
+        let vals: Vec<&String> = authors.iter().map(|a| &a.author).collect();
+        assert!(
+            vals.iter().any(|a| a.as_str() == expected),
+            "expected {expected:?} in {vals:?} for {text:?}"
+        );
+    }
+}

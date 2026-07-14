@@ -225,7 +225,20 @@ pub fn is_junk_copyright(s: &str) -> bool {
         || is_creative_commons_license_prose(s)
         || spans_prose_sentence_boundary(s)
         || contains_unicode_segmentation_markers(s)
+        || is_bare_markup_tag(s)
         || looks_like_source_code(s)
+}
+
+/// Return true if the whole candidate is a single markup tag such as the XML
+/// `<copyright>` element opener found in Wayland protocol descriptions and other
+/// schemas. The tag word (`copyright`) otherwise reaches the detector as a bare
+/// marker. Anchored to the full string and excluding `@`, so an angle-bracketed
+/// holder email (`<jane@example.com>`) — which carries an address, not a tag — is
+/// never matched.
+pub(super) fn is_bare_markup_tag(s: &str) -> bool {
+    static MARKUP_TAG_ONLY_RE: LazyLock<Regex> =
+        LazyLock::new(|| compile_static_regex(r"^\s*<[/!?]?[a-zA-Z][a-zA-Z0-9:_-]*\s*/?>\s*$"));
+    MARKUP_TAG_ONLY_RE.is_match(s)
 }
 
 /// Return true if a candidate carries Unicode segmentation-test markers — the
@@ -403,6 +416,7 @@ pub(crate) fn is_junk_holder(s: &str) -> bool {
         || looks_like_source_code(s)
         || starts_with_sentence_connective(s)
         || contains_unicode_segmentation_markers(s)
+        || is_bare_markup_tag(s)
         || s.eq_ignore_ascii_case("MIT")
 }
 
