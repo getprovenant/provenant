@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 249 of 249 recorded runs, with a **19.6× median speedup** and **19.6× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
+> Provenant is faster on 252 of 252 recorded runs, with a **19.6× median speedup** and **19.6× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -571,6 +571,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `5.07s`; ScanCode `49.73s`
 - Direct Leiningen and tools.deps package identity (`2` vs `0` packages, `68` vs `0` dependencies) that ScanCode cannot model because it ships no `project.clj`/`deps.edn` parser: the root `pkg:maven/aleph/aleph` assembles its `project.clj` with the co-located generated `deps.edn`, resolving `def`-bound `~netty-version`/`~brotli-version` dependency versions and a runtime `(or (System/getenv …) …)` project version into concrete coordinates and normalizing tools.deps `artifact$classifier` deps into clean purls with classifier metadata, plus source-faithful `©` copyright recovery on `README.md` where ScanCode renders `(c)` and rejection of the `${…}`-templated CircleCI status URL ScanCode emits as a broken percent-encoded fragment
 
+##### [eclipse-vertx/vert.x @ 78ade62](https://github.com/eclipse-vertx/vert.x/tree/78ade6225ad1dc24f39496af6e109c1505ff9839) — **20.94× faster**
+
+- Files: 1,752
+- Run context: 2026-07-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `9.29s`; ScanCode `194.51s`
+- Classifies the `Apache-2.0 AND EPL-2.0` dual license on one more file than ScanCode and extracts the Java Javadoc `@author` contributor names wrapped in HTML homepage anchors (`Tim Fox`, `Clement Escoffier`) across hundreds of source files, while omitting ScanCode's `LicenseRef-scancode-unknown-license-reference` noise on the terms-of-service document
+
 ##### [elastic/elasticsearch @ a414f3d](https://github.com/elastic/elasticsearch/tree/a414f3d06c7ab59a5a0b350e80e5674bf9864688) — **38.84× faster**
 
 - Files: 40,293
@@ -846,6 +853,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `14.62s`; ScanCode `623.80s`
 - Broader package-adjacent Git metadata visibility on the tracked `.gitmodules` manifest (`1` vs `0` dependencies on that file), plus one extra top-level package row (`4` vs `3`) from treating the manifest as package metadata instead of leaving it scanner-silent
 
+##### [glfw/glfw @ ed6452b](https://github.com/glfw/glfw/tree/ed6452b13c76f7b4da216a9952bc7837aeb0f031) — **17.15× faster**
+
+- Files: 177
+- Run context: 2026-07-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.18s`; ScanCode `88.79s`
+- Copyright rendering in the vendored Wayland protocol descriptions preserves the literal `©` glyph and accented holder names (`Copyright © 2014 Jonas Ådahl`) where ScanCode normalizes the sign to `(c)` and folds the name to `Adahl`; both classify the repository `LICENSE.md` as `Zlib`, and a Doxygen build-config prose fragment (`doxygen. Using`) is kept out of the author list where ScanCode reports it
+
 ##### [go-gitea/gitea @ 47fdf3e2](https://github.com/go-gitea/gitea/tree/47fdf3e284308c6b648936b5c15e136b08f5e1da) — **26.3× faster**
 
 - Files: 5,201
@@ -1069,6 +1083,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-15 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `5.00s`; ScanCode `44.92s`
 - Matched Cargo workspace package and dependency coverage (`2` vs `2` packages, `190` vs `190` dependencies) while preserving the repository's dual-license README and manifest semantics, recovering SVG-linked URL evidence, and avoiding trailing-slash URL drift across the docs surfaces
+
+##### [mozilla/glean @ a4166fa](https://github.com/mozilla/glean/tree/a4166fa8816193c44d8b18a61e4457c7c430e44a) — **20.46× faster**
+
+- Files: 1,079
+- Run context: 2026-07-14 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `6.26s`; ScanCode `128.06s`
+- Detects `MPL-2.0` on one more file (`13` vs `12`) and rejects ScanCode's author false positives mined from config and documentation prose (`the Glean`, `cron task <url>`); the virtual `[workspace]` Cargo manifest and `Cargo.lock` report an empty declared license where ScanCode attributes `mpl-2.0` to files that declare none
 
 ##### [rust-lang/cargo @ b54fe55](https://github.com/rust-lang/cargo/tree/b54fe551a982d75d299e0d54daeac70cb854eef0) — **24.6× faster**
 
