@@ -354,13 +354,13 @@ jobs:
           lfs: false
 
       # Least-privilege, short-lived token scoped to the tap repo only. Requires
-      # the provenant-release-bot GitHub App (RELEASE_BOT_APP_ID /
+      # the provenant-release-bot GitHub App (RELEASE_BOT_CLIENT_ID /
       # RELEASE_BOT_PRIVATE_KEY secrets) installed on getprovenant/homebrew-tap.
       - name: Mint a token for the tap repository
         id: tap_token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          client-id: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
           owner: getprovenant
           repositories: homebrew-tap
