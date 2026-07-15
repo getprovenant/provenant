@@ -868,6 +868,11 @@ fn test_javadoc_author_with_html_anchor_is_extracted() {
             " * @author Francesco Guardiani <a href=\"https://slinkydeveloper.github.io/\">@slinkydeveloper</a>",
             "Francesco Guardiani",
         ),
+        // Plain-text name followed by a bare social handle (no anchor).
+        (
+            " * @author Francesco Guardiani @slinkydeveloper",
+            "Francesco Guardiani",
+        ),
     ] {
         let (_c, _h, authors) = detect_copyrights_from_text(text);
         let vals: Vec<&String> = authors.iter().map(|a| &a.author).collect();

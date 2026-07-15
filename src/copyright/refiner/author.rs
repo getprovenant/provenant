@@ -14,6 +14,7 @@ pub fn refine_author(s: &str) -> Option<String> {
     let had_obfuscated_angle_contact = contains_obfuscated_angle_contact(s);
     let mut a = remove_some_extra_words_and_punct(s);
     a = strip_trailing_parenthesized_email_contact(&a);
+    a = strip_trailing_at_handle(&a);
     a = truncate_trailing_collective_contributors_prose(&a);
     a = strip_leading_maintainers_label(&a);
     a = strip_trailing_javadoc_tags(&a);
@@ -141,6 +142,30 @@ fn strip_trailing_parenthesized_email_contact(s: &str) -> String {
     };
     let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
     if prefix.is_empty() || !prefix.chars().any(|ch| ch.is_alphabetic()) {
+        return s.to_string();
+    }
+
+    prefix.to_string()
+}
+
+/// Strip a trailing social/VCS handle from an author name — the `@slinkydeveloper`
+/// in a Javadoc `@author Francesco Guardiani @slinkydeveloper` tag. The handle is
+/// a contact reference, not part of the name, and its bare `@` prefix would
+/// otherwise get the whole candidate rejected as a code fragment. Only a real
+/// name prefix (alphabetic, no other `@`) is kept, so an email address or a
+/// standalone `@ref`/`@type` token is left untouched.
+fn strip_trailing_at_handle(s: &str) -> String {
+    static TRAILING_AT_HANDLE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?P<prefix>.+?)\s+@[A-Za-z][A-Za-z0-9_-]*\s*$")
+            .expect("valid trailing at-handle regex")
+    });
+
+    let trimmed = s.trim();
+    let Some(cap) = TRAILING_AT_HANDLE_RE.captures(trimmed) else {
+        return s.to_string();
+    };
+    let prefix = cap.name("prefix").map(|m| m.as_str()).unwrap_or("").trim();
+    if prefix.is_empty() || prefix.contains('@') || !prefix.chars().any(|ch| ch.is_alphabetic()) {
         return s.to_string();
     }
 
