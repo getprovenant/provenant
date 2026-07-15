@@ -235,10 +235,12 @@ static AUTHOR_HTTP_ANCHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
 /// with an http(s) anchor whose text is a handle/homepage link, not the name
 /// (`@author Francesco Guardiani <a href="https://…">@slinkydeveloper</a>`).
 /// Group 1 keeps the marker and the plain-text name; the trailing anchor —
-/// href and link text both — is dropped. The name must begin with an uppercase
-/// letter so this never fires on the name-inside-anchor form handled above.
+/// href and link text both — is dropped. The text between the marker and the
+/// anchor must begin with a letter, so this never fires on the
+/// name-inside-anchor form handled above (there `<` immediately follows the
+/// marker).
 static AUTHOR_TRAILING_HTTP_ANCHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?is)(@?authors?[:\s]+[A-Z][^<]*?)\s+<a\s+href=['\"]https?://[^>]*>[^<]*</a>"#)
+    Regex::new(r#"(?is)(@?authors?[:\s]+[A-Za-z][^<]*?)\s+<a\s+href=['\"]https?://[^>]*>[^<]*</a>"#)
         .unwrap()
 });
 
