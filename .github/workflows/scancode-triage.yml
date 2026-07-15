@@ -17,11 +17,11 @@ on:
         required: false
         default: "8"
 
-# GITHUB_TOKEN needs models:read to call GitHub Models inference and issues:write
-# to open per-finding issues.
+# GITHUB_TOKEN needs issues:write to open per-finding issues (contents:read for
+# checkout). Models inference does NOT use GITHUB_TOKEN -- it uses MODELS_TOKEN
+# (see the Run triage step) because this org has no Models entitlement.
 permissions:
   contents: read
-  models: read
   issues: write
 
 concurrency:
@@ -46,8 +46,16 @@ jobs:
 
       - name: Run triage
         env:
+          # GITHUB_TOKEN drives the gh CLI (fetching upstream issues, opening
+          # findings) via the org repo's own issues:write/contents:read.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GitHub Models inference needs a separate credential: on this org-owned
+          # repo the built-in GITHUB_TOKEN resolves against the org, which has no
+          # Models entitlement (403 on scheduled runs). MODELS_TOKEN is a personal
+          # fine-grained PAT (resource owner = a user, Models: read only) carrying
+          # a personal Models entitlement. See docs in the triage tool.
+          MODELS_TOKEN: ${{ secrets.MODELS_TOKEN }}
           # Passed via env (never interpolated into the run script) so a dispatch
           # input cannot break out of the shell command. The tool also validates
           # it is a positive integer.
