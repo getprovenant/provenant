@@ -9,11 +9,21 @@
 //! "New license request:" noise, classifying, deciding what to reproduce, and
 //! writing the verdict table.
 //!
-//! Runs on GitHub Models inference, authenticated with a GitHub token that
-//! carries `models:read`. In GitHub Actions that is the built-in GITHUB_TOKEN
-//! (with `permissions: models: read`); locally it is `gh auth token`. The model
-//! must be supplied via `--model` or the `SCANCODE_TRIAGE_MODEL` env var
-//! (typically a repository variable); there is no built-in default.
+//! The tool uses two independent credentials, because a single GitHub token
+//! cannot satisfy both jobs when the repo lives in an org without a GitHub
+//! Models entitlement:
+//!   * GitHub Models inference needs a token carrying a `models:read`
+//!     entitlement. On an org-owned repo the built-in GITHUB_TOKEN resolves
+//!     against the org (403 on scheduled runs when the org has no Models
+//!     entitlement), so the inference token is read from `MODELS_TOKEN` -- a
+//!     personal fine-grained PAT whose resource owner is a user with a personal
+//!     Models entitlement. It falls back to GITHUB_TOKEN/GH_TOKEN/`gh auth
+//!     token` for local runs.
+//!   * The GitHub REST calls (fetching upstream issues, opening findings) run
+//!     through the `gh` CLI, which uses the built-in GITHUB_TOKEN/GH_TOKEN.
+//!
+//! The model must be supplied via `--model` or the `SCANCODE_TRIAGE_MODEL` env
+//! var (typically a repository variable); there is no built-in default.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -124,6 +134,16 @@ struct Finding {
     evidence: String,
 }
 
+/// One triaged candidate: its markdown table row, plus whether the model call
+/// itself failed (auth/transport/retries exhausted) as opposed to producing a
+/// real verdict. `llm_error` is tracked explicitly rather than inferred from
+/// the row text, so a verdict that merely quotes the words "LLM error" is not
+/// miscounted as an outage.
+struct Triaged {
+    row: String,
+    llm_error: bool,
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     if args.days == 0 {
@@ -150,7 +170,7 @@ fn main() -> Result<()> {
         None => default_since(args.days)?,
     };
 
-    let (report, findings) = run(&args, &model, &since)?;
+    let (report, findings, llm_errors) = run(&args, &model, &since)?;
 
     // The full run summary is not an issue; it lives in the run output. Print it
     // to stdout (captured in CI logs) and, when running under Actions, append it
@@ -173,11 +193,21 @@ fn main() -> Result<()> {
             findings.len()
         );
     }
+
+    // Report first (above), then fail: any candidate that hit an LLM error was
+    // not triaged, so exit non-zero rather than let a green run mask missing
+    // triage (a total outage or a token that fails partway through a run).
+    if llm_errors > 0 {
+        bail!(
+            "{llm_errors} candidate(s) could not be triaged: the model call failed \
+             for them (check MODELS_TOKEN and its Models entitlement)"
+        );
+    }
     Ok(())
 }
 
-fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>)> {
-    let token = gh_token()?;
+fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>, usize)> {
+    let token = models_token()?;
     let client = reqwest::blocking::Client::builder()
         .user_agent("provenant-triage")
         .build()?;
@@ -199,6 +229,7 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>)> 
 
     let mut rows = Vec::new();
     let mut findings = Vec::new();
+    let mut llm_errors = 0usize;
     for (i, issue) in candidates.iter().enumerate() {
         eprintln!(
             "  [{}/{}] triaging #{}: {}",
@@ -207,7 +238,10 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>)> 
             issue.number,
             truncate(&issue.title, 60)
         );
-        let row = triage_one_issue(&client, &token, model, args, issue);
+        let Triaged { row, llm_error } = triage_one_issue(&client, &token, model, args, issue);
+        if llm_error {
+            llm_errors += 1;
+        }
         if row.to_lowercase().contains("worth fixing") {
             // Row shape: '' | Issue | Type | Verdict | Evidence | ''
             let cells: Vec<&str> = row.split('|').map(str::trim).collect();
@@ -229,7 +263,11 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>)> 
         &candidates,
         &rows,
     );
-    Ok((report, findings))
+    // A candidate that hit an LLM error was not actually triaged. Report the
+    // count so the caller can fail loudly rather than let a green run mask
+    // missing triage -- whether the model was unreachable for the whole run or
+    // only part of it (e.g. a token that expires mid-run).
+    Ok((report, findings, llm_errors))
 }
 
 fn assemble_report(
@@ -275,19 +313,24 @@ fn assemble_report(
     lines.join("\n")
 }
 
-/// Bounded per-issue tool-loop. Returns a single markdown table row.
+/// Bounded per-issue tool-loop. Returns the issue's markdown table row and
+/// whether the model call failed (vs. a genuine verdict).
 fn triage_one_issue(
     client: &reqwest::blocking::Client,
     token: &str,
     model: &str,
     args: &Args,
     issue: &Issue,
-) -> String {
+) -> Triaged {
     let n = issue.number;
-    let fallback = |note: &str| {
+    let row = |note: &str| {
         format!(
             "| [#{n}](https://github.com/{SCANCODE_REPO}/issues/{n}) | ? | needs manual check | {note} |"
         )
+    };
+    let verdict = |note: &str| Triaged {
+        row: row(note),
+        llm_error: false,
     };
     let user = format!(
         "Issue #{n} [{}] by {} (labels: {})\nTITLE: {}\nBODY:\n{}",
@@ -309,7 +352,12 @@ fn triage_one_issue(
     for _turn in 0..MAX_TURNS {
         let resp = match call_model(client, token, model, &messages) {
             Ok(v) => v,
-            Err(e) => return fallback(&format!("LLM error: {}", truncate(&e.to_string(), 80))),
+            Err(e) => {
+                return Triaged {
+                    row: row(&format!("LLM error: {}", truncate(&e.to_string(), 80))),
+                    llm_error: true,
+                };
+            }
         };
         let msg = &resp["choices"][0]["message"];
         let tool_calls = msg.get("tool_calls").cloned().filter(|v| !v.is_null());
@@ -327,8 +375,11 @@ fn triage_one_issue(
             return content
                 .lines()
                 .find(|l| l.trim_start().starts_with('|'))
-                .map(|l| l.trim().to_string())
-                .unwrap_or_else(|| fallback("no table row in model output"));
+                .map(|l| Triaged {
+                    row: l.trim().to_string(),
+                    llm_error: false,
+                })
+                .unwrap_or_else(|| verdict("no table row in model output"));
         };
 
         for tc in tool_calls {
@@ -363,7 +414,7 @@ fn triage_one_issue(
         }
         sleep(THROTTLE);
     }
-    fallback("did not converge")
+    verdict("did not converge")
 }
 
 fn tools() -> Value {
@@ -426,8 +477,16 @@ fn call_model(
                 sleep(Duration::from_secs(wait));
             }
             Ok(r) => {
-                let r = r.error_for_status()?;
-                return Ok(serde_json::from_slice(&r.bytes()?)?);
+                let status = r.status();
+                let bytes = r.bytes()?;
+                if !status.is_success() {
+                    // error_for_status() discards the body; GitHub returns the
+                    // actual reason there (e.g. "no access to model"), so surface
+                    // it -- a bare status code is not self-diagnosing.
+                    let body = String::from_utf8_lossy(&bytes);
+                    bail!("model request failed ({status}): {}", truncate(&body, 300));
+                }
+                return Ok(serde_json::from_slice(&bytes)?);
             }
             Err(e) => return Err(anyhow!("model request failed: {e}")),
         }
@@ -617,8 +676,12 @@ fn list_parsers(repo_root: &Path) -> Vec<String> {
 
 // ---- GitHub (via gh CLI) ---------------------------------------------------
 
-fn gh_token() -> Result<String> {
-    for var in ["GITHUB_TOKEN", "GH_TOKEN"] {
+/// Resolve the token used for GitHub Models inference. Prefers the dedicated
+/// `MODELS_TOKEN` (a personal PAT carrying a Models entitlement, kept separate
+/// from the org GITHUB_TOKEN used for REST calls), then falls back to
+/// GITHUB_TOKEN/GH_TOKEN/`gh auth token` for local runs.
+fn models_token() -> Result<String> {
+    for var in ["MODELS_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"] {
         if let Ok(v) = std::env::var(var)
             && !v.is_empty()
         {
@@ -630,7 +693,10 @@ fn gh_token() -> Result<String> {
         .output()
         .context("running `gh auth token`")?;
     if !out.status.success() {
-        bail!("no GitHub token (GITHUB_TOKEN/GH_TOKEN unset and `gh auth token` failed)");
+        bail!(
+            "no Models token (MODELS_TOKEN/GITHUB_TOKEN/GH_TOKEN unset and \
+             `gh auth token` failed)"
+        );
     }
     Ok(String::from_utf8(out.stdout)?.trim().to_string())
 }
