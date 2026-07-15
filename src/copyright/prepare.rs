@@ -231,6 +231,17 @@ static AUTHOR_HTTP_ANCHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
+/// A Javadoc `@author` tag that names the author in plain text and *follows* it
+/// with an http(s) anchor whose text is a handle/homepage link, not the name
+/// (`@author Francesco Guardiani <a href="https://…">@slinkydeveloper</a>`).
+/// Group 1 keeps the marker and the plain-text name; the trailing anchor —
+/// href and link text both — is dropped. The name must begin with an uppercase
+/// letter so this never fires on the name-inside-anchor form handled above.
+static AUTHOR_TRAILING_HTTP_ANCHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?is)(@?authors?[:\s]+[A-Z][^<]*?)\s+<a\s+href=['\"]https?://[^>]*>[^<]*</a>"#)
+        .unwrap()
+});
+
 static TAG_VALUE_ATTR_DQ_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?is)\bvalue\s*=\s*\"([^\"]+)\""#).unwrap());
 
@@ -669,6 +680,10 @@ pub fn prepare_text_line(line: &str) -> String {
     // the marker and the name and break author extraction). Scoped to an author
     // marker and to http(s) hrefs so copyright anchors and mailto/email contact
     // anchors — which keep their address — are unaffected.
+    s = AUTHOR_TRAILING_HTTP_ANCHOR_RE
+        .replace_all(&s, "$1 ")
+        .into_owned();
+
     s = AUTHOR_HTTP_ANCHOR_RE.replace_all(&s, "$1$2 ").into_owned();
 
     s = HTTP_ANCHOR_RE.replace_all(&s, "$1 $2").into_owned();
