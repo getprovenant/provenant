@@ -622,9 +622,11 @@ fn format_spdx_text_field(value: &str) -> String {
 }
 
 fn spdx_relative_file_name(path: &str, scanned_path: Option<&str>) -> String {
-    let path = Path::new(path.trim_start_matches("./"));
+    // Normalize both sides the same way so a CLI root like `./proj` still
+    // strips against collected paths that lose the leading `./`.
+    let path = Path::new(trim_spdx_dot_slash(path));
     let relative = match scanned_path {
-        Some(root) => match path.strip_prefix(Path::new(root)) {
+        Some(root) => match path.strip_prefix(Path::new(trim_spdx_dot_slash(root))) {
             Ok(stripped) => stripped.to_string_lossy().into_owned(),
             Err(_) => path.to_string_lossy().into_owned(),
         },
@@ -639,6 +641,10 @@ fn spdx_relative_file_name(path: &str, scanned_path: Option<&str>) -> String {
     } else {
         format!("./{relative}")
     }
+}
+
+fn trim_spdx_dot_slash(path: &str) -> &str {
+    path.trim_start_matches("./")
 }
 
 /// Plan SPDX packages: one per assembled package (with owned files), plus a
@@ -738,6 +744,18 @@ mod tests {
         );
         assert_eq!(
             spdx_relative_file_name("/tmp/proj/src.rs", Some("/tmp/proj")),
+            "./src.rs"
+        );
+    }
+
+    #[test]
+    fn spdx_relative_file_name_strips_matching_dot_slash_roots() {
+        assert_eq!(
+            spdx_relative_file_name("./proj/src.rs", Some("./proj")),
+            "./src.rs"
+        );
+        assert_eq!(
+            spdx_relative_file_name("proj/src.rs", Some("./proj")),
             "./src.rs"
         );
     }
