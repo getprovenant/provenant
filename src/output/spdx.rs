@@ -45,6 +45,8 @@ pub(crate) fn write_spdx_tag_value(
     let package_license_info_from_files = spdx_package_license_info_from_files(&files);
     let package_copyright_text = spdx_package_copyright_text(&files);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
+    let created = spdx_created_timestamp(output);
+    let creator = spdx_creator();
 
     writeln!(writer, "## Document Information")?;
     writeln!(writer, "SPDXVersion: SPDX-2.2")?;
@@ -58,6 +60,8 @@ pub(crate) fn write_spdx_tag_value(
         SPDX_DOCUMENT_NOTICE
     )?;
     writeln!(writer, "## Creation Information")?;
+    writeln!(writer, "Creator: {}", creator)?;
+    writeln!(writer, "Created: {}", created)?;
     writeln!(writer, "## Package Information")?;
 
     writeln!(writer, "PackageName: {}", package_name)?;
@@ -77,13 +81,21 @@ pub(crate) fn write_spdx_tag_value(
         writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
     }
     writeln!(writer, "PackageLicenseDeclared: NOASSERTION")?;
-    writeln!(writer, "PackageCopyrightText: {}", package_copyright_text)?;
+    writeln!(
+        writer,
+        "PackageCopyrightText: {}",
+        format_spdx_text_field(&package_copyright_text)
+    )?;
     writeln!(writer, "## File Information")?;
 
     for (file_index, file) in (1usize..).zip(files) {
         let sha1 = file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX);
         let file_license_info = spdx_file_license_info(file);
-        writeln!(writer, "FileName: ./{}", file.path)?;
+        writeln!(
+            writer,
+            "FileName: {}",
+            spdx_relative_file_name(&file.path, config.scanned_path.as_deref())
+        )?;
         writeln!(writer, "SPDXID: SPDXRef-{}", file_index)?;
         writeln!(writer, "FileChecksum: SHA1: {}", sha1)?;
         writeln!(writer, "LicenseConcluded: NOASSERTION")?;
@@ -104,11 +116,21 @@ pub(crate) fn write_spdx_tag_value(
                 .map(|c| c.copyright.clone())
                 .collect::<Vec<_>>()
                 .join("\\n");
-            writeln!(writer, "FileCopyrightText: {}", text)?;
+            writeln!(
+                writer,
+                "FileCopyrightText: {}",
+                format_spdx_text_field(&text)
+            )?;
         }
 
         writeln!(writer)?;
     }
+
+    writeln!(writer, "## Relationships")?;
+    writeln!(
+        writer,
+        "Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-001"
+    )?;
 
     if !extracted_license_infos.is_empty() {
         writeln!(writer, "## License Information")?;
@@ -143,22 +165,24 @@ pub(crate) fn write_spdx_rdf_xml(
     }
 
     let package_name = xml_escape(&package_name_raw);
+    let document_namespace = format!("http://spdx.org/spdxdocs/{}", package_name_raw);
+    let document_namespace_xml = xml_escape(&document_namespace);
     let package_verification_code = spdx_package_verification_code(&files);
     let package_license_info_from_files = spdx_package_license_info_from_files(&files);
     let package_copyright_text = xml_escape(&spdx_package_copyright_text(&files));
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
-    let created_raw = output
-        .headers
-        .first()
-        .and_then(|h| convert_header_timestamp_to_iso_utc(&h.start_timestamp))
-        .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string());
-    let created = xml_escape(&created_raw);
+    let created = xml_escape(&spdx_created_timestamp(output));
+    let creator = xml_escape(&spdx_creator());
 
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\" xmlns:spdx=\"http://spdx.org/rdf/terms#\">\n");
 
-    xml.push_str("  <spdx:Package rdf:about=\"#SPDXRef-001\">\n");
+    // Absolute rdf:about URIs (namespace#SPDXRef-…) so RDF parsers do not resolve
+    // bare fragments against the on-disk file path.
+    xml.push_str("  <spdx:Package rdf:about=\"");
+    xml.push_str(&document_namespace_xml);
+    xml.push_str("#SPDXRef-001\">\n");
     xml.push_str("    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">true</spdx:filesAnalyzed>\n");
     xml.push_str(
         "    <spdx:downloadLocation rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
@@ -189,7 +213,9 @@ pub(crate) fn write_spdx_rdf_xml(
         let file_license_info = spdx_file_license_info(file);
         xml.push_str("    <spdx:relationship><spdx:Relationship>");
         xml.push_str("<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_contains\"/>");
-        xml.push_str("<spdx:relatedSpdxElement><spdx:File rdf:about=\"#SPDXRef-");
+        xml.push_str("<spdx:relatedSpdxElement><spdx:File rdf:about=\"");
+        xml.push_str(&document_namespace_xml);
+        xml.push_str("#SPDXRef-");
         xml.push_str(&file_id.to_string());
         xml.push_str("\">");
         xml.push_str(
@@ -211,7 +237,10 @@ pub(crate) fn write_spdx_rdf_xml(
         xml.push_str(&xml_escape(file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX)));
         xml.push_str("</spdx:checksumValue></spdx:Checksum></spdx:checksum>");
         xml.push_str("<spdx:fileName>");
-        xml.push_str(&xml_escape(&format!("./{}", file.path)));
+        xml.push_str(&xml_escape(&spdx_relative_file_name(
+            &file.path,
+            config.scanned_path.as_deref(),
+        )));
         xml.push_str("</spdx:fileName>");
         xml.push_str("<spdx:copyrightText>");
         if file.copyrights.is_empty() {
@@ -240,15 +269,20 @@ pub(crate) fn write_spdx_rdf_xml(
     xml.push_str("</spdx:name>\n");
     xml.push_str("  </spdx:Package>\n");
 
-    xml.push_str("  <spdx:SpdxDocument rdf:about=\"#SPDXRef-DOCUMENT\">\n");
+    // spdx-tools expects SpdxDocument rdf:about = documentNamespace + "#SPDXRef-DOCUMENT".
+    xml.push_str("  <spdx:SpdxDocument rdf:about=\"");
+    xml.push_str(&document_namespace_xml);
+    xml.push_str("#SPDXRef-DOCUMENT\">\n");
     xml.push_str("    <spdx:dataLicense rdf:resource=\"http://spdx.org/licenses/CC0-1.0\"/>\n");
     xml.push_str("    <rdfs:comment>");
     xml.push_str(&xml_escape(SPDX_DOCUMENT_NOTICE));
     xml.push_str("</rdfs:comment>\n");
     for info in extracted_license_infos {
         xml.push_str(
-            "    <spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"#",
+            "    <spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"",
         );
+        xml.push_str(&document_namespace_xml);
+        xml.push('#');
         xml.push_str(&xml_escape(&info.license_id));
         xml.push_str("\">");
         xml.push_str("<spdx:licenseId>");
@@ -267,9 +301,22 @@ pub(crate) fn write_spdx_rdf_xml(
     }
     xml.push_str("    <spdx:name>SPDX Document created by Provenant</spdx:name>\n");
     xml.push_str("    <spdx:specVersion>SPDX-2.2</spdx:specVersion>\n");
-    xml.push_str("    <spdx:creationInfo><spdx:CreationInfo><spdx:created>");
+    xml.push_str("    <spdx:creationInfo><spdx:CreationInfo>");
+    xml.push_str("<spdx:creator>");
+    xml.push_str(&creator);
+    xml.push_str("</spdx:creator>");
+    xml.push_str("<spdx:created>");
     xml.push_str(&created);
-    xml.push_str("</spdx:created></spdx:CreationInfo></spdx:creationInfo>\n");
+    xml.push_str("</spdx:created>");
+    xml.push_str("</spdx:CreationInfo></spdx:creationInfo>\n");
+    xml.push_str("    <spdx:relationship><spdx:Relationship>");
+    xml.push_str(
+        "<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_describes\"/>",
+    );
+    xml.push_str("<spdx:relatedSpdxElement rdf:resource=\"");
+    xml.push_str(&document_namespace_xml);
+    xml.push_str("#SPDXRef-001\"/>");
+    xml.push_str("</spdx:Relationship></spdx:relationship>\n");
     xml.push_str("  </spdx:SpdxDocument>\n");
 
     xml.push_str("</rdf:RDF>\n");
@@ -338,7 +385,7 @@ fn spdx_package_verification_code(files: &[&FileInfo]) -> String {
 }
 
 fn spdx_file_license_info(file: &FileInfo) -> Vec<String> {
-    let mut license_ids = Vec::new();
+    let mut license_ids = BTreeSet::new();
 
     for detection in file.license_detections.iter().chain(
         file.package_data
@@ -365,7 +412,7 @@ fn spdx_file_license_info(file: &FileInfo) -> Vec<String> {
         }
     }
 
-    license_ids
+    license_ids.into_iter().collect()
 }
 
 fn spdx_package_license_info_from_files(files: &[&FileInfo]) -> Vec<String> {
@@ -482,7 +529,8 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
     };
 
     for ch in expression.chars() {
-        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '.' | '+') {
+        // Keep underscores so LicenseRef- and SPDX ids that use them stay intact.
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '.' | '+' | '_') {
             token.push(ch);
         } else {
             flush(&mut token, &mut ids);
@@ -491,6 +539,46 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
     flush(&mut token, &mut ids);
 
     ids
+}
+
+fn spdx_creator() -> String {
+    format!("Tool: Provenant-{}", crate::version::BUILD_VERSION)
+}
+
+fn spdx_created_timestamp(output: &Output) -> String {
+    output
+        .headers
+        .first()
+        .and_then(|h| convert_header_timestamp_to_iso_utc(&h.start_timestamp))
+        .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string())
+}
+
+fn format_spdx_text_field(value: &str) -> String {
+    if value.contains('\n') {
+        format!("<text>{value}</text>")
+    } else {
+        value.to_string()
+    }
+}
+
+fn spdx_relative_file_name(path: &str, scanned_path: Option<&str>) -> String {
+    let trimmed = path.trim_start_matches("./");
+    let relative = if let Some(root) = scanned_path {
+        let root = root.trim_end_matches('/');
+        if let Some(rest) = trimmed.strip_prefix(root) {
+            rest.trim_start_matches('/')
+        } else {
+            trimmed
+        }
+    } else {
+        trimmed
+    };
+
+    if relative.is_empty() {
+        "./.".to_string()
+    } else {
+        format!("./{relative}")
+    }
 }
 
 #[cfg(test)]

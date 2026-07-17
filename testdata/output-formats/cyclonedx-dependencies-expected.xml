@@ -11,12 +11,25 @@
     </tools>
   </metadata>
   <components>
+    <component type="library" bom-ref="pkg:npm/root@1.0.0">
+      <name>root</name>
+      <version>1.0.0</version>
+      <scope>required</scope>
+      <purl>pkg:npm/root@1.0.0</purl>
+    </component>
+    <component type="library" bom-ref="pkg:npm/other@1.0.0">
+      <name>other</name>
+      <version>1.0.0</version>
+      <scope>required</scope>
+      <purl>pkg:npm/other@1.0.0</purl>
+    </component>
   </components>
   <dependencies>
-    <dependency ref="pkg:npm/root@1.0.0">
+    <dependency ref="pkg:npm/other@1.0.0">
       <dependency ref="pkg:npm/dep@2.0.0"/>
     </dependency>
-    <dependency ref="dependency-2">
+    <dependency ref="pkg:npm/root@1.0.0">
+      <dependency ref="pkg:npm/dep@2.0.0"/>
     </dependency>
   </dependencies>
 </bom>
