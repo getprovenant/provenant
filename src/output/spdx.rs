@@ -6,12 +6,12 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use sha1::{Digest, Sha1};
 
 use crate::output_schema::{
-    Output, OutputFileInfo as FileInfo, OutputFileType, OutputMatch as Match,
+    Output, OutputFileInfo as FileInfo, OutputFileType, OutputMatch as Match, OutputPackage,
 };
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
@@ -27,24 +27,36 @@ struct ExtractedLicenseInfo {
     comment: String,
 }
 
+/// One SPDX Package to emit, with the files it owns.
+struct SpdxPackagePlan<'a> {
+    spdx_id: String,
+    name: String,
+    files: Vec<&'a FileInfo>,
+}
+
 pub(crate) fn write_spdx_tag_value(
     output: &Output,
     writer: &mut dyn Write,
     config: &OutputWriteConfig,
 ) -> io::Result<()> {
-    let package_name = primary_package_name(output, config);
-
     let files = spdx_files(output);
+    let fallback_name = primary_package_name(output, config);
     if files.is_empty() {
-        writeln!(writer, "# No results for package '{}'.", package_name)?;
+        writeln!(writer, "# No results for package '{}'.", fallback_name)?;
         return Ok(());
     }
 
-    let document_namespace = format!("http://spdx.org/spdxdocs/{}", package_name);
-    let package_verification_code = spdx_package_verification_code(&files);
-    let package_license_info_from_files = spdx_package_license_info_from_files(&files);
-    let package_copyright_text = spdx_package_copyright_text(&files);
+    let plans = plan_spdx_packages(output, &files, config);
+    let document_namespace = document_namespace_for(output, config);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
+    let created = spdx_created_timestamp(output);
+    let creator = spdx_creator();
+
+    // Global file index → SPDXRef so CONTAINS relationships can point at files.
+    let mut file_spdx_ids: HashMap<&str, String> = HashMap::new();
+    for (file_index, file) in (1usize..).zip(files.iter()) {
+        file_spdx_ids.insert(file.path.as_str(), format!("SPDXRef-{file_index}"));
+    }
 
     writeln!(writer, "## Document Information")?;
     writeln!(writer, "SPDXVersion: SPDX-2.2")?;
@@ -55,35 +67,51 @@ pub(crate) fn write_spdx_tag_value(
     writeln!(
         writer,
         "DocumentComment: <text>{}</text>",
-        SPDX_DOCUMENT_NOTICE
+        sanitize_spdx_text_content(SPDX_DOCUMENT_NOTICE)
     )?;
     writeln!(writer, "## Creation Information")?;
-    writeln!(writer, "## Package Information")?;
+    writeln!(writer, "Creator: {}", creator)?;
+    writeln!(writer, "Created: {}", created)?;
 
-    writeln!(writer, "PackageName: {}", package_name)?;
-    writeln!(writer, "SPDXID: SPDXRef-001")?;
-    writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
-    writeln!(writer, "FilesAnalyzed: true")?;
-    writeln!(
-        writer,
-        "PackageVerificationCode: {}",
-        package_verification_code
-    )?;
-    writeln!(writer, "PackageLicenseConcluded: NOASSERTION")?;
-    for license_id in &package_license_info_from_files {
-        writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
+    for plan in &plans {
+        let package_verification_code = spdx_package_verification_code(&plan.files);
+        let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+        let package_copyright_text = spdx_package_copyright_text(&plan.files);
+
+        writeln!(writer, "## Package Information")?;
+        writeln!(writer, "PackageName: {}", plan.name)?;
+        writeln!(writer, "SPDXID: {}", plan.spdx_id)?;
+        writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
+        writeln!(writer, "FilesAnalyzed: true")?;
+        writeln!(
+            writer,
+            "PackageVerificationCode: {}",
+            package_verification_code
+        )?;
+        writeln!(writer, "PackageLicenseConcluded: NOASSERTION")?;
+        for license_id in &package_license_info_from_files {
+            writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
+        }
+        if package_license_info_from_files.is_empty() {
+            writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
+        }
+        writeln!(writer, "PackageLicenseDeclared: NOASSERTION")?;
+        writeln!(
+            writer,
+            "PackageCopyrightText: {}",
+            format_spdx_text_field(&package_copyright_text)
+        )?;
     }
-    if package_license_info_from_files.is_empty() {
-        writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
-    }
-    writeln!(writer, "PackageLicenseDeclared: NOASSERTION")?;
-    writeln!(writer, "PackageCopyrightText: {}", package_copyright_text)?;
+
     writeln!(writer, "## File Information")?;
-
-    for (file_index, file) in (1usize..).zip(files) {
+    for (file_index, file) in (1usize..).zip(files.iter()) {
         let sha1 = file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX);
         let file_license_info = spdx_file_license_info(file);
-        writeln!(writer, "FileName: ./{}", file.path)?;
+        writeln!(
+            writer,
+            "FileName: {}",
+            spdx_relative_file_name(&file.path, config.scanned_path.as_deref())
+        )?;
         writeln!(writer, "SPDXID: SPDXRef-{}", file_index)?;
         writeln!(writer, "FileChecksum: SHA1: {}", sha1)?;
         writeln!(writer, "LicenseConcluded: NOASSERTION")?;
@@ -104,20 +132,50 @@ pub(crate) fn write_spdx_tag_value(
                 .map(|c| c.copyright.clone())
                 .collect::<Vec<_>>()
                 .join("\\n");
-            writeln!(writer, "FileCopyrightText: {}", text)?;
+            writeln!(
+                writer,
+                "FileCopyrightText: {}",
+                format_spdx_text_field(&text)
+            )?;
         }
 
         writeln!(writer)?;
+    }
+
+    writeln!(writer, "## Relationships")?;
+    for plan in &plans {
+        writeln!(
+            writer,
+            "Relationship: SPDXRef-DOCUMENT DESCRIBES {}",
+            plan.spdx_id
+        )?;
+        for file in &plan.files {
+            if let Some(file_id) = file_spdx_ids.get(file.path.as_str()) {
+                writeln!(
+                    writer,
+                    "Relationship: {} CONTAINS {}",
+                    plan.spdx_id, file_id
+                )?;
+            }
+        }
     }
 
     if !extracted_license_infos.is_empty() {
         writeln!(writer, "## License Information")?;
         for info in extracted_license_infos {
             writeln!(writer, "LicenseID: {}", info.license_id)?;
-            writeln!(writer, "ExtractedText: <text>{}", info.extracted_text)?;
+            writeln!(
+                writer,
+                "ExtractedText: <text>{}",
+                sanitize_spdx_text_content(&info.extracted_text)
+            )?;
             writeln!(writer, "</text>")?;
             writeln!(writer, "LicenseName: {}", info.name)?;
-            writeln!(writer, "LicenseComment: <text>{}", info.comment)?;
+            writeln!(
+                writer,
+                "LicenseComment: <text>{}",
+                sanitize_spdx_text_content(&info.comment)
+            )?;
             writeln!(writer, "</text>")?;
         }
     }
@@ -130,125 +188,147 @@ pub(crate) fn write_spdx_rdf_xml(
     writer: &mut dyn Write,
     config: &OutputWriteConfig,
 ) -> io::Result<()> {
-    let package_name_raw = primary_package_name(output, config);
-
+    let fallback_name = primary_package_name(output, config);
     let files = spdx_files(output);
     if files.is_empty() {
         writeln!(
             writer,
             "<!-- No results for package '{}'. -->",
-            package_name_raw
+            fallback_name
         )?;
         return Ok(());
     }
 
-    let package_name = xml_escape(&package_name_raw);
-    let package_verification_code = spdx_package_verification_code(&files);
-    let package_license_info_from_files = spdx_package_license_info_from_files(&files);
-    let package_copyright_text = xml_escape(&spdx_package_copyright_text(&files));
+    let plans = plan_spdx_packages(output, &files, config);
+    let document_namespace = document_namespace_for(output, config);
+    let document_namespace_xml = xml_escape(&document_namespace);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
-    let created_raw = output
-        .headers
-        .first()
-        .and_then(|h| convert_header_timestamp_to_iso_utc(&h.start_timestamp))
-        .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string());
-    let created = xml_escape(&created_raw);
+    let created = xml_escape(&spdx_created_timestamp(output));
+    let creator = xml_escape(&spdx_creator());
+
+    let mut file_spdx_ids: HashMap<&str, String> = HashMap::new();
+    for (file_index, file) in (1usize..).zip(files.iter()) {
+        file_spdx_ids.insert(file.path.as_str(), format!("SPDXRef-{file_index}"));
+    }
 
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\" xmlns:spdx=\"http://spdx.org/rdf/terms#\">\n");
 
-    xml.push_str("  <spdx:Package rdf:about=\"#SPDXRef-001\">\n");
-    xml.push_str("    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">true</spdx:filesAnalyzed>\n");
-    xml.push_str(
-        "    <spdx:downloadLocation rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
-    );
-    xml.push_str(
-        "    <spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
-    );
-    xml.push_str(
-        "    <spdx:licenseDeclared rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
-    );
-    if package_license_info_from_files.is_empty() {
-        xml.push_str(
-            "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
-        );
-    } else {
-        for license_id in &package_license_info_from_files {
-            xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
-            xml.push_str(&xml_escape(&spdx_license_rdf_resource(license_id)));
-            xml.push_str("\"/>\n");
-        }
-    }
-    xml.push_str("    <spdx:packageVerificationCode><spdx:PackageVerificationCode><spdx:packageVerificationCodeValue>");
-    xml.push_str(&package_verification_code);
-    xml.push_str("</spdx:packageVerificationCodeValue></spdx:PackageVerificationCode></spdx:packageVerificationCode>\n");
+    for plan in &plans {
+        let package_verification_code = spdx_package_verification_code(&plan.files);
+        let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+        let package_copyright_text = xml_escape(&spdx_package_copyright_text(&plan.files));
+        let package_name = xml_escape(&plan.name);
 
-    for (idx, file) in files.iter().enumerate() {
-        let file_id = idx + 1usize;
-        let file_license_info = spdx_file_license_info(file);
-        xml.push_str("    <spdx:relationship><spdx:Relationship>");
-        xml.push_str("<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_contains\"/>");
-        xml.push_str("<spdx:relatedSpdxElement><spdx:File rdf:about=\"#SPDXRef-");
-        xml.push_str(&file_id.to_string());
-        xml.push_str("\">");
+        xml.push_str("  <spdx:Package rdf:about=\"");
+        xml.push_str(&document_namespace_xml);
+        xml.push('#');
+        xml.push_str(&xml_escape(&plan.spdx_id));
+        xml.push_str("\">\n");
+        xml.push_str("    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">true</spdx:filesAnalyzed>\n");
         xml.push_str(
-            "<spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>",
+            "    <spdx:downloadLocation rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
         );
-        if file_license_info.is_empty() {
+        xml.push_str(
+            "    <spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
+        );
+        xml.push_str(
+            "    <spdx:licenseDeclared rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
+        );
+        if package_license_info_from_files.is_empty() {
             xml.push_str(
-                "<spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/rdf/terms#none\"/>",
+                "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
             );
         } else {
-            for license_id in file_license_info {
-                xml.push_str("<spdx:licenseInfoInFile rdf:resource=\"");
-                xml.push_str(&xml_escape(&spdx_license_rdf_resource(&license_id)));
-                xml.push_str("\"/>");
+            for license_id in &package_license_info_from_files {
+                xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
+                xml.push_str(&xml_escape(&spdx_license_rdf_resource(license_id)));
+                xml.push_str("\"/>\n");
             }
         }
-        xml.push_str("<spdx:checksum><spdx:Checksum><spdx:algorithm rdf:resource=\"http://spdx.org/rdf/terms#checksumAlgorithm_sha1\"/>");
-        xml.push_str("<spdx:checksumValue>");
-        xml.push_str(&xml_escape(file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX)));
-        xml.push_str("</spdx:checksumValue></spdx:Checksum></spdx:checksum>");
-        xml.push_str("<spdx:fileName>");
-        xml.push_str(&xml_escape(&format!("./{}", file.path)));
-        xml.push_str("</spdx:fileName>");
-        xml.push_str("<spdx:copyrightText>");
-        if file.copyrights.is_empty() {
-            xml.push_str("NONE");
-        } else {
-            xml.push_str(&xml_escape(
-                &file
-                    .copyrights
-                    .iter()
-                    .map(|c| c.copyright.clone())
-                    .collect::<Vec<_>>()
-                    .join("\\n"),
-            ));
+        xml.push_str("    <spdx:packageVerificationCode><spdx:PackageVerificationCode><spdx:packageVerificationCodeValue>");
+        xml.push_str(&package_verification_code);
+        xml.push_str("</spdx:packageVerificationCodeValue></spdx:PackageVerificationCode></spdx:packageVerificationCode>\n");
+
+        for file in &plan.files {
+            let Some(file_id) = file_spdx_ids.get(file.path.as_str()) else {
+                continue;
+            };
+            let file_license_info = spdx_file_license_info(file);
+            xml.push_str("    <spdx:relationship><spdx:Relationship>");
+            xml.push_str("<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_contains\"/>");
+            xml.push_str("<spdx:relatedSpdxElement><spdx:File rdf:about=\"");
+            xml.push_str(&document_namespace_xml);
+            xml.push('#');
+            xml.push_str(&xml_escape(file_id));
+            xml.push_str("\">");
+            xml.push_str(
+                "<spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>",
+            );
+            if file_license_info.is_empty() {
+                xml.push_str(
+                    "<spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/rdf/terms#none\"/>",
+                );
+            } else {
+                for license_id in file_license_info {
+                    xml.push_str("<spdx:licenseInfoInFile rdf:resource=\"");
+                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(&license_id)));
+                    xml.push_str("\"/>");
+                }
+            }
+            xml.push_str("<spdx:checksum><spdx:Checksum><spdx:algorithm rdf:resource=\"http://spdx.org/rdf/terms#checksumAlgorithm_sha1\"/>");
+            xml.push_str("<spdx:checksumValue>");
+            xml.push_str(&xml_escape(file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX)));
+            xml.push_str("</spdx:checksumValue></spdx:Checksum></spdx:checksum>");
+            xml.push_str("<spdx:fileName>");
+            xml.push_str(&xml_escape(&spdx_relative_file_name(
+                &file.path,
+                config.scanned_path.as_deref(),
+            )));
+            xml.push_str("</spdx:fileName>");
+            xml.push_str("<spdx:copyrightText>");
+            if file.copyrights.is_empty() {
+                xml.push_str("NONE");
+            } else {
+                xml.push_str(&xml_escape(
+                    &file
+                        .copyrights
+                        .iter()
+                        .map(|c| c.copyright.clone())
+                        .collect::<Vec<_>>()
+                        .join("\\n"),
+                ));
+            }
+            xml.push_str("</spdx:copyrightText>");
+            xml.push_str(
+                "</spdx:File></spdx:relatedSpdxElement></spdx:Relationship></spdx:relationship>\n",
+            );
         }
-        xml.push_str("</spdx:copyrightText>");
-        xml.push_str(
-            "</spdx:File></spdx:relatedSpdxElement></spdx:Relationship></spdx:relationship>\n",
-        );
+
+        xml.push_str("    <spdx:copyrightText>");
+        xml.push_str(&package_copyright_text);
+        xml.push_str("</spdx:copyrightText>\n");
+        xml.push_str("    <spdx:name>");
+        xml.push_str(&package_name);
+        xml.push_str("</spdx:name>\n");
+        xml.push_str("  </spdx:Package>\n");
     }
 
-    xml.push_str("    <spdx:copyrightText>");
-    xml.push_str(&package_copyright_text);
-    xml.push_str("</spdx:copyrightText>\n");
-    xml.push_str("    <spdx:name>");
-    xml.push_str(&package_name);
-    xml.push_str("</spdx:name>\n");
-    xml.push_str("  </spdx:Package>\n");
-
-    xml.push_str("  <spdx:SpdxDocument rdf:about=\"#SPDXRef-DOCUMENT\">\n");
+    // spdx-tools expects SpdxDocument rdf:about = documentNamespace + "#SPDXRef-DOCUMENT".
+    xml.push_str("  <spdx:SpdxDocument rdf:about=\"");
+    xml.push_str(&document_namespace_xml);
+    xml.push_str("#SPDXRef-DOCUMENT\">\n");
     xml.push_str("    <spdx:dataLicense rdf:resource=\"http://spdx.org/licenses/CC0-1.0\"/>\n");
     xml.push_str("    <rdfs:comment>");
     xml.push_str(&xml_escape(SPDX_DOCUMENT_NOTICE));
     xml.push_str("</rdfs:comment>\n");
     for info in extracted_license_infos {
         xml.push_str(
-            "    <spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"#",
+            "    <spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"",
         );
+        xml.push_str(&document_namespace_xml);
+        xml.push('#');
         xml.push_str(&xml_escape(&info.license_id));
         xml.push_str("\">");
         xml.push_str("<spdx:licenseId>");
@@ -267,9 +347,26 @@ pub(crate) fn write_spdx_rdf_xml(
     }
     xml.push_str("    <spdx:name>SPDX Document created by Provenant</spdx:name>\n");
     xml.push_str("    <spdx:specVersion>SPDX-2.2</spdx:specVersion>\n");
-    xml.push_str("    <spdx:creationInfo><spdx:CreationInfo><spdx:created>");
+    xml.push_str("    <spdx:creationInfo><spdx:CreationInfo>");
+    xml.push_str("<spdx:creator>");
+    xml.push_str(&creator);
+    xml.push_str("</spdx:creator>");
+    xml.push_str("<spdx:created>");
     xml.push_str(&created);
-    xml.push_str("</spdx:created></spdx:CreationInfo></spdx:creationInfo>\n");
+    xml.push_str("</spdx:created>");
+    xml.push_str("</spdx:CreationInfo></spdx:creationInfo>\n");
+    for plan in &plans {
+        xml.push_str("    <spdx:relationship><spdx:Relationship>");
+        xml.push_str(
+            "<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_describes\"/>",
+        );
+        xml.push_str("<spdx:relatedSpdxElement rdf:resource=\"");
+        xml.push_str(&document_namespace_xml);
+        xml.push('#');
+        xml.push_str(&xml_escape(&plan.spdx_id));
+        xml.push_str("\"/>");
+        xml.push_str("</spdx:Relationship></spdx:relationship>\n");
+    }
     xml.push_str("  </spdx:SpdxDocument>\n");
 
     xml.push_str("</rdf:RDF>\n");
@@ -338,7 +435,7 @@ fn spdx_package_verification_code(files: &[&FileInfo]) -> String {
 }
 
 fn spdx_file_license_info(file: &FileInfo) -> Vec<String> {
-    let mut license_ids = Vec::new();
+    let mut license_ids = BTreeSet::new();
 
     for detection in file.license_detections.iter().chain(
         file.package_data
@@ -365,7 +462,7 @@ fn spdx_file_license_info(file: &FileInfo) -> Vec<String> {
         }
     }
 
-    license_ids
+    license_ids.into_iter().collect()
 }
 
 fn spdx_package_license_info_from_files(files: &[&FileInfo]) -> Vec<String> {
@@ -482,7 +579,8 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
     };
 
     for ch in expression.chars() {
-        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '.' | '+') {
+        // Keep underscores so LicenseRef- and SPDX ids that use them stay intact.
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '.' | '+' | '_') {
             token.push(ch);
         } else {
             flush(&mut token, &mut ids);
@@ -493,6 +591,141 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
     ids
 }
 
+fn spdx_creator() -> String {
+    format!("Tool: Provenant-{}", crate::version::BUILD_VERSION)
+}
+
+fn spdx_created_timestamp(output: &Output) -> String {
+    output
+        .headers
+        .first()
+        .and_then(|h| convert_header_timestamp_to_iso_utc(&h.start_timestamp))
+        .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string())
+}
+
+fn sanitize_spdx_text_content(value: &str) -> String {
+    // SPDX tag-value `<text>` blocks end at the first `</text>`; neutralize
+    // embedded closers so source-derived copyright/license text cannot break
+    // the document. Fullwidth brackets keep the content readable.
+    value
+        .replace("</text>", "＜/text＞")
+        .replace("</TEXT>", "＜/TEXT＞")
+}
+
+fn format_spdx_text_field(value: &str) -> String {
+    let sanitized = sanitize_spdx_text_content(value);
+    if sanitized.contains('\n') {
+        format!("<text>{sanitized}</text>")
+    } else {
+        sanitized
+    }
+}
+
+fn spdx_relative_file_name(path: &str, scanned_path: Option<&str>) -> String {
+    // Normalize both sides the same way so a CLI root like `./proj` still
+    // strips against collected paths that lose the leading `./`.
+    let path = Path::new(trim_spdx_dot_slash(path));
+    let relative = match scanned_path {
+        Some(root) => match path.strip_prefix(Path::new(trim_spdx_dot_slash(root))) {
+            Ok(stripped) => stripped.to_string_lossy().into_owned(),
+            Err(_) => path.to_string_lossy().into_owned(),
+        },
+        None => path.to_string_lossy().into_owned(),
+    };
+
+    if relative.is_empty() {
+        "./.".to_string()
+    } else if let Some(stripped) = relative.strip_prefix('/') {
+        // Absolute path that did not strip against scanned_path: keep one slash.
+        format!("./{stripped}")
+    } else {
+        format!("./{relative}")
+    }
+}
+
+fn trim_spdx_dot_slash(path: &str) -> &str {
+    path.trim_start_matches("./")
+}
+
+/// Plan SPDX packages: one per assembled package (with owned files), plus a
+/// scan-root fallback package for files that no assembled package claims.
+/// When there are no assembled packages, keep a single synthetic package
+/// (`SPDXRef-001`) owning every file — the historic no-package contract.
+fn plan_spdx_packages<'a>(
+    output: &'a Output,
+    files: &[&'a FileInfo],
+    config: &OutputWriteConfig,
+) -> Vec<SpdxPackagePlan<'a>> {
+    if output.packages.is_empty() {
+        return vec![SpdxPackagePlan {
+            spdx_id: "SPDXRef-001".to_string(),
+            name: primary_package_name(output, config),
+            files: files.to_vec(),
+        }];
+    }
+
+    let mut assigned_paths: HashSet<&str> = HashSet::new();
+    let mut plans = Vec::with_capacity(output.packages.len() + 1);
+
+    for (idx, package) in output.packages.iter().enumerate() {
+        let owned: Vec<&FileInfo> = files
+            .iter()
+            .copied()
+            .filter(|file| {
+                file.for_packages
+                    .iter()
+                    .any(|uid| uid == &package.package_uid)
+            })
+            .collect();
+        for file in &owned {
+            assigned_paths.insert(file.path.as_str());
+        }
+        plans.push(SpdxPackagePlan {
+            spdx_id: format!("SPDXRef-Package-{}", idx + 1),
+            name: spdx_assembled_package_name(package, idx),
+            files: owned,
+        });
+    }
+
+    let unassigned: Vec<&FileInfo> = files
+        .iter()
+        .copied()
+        .filter(|file| !assigned_paths.contains(file.path.as_str()))
+        .collect();
+    if !unassigned.is_empty() {
+        plans.push(SpdxPackagePlan {
+            spdx_id: "SPDXRef-Package-unassigned".to_string(),
+            name: primary_package_name(output, config),
+            files: unassigned,
+        });
+    }
+
+    plans
+}
+
+fn spdx_assembled_package_name(package: &OutputPackage, idx: usize) -> String {
+    package
+        .name
+        .as_deref()
+        .filter(|name| !name.is_empty())
+        .map(sanitize_spdx_package_name)
+        .unwrap_or_else(|| format!("package-{}", idx + 1))
+}
+
+fn document_namespace_for(output: &Output, config: &OutputWriteConfig) -> String {
+    let base = if output.packages.len() > 1 {
+        config
+            .scanned_path
+            .as_deref()
+            .and_then(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
+            .map(sanitize_spdx_package_name)
+            .unwrap_or_else(|| "provenant-scan".to_string())
+    } else {
+        primary_package_name(output, config)
+    };
+    format!("http://spdx.org/spdxdocs/{base}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -500,6 +733,186 @@ mod tests {
     use crate::models::{
         FileType, LicenseDetection, LineNumber, MatchScore, PackageData, PackageType,
     };
+
+    #[test]
+    fn spdx_relative_file_name_uses_path_prefix_not_string_prefix() {
+        // Path::strip_prefix fails for /tmp/proj vs /tmp/project/..., so the
+        // original path is preserved (with ./ prefix), not truncated to ect/...
+        assert_eq!(
+            spdx_relative_file_name("/tmp/project/src.rs", Some("/tmp/proj")),
+            "./tmp/project/src.rs"
+        );
+        assert_eq!(
+            spdx_relative_file_name("/tmp/proj/src.rs", Some("/tmp/proj")),
+            "./src.rs"
+        );
+    }
+
+    #[test]
+    fn spdx_relative_file_name_strips_matching_dot_slash_roots() {
+        assert_eq!(
+            spdx_relative_file_name("./proj/src.rs", Some("./proj")),
+            "./src.rs"
+        );
+        assert_eq!(
+            spdx_relative_file_name("proj/src.rs", Some("./proj")),
+            "./src.rs"
+        );
+    }
+
+    #[test]
+    fn format_spdx_text_field_neutralizes_embedded_text_closers() {
+        let rendered = format_spdx_text_field("before</text>after\nline2");
+        assert!(rendered.starts_with("<text>"));
+        assert!(rendered.ends_with("</text>"));
+        assert!(!rendered.contains("before</text>after"));
+        assert!(rendered.contains("before＜/text＞after"));
+    }
+
+    #[test]
+    fn plan_spdx_packages_emits_one_package_per_assembled_package() {
+        let mut file_a = crate::models::FileInfo::new(
+            "a/mix.exs".to_string(),
+            "mix.exs".to_string(),
+            String::new(),
+            "a/mix.exs".to_string(),
+            FileType::File,
+            None,
+            None,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            vec![],
+            None,
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        );
+        file_a.for_packages = vec![crate::models::PackageUid::from_raw("uid-a".to_string())];
+        let mut file_b = crate::models::FileInfo::new(
+            "b/mix.exs".to_string(),
+            "mix.exs".to_string(),
+            String::new(),
+            "b/mix.exs".to_string(),
+            FileType::File,
+            None,
+            None,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            vec![],
+            None,
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        );
+        file_b.for_packages = vec![crate::models::PackageUid::from_raw("uid-b".to_string())];
+        let file_orphan = crate::models::FileInfo::new(
+            "README".to_string(),
+            "README".to_string(),
+            String::new(),
+            "README".to_string(),
+            FileType::File,
+            None,
+            None,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            vec![],
+            None,
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        );
+
+        let pkg_a = {
+            let mut pkg = crate::models::Package::from_package_data(
+                &PackageData {
+                    package_type: Some(PackageType::Hex),
+                    name: Some("a".to_string()),
+                    version: Some("0.1.0".to_string()),
+                    purl: Some("pkg:hex/a@0.1.0".to_string()),
+                    ..Default::default()
+                },
+                "a/mix.exs".to_string(),
+            );
+            pkg.package_uid = crate::models::PackageUid::from_raw("uid-a".to_string());
+            pkg
+        };
+        let pkg_b = {
+            let mut pkg = crate::models::Package::from_package_data(
+                &PackageData {
+                    package_type: Some(PackageType::Hex),
+                    name: Some("b".to_string()),
+                    version: Some("0.1.0".to_string()),
+                    purl: Some("pkg:hex/b@0.1.0".to_string()),
+                    ..Default::default()
+                },
+                "b/mix.exs".to_string(),
+            );
+            pkg.package_uid = crate::models::PackageUid::from_raw("uid-b".to_string());
+            pkg
+        };
+
+        let output = crate::models::Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![pkg_a, pkg_b],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![file_a, file_b, file_orphan],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let schema = Output::from(&output);
+        let files = spdx_files(&schema);
+        let plans = plan_spdx_packages(
+            &schema,
+            &files,
+            &OutputWriteConfig {
+                format: crate::output::OutputFormat::SpdxTv,
+                custom_template: None,
+                scanned_path: Some("umbrella".to_string()),
+            },
+        );
+        assert_eq!(plans.len(), 3);
+        assert_eq!(plans[0].spdx_id, "SPDXRef-Package-1");
+        assert_eq!(plans[0].name, "a");
+        assert_eq!(plans[0].files.len(), 1);
+        assert_eq!(plans[1].spdx_id, "SPDXRef-Package-2");
+        assert_eq!(plans[2].spdx_id, "SPDXRef-Package-unassigned");
+        assert_eq!(plans[2].files.len(), 1);
+    }
 
     #[test]
     fn spdx_file_license_info_includes_manifest_package_data_detections() {

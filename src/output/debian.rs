@@ -47,7 +47,10 @@ fn write_file_paragraph(writer: &mut dyn Write, file: &FileInfo) -> io::Result<(
         .iter()
         .map(|holder| holder.holder.as_str())
         .collect();
-    if !copyright_lines.is_empty() {
+    // DEP-5 Files paragraphs should carry Copyright; be explicit when unknown.
+    if copyright_lines.is_empty() {
+        write_multiline_field(writer, "Copyright", &["NOASSERTION"])?;
+    } else {
         write_multiline_field(writer, "Copyright", &copyright_lines)?;
     }
 
@@ -69,19 +72,10 @@ fn write_file_paragraph(writer: &mut dyn Write, file: &FileInfo) -> io::Result<(
     writer.write_all(b"\n")
 }
 
+/// Prefer SPDX short names for DEP-5 `License:` fields.
 fn detected_license_expression(file: &FileInfo) -> Option<String> {
-    let expressions: Vec<String> = file
-        .license_detections
-        .iter()
-        .map(|detection| detection.license_expression.clone())
-        .filter(|expression| !expression.is_empty())
-        .collect();
-
-    if !expressions.is_empty() {
-        return crate::utils::spdx::combine_license_expressions(expressions);
-    }
-
-    file.license_expression.clone()
+    file.detected_license_expression_spdx()
+        .or_else(|| file.detected_license_expression())
 }
 
 fn write_multiline_field(writer: &mut dyn Write, key: &str, lines: &[&str]) -> io::Result<()> {
@@ -176,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn detected_license_expression_prefers_non_spdx_detection_expression() {
+    fn detected_license_expression_prefers_spdx_short_name() {
         let internal = crate::models::FileInfo::new(
             "LICENSE".to_string(),
             "LICENSE".to_string(),
@@ -212,6 +206,6 @@ mod tests {
             identifier: None,
         }];
 
-        assert_eq!(detected_license_expression(&file).as_deref(), Some("mit"));
+        assert_eq!(detected_license_expression(&file).as_deref(), Some("MIT"));
     }
 }

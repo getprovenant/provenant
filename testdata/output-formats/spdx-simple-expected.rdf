@@ -17,7 +17,7 @@
       "spdx:licenseInfoFromFiles": {
         "@rdf:resource": "http://spdx.org/rdf/terms#none"
       },
-      "@rdf:about": "#SPDXRef-001",
+      "@rdf:about": "http://spdx.org/spdxdocs/simple#SPDXRef-001",
       "spdx:packageVerificationCode": {
         "spdx:PackageVerificationCode": {
           "spdx:packageVerificationCodeValue": "a83523bcfc10441aa94a575b88aa1d3269902485"
@@ -36,7 +36,7 @@
               "spdx:licenseInfoInFile": {
                 "@rdf:resource": "http://spdx.org/rdf/terms#none"
               },
-              "@rdf:about": "#SPDXRef-1",
+              "@rdf:about": "http://spdx.org/spdxdocs/simple#SPDXRef-1",
               "spdx:checksum": {
                 "spdx:Checksum": {
                   "spdx:algorithm": {
@@ -58,7 +58,7 @@
       "spdx:dataLicense": {
         "@rdf:resource": "http://spdx.org/licenses/CC0-1.0"
       },
-      "@rdf:about": "#SPDXRef-DOCUMENT",
+      "@rdf:about": "http://spdx.org/spdxdocs/simple#SPDXRef-DOCUMENT",
       "rdfs:comment": "Generated with Provenant and provided on an \"AS IS\" BASIS, WITHOUT WARRANTIES\nOR CONDITIONS OF ANY KIND, either express or implied. No content created from\nProvenant should be considered or used as legal advice. Consult an attorney\nfor legal advice.\nProvenant is a free software code scanning tool.\nVisit https://github.com/getprovenant/provenant/ for support and download.\nSPDX License List: 3.27",
       "spdx:name": "SPDX Document created by Provenant",
       "spdx:specVersion": "SPDX-2.2"

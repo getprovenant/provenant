@@ -683,6 +683,18 @@ fn test_spdx_simple_contract_matches_local_python_fixture_after_normalization() 
         .expect("fixture should be readable");
 
     assert_eq!(normalize_spdx_tv(&actual), normalize_spdx_tv(&expected));
+    assert!(
+        actual.contains("Creator: Tool: Provenant-"),
+        "SPDX TV golden path must keep CreationInfo Creator"
+    );
+    assert!(
+        actual.contains("Created:"),
+        "SPDX TV golden path must keep CreationInfo Created"
+    );
+    assert!(
+        actual.contains("Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-001"),
+        "SPDX TV golden path must keep DocumentDescribes"
+    );
 }
 
 #[test]
@@ -865,7 +877,10 @@ fn test_spdx_rdf_contract_contains_python_semantic_markers() {
     assert!(rendered.contains(&xml_escape_for_assert(expected_comment_prefix)));
     assert!(rendered.contains(expected_document_name));
     assert!(rendered.contains(expected_spec_version));
-    assert!(rendered.contains("<spdx:creationInfo><spdx:CreationInfo><spdx:created>"));
+    assert!(rendered.contains("<spdx:creationInfo><spdx:CreationInfo>"));
+    assert!(rendered.contains("<spdx:creator>Tool: Provenant-"));
+    assert!(rendered.contains("<spdx:created>"));
+    assert!(rendered.contains("relationshipType_describes"));
 }
 
 #[test]
@@ -1002,7 +1017,36 @@ fn test_cyclonedx_json_dependency_graph_matches_local_fixture_after_normalizatio
     let expected: Value = serde_json::from_str(&expected_text)
         .expect("cyclonedx dependency fixture should be valid json");
 
-    assert_eq!(normalize_cyclonedx(actual), normalize_cyclonedx(expected));
+    assert_eq!(
+        normalize_cyclonedx(actual.clone()),
+        normalize_cyclonedx(expected)
+    );
+
+    // Schema-guard: CycloneDX requires unique dependencies[].ref (uniqueItems).
+    let refs: Vec<&str> = actual["dependencies"]
+        .as_array()
+        .expect("dependencies array")
+        .iter()
+        .map(|d| d["ref"].as_str().expect("ref"))
+        .collect();
+    let unique: std::collections::BTreeSet<_> = refs.iter().copied().collect();
+    assert_eq!(
+        refs.len(),
+        unique.len(),
+        "duplicate CycloneDX dependency refs: {refs:?}"
+    );
+    let bom_refs: Vec<&str> = actual["components"]
+        .as_array()
+        .expect("components array")
+        .iter()
+        .map(|c| c["bom-ref"].as_str().expect("bom-ref"))
+        .collect();
+    let unique_bom: std::collections::BTreeSet<_> = bom_refs.iter().copied().collect();
+    assert_eq!(
+        bom_refs.len(),
+        unique_bom.len(),
+        "duplicate CycloneDX component bom-refs: {bom_refs:?}"
+    );
 }
 
 #[test]
@@ -1139,8 +1183,10 @@ fn normalize_html(html: &str) -> String {
 }
 
 fn normalize_spdx_tv(text: &str) -> String {
+    // Strip tool version / timestamp lines that vary across builds while keeping
+    // the rest of Creation Information (section header) and Relationships.
     text.lines()
-        .filter(|line| !line.starts_with("Creator:"))
+        .filter(|line| !line.starts_with("Creator:") && !line.starts_with("Created:"))
         .collect::<Vec<_>>()
         .join("\n")
         .trim()
@@ -1291,8 +1337,10 @@ fn extract_spdx_rdf_semantics(xml: &str) -> BTreeMap<String, String> {
         Regex::new(r#"<spdx:specVersion>([^<]+)</spdx:specVersion>"#).expect("spec version regex");
     let comment_re = Regex::new(r#"(?s)<rdfs:comment>(.*?)</rdfs:comment>"#)
         .expect("comment regex should compile");
-    let creation_info_re = Regex::new(r#"<spdx:creationInfo><spdx:CreationInfo><spdx:created>[^<]+</spdx:created></spdx:CreationInfo></spdx:creationInfo>"#)
-        .expect("creation info regex should compile");
+    let creation_info_re = Regex::new(
+        r#"<spdx:creationInfo><spdx:CreationInfo>(?:<spdx:creator>[^<]+</spdx:creator>)?<spdx:created>[^<]+</spdx:created></spdx:CreationInfo></spdx:creationInfo>"#,
+    )
+    .expect("creation info regex should compile");
     let package_license_values_re = Regex::new(
         r#"(?s)<spdx:Package[^>]*>.*?<spdx:licenseConcluded rdf:resource=\"([^\"]+)\"/>.*?<spdx:licenseDeclared rdf:resource=\"([^\"]+)\"/>.*?<spdx:licenseInfoFromFiles rdf:resource=\"([^\"]+)\"/>.*?<spdx:copyrightText>([^<]+)</spdx:copyrightText>.*?<spdx:name>[^<]+</spdx:name>"#,
     )
@@ -1907,9 +1955,27 @@ fn sample_cyclonedx_rich_output() -> Output {
 }
 
 fn sample_cyclonedx_dependency_output() -> Output {
-    let root_dep = TopLevelDependency {
-        purl: Some("pkg:npm/root@1.0.0".to_string()),
-        extracted_requirement: None,
+    let root_uid = PackageUid::from_raw(
+        "pkg:npm/root@1.0.0?uuid=00000000-0000-0000-0000-000000000000".to_string(),
+    );
+    let root_pkg = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("root".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/root@1.0.0".to_string()),
+                ..Default::default()
+            },
+            "scan/package.json".to_string(),
+        );
+        pkg.package_uid = root_uid.clone();
+        pkg
+    };
+
+    let owned_dep = TopLevelDependency {
+        purl: Some("pkg:npm/dep@2.0.0".to_string()),
+        extracted_requirement: Some("2.0.0".to_string()),
         scope: Some("dependencies".to_string()),
         is_runtime: Some(true),
         is_optional: Some(false),
@@ -1939,36 +2005,58 @@ fn sample_cyclonedx_dependency_output() -> Output {
         })),
         extra_data: None,
         dependency_uid: DependencyUid::from_raw(
-            "pkg:npm/root@1.0.0?uuid=00000000-0000-0000-0000-000000000001".to_string(),
+            "pkg:npm/dep@2.0.0?uuid=00000000-0000-0000-0000-000000000001".to_string(),
         ),
-        for_package_uid: Some(PackageUid::from_raw(
-            "pkg:npm/root-package@1.0.0?uuid=00000000-0000-0000-0000-000000000000".to_string(),
-        )),
+        for_package_uid: Some(root_uid.clone()),
         datafile_path: "scan/package-lock.json".to_string(),
         datasource_id: DatasourceId::NpmPackageLockJson,
         namespace: None,
     };
 
-    let fallback_dep = TopLevelDependency {
-        purl: None,
-        extracted_requirement: Some("^3.0.0".to_string()),
-        scope: Some("devDependencies".to_string()),
-        is_runtime: Some(false),
+    // Second owner of the same dep purl — must not duplicate CycloneDX refs.
+    let other_uid = PackageUid::from_raw(
+        "pkg:npm/other@1.0.0?uuid=00000000-0000-0000-0000-000000000010".to_string(),
+    );
+    let other_pkg = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("other".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/other@1.0.0".to_string()),
+                ..Default::default()
+            },
+            "scan/packages/other/package.json".to_string(),
+        );
+        pkg.package_uid = other_uid.clone();
+        pkg
+    };
+    let shared_dep = TopLevelDependency {
+        purl: Some("pkg:npm/dep@2.0.0".to_string()),
+        extracted_requirement: Some("2.0.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
         is_optional: Some(false),
-        is_pinned: Some(false),
+        is_pinned: Some(true),
         is_direct: Some(true),
         resolved_package: None,
         extra_data: None,
-        dependency_uid: DependencyUid::empty(),
-        for_package_uid: Some(PackageUid::from_raw(
-            "pkg:npm/root-package@1.0.0?uuid=00000000-0000-0000-0000-000000000000".to_string(),
-        )),
-        datafile_path: "scan/package-lock.json".to_string(),
-        datasource_id: DatasourceId::NpmPackageLockJson,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/dep@2.0.0?uuid=00000000-0000-0000-0000-000000000002".to_string(),
+        ),
+        for_package_uid: Some(other_uid),
+        datafile_path: "scan/packages/other/package.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageJson,
         namespace: None,
     };
 
-    sample_output_with_sections(0, 0, vec![], vec![root_dep, fallback_dep], vec![])
+    sample_output_with_sections(
+        0,
+        0,
+        vec![root_pkg, other_pkg],
+        vec![owned_dep, shared_dep],
+        vec![],
+    )
 }
 
 fn empty_output() -> Output {

@@ -198,7 +198,7 @@ mod tests {
         assert!(rendered.contains("Comment: Generated with Provenant"));
         assert!(rendered.contains("Files: src/main.rs"));
         assert!(rendered.contains("Copyright: Example Org"));
-        assert!(rendered.contains("License: mit"));
+        assert!(rendered.contains("License: MIT"));
         assert!(rendered.contains(" Permission is hereby granted, free of charge"));
     }
 
@@ -546,6 +546,18 @@ mod tests {
         let rendered = String::from_utf8(bytes).expect("spdx should be utf-8");
         assert!(rendered.contains("SPDXVersion: SPDX-2.2"));
         assert!(rendered.contains("FileName: ./src/main.rs"));
+        assert!(
+            rendered.contains("Creator: Tool: Provenant-"),
+            "SPDX TV must emit CreationInfo Creator for spdx-tools"
+        );
+        assert!(
+            rendered.contains("Created:"),
+            "SPDX TV must emit CreationInfo Created for spdx-tools"
+        );
+        assert!(
+            rendered.contains("Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-001"),
+            "SPDX TV must describe the package from the document"
+        );
     }
 
     #[test]
@@ -568,6 +580,14 @@ mod tests {
         assert!(rendered.contains("<rdf:RDF"));
         assert!(rendered.contains("<spdx:SpdxDocument"));
         assert!(rendered.contains("<spdx:created>2026-01-01T00:00:00Z</spdx:created>"));
+        assert!(
+            rendered.contains("<spdx:creator>Tool: Provenant-"),
+            "SPDX RDF must emit a creator Actor for spdx-tools"
+        );
+        assert!(
+            rendered.contains("relationshipType_describes"),
+            "SPDX RDF must include Document DESCRIBES package"
+        );
     }
 
     #[test]
@@ -771,7 +791,7 @@ mod tests {
             "<spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/licenses/LicenseRef-scancode-unknown-license-reference\"/>"
         ));
         assert!(rdf_rendered.contains(
-            "<spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"#LicenseRef-scancode-unknown-license-reference\">"
+            "<spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"http://spdx.org/spdxdocs/scan#LicenseRef-scancode-unknown-license-reference\">"
         ));
         assert!(
             rdf_rendered.contains("<spdx:extractedText>Custom license text</spdx:extractedText>")

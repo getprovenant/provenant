@@ -31,4 +31,8 @@
       </externalReferences>
     </component>
   </components>
+  <dependencies>
+    <dependency ref="pkg:npm/npm@2.13.5">
+    </dependency>
+  </dependencies>
 </bom>
