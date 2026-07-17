@@ -34,3 +34,4 @@ FileCopyrightText: NONE
 
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-001
+Relationship: SPDXRef-001 CONTAINS SPDXRef-1

@@ -198,7 +198,7 @@ mod tests {
         assert!(rendered.contains("Comment: Generated with Provenant"));
         assert!(rendered.contains("Files: src/main.rs"));
         assert!(rendered.contains("Copyright: Example Org"));
-        assert!(rendered.contains("License: mit"));
+        assert!(rendered.contains("License: MIT"));
         assert!(rendered.contains(" Permission is hereby granted, free of charge"));
     }
 

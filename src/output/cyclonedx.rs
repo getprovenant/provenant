@@ -265,10 +265,13 @@ fn component_bom_refs(packages: &[Package]) -> Vec<String> {
 }
 
 /// Build a CycloneDX dependency graph: one unique entry per `ref`, with
-/// `dependsOn` listing the purls that package depends on.
+/// `dependsOn` listing component `bom-ref`s (or dependency purls when the
+/// target is not itself a component).
 ///
-/// Edges are owner → dependency (`for_package_uid` → package bom-ref, dependency
-/// purl as child). Self-edges are dropped. Components with no outgoing edges
+/// Edges are owner → dependency (`for_package_uid` → package bom-ref). Child
+/// refs are resolved through [`resolve_depends_on_refs`] so a disambiguated
+/// `package_uid` bom-ref is used whenever the dependency purl maps to
+/// component(s). Self-edges are dropped. Components with no outgoing edges
 /// still get an empty `dependsOn` entry so the graph is complete.
 fn build_dependency_graph(
     output: &Output,
@@ -291,25 +294,55 @@ fn build_dependency_graph(
         let Some(dep_purl) = dependency_edge_purl(dep) else {
             continue;
         };
+        let child_refs = resolve_depends_on_refs(&dep_purl, &output.packages, component_refs);
 
         if let Some(owner_uid) = dep.for_package_uid.as_deref()
             && let Some(owner_ref) = uid_to_ref.get(owner_uid).copied()
         {
-            if owner_ref != dep_purl {
-                graph
-                    .entry(owner_ref.to_string())
-                    .or_default()
-                    .insert(dep_purl);
+            for child_ref in child_refs {
+                if owner_ref != child_ref {
+                    graph
+                        .entry(owner_ref.to_string())
+                        .or_default()
+                        .insert(child_ref);
+                }
             }
             continue;
         }
 
-        // Unowned / unknown-owner dependency: emit as a leaf node so its purl
+        // Unowned / unknown-owner dependency: emit as a leaf node so its ref
         // still appears once (no duplicate refs across hoisted rows).
-        graph.entry(dep_purl).or_default();
+        for child_ref in child_refs {
+            graph.entry(child_ref).or_default();
+        }
     }
 
     graph
+}
+
+/// Map a dependency purl onto component `bom-ref`s.
+///
+/// When the purl uniquely identifies a component, returns that component's
+/// bom-ref (purl or disambiguated `package_uid`). When several assembled
+/// packages share the purl, returns every matching bom-ref so `dependsOn`
+/// never points at a bare purl that no component owns. When no component
+/// matches, returns the purl itself (external / unresolved dependency).
+fn resolve_depends_on_refs(
+    dep_purl: &str,
+    packages: &[Package],
+    component_refs: &[String],
+) -> Vec<String> {
+    let matching: Vec<String> = packages
+        .iter()
+        .zip(component_refs.iter())
+        .filter(|(pkg, _)| pkg.purl.as_deref() == Some(dep_purl))
+        .map(|(_, bom_ref)| bom_ref.clone())
+        .collect();
+    if matching.is_empty() {
+        vec![dep_purl.to_string()]
+    } else {
+        matching
+    }
 }
 
 fn dependency_edge_purl(dep: &TopLevelDependency) -> Option<String> {
@@ -505,5 +538,62 @@ mod tests {
         assert_eq!(refs[0], "uid-1");
         assert_eq!(refs[1], "uid-2");
         assert_ne!(refs[0], refs[1]);
+    }
+
+    #[test]
+    fn depends_on_uses_component_bom_ref_when_target_purl_is_unique() {
+        let owner = sample_package("app", "1.0.0", "uid-app");
+        let mut lib = sample_package("lib", "2.0.0", "uid-lib");
+        lib.purl = Some("pkg:hex/lib@2.0.0".to_string());
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![owner, lib],
+            dependencies: vec![sample_dep("pkg:hex/lib@2.0.0", Some("uid-app"))],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let refs = component_bom_refs(&output.packages);
+        let graph = build_dependency_graph(&output, &refs);
+        assert_eq!(
+            graph["pkg:hex/app@1.0.0"],
+            BTreeSet::from(["pkg:hex/lib@2.0.0".to_string()])
+        );
+    }
+
+    #[test]
+    fn depends_on_uses_disambiguated_bom_refs_when_target_purl_collides() {
+        let owner = sample_package("app", "1.0.0", "uid-app");
+        let mut shared_a = sample_package("shared", "1.0.0", "uid-shared-a");
+        let mut shared_b = sample_package("shared", "1.0.0", "uid-shared-b");
+        shared_a.purl = Some("pkg:hex/shared@1.0.0".to_string());
+        shared_b.purl = Some("pkg:hex/shared@1.0.0".to_string());
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![owner, shared_a, shared_b],
+            dependencies: vec![sample_dep("pkg:hex/shared@1.0.0", Some("uid-app"))],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let refs = component_bom_refs(&output.packages);
+        assert_eq!(refs[1], "uid-shared-a");
+        assert_eq!(refs[2], "uid-shared-b");
+        let graph = build_dependency_graph(&output, &refs);
+        assert_eq!(
+            graph["pkg:hex/app@1.0.0"],
+            BTreeSet::from(["uid-shared-a".to_string(), "uid-shared-b".to_string()])
+        );
+        assert!(!graph["pkg:hex/app@1.0.0"].contains("pkg:hex/shared@1.0.0"));
     }
 }
