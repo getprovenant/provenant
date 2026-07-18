@@ -884,6 +884,70 @@ fn test_spdx_rdf_contract_contains_python_semantic_markers() {
 }
 
 #[test]
+fn test_spdx_licensed_tv_matches_local_golden_fixture() {
+    let output = sample_spdx_licensed_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::SpdxTv)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::SpdxTv,
+                custom_template: None,
+                scanned_path: Some("licensed".to_string()),
+            },
+        )
+        .expect("spdx output should be generated");
+
+    let actual = String::from_utf8(bytes).expect("spdx output should be utf-8");
+    let expected = fs::read_to_string("testdata/output-formats/spdx-licensed-expected.tv")
+        .expect("golden fixture should be readable");
+
+    assert_eq!(normalize_spdx_tv(&actual), normalize_spdx_tv(&expected));
+}
+
+#[test]
+fn test_spdx_licensed_rdf_fills_known_license_fields() {
+    let output = sample_spdx_licensed_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::SpdxRdf)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::SpdxRdf,
+                custom_template: None,
+                scanned_path: Some("licensed".to_string()),
+            },
+        )
+        .expect("spdx rdf output should be generated");
+
+    let rendered = String::from_utf8(bytes).expect("spdx rdf should be utf-8");
+
+    // widget-mit declares MIT: PackageLicenseDeclared and PackageLicenseConcluded
+    // both resolve to the declared expression (the single most authoritative
+    // source), and its manifest file's own MIT detection fills LicenseConcluded.
+    assert!(rendered.contains(
+        "<spdx:Package rdf:about=\"http://spdx.org/spdxdocs/licensed#SPDXRef-Package-1\">"
+    ));
+    assert!(rendered.contains(
+        "<spdx:licenseConcluded rdf:resource=\"http://spdx.org/licenses/MIT\"/>\n    <spdx:licenseDeclared rdf:resource=\"http://spdx.org/licenses/MIT\"/>"
+    ));
+
+    // widget-other declares nothing but carries other_license_expression_spdx
+    // (detected-but-undeclared evidence): PackageLicenseConcluded falls back to
+    // it while PackageLicenseDeclared honestly stays NOASSERTION.
+    assert!(rendered.contains(
+        "<spdx:Package rdf:about=\"http://spdx.org/spdxdocs/licensed#SPDXRef-Package-2\">"
+    ));
+    assert!(rendered.contains(
+        "<spdx:licenseConcluded rdf:resource=\"http://spdx.org/licenses/Apache-2.0\"/>\n    <spdx:licenseDeclared rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>"
+    ));
+}
+
+#[test]
 fn test_spdx_rdf_semantics_match_fixture_map() {
     let output = sample_spdx_simple_output();
     let mut bytes = Vec::new();
@@ -2173,6 +2237,108 @@ fn sample_spdx_multi_package_output() -> Output {
         vec![pkg_a, pkg_b],
         vec![],
         vec![manifest_a, source_a, manifest_b, source_b, readme],
+    )
+}
+
+/// Two assembled packages exercising the two honest SPDX license rules:
+/// `widget-mit` has a declared SPDX expression (used for both
+/// `PackageLicenseDeclared` and `PackageLicenseConcluded`, and its manifest's
+/// own detection fills the file's `LicenseConcluded`); `widget-other` has no
+/// declared expression but carries `other_license_expression_spdx` (detected
+/// evidence assembly found in its own files), which only backs
+/// `PackageLicenseConcluded` — `PackageLicenseDeclared` stays NOASSERTION
+/// since nothing was actually declared.
+fn sample_spdx_licensed_output() -> Output {
+    let mit_uid = PackageUid::from_raw(
+        "pkg:npm/widget-mit@1.0.0?uuid=00000000-0000-0000-0000-00000000m1".to_string(),
+    );
+    let mit_package = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("widget-mit".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/widget-mit@1.0.0".to_string()),
+                declared_license_expression_spdx: Some("MIT".to_string()),
+                ..Default::default()
+            },
+            "widget-mit/package.json".to_string(),
+        );
+        pkg.package_uid = mit_uid.clone();
+        pkg
+    };
+
+    let other_uid = PackageUid::from_raw(
+        "pkg:npm/widget-other@1.0.0?uuid=00000000-0000-0000-0000-00000000o1".to_string(),
+    );
+    let other_package = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("widget-other".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/widget-other@1.0.0".to_string()),
+                other_license_expression_spdx: Some("Apache-2.0".to_string()),
+                ..Default::default()
+            },
+            "widget-other/package.json".to_string(),
+        );
+        pkg.package_uid = other_uid.clone();
+        pkg
+    };
+
+    let mut manifest_mit = sample_plain_text_file(
+        "package.json",
+        "package",
+        ".json",
+        "widget-mit/package.json",
+        20,
+        "1111111111111111111111111111111111111111",
+        vec![],
+    );
+    manifest_mit.for_packages = vec![mit_uid];
+    manifest_mit.detected_license_expression = Some("MIT".to_string());
+    manifest_mit.license_detections = vec![provenant::models::LicenseDetection {
+        license_expression: "mit".to_string(),
+        license_expression_spdx: "MIT".to_string(),
+        matches: vec![provenant::models::Match {
+            license_expression: "mit".to_string(),
+            license_expression_spdx: "MIT".to_string(),
+            from_file: Some("widget-mit/package.json".to_string()),
+            start_line: LineNumber::ONE,
+            end_line: LineNumber::ONE,
+            matcher: MatcherKind::Declared,
+            score: MatchScore::MAX,
+            matched_length: Some(1),
+            match_coverage: Some(100.0),
+            rule_relevance: Some(100),
+            rule_identifier: "mit_1.RULE".to_string(),
+            rule_url: None,
+            matched_text: Some("MIT".to_string()),
+            referenced_filenames: None,
+            matched_text_diagnostics: None,
+        }],
+        detection_log: vec![],
+        identifier: String::new(),
+    }];
+
+    let mut manifest_other = sample_plain_text_file(
+        "package.json",
+        "package",
+        ".json",
+        "widget-other/package.json",
+        20,
+        "2222222222222222222222222222222222222222",
+        vec![],
+    );
+    manifest_other.for_packages = vec![other_uid];
+
+    sample_output_with_sections(
+        2,
+        0,
+        vec![mit_package, other_package],
+        vec![],
+        vec![manifest_mit, manifest_other],
     )
 }
 

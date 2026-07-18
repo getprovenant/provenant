@@ -1,0 +1,56 @@
+## Document Information
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: SPDX Document created by Provenant
+DocumentNamespace: http://spdx.org/spdxdocs/licensed
+DocumentComment: <text>Generated with Provenant and provided on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied. No content created from
+Provenant should be considered or used as legal advice. Consult an attorney
+for legal advice.
+Provenant is a free software code scanning tool.
+Visit https://github.com/getprovenant/provenant/ for support and download.
+SPDX License List: 3.27</text>
+## Creation Information
+Creator: Tool: Provenant-0.0.0
+Created: 2026-01-01T00:00:00Z
+## Package Information
+PackageName: widget-mit
+SPDXID: SPDXRef-Package-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 0a05a9e69e5757ac71c75a50418622624f042c97
+PackageLicenseConcluded: MIT
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseDeclared: MIT
+PackageCopyrightText: NONE
+## Package Information
+PackageName: widget-other
+SPDXID: SPDXRef-Package-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 4ef6c88cdec9dbcc9bd8b7fa0fdfe4cc43bfed4f
+PackageLicenseConcluded: Apache-2.0
+PackageLicenseInfoFromFiles: NONE
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## File Information
+FileName: ./widget-mit/package.json
+SPDXID: SPDXRef-1
+FileChecksum: SHA1: 1111111111111111111111111111111111111111
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: NONE
+
+FileName: ./widget-other/package.json
+SPDXID: SPDXRef-2
+FileChecksum: SHA1: 2222222222222222222222222222222222222222
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+## Relationships
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-1
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-2
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-2
