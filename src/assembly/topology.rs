@@ -491,10 +491,17 @@ impl TopologyPlan {
                 let Some(member_dir) = Path::new(&files[member_idx].path).parent() else {
                     continue;
                 };
-                anchors.push((
-                    member_dir.to_path_buf(),
-                    files[member_idx].for_packages.clone(),
-                ));
+                let member_dir = member_dir.to_path_buf();
+                // A declared module normally lives under the reactor root
+                // directory, which already covers it via `scope_roots` above.
+                // But `<module>` strings may legally escape it with a `../`
+                // spelling (a true sibling directory), so each resolved
+                // member also contributes its own scope root — otherwise a
+                // correctly-resolved sibling module would still get no file
+                // ownership benefit and remain effectively dropped from the
+                // reactor.
+                scope_roots.push(member_dir.clone());
+                anchors.push((member_dir, files[member_idx].for_packages.clone()));
             }
         }
 
@@ -708,14 +715,16 @@ fn plan_maven_reactor_domains(
 /// Resolve each declared `<module>` string to a scanned `pom.xml` with a real
 /// package identity (a purl). A module string is a relative path from the
 /// declaring POM's directory to the member's own directory (almost always a
-/// bare directory name, but Maven also allows nested relative paths). A module
-/// that does not resolve to a purl-bearing `pom.xml` on disk is silently
-/// skipped — Provenant never guesses at an undeclared or missing member.
+/// bare directory name, but Maven also allows nested relative paths,
+/// including `.`/`..` components such as `./module-a` or `../sibling-module`).
+/// A module that does not resolve to a purl-bearing `pom.xml` on disk is
+/// silently skipped — Provenant never guesses at an undeclared or missing
+/// member.
 fn resolve_maven_reactor_members(files: &[FileInfo], hint: &MavenReactorRootHint) -> Vec<usize> {
     let mut member_indices = Vec::new();
 
     for module in &hint.module_paths {
-        let candidate_path = hint.root_dir.join(module).join("pom.xml");
+        let candidate_path = normalize_lexical_path(&hint.root_dir.join(module)).join("pom.xml");
 
         let Some(found_idx) = files
             .iter()
@@ -734,6 +743,26 @@ fn resolve_maven_reactor_members(files: &[FileInfo], hint: &MavenReactorRootHint
     }
 
     member_indices
+}
+
+/// Lexically resolve `.` and `..` components in a path without touching the
+/// filesystem, so a declared module path such as `./module-a` or
+/// `../sibling-module` compares equal to the scanned path's own normalized
+/// form.
+fn normalize_lexical_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                normalized.pop();
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+
+    normalized
 }
 
 fn plan_go_workspace_domains(

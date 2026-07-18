@@ -325,6 +325,96 @@ mod tests {
     }
 
     #[test]
+    fn test_maven_reactor_resolves_relative_module_paths() {
+        // Declared <module> strings are allowed to carry `.`/`..` components
+        // (e.g. `./module-a`, `../sibling-module`). Raw path joining without
+        // lexical normalization would keep those components and fail to match
+        // the scanned pom.xml path, silently dropping the member from the
+        // reactor. Both a same-directory `./` spelling and a `../` escape to a
+        // sibling directory must still resolve to their real module package.
+        let mut files = vec![
+            create_maven_reactor_root_file_info(
+                "reactor/parent/pom.xml",
+                "org.example",
+                "parent",
+                "1.0",
+                &["./module-a", "../sibling-module"],
+            ),
+            create_maven_pom_file_info(
+                "reactor/parent/module-a/pom.xml",
+                "org.example",
+                "module-a",
+                "1.0",
+            ),
+            create_plain_source_file_info(
+                "reactor/parent/module-a/src/main/java/com/example/Foo.java",
+            ),
+            create_maven_pom_file_info(
+                "reactor/sibling-module/pom.xml",
+                "org.example",
+                "sibling-module",
+                "1.0",
+            ),
+            create_plain_source_file_info(
+                "reactor/sibling-module/src/main/java/com/example/Bar.java",
+            ),
+        ];
+
+        let result = assemble(&mut files);
+
+        let mut purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        purls.sort_unstable();
+        assert_eq!(
+            purls,
+            vec![
+                "pkg:maven/org.example/module-a@1.0",
+                "pkg:maven/org.example/parent@1.0",
+                "pkg:maven/org.example/sibling-module@1.0",
+            ],
+            "the relatively-spelled modules must still each assemble into their own package: {:#?}",
+            result.packages
+        );
+
+        let owning_purls = |path: &str, files: &[FileInfo]| -> Vec<String> {
+            let file = files.iter().find(|f| f.path == path).unwrap_or_else(|| {
+                panic!("file {path} should exist in scan results");
+            });
+            file.for_packages
+                .iter()
+                .map(|uid| {
+                    result
+                        .packages
+                        .iter()
+                        .find(|pkg| pkg.package_uid == *uid)
+                        .and_then(|pkg| pkg.purl.clone())
+                        .unwrap_or_default()
+                })
+                .collect()
+        };
+
+        assert_eq!(
+            owning_purls(
+                "reactor/parent/module-a/src/main/java/com/example/Foo.java",
+                &files
+            ),
+            vec!["pkg:maven/org.example/module-a@1.0"],
+            "a `./module-a` declared module must still resolve and own its nested source file"
+        );
+        assert_eq!(
+            owning_purls(
+                "reactor/sibling-module/src/main/java/com/example/Bar.java",
+                &files
+            ),
+            vec!["pkg:maven/org.example/sibling-module@1.0"],
+            "a `../sibling-module` declared module must resolve outside the parent's own directory"
+        );
+    }
+
+    #[test]
     fn test_maven_distinct_gav_poms_in_one_dir_stay_separate_packages() {
         // A directory of standalone `.pom` fixtures, each with a distinct GAV,
         // must NOT collapse into one top-level package.
