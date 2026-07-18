@@ -393,6 +393,8 @@ In practice:
 - SPDX is often the better fit for compliance-oriented exchange.
 - `--package` is usually part of these workflows because package/dependency data is central to SBOM output.
 
+Reshaping with `--from-json` (see section 14) into an SBOM format needs the original scan to have run package detection. If the JSON being reshaped never ran `--package`/`--package-only`/`--system-package`/`--package-in-compiled` and it has no packages, Provenant refuses the SBOM export instead of silently writing an empty `components` array or SPDX's no-package projection. Rescan with one of those flags first, or reshape to `--json`/`--json-pp` instead if you only need file-level data.
+
 ### 11. "I need Debian copyright output"
 
 ```sh
@@ -448,6 +450,8 @@ This is especially useful for:
 Important: `--from-json` is for reshaping existing results. It is not a second scan pass, and scan-time options such as fresh detection flags are intentionally restricted in this mode.
 
 Also note that `--from-json` cannot recover newer native-only evidence details that were never serialized in the original JSON. For example, replaying older ScanCode-style or compatibility-mode JSON cannot reconstruct the newer less-normalized file-level copyright text without rescanning the original files.
+
+For the same reason, reshaping into an SBOM format (`--spdx-tv`, `--spdx-rdf`, `--cyclonedx`, `--cyclonedx-xml`) fails instead of silently succeeding when the source JSON has scanned files but never ran package detection: with no package data to recover, the export would otherwise be a hollow document (an empty CycloneDX `components` array, or SPDX's no-package projection) that still looks like a normal successful scan. Rescan with `--package`/`--package-only`/`--system-package`/`--package-in-compiled` before reshaping into an SBOM format. A source scan that ran package detection and genuinely found no packages reshapes normally — only the "package detection was never attempted" case is refused. A genuinely empty scan document (no files at all) also reshapes normally, since that keeps its existing documented empty-SBOM behavior.
 
 ### 15. "I want a codebase-level summary instead of reading raw file-by-file results"
 

@@ -3,6 +3,7 @@
 
 use anyhow::{Result, anyhow};
 use serde::Deserialize;
+use serde_json::Value;
 use std::collections::HashSet;
 use std::env;
 use std::fs;
@@ -28,6 +29,7 @@ type JsonInputParts = (
     Vec<String>,
     Option<String>,
     Option<LicenseIndexProvenance>,
+    bool,
 );
 
 #[cfg(test)]
@@ -42,7 +44,7 @@ pub(crate) struct JsonHeaderExtraDataInput {
     license_index_provenance: Option<LicenseIndexProvenance>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub(crate) struct JsonHeaderInput {
     #[serde(default)]
     errors: Vec<String>,
@@ -50,6 +52,33 @@ pub(crate) struct JsonHeaderInput {
     warnings: Vec<String>,
     #[serde(default)]
     extra_data: Option<JsonHeaderExtraDataInput>,
+    /// Raw `header.options` flags recorded by the scan that produced this JSON,
+    /// e.g. `"--package": true`. Used only to detect whether package detection
+    /// was ever requested upstream, distinguishing "no packages because
+    /// nothing looked for them" from "no packages because none exist" so a
+    /// `--from-json` reshape into an SBOM format can tell hollow output from an
+    /// honest empty inventory (see [`Self::requested_package_detection`]).
+    #[serde(default)]
+    options: serde_json::Map<String, serde_json::Value>,
+}
+
+/// CLI flags that cause package/dependency metadata to be collected. Mirrors
+/// the flags forbidden alongside `--from-json` in
+/// `validate_scan_option_compatibility`, since those are exactly the flags a
+/// prior *native* scan needed in order to have produced real package data.
+const PACKAGE_DETECTION_OPTION_KEYS: &[&str] = &[
+    "--package",
+    "--package-only",
+    "--system-package",
+    "--package-in-compiled",
+];
+
+impl JsonHeaderInput {
+    fn requested_package_detection(&self) -> bool {
+        PACKAGE_DETECTION_OPTION_KEYS
+            .iter()
+            .any(|key| self.options.get(*key).and_then(Value::as_bool) == Some(true))
+    }
 }
 
 #[derive(Deserialize)]
@@ -148,6 +177,11 @@ impl JsonScanInput {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| anyhow!("Failed to convert license rule reference from JSON: {}", e))?;
 
+        let package_detection_requested_in_source = self
+            .headers
+            .iter()
+            .any(JsonHeaderInput::requested_package_detection);
+
         let imported_spdx_license_list_version =
             consistent_header_value(self.headers.iter().filter_map(|header| {
                 header
@@ -171,6 +205,7 @@ impl JsonScanInput {
                      errors,
                      warnings: _,
                      extra_data: _,
+                     options: _,
                  }| errors,
             )
             .filter(|error| !is_imported_file_summary_error(error, &files))
@@ -191,6 +226,7 @@ impl JsonScanInput {
             preserved_header_errors,
             imported_spdx_license_list_version,
             imported_license_index_provenance,
+            package_detection_requested_in_source,
         ))
     }
 }

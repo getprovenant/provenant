@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::app::request::ScanRequest;
+use crate::app::request::{InputMode, ScanRequest};
 use crate::app::scan_pipeline::execute_request;
 use crate::cli::{Cli, Command, ScanArgs};
 use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
-use crate::output::{OutputWriteConfig, write_output_file};
+use crate::models::{FileType, Output};
+use crate::output::{OutputFormat, OutputWriteConfig, write_output_file};
 use crate::progress::{ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
@@ -100,6 +101,12 @@ pub fn run() -> Result<ExitCode> {
     let output = executed.output;
     let progress = executed.progress;
     let start_time = executed.start_time;
+
+    guard_against_hollow_from_json_sbom(
+        &request,
+        &output,
+        executed.package_detection_requested_in_source,
+    )?;
 
     let output_schema_output =
         crate::output_schema::Output::from_with_compat_mode(&output, cli.compat_mode);
@@ -238,6 +245,92 @@ fn validate_scan_option_compatibility(cli: &ScanArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// SBOM-oriented output formats whose entire value proposition is the package
+/// inventory: an SPDX or CycloneDX document with zero packages looks like a
+/// normal, successful export while actually reporting no components at all.
+const SBOM_OUTPUT_FORMATS: &[OutputFormat] = &[
+    OutputFormat::SpdxTv,
+    OutputFormat::SpdxRdf,
+    OutputFormat::CycloneDxJson,
+    OutputFormat::CycloneDxXml,
+];
+
+fn sbom_output_flag(format: OutputFormat) -> &'static str {
+    match format {
+        OutputFormat::SpdxTv => "--spdx-tv",
+        OutputFormat::SpdxRdf => "--spdx-rdf",
+        OutputFormat::CycloneDxJson => "--cyclonedx",
+        OutputFormat::CycloneDxXml => "--cyclonedx-xml",
+        _ => "<sbom-format>",
+    }
+}
+
+/// Refuses a `--from-json` reshape that requests an SBOM format
+/// (`--spdx-tv`/`--spdx-rdf`/`--cyclonedx`/`--cyclonedx-xml`) when the result
+/// would be a hollow document: real scanned files, but zero packages, because
+/// the JSON being reshaped never ran package detection in the first place.
+///
+/// `--from-json` reshapes an existing scan without rescanning (see
+/// `docs/CLI_GUIDE.md`), so it cannot recover package data the original scan
+/// never collected. Emitting the SBOM anyway would silently succeed with an
+/// empty inventory: CycloneDX would write an empty `components` array and
+/// SPDX would fall back to its single-synthetic-package "no packages"
+/// projection, both indistinguishable from a normal successful export.
+///
+/// This intentionally does **not** fire for:
+/// - native scans (only `--from-json` reshapes lack a fresh detection pass);
+/// - requests that do not ask for an SBOM format;
+/// - a truly empty scan document (no files at all) — that keeps the existing
+///   documented empty-SBOM sentinel behavior;
+/// - input whose recorded header options show package detection
+///   (`--package`, `--package-only`, `--system-package`, or
+///   `--package-in-compiled`) actually ran upstream, since zero packages then
+///   means the codebase honestly has none, not that nothing looked.
+fn guard_against_hollow_from_json_sbom(
+    request: &ScanRequest,
+    output: &Output,
+    package_detection_requested_in_source: bool,
+) -> Result<()> {
+    if !matches!(request.input_mode, InputMode::FromJson) || package_detection_requested_in_source {
+        return Ok(());
+    }
+
+    if !output.packages.is_empty() {
+        return Ok(());
+    }
+
+    let scanned_file_count = output
+        .files
+        .iter()
+        .filter(|file| file.file_type == FileType::File)
+        .count();
+    if scanned_file_count == 0 {
+        return Ok(());
+    }
+
+    let requested_sbom_flags: Vec<&'static str> = request
+        .output_targets
+        .iter()
+        .map(|target| target.format)
+        .filter(|format| SBOM_OUTPUT_FORMATS.contains(format))
+        .map(sbom_output_flag)
+        .collect();
+    if requested_sbom_flags.is_empty() {
+        return Ok(());
+    }
+
+    Err(anyhow!(
+        "Refusing to write a hollow SBOM for {}: the --from-json input has {} scanned file(s) but no \
+         packages, and its recorded scan options never requested package detection (--package, \
+         --package-only, --system-package, or --package-in-compiled). Rerun the original scan with one \
+         of those flags before reshaping to an SBOM format, or drop {} if a package-less scan was \
+         intended.",
+        requested_sbom_flags.join(", "),
+        scanned_file_count,
+        requested_sbom_flags.join(", "),
+    ))
 }
 
 fn record_detail_timing<T, F>(progress: &Arc<ScanProgress>, name: impl Into<String>, f: F) -> T

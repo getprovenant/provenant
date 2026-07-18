@@ -64,6 +64,14 @@ pub(crate) struct ScanSession {
     pub(crate) active_license_engine: Option<Arc<LicenseDetectionEngine>>,
     pub(crate) shared_cache_config: Option<CacheConfig>,
     pub(crate) shared_license_cache_config: Option<LicenseCacheConfig>,
+    /// For `--from-json` sessions: whether any merged input's header options
+    /// recorded a package-detection flag (`--package`, `--package-only`,
+    /// `--system-package`, `--package-in-compiled`). Always `true` for native
+    /// scans, where this distinction does not apply. Lets a later SBOM-export
+    /// guard tell "reshaped input never ran package detection" (hollow) apart
+    /// from "package detection ran and honestly found nothing" (a real empty
+    /// inventory).
+    pub(crate) package_detection_requested_in_source: bool,
 }
 
 pub(crate) fn load_scan_session(
@@ -106,6 +114,7 @@ pub(crate) fn load_scan_session(
             extra_errors,
             imported_spdx_license_list_version,
             imported_license_index_provenance,
+            package_detection_requested_in_source,
         ) = loaded.into_parts()?;
         return Ok(ScanSession {
             scan_result: process_result,
@@ -121,6 +130,7 @@ pub(crate) fn load_scan_session(
             active_license_engine: None,
             shared_cache_config,
             shared_license_cache_config,
+            package_detection_requested_in_source,
         });
     }
 
@@ -132,6 +142,10 @@ pub(crate) struct ExecutedRequest {
     pub(crate) output: Output,
     pub(crate) progress: Arc<ScanProgress>,
     pub(crate) start_time: DateTime<Utc>,
+    /// Carried from [`ScanSession::package_detection_requested_in_source`] so
+    /// the CLI layer can gate hollow-SBOM detection without re-deriving it
+    /// from raw header options after the session has been consumed.
+    pub(crate) package_detection_requested_in_source: bool,
 }
 
 pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> {
@@ -154,6 +168,7 @@ pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> 
     progress.finish_setup();
 
     let session = load_scan_session(request, &scan_plan, &progress)?;
+    let package_detection_requested_in_source = session.package_detection_requested_in_source;
     let output = build_output_model(
         session,
         request,
@@ -168,6 +183,7 @@ pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> 
         output,
         progress,
         start_time,
+        package_detection_requested_in_source,
     })
 }
 
@@ -715,6 +731,7 @@ fn load_native_scan_session(
         active_license_engine: license_engine,
         shared_cache_config,
         shared_license_cache_config,
+        package_detection_requested_in_source: true,
     })
 }
 

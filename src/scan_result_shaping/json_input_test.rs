@@ -12,6 +12,94 @@ fn output_json_file(path: &str, file_type: crate::models::FileType) -> OutputFil
     OutputFileInfo::from(&internal)
 }
 
+fn header_with_options(options: serde_json::Map<String, serde_json::Value>) -> JsonHeaderInput {
+    JsonHeaderInput {
+        options,
+        ..Default::default()
+    }
+}
+
+#[test]
+fn requested_package_detection_is_false_without_package_flags() {
+    let header = header_with_options(serde_json::Map::new());
+    assert!(!header.requested_package_detection());
+}
+
+#[test]
+fn requested_package_detection_is_false_when_flag_present_but_disabled() {
+    // `push_bool_option` only ever records a `true` flag, but the raw options
+    // map is untrusted JSON, so an explicit `false` must not be mistaken for
+    // "package detection ran".
+    let header = header_with_options(serde_json::Map::from_iter([(
+        "--package".to_string(),
+        serde_json::Value::Bool(false),
+    )]));
+    assert!(!header.requested_package_detection());
+}
+
+#[test]
+fn requested_package_detection_is_true_for_each_recognized_package_flag() {
+    for flag in [
+        "--package",
+        "--package-only",
+        "--system-package",
+        "--package-in-compiled",
+    ] {
+        let header = header_with_options(serde_json::Map::from_iter([(
+            flag.to_string(),
+            serde_json::Value::Bool(true),
+        )]));
+        assert!(
+            header.requested_package_detection(),
+            "{flag} should be recognized as package detection"
+        );
+    }
+}
+
+#[test]
+fn into_parts_reports_package_detection_requested_when_any_merged_header_ran_it() {
+    let loaded = JsonScanInput {
+        headers: vec![
+            header_with_options(serde_json::Map::new()),
+            header_with_options(serde_json::Map::from_iter([(
+                "--package".to_string(),
+                serde_json::Value::Bool(true),
+            )])),
+        ],
+        files: vec![],
+        packages: vec![],
+        dependencies: vec![],
+        license_detections: vec![],
+        license_references: vec![],
+        license_rule_references: vec![],
+        excluded_count: 0,
+    };
+
+    let (.., package_detection_requested_in_source) =
+        loaded.into_parts().expect("into_parts should succeed");
+
+    assert!(package_detection_requested_in_source);
+}
+
+#[test]
+fn into_parts_reports_package_detection_not_requested_when_no_header_ran_it() {
+    let loaded = JsonScanInput {
+        headers: vec![header_with_options(serde_json::Map::new())],
+        files: vec![],
+        packages: vec![],
+        dependencies: vec![],
+        license_detections: vec![],
+        license_references: vec![],
+        license_rule_references: vec![],
+        excluded_count: 0,
+    };
+
+    let (.., package_detection_requested_in_source) =
+        loaded.into_parts().expect("into_parts should succeed");
+
+    assert!(!package_detection_requested_in_source);
+}
+
 #[test]
 fn load_scan_from_json_reads_files_and_metadata_sections() {
     let temp_path = std::env::temp_dir().join("provenant-from-json-test.json");
@@ -172,6 +260,7 @@ fn normalize_loaded_json_scan_applies_strip_root_per_loaded_input() {
             ],
             warnings: vec!["custom recoverable warning: archive/root/src/main.rs".to_string()],
             extra_data: None,
+            ..Default::default()
         }],
         files: vec![
             output_json_file("archive/root", crate::models::FileType::Directory),
@@ -235,6 +324,7 @@ fn normalize_loaded_json_scan_trims_full_root_display_without_absolutizing() {
             errors: vec!["Path: /tmp/archive/root/src/main.rs".to_string()],
             warnings: vec!["custom recoverable warning: /tmp/archive/root/src/main.rs".to_string()],
             extra_data: None,
+            ..Default::default()
         }],
         files: vec![output_json_file(
             "/tmp/archive/root/src/main.rs",
@@ -541,6 +631,7 @@ fn into_parts_preserves_imported_header_errors_as_extra_errors() {
                     replaced_licenses: vec![],
                 }),
             }),
+            ..Default::default()
         }],
         files: vec![output_json_file(
             "src/main.rs",
@@ -563,6 +654,7 @@ fn into_parts_preserves_imported_header_errors_as_extra_errors() {
         extra_errors,
         imported_spdx_license_list_version,
         imported_license_index_provenance,
+        _package_detection_requested_in_source,
     ) = loaded.into_parts().expect("into_parts should succeed");
 
     assert_eq!(extra_errors, vec!["Failed to read directory: src/main.rs"]);
@@ -585,6 +677,7 @@ fn into_parts_drops_imported_warnings_and_file_summary_errors() {
             ],
             warnings: vec!["Imported warning".to_string()],
             extra_data: None,
+            ..Default::default()
         }],
         files: vec![{
             let mut file = output_json_file("src/main.rs", crate::models::FileType::File);
@@ -608,6 +701,7 @@ fn into_parts_drops_imported_warnings_and_file_summary_errors() {
         extra_errors,
         imported_spdx_license_list_version,
         imported_license_index_provenance,
+        _package_detection_requested_in_source,
     ) = loaded.into_parts().expect("into_parts should succeed");
 
     assert_eq!(extra_errors, vec!["Failed to read directory: src/vendor"]);
@@ -622,6 +716,7 @@ fn into_parts_restores_file_warning_severity_from_header_warnings() {
             errors: vec![],
             warnings: vec!["custom recoverable warning: src/main.rs".to_string()],
             extra_data: None,
+            ..Default::default()
         }],
         files: vec![{
             let mut file = output_json_file("src/main.rs", crate::models::FileType::File);
@@ -636,7 +731,7 @@ fn into_parts_restores_file_warning_severity_from_header_warnings() {
         excluded_count: 0,
     };
 
-    let (process_result, _assembly_result, _dets, _refs, _rule_refs, extra_errors, _, _) =
+    let (process_result, _assembly_result, _dets, _refs, _rule_refs, extra_errors, _, _, _) =
         loaded.into_parts().expect("into_parts should succeed");
 
     assert!(extra_errors.is_empty());
@@ -661,6 +756,7 @@ fn normalize_loaded_json_scan_rewrites_verbose_header_error_path_prefix() {
             ],
             warnings: vec![],
             extra_data: None,
+            ..Default::default()
         }],
         files: vec![output_json_file(
             "/tmp/archive/root/src/main.rs",
@@ -691,6 +787,7 @@ fn normalize_loaded_json_scan_rewrites_header_warnings_too() {
             errors: vec![],
             warnings: vec!["custom recoverable warning: /tmp/archive/root/src/main.rs".to_string()],
             extra_data: None,
+            ..Default::default()
         }],
         files: vec![output_json_file(
             "/tmp/archive/root/src/main.rs",
@@ -733,6 +830,7 @@ fn into_parts_discards_conflicting_imported_header_provenance() {
                         replaced_licenses: vec![],
                     }),
                 }),
+                ..Default::default()
             },
             JsonHeaderInput {
                 errors: vec![],
@@ -751,6 +849,7 @@ fn into_parts_discards_conflicting_imported_header_provenance() {
                         replaced_licenses: vec![],
                     }),
                 }),
+                ..Default::default()
             },
         ],
         files: vec![output_json_file(
@@ -774,6 +873,7 @@ fn into_parts_discards_conflicting_imported_header_provenance() {
         _extra_errors,
         imported_spdx_license_list_version,
         imported_license_index_provenance,
+        _package_detection_requested_in_source,
     ) = loaded.into_parts().expect("into_parts should succeed");
 
     assert!(imported_spdx_license_list_version.is_none());
