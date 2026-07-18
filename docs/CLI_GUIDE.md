@@ -329,6 +329,8 @@ If you explicitly ask for non-license detections such as `--email`, `--url`, or 
 
 If you want assembled top-level packages and dependencies, use `--package` instead.
 
+Because `--package-only` (and `--no-assemble`) skip top-level package assembly outright, Provenant refuses to combine either flag with an SBOM format (`--spdx-tv`/`--spdx-rdf`/`--cyclonedx`/`--cyclonedx-xml`) when there is real scanned content — see section 10.
+
 ### 7. "I need system package data"
 
 ```sh
@@ -394,6 +396,12 @@ In practice:
 - `--package` is usually part of these workflows because package/dependency data is central to SBOM output.
 
 Reshaping with `--from-json` (see section 14) into an SBOM format needs the original scan to have run package detection. If the JSON being reshaped never ran `--package`/`--package-only`/`--system-package`/`--package-in-compiled` and it has no packages, Provenant refuses the SBOM export instead of silently writing an empty `components` array or SPDX's no-package projection. This check runs per merged `--from-json` input, so merging several JSON files where even one of them never ran package detection still refuses — a different merged input that did request detection does not override it. Rescan with one of those flags first, or reshape to `--json`/`--json-pp` instead if you only need file-level data. A refused SBOM target does not block other, non-SBOM output targets requested in the same run (e.g. `--cyclonedx bom.json --json out.json`): the non-SBOM outputs are still written, and the process exits with a dedicated non-zero exit code distinct from a scan/runtime error or the license-policy gate.
+
+The same refusal applies to a native (non-`--from-json`) scan that combines an SBOM format with `--package-only` or `--no-assemble`: both flags unconditionally skip the top-level package assembly that SBOM export reads from, for the whole run, regardless of what was scanned. Drop `--package-only`/`--no-assemble` (use `--package` instead) before requesting an SBOM format, or reshape to `--json`/`--json-pp` if a package-less export was intended. This shares the same dedicated exit code and "write the artifact, then fail" behavior as the `--from-json` case above.
+
+Combining an SBOM format with `--paths-file` (see section 21) only warns, since assembly still runs and can produce a genuinely well-formed SBOM from whatever was selected — but that export can understate a monorepo's real inventory if the selection omitted sibling member manifests or a workspace root. The export is still written; rerun without `--paths-file` (or widen the selection to the full workspace) when you need a guaranteed-complete SBOM.
+
+Both the refusal and the warning above are always printed to stderr, even under `--quiet`, so a caller that only checks the exit code still has an explanation available if they look; `--quiet` otherwise suppresses Provenant's normal progress and informational logging for the scan subcommand.
 
 ### 11. "I need Debian copyright output"
 
@@ -666,6 +674,7 @@ Current behavior:
 - missing entries are skipped with a warning
 - `--paths-file -` reads the list from stdin
 - `--paths-file` cannot currently be combined with `--from-json`
+- combining `--paths-file` with an SBOM format (`--spdx-tv`/`--spdx-rdf`/`--cyclonedx`/`--cyclonedx-xml`) still writes the export, but Provenant emits a loud warning that the selection may omit sibling manifests or a workspace root, so the inventory can understate the full repository — see section 10
 
 Example with stdin:
 
@@ -690,6 +699,8 @@ These are worth learning early because they change what the output means:
 - `--debian <FILE>` requires `--license`, `--copyright`, and `--license-text`
 - `--fail-on <LEVEL>` requires `--license-policy`; a violation exits with code 3
 - an SBOM format (`--spdx-tv`/`--spdx-rdf`/`--cyclonedx`/`--cyclonedx-xml`) combined with `--from-json` on an input that never ran package detection is refused and exits with code 4, while any other requested non-SBOM output targets are still written
+- an SBOM format combined with `--package-only` or `--no-assemble` on a native scan with real scanned content is refused the same way and shares exit code 4
+- an SBOM format combined with `--paths-file` still writes the export but logs a loud warning that the inventory may understate the full repository
 - `--sarif <FILE>` only emits results for `--license-policy` entries that carry a `compliance_alert`
 - `--paths-file <FILE>` requires exactly one native scan root and is currently native-scan only (no `--from-json`)
 - `--reindex` only matters when the license engine is initialized (`--license` and some `--from-json` reference-recompute flows)

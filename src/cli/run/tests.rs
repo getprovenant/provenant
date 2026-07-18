@@ -265,6 +265,14 @@ fn from_json_sbom_request(sbom_flag: &str, output_file: &str) -> ScanRequest {
     ScanRequest::from(cli.scan_args().expect("scan args should be present"))
 }
 
+fn native_sbom_request(sbom_flag: &str, output_file: &str, extra_args: &[&str]) -> ScanRequest {
+    let mut args = vec!["provenant", sbom_flag, output_file];
+    args.extend_from_slice(extra_args);
+    args.push("sample-dir");
+    let cli = crate::cli::Cli::try_parse_from(args).expect("cli parse should succeed");
+    ScanRequest::from(cli.scan_args().expect("scan args should be present"))
+}
+
 fn output_with_files(files: Vec<crate::models::FileInfo>) -> crate::models::Output {
     crate::models::Output {
         summary: None,
@@ -386,6 +394,107 @@ fn hollow_from_json_sbom_refusal_allows_requests_with_real_packages() {
     )];
 
     assert!(hollow_from_json_sbom_refusal(&request, &output, false).is_none());
+}
+
+#[test]
+fn assembly_skipped_sbom_refusal_fires_for_package_only_with_scanned_files() {
+    let request = native_sbom_request("--cyclonedx", "bom.json", &["--package-only"]);
+    let output = output_with_files(vec![json_file(
+        "package.json",
+        crate::models::FileType::File,
+    )]);
+
+    let refusal = assembly_skipped_sbom_refusal(&request, &output)
+        .expect("--package-only must refuse a hollow cyclonedx export");
+    assert!(refusal.contains("--package-only"));
+    assert!(refusal.contains("--cyclonedx"));
+}
+
+#[test]
+fn assembly_skipped_sbom_refusal_fires_for_no_assemble_with_scanned_files() {
+    let request = native_sbom_request("--spdx-tv", "sbom.spdx", &["--no-assemble", "--package"]);
+    let output = output_with_files(vec![json_file(
+        "package.json",
+        crate::models::FileType::File,
+    )]);
+
+    let refusal = assembly_skipped_sbom_refusal(&request, &output)
+        .expect("--no-assemble must refuse a hollow spdx-tv export");
+    assert!(refusal.contains("--no-assemble"));
+    assert!(refusal.contains("--spdx-tv"));
+}
+
+#[test]
+fn assembly_skipped_sbom_refusal_allows_non_sbom_output_formats() {
+    let request = native_sbom_request("--json-pp", "-", &["--package-only"]);
+    let output = output_with_files(vec![json_file(
+        "package.json",
+        crate::models::FileType::File,
+    )]);
+
+    assert!(assembly_skipped_sbom_refusal(&request, &output).is_none());
+}
+
+#[test]
+fn assembly_skipped_sbom_refusal_allows_truly_empty_scan_documents() {
+    let request = native_sbom_request("--cyclonedx-xml", "bom.xml", &["--package-only"]);
+    let output = output_with_files(vec![]);
+
+    assert!(assembly_skipped_sbom_refusal(&request, &output).is_none());
+}
+
+#[test]
+fn assembly_skipped_sbom_refusal_allows_package_without_assembly_skip() {
+    let request = native_sbom_request("--cyclonedx", "bom.json", &["--package"]);
+    let output = output_with_files(vec![json_file(
+        "package.json",
+        crate::models::FileType::File,
+    )]);
+
+    assert!(assembly_skipped_sbom_refusal(&request, &output).is_none());
+}
+
+#[test]
+fn assembly_skipped_sbom_refusal_does_not_fire_for_from_json() {
+    let request = from_json_sbom_request("--cyclonedx", "bom.json");
+    let output = output_with_files(vec![json_file(
+        "package.json",
+        crate::models::FileType::File,
+    )]);
+
+    assert!(assembly_skipped_sbom_refusal(&request, &output).is_none());
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_fires_for_native_paths_file_sbom_export() {
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+
+    let warning = paths_file_sbom_completeness_warning(&request)
+        .expect("--paths-file combined with an SBOM format must warn");
+    assert!(warning.contains("--paths-file"));
+    assert!(warning.contains("--cyclonedx"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_allows_non_sbom_output_formats() {
+    let request = native_sbom_request(
+        "--json-pp",
+        "-",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+
+    assert!(paths_file_sbom_completeness_warning(&request).is_none());
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_allows_requests_without_paths_file() {
+    let request = native_sbom_request("--spdx-rdf", "sbom.rdf", &["--package"]);
+
+    assert!(paths_file_sbom_completeness_warning(&request).is_none());
 }
 
 #[test]
