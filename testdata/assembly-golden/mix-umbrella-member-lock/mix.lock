@@ -1,0 +1,3 @@
+%{
+  "ecto": {:hex, :ecto, "3.10.0", "ghi", [:mix], [], "hexpm", "jkl"}
+}

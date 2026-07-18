@@ -320,4 +320,113 @@ end
             );
         }
     }
+
+    /// A member directory is claimed for umbrella topology instead of
+    /// ordinary sibling merge, but that claim must not make a `mix.lock`
+    /// living directly inside that member's own directory disappear. Mix
+    /// does not forbid a member from also carrying its own lock, so its
+    /// entries must still be assembled — attributed to that member — in
+    /// addition to (not instead of) umbrella-wide root-lock attribution.
+    #[test]
+    fn test_mix_umbrella_member_local_mix_lock_is_assembled() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        std::fs::write(
+            temp_dir.path().join("mix.exs"),
+            r#"defmodule Umbrella.MixProject do
+  use Mix.Project
+
+  def project do
+    [apps_path: "apps"]
+  end
+end
+"#,
+        )
+        .expect("write root mix.exs");
+        // No root mix.lock in this fixture: only app_one carries its own
+        // mix.lock, directly inside its own member directory.
+
+        std::fs::create_dir_all(temp_dir.path().join("apps/app_one")).expect("mkdir app_one");
+        std::fs::write(
+            temp_dir.path().join("apps/app_one/mix.exs"),
+            r#"defmodule AppOne.MixProject do
+  use Mix.Project
+
+  def project do
+    [app: :app_one, version: "0.1.0", deps: deps()]
+  end
+
+  defp deps do
+    [{:jason, "~> 1.4"}]
+  end
+end
+"#,
+        )
+        .expect("write app_one/mix.exs");
+        std::fs::write(
+            temp_dir.path().join("apps/app_one/mix.lock"),
+            "%{\n  \"jason\": {:hex, :jason, \"1.4.1\", \"mno\", [:mix], [], \"hexpm\", \"pqr\"}\n}\n",
+        )
+        .expect("write app_one/mix.lock");
+
+        std::fs::create_dir_all(temp_dir.path().join("apps/app_two")).expect("mkdir app_two");
+        std::fs::write(
+            temp_dir.path().join("apps/app_two/mix.exs"),
+            r#"defmodule AppTwo.MixProject do
+  use Mix.Project
+
+  def project do
+    [app: :app_two, version: "0.2.0"]
+  end
+end
+"#,
+        )
+        .expect("write app_two/mix.exs");
+
+        let (files, result) = scan_and_assemble(temp_dir.path());
+
+        assert_eq!(
+            result.packages.len(),
+            2,
+            "expected one package per umbrella app, found: {:#?}",
+            result.packages
+        );
+
+        let app_one = result
+            .packages
+            .iter()
+            .find(|p| p.purl.as_deref() == Some("pkg:hex/app_one@0.1.0"))
+            .expect("app_one should assemble to a package");
+
+        // app_one's own member-local mix.lock is assembled and owned by
+        // app_one, not silently dropped because the directory was claimed
+        // for umbrella topology.
+        assert!(
+            result.dependencies.iter().any(|d| {
+                d.purl.as_deref() == Some("pkg:hex/jason@1.4.1")
+                    && d.datafile_path.ends_with("apps/app_one/mix.lock")
+                    && d.for_package_uid.as_ref() == Some(&app_one.package_uid)
+            }),
+            "app_one's member-local mix.lock entry must be assembled, found: {:?}",
+            result
+                .dependencies
+                .iter()
+                .map(|d| (
+                    d.purl.clone(),
+                    d.datafile_path.clone(),
+                    d.for_package_uid.clone()
+                ))
+                .collect::<Vec<_>>()
+        );
+
+        let app_one_lock_file = files
+            .iter()
+            .find(|f| f.path.ends_with("apps/app_one/mix.lock"))
+            .expect("app_one/mix.lock should be scanned");
+        assert!(
+            app_one_lock_file
+                .for_packages
+                .contains(&app_one.package_uid),
+            "app_one's own mix.lock should link to app_one"
+        );
+    }
 }

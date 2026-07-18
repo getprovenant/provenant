@@ -37,6 +37,14 @@
 //!   Cargo/npm workspace roots that lack their own package manifest section.
 //!   If the root manifest *does* carry an `app:` (unusual but valid), it is
 //!   treated as another owning candidate, exactly like a member.
+//! - A member directory is claimed for umbrella topology instead of ordinary
+//!   sibling merge, but that claim does not extend to dropping a `mix.lock`
+//!   that lives directly inside that member's own directory. Mix does not
+//!   forbid a member from also carrying its own lock (e.g. an app that is
+//!   also lockable/runnable standalone), so when one is present every one of
+//!   its entries is attributed to that single member — unambiguous, unlike
+//!   the shared root lock — in addition to (not instead of) the umbrella-wide
+//!   root `mix.lock` attribution above.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -55,6 +63,14 @@ pub(super) struct MixUmbrellaRootHint {
 pub(super) struct MixUmbrellaMemberDomain {
     pub(super) manifest_idx: usize,
     pub(super) dir_path: PathBuf,
+    /// A member directory normally has no `mix.lock` of its own — the
+    /// umbrella shares one root-level lock (see `root_mix_lock_idx`). Mix
+    /// does not forbid a member from carrying its own lock too (e.g. an app
+    /// that is also runnable/lockable standalone), and dropping that lock
+    /// silently would make its locked deps disappear. When present, it is
+    /// merged for this member in addition to (not instead of) umbrella
+    /// topology; see `apply_mix_umbrella_domain`.
+    pub(super) local_mix_lock_idx: Option<usize>,
 }
 
 pub(super) struct MixUmbrellaDomain {
@@ -188,6 +204,7 @@ fn discover_members(
         members.push(MixUmbrellaMemberDomain {
             manifest_idx: idx,
             dir_path: parent.to_path_buf(),
+            local_mix_lock_idx: find_mix_lock_index(files, parent),
         });
     }
 
@@ -351,6 +368,39 @@ pub(super) fn apply_mix_umbrella_domain(
                     Some(owner.package.package_uid.clone()),
                 ));
             }
+        }
+    }
+
+    // A member's own local mix.lock (unusual, but not forbidden by Mix) is
+    // unambiguous: unlike the shared root lock, every entry in it belongs
+    // entirely to that one member, exactly as for a standalone
+    // mix.exs+mix.lock sibling pair outside any umbrella. Merge it in
+    // addition to the umbrella-wide root lock rather than dropping it just
+    // because this directory was claimed for umbrella topology instead of
+    // ordinary sibling merge.
+    for (offset, member) in domain.members.iter().enumerate() {
+        let Some(lock_idx) = member.local_mix_lock_idx else {
+            continue;
+        };
+        let lock_path = files[lock_idx].path.clone();
+        let lock_deps: Vec<Dependency> = files[lock_idx]
+            .package_data
+            .iter()
+            .find(|pkg| pkg.datasource_id == Some(DatasourceId::HexMixLock))
+            .map(|pkg| pkg.dependencies.clone())
+            .unwrap_or_default();
+
+        let owner_uid = candidates[root_candidate_len + offset]
+            .package
+            .package_uid
+            .clone();
+        for dep in &lock_deps {
+            dependencies.push(TopLevelDependency::from_dependency(
+                dep,
+                lock_path.clone(),
+                DatasourceId::HexMixLock,
+                Some(owner_uid.clone()),
+            ));
         }
     }
 
