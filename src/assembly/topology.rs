@@ -755,15 +755,28 @@ fn resolve_maven_reactor_members(files: &[FileInfo], hint: &MavenReactorRootHint
 /// filesystem, so a declared module path such as `./module-a` or
 /// `../sibling-module` compares equal to the scanned path's own normalized
 /// form.
+///
+/// Unresolved parent components are kept rather than discarded. Dropping them
+/// would let an over-escaped module like `../../../module-a` collapse onto an
+/// unrelated in-scan `module-a/` and incorrectly accept it as a reactor member.
 fn normalize_lexical_path(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
 
     for component in path.components() {
         match component {
             std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                normalized.pop();
-            }
+            std::path::Component::ParentDir => match normalized.components().next_back() {
+                Some(std::path::Component::Normal(_)) => {
+                    normalized.pop();
+                }
+                Some(std::path::Component::ParentDir) | None => {
+                    normalized.push(std::path::Component::ParentDir.as_os_str());
+                }
+                // Never escape a filesystem root / Windows prefix.
+                Some(std::path::Component::RootDir) | Some(std::path::Component::Prefix(_)) => {}
+                // CurDir is skipped above, so it never accumulates here.
+                Some(std::path::Component::CurDir) => unreachable!(),
+            },
             other => normalized.push(other.as_os_str()),
         }
     }

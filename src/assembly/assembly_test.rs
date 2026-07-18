@@ -428,6 +428,38 @@ mod tests {
     }
 
     #[test]
+    fn test_maven_reactor_rejects_over_escaped_module_paths() {
+        // An over-escaped `<module>` path such as `../../../module-a` must not
+        // collapse onto an unrelated in-scan `module-a/` just because lexical
+        // `..` popping ran out of parents. The declared path stays unresolved
+        // and the reactor must not attribute that unrelated module's files.
+        let mut files = vec![
+            create_maven_reactor_root_file_info(
+                "reactor/parent/pom.xml",
+                "org.example",
+                "parent",
+                "1.0",
+                &["../../../module-a"],
+            ),
+            create_maven_pom_file_info("module-a/pom.xml", "org.example", "module-a", "1.0"),
+            create_plain_source_file_info("module-a/src/main/java/com/example/Foo.java"),
+        ];
+
+        let result = assemble(&mut files);
+
+        assert!(
+            files
+                .iter()
+                .find(|f| f.path == "module-a/src/main/java/com/example/Foo.java")
+                .expect("source file should exist")
+                .for_packages
+                .is_empty(),
+            "over-escaped reactor module paths must not claim unrelated in-scan modules: {:#?}",
+            result.packages
+        );
+    }
+
+    #[test]
     fn test_maven_distinct_gav_poms_in_one_dir_stay_separate_packages() {
         // A directory of standalone `.pom` fixtures, each with a distinct GAV,
         // must NOT collapse into one top-level package.
