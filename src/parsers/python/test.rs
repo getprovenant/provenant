@@ -452,6 +452,60 @@ description = "demo"
     }
 
     #[test]
+    fn test_extracts_uv_workspace_members_from_pep621_and_poetry_pyprojects() {
+        for (metadata, expected_datasource) in [
+            (
+                "[project]\nname = 'uv-root'\nversion = '1.0.0'",
+                DatasourceId::PypiPyprojectToml,
+            ),
+            (
+                "[tool.poetry]\nname = 'uv-root'\nversion = '1.0.0'",
+                DatasourceId::PypiPoetryPyprojectToml,
+            ),
+        ] {
+            let content = format!(
+                "{metadata}\n\n[tool.uv.workspace]\nmembers = ['./packages/*', 'tools/cli']\nexclude = ['packages/ignored']\n"
+            );
+            let (_temp_dir, file_path) = create_temp_file(&content, "pyproject.toml");
+            let package_data = PythonParser::extract_first_package(&file_path);
+
+            assert_eq!(package_data.datasource_id, Some(expected_datasource));
+            let extra_data = package_data.extra_data.expect("uv workspace extra data");
+            assert_eq!(
+                extra_data.get("workspace_members"),
+                Some(&serde_json::json!(["./packages/*", "tools/cli"]))
+            );
+            assert_eq!(
+                extra_data.get("workspace_exclude"),
+                Some(&serde_json::json!(["packages/ignored"]))
+            );
+        }
+    }
+
+    #[test]
+    fn test_extracts_uv_workspace_from_virtual_pyproject() {
+        let content = r#"
+[tool.uv.workspace]
+members = ["packages/*"]
+"#;
+        let (_temp_dir, file_path) = create_temp_file(content, "pyproject.toml");
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        assert_eq!(
+            package_data.datasource_id,
+            Some(DatasourceId::PypiPyprojectToml)
+        );
+        assert!(package_data.purl.is_none());
+        assert_eq!(
+            package_data
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("workspace_members")),
+            Some(&serde_json::json!(["packages/*"]))
+        );
+    }
+
+    #[test]
     fn test_try_parse_file_build_system_only_pyproject_is_not_a_scan_error() {
         let content = r#"
 [build-system]

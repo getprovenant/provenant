@@ -564,6 +564,30 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_gradle_multiproject() {
+        match run_assembly_golden_test("gradle-multiproject") {
+            Ok(_) => (),
+            Err(e) => panic!("Assembly golden test failed for gradle-multiproject: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_assembly_uv_workspace() {
+        match run_assembly_golden_test("uv-workspace") {
+            Ok(_) => (),
+            Err(e) => panic!("Assembly golden test failed for uv-workspace: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_assembly_dart_workspace() {
+        match run_assembly_golden_test("dart-workspace") {
+            Ok(_) => (),
+            Err(e) => panic!("Assembly golden test failed for dart-workspace: {}", e),
+        }
+    }
+
+    #[test]
     fn test_assembly_deno_basic() {
         match run_assembly_golden_test("deno-basic") {
             Ok(_) => (),

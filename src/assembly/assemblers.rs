@@ -42,6 +42,9 @@ pub(super) enum PostAssemblyPassKind {
     CargoWorkspaceMerge,
     MixUmbrellaMerge,
     MavenReactorAssign,
+    GradleMultiProjectAssign,
+    UvWorkspaceAssign,
+    DartWorkspaceMerge,
     NugetCpmResolve,
     CargoResourceAssign,
     ComposerResourceAssign,
@@ -77,6 +80,9 @@ pub(super) static POST_ASSEMBLY_PASSES: &[PostAssemblyPassKind] = &[
     PostAssemblyPassKind::CargoWorkspaceMerge,
     PostAssemblyPassKind::MixUmbrellaMerge,
     PostAssemblyPassKind::MavenReactorAssign,
+    PostAssemblyPassKind::GradleMultiProjectAssign,
+    PostAssemblyPassKind::UvWorkspaceAssign,
+    PostAssemblyPassKind::DartWorkspaceMerge,
     PostAssemblyPassKind::NugetCpmResolve,
     PostAssemblyPassKind::CargoResourceAssign,
     PostAssemblyPassKind::ComposerResourceAssign,
@@ -119,6 +125,9 @@ struct PostAssemblyInputs {
     has_cargo_workspace_markers: bool,
     has_mix_umbrella_markers: bool,
     has_maven_reactor_markers: bool,
+    has_gradle_multi_project_markers: bool,
+    has_uv_workspace_markers: bool,
+    has_dart_workspace_markers: bool,
 }
 
 pub(super) fn run_post_assembly_passes(
@@ -197,6 +206,41 @@ impl PostAssemblyInputs {
                         .is_some_and(|modules| !modules.is_empty())
                 {
                     inputs.has_maven_reactor_markers = true;
+                }
+
+                if datasource_id == DatasourceId::GradleSettings
+                    && package_data
+                        .extra_data
+                        .as_ref()
+                        .and_then(|extra_data| extra_data.get("projects"))
+                        .and_then(|projects| projects.as_array())
+                        .is_some_and(|projects| !projects.is_empty())
+                {
+                    inputs.has_gradle_multi_project_markers = true;
+                }
+
+                if matches!(
+                    datasource_id,
+                    DatasourceId::PypiPyprojectToml | DatasourceId::PypiPoetryPyprojectToml
+                ) && package_data
+                    .extra_data
+                    .as_ref()
+                    .and_then(|extra_data| extra_data.get("workspace_members"))
+                    .and_then(|members| members.as_array())
+                    .is_some_and(|members| !members.is_empty())
+                {
+                    inputs.has_uv_workspace_markers = true;
+                }
+
+                if datasource_id == DatasourceId::PubspecYaml
+                    && package_data
+                        .extra_data
+                        .as_ref()
+                        .and_then(|extra_data| extra_data.get("workspace_members"))
+                        .and_then(|members| members.as_array())
+                        .is_some_and(|members| !members.is_empty())
+                {
+                    inputs.has_dart_workspace_markers = true;
                 }
             }
         }
@@ -285,6 +329,9 @@ impl PostAssemblyPassKind {
             Self::CargoWorkspaceMerge => inputs.has_cargo_workspace_markers,
             Self::MixUmbrellaMerge => inputs.has_mix_umbrella_markers,
             Self::MavenReactorAssign => inputs.has_maven_reactor_markers,
+            Self::GradleMultiProjectAssign => inputs.has_gradle_multi_project_markers,
+            Self::UvWorkspaceAssign => inputs.has_uv_workspace_markers,
+            Self::DartWorkspaceMerge => inputs.has_dart_workspace_markers,
             Self::NugetCpmResolve => {
                 inputs.has_any_file_datasource(NUGET_CPM_CONFIG_DATASOURCE_IDS)
                     && inputs.has_any_file_datasource(NUGET_CPM_PROJECT_DATASOURCE_IDS)
@@ -351,6 +398,13 @@ impl PostAssemblyPassKind {
                 topology_plan.apply_mix_umbrella_domains(files, packages, dependencies)
             }
             Self::MavenReactorAssign => topology_plan.apply_maven_reactor_domains(files),
+            Self::GradleMultiProjectAssign => {
+                topology_plan.apply_gradle_multi_project_domains(files, packages, dependencies)
+            }
+            Self::UvWorkspaceAssign => topology_plan.apply_uv_workspace_domains(files),
+            Self::DartWorkspaceMerge => {
+                topology_plan.apply_dart_workspace_domains(files, packages, dependencies)
+            }
             Self::NugetCpmResolve => {
                 nuget_cpm_resolve::resolve_nuget_cpm_versions(files, dependencies)
             }
@@ -1109,6 +1163,11 @@ pub(super) static UNASSEMBLED_DATASOURCE_IDS: &[(DatasourceId, UnassembledReason
         UnassembledReason::NotAPackage,
     ),
     (DatasourceId::Dockerfile, UnassembledReason::NotAPackage),
+    // A Gradle settings file declares multi-project structure (subprojects,
+    // root project name), not a package. Its declared subprojects drive
+    // `gradle_multiproject_merge` topology; it carries no package identity or
+    // dependency list of its own.
+    (DatasourceId::GradleSettings, UnassembledReason::NotAPackage),
     (DatasourceId::OciImageIndex, UnassembledReason::NotAPackage),
     (
         DatasourceId::OciImageManifest,
@@ -1345,6 +1404,9 @@ mod tests {
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
             has_maven_reactor_markers: false,
+            has_gradle_multi_project_markers: false,
+            has_uv_workspace_markers: false,
+            has_dart_workspace_markers: false,
         };
 
         let runnable: HashSet<_> = PostAssemblyPassKind::iter()
@@ -1369,6 +1431,9 @@ mod tests {
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
             has_maven_reactor_markers: false,
+            has_gradle_multi_project_markers: false,
+            has_uv_workspace_markers: false,
+            has_dart_workspace_markers: false,
         };
 
         assert!(!PostAssemblyPassKind::CargoWorkspaceMerge.should_run(&without_markers));
@@ -1390,6 +1455,9 @@ mod tests {
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
             has_maven_reactor_markers: false,
+            has_gradle_multi_project_markers: false,
+            has_uv_workspace_markers: false,
+            has_dart_workspace_markers: false,
         };
 
         assert!(!PostAssemblyPassKind::MixUmbrellaMerge.should_run(&without_markers));

@@ -39,6 +39,27 @@ mod tests {
     }
 
     #[test]
+    fn test_extracts_pub_workspace_members() {
+        let content = r#"
+name: workspace_root
+version: 1.0.0
+workspace:
+  - ./packages/core
+  - packages/ui
+"#;
+        let (_temp_dir, pubspec_path) = create_temp_file("pubspec.yaml", content);
+        let package_data = PubspecYamlParser::extract_first_package(&pubspec_path);
+
+        assert_eq!(
+            package_data
+                .extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("workspace_members")),
+            Some(&serde_json::json!(["./packages/core", "packages/ui"]))
+        );
+    }
+
+    #[test]
     fn test_extract_simple_dependencies() {
         let content = r#"
 name: example

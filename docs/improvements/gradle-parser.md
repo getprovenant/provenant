@@ -63,6 +63,12 @@ Rust now intentionally differs from or improves on current Python ScanCode Gradl
 
 - Rust also skips placeholder-only Maven coordinates like `${groupId}` / `${artifactId}` / `${version}` instead of emitting junk package identifiers.
 
+### Multiproject topology from `settings.gradle(.kts)`
+
+- Rust now parses literal `include` / `includeFlat` project paths from `settings.gradle` / `settings.gradle.kts` into `extra_data.projects` (datasource `gradle_settings`).
+- Assembly builds a Gradle multiproject topology domain from those declarations, synthesizes package identity for each resolved `build.gradle(.kts)` using settings root name / project path plus build `group`/`version`, and attributes nested sources to the deepest enclosing project while skipping each module's immediate `build/` output directory.
+- Non-literal / dynamic includes and custom `project(...).projectDir` remaps are intentionally skipped rather than guessed.
+
 ## Coverage
 
-Coverage spans scope classification, all discovered dependency-block parsing, Kotlin DSL quoted configuration names, version-catalog alias resolution, Gradle POM license extraction, and placeholder-coordinate guardrails.
+Coverage spans scope classification, all discovered dependency-block parsing, Kotlin DSL quoted configuration names, version-catalog alias resolution, Gradle POM license extraction, placeholder-coordinate guardrails, and settings-driven multiproject topology.

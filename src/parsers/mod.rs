@@ -165,6 +165,7 @@ mod gradle_module_scan_test;
 mod gradle_module_test;
 #[cfg(test)]
 mod gradle_scan_test;
+mod gradle_settings;
 mod hackage;
 #[cfg(test)]
 mod hackage_scan_test;
@@ -691,6 +692,7 @@ pub use self::go_mod_graph::GoModGraphParser;
 pub use self::gradle::GradleParser;
 pub use self::gradle_lock::GradleLockfileParser;
 pub use self::gradle_module::GradleModuleParser;
+pub use self::gradle_settings::GradleSettingsParser;
 pub use self::hackage::{HackageCabalParser, HackageCabalProjectParser, HackageStackYamlParser};
 pub use self::haxe::HaxeParser;
 pub use self::helm::{HelmChartLockParser, HelmChartYamlParser};
@@ -998,6 +1000,7 @@ register_package_handlers! {
         GradleLockfileParser,
         GradleParser,
         GradleModuleParser,
+        GradleSettingsParser,
         HackageCabalParser,
         HackageCabalProjectParser,
         HackageStackYamlParser,

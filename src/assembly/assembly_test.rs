@@ -460,6 +460,447 @@ mod tests {
     }
 
     #[test]
+    fn test_gradle_multi_project_owns_nested_sources_and_skips_build_output() {
+        let mut settings = create_test_file_info(
+            "repo/settings.gradle",
+            DatasourceId::GradleSettings,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        settings.package_data[0].package_type = Some(PackageType::Maven);
+        settings.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "projects".to_string(),
+                json!(["./modules/app", "../../../escaped"]),
+            ),
+            ("root_project_name".to_string(), json!("gradle-root")),
+        ]));
+
+        let mut root_build = create_test_file_info(
+            "repo/build.gradle",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root_build.package_data[0].package_type = Some(PackageType::Maven);
+        root_build.package_data[0].extra_data = Some(HashMap::from([
+            ("group".to_string(), json!("org.example")),
+            ("version".to_string(), json!("1.0")),
+        ]));
+
+        let mut member_build = create_test_file_info(
+            "repo/modules/app/build.gradle.kts",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        member_build.package_data[0].package_type = Some(PackageType::Maven);
+        member_build.package_data[0].extra_data = Some(HashMap::from([
+            ("group".to_string(), json!("org.example")),
+            ("version".to_string(), json!("1.0")),
+        ]));
+
+        let mut escaped_build = create_test_file_info(
+            "escaped/build.gradle",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        escaped_build.package_data[0].package_type = Some(PackageType::Maven);
+
+        let mut files = vec![
+            settings,
+            root_build,
+            create_plain_source_file_info("repo/README.md"),
+            member_build,
+            create_plain_source_file_info("repo/modules/app/src/main/java/App.java"),
+            create_plain_source_file_info("repo/modules/app/build/classes/App.class"),
+            escaped_build,
+            create_plain_source_file_info("escaped/src/Escaped.java"),
+        ];
+
+        let result = assemble(&mut files);
+        let root = result
+            .packages
+            .iter()
+            .find(|package| {
+                package.purl.as_deref() == Some("pkg:maven/org.example/gradle-root@1.0")
+            })
+            .expect("root Gradle package");
+        let member = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:maven/org.example/app@1.0"))
+            .expect("member Gradle package");
+
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/README.md")
+                .expect("root source")
+                .for_packages
+                .contains(&root.package_uid)
+        );
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/modules/app/src/main/java/App.java")
+                .expect("member source")
+                .for_packages
+                .contains(&member.package_uid)
+        );
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/modules/app/build/classes/App.class")
+                .expect("build output")
+                .for_packages
+                .is_empty()
+        );
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "escaped/src/Escaped.java")
+                .expect("escaped source")
+                .for_packages
+                .is_empty(),
+            "an over-escaped declared project must not claim an unrelated directory"
+        );
+    }
+
+    #[test]
+    fn test_uv_workspace_owns_only_resolved_non_excluded_members() {
+        let mut root = create_test_file_info(
+            "repo/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/workspace-root@1.0.0"),
+            Some("workspace-root"),
+            Some("1.0.0"),
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Pypi);
+        root.package_data[0].extra_data = Some(HashMap::from([
+            (
+                "workspace_members".to_string(),
+                json!(["./packages/*", "../../../escaped"]),
+            ),
+            ("workspace_exclude".to_string(), json!(["packages/ignored"])),
+        ]));
+
+        let mut member = create_test_file_info(
+            "repo/packages/core/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/core@0.1.0"),
+            Some("core"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member.package_data[0].package_type = Some(PackageType::Pypi);
+        let mut ignored = create_test_file_info(
+            "repo/packages/ignored/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/ignored@0.1.0"),
+            Some("ignored"),
+            Some("0.1.0"),
+            vec![],
+        );
+        ignored.package_data[0].package_type = Some(PackageType::Pypi);
+
+        let mut files = vec![
+            root,
+            member,
+            create_plain_source_file_info("repo/packages/core/src/core.py"),
+            ignored,
+            create_plain_source_file_info("repo/packages/ignored/src/ignored.py"),
+            create_plain_source_file_info("escaped/src/escaped.py"),
+        ];
+        let result = assemble(&mut files);
+        let core = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:pypi/core@0.1.0"))
+            .expect("uv member package");
+
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/packages/core/src/core.py")
+                .expect("member source")
+                .for_packages
+                .contains(&core.package_uid)
+        );
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/packages/ignored/src/ignored.py")
+                .expect("excluded source")
+                .for_packages
+                .is_empty()
+        );
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "escaped/src/escaped.py")
+                .expect("escaped source")
+                .for_packages
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_dart_workspace_claims_members_and_attributes_shared_lock_honestly() {
+        let mut root = create_test_file_info(
+            "repo/pubspec.yaml",
+            DatasourceId::PubspecYaml,
+            Some("pkg:pub/workspace_root@1.0.0"),
+            Some("workspace_root"),
+            Some("1.0.0"),
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Pub);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace_members".to_string(),
+            json!(["./packages/app", "../../../escaped"]),
+        )]));
+
+        let direct_http = Dependency {
+            purl: Some("pkg:pub/http".to_string()),
+            extracted_requirement: Some("^1.0.0".to_string()),
+            scope: Some("dependencies".to_string()),
+            is_runtime: Some(true),
+            is_optional: Some(false),
+            is_pinned: Some(false),
+            is_direct: Some(true),
+            resolved_package: None,
+            extra_data: None,
+        };
+        let mut member = create_test_file_info(
+            "repo/packages/app/pubspec.yaml",
+            DatasourceId::PubspecYaml,
+            Some("pkg:pub/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![direct_http],
+        );
+        member.package_data[0].package_type = Some(PackageType::Pub);
+
+        let mut lock = create_test_file_info(
+            "repo/pubspec.lock",
+            DatasourceId::PubspecLock,
+            None,
+            None,
+            None,
+            vec![
+                Dependency {
+                    purl: Some("pkg:pub/http@1.2.0".to_string()),
+                    extracted_requirement: Some("1.2.0".to_string()),
+                    scope: Some("direct main".to_string()),
+                    is_runtime: Some(true),
+                    is_optional: Some(false),
+                    is_pinned: Some(true),
+                    is_direct: Some(true),
+                    resolved_package: None,
+                    extra_data: None,
+                },
+                Dependency {
+                    purl: Some("pkg:pub/collection@1.19.0".to_string()),
+                    extracted_requirement: Some("1.19.0".to_string()),
+                    scope: Some("transitive".to_string()),
+                    is_runtime: Some(true),
+                    is_optional: Some(false),
+                    is_pinned: Some(true),
+                    is_direct: Some(false),
+                    resolved_package: None,
+                    extra_data: None,
+                },
+            ],
+        );
+        lock.package_data[0].package_type = Some(PackageType::Pub);
+
+        let mut files = vec![
+            root,
+            lock,
+            member,
+            create_plain_source_file_info("repo/packages/app/lib/app.dart"),
+            create_plain_source_file_info("escaped/lib/escaped.dart"),
+        ];
+        let result = assemble(&mut files);
+        let app = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:pub/app@0.1.0"))
+            .expect("Dart member package");
+
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/packages/app/lib/app.dart")
+                .expect("Dart member source")
+                .for_packages
+                .contains(&app.package_uid)
+        );
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:pub/http@1.2.0")
+                && dependency.for_package_uid.as_ref() == Some(&app.package_uid)
+        }));
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:pub/collection@1.19.0")
+                && dependency.for_package_uid.is_none()
+        }));
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "escaped/lib/escaped.dart")
+                .expect("escaped source")
+                .for_packages
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_uv_workspace_exclude_rejects_descendants_of_excluded_dir() {
+        // A recursive `members = ["packages/**"]` glob would otherwise pull back
+        // a package nested under an excluded directory; a literal `exclude` must
+        // drop the whole excluded subtree, not only the exact excluded directory.
+        let mut root = create_test_file_info(
+            "repo/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/workspace-root@1.0.0"),
+            Some("workspace-root"),
+            Some("1.0.0"),
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Pypi);
+        root.package_data[0].extra_data = Some(HashMap::from([
+            ("workspace_members".to_string(), json!(["packages/**"])),
+            ("workspace_exclude".to_string(), json!(["packages/ignored"])),
+        ]));
+
+        let mut included = create_test_file_info(
+            "repo/packages/core/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/core@0.1.0"),
+            Some("core"),
+            Some("0.1.0"),
+            vec![],
+        );
+        included.package_data[0].package_type = Some(PackageType::Pypi);
+
+        let mut nested = create_test_file_info(
+            "repo/packages/ignored/sub/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/nested@0.1.0"),
+            Some("nested"),
+            Some("0.1.0"),
+            vec![],
+        );
+        nested.package_data[0].package_type = Some(PackageType::Pypi);
+
+        let mut files = vec![
+            root,
+            included,
+            create_plain_source_file_info("repo/packages/core/src/core.py"),
+            nested,
+            create_plain_source_file_info("repo/packages/ignored/sub/src/nested.py"),
+        ];
+        let result = assemble(&mut files);
+
+        let core = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:pypi/core@0.1.0"))
+            .expect("included uv member");
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/packages/core/src/core.py")
+                .expect("included member source")
+                .for_packages
+                .contains(&core.package_uid)
+        );
+        // The package under the excluded subtree is not adopted as a workspace
+        // member, so the topology never attributes its nested sources.
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/packages/ignored/sub/src/nested.py")
+                .expect("excluded nested source")
+                .for_packages
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_dart_workspace_only_root_leaves_root_files_unowned() {
+        // A workspace-only root pubspec (no package identity, e.g. a
+        // `publish_to: none` root with no name) must not push its root-level
+        // files into every member package.
+        let mut root = create_test_file_info(
+            "repo/pubspec.yaml",
+            DatasourceId::PubspecYaml,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Pub);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace_members".to_string(),
+            json!(["packages/app"]),
+        )]));
+
+        let mut member = create_test_file_info(
+            "repo/packages/app/pubspec.yaml",
+            DatasourceId::PubspecYaml,
+            Some("pkg:pub/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member.package_data[0].package_type = Some(PackageType::Pub);
+
+        let mut files = vec![
+            root,
+            member,
+            create_plain_source_file_info("repo/README.md"),
+            create_plain_source_file_info("repo/packages/app/lib/app.dart"),
+        ];
+        let result = assemble(&mut files);
+
+        let app = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:pub/app@0.1.0"))
+            .expect("Dart member package");
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/packages/app/lib/app.dart")
+                .expect("member source")
+                .for_packages
+                .contains(&app.package_uid)
+        );
+        // The workspace-only root's README stays unowned rather than being
+        // attributed to every member.
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/README.md")
+                .expect("root readme")
+                .for_packages
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn test_maven_distinct_gav_poms_in_one_dir_stay_separate_packages() {
         // A directory of standalone `.pom` fixtures, each with a distinct GAV,
         // must NOT collapse into one top-level package.

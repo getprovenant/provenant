@@ -12,6 +12,10 @@ use super::cargo_workspace_merge::{
     CargoWorkspaceDomain, CargoWorkspaceRootHint, apply_cargo_workspace_domain,
     collect_cargo_workspace_hints, plan_cargo_workspace_domains,
 };
+use super::dart_workspace_merge::{
+    DartWorkspaceDomain, DartWorkspaceRootHint, apply_dart_workspace_domain,
+    collect_dart_workspace_hints, plan_dart_workspace_domains,
+};
 use super::hackage_merge;
 use super::mix_umbrella_merge::{
     MixUmbrellaDomain, MixUmbrellaRootHint, apply_mix_umbrella_domain, collect_mix_umbrella_hints,
@@ -69,29 +73,62 @@ pub(super) struct MavenReactorDomain {
     member_pom_indices: Vec<usize>,
 }
 
+pub(super) struct GradleMultiProjectRootHint {
+    root_dir: PathBuf,
+    project_paths: Vec<String>,
+    root_project_name: Option<String>,
+}
+
+pub(super) struct GradleMultiProjectDomain {
+    root_dir: PathBuf,
+    root_build_idx: Option<usize>,
+    root_project_name: Option<String>,
+    member_build_indices: Vec<usize>,
+}
+
+pub(super) struct UvWorkspaceRootHint {
+    root_dir: PathBuf,
+    root_pyproject_idx: usize,
+    member_patterns: Vec<String>,
+    exclude_patterns: Vec<String>,
+}
+
+pub(super) struct UvWorkspaceDomain {
+    root_dir: PathBuf,
+    root_pyproject_idx: usize,
+    member_pyproject_indices: Vec<usize>,
+}
+
 pub(super) enum TopologyHint {
     CargoWorkspaceRoot(CargoWorkspaceRootHint),
+    DartWorkspaceRoot(DartWorkspaceRootHint),
     GoWorkspaceRoot(GoWorkspaceRootHint),
+    GradleMultiProjectRoot(GradleMultiProjectRootHint),
     HackageProject(HackageProjectHint),
     MixUmbrellaRoot(MixUmbrellaRootHint),
     MavenReactorRoot(MavenReactorRootHint),
     NpmWorkspaceRoot(NpmWorkspaceRootHint),
     PixiRoot(PixiRootHint),
+    UvWorkspaceRoot(UvWorkspaceRootHint),
 }
 
 pub(super) enum TopologyDomain {
     CargoWorkspace(CargoWorkspaceDomain),
+    DartWorkspace(DartWorkspaceDomain),
     GoWorkspace(GoWorkspaceDomain),
+    GradleMultiProject(GradleMultiProjectDomain),
     HackageProject(HackageProjectDomain),
     MixUmbrella(MixUmbrellaDomain),
     MavenReactor(MavenReactorDomain),
     NpmWorkspace(NpmWorkspaceDomain),
     Pixi(PixiDomain),
+    UvWorkspace(UvWorkspaceDomain),
 }
 
 pub(super) struct TopologyPlan {
     domains: Vec<TopologyDomain>,
     claimed_cargo_dirs: HashSet<PathBuf>,
+    claimed_dart_dirs: HashSet<PathBuf>,
     claimed_go_dirs: HashSet<PathBuf>,
     claimed_hackage_dirs: HashSet<PathBuf>,
     claimed_mix_dirs: HashSet<PathBuf>,
@@ -108,9 +145,19 @@ impl TopologyPlan {
                 .map(TopologyHint::CargoWorkspaceRoot),
         );
         hints.extend(
+            collect_dart_workspace_hints(files)
+                .into_iter()
+                .map(TopologyHint::DartWorkspaceRoot),
+        );
+        hints.extend(
             collect_go_workspace_hints(files)
                 .into_iter()
                 .map(TopologyHint::GoWorkspaceRoot),
+        );
+        hints.extend(
+            collect_gradle_multi_project_hints(files)
+                .into_iter()
+                .map(TopologyHint::GradleMultiProjectRoot),
         );
         hints.extend(
             collect_hackage_project_hints(files)
@@ -137,9 +184,15 @@ impl TopologyPlan {
                 .into_iter()
                 .map(TopologyHint::PixiRoot),
         );
+        hints.extend(
+            collect_uv_workspace_hints(files)
+                .into_iter()
+                .map(TopologyHint::UvWorkspaceRoot),
+        );
 
         let mut domains = Vec::new();
         let mut claimed_cargo_dirs = HashSet::new();
+        let mut claimed_dart_dirs = HashSet::new();
         let mut claimed_go_dirs = HashSet::new();
         let mut claimed_hackage_dirs = HashSet::new();
         let mut claimed_mix_dirs = HashSet::new();
@@ -150,12 +203,7 @@ impl TopologyPlan {
             .iter()
             .filter_map(|hint| match hint {
                 TopologyHint::CargoWorkspaceRoot(hint) => Some(hint),
-                TopologyHint::GoWorkspaceRoot(_) => None,
-                TopologyHint::HackageProject(_) => None,
-                TopologyHint::MixUmbrellaRoot(_) => None,
-                TopologyHint::MavenReactorRoot(_) => None,
-                TopologyHint::NpmWorkspaceRoot(_) => None,
-                TopologyHint::PixiRoot(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -165,16 +213,26 @@ impl TopologyPlan {
             domains.push(TopologyDomain::CargoWorkspace(domain));
         }
 
+        let dart_workspace_hints: Vec<_> = hints
+            .iter()
+            .filter_map(|hint| match hint {
+                TopologyHint::DartWorkspaceRoot(hint) => Some(hint),
+                _ => None,
+            })
+            .collect();
+
+        for domain in plan_dart_workspace_domains(files, &dart_workspace_hints) {
+            claimed_dart_dirs.insert(domain.root_dir.clone());
+            claimed_dart_dirs.extend(domain.members.iter().map(|member| member.dir_path.clone()));
+            domains.push(TopologyDomain::DartWorkspace(domain));
+        }
+
         let go_workspace_hints: Vec<_> = hints
             .iter()
             .filter_map(|hint| match hint {
                 TopologyHint::CargoWorkspaceRoot(_) => None,
                 TopologyHint::GoWorkspaceRoot(hint) => Some(hint),
-                TopologyHint::HackageProject(_) => None,
-                TopologyHint::MixUmbrellaRoot(_) => None,
-                TopologyHint::MavenReactorRoot(_) => None,
-                TopologyHint::NpmWorkspaceRoot(_) => None,
-                TopologyHint::PixiRoot(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -183,16 +241,25 @@ impl TopologyPlan {
             domains.push(TopologyDomain::GoWorkspace(domain));
         }
 
+        let gradle_multi_project_hints: Vec<_> = hints
+            .iter()
+            .filter_map(|hint| match hint {
+                TopologyHint::GradleMultiProjectRoot(hint) => Some(hint),
+                _ => None,
+            })
+            .collect();
+
+        for domain in plan_gradle_multi_project_domains(files, &gradle_multi_project_hints) {
+            domains.push(TopologyDomain::GradleMultiProject(domain));
+        }
+
         let hackage_project_hints: Vec<_> = hints
             .iter()
             .filter_map(|hint| match hint {
                 TopologyHint::CargoWorkspaceRoot(_) => None,
                 TopologyHint::GoWorkspaceRoot(_) => None,
                 TopologyHint::HackageProject(hint) => Some(hint),
-                TopologyHint::MixUmbrellaRoot(_) => None,
-                TopologyHint::MavenReactorRoot(_) => None,
-                TopologyHint::NpmWorkspaceRoot(_) => None,
-                TopologyHint::PixiRoot(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -208,9 +275,7 @@ impl TopologyPlan {
                 TopologyHint::GoWorkspaceRoot(_) => None,
                 TopologyHint::HackageProject(_) => None,
                 TopologyHint::MixUmbrellaRoot(hint) => Some(hint),
-                TopologyHint::MavenReactorRoot(_) => None,
-                TopologyHint::NpmWorkspaceRoot(_) => None,
-                TopologyHint::PixiRoot(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -234,8 +299,7 @@ impl TopologyPlan {
                 TopologyHint::HackageProject(_) => None,
                 TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::MavenReactorRoot(hint) => Some(hint),
-                TopologyHint::NpmWorkspaceRoot(_) => None,
-                TopologyHint::PixiRoot(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -252,7 +316,7 @@ impl TopologyPlan {
                 TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::MavenReactorRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(hint) => Some(hint),
-                TopologyHint::PixiRoot(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -272,6 +336,7 @@ impl TopologyPlan {
                 TopologyHint::MavenReactorRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(_) => None,
                 TopologyHint::PixiRoot(hint) => Some(hint),
+                _ => None,
             })
             .collect();
 
@@ -280,9 +345,22 @@ impl TopologyPlan {
             domains.push(TopologyDomain::Pixi(domain));
         }
 
+        let uv_workspace_hints: Vec<_> = hints
+            .iter()
+            .filter_map(|hint| match hint {
+                TopologyHint::UvWorkspaceRoot(hint) => Some(hint),
+                _ => None,
+            })
+            .collect();
+
+        for domain in plan_uv_workspace_domains(files, &uv_workspace_hints) {
+            domains.push(TopologyDomain::UvWorkspace(domain));
+        }
+
         Self {
             domains,
             claimed_cargo_dirs,
+            claimed_dart_dirs,
             claimed_go_dirs,
             claimed_hackage_dirs,
             claimed_mix_dirs,
@@ -306,6 +384,10 @@ impl TopologyPlan {
 
         if config.datasource_ids.contains(&DatasourceId::CargoToml) {
             return self.claimed_cargo_dirs.contains(parent_dir);
+        }
+
+        if config.datasource_ids.contains(&DatasourceId::PubspecYaml) {
+            return self.claimed_dart_dirs.contains(parent_dir);
         }
 
         if config.datasource_ids.contains(&DatasourceId::GoWork) {
@@ -378,9 +460,12 @@ impl TopologyPlan {
                     apply_directory_merge_result(files, packages, dependencies, result);
                 }
                 TopologyDomain::CargoWorkspace(_)
+                | TopologyDomain::DartWorkspace(_)
+                | TopologyDomain::GradleMultiProject(_)
                 | TopologyDomain::MixUmbrella(_)
                 | TopologyDomain::MavenReactor(_)
-                | TopologyDomain::NpmWorkspace(_) => {}
+                | TopologyDomain::NpmWorkspace(_)
+                | TopologyDomain::UvWorkspace(_) => {}
             }
         }
     }
@@ -397,11 +482,14 @@ impl TopologyPlan {
                     apply_cargo_workspace_domain(domain, files, packages, dependencies);
                 }
                 TopologyDomain::GoWorkspace(_)
+                | TopologyDomain::DartWorkspace(_)
+                | TopologyDomain::GradleMultiProject(_)
                 | TopologyDomain::HackageProject(_)
                 | TopologyDomain::MixUmbrella(_)
                 | TopologyDomain::MavenReactor(_)
                 | TopologyDomain::NpmWorkspace(_)
-                | TopologyDomain::Pixi(_) => {}
+                | TopologyDomain::Pixi(_)
+                | TopologyDomain::UvWorkspace(_) => {}
             }
         }
     }
@@ -415,11 +503,14 @@ impl TopologyPlan {
         for domain in &self.domains {
             match domain {
                 TopologyDomain::CargoWorkspace(_)
+                | TopologyDomain::DartWorkspace(_)
                 | TopologyDomain::GoWorkspace(_)
+                | TopologyDomain::GradleMultiProject(_)
                 | TopologyDomain::HackageProject(_)
                 | TopologyDomain::MixUmbrella(_)
                 | TopologyDomain::MavenReactor(_)
-                | TopologyDomain::Pixi(_) => {}
+                | TopologyDomain::Pixi(_)
+                | TopologyDomain::UvWorkspace(_) => {}
                 TopologyDomain::NpmWorkspace(domain) => {
                     apply_npm_workspace_domain(domain, files, packages, dependencies);
                 }
@@ -436,14 +527,30 @@ impl TopologyPlan {
         for domain in &self.domains {
             match domain {
                 TopologyDomain::CargoWorkspace(_)
+                | TopologyDomain::DartWorkspace(_)
                 | TopologyDomain::GoWorkspace(_)
+                | TopologyDomain::GradleMultiProject(_)
                 | TopologyDomain::HackageProject(_)
                 | TopologyDomain::MavenReactor(_)
                 | TopologyDomain::NpmWorkspace(_)
-                | TopologyDomain::Pixi(_) => {}
+                | TopologyDomain::Pixi(_)
+                | TopologyDomain::UvWorkspace(_) => {}
                 TopologyDomain::MixUmbrella(domain) => {
                     apply_mix_umbrella_domain(domain, files, packages, dependencies);
                 }
+            }
+        }
+    }
+
+    pub(super) fn apply_dart_workspace_domains(
+        &self,
+        files: &mut [FileInfo],
+        packages: &mut Vec<Package>,
+        dependencies: &mut Vec<TopLevelDependency>,
+    ) {
+        for domain in &self.domains {
+            if let TopologyDomain::DartWorkspace(domain) = domain {
+                apply_dart_workspace_domain(domain, files, packages, dependencies);
             }
         }
     }
@@ -539,6 +646,309 @@ impl TopologyPlan {
             file.for_packages.extend(package_uids.iter().cloned());
         }
     }
+
+    pub(super) fn apply_gradle_multi_project_domains(
+        &self,
+        files: &mut [FileInfo],
+        packages: &mut Vec<Package>,
+        dependencies: &mut Vec<TopLevelDependency>,
+    ) {
+        let mut scope_roots = Vec::new();
+        let mut anchor_indices = Vec::new();
+
+        for domain in &self.domains {
+            let TopologyDomain::GradleMultiProject(domain) = domain else {
+                continue;
+            };
+
+            scope_roots.push(domain.root_dir.clone());
+            if let Some(root_idx) = domain.root_build_idx {
+                ensure_gradle_package(
+                    root_idx,
+                    domain.root_project_name.as_deref(),
+                    files,
+                    packages,
+                    dependencies,
+                );
+                anchor_indices.push(root_idx);
+            }
+            for &member_idx in &domain.member_build_indices {
+                if let Some(member_dir) = Path::new(&files[member_idx].path).parent() {
+                    scope_roots.push(member_dir.to_path_buf());
+                }
+                ensure_gradle_package(member_idx, None, files, packages, dependencies);
+                anchor_indices.push(member_idx);
+            }
+        }
+
+        assign_unowned_files_to_anchors(
+            files,
+            &scope_roots,
+            &anchor_indices,
+            &[OsStr::new("build")],
+            &[],
+        );
+    }
+
+    pub(super) fn apply_uv_workspace_domains(&self, files: &mut [FileInfo]) {
+        let mut scope_roots = Vec::new();
+        let mut anchor_indices = Vec::new();
+        let mut protected_project_dirs = Vec::new();
+
+        for domain in &self.domains {
+            let TopologyDomain::UvWorkspace(domain) = domain else {
+                continue;
+            };
+
+            scope_roots.push(domain.root_dir.clone());
+            anchor_indices.push(domain.root_pyproject_idx);
+            for &member_idx in &domain.member_pyproject_indices {
+                if let Some(member_dir) = Path::new(&files[member_idx].path).parent() {
+                    scope_roots.push(member_dir.to_path_buf());
+                }
+                anchor_indices.push(member_idx);
+            }
+        }
+
+        let anchor_set: HashSet<usize> = anchor_indices.iter().copied().collect();
+        for (idx, file) in files.iter().enumerate() {
+            if anchor_set.contains(&idx)
+                || Path::new(&file.path)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    != Some("pyproject.toml")
+            {
+                continue;
+            }
+            let Some(project_dir) = Path::new(&file.path).parent() else {
+                continue;
+            };
+            if scope_roots.iter().any(|root| project_dir.starts_with(root)) {
+                protected_project_dirs.push(project_dir.to_path_buf());
+            }
+        }
+
+        assign_unowned_files_to_anchors(
+            files,
+            &scope_roots,
+            &anchor_indices,
+            &[],
+            &protected_project_dirs,
+        );
+    }
+}
+
+/// Materialize a package for a Gradle (sub)project from its `build.gradle`.
+///
+/// Gradle build scripts carry no package identity on their own — the project
+/// *name* lives in `settings.gradle` (or defaults to the directory name) and the
+/// Maven coordinates (`group`/`version`) are top-level statements the parser
+/// stashes in `extra_data`. Assembly is the only layer that can combine these
+/// cross-file facts, so the multi-project topology builds the package here rather
+/// than in per-directory sibling merge (which is why Gradle build directories are
+/// never added to a `claimed_*_dirs` set: ordinary merge still runs and only
+/// hoists dependencies, which this function re-owns to the project package).
+///
+/// The purl is built as `pkg:maven/<group>/<name>@<version>` when a `group` is
+/// declared; without a group the package keeps its name only (`purl: None`) —
+/// an honest partial identity rather than a fabricated Maven coordinate.
+fn ensure_gradle_package(
+    build_idx: usize,
+    name_override: Option<&str>,
+    files: &mut [FileInfo],
+    packages: &mut Vec<Package>,
+    dependencies: &mut Vec<TopLevelDependency>,
+) {
+    if !files[build_idx].for_packages.is_empty() {
+        return;
+    }
+
+    let Some(mut package_data) = files[build_idx]
+        .package_data
+        .iter()
+        .find(|data| data.datasource_id == Some(DatasourceId::BuildGradle))
+        .cloned()
+    else {
+        return;
+    };
+    let Some(build_dir) = Path::new(&files[build_idx].path).parent() else {
+        return;
+    };
+
+    let name = name_override
+        .map(str::to_string)
+        .or_else(|| package_data.name.clone())
+        .or_else(|| {
+            build_dir
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "gradle-root".to_string());
+    package_data.name = Some(name.clone());
+
+    let group = gradle_extra_string(&package_data, "group");
+    let version = gradle_extra_string(&package_data, "version");
+    if package_data.namespace.is_none() {
+        package_data.namespace = group.clone();
+    }
+    if package_data.version.is_none() {
+        package_data.version = version.clone();
+    }
+    // Build an honest Maven purl only when a group is present; a name-only
+    // Gradle project stays purl-less rather than inventing a coordinate.
+    if package_data.purl.is_none()
+        && let Some(group) = group.as_deref()
+        && let Ok(mut purl) = packageurl::PackageUrl::new("maven", name.as_str())
+    {
+        let _ = purl.with_namespace(group);
+        if let Some(version) = package_data.version.as_deref() {
+            let _ = purl.with_version(version);
+        }
+        package_data.purl = Some(purl.to_string());
+    }
+
+    let build_path = files[build_idx].path.clone();
+    let mut package = Package::from_package_data(&package_data, build_path.clone());
+    let mut datafile_indices = vec![build_idx];
+    for (idx, file) in files.iter().enumerate() {
+        let path = Path::new(&file.path);
+        if path.parent() != Some(build_dir)
+            || path.file_name().and_then(|name| name.to_str()) != Some("gradle.lockfile")
+        {
+            continue;
+        }
+        if let Some(lock_data) = file
+            .package_data
+            .iter()
+            .find(|data| data.datasource_id == Some(DatasourceId::GradleLockfile))
+        {
+            package.update(lock_data, file.path.clone());
+            datafile_indices.push(idx);
+        }
+    }
+
+    let package_uid = package.package_uid.clone();
+    let datafile_paths: HashSet<String> = datafile_indices
+        .iter()
+        .map(|idx| files[*idx].path.clone())
+        .collect();
+    dependencies.retain(|dependency| !datafile_paths.contains(&dependency.datafile_path));
+
+    for idx in &datafile_indices {
+        files[*idx].for_packages.push(package_uid.clone());
+        for data in &files[*idx].package_data {
+            let Some(datasource_id) = data.datasource_id else {
+                continue;
+            };
+            if !matches!(
+                datasource_id,
+                DatasourceId::BuildGradle | DatasourceId::GradleLockfile
+            ) {
+                continue;
+            }
+            dependencies.extend(
+                data.dependencies
+                    .iter()
+                    .filter(|dep| dep.purl.is_some())
+                    .map(|dependency| {
+                        TopLevelDependency::from_dependency(
+                            dependency,
+                            files[*idx].path.clone(),
+                            datasource_id,
+                            Some(package_uid.clone()),
+                        )
+                    }),
+            );
+        }
+    }
+
+    packages.push(package);
+}
+
+/// Attribute currently-unowned files to the deepest (most specific) anchor
+/// package that contains them, within the declared workspace scope.
+///
+/// This is the shared "reactor-style" file-ownership rule used by the Maven
+/// reactor, Gradle multi-project, and uv workspace
+/// topologies. Ownership is additive (only files with no package yet), bounded to
+/// files under a declared `scope_root`, and skips a build-output subtree that
+/// sits as an anchor's *immediate* child (e.g. Maven `target/`, Gradle `build/`,
+/// Dart `.dart_tool/`) so compiled artifacts are not attributed to source
+/// packages. "Deepest wins" is what makes a nested member (its own manifest
+/// contributes a more specific anchor) claim its files over an outer root.
+fn assign_unowned_files_to_anchors(
+    files: &mut [FileInfo],
+    scope_roots: &[PathBuf],
+    anchor_indices: &[usize],
+    excluded_immediate_children: &[&OsStr],
+    protected_dirs: &[PathBuf],
+) {
+    let anchors: Vec<(PathBuf, Vec<PackageUid>)> = anchor_indices
+        .iter()
+        .filter_map(|idx| {
+            Path::new(&files[*idx].path)
+                .parent()
+                .map(|dir| (dir.to_path_buf(), files[*idx].for_packages.clone()))
+        })
+        .collect();
+
+    for file in files.iter_mut() {
+        if !file.for_packages.is_empty() {
+            continue;
+        }
+        let Some(file_dir) = Path::new(&file.path).parent() else {
+            continue;
+        };
+        if !scope_roots.iter().any(|root| file_dir.starts_with(root)) {
+            continue;
+        }
+        if protected_dirs
+            .iter()
+            .any(|protected| file_dir.starts_with(protected))
+        {
+            continue;
+        }
+
+        let Some((anchor_dir, package_uids)) = anchors
+            .iter()
+            .filter(|(anchor_dir, _)| file_dir.starts_with(anchor_dir))
+            .max_by_key(|(anchor_dir, _)| anchor_dir.as_os_str().len())
+        else {
+            continue;
+        };
+        if package_uids.is_empty()
+            || crosses_excluded_build_output(anchor_dir, file_dir, excluded_immediate_children)
+        {
+            continue;
+        }
+
+        file.for_packages.extend(package_uids.iter().cloned());
+    }
+}
+
+/// Whether `file_dir` lies under one of the anchor's excluded immediate
+/// build-output children. An excluded name matches only as the first path
+/// component beneath the anchor (e.g. `<module>/target/...`); a directory of the
+/// same name deeper in the tree (a real source package literally named `target`)
+/// is not build output and still receives ownership.
+fn crosses_excluded_build_output(
+    anchor_dir: &Path,
+    file_dir: &Path,
+    excluded_immediate_children: &[&OsStr],
+) -> bool {
+    if excluded_immediate_children.is_empty() {
+        return false;
+    }
+    file_dir
+        .strip_prefix(anchor_dir)
+        .ok()
+        .and_then(|relative| relative.components().next())
+        .is_some_and(|first| {
+            excluded_immediate_children
+                .iter()
+                .any(|excluded| first == Component::Normal(excluded))
+        })
 }
 
 /// Maven build output (`target/classes`, `target/test-classes`, …) sits directly
@@ -554,6 +964,261 @@ fn crosses_maven_build_output_dir(anchor_dir: &Path, file_dir: &Path) -> bool {
             relative.components().next() == Some(Component::Normal(OsStr::new("target")))
         })
         .unwrap_or(false)
+}
+
+fn collect_gradle_multi_project_hints(files: &[FileInfo]) -> Vec<GradleMultiProjectRootHint> {
+    let mut hints = Vec::new();
+
+    for file in files {
+        let path = Path::new(&file.path);
+        if !matches!(
+            path.file_name().and_then(|name| name.to_str()),
+            Some("settings.gradle" | "settings.gradle.kts")
+        ) {
+            continue;
+        }
+        let Some(project_paths) = file.package_data.iter().find_map(|data| {
+            (data.datasource_id == Some(DatasourceId::GradleSettings))
+                .then_some(data.extra_data.as_ref())
+                .flatten()
+                .and_then(|extra| extra.get("projects"))
+                .and_then(|projects| projects.as_array())
+                .map(|projects| {
+                    projects
+                        .iter()
+                        .filter_map(|project| project.as_str().map(str::to_string))
+                        .collect::<Vec<_>>()
+                })
+        }) else {
+            continue;
+        };
+        if project_paths.is_empty() {
+            continue;
+        }
+        let Some(root_dir) = path.parent() else {
+            continue;
+        };
+        let root_project_name = file.package_data.iter().find_map(|data| {
+            (data.datasource_id == Some(DatasourceId::GradleSettings))
+                .then_some(data.extra_data.as_ref())
+                .flatten()
+                .and_then(|extra| extra.get("root_project_name"))
+                .and_then(|value| value.as_str())
+                .map(str::to_string)
+        });
+        hints.push(GradleMultiProjectRootHint {
+            root_dir: root_dir.to_path_buf(),
+            project_paths,
+            root_project_name,
+        });
+    }
+
+    hints.sort_by(|left, right| left.root_dir.cmp(&right.root_dir));
+    hints
+}
+
+fn plan_gradle_multi_project_domains(
+    files: &[FileInfo],
+    hints: &[&GradleMultiProjectRootHint],
+) -> Vec<GradleMultiProjectDomain> {
+    let mut domains = Vec::new();
+
+    for hint in hints {
+        let root_build_idx = find_gradle_build_index(files, &hint.root_dir);
+        let member_build_indices = hint
+            .project_paths
+            .iter()
+            .filter_map(|project| {
+                let project_dir = normalize_lexical_path(&hint.root_dir.join(project));
+                find_gradle_build_index(files, &project_dir)
+            })
+            .collect::<Vec<_>>();
+
+        if root_build_idx.is_none() && member_build_indices.is_empty() {
+            continue;
+        }
+        domains.push(GradleMultiProjectDomain {
+            root_dir: hint.root_dir.clone(),
+            root_build_idx,
+            root_project_name: hint.root_project_name.clone(),
+            member_build_indices,
+        });
+    }
+
+    domains.sort_by(|left, right| left.root_dir.cmp(&right.root_dir));
+    domains
+}
+
+fn find_gradle_build_index(files: &[FileInfo], directory: &Path) -> Option<usize> {
+    files.iter().position(|file| {
+        let path = Path::new(&file.path);
+        path.parent() == Some(directory)
+            && matches!(
+                path.file_name().and_then(|name| name.to_str()),
+                Some("build.gradle" | "build.gradle.kts")
+            )
+            && file
+                .package_data
+                .iter()
+                .any(|data| data.datasource_id == Some(DatasourceId::BuildGradle))
+    })
+}
+
+fn collect_uv_workspace_hints(files: &[FileInfo]) -> Vec<UvWorkspaceRootHint> {
+    let mut hints = Vec::new();
+
+    for (idx, file) in files.iter().enumerate() {
+        let path = Path::new(&file.path);
+        if path.file_name().and_then(|name| name.to_str()) != Some("pyproject.toml") {
+            continue;
+        }
+        for data in &file.package_data {
+            if !matches!(
+                data.datasource_id,
+                Some(DatasourceId::PypiPyprojectToml | DatasourceId::PypiPoetryPyprojectToml)
+            ) {
+                continue;
+            }
+            let member_patterns = extra_string_array(data, "workspace_members");
+            if member_patterns.is_empty() {
+                continue;
+            }
+            let Some(root_dir) = path.parent() else {
+                continue;
+            };
+            hints.push(UvWorkspaceRootHint {
+                root_dir: root_dir.to_path_buf(),
+                root_pyproject_idx: idx,
+                member_patterns,
+                exclude_patterns: extra_string_array(data, "workspace_exclude"),
+            });
+        }
+    }
+
+    hints.sort_by(|left, right| left.root_dir.cmp(&right.root_dir));
+    hints
+}
+
+fn gradle_extra_string(data: &crate::models::PackageData, key: &str) -> Option<String> {
+    data.extra_data
+        .as_ref()
+        .and_then(|extra| extra.get(key))
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+        .filter(|value| !value.is_empty())
+}
+
+fn extra_string_array(data: &crate::models::PackageData, key: &str) -> Vec<String> {
+    data.extra_data
+        .as_ref()
+        .and_then(|extra| extra.get(key))
+        .and_then(|value| value.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|value| value.as_str().map(str::to_string))
+        .collect()
+}
+
+fn plan_uv_workspace_domains(
+    files: &[FileInfo],
+    hints: &[&UvWorkspaceRootHint],
+) -> Vec<UvWorkspaceDomain> {
+    let mut domains = Vec::new();
+
+    for hint in hints {
+        let mut member_pyproject_indices =
+            files
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, file)| {
+                    if idx == hint.root_pyproject_idx {
+                        return None;
+                    }
+                    let path = Path::new(&file.path);
+                    if path.file_name().and_then(|name| name.to_str()) != Some("pyproject.toml")
+                        || !file.package_data.iter().any(|data| {
+                            matches!(
+                                data.datasource_id,
+                                Some(
+                                    DatasourceId::PypiPyprojectToml
+                                        | DatasourceId::PypiPoetryPyprojectToml
+                                )
+                            ) && data.purl.is_some()
+                        })
+                    {
+                        return None;
+                    }
+                    let member_dir = path.parent()?;
+                    let included = hint.member_patterns.iter().any(|pattern| {
+                        workspace_pattern_matches(&hint.root_dir, member_dir, pattern)
+                    });
+                    let excluded = hint.exclude_patterns.iter().any(|pattern| {
+                        workspace_exclude_matches(&hint.root_dir, member_dir, pattern)
+                    });
+                    (included && !excluded).then_some(idx)
+                })
+                .collect::<Vec<_>>();
+        member_pyproject_indices.sort_by(|left, right| files[*left].path.cmp(&files[*right].path));
+
+        if member_pyproject_indices.is_empty() {
+            continue;
+        }
+        domains.push(UvWorkspaceDomain {
+            root_dir: hint.root_dir.clone(),
+            root_pyproject_idx: hint.root_pyproject_idx,
+            member_pyproject_indices,
+        });
+    }
+
+    domains.sort_by(|left, right| left.root_dir.cmp(&right.root_dir));
+    domains
+}
+
+fn workspace_pattern_matches(root_dir: &Path, member_dir: &Path, pattern: &str) -> bool {
+    let pattern = pattern.trim().strip_prefix("./").unwrap_or(pattern.trim());
+    if pattern.is_empty() {
+        return false;
+    }
+
+    if !pattern
+        .chars()
+        .any(|character| matches!(character, '*' | '?' | '['))
+    {
+        return normalize_lexical_path(&root_dir.join(pattern)) == member_dir;
+    }
+
+    let Ok(relative) = member_dir.strip_prefix(root_dir) else {
+        return false;
+    };
+    glob::Pattern::new(pattern)
+        .ok()
+        .is_some_and(|glob| glob.matches_path(relative))
+}
+
+/// Whether `member_dir` is excluded by a uv workspace `exclude` pattern.
+///
+/// Glob excludes match exactly like [`workspace_pattern_matches`]. A literal
+/// (non-glob) exclude additionally rejects any member nested *under* the
+/// excluded directory: `exclude = ["packages/ignored"]` must also drop
+/// `packages/ignored/sub`, which a recursive `members = ["packages/**"]` glob
+/// would otherwise pull back in. `Path::starts_with` is component-wise, so
+/// `packages/ignored` does not spuriously exclude a sibling like
+/// `packages/ignored-2`.
+fn workspace_exclude_matches(root_dir: &Path, member_dir: &Path, pattern: &str) -> bool {
+    let trimmed = pattern.trim().strip_prefix("./").unwrap_or(pattern.trim());
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if !trimmed
+        .chars()
+        .any(|character| matches!(character, '*' | '?' | '['))
+    {
+        let excluded_dir = normalize_lexical_path(&root_dir.join(trimmed));
+        return member_dir.starts_with(&excluded_dir);
+    }
+
+    workspace_pattern_matches(root_dir, member_dir, pattern)
 }
 
 fn collect_go_workspace_hints(files: &[FileInfo]) -> Vec<GoWorkspaceRootHint> {
@@ -759,7 +1424,7 @@ fn resolve_maven_reactor_members(files: &[FileInfo], hint: &MavenReactorRootHint
 /// Unresolved parent components are kept rather than discarded. Dropping them
 /// would let an over-escaped module like `../../../module-a` collapse onto an
 /// unrelated in-scan `module-a/` and incorrectly accept it as a reactor member.
-fn normalize_lexical_path(path: &Path) -> PathBuf {
+pub(super) fn normalize_lexical_path(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
 
     for component in path.components() {
