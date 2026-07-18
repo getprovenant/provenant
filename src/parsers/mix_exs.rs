@@ -20,6 +20,22 @@
 //! tuple whose first element is not a literal atom, or whose version slot is not
 //! a string literal, simply contributes name-only (or is dropped) instead of
 //! producing a wrong requirement.
+//!
+//! # Umbrella projects
+//!
+//! A root `mix.exs` whose `project` keyword list carries a literal `apps_path:`
+//! string marks an [umbrella project](https://hexdocs.pm/mix/Mix.Project.html#module-umbrella-projects):
+//! its child applications live under that directory (one `mix.exs` per app) and
+//! typically share a single root `mix.lock`. This parser records `apps_path`
+//! (and the optional `apps:` allow-list) into `extra_data` so
+//! `src/assembly/mix_umbrella_merge.rs` can plan the umbrella topology; the
+//! parser itself stays file-local and does not look at sibling files.
+//!
+//! A dependency declared as `{:sibling, in_umbrella: true}` refers to another
+//! app in the same umbrella, not a real Hex package. Such deps are emitted with
+//! `purl: None` and `extra_data["in_umbrella"] = true` so they are never
+//! mistaken for (nonexistent, unversioned) Hex registry packages; umbrella
+//! assembly resolves them to the sibling app's actual package identity.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -84,6 +100,7 @@ fn parse_mix_exs(content: &str) -> PackageData {
     let mut package = default_package_data();
 
     let module_version = extract_module_version(content);
+    let mut extra_data: HashMap<String, JsonValue> = HashMap::new();
 
     if let Some(project_body) = extract_block_body(content, "def", "project") {
         let entries = parse_keyword_list(&project_body);
@@ -103,11 +120,40 @@ fn parse_mix_exs(content: &str) -> PackageData {
                 package.version = Some(truncate_field(version));
             }
         }
+
+        // `apps_path:` marks this manifest as an umbrella root; the optional
+        // `apps:` allow-list restricts which child apps under that directory
+        // are actually part of the umbrella (Mix defaults to every app found
+        // there when `apps:` is absent).
+        if let Some((_, apps_path_value)) = entries.iter().find(|(k, _)| k == "apps_path")
+            && let Some(apps_path) = string_value(apps_path_value)
+        {
+            extra_data.insert(
+                "apps_path".to_string(),
+                JsonValue::String(truncate_field(apps_path)),
+            );
+        }
+        if let Some((_, apps_value)) = entries.iter().find(|(k, _)| k == "apps")
+            && let Some(apps) = literal_env_list(apps_value)
+        {
+            extra_data.insert(
+                "apps".to_string(),
+                JsonValue::Array(
+                    apps.into_iter()
+                        .map(|app| JsonValue::String(truncate_field(app)))
+                        .collect(),
+                ),
+            );
+        }
     }
 
     package.purl = build_hex_purl(package.name.as_deref(), package.version.as_deref());
 
     package.dependencies = extract_deps(content);
+
+    if !extra_data.is_empty() {
+        package.extra_data = Some(extra_data);
+    }
 
     package
 }
@@ -278,10 +324,11 @@ fn parse_dep_tuple(tuple_src: &str) -> Option<Dependency> {
         options_start = 2;
     }
 
-    // Remaining items may be `key: value` options; collect literal `only:` and
-    // `optional:` only.
+    // Remaining items may be `key: value` options; collect literal `only:`,
+    // `optional:`, and `in_umbrella:` only.
     let mut scope: Option<String> = None;
     let mut is_optional: Option<bool> = None;
+    let mut is_in_umbrella = false;
     for item in items.iter().skip(options_start).take(MAX_ITERATION_COUNT) {
         for (key, value) in parse_keyword_list(item) {
             match key.as_str() {
@@ -295,24 +342,44 @@ fn parse_dep_tuple(tuple_src: &str) -> Option<Dependency> {
                         is_optional = Some(flag);
                     }
                 }
+                "in_umbrella" if bool_value(&value) == Some(true) => {
+                    is_in_umbrella = true;
+                }
                 _ => {}
             }
         }
     }
 
+    // `{:sibling, in_umbrella: true}` names another app in the same umbrella,
+    // not a real Hex package: it has no registry version and building a
+    // `pkg:hex/<name>` purl for it would fabricate a nonexistent, unversioned
+    // package. Leave the purl unset and flag it so umbrella assembly can
+    // resolve it to the sibling app's real (versioned) package identity.
+    let mut extra_data = HashMap::from([(
+        "app".to_string(),
+        JsonValue::String(truncate_field(name.clone())),
+    )]);
+    let purl = if is_in_umbrella {
+        extra_data.insert("in_umbrella".to_string(), JsonValue::Bool(true));
+        None
+    } else {
+        build_hex_purl(Some(&name), None).map(truncate_field)
+    };
+
     Some(Dependency {
-        purl: build_hex_purl(Some(&name), None).map(truncate_field),
-        extracted_requirement: requirement.map(truncate_field),
+        purl,
+        extracted_requirement: if is_in_umbrella {
+            None
+        } else {
+            requirement.map(truncate_field)
+        },
         scope: scope.map(truncate_field),
         is_runtime: None,
         is_optional,
         is_pinned: None,
         is_direct: Some(true),
         resolved_package: None,
-        extra_data: Some(HashMap::from([(
-            "app".to_string(),
-            JsonValue::String(truncate_field(name)),
-        )])),
+        extra_data: Some(extra_data),
     })
 }
 

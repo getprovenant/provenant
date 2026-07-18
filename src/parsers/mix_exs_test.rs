@@ -170,6 +170,122 @@ fn test_parse_mix_exs_missing_project_is_empty_but_typed() {
 }
 
 #[test]
+fn test_parse_mix_exs_umbrella_root_apps_path_and_apps() {
+    let content = r#"
+defmodule MyUmbrella.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      apps_path: "apps",
+      apps: [:kv, :kv_server],
+      version: "0.1.0",
+      deps: deps()
+    ]
+  end
+
+  defp deps do
+    [{:meck, "~> 1.0", only: :test}]
+  end
+end
+"#;
+    let package = super::mix_exs::parse_mix_exs_for_test(content);
+    // An umbrella root commonly has no `app:` field, so no purl is formed for it.
+    assert_eq!(package.name, None);
+    let extra_data = package.extra_data.expect("apps_path marker expected");
+    assert_eq!(
+        extra_data.get("apps_path").and_then(|v| v.as_str()),
+        Some("apps")
+    );
+    let apps = extra_data
+        .get("apps")
+        .and_then(|v| v.as_array())
+        .expect("apps allow-list expected");
+    let apps: Vec<&str> = apps.iter().filter_map(|v| v.as_str()).collect();
+    assert_eq!(apps, vec!["kv", "kv_server"]);
+}
+
+#[test]
+fn test_parse_mix_exs_umbrella_root_without_apps_filter() {
+    let content = r#"
+defmodule MyUmbrella.MixProject do
+  use Mix.Project
+
+  def project do
+    [apps_path: "apps", version: "0.1.0", deps: []]
+  end
+end
+"#;
+    let package = super::mix_exs::parse_mix_exs_for_test(content);
+    let extra_data = package.extra_data.expect("apps_path marker expected");
+    assert_eq!(
+        extra_data.get("apps_path").and_then(|v| v.as_str()),
+        Some("apps")
+    );
+    assert!(!extra_data.contains_key("apps"));
+}
+
+#[test]
+fn test_parse_mix_exs_non_umbrella_manifest_has_no_apps_path_marker() {
+    let path = PathBuf::from("testdata/hex/basic/mix.exs");
+    let package_data = MixExsParser::extract_first_package(&path);
+    assert!(package_data.extra_data.is_none());
+}
+
+#[test]
+fn test_parse_mix_exs_in_umbrella_dependency_has_no_hex_purl() {
+    let content = r#"
+defmodule KVServer.MixProject do
+  use Mix.Project
+
+  def project do
+    [app: :kv_server, version: "0.1.0", deps: deps()]
+  end
+
+  defp deps do
+    [
+      {:kv, in_umbrella: true},
+      {:phoenix, "~> 1.7.0"}
+    ]
+  end
+end
+"#;
+    let package = super::mix_exs::parse_mix_exs_for_test(content);
+    let kv = package
+        .dependencies
+        .iter()
+        .find(|d| {
+            d.extra_data
+                .as_ref()
+                .and_then(|extra| extra.get("app"))
+                .and_then(|v| v.as_str())
+                == Some("kv")
+        })
+        .expect("in_umbrella dep should be present");
+    // No fabricated unversioned `pkg:hex/kv` purl for an internal sibling app.
+    assert_eq!(kv.purl, None);
+    assert_eq!(kv.extracted_requirement, None);
+    assert_eq!(
+        kv.extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("in_umbrella"))
+            .and_then(|v| v.as_bool()),
+        Some(true)
+    );
+
+    // A regular Hex dependency alongside it is unaffected.
+    let phoenix = dep(&package.dependencies, "pkg:hex/phoenix");
+    assert_eq!(phoenix.extracted_requirement.as_deref(), Some("~> 1.7.0"));
+    assert!(
+        phoenix
+            .extra_data
+            .as_ref()
+            .and_then(|extra| extra.get("in_umbrella"))
+            .is_none()
+    );
+}
+
+#[test]
 fn test_parse_mix_exs_def_deps_supported() {
     let content = r#"
 defmodule App.MixProject do

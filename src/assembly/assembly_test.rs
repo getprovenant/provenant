@@ -2989,6 +2989,229 @@ mod tests {
     }
 
     #[test]
+    fn test_assemble_mix_umbrella_dangling_in_umbrella_dependency_is_dropped() {
+        let mut root = create_test_file_info(
+            "umbrella/mix.exs",
+            DatasourceId::HexMixExs,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Hex);
+        root.package_data[0].extra_data =
+            Some(HashMap::from([("apps_path".to_string(), json!("apps"))]));
+
+        let mut member = create_test_file_info(
+            "umbrella/apps/app_one/mix.exs",
+            DatasourceId::HexMixExs,
+            Some("pkg:hex/app_one@0.1.0"),
+            Some("app_one"),
+            Some("0.1.0"),
+            vec![create_test_dependency(
+                "pkg:hex/missing_sibling",
+                None,
+                Some(HashMap::from([
+                    ("app".to_string(), json!("missing_sibling")),
+                    ("in_umbrella".to_string(), json!(true)),
+                ])),
+            )],
+        );
+        member.package_data[0].package_type = Some(PackageType::Hex);
+
+        let mut files = vec![root, member];
+        let result = assemble(&mut files);
+
+        assert_eq!(result.packages.len(), 1);
+        assert!(
+            result.dependencies.is_empty(),
+            "a dangling in_umbrella reference must be dropped rather than fabricated, found: {:?}",
+            result
+                .dependencies
+                .iter()
+                .map(|d| d.purl.clone())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_assemble_mix_umbrella_apps_filter_excludes_app_from_lock_attribution() {
+        let mut root = create_test_file_info(
+            "umbrella/mix.exs",
+            DatasourceId::HexMixExs,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Hex);
+        root.package_data[0].extra_data = Some(HashMap::from([
+            ("apps_path".to_string(), json!("apps")),
+            ("apps".to_string(), json!(["app_one"])),
+        ]));
+
+        let mut root_lock = create_test_file_info(
+            "umbrella/mix.lock",
+            DatasourceId::HexMixLock,
+            None,
+            None,
+            None,
+            vec![create_test_dependency(
+                "pkg:hex/ecto@3.10.0",
+                Some("3.10.0"),
+                Some(HashMap::from([("app".to_string(), json!("ecto"))])),
+            )],
+        );
+        root_lock.package_data[0].package_type = Some(PackageType::Hex);
+
+        let mut app_one = create_test_file_info(
+            "umbrella/apps/app_one/mix.exs",
+            DatasourceId::HexMixExs,
+            Some("pkg:hex/app_one@0.1.0"),
+            Some("app_one"),
+            Some("0.1.0"),
+            vec![],
+        );
+        app_one.package_data[0].package_type = Some(PackageType::Hex);
+
+        // Excluded by `apps:` above, so it is not part of the umbrella
+        // domain even though it declares the same lock entry.
+        let mut app_two = create_test_file_info(
+            "umbrella/apps/app_two/mix.exs",
+            DatasourceId::HexMixExs,
+            Some("pkg:hex/app_two@0.2.0"),
+            Some("app_two"),
+            Some("0.2.0"),
+            vec![create_test_dependency(
+                "pkg:hex/ecto",
+                Some(">= 3.0.0"),
+                Some(HashMap::from([("app".to_string(), json!("ecto"))])),
+            )],
+        );
+        app_two.package_data[0].package_type = Some(PackageType::Hex);
+
+        let mut files = vec![root, root_lock, app_one, app_two];
+        let result = assemble(&mut files);
+
+        let app_one_pkg = result
+            .packages
+            .iter()
+            .find(|p| p.purl.as_deref() == Some("pkg:hex/app_one@0.1.0"))
+            .expect("app_one should assemble to a package");
+
+        // app_two is excluded from the umbrella domain by `apps:`, so the
+        // shared lock's ecto entry is not attributed to it even though its
+        // own (non-umbrella) mix.exs declares the same app name.
+        assert!(
+            !result.dependencies.iter().any(|d| {
+                d.purl.as_deref() == Some("pkg:hex/ecto@3.10.0")
+                    && d.for_package_uid.as_ref() == Some(&app_one_pkg.package_uid)
+            }),
+            "excluded app_two must not cause the lock entry to be misattributed to app_one"
+        );
+
+        // The excluded app's own mix.exs file must not be swept into
+        // app_one's for_packages via the umbrella's root-fallback rule.
+        let app_two_file = files
+            .iter()
+            .find(|f| f.path == "umbrella/apps/app_two/mix.exs")
+            .expect("app_two mix.exs should be present");
+        assert!(
+            !app_two_file.for_packages.contains(&app_one_pkg.package_uid),
+            "excluded app_two's manifest must not be attributed to app_one"
+        );
+    }
+
+    #[test]
+    fn test_assemble_mix_umbrella_member_local_lock_is_assembled() {
+        let mut root = create_test_file_info(
+            "umbrella/mix.exs",
+            DatasourceId::HexMixExs,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Hex);
+        root.package_data[0].extra_data =
+            Some(HashMap::from([("apps_path".to_string(), json!("apps"))]));
+
+        // No root mix.lock in this fixture: only app_one carries its own
+        // mix.lock directly inside its member directory.
+        let mut app_one = create_test_file_info(
+            "umbrella/apps/app_one/mix.exs",
+            DatasourceId::HexMixExs,
+            Some("pkg:hex/app_one@0.1.0"),
+            Some("app_one"),
+            Some("0.1.0"),
+            vec![create_test_dependency(
+                "pkg:hex/jason",
+                Some("~> 1.4"),
+                Some(HashMap::from([("app".to_string(), json!("jason"))])),
+            )],
+        );
+        app_one.package_data[0].package_type = Some(PackageType::Hex);
+
+        let mut app_one_lock = create_test_file_info(
+            "umbrella/apps/app_one/mix.lock",
+            DatasourceId::HexMixLock,
+            None,
+            None,
+            None,
+            vec![create_test_dependency(
+                "pkg:hex/jason@1.4.1",
+                Some("1.4.1"),
+                Some(HashMap::from([("app".to_string(), json!("jason"))])),
+            )],
+        );
+        app_one_lock.package_data[0].package_type = Some(PackageType::Hex);
+
+        let mut app_two = create_test_file_info(
+            "umbrella/apps/app_two/mix.exs",
+            DatasourceId::HexMixExs,
+            Some("pkg:hex/app_two@0.2.0"),
+            Some("app_two"),
+            Some("0.2.0"),
+            vec![],
+        );
+        app_two.package_data[0].package_type = Some(PackageType::Hex);
+
+        let mut files = vec![root, app_one, app_one_lock, app_two];
+        let result = assemble(&mut files);
+
+        let app_one_pkg = result
+            .packages
+            .iter()
+            .find(|p| p.purl.as_deref() == Some("pkg:hex/app_one@0.1.0"))
+            .expect("app_one should assemble to a package");
+
+        assert!(
+            result.dependencies.iter().any(|d| {
+                d.purl.as_deref() == Some("pkg:hex/jason@1.4.1")
+                    && d.datasource_id == DatasourceId::HexMixLock
+                    && d.for_package_uid.as_ref() == Some(&app_one_pkg.package_uid)
+            }),
+            "app_one's own member-local mix.lock must be assembled onto app_one, found: {:?}",
+            result
+                .dependencies
+                .iter()
+                .map(|d| (d.purl.clone(), d.for_package_uid.clone()))
+                .collect::<Vec<_>>()
+        );
+
+        let app_one_lock_file = files
+            .iter()
+            .find(|f| f.path == "umbrella/apps/app_one/mix.lock")
+            .expect("app_one mix.lock should be present");
+        assert!(
+            app_one_lock_file
+                .for_packages
+                .contains(&app_one_pkg.package_uid),
+            "app_one's own mix.lock must be attributed to app_one"
+        );
+    }
+
+    #[test]
     fn test_assemble_python_pyproject_with_uv_lock() {
         let mut files = vec![
             create_test_file_info(
