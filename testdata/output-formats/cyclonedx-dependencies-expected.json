@@ -10,7 +10,13 @@
         "name": "Provenant",
         "version": "0.0.5"
       }
-    ]
+    ],
+    "component": {
+      "type": "application",
+      "name": "root",
+      "version": "1.0.0",
+      "purl": "pkg:npm/root@1.0.0"
+    }
   },
   "components": [
     {

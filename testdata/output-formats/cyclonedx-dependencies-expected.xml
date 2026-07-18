@@ -9,6 +9,11 @@
         <version>0.0.5</version>
       </tool>
     </tools>
+    <component type="application">
+      <name>root</name>
+      <version>1.0.0</version>
+      <purl>pkg:npm/root@1.0.0</purl>
+    </component>
   </metadata>
   <components>
     <component type="library" bom-ref="pkg:npm/root@1.0.0">

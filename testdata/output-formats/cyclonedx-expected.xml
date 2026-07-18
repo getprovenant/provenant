@@ -9,6 +9,24 @@
         <version>0.0.5</version>
       </tool>
     </tools>
+    <component type="application">
+      <author>Isaac Z. Schlueter</author>
+      <name>npm</name>
+      <version>2.13.5</version>
+      <description>a package manager for JavaScript</description>
+      <hashes>
+        <hash alg="SHA-1">a124386bce4a90506f28ad4b1d1a804a17baaf32</hash>
+      </hashes>
+      <licenses>
+        <expression>Artistic-2.0</expression>
+      </licenses>
+      <purl>pkg:npm/npm@2.13.5</purl>
+      <externalReferences>
+        <reference type="bom">
+          <url>https://registry.npmjs.org/npm/2.13.5</url>
+        </reference>
+      </externalReferences>
+    </component>
   </metadata>
   <components>
     <component type="library" bom-ref="pkg:npm/npm@2.13.5">

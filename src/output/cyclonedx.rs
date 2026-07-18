@@ -4,10 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
+use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::io::{self, Write};
-
-use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
 use crate::output_schema::{
@@ -48,73 +47,22 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
     xml.push_str(crate::version::BUILD_VERSION);
     xml.push_str("</version></tool>\n");
     xml.push_str("    </tools>\n");
+    // `component` (the BOM subject) must follow `tools` per the CycloneDX
+    // 1.3 XSD `metadata` element order.
+    if let Some(root_idx) = select_root_package_index(&output.packages) {
+        write_component_xml(
+            &mut xml,
+            &output.packages[root_idx],
+            None,
+            "application",
+            false,
+        );
+    }
     xml.push_str("  </metadata>\n");
 
     xml.push_str("  <components>\n");
     for (idx, pkg) in output.packages.iter().enumerate() {
-        let name = pkg.name.as_deref().unwrap_or("unknown");
-        let version = pkg.version.as_deref().unwrap_or("unknown");
-        let bom_ref = &component_refs[idx];
-        xml.push_str(&format!(
-            "    <component type=\"library\" bom-ref=\"{}\">\n",
-            xml_escape(bom_ref)
-        ));
-        // CycloneDX 1.3 XSD requires this element order within <component>:
-        // author precedes name/version, which precede description, which
-        // precedes scope.
-        if let Some(author) = package_author(pkg) {
-            xml.push_str("      <author>");
-            xml.push_str(&xml_escape(&author));
-            xml.push_str("</author>\n");
-        }
-        xml.push_str("      <name>");
-        xml.push_str(&xml_escape(name));
-        xml.push_str("</name>\n");
-        xml.push_str("      <version>");
-        xml.push_str(&xml_escape(version));
-        xml.push_str("</version>\n");
-        if let Some(description) = &pkg.description {
-            xml.push_str("      <description>");
-            xml.push_str(&xml_escape(description));
-            xml.push_str("</description>\n");
-        }
-        xml.push_str("      <scope>required</scope>\n");
-        let hashes = component_hashes(pkg);
-        if !hashes.is_empty() {
-            xml.push_str("      <hashes>\n");
-            for (alg, content) in hashes {
-                xml.push_str("        <hash alg=\"");
-                xml.push_str(alg);
-                xml.push_str("\">");
-                xml.push_str(&xml_escape(&content));
-                xml.push_str("</hash>\n");
-            }
-            xml.push_str("      </hashes>\n");
-        }
-        if let Some(license_expression) = cyclonedx_license_expression(pkg) {
-            xml.push_str("      <licenses><expression>");
-            xml.push_str(&xml_escape(&license_expression));
-            xml.push_str("</expression></licenses>\n");
-        }
-        // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.3 XSD.
-        if let Some(purl) = &pkg.purl {
-            xml.push_str("      <purl>");
-            xml.push_str(&xml_escape(purl));
-            xml.push_str("</purl>\n");
-        }
-        let external_refs = component_external_references(pkg);
-        if !external_refs.is_empty() {
-            xml.push_str("      <externalReferences>\n");
-            for (ref_type, url) in external_refs {
-                xml.push_str("        <reference type=\"");
-                xml.push_str(ref_type);
-                xml.push_str("\"><url>");
-                xml.push_str(&xml_escape(&url));
-                xml.push_str("</url></reference>\n");
-            }
-            xml.push_str("      </externalReferences>\n");
-        }
-        xml.push_str("    </component>\n");
+        write_component_xml(&mut xml, pkg, Some(&component_refs[idx]), "library", true);
     }
     xml.push_str("  </components>\n");
 
@@ -140,6 +88,89 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
     writer.write_all(xml.as_bytes())
 }
 
+/// Write a single `<component>` element (used for both `metadata.component`
+/// and entries in `<components>`), in the CycloneDX 1.3 XSD element order:
+/// `author` precedes `name`/`version`, which precede `description`, which
+/// precedes `scope`, `hashes`, `licenses`, `purl`, `externalReferences`.
+///
+/// `bom_ref` is `None` for `metadata.component`: CycloneDX 1.3 requires
+/// every `bom-ref` in a document to be unique, so the root package's
+/// existing `components` entry (which already carries that `bom-ref`) is
+/// the single source of truth for it and `metadata.component` does not
+/// repeat it.
+fn write_component_xml(
+    xml: &mut String,
+    pkg: &Package,
+    bom_ref: Option<&str>,
+    component_type: &str,
+    include_scope: bool,
+) {
+    let name = pkg.name.as_deref().unwrap_or("unknown");
+    let version = pkg.version.as_deref().unwrap_or("unknown");
+    match bom_ref {
+        Some(bom_ref) => xml.push_str(&format!(
+            "    <component type=\"{component_type}\" bom-ref=\"{}\">\n",
+            xml_escape(bom_ref)
+        )),
+        None => xml.push_str(&format!("    <component type=\"{component_type}\">\n")),
+    }
+    if let Some(author) = package_author(pkg) {
+        xml.push_str("      <author>");
+        xml.push_str(&xml_escape(&author));
+        xml.push_str("</author>\n");
+    }
+    xml.push_str("      <name>");
+    xml.push_str(&xml_escape(name));
+    xml.push_str("</name>\n");
+    xml.push_str("      <version>");
+    xml.push_str(&xml_escape(version));
+    xml.push_str("</version>\n");
+    if let Some(description) = &pkg.description {
+        xml.push_str("      <description>");
+        xml.push_str(&xml_escape(description));
+        xml.push_str("</description>\n");
+    }
+    if include_scope {
+        xml.push_str("      <scope>required</scope>\n");
+    }
+    let hashes = component_hashes(pkg);
+    if !hashes.is_empty() {
+        xml.push_str("      <hashes>\n");
+        for (alg, content) in hashes {
+            xml.push_str("        <hash alg=\"");
+            xml.push_str(alg);
+            xml.push_str("\">");
+            xml.push_str(&xml_escape(&content));
+            xml.push_str("</hash>\n");
+        }
+        xml.push_str("      </hashes>\n");
+    }
+    if let Some(license_expression) = cyclonedx_license_expression(pkg) {
+        xml.push_str("      <licenses><expression>");
+        xml.push_str(&xml_escape(&license_expression));
+        xml.push_str("</expression></licenses>\n");
+    }
+    // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.3 XSD.
+    if let Some(purl) = &pkg.purl {
+        xml.push_str("      <purl>");
+        xml.push_str(&xml_escape(purl));
+        xml.push_str("</purl>\n");
+    }
+    let external_refs = component_external_references(pkg);
+    if !external_refs.is_empty() {
+        xml.push_str("      <externalReferences>\n");
+        for (ref_type, url) in external_refs {
+            xml.push_str("        <reference type=\"");
+            xml.push_str(ref_type);
+            xml.push_str("\"><url>");
+            xml.push_str(&xml_escape(&url));
+            xml.push_str("</url></reference>\n");
+        }
+        xml.push_str("      </externalReferences>\n");
+    }
+    xml.push_str("    </component>\n");
+}
+
 fn build_cyclonedx_json(output: &Output) -> Value {
     let timestamp = output
         .headers
@@ -155,54 +186,7 @@ fn build_cyclonedx_json(output: &Output) -> Value {
         .map(|(idx, pkg)| {
             let mut obj = Map::new();
             obj.insert("type".to_string(), Value::String("library".to_string()));
-            obj.insert(
-                "bom-ref".to_string(),
-                Value::String(component_refs[idx].clone()),
-            );
-            obj.insert(
-                "name".to_string(),
-                Value::String(pkg.name.clone().unwrap_or_else(|| "unknown".to_string())),
-            );
-            obj.insert(
-                "version".to_string(),
-                Value::String(pkg.version.clone().unwrap_or_else(|| "unknown".to_string())),
-            );
-            if let Some(description) = &pkg.description {
-                obj.insert(
-                    "description".to_string(),
-                    Value::String(description.clone()),
-                );
-            }
-            if let Some(author) = package_author(pkg) {
-                obj.insert("author".to_string(), Value::String(author));
-            }
-            obj.insert("scope".to_string(), Value::String("required".to_string()));
-            if let Some(purl) = &pkg.purl {
-                obj.insert("purl".to_string(), Value::String(purl.clone()));
-            }
-            let hashes = component_hashes(pkg)
-                .into_iter()
-                .map(|(alg, content)| json!({"alg": alg, "content": content}))
-                .collect::<Vec<_>>();
-            if !hashes.is_empty() {
-                obj.insert("hashes".to_string(), Value::Array(hashes));
-            }
-            if let Some(license_expression) = cyclonedx_license_expression(pkg) {
-                obj.insert(
-                    "licenses".to_string(),
-                    Value::Array(vec![json!({ "expression": license_expression })]),
-                );
-            }
-            let external_refs = component_external_references(pkg)
-                .into_iter()
-                .map(|(ref_type, url)| json!({"type": ref_type, "url": url}))
-                .collect::<Vec<_>>();
-            if !external_refs.is_empty() {
-                obj.insert(
-                    "externalReferences".to_string(),
-                    Value::Array(external_refs),
-                );
-            }
+            component_json_fields(&mut obj, pkg, Some(&component_refs[idx]), true);
             Value::Object(obj)
         })
         .collect::<Vec<_>>();
@@ -226,23 +210,94 @@ fn build_cyclonedx_json(output: &Output) -> Value {
             "dependencies": [],
         })
     } else {
+        let mut metadata = Map::new();
+        metadata.insert("timestamp".to_string(), Value::String(timestamp));
+        metadata.insert(
+            "tools".to_string(),
+            json!([{ "name": "Provenant", "version": crate::version::BUILD_VERSION }]),
+        );
+        if let Some(root_idx) = select_root_package_index(&output.packages) {
+            let mut root_obj = Map::new();
+            root_obj.insert("type".to_string(), Value::String("application".to_string()));
+            // No `bom-ref`: CycloneDX 1.3 requires every `bom-ref` in a
+            // document to be unique, and the root package's existing
+            // `components` entry already carries that `bom-ref`.
+            component_json_fields(&mut root_obj, &output.packages[root_idx], None, false);
+            metadata.insert("component".to_string(), Value::Object(root_obj));
+        }
+
         json!({
             "bomFormat": "CycloneDX",
             "specVersion": "1.3",
             "serialNumber": format!("urn:uuid:{}", Uuid::new_v4()),
             "version": 1,
-                "metadata": {
-                    "timestamp": timestamp,
-                    "tools": [
-                        {
-                            "name": "Provenant",
-                            "version": crate::version::BUILD_VERSION
-                        }
-                    ]
-                },
+            "metadata": metadata,
             "components": components,
             "dependencies": dependencies,
         })
+    }
+}
+
+/// Populate the fields shared by every CycloneDX `component` object (JSON):
+/// an optional `bom-ref` (omitted for `metadata.component`, see
+/// [`build_cyclonedx_json`]), `name`, `version`, `description`, `author`,
+/// an optional `scope` (regular components only; `metadata.component` has
+/// no scope of its own), `purl`, `hashes`, `licenses`,
+/// `externalReferences`. Callers insert `type` before calling this.
+fn component_json_fields(
+    obj: &mut Map<String, Value>,
+    pkg: &Package,
+    bom_ref: Option<&str>,
+    include_scope: bool,
+) {
+    if let Some(bom_ref) = bom_ref {
+        obj.insert("bom-ref".to_string(), Value::String(bom_ref.to_string()));
+    }
+    obj.insert(
+        "name".to_string(),
+        Value::String(pkg.name.clone().unwrap_or_else(|| "unknown".to_string())),
+    );
+    obj.insert(
+        "version".to_string(),
+        Value::String(pkg.version.clone().unwrap_or_else(|| "unknown".to_string())),
+    );
+    if let Some(description) = &pkg.description {
+        obj.insert(
+            "description".to_string(),
+            Value::String(description.clone()),
+        );
+    }
+    if let Some(author) = package_author(pkg) {
+        obj.insert("author".to_string(), Value::String(author));
+    }
+    if include_scope {
+        obj.insert("scope".to_string(), Value::String("required".to_string()));
+    }
+    if let Some(purl) = &pkg.purl {
+        obj.insert("purl".to_string(), Value::String(purl.clone()));
+    }
+    let hashes = component_hashes(pkg)
+        .into_iter()
+        .map(|(alg, content)| json!({"alg": alg, "content": content}))
+        .collect::<Vec<_>>();
+    if !hashes.is_empty() {
+        obj.insert("hashes".to_string(), Value::Array(hashes));
+    }
+    if let Some(license_expression) = cyclonedx_license_expression(pkg) {
+        obj.insert(
+            "licenses".to_string(),
+            Value::Array(vec![json!({ "expression": license_expression })]),
+        );
+    }
+    let external_refs = component_external_references(pkg)
+        .into_iter()
+        .map(|(ref_type, url)| json!({"type": ref_type, "url": url}))
+        .collect::<Vec<_>>();
+    if !external_refs.is_empty() {
+        obj.insert(
+            "externalReferences".to_string(),
+            Value::Array(external_refs),
+        );
     }
 }
 
@@ -266,6 +321,52 @@ fn component_bom_refs(packages: &[Package]) -> Vec<String> {
             None => format!("component-{}", idx + 1),
         })
         .collect()
+}
+
+/// Select the package that should become CycloneDX `metadata.component`,
+/// i.e. the "subject" of the BOM, if one can be identified without guessing.
+///
+/// Selection rule:
+/// - A scan with exactly one package always has that package as the root.
+/// - A scan with several packages has a root only when exactly one
+///   package's shallowest datafile path is strictly closer to the scan root
+///   (fewer path components) than every other package's shallowest datafile
+///   path. This is the workspace/monorepo root-manifest signature: a
+///   top-level `Cargo.toml`/`package.json` sitting above nested member
+///   manifests.
+/// - Anything else — no packages, or several packages tied for the
+///   shallowest path — is ambiguous, so `metadata.component` is omitted
+///   rather than guessed.
+fn select_root_package_index(packages: &[Package]) -> Option<usize> {
+    if packages.len() == 1 {
+        return Some(0);
+    }
+
+    let mut depths: Vec<(usize, usize)> = packages
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, pkg)| package_min_datafile_depth(pkg).map(|depth| (idx, depth)))
+        .collect();
+    depths.sort_by_key(|(_, depth)| *depth);
+
+    match depths.as_slice() {
+        [(idx, shallowest), rest @ ..] if rest.iter().all(|(_, depth)| depth > shallowest) => {
+            Some(*idx)
+        }
+        _ => None,
+    }
+}
+
+fn package_min_datafile_depth(pkg: &Package) -> Option<usize> {
+    pkg.datafile_paths
+        .iter()
+        .map(|path| {
+            path.replace('\\', "/")
+                .split('/')
+                .filter(|component| !component.is_empty())
+                .count()
+        })
+        .min()
 }
 
 /// Build a CycloneDX dependency graph: one unique entry per `ref`, with
@@ -599,5 +700,104 @@ mod tests {
             BTreeSet::from(["uid-shared-a".to_string(), "uid-shared-b".to_string()])
         );
         assert!(!graph["pkg:hex/app@1.0.0"].contains("pkg:hex/shared@1.0.0"));
+    }
+
+    fn with_datafile_path(mut pkg: Package, path: &str) -> Package {
+        pkg.datafile_paths = vec![path.to_string()];
+        pkg
+    }
+
+    #[test]
+    fn select_root_package_index_picks_sole_package() {
+        let only = sample_package("app", "1.0.0", "uid-app");
+        assert_eq!(select_root_package_index(&[only]), Some(0));
+    }
+
+    #[test]
+    fn select_root_package_index_picks_unique_shallowest_workspace_root() {
+        let root = with_datafile_path(
+            sample_package("workspace", "1.0.0", "uid-root"),
+            "package.json",
+        );
+        let member_a = with_datafile_path(
+            sample_package("widget-a", "1.0.0", "uid-a"),
+            "packages/widget-a/package.json",
+        );
+        let member_b = with_datafile_path(
+            sample_package("widget-b", "1.0.0", "uid-b"),
+            "packages/widget-b/package.json",
+        );
+        let packages = vec![member_a, root, member_b];
+        assert_eq!(select_root_package_index(&packages), Some(1));
+    }
+
+    #[test]
+    fn select_root_package_index_omits_when_multiple_roots_tie() {
+        let member_a = with_datafile_path(
+            sample_package("widget-a", "1.0.0", "uid-a"),
+            "packages/widget-a/package.json",
+        );
+        let member_b = with_datafile_path(
+            sample_package("widget-b", "1.0.0", "uid-b"),
+            "packages/widget-b/package.json",
+        );
+        let packages = vec![member_a, member_b];
+        assert_eq!(select_root_package_index(&packages), None);
+    }
+
+    #[test]
+    fn select_root_package_index_omits_when_no_packages() {
+        assert_eq!(select_root_package_index(&[]), None);
+    }
+
+    #[test]
+    fn select_root_package_index_picks_shallowest_root_with_windows_style_paths() {
+        // Datafile paths can carry `\`-separated components regardless of the
+        // host OS the scan runs on; depth must be computed consistently.
+        let root = with_datafile_path(
+            sample_package("workspace", "1.0.0", "uid-root"),
+            "package.json",
+        );
+        let member = with_datafile_path(
+            sample_package("member", "1.0.0", "uid-member"),
+            "packages\\member\\package.json",
+        );
+        let packages = vec![member, root];
+        assert_eq!(select_root_package_index(&packages), Some(1));
+    }
+
+    #[test]
+    fn metadata_component_has_no_bom_ref_to_avoid_duplicating_the_unique_key() {
+        // CycloneDX 1.3 requires every `bom-ref` in a document to be unique.
+        // The root package already gets a `bom-ref` in `components`, so
+        // `metadata.component` must not repeat it (schema-guard against
+        // reintroducing the duplicate-key regression).
+        let root = with_datafile_path(
+            sample_package("workspace", "1.0.0", "uid-root"),
+            "package.json",
+        );
+        let member = with_datafile_path(
+            sample_package("widget-a", "1.0.0", "uid-a"),
+            "packages/widget-a/package.json",
+        );
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![root, member],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+
+        let bom = build_cyclonedx_json(&output);
+        assert!(bom["metadata"]["component"]["bom-ref"].is_null());
+        assert_eq!(bom["metadata"]["component"]["type"], "application");
+        assert_eq!(bom["metadata"]["component"]["name"], "workspace");
+        assert!(bom["components"][0]["bom-ref"].is_string());
     }
 }
