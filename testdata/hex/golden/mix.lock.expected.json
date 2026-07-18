@@ -29,28 +29,28 @@
               "purl": "pkg:hex/mime",
               "extracted_requirement": "~> 1.0 or ~> 2.0",
               "scope": "dependencies",
-              "is_runtime": true,
+              "is_runtime": null,
               "is_optional": false,
               "is_pinned": false,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:hex/plug_crypto",
               "extracted_requirement": "~> 1.1.1 or ~> 1.2 or ~> 2.0",
               "scope": "dependencies",
-              "is_runtime": true,
+              "is_runtime": null,
               "is_optional": false,
               "is_pinned": false,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:hex/telemetry",
               "extracted_requirement": "~> 0.4.3 or ~> 1.0",
               "scope": "dependencies",
-              "is_runtime": true,
+              "is_runtime": null,
               "is_optional": false,
               "is_pinned": false,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "repository_homepage_url": "https://hex.pm/packages/plug",

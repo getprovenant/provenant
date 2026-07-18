@@ -15,7 +15,6 @@
 //!
 //! # Key Features
 //! - Multi-format support for Yarn Classic and Berry versions
-//! - Direct vs transitive dependency tracking (`is_direct`)
 //! - Integrity hash extraction (sha1, sha512, sha256)
 //! - Package URL (purl) generation for scoped and unscoped packages
 //! - Workspace and monorepo dependency resolution
@@ -159,8 +158,11 @@ fn parse_yarn_v2(
             let mut combined = nested_deps;
             for mut dep in peer_deps {
                 dep.scope = Some("peerDependencies".to_string());
-                dep.is_optional = Some(true);
-                dep.is_runtime = Some(false);
+                // yarn.lock does not carry `peerDependenciesMeta`-style optionality for
+                // this edge, so whether the peer dependency is actually optional or used
+                // at runtime is not provable here; leave both unset.
+                dep.is_optional = None;
+                dep.is_runtime = None;
                 combined.push(dep);
             }
             combined
@@ -691,12 +693,15 @@ fn parse_yarn_v1_dependency_line(
 
     let purl = create_purl(&namespace, &name, parent_version).map(truncate_field);
 
+    // This is an edge in the resolved dependency graph (the parent package's own
+    // declared dependency), not the scanned project's manifest, so yarn.lock alone does
+    // not prove whether it is a runtime or optional dependency of the project.
     Some(Dependency {
         purl,
         extracted_requirement: Some(constraint),
         scope: Some("dependencies".to_string()),
-        is_runtime: Some(true),
-        is_optional: Some(false),
+        is_runtime: None,
+        is_optional: None,
         is_pinned: Some(false),
         is_direct: Some(false),
         resolved_package: None,
@@ -840,12 +845,15 @@ fn parse_yaml_dependencies(yaml_value: Option<&Value>) -> Vec<Dependency> {
             let constraint = truncate_field(constraint);
             let purl = create_purl(&namespace, &dep_name, &constraint).map(truncate_field);
 
+            // Same reasoning as the v1 nested case: this is a graph edge from an
+            // already-resolved package, not a claim about the scanned project's own
+            // runtime/dev split.
             dependencies.push(Dependency {
                 purl,
                 extracted_requirement: Some(constraint),
                 scope: Some("dependencies".to_string()),
-                is_runtime: Some(true),
-                is_optional: Some(false),
+                is_runtime: None,
+                is_optional: None,
                 is_pinned: Some(false),
                 is_direct: Some(false),
                 resolved_package: None,
