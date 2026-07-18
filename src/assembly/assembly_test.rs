@@ -142,6 +142,188 @@ mod tests {
         file
     }
 
+    fn create_maven_reactor_root_file_info(
+        path: &str,
+        namespace: &str,
+        name: &str,
+        version: &str,
+        modules: &[&str],
+    ) -> FileInfo {
+        let mut file = create_maven_pom_file_info(path, namespace, name, version);
+        let mut extra_data = HashMap::new();
+        extra_data.insert(
+            "modules".to_string(),
+            json!(modules.iter().collect::<Vec<_>>()),
+        );
+        file.package_data[0].extra_data = Some(extra_data);
+        file
+    }
+
+    fn create_plain_source_file_info(path: &str) -> FileInfo {
+        let mut file =
+            create_test_file_info(path, DatasourceId::MavenPom, None, None, None, vec![]);
+        file.package_data.clear();
+        file
+    }
+
+    #[test]
+    fn test_maven_reactor_assigns_module_source_files_to_module_package() {
+        // A root pom.xml declaring <modules>module-a, module-b</modules> plus two
+        // real module poms. Source files nested under each module must attach to
+        // that module's own package (not the root, and not left orphaned), a
+        // root-level file with no manifest attaches to the root package, and
+        // Maven build output (`target/`) is excluded from ownership entirely.
+        let mut files = vec![
+            create_maven_reactor_root_file_info(
+                "reactor/pom.xml",
+                "org.example",
+                "parent",
+                "1.0",
+                &["module-a", "module-b"],
+            ),
+            create_plain_source_file_info("reactor/README.md"),
+            create_maven_pom_file_info(
+                "reactor/module-a/pom.xml",
+                "org.example",
+                "module-a",
+                "1.0",
+            ),
+            create_plain_source_file_info("reactor/module-a/src/main/java/com/example/Foo.java"),
+            create_plain_source_file_info("reactor/module-a/target/classes/com/example/Foo.class"),
+            create_maven_pom_file_info(
+                "reactor/module-b/pom.xml",
+                "org.example",
+                "module-b",
+                "1.0",
+            ),
+            create_plain_source_file_info("reactor/module-b/src/main/java/com/example/Bar.java"),
+        ];
+
+        let result = assemble(&mut files);
+
+        let mut purls: Vec<&str> = result
+            .packages
+            .iter()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        purls.sort_unstable();
+        assert_eq!(
+            purls,
+            vec![
+                "pkg:maven/org.example/module-a@1.0",
+                "pkg:maven/org.example/module-b@1.0",
+                "pkg:maven/org.example/parent@1.0",
+            ],
+            "root and both modules must each assemble into their own package: {:#?}",
+            result.packages
+        );
+
+        let for_packages_purls = |path: &str, files: &[FileInfo]| -> Vec<String> {
+            let file = files.iter().find(|f| f.path == path).unwrap_or_else(|| {
+                panic!("file {path} should exist in scan results");
+            });
+            file.for_packages
+                .iter()
+                .map(|uid| {
+                    result
+                        .packages
+                        .iter()
+                        .find(|pkg| pkg.package_uid == *uid)
+                        .and_then(|pkg| pkg.purl.clone())
+                        .unwrap_or_default()
+                })
+                .collect()
+        };
+
+        assert_eq!(
+            for_packages_purls("reactor/README.md", &files),
+            vec!["pkg:maven/org.example/parent@1.0"],
+            "a root-level file with no manifest must attach to the reactor root package"
+        );
+        assert_eq!(
+            for_packages_purls(
+                "reactor/module-a/src/main/java/com/example/Foo.java",
+                &files
+            ),
+            vec!["pkg:maven/org.example/module-a@1.0"],
+            "a source file nested under module-a must attach to module-a, not the root"
+        );
+        assert_eq!(
+            for_packages_purls(
+                "reactor/module-b/src/main/java/com/example/Bar.java",
+                &files
+            ),
+            vec!["pkg:maven/org.example/module-b@1.0"],
+            "a source file nested under module-b must attach to module-b, not the root"
+        );
+        assert!(
+            for_packages_purls(
+                "reactor/module-a/target/classes/com/example/Foo.class",
+                &files
+            )
+            .is_empty(),
+            "Maven build output under target/ must stay unowned by the source package"
+        );
+    }
+
+    #[test]
+    fn test_maven_reactor_nested_module_wins_over_outer_root() {
+        // A module that itself declares further <modules> (a nested reactor)
+        // contributes its own, more specific anchor. Files under the nested
+        // module must resolve to it, not to the outer root, even though both
+        // anchors' scope roots contain the file.
+        let mut files = vec![
+            create_maven_reactor_root_file_info(
+                "reactor/pom.xml",
+                "org.example",
+                "parent",
+                "1.0",
+                &["module-a"],
+            ),
+            create_maven_reactor_root_file_info(
+                "reactor/module-a/pom.xml",
+                "org.example",
+                "module-a",
+                "1.0",
+                &["submodule"],
+            ),
+            create_maven_pom_file_info(
+                "reactor/module-a/submodule/pom.xml",
+                "org.example",
+                "submodule",
+                "1.0",
+            ),
+            create_plain_source_file_info(
+                "reactor/module-a/submodule/src/main/java/com/example/Baz.java",
+            ),
+        ];
+
+        let result = assemble(&mut files);
+
+        let submodule_file = files
+            .iter()
+            .find(|f| f.path == "reactor/module-a/submodule/src/main/java/com/example/Baz.java")
+            .expect("submodule source file should exist");
+        let owning_purls: Vec<String> = submodule_file
+            .for_packages
+            .iter()
+            .map(|uid| {
+                result
+                    .packages
+                    .iter()
+                    .find(|pkg| pkg.package_uid == *uid)
+                    .and_then(|pkg| pkg.purl.clone())
+                    .unwrap_or_default()
+            })
+            .collect();
+
+        assert_eq!(
+            owning_purls,
+            vec!["pkg:maven/org.example/submodule@1.0"],
+            "a file under a nested module must attach to the nested module, not any outer reactor root"
+        );
+    }
+
     #[test]
     fn test_maven_distinct_gav_poms_in_one_dir_stay_separate_packages() {
         // A directory of standalone `.pom` fixtures, each with a distinct GAV,

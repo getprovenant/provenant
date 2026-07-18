@@ -255,8 +255,8 @@ After scanning, the assembly system merges related manifests into logical packag
 **Assembly layers:**
 
 - **SiblingMerge**: Combines sibling files in the same directory (e.g., `package.json` + `package-lock.json` → single npm package)
-- **NestedMerge**: Combines parent/child manifests across directories (e.g., Maven parent POM + module POMs)
-- **TopologyPlan**: Claims directories or multi-directory domains whose package boundaries are defined by project structure instead of plain sibling files (e.g., npm/pnpm workspaces, Cargo workspaces, `go.work`, `pixi.toml`, Hackage project roots, Mix umbrella apps)
+- **NestedMerge**: Folds a single packaged artifact's supplementary metadata across directories into one package (e.g., a Maven POM plus its `META-INF/MANIFEST.MF`). It deliberately skips a source reactor (a directory tree with more than one `pom.xml`); each module's `pom.xml` there is its own package, and reactor-aware file ownership across those modules is handled by `TopologyPlan` instead.
+- **TopologyPlan**: Claims directories or multi-directory domains whose package boundaries are defined by project structure instead of plain sibling files (e.g., npm/pnpm workspaces, Cargo workspaces, `go.work`, `pixi.toml`, Hackage project roots, Mix umbrella apps). For a Maven reactor (a `pom.xml` declaring `<modules>`), it does not claim directories outright — each module still assembles into its own package via the normal per-directory merge — but it attributes source files nested under each module (and under the root) to the nearest enclosing module's package after assembly.
 - **FileRefResolve**: Resolves `file_references` from package database entries (RPM/Alpine/Debian) against scanned files, sets `for_packages` on matched files, tracks missing references, and resolves RPM namespace from os-release
 - **Post-assembly passes**: Final targeted repair or enrichment steps that still need whole-scan context (for example file-reference resolution and the remaining workspace-specific finalization hooks)
 

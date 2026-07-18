@@ -1,0 +1,208 @@
+{
+  "packages": [
+    {
+      "type": "maven",
+      "namespace": "com.example",
+      "name": "module-a",
+      "version": "1.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": "Module A",
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": null,
+      "declared_license_expression_spdx": null,
+      "license_detections": [],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": null,
+      "notice_text": null,
+      "source_packages": ["pkg:maven/com.example/module-a@1.0.0?classifier=sources"],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {
+        "parent": {
+          "groupId": "com.example",
+          "artifactId": "reactor-parent",
+          "version": "1.0.0",
+          "relativePath": "../pom.xml"
+        }
+      },
+      "repository_homepage_url": "https://repo1.maven.org/maven2/com/example/module-a/1.0.0/",
+      "repository_download_url": "https://repo1.maven.org/maven2/com/example/module-a/1.0.0/module-a-1.0.0.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/com/example/module-a/1.0.0/module-a-1.0.0.pom",
+      "purl": "pkg:maven/com.example/module-a@1.0.0",
+      "package_uid": "pkg:maven/com.example/module-a@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": ["module-a/pom.xml"],
+      "datasource_ids": ["maven_pom"]
+    },
+    {
+      "type": "maven",
+      "namespace": "com.example",
+      "name": "module-b",
+      "version": "1.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": "Module B",
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": null,
+      "declared_license_expression_spdx": null,
+      "license_detections": [],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": null,
+      "notice_text": null,
+      "source_packages": ["pkg:maven/com.example/module-b@1.0.0?classifier=sources"],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {
+        "parent": {
+          "groupId": "com.example",
+          "artifactId": "reactor-parent",
+          "version": "1.0.0",
+          "relativePath": "../pom.xml"
+        }
+      },
+      "repository_homepage_url": "https://repo1.maven.org/maven2/com/example/module-b/1.0.0/",
+      "repository_download_url": "https://repo1.maven.org/maven2/com/example/module-b/1.0.0/module-b-1.0.0.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/com/example/module-b/1.0.0/module-b-1.0.0.pom",
+      "purl": "pkg:maven/com.example/module-b@1.0.0",
+      "package_uid": "pkg:maven/com.example/module-b@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": ["module-b/pom.xml"],
+      "datasource_ids": ["maven_pom"]
+    },
+    {
+      "type": "maven",
+      "namespace": "com.example",
+      "name": "reactor-parent",
+      "version": "1.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": "Reactor Parent",
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": null,
+      "declared_license_expression_spdx": null,
+      "license_detections": [],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": null,
+      "notice_text": null,
+      "source_packages": ["pkg:maven/com.example/reactor-parent@1.0.0?classifier=sources"],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {
+        "modules": ["module-a", "module-b"]
+      },
+      "repository_homepage_url": "https://repo1.maven.org/maven2/com/example/reactor-parent/1.0.0/",
+      "repository_download_url": "https://repo1.maven.org/maven2/com/example/reactor-parent/1.0.0/reactor-parent-1.0.0.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/com/example/reactor-parent/1.0.0/reactor-parent-1.0.0.pom",
+      "purl": "pkg:maven/com.example/reactor-parent@1.0.0",
+      "package_uid": "pkg:maven/com.example/reactor-parent@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": ["pom.xml"],
+      "datasource_ids": ["maven_pom"]
+    }
+  ],
+  "dependencies": [
+    {
+      "purl": "pkg:maven/com.example/module-a@1.0.0",
+      "extracted_requirement": "1.0.0",
+      "scope": null,
+      "is_runtime": null,
+      "is_optional": false,
+      "is_pinned": true,
+      "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
+      "dependency_uid": "pkg:maven/com.example/module-a@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:maven/com.example/module-b@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_path": "module-b/pom.xml",
+      "datasource_id": "maven_pom",
+      "namespace": null
+    }
+  ],
+  "files_with_packages": [
+    {
+      "path": "README.md",
+      "for_packages": [
+        "pkg:maven/com.example/reactor-parent@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "module-a/pom.xml",
+      "for_packages": [
+        "pkg:maven/com.example/module-a@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "module-a/src/main/java/com/example/Foo.java",
+      "for_packages": [
+        "pkg:maven/com.example/module-a@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "module-b/pom.xml",
+      "for_packages": [
+        "pkg:maven/com.example/module-b@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "module-b/src/main/java/com/example/Bar.java",
+      "for_packages": [
+        "pkg:maven/com.example/module-b@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "pom.xml",
+      "for_packages": [
+        "pkg:maven/com.example/reactor-parent@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    }
+  ]
+}
