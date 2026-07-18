@@ -32,6 +32,10 @@ struct SpdxPackagePlan<'a> {
     spdx_id: String,
     name: String,
     files: Vec<&'a FileInfo>,
+    /// The assembled package this plan was built from, when there is one.
+    /// `None` for the no-package synthetic plan and the unassigned-files
+    /// fallback bucket, which have no package-level license data to draw on.
+    package: Option<&'a OutputPackage>,
 }
 
 pub(crate) fn write_spdx_tag_value(
@@ -77,6 +81,8 @@ pub(crate) fn write_spdx_tag_value(
         let package_verification_code = spdx_package_verification_code(&plan.files);
         let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
         let package_copyright_text = spdx_package_copyright_text(&plan.files);
+        let package_license_concluded = spdx_package_license_concluded(plan.package);
+        let package_license_declared = spdx_package_license_declared(plan.package);
 
         writeln!(writer, "## Package Information")?;
         writeln!(writer, "PackageName: {}", plan.name)?;
@@ -88,14 +94,22 @@ pub(crate) fn write_spdx_tag_value(
             "PackageVerificationCode: {}",
             package_verification_code
         )?;
-        writeln!(writer, "PackageLicenseConcluded: NOASSERTION")?;
+        writeln!(
+            writer,
+            "PackageLicenseConcluded: {}",
+            spdx_tv_license_value(package_license_concluded.as_deref())
+        )?;
         for license_id in &package_license_info_from_files {
             writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
         }
         if package_license_info_from_files.is_empty() {
             writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
         }
-        writeln!(writer, "PackageLicenseDeclared: NOASSERTION")?;
+        writeln!(
+            writer,
+            "PackageLicenseDeclared: {}",
+            spdx_tv_license_value(package_license_declared.as_deref())
+        )?;
         writeln!(
             writer,
             "PackageCopyrightText: {}",
@@ -107,6 +121,7 @@ pub(crate) fn write_spdx_tag_value(
     for (file_index, file) in (1usize..).zip(files.iter()) {
         let sha1 = file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX);
         let file_license_info = spdx_file_license_info(file);
+        let file_license_concluded = spdx_file_license_concluded(file);
         writeln!(
             writer,
             "FileName: {}",
@@ -114,7 +129,11 @@ pub(crate) fn write_spdx_tag_value(
         )?;
         writeln!(writer, "SPDXID: SPDXRef-{}", file_index)?;
         writeln!(writer, "FileChecksum: SHA1: {}", sha1)?;
-        writeln!(writer, "LicenseConcluded: NOASSERTION")?;
+        writeln!(
+            writer,
+            "LicenseConcluded: {}",
+            spdx_tv_license_value(file_license_concluded.as_deref())
+        )?;
         if file_license_info.is_empty() {
             writeln!(writer, "LicenseInfoInFile: NONE")?;
         } else {
@@ -220,6 +239,8 @@ pub(crate) fn write_spdx_rdf_xml(
         let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
         let package_copyright_text = xml_escape(&spdx_package_copyright_text(&plan.files));
         let package_name = xml_escape(&plan.name);
+        let package_license_concluded = spdx_package_license_concluded(plan.package);
+        let package_license_declared = spdx_package_license_declared(plan.package);
 
         xml.push_str("  <spdx:Package rdf:about=\"");
         xml.push_str(&document_namespace_xml);
@@ -230,12 +251,18 @@ pub(crate) fn write_spdx_rdf_xml(
         xml.push_str(
             "    <spdx:downloadLocation rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
         );
-        xml.push_str(
-            "    <spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
-        );
-        xml.push_str(
-            "    <spdx:licenseDeclared rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
-        );
+        xml.push_str("    <spdx:licenseConcluded rdf:resource=\"");
+        xml.push_str(&xml_escape(&spdx_rdf_license_resource(
+            package_license_concluded.as_deref(),
+            &document_namespace,
+        )));
+        xml.push_str("\"/>\n");
+        xml.push_str("    <spdx:licenseDeclared rdf:resource=\"");
+        xml.push_str(&xml_escape(&spdx_rdf_license_resource(
+            package_license_declared.as_deref(),
+            &document_namespace,
+        )));
+        xml.push_str("\"/>\n");
         if package_license_info_from_files.is_empty() {
             xml.push_str(
                 "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
@@ -243,7 +270,10 @@ pub(crate) fn write_spdx_rdf_xml(
         } else {
             for license_id in &package_license_info_from_files {
                 xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
-                xml.push_str(&xml_escape(&spdx_license_rdf_resource(license_id)));
+                xml.push_str(&xml_escape(&spdx_license_rdf_resource(
+                    license_id,
+                    &document_namespace,
+                )));
                 xml.push_str("\"/>\n");
             }
         }
@@ -256,6 +286,7 @@ pub(crate) fn write_spdx_rdf_xml(
                 continue;
             };
             let file_license_info = spdx_file_license_info(file);
+            let file_license_concluded = spdx_file_license_concluded(file);
             xml.push_str("    <spdx:relationship><spdx:Relationship>");
             xml.push_str("<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_contains\"/>");
             xml.push_str("<spdx:relatedSpdxElement><spdx:File rdf:about=\"");
@@ -263,9 +294,12 @@ pub(crate) fn write_spdx_rdf_xml(
             xml.push('#');
             xml.push_str(&xml_escape(file_id));
             xml.push_str("\">");
-            xml.push_str(
-                "<spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>",
-            );
+            xml.push_str("<spdx:licenseConcluded rdf:resource=\"");
+            xml.push_str(&xml_escape(&spdx_rdf_license_resource(
+                file_license_concluded.as_deref(),
+                &document_namespace,
+            )));
+            xml.push_str("\"/>");
             if file_license_info.is_empty() {
                 xml.push_str(
                     "<spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/rdf/terms#none\"/>",
@@ -273,7 +307,10 @@ pub(crate) fn write_spdx_rdf_xml(
             } else {
                 for license_id in file_license_info {
                     xml.push_str("<spdx:licenseInfoInFile rdf:resource=\"");
-                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(&license_id)));
+                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(
+                        &license_id,
+                        &document_namespace,
+                    )));
                     xml.push_str("\"/>");
                 }
             }
@@ -475,6 +512,77 @@ fn spdx_package_license_info_from_files(files: &[&FileInfo]) -> Vec<String> {
     unique.into_iter().collect()
 }
 
+/// The package's own declared SPDX expression, straight from parser/assembly
+/// -normalized manifest data. `None` (rendered as NOASSERTION) when the
+/// package declares nothing we could resolve to a valid SPDX expression; this
+/// never falls back to detected evidence, since "declared" specifically means
+/// what the package's producer stated.
+fn spdx_package_license_declared(package: Option<&OutputPackage>) -> Option<String> {
+    package
+        .and_then(|pkg| pkg.declared_license_expression_spdx.as_deref())
+        .and_then(spdx_validated_expression)
+}
+
+/// The best honest SPDX conclusion for the package: the declared expression
+/// when present (the single most authoritative source we have), otherwise
+/// `other_license_expression_spdx` — license text assembly detected in the
+/// package's own files that was not folded into the declared expression (see
+/// `reference_following.rs`). Falls back to `None` (NOASSERTION) rather than
+/// inventing a conclusion from evidence the package itself doesn't carry.
+fn spdx_package_license_concluded(package: Option<&OutputPackage>) -> Option<String> {
+    package.and_then(|pkg| {
+        pkg.declared_license_expression_spdx
+            .as_deref()
+            .and_then(spdx_validated_expression)
+            .or_else(|| {
+                pkg.other_license_expression_spdx
+                    .as_deref()
+                    .and_then(spdx_validated_expression)
+            })
+    })
+}
+
+/// Re-parse an expression through the same strict SPDX combiner the file
+/// conclusion path uses, so malformed package fields (newlines, bad tokens)
+/// become `None` / NOASSERTION instead of broken tag-value output.
+fn spdx_validated_expression(expression: &str) -> Option<String> {
+    if expression.is_empty() {
+        return None;
+    }
+    crate::utils::spdx::combine_license_expressions_preserving_structure_strict([
+        expression.to_string()
+    ])
+}
+
+/// The best honest SPDX conclusion for a file: reuses the same three-tier
+/// fallback the JSON `detected_license_expression_spdx` field already applies
+/// (own detections, then owning package-data detections, then the carried
+/// expression). `None` (rendered as NOASSERTION) when nothing was detected.
+fn spdx_file_license_concluded(file: &FileInfo) -> Option<String> {
+    file.detected_license_expression_spdx()
+}
+
+/// Renders an already-resolved SPDX expression for a tag-value field, or the
+/// NOASSERTION placeholder when nothing is known.
+fn spdx_tv_license_value(expression: Option<&str>) -> &str {
+    expression.unwrap_or("NOASSERTION")
+}
+
+/// Renders an already-resolved SPDX expression as an RDF resource. Only a
+/// single license id (no `AND`/`OR`/`WITH` operators) can be expressed as the
+/// simple `rdf:resource` link this writer uses elsewhere (see
+/// `spdx_license_rdf_resource`); a compound expression would need a nested
+/// `ConjunctiveLicenseSet`/`DisjunctiveLicenseSet` structure this writer does
+/// not build, so it honestly falls back to NOASSERTION in RDF only (the
+/// tag-value form above keeps the full expression, since tag-value license
+/// fields accept SPDX expression syntax directly).
+fn spdx_rdf_license_resource(expression: Option<&str>, document_namespace: &str) -> String {
+    match expression.map(spdx_ids_from_expression) {
+        Some(ids) if ids.len() == 1 => spdx_license_rdf_resource(&ids[0], document_namespace),
+        _ => "http://spdx.org/rdf/terms#noassertion".to_string(),
+    }
+}
+
 fn spdx_package_copyright_text(files: &[&FileInfo]) -> String {
     let copyrights: BTreeSet<String> = files
         .iter()
@@ -560,8 +668,16 @@ fn spdx_license_comment(detection_match: &Match) -> String {
     }
 }
 
-fn spdx_license_rdf_resource(license_id: &str) -> String {
-    format!("http://spdx.org/licenses/{}", license_id)
+/// Listed SPDX licenses use the canonical `spdx.org/licenses/` URI; document-
+/// scoped `LicenseRef-*` ids point at the matching `ExtractedLicensingInfo`
+/// node (`{documentNamespace}#{LicenseRef-…}`) instead of a non-existent
+/// listed-license URL.
+fn spdx_license_rdf_resource(license_id: &str, document_namespace: &str) -> String {
+    if license_id.starts_with("LicenseRef-") {
+        format!("{document_namespace}#{license_id}")
+    } else {
+        format!("http://spdx.org/licenses/{license_id}")
+    }
 }
 
 fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
@@ -661,6 +777,7 @@ fn plan_spdx_packages<'a>(
             spdx_id: "SPDXRef-001".to_string(),
             name: primary_package_name(output, config),
             files: files.to_vec(),
+            package: None,
         }];
     }
 
@@ -684,6 +801,7 @@ fn plan_spdx_packages<'a>(
             spdx_id: format!("SPDXRef-Package-{}", idx + 1),
             name: spdx_assembled_package_name(package, idx),
             files: owned,
+            package: Some(package),
         });
     }
 
@@ -697,6 +815,7 @@ fn plan_spdx_packages<'a>(
             spdx_id: "SPDXRef-Package-unassigned".to_string(),
             name: primary_package_name(output, config),
             files: unassigned,
+            package: None,
         });
     }
 
@@ -974,6 +1093,175 @@ mod tests {
         assert_eq!(
             spdx_file_license_info(&schema_file),
             vec!["MIT".to_string()]
+        );
+    }
+
+    fn output_package_with(package_data: PackageData) -> crate::output_schema::OutputPackage {
+        let package =
+            crate::models::Package::from_package_data(&package_data, "package.json".to_string());
+        crate::output_schema::OutputPackage::from(&package)
+    }
+
+    #[test]
+    fn spdx_package_license_declared_uses_only_the_declared_spdx_expression() {
+        let declared = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            other_license_expression_spdx: Some("Apache-2.0".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            spdx_package_license_declared(Some(&declared)),
+            Some("MIT".to_string())
+        );
+
+        // Never falls back to detected-but-undeclared evidence, and no package
+        // (the synthetic/unassigned SPDX plans) means nothing was declared.
+        let undeclared = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            other_license_expression_spdx: Some("Apache-2.0".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(spdx_package_license_declared(Some(&undeclared)), None);
+        assert_eq!(spdx_package_license_declared(None), None);
+    }
+
+    #[test]
+    fn spdx_package_license_helpers_reject_invalid_expressions() {
+        let malformed = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT\" or malformed".to_string()),
+            other_license_expression_spdx: Some("not a@@license".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(spdx_package_license_declared(Some(&malformed)), None);
+        assert_eq!(spdx_package_license_concluded(Some(&malformed)), None);
+
+        // Invalid declared must not poison a valid other-license fallback.
+        let declared_bad_other_ok = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT\" or malformed".to_string()),
+            other_license_expression_spdx: Some("Apache-2.0".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            spdx_package_license_concluded(Some(&declared_bad_other_ok)),
+            Some("Apache-2.0".to_string())
+        );
+    }
+
+    #[test]
+    fn spdx_license_rdf_resource_uses_document_namespace_for_license_refs() {
+        let ns = "http://spdx.org/spdxdocs/demo";
+        assert_eq!(
+            spdx_license_rdf_resource("MIT", ns),
+            "http://spdx.org/licenses/MIT"
+        );
+        assert_eq!(
+            spdx_license_rdf_resource("LicenseRef-Custom", ns),
+            "http://spdx.org/spdxdocs/demo#LicenseRef-Custom"
+        );
+        assert_eq!(
+            spdx_rdf_license_resource(Some("LicenseRef-Custom"), ns),
+            "http://spdx.org/spdxdocs/demo#LicenseRef-Custom"
+        );
+    }
+
+    #[test]
+    fn spdx_package_license_concluded_prefers_declared_then_falls_back_to_other() {
+        let declared = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            other_license_expression_spdx: Some("Apache-2.0".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            spdx_package_license_concluded(Some(&declared)),
+            Some("MIT".to_string())
+        );
+
+        let other_only = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            other_license_expression_spdx: Some("Apache-2.0".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            spdx_package_license_concluded(Some(&other_only)),
+            Some("Apache-2.0".to_string())
+        );
+
+        let unknown = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            ..Default::default()
+        });
+        assert_eq!(spdx_package_license_concluded(Some(&unknown)), None);
+        assert_eq!(spdx_package_license_concluded(None), None);
+    }
+
+    #[test]
+    fn spdx_file_license_concluded_reuses_the_detected_spdx_expression() {
+        let mut file = crate::models::FileInfo::new(
+            "notice.c".to_string(),
+            "notice".to_string(),
+            ".c".to_string(),
+            "project/notice.c".to_string(),
+            FileType::File,
+            None,
+            None,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Vec::new(),
+            None,
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+        );
+        file.license_detections = vec![LicenseDetection {
+            license_expression: "mit".to_string(),
+            license_expression_spdx: "MIT".to_string(),
+            matches: vec![],
+            detection_log: vec![],
+            identifier: String::new(),
+        }];
+
+        let schema_file = crate::output_schema::OutputFileInfo::from(&file);
+        assert_eq!(
+            spdx_file_license_concluded(&schema_file),
+            Some("MIT".to_string())
+        );
+
+        let mut undetected = file;
+        undetected.license_detections = vec![];
+        let schema_undetected = crate::output_schema::OutputFileInfo::from(&undetected);
+        assert_eq!(spdx_file_license_concluded(&schema_undetected), None);
+    }
+
+    #[test]
+    fn spdx_rdf_license_resource_only_resolves_a_single_license_id() {
+        let ns = "http://spdx.org/spdxdocs/demo";
+        assert_eq!(
+            spdx_rdf_license_resource(Some("MIT"), ns),
+            "http://spdx.org/licenses/MIT"
+        );
+        // A compound expression would need a nested RDF license-set structure
+        // this writer doesn't build, so it honestly reports NOASSERTION.
+        assert_eq!(
+            spdx_rdf_license_resource(Some("MIT AND Apache-2.0"), ns),
+            "http://spdx.org/rdf/terms#noassertion"
+        );
+        assert_eq!(
+            spdx_rdf_license_resource(None, ns),
+            "http://spdx.org/rdf/terms#noassertion"
         );
     }
 }

@@ -55,7 +55,7 @@ FileCopyrightText: Copyright 2024 Umbrella Maintainers
 FileName: ./packages/widget-a/package.json
 SPDXID: SPDXRef-2
 FileChecksum: SHA1: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-LicenseConcluded: NOASSERTION
+LicenseConcluded: MIT
 LicenseInfoInFile: MIT
 FileCopyrightText: Copyright 2024 Widget A Contributors
 
@@ -69,7 +69,7 @@ FileCopyrightText: NONE
 FileName: ./packages/widget-b/package.json
 SPDXID: SPDXRef-4
 FileChecksum: SHA1: cccccccccccccccccccccccccccccccccccccccc
-LicenseConcluded: NOASSERTION
+LicenseConcluded: Apache-2.0
 LicenseInfoInFile: Apache-2.0
 FileCopyrightText: Copyright 2024 Widget B Contributors
 
