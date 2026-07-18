@@ -44,12 +44,8 @@
       "api_data_url": null,
       "purl": "pkg:maven/org.example/app@1.0.0",
       "package_uid": "pkg:maven/org.example/app@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "datafile_paths": [
-        "modules/app/build.gradle.kts"
-      ],
-      "datasource_ids": [
-        "build_gradle"
-      ]
+      "datafile_paths": ["modules/app/build.gradle.kts"],
+      "datasource_ids": ["build_gradle"]
     },
     {
       "type": "maven",
@@ -95,12 +91,8 @@
       "api_data_url": null,
       "purl": "pkg:maven/org.example/gradle-root@1.0.0",
       "package_uid": "pkg:maven/org.example/gradle-root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "datafile_paths": [
-        "build.gradle"
-      ],
-      "datasource_ids": [
-        "build_gradle"
-      ]
+      "datafile_paths": ["build.gradle"],
+      "datasource_ids": ["build_gradle"]
     }
   ],
   "dependencies": [],

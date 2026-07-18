@@ -41,12 +41,8 @@
       "api_data_url": "https://pub.dev/api/packages/app/versions/0.1.0",
       "purl": "pkg:pub/app@0.1.0",
       "package_uid": "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "datafile_paths": [
-        "packages/app/pubspec.yaml"
-      ],
-      "datasource_ids": [
-        "pubspec_yaml"
-      ]
+      "datafile_paths": ["packages/app/pubspec.yaml"],
+      "datasource_ids": ["pubspec_yaml"]
     },
     {
       "type": "pub",
@@ -84,9 +80,7 @@
       "is_private": true,
       "is_virtual": false,
       "extra_data": {
-        "workspace_members": [
-          "packages/app"
-        ],
+        "workspace_members": ["packages/app"],
         "publish_to": "none"
       },
       "repository_homepage_url": "https://pub.dev/packages/workspace_root/versions/1.0.0",
@@ -94,12 +88,8 @@
       "api_data_url": "https://pub.dev/api/packages/workspace_root/versions/1.0.0",
       "purl": "pkg:pub/workspace_root@1.0.0",
       "package_uid": "pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "datafile_paths": [
-        "pubspec.yaml"
-      ],
-      "datasource_ids": [
-        "pubspec_yaml"
-      ]
+      "datafile_paths": ["pubspec.yaml"],
+      "datasource_ids": ["pubspec_yaml"]
     }
   ],
   "dependencies": [
@@ -123,27 +113,19 @@
   "files_with_packages": [
     {
       "path": "README.md",
-      "for_packages": [
-        "pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     },
     {
       "path": "packages/app/lib/app.dart",
-      "for_packages": [
-        "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     },
     {
       "path": "packages/app/pubspec.yaml",
-      "for_packages": [
-        "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     },
     {
       "path": "pubspec.yaml",
-      "for_packages": [
-        "pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     }
   ]
 }

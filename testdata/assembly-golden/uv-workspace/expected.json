@@ -41,12 +41,8 @@
       "api_data_url": "https://pypi.org/pypi/core/0.1.0/json",
       "purl": "pkg:pypi/core@0.1.0",
       "package_uid": "pkg:pypi/core@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "datafile_paths": [
-        "packages/core/pyproject.toml"
-      ],
-      "datasource_ids": [
-        "pypi_pyproject_toml"
-      ]
+      "datafile_paths": ["packages/core/pyproject.toml"],
+      "datasource_ids": ["pypi_pyproject_toml"]
     },
     {
       "type": "pypi",
@@ -86,59 +82,39 @@
       "extra_data": {
         "tool_uv": {
           "workspace": {
-            "exclude": [
-              "packages/ignored"
-            ],
-            "members": [
-              "packages/*"
-            ]
+            "exclude": ["packages/ignored"],
+            "members": ["packages/*"]
           }
         },
-        "workspace_exclude": [
-          "packages/ignored"
-        ],
-        "workspace_members": [
-          "packages/*"
-        ]
+        "workspace_exclude": ["packages/ignored"],
+        "workspace_members": ["packages/*"]
       },
       "repository_homepage_url": null,
       "repository_download_url": null,
       "api_data_url": "https://pypi.org/pypi/workspace-root/1.0.0/json",
       "purl": "pkg:pypi/workspace-root@1.0.0",
       "package_uid": "pkg:pypi/workspace-root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
-      "datafile_paths": [
-        "pyproject.toml"
-      ],
-      "datasource_ids": [
-        "pypi_pyproject_toml"
-      ]
+      "datafile_paths": ["pyproject.toml"],
+      "datasource_ids": ["pypi_pyproject_toml"]
     }
   ],
   "dependencies": [],
   "files_with_packages": [
     {
       "path": "README.md",
-      "for_packages": [
-        "pkg:pypi/workspace-root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pypi/workspace-root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     },
     {
       "path": "packages/core/pyproject.toml",
-      "for_packages": [
-        "pkg:pypi/core@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pypi/core@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     },
     {
       "path": "packages/core/src/core.py",
-      "for_packages": [
-        "pkg:pypi/core@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pypi/core@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     },
     {
       "path": "pyproject.toml",
-      "for_packages": [
-        "pkg:pypi/workspace-root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
-      ]
+      "for_packages": ["pkg:pypi/workspace-root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
     }
   ]
 }
