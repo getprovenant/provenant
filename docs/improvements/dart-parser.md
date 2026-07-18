@@ -48,6 +48,11 @@ Rust now also surfaces several package-level pubspec metadata fields more truthf
 - `platforms`, `funding`, `topics`, `screenshots`, `false_secrets`, and `ignored_advisories` are preserved in `extra_data`
 - `topics` also populate `keywords`
 
+### 6. Pub workspace topology
+
+- Root `pubspec.yaml` `workspace:` member paths are preserved in `extra_data.workspace_members`.
+- Assembly claims those member directories for Dart workspace topology, keeps each member as its own package, and attributes a shared root `pubspec.lock` honestly to members that declare matching direct deps (otherwise hoisted).
+
 ## Coverage
 
 Coverage includes:
@@ -58,4 +63,5 @@ Coverage includes:
 - hosted / git / path / sdk descriptor preservation
 - legacy `sdk:` lockfile compatibility
 - `publish_to: none` and `archive_url` behavior
+- pub workspace member extraction and topology assembly
 - parser-only goldens for publish metadata, dict-style dependency descriptors, and path lockfiles

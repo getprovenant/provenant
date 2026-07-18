@@ -1,0 +1,149 @@
+{
+  "packages": [
+    {
+      "type": "pub",
+      "namespace": null,
+      "name": "app",
+      "version": "0.1.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "dart",
+      "description": null,
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": "https://pub.dartlang.org/packages/app/versions/0.1.0.tar.gz",
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": null,
+      "declared_license_expression_spdx": null,
+      "license_detections": [],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": null,
+      "notice_text": null,
+      "source_packages": [],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {},
+      "repository_homepage_url": "https://pub.dev/packages/app/versions/0.1.0",
+      "repository_download_url": "https://pub.dartlang.org/packages/app/versions/0.1.0.tar.gz",
+      "api_data_url": "https://pub.dev/api/packages/app/versions/0.1.0",
+      "purl": "pkg:pub/app@0.1.0",
+      "package_uid": "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "packages/app/pubspec.yaml"
+      ],
+      "datasource_ids": [
+        "pubspec_yaml"
+      ]
+    },
+    {
+      "type": "pub",
+      "namespace": null,
+      "name": "workspace_root",
+      "version": "1.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "dart",
+      "description": null,
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": "https://pub.dartlang.org/packages/workspace_root/versions/1.0.0.tar.gz",
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": null,
+      "declared_license_expression_spdx": null,
+      "license_detections": [],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": null,
+      "notice_text": null,
+      "source_packages": [],
+      "is_private": true,
+      "is_virtual": false,
+      "extra_data": {
+        "workspace_members": [
+          "packages/app"
+        ],
+        "publish_to": "none"
+      },
+      "repository_homepage_url": "https://pub.dev/packages/workspace_root/versions/1.0.0",
+      "repository_download_url": "https://pub.dartlang.org/packages/workspace_root/versions/1.0.0.tar.gz",
+      "api_data_url": "https://pub.dev/api/packages/workspace_root/versions/1.0.0",
+      "purl": "pkg:pub/workspace_root@1.0.0",
+      "package_uid": "pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "pubspec.yaml"
+      ],
+      "datasource_ids": [
+        "pubspec_yaml"
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "purl": "pkg:pub/http",
+      "extracted_requirement": "^1.0.0",
+      "scope": "dependencies",
+      "is_runtime": true,
+      "is_optional": false,
+      "is_pinned": false,
+      "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
+      "dependency_uid": "pkg:pub/http?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_path": "packages/app/pubspec.yaml",
+      "datasource_id": "pubspec_yaml",
+      "namespace": null
+    }
+  ],
+  "files_with_packages": [
+    {
+      "path": "README.md",
+      "for_packages": [
+        "pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "packages/app/lib/app.dart",
+      "for_packages": [
+        "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "packages/app/pubspec.yaml",
+      "for_packages": [
+        "pkg:pub/app@0.1.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "pubspec.yaml",
+      "for_packages": [
+        "pkg:pub/workspace_root@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    }
+  ]
+}

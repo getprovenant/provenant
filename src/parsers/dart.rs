@@ -67,6 +67,7 @@ const FIELD_FALSE_SECRETS: &str = "false_secrets";
 const FIELD_SCREENSHOTS: &str = "screenshots";
 const FIELD_TOPICS: &str = "topics";
 const FIELD_IGNORED_ADVISORIES: &str = "ignored_advisories";
+const FIELD_WORKSPACE: &str = "workspace";
 const FIELD_PACKAGES: &str = "packages";
 const FIELD_SDKS: &str = "sdks";
 const FIELD_SDK: &str = "sdk";
@@ -757,6 +758,14 @@ fn build_extra_data(
         {
             extra_data.insert(field.to_string(), json_value);
         }
+    }
+
+    let workspace_members = extract_string_list_field(yaml_content, FIELD_WORKSPACE);
+    if !workspace_members.is_empty() {
+        extra_data.insert(
+            "workspace_members".to_string(),
+            serde_json::json!(workspace_members),
+        );
     }
 
     if extra_data.is_empty() {

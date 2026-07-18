@@ -111,6 +111,8 @@ impl PackageParser for GradleParser {
             license_detections,
         ) = extract_gradle_license_metadata(&tokens);
 
+        let extra_data = extract_gradle_project_coordinates(path, &content, &tokens);
+
         vec![PackageData {
             package_type: Some(Self::PACKAGE_TYPE),
             namespace: None,
@@ -145,7 +147,7 @@ impl PackageParser for GradleParser {
             notice_text: None,
             source_packages: Vec::new(),
             file_references: Vec::new(),
-            extra_data: None,
+            extra_data,
             dependencies,
             repository_homepage_url: None,
             repository_download_url: None,
@@ -171,7 +173,7 @@ fn default_package_data() -> PackageData {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq)]
-enum Tok {
+pub(super) enum Tok {
     Ident(String),
     Str(String),
     MalformedStr(String),
@@ -186,7 +188,7 @@ enum Tok {
     Equals,
 }
 
-fn lex(input: &str) -> Vec<Tok> {
+pub(super) fn lex(input: &str) -> Vec<Tok> {
     let chars: Vec<char> = input.chars().collect();
     let len = chars.len();
     let mut i = 0;
@@ -1871,6 +1873,80 @@ fn strip_quotes(value: &str) -> &str {
         .and_then(|v| v.strip_suffix('"'))
         .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
         .unwrap_or(value)
+}
+
+/// Extract the project's declared Maven coordinates (`group` and `version`) from
+/// top-level Gradle statements so multi-project assembly can build an honest
+/// `pkg:maven/<group>/<name>@<version>` identity for each subproject. Gradle does
+/// not carry the project *name* in the build script (it defaults to the directory
+/// or is set in `settings.gradle`), so only `group`/`version` are recovered here.
+///
+/// Only literal, top-level (brace-depth 0) assignments are recovered — both the
+/// Kotlin/`=` form (`group = "com.example"`) and the Groovy method-call form
+/// (`group "com.example"`). Values referencing variables are interpolated through
+/// the same `gradle.properties`/script-constant resolution used for dependency
+/// versions; an unresolved value is left unset rather than guessed.
+fn extract_gradle_project_coordinates(
+    path: &Path,
+    content: &str,
+    tokens: &[Tok],
+) -> Option<std::collections::HashMap<String, serde_json::Value>> {
+    let mut group: Option<String> = None;
+    let mut version: Option<String> = None;
+    let mut depth: i32 = 0;
+
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Tok::OpenBrace => depth += 1,
+            Tok::CloseBrace => depth = depth.saturating_sub(1),
+            Tok::Ident(name) if depth == 0 && (name == "group" || name == "version") => {
+                // Accept `group = "x"`, `group "x"`, and `group("x")`.
+                let mut cursor = i + 1;
+                if tokens.get(cursor) == Some(&Tok::Equals) {
+                    cursor += 1;
+                }
+                let mut had_paren = false;
+                if tokens.get(cursor) == Some(&Tok::OpenParen) {
+                    had_paren = true;
+                    cursor += 1;
+                }
+                if let Some(Tok::Str(value)) = tokens.get(cursor) {
+                    let literal = value.clone();
+                    if name == "group" && group.is_none() {
+                        group = Some(literal);
+                    } else if name == "version" && version.is_none() {
+                        version = Some(literal);
+                    }
+                    i = cursor + if had_paren { 2 } else { 1 };
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    if group.is_none() && version.is_none() {
+        return None;
+    }
+
+    let properties = load_gradle_script_properties(path, content);
+    let mut extra_data = std::collections::HashMap::new();
+    if let Some(group) = group {
+        let resolved = interpolate_gradle_string(&group, &properties);
+        if !resolved.contains('$') && !resolved.is_empty() {
+            extra_data.insert("group".to_string(), json!(truncate_field(resolved)));
+        }
+    }
+    if let Some(version) = version {
+        let resolved = interpolate_gradle_string(&version, &properties);
+        if !resolved.contains('$') && !resolved.is_empty() {
+            extra_data.insert("version".to_string(), json!(truncate_field(resolved)));
+        }
+    }
+
+    (!extra_data.is_empty()).then_some(extra_data)
 }
 
 fn extract_gradle_license_metadata(

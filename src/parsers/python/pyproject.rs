@@ -87,7 +87,9 @@ pub(super) fn extract(path: &Path) -> Vec<PackageData> {
     };
 
     if project_metadata.is_none() && poetry_metadata.is_none() && legacy_metadata.is_none() {
-        return default_package_data(path);
+        let mut package_data = default_package_data(path);
+        package_data[0].extra_data = extract_pyproject_extra_data(&toml_content);
+        return package_data;
     }
 
     let selected_metadata = project_metadata
@@ -587,6 +589,29 @@ fn extract_pyproject_extra_data(toml_content: &TomlValue) -> Option<HashMap<Stri
         .and_then(|tool| tool.get("uv"))
     {
         extra_data.insert("tool_uv".to_string(), toml_value_to_json(tool_uv));
+
+        if let Some(workspace) = tool_uv.get("workspace").and_then(TomlValue::as_table) {
+            for (source_field, output_field) in [
+                ("members", "workspace_members"),
+                ("exclude", "workspace_exclude"),
+            ] {
+                let values = workspace
+                    .get(source_field)
+                    .and_then(TomlValue::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(TomlValue::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .take(crate::parsers::utils::MAX_ITERATION_COUNT)
+                    .map(|value| JsonValue::String(truncate_field(value.to_string())))
+                    .collect::<Vec<_>>();
+
+                if !values.is_empty() {
+                    extra_data.insert(output_field.to_string(), JsonValue::Array(values));
+                }
+            }
+        }
     }
 
     if extra_data.is_empty() {

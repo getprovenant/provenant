@@ -1,0 +1,5 @@
+name: workspace_root
+version: 1.0.0
+publish_to: none
+workspace:
+  - packages/app

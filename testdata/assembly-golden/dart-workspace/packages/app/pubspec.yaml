@@ -1,0 +1,5 @@
+name: app
+version: 0.1.0
+resolution: workspace
+dependencies:
+  http: ^1.0.0

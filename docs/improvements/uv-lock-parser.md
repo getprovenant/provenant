@@ -23,8 +23,13 @@ The Python reference does not currently support `uv.lock`, which leaves a gap fo
 
 Rust parses `uv.lock` directly, recovers root-package identity and locked dependency data, and combines that lockfile evidence with sibling Python package metadata during scans.
 
+## Workspace topology (companion)
+
+`pyproject.toml` parsing now also extracts explicit `[tool.uv.workspace] members` / `exclude` into `extra_data.workspace_members` / `workspace_exclude`. Assembly resolves those member patterns to on-disk member `pyproject.toml` files and attributes nested member sources to the deepest enclosing workspace package (Maven-reactor-style ownership; no guessed Poetry path-dep workspaces).
+
 ## Impact
 
 - Better Python dependency visibility for uv-managed projects
 - Better root-package recovery when only `uv.lock` is available during scans
 - Better alignment with the current Python packaging ecosystem
+- Correct nested-source ownership for declared uv workspaces
