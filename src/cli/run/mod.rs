@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::app::request::{InputMode, ScanRequest};
+use crate::app::request::{InputMode, OutputTarget, ScanRequest};
 use crate::app::scan_pipeline::execute_request;
 use crate::cli::{Cli, Command, ScanArgs};
 use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
 use crate::models::{FileType, Output};
 use crate::output::{OutputFormat, OutputWriteConfig, write_output_file};
-use crate::progress::{ScanProgress, init_cli_logger};
+use crate::progress::{ProgressMode, ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
 use anyhow::{Result, anyhow};
@@ -116,22 +116,42 @@ pub fn run() -> Result<ExitCode> {
     // below; it must not short-circuit non-SBOM outputs in the same request
     // (e.g. `--spdx-tv out.spdx --json out.json`), so it is computed as a
     // value up front instead of using `?` to bail out of `run` immediately.
+    // Covers two independent causes: a `--from-json` reshape whose source
+    // scan never ran package detection, and a native `--package-only`/
+    // `--no-assemble` scan that unconditionally skipped assembly this run.
     let hollow_sbom_refusal = hollow_from_json_sbom_refusal(
         &request,
         &output,
         executed.has_hollow_package_detection_input,
-    );
+    )
+    .or_else(|| assembly_skipped_sbom_refusal(&request, &output));
+
+    // Unlike the refusal above, this only warns: `--paths-file` assembly can
+    // produce a genuinely well-formed SBOM, just one that may understate the
+    // repository if the selection omitted sibling manifests or a workspace
+    // root. Skipped once a hollow-SBOM refusal already blocks every SBOM
+    // target this run, since there is then no written SBOM left to warn
+    // about.
+    if hollow_sbom_refusal.is_none()
+        && let Some(warning) = paths_file_sbom_completeness_warning(&request)
+    {
+        emit_sbom_guard_diagnostic(request.progress_mode, &warning, false);
+    }
 
     let output_schema_output =
         crate::output_schema::Output::from_with_compat_mode(&output, cli.compat_mode);
     progress.start_output();
     for target in &request.output_targets {
         if hollow_sbom_refusal.is_some() && SBOM_OUTPUT_FORMATS.contains(&target.format) {
-            log::error!(
-                "Skipping {:?} output to {}: {}",
-                target.format,
-                target.file,
-                hollow_sbom_refusal.as_deref().unwrap_or_default()
+            emit_sbom_guard_diagnostic(
+                request.progress_mode,
+                &format!(
+                    "Skipping {:?} output to {}: {}",
+                    target.format,
+                    target.file,
+                    hollow_sbom_refusal.as_deref().unwrap_or_default()
+                ),
+                true,
             );
             continue;
         }
@@ -168,8 +188,12 @@ pub fn run() -> Result<ExitCode> {
     // Fails the run after all allowed outputs are already written (same
     // never-lose-the-artifact shape as the license-policy gate below).
     if let Some(refusal) = hollow_sbom_refusal {
-        log::error!(
-            "Hollow-SBOM guard: {refusal} Failing with exit code {HOLLOW_SBOM_GUARD_EXIT_CODE}."
+        emit_sbom_guard_diagnostic(
+            request.progress_mode,
+            &format!(
+                "Hollow-SBOM guard: {refusal} Failing with exit code {HOLLOW_SBOM_GUARD_EXIT_CODE}."
+            ),
+            true,
         );
         return Ok(ExitCode::from(HOLLOW_SBOM_GUARD_EXIT_CODE));
     }
@@ -280,6 +304,29 @@ fn validate_scan_option_compatibility(cli: &ScanArgs) -> Result<()> {
     Ok(())
 }
 
+/// Emits an SBOM-guard diagnostic (a refusal explanation or a completeness
+/// warning) so it is never silently dropped.
+///
+/// `ScanProgress::init_logging_bridge` deliberately never installs a logger
+/// at all in `--quiet` mode (see `src/progress.rs`), so a plain
+/// `log::error!`/`log::warn!` call would vanish with no trace — even though a
+/// refusal still changes the process's exit code, and a `--quiet` caller who
+/// only checks the exit code would otherwise have no way to learn why an SBOM
+/// target was skipped. Falling back to a direct `eprintln!` in that case
+/// keeps the message honest without depending on whether a logger happens to
+/// be installed. In Default/Verbose mode the bridge is installed and active,
+/// so this routes through `log` as usual to stay interleaved with progress
+/// bars instead of writing over them.
+fn emit_sbom_guard_diagnostic(progress_mode: ProgressMode, message: &str, is_error: bool) {
+    if progress_mode == ProgressMode::Quiet {
+        eprintln!("{message}");
+    } else if is_error {
+        log::error!("{message}");
+    } else {
+        log::warn!("{message}");
+    }
+}
+
 /// SBOM-oriented output formats whose entire value proposition is the package
 /// inventory: an SPDX or CycloneDX document with zero packages looks like a
 /// normal, successful export while actually reporting no components at all.
@@ -298,6 +345,17 @@ fn sbom_output_flag(format: OutputFormat) -> &'static str {
         OutputFormat::CycloneDxXml => "--cyclonedx-xml",
         _ => "<sbom-format>",
     }
+}
+
+/// CLI flags for whichever SBOM formats (see [`SBOM_OUTPUT_FORMATS`]) appear
+/// among `output_targets`, in request order. Empty when none were requested.
+fn requested_sbom_flags(output_targets: &[OutputTarget]) -> Vec<&'static str> {
+    output_targets
+        .iter()
+        .map(|target| target.format)
+        .filter(|format| SBOM_OUTPUT_FORMATS.contains(format))
+        .map(sbom_output_flag)
+        .collect()
 }
 
 /// Returns a refusal message when a `--from-json` reshape requests an SBOM
@@ -357,13 +415,7 @@ fn hollow_from_json_sbom_refusal(
         return None;
     }
 
-    let requested_sbom_flags: Vec<&'static str> = request
-        .output_targets
-        .iter()
-        .map(|target| target.format)
-        .filter(|format| SBOM_OUTPUT_FORMATS.contains(format))
-        .map(sbom_output_flag)
-        .collect();
+    let requested_sbom_flags = requested_sbom_flags(&request.output_targets);
     if requested_sbom_flags.is_empty() {
         return None;
     }
@@ -377,6 +429,120 @@ fn hollow_from_json_sbom_refusal(
          scan was intended.",
         requested_sbom_flags.join(", "),
         scanned_file_count,
+        requested_sbom_flags.join(", "),
+    ))
+}
+
+/// Returns a refusal message when a **native** scan requests an SBOM format
+/// while `--package-only` or `--no-assemble` forced top-level package
+/// assembly to be skipped for the whole run (see `skip_assembly` in
+/// `src/app/scan_pipeline.rs`).
+///
+/// Both flags unconditionally zero out `output.packages`/`output.dependencies`
+/// regardless of what was scanned: `--package-only` intentionally trades the
+/// top-level assembled view for a faster, narrower per-file pass, and
+/// `--no-assemble` disables assembly outright. Either way, CycloneDX would
+/// write an empty `components` array and SPDX would fall back to its
+/// no-package projection — both indistinguishable from a normal, honest
+/// export with zero packages, even though the scanned files may carry
+/// per-file package manifests that were simply never assembled into the
+/// top-level view the SBOM formats read from.
+///
+/// Like [`hollow_from_json_sbom_refusal`], this is a query, not a hard gate:
+/// it returns `Some(message)` so the caller can skip only the requested SBOM
+/// output target(s) while still writing any other requested output formats
+/// in the same request (see the output loop and
+/// [`HOLLOW_SBOM_GUARD_EXIT_CODE`] in `run`).
+///
+/// This intentionally does **not** fire for:
+/// - `--from-json` reshapes (covered separately by
+///   [`hollow_from_json_sbom_refusal`], which reasons about the *source*
+///   scan's recorded options rather than this run's flags);
+/// - requests that do not ask for an SBOM format;
+/// - a truly empty scan document (no files at all);
+/// - the (currently impossible, but defensively checked) case where
+///   `output.packages` is non-empty despite the skip, so this guard degrades
+///   gracefully rather than fires a false positive if that invariant ever
+///   changes.
+fn assembly_skipped_sbom_refusal(request: &ScanRequest, output: &Output) -> Option<String> {
+    if !matches!(request.input_mode, InputMode::Native) {
+        return None;
+    }
+    if !(request.package_only || request.no_assemble) {
+        return None;
+    }
+    if !output.packages.is_empty() {
+        return None;
+    }
+
+    let scanned_file_count = output
+        .files
+        .iter()
+        .filter(|file| file.file_type == FileType::File)
+        .count();
+    if scanned_file_count == 0 {
+        return None;
+    }
+
+    let requested_sbom_flags = requested_sbom_flags(&request.output_targets);
+    if requested_sbom_flags.is_empty() {
+        return None;
+    }
+
+    let cause_flag = if request.package_only {
+        "--package-only"
+    } else {
+        "--no-assemble"
+    };
+
+    Some(format!(
+        "Refusing to write a hollow SBOM for {}: {cause_flag} skips top-level package assembly for \
+         this entire scan, so the {} scanned file(s) were never assembled into the top-level \
+         packages/dependencies view that SBOM export reads from, even if some of those files carry \
+         their own per-file package manifests. Rerun without {cause_flag} (e.g. with --package \
+         instead) before requesting an SBOM format, or drop {} if a package-less export was intended.",
+        requested_sbom_flags.join(", "),
+        scanned_file_count,
+        requested_sbom_flags.join(", "),
+    ))
+}
+
+/// Returns a loud, non-blocking warning when a **native** `--paths-file` scan
+/// requests an SBOM format.
+///
+/// `--paths-file` deliberately narrows collection to a caller-selected subset
+/// of files under the scan root (see `docs/CLI_GUIDE.md`), so assembly only
+/// ever sees the manifests, lockfiles, and workspace context that fell inside
+/// that selection. Unlike [`assembly_skipped_sbom_refusal`], assembly still
+/// runs and can produce a genuinely non-empty, well-formed SBOM — but that
+/// SBOM can silently understate a monorepo's real inventory whenever the
+/// selection omits sibling member manifests or a workspace root that
+/// topology-aware assembly would otherwise use to complete the picture.
+/// Provenant has no bounded, static way to tell "this selection happens to be
+/// complete" apart from "this selection quietly dropped sibling manifests"
+/// without rescanning the whole tree, which would defeat the point of
+/// `--paths-file`. So this warns instead of refusing: the export is still
+/// written, and callers who need a guaranteed-complete inventory should
+/// rerun without `--paths-file`.
+///
+/// Returns `None` when `--paths-file` was not used, the request is not a
+/// native scan, or no SBOM format was requested.
+fn paths_file_sbom_completeness_warning(request: &ScanRequest) -> Option<String> {
+    if !matches!(request.input_mode, InputMode::Native) || request.paths_files.is_empty() {
+        return None;
+    }
+
+    let requested_sbom_flags = requested_sbom_flags(&request.output_targets);
+    if requested_sbom_flags.is_empty() {
+        return None;
+    }
+
+    Some(format!(
+        "--paths-file restricted this scan to a caller-selected subset of files, so the {} export \
+         only reflects packages whose manifests fell inside that selection. If this repository has \
+         sibling member manifests, lockfiles, or a workspace root outside the selection, the \
+         resulting inventory may understate the full repository. Rerun without --paths-file (or \
+         widen the selection to include the full workspace) if you need a guaranteed-complete SBOM.",
         requested_sbom_flags.join(", "),
     ))
 }

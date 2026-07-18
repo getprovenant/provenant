@@ -383,6 +383,35 @@ fn from_json_cyclonedx_fails_when_one_merged_input_is_hollow_even_if_another_req
 }
 
 #[test]
+fn from_json_cyclonedx_refusal_is_explained_even_in_quiet_mode() {
+    // Regression: `ScanProgress::init_logging_bridge` never installs a
+    // logger at all in `--quiet` mode, so a plain `log::error!` refusal
+    // message would otherwise vanish, leaving only the exit code.
+    let temp = TempDir::new().expect("temp dir");
+    let input_file =
+        write_from_json_fixture(&temp, json!({}), vec![sample_file("src/main.rs")], vec![]);
+    let output_file = temp.path().join("bom.json");
+
+    let output = provenant_command()
+        .args([
+            "--cyclonedx",
+            output_file.to_str().expect("utf-8 path"),
+            "--from-json",
+            &input_file,
+            "--quiet",
+        ])
+        .output()
+        .expect("failed to run provenant");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("hollow") && stderr.contains("--cyclonedx"),
+        "the refusal must still explain itself under --quiet, got: {stderr}"
+    );
+}
+
+#[test]
 fn from_json_hollow_sbom_target_is_skipped_but_other_outputs_still_write() {
     // A refused SBOM target must not prevent other, non-SBOM output targets
     // in the same request from being written.
