@@ -393,7 +393,7 @@ In practice:
 - SPDX is often the better fit for compliance-oriented exchange.
 - `--package` is usually part of these workflows because package/dependency data is central to SBOM output.
 
-Reshaping with `--from-json` (see section 14) into an SBOM format needs the original scan to have run package detection. If the JSON being reshaped never ran `--package`/`--package-only`/`--system-package`/`--package-in-compiled` and it has no packages, Provenant refuses the SBOM export instead of silently writing an empty `components` array or SPDX's no-package projection. Rescan with one of those flags first, or reshape to `--json`/`--json-pp` instead if you only need file-level data.
+Reshaping with `--from-json` (see section 14) into an SBOM format needs the original scan to have run package detection. If the JSON being reshaped never ran `--package`/`--package-only`/`--system-package`/`--package-in-compiled` and it has no packages, Provenant refuses the SBOM export instead of silently writing an empty `components` array or SPDX's no-package projection. This check runs per merged `--from-json` input, so merging several JSON files where even one of them never ran package detection still refuses — a different merged input that did request detection does not override it. Rescan with one of those flags first, or reshape to `--json`/`--json-pp` instead if you only need file-level data. A refused SBOM target does not block other, non-SBOM output targets requested in the same run (e.g. `--cyclonedx bom.json --json out.json`): the non-SBOM outputs are still written, and the process exits with a dedicated non-zero exit code distinct from a scan/runtime error or the license-policy gate.
 
 ### 11. "I need Debian copyright output"
 
@@ -452,6 +452,8 @@ Important: `--from-json` is for reshaping existing results. It is not a second s
 Also note that `--from-json` cannot recover newer native-only evidence details that were never serialized in the original JSON. For example, replaying older ScanCode-style or compatibility-mode JSON cannot reconstruct the newer less-normalized file-level copyright text without rescanning the original files.
 
 For the same reason, reshaping into an SBOM format (`--spdx-tv`, `--spdx-rdf`, `--cyclonedx`, `--cyclonedx-xml`) fails instead of silently succeeding when the source JSON has scanned files but never ran package detection: with no package data to recover, the export would otherwise be a hollow document (an empty CycloneDX `components` array, or SPDX's no-package projection) that still looks like a normal successful scan. Rescan with `--package`/`--package-only`/`--system-package`/`--package-in-compiled` before reshaping into an SBOM format. A source scan that ran package detection and genuinely found no packages reshapes normally — only the "package detection was never attempted" case is refused. A genuinely empty scan document (no files at all) also reshapes normally, since that keeps its existing documented empty-SBOM behavior.
+
+This is tracked per merged `--from-json` input, not as a single flag for the whole request: when `--from-json` is given multiple JSON paths to merge into one replay (see "merging or reshaping multiple prior JSON scans" above), a merged input that never ran package detection still refuses an SBOM export even if a different merged input honestly requested it (or already carries real packages) — one input's package-detection request can never silence another merged input's hollow files. A refusal only blocks the requested SBOM target(s); any other, non-SBOM output targets in the same request (e.g. `--json`/`--json-pp`) are still written, and the overall run exits non-zero with a dedicated exit code once all allowed outputs have been produced, matching the "write the artifact, then fail the gate" pattern used by `--fail-on` (see [ADR 0011](adr/0011-license-compliance-gating-and-sarif.md)).
 
 ### 15. "I want a codebase-level summary instead of reading raw file-by-file results"
 
@@ -687,6 +689,7 @@ These are worth learning early because they change what the output means:
 - `--tallies-by-facet` requires `--facet` and `--tallies`
 - `--debian <FILE>` requires `--license`, `--copyright`, and `--license-text`
 - `--fail-on <LEVEL>` requires `--license-policy`; a violation exits with code 3
+- an SBOM format (`--spdx-tv`/`--spdx-rdf`/`--cyclonedx`/`--cyclonedx-xml`) combined with `--from-json` on an input that never ran package detection is refused and exits with code 4, while any other requested non-SBOM output targets are still written
 - `--sarif <FILE>` only emits results for `--license-policy` entries that carry a `compliance_alert`
 - `--paths-file <FILE>` requires exactly one native scan root and is currently native-scan only (no `--from-json`)
 - `--reindex` only matters when the license engine is initialized (`--license` and some `--from-json` reference-recompute flows)

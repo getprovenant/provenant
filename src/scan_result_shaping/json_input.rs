@@ -81,7 +81,7 @@ impl JsonHeaderInput {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub(crate) struct JsonScanInput {
     #[serde(default)]
     pub(crate) headers: Vec<JsonHeaderInput>,
@@ -99,6 +99,16 @@ pub(crate) struct JsonScanInput {
     pub(crate) license_rule_references: Vec<OutputLicenseRuleReference>,
     #[serde(default)]
     pub(crate) excluded_count: usize,
+    /// Whether *this* loaded input — before merging with any other
+    /// `--from-json` path — has scanned files, no packages of its own, and
+    /// none of its recorded headers requested package detection. Never
+    /// present in the raw JSON; computed by [`load_and_merge_json_inputs`]
+    /// per input and OR'd into the merged value, so one input's real
+    /// packages or package-detection request can never mask another
+    /// merged input's hollow contribution (see
+    /// [`is_hollow_package_detection_input`]).
+    #[serde(skip)]
+    pub(crate) has_hollow_package_detection_input: bool,
 }
 
 impl JsonScanInput {
@@ -122,6 +132,21 @@ impl JsonScanInput {
             .filter(|file| file.file_type == OutputFileType::File)
             .map(|file| file.size)
             .sum()
+    }
+
+    /// Whether this input, considered on its own before any merge, has
+    /// scanned files but no packages, and none of its recorded headers show
+    /// package detection having been requested upstream. This is the
+    /// per-input hollow check; see [`load_and_merge_json_inputs`] for how it
+    /// is combined across merged `--from-json` inputs so one input's real
+    /// packages or request flag cannot silence another's hollow files.
+    fn is_hollow_package_detection_input(&self) -> bool {
+        self.file_count() > 0
+            && self.packages.is_empty()
+            && !self
+                .headers
+                .iter()
+                .any(JsonHeaderInput::requested_package_detection)
     }
 
     pub(crate) fn into_parts(self) -> Result<JsonInputParts> {
@@ -177,10 +202,7 @@ impl JsonScanInput {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| anyhow!("Failed to convert license rule reference from JSON: {}", e))?;
 
-        let package_detection_requested_in_source = self
-            .headers
-            .iter()
-            .any(JsonHeaderInput::requested_package_detection);
+        let has_hollow_package_detection_input = self.has_hollow_package_detection_input;
 
         let imported_spdx_license_list_version =
             consistent_header_value(self.headers.iter().filter_map(|header| {
@@ -226,7 +248,7 @@ impl JsonScanInput {
             preserved_header_errors,
             imported_spdx_license_list_version,
             imported_license_index_provenance,
-            package_detection_requested_in_source,
+            has_hollow_package_detection_input,
         ))
     }
 }
@@ -291,6 +313,14 @@ pub(crate) fn load_and_merge_json_inputs(
             namespace_loaded_input(&mut loaded, index + 1);
         }
 
+        // Computed before merging: hollowness must be judged per merged
+        // input, using only that input's own files/packages/headers.
+        // Deriving it from `acc`/`loaded` after the appends below would let
+        // one input's real packages or package-detection request mask
+        // another input's hollow files (see `hollow_from_json_sbom_refusal`
+        // in `src/cli/run/mod.rs`).
+        let loaded_is_hollow = loaded.is_hollow_package_detection_input();
+
         if let Some(acc) = &mut merged {
             acc.files.append(&mut loaded.files);
             acc.packages.append(&mut loaded.packages);
@@ -303,7 +333,9 @@ pub(crate) fn load_and_merge_json_inputs(
                 .append(&mut loaded.license_rule_references);
             acc.headers.append(&mut loaded.headers);
             acc.excluded_count += loaded.excluded_count;
+            acc.has_hollow_package_detection_input |= loaded_is_hollow;
         } else {
+            loaded.has_hollow_package_detection_input = loaded_is_hollow;
             merged = Some(loaded);
         }
     }
