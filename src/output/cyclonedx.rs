@@ -59,6 +59,14 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
             "    <component type=\"library\" bom-ref=\"{}\">\n",
             xml_escape(bom_ref)
         ));
+        // CycloneDX 1.3 XSD requires this element order within <component>:
+        // author precedes name/version, which precede description, which
+        // precedes scope.
+        if let Some(author) = package_author(pkg) {
+            xml.push_str("      <author>");
+            xml.push_str(&xml_escape(&author));
+            xml.push_str("</author>\n");
+        }
         xml.push_str("      <name>");
         xml.push_str(&xml_escape(name));
         xml.push_str("</name>\n");
@@ -70,17 +78,7 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
             xml.push_str(&xml_escape(description));
             xml.push_str("</description>\n");
         }
-        if let Some(author) = package_author(pkg) {
-            xml.push_str("      <author>");
-            xml.push_str(&xml_escape(&author));
-            xml.push_str("</author>\n");
-        }
         xml.push_str("      <scope>required</scope>\n");
-        if let Some(purl) = &pkg.purl {
-            xml.push_str("      <purl>");
-            xml.push_str(&xml_escape(purl));
-            xml.push_str("</purl>\n");
-        }
         let hashes = component_hashes(pkg);
         if !hashes.is_empty() {
             xml.push_str("      <hashes>\n");
@@ -97,6 +95,12 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
             xml.push_str("      <licenses><expression>");
             xml.push_str(&xml_escape(&license_expression));
             xml.push_str("</expression></licenses>\n");
+        }
+        // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.3 XSD.
+        if let Some(purl) = &pkg.purl {
+            xml.push_str("      <purl>");
+            xml.push_str(&xml_escape(purl));
+            xml.push_str("</purl>\n");
         }
         let external_refs = component_external_references(pkg);
         if !external_refs.is_empty() {

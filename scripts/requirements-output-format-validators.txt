@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: Provenant contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Pinned Python dependencies for scripts/validate_output_format_fixtures.py.
+# Bump deliberately; these packages provide the official/reference validators
+# (CycloneDX JSON-Schema/XSD, SPDX tag-value/RDF parsing + spec validation)
+# that catch schema regressions our own goldens can miss.
+cyclonedx-python-lib[validation]==11.11.0
+spdx-tools==0.8.5
