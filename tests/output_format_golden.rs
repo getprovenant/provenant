@@ -912,6 +912,105 @@ fn test_spdx_rdf_semantics_match_fixture_map() {
 }
 
 #[test]
+fn test_spdx_multi_package_tv_matches_local_golden_fixture() {
+    let output = sample_spdx_multi_package_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::SpdxTv)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::SpdxTv,
+                custom_template: None,
+                scanned_path: Some("workspace".to_string()),
+            },
+        )
+        .expect("spdx output should be generated");
+
+    let actual = String::from_utf8(bytes).expect("spdx output should be utf-8");
+    let expected = fs::read_to_string("testdata/output-formats/spdx-multi-package-expected.tv")
+        .expect("golden fixture should be readable");
+
+    assert_eq!(normalize_spdx_tv(&actual), normalize_spdx_tv(&expected));
+
+    // Two assembled packages plus the unassigned fallback bucket, each DESCRIBES'd
+    // from the document and CONTAINS'ing only the files that belong to it.
+    assert!(actual.contains("Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1"));
+    assert!(actual.contains("Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-2"));
+    assert!(actual.contains("Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-unassigned"));
+    assert!(actual.contains("Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-2"));
+    assert!(actual.contains("Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-3"));
+    assert!(actual.contains("Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-4"));
+    assert!(actual.contains("Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-5"));
+    assert!(actual.contains("Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-1"));
+    assert!(actual.contains("PackageName: widget-a"));
+    assert!(actual.contains("PackageName: widget-b"));
+    assert!(actual.contains("PackageName: workspace"));
+}
+
+#[test]
+fn test_spdx_multi_package_rdf_contains_one_package_element_per_plan() {
+    let output = sample_spdx_multi_package_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::SpdxRdf)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::SpdxRdf,
+                custom_template: None,
+                scanned_path: Some("workspace".to_string()),
+            },
+        )
+        .expect("spdx rdf output should be generated");
+
+    let rendered = String::from_utf8(bytes).expect("spdx rdf should be utf-8");
+
+    // One <spdx:Package> per plan: widget-a, widget-b, and the unassigned bucket.
+    let package_open_count = rendered.matches("<spdx:Package rdf:about=\"").count();
+    assert_eq!(
+        package_open_count, 3,
+        "expected 3 SPDX RDF packages: {rendered}"
+    );
+    assert!(rendered.contains("http://spdx.org/spdxdocs/workspace#SPDXRef-Package-1\">"));
+    assert!(rendered.contains("http://spdx.org/spdxdocs/workspace#SPDXRef-Package-2\">"));
+    assert!(rendered.contains("http://spdx.org/spdxdocs/workspace#SPDXRef-Package-unassigned\">"));
+    assert!(rendered.contains("<spdx:name>widget-a</spdx:name>"));
+    assert!(rendered.contains("<spdx:name>widget-b</spdx:name>"));
+    assert!(rendered.contains("<spdx:name>workspace</spdx:name>"));
+
+    // One DESCRIBES relationship per plan, from the document.
+    let describes_count = rendered.matches("relationshipType_describes").count();
+    assert_eq!(describes_count, 3);
+
+    // Five CONTAINS relationships total: two files per assembled package, one
+    // orphaned file rolled up into the unassigned fallback package.
+    let contains_count = rendered.matches("relationshipType_contains").count();
+    assert_eq!(contains_count, 5);
+
+    for file_id in [
+        "SPDXRef-1",
+        "SPDXRef-2",
+        "SPDXRef-3",
+        "SPDXRef-4",
+        "SPDXRef-5",
+    ] {
+        assert!(
+            rendered.contains(&format!("http://spdx.org/spdxdocs/workspace#{file_id}\">")),
+            "expected RDF to contain a File element for {file_id}"
+        );
+    }
+
+    assert!(rendered.contains("<spdx:fileName>./packages/widget-a/package.json</spdx:fileName>"));
+    assert!(rendered.contains("<spdx:fileName>./packages/widget-a/src/index.js</spdx:fileName>"));
+    assert!(rendered.contains("<spdx:fileName>./packages/widget-b/package.json</spdx:fileName>"));
+    assert!(rendered.contains("<spdx:fileName>./packages/widget-b/src/index.js</spdx:fileName>"));
+    assert!(rendered.contains("<spdx:fileName>./README.md</spdx:fileName>"));
+}
+
+#[test]
 fn test_cyclonedx_rich_output_contains_enriched_fields_json_and_xml() {
     let output = sample_cyclonedx_rich_output();
     let schema_output = OutputSchemaOutput::from(&output);
@@ -1912,6 +2011,168 @@ fn sample_spdx_simple_output() -> Output {
             "b8a793cce3c3a4cd3a4646ddbe86edd542ed0cd8",
             vec![],
         )],
+    )
+}
+
+/// A small umbrella/workspace-style fixture: two assembled packages each
+/// owning a manifest + source file, plus one top-level file no package
+/// claims. Exercises multi-package DESCRIBES/CONTAINS and the
+/// `SPDXRef-Package-unassigned` fallback bucket that `spdx-simple-*` and
+/// `spdx-empty-*` (single-package / no-package) goldens cannot cover.
+fn sample_spdx_multi_package_output() -> Output {
+    let pkg_a_uid = PackageUid::from_raw(
+        "pkg:npm/widget-a@1.0.0?uuid=00000000-0000-0000-0000-0000000000a1".to_string(),
+    );
+    let pkg_a = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("widget-a".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/widget-a@1.0.0".to_string()),
+                ..Default::default()
+            },
+            "packages/widget-a/package.json".to_string(),
+        );
+        pkg.package_uid = pkg_a_uid.clone();
+        pkg
+    };
+
+    let pkg_b_uid = PackageUid::from_raw(
+        "pkg:npm/widget-b@2.0.0?uuid=00000000-0000-0000-0000-0000000000b1".to_string(),
+    );
+    let pkg_b = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("widget-b".to_string()),
+                version: Some("2.0.0".to_string()),
+                purl: Some("pkg:npm/widget-b@2.0.0".to_string()),
+                ..Default::default()
+            },
+            "packages/widget-b/package.json".to_string(),
+        );
+        pkg.package_uid = pkg_b_uid.clone();
+        pkg
+    };
+
+    let license_detection =
+        |key: &str, spdx: &str, rule: &str, from_file: &str| provenant::models::LicenseDetection {
+            license_expression: key.to_string(),
+            license_expression_spdx: spdx.to_string(),
+            matches: vec![provenant::models::Match {
+                license_expression: key.to_string(),
+                license_expression_spdx: spdx.to_string(),
+                from_file: Some(from_file.to_string()),
+                start_line: LineNumber::ONE,
+                end_line: LineNumber::ONE,
+                matcher: MatcherKind::Declared,
+                score: MatchScore::MAX,
+                matched_length: Some(1),
+                match_coverage: Some(100.0),
+                rule_relevance: Some(100),
+                rule_identifier: rule.to_string(),
+                rule_url: None,
+                matched_text: Some(spdx.to_string()),
+                referenced_filenames: None,
+                matched_text_diagnostics: None,
+            }],
+            detection_log: vec![],
+            identifier: String::new(),
+        };
+
+    let mut manifest_a = sample_plain_text_file(
+        "package.json",
+        "package",
+        ".json",
+        "packages/widget-a/package.json",
+        30,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        vec![],
+    );
+    manifest_a.detected_license_expression = Some("MIT".to_string());
+    manifest_a.license_detections = vec![license_detection(
+        "mit",
+        "MIT",
+        "mit_1.RULE",
+        "packages/widget-a/package.json",
+    )];
+    manifest_a.copyrights = vec![Copyright {
+        copyright: "Copyright 2024 Widget A Contributors".to_string(),
+        normalized_copyright: None,
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+    manifest_a.for_packages = vec![pkg_a_uid.clone()];
+
+    let mut source_a = sample_plain_text_file(
+        "index.js",
+        "index",
+        ".js",
+        "packages/widget-a/src/index.js",
+        12,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        vec![],
+    );
+    source_a.for_packages = vec![pkg_a_uid.clone()];
+
+    let mut manifest_b = sample_plain_text_file(
+        "package.json",
+        "package",
+        ".json",
+        "packages/widget-b/package.json",
+        30,
+        "cccccccccccccccccccccccccccccccccccccccc",
+        vec![],
+    );
+    manifest_b.detected_license_expression = Some("Apache-2.0".to_string());
+    manifest_b.license_detections = vec![license_detection(
+        "apache-2.0",
+        "Apache-2.0",
+        "apache-2.0_1.RULE",
+        "packages/widget-b/package.json",
+    )];
+    manifest_b.copyrights = vec![Copyright {
+        copyright: "Copyright 2024 Widget B Contributors".to_string(),
+        normalized_copyright: None,
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+    manifest_b.for_packages = vec![pkg_b_uid.clone()];
+
+    let mut source_b = sample_plain_text_file(
+        "index.js",
+        "index",
+        ".js",
+        "packages/widget-b/src/index.js",
+        12,
+        "dddddddddddddddddddddddddddddddddddddddd",
+        vec![],
+    );
+    source_b.for_packages = vec![pkg_b_uid.clone()];
+
+    let mut readme = sample_plain_text_file(
+        "README.md",
+        "README",
+        ".md",
+        "README.md",
+        8,
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        vec![],
+    );
+    readme.copyrights = vec![Copyright {
+        copyright: "Copyright 2024 Umbrella Maintainers".to_string(),
+        normalized_copyright: None,
+        start_line: LineNumber::ONE,
+        end_line: LineNumber::ONE,
+    }];
+
+    sample_output_with_sections(
+        5,
+        0,
+        vec![pkg_a, pkg_b],
+        vec![],
+        vec![manifest_a, source_a, manifest_b, source_b, readme],
     )
 }
 
