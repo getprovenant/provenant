@@ -10,7 +10,52 @@
         "name": "Provenant",
         "version": "0.0.5"
       }
-    ]
+    ],
+    "component": {
+      "type": "application",
+      "name": "npm",
+      "version": "2.13.5",
+      "description": "a package manager for JavaScript",
+      "author": "Isaac Z. Schlueter",
+      "purl": "pkg:npm/npm@2.13.5",
+      "hashes": [
+        {
+          "alg": "SHA-1",
+          "content": "a124386bce4a90506f28ad4b1d1a804a17baaf32"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Artistic-2.0"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://registry.npmjs.org/npm/2.13.5"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "http://github.com/npm/npm/issues"
+        },
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/npm/-/npm-2.13.5.tgz"
+        },
+        {
+          "type": "website",
+          "url": "https://docs.npmjs.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://www.npmjs.com/package/npm"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/npm/npm.git@fc7bbf03e39cc48a8924b90696d28345a6a90f3c"
+        }
+      ]
+    }
   },
   "components": [
     {

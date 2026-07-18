@@ -1390,8 +1390,27 @@ mod tests {
             .write(&output, &mut xml_bytes, &OutputWriteConfig::default())
             .expect("cyclonedx xml write should succeed");
         let xml = String::from_utf8(xml_bytes).expect("cyclonedx xml should be utf-8");
-        assert_eq!(xml.matches("https://example.com/download.tgz").count(), 1);
-        assert_eq!(xml.matches("https://example.com</url>").count(), 1);
+        // Scope the dedup assertion to `<components>`: the sole package here
+        // also becomes `metadata.component` (see the metadata-component
+        // tests in `output/cyclonedx.rs`), which legitimately repeats these
+        // URLs once more outside `<components>`.
+        let components_section = xml
+            .split("<components>")
+            .nth(1)
+            .and_then(|s| s.split("</components>").next())
+            .expect("xml must contain a components section");
+        assert_eq!(
+            components_section
+                .matches("https://example.com/download.tgz")
+                .count(),
+            1
+        );
+        assert_eq!(
+            components_section
+                .matches("https://example.com</url>")
+                .count(),
+            1
+        );
     }
 
     #[test]
