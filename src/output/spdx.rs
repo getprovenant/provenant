@@ -254,11 +254,13 @@ pub(crate) fn write_spdx_rdf_xml(
         xml.push_str("    <spdx:licenseConcluded rdf:resource=\"");
         xml.push_str(&xml_escape(&spdx_rdf_license_resource(
             package_license_concluded.as_deref(),
+            &document_namespace,
         )));
         xml.push_str("\"/>\n");
         xml.push_str("    <spdx:licenseDeclared rdf:resource=\"");
         xml.push_str(&xml_escape(&spdx_rdf_license_resource(
             package_license_declared.as_deref(),
+            &document_namespace,
         )));
         xml.push_str("\"/>\n");
         if package_license_info_from_files.is_empty() {
@@ -268,7 +270,10 @@ pub(crate) fn write_spdx_rdf_xml(
         } else {
             for license_id in &package_license_info_from_files {
                 xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
-                xml.push_str(&xml_escape(&spdx_license_rdf_resource(license_id)));
+                xml.push_str(&xml_escape(&spdx_license_rdf_resource(
+                    license_id,
+                    &document_namespace,
+                )));
                 xml.push_str("\"/>\n");
             }
         }
@@ -292,6 +297,7 @@ pub(crate) fn write_spdx_rdf_xml(
             xml.push_str("<spdx:licenseConcluded rdf:resource=\"");
             xml.push_str(&xml_escape(&spdx_rdf_license_resource(
                 file_license_concluded.as_deref(),
+                &document_namespace,
             )));
             xml.push_str("\"/>");
             if file_license_info.is_empty() {
@@ -301,7 +307,10 @@ pub(crate) fn write_spdx_rdf_xml(
             } else {
                 for license_id in file_license_info {
                     xml.push_str("<spdx:licenseInfoInFile rdf:resource=\"");
-                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(&license_id)));
+                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(
+                        &license_id,
+                        &document_namespace,
+                    )));
                     xml.push_str("\"/>");
                 }
             }
@@ -511,8 +520,7 @@ fn spdx_package_license_info_from_files(files: &[&FileInfo]) -> Vec<String> {
 fn spdx_package_license_declared(package: Option<&OutputPackage>) -> Option<String> {
     package
         .and_then(|pkg| pkg.declared_license_expression_spdx.as_deref())
-        .filter(|expression| !expression.is_empty())
-        .map(str::to_string)
+        .and_then(spdx_validated_expression)
 }
 
 /// The best honest SPDX conclusion for the package: the declared expression
@@ -522,15 +530,28 @@ fn spdx_package_license_declared(package: Option<&OutputPackage>) -> Option<Stri
 /// `reference_following.rs`). Falls back to `None` (NOASSERTION) rather than
 /// inventing a conclusion from evidence the package itself doesn't carry.
 fn spdx_package_license_concluded(package: Option<&OutputPackage>) -> Option<String> {
-    fn non_empty(value: &Option<String>) -> Option<&str> {
-        value.as_deref().filter(|v| !v.is_empty())
+    package.and_then(|pkg| {
+        pkg.declared_license_expression_spdx
+            .as_deref()
+            .and_then(spdx_validated_expression)
+            .or_else(|| {
+                pkg.other_license_expression_spdx
+                    .as_deref()
+                    .and_then(spdx_validated_expression)
+            })
+    })
+}
+
+/// Re-parse an expression through the same strict SPDX combiner the file
+/// conclusion path uses, so malformed package fields (newlines, bad tokens)
+/// become `None` / NOASSERTION instead of broken tag-value output.
+fn spdx_validated_expression(expression: &str) -> Option<String> {
+    if expression.is_empty() {
+        return None;
     }
-    package
-        .and_then(|pkg| {
-            non_empty(&pkg.declared_license_expression_spdx)
-                .or_else(|| non_empty(&pkg.other_license_expression_spdx))
-        })
-        .map(str::to_string)
+    crate::utils::spdx::combine_license_expressions_preserving_structure_strict([
+        expression.to_string()
+    ])
 }
 
 /// The best honest SPDX conclusion for a file: reuses the same three-tier
@@ -555,9 +576,9 @@ fn spdx_tv_license_value(expression: Option<&str>) -> &str {
 /// not build, so it honestly falls back to NOASSERTION in RDF only (the
 /// tag-value form above keeps the full expression, since tag-value license
 /// fields accept SPDX expression syntax directly).
-fn spdx_rdf_license_resource(expression: Option<&str>) -> String {
+fn spdx_rdf_license_resource(expression: Option<&str>, document_namespace: &str) -> String {
     match expression.map(spdx_ids_from_expression) {
-        Some(ids) if ids.len() == 1 => spdx_license_rdf_resource(&ids[0]),
+        Some(ids) if ids.len() == 1 => spdx_license_rdf_resource(&ids[0], document_namespace),
         _ => "http://spdx.org/rdf/terms#noassertion".to_string(),
     }
 }
@@ -647,8 +668,16 @@ fn spdx_license_comment(detection_match: &Match) -> String {
     }
 }
 
-fn spdx_license_rdf_resource(license_id: &str) -> String {
-    format!("http://spdx.org/licenses/{}", license_id)
+/// Listed SPDX licenses use the canonical `spdx.org/licenses/` URI; document-
+/// scoped `LicenseRef-*` ids point at the matching `ExtractedLicensingInfo`
+/// node (`{documentNamespace}#{LicenseRef-…}`) instead of a non-existent
+/// listed-license URL.
+fn spdx_license_rdf_resource(license_id: &str, document_namespace: &str) -> String {
+    if license_id.starts_with("LicenseRef-") {
+        format!("{document_namespace}#{license_id}")
+    } else {
+        format!("http://spdx.org/licenses/{license_id}")
+    }
 }
 
 fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
@@ -1098,6 +1127,47 @@ mod tests {
     }
 
     #[test]
+    fn spdx_package_license_helpers_reject_invalid_expressions() {
+        let malformed = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT\" or malformed".to_string()),
+            other_license_expression_spdx: Some("not a@@license".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(spdx_package_license_declared(Some(&malformed)), None);
+        assert_eq!(spdx_package_license_concluded(Some(&malformed)), None);
+
+        // Invalid declared must not poison a valid other-license fallback.
+        let declared_bad_other_ok = output_package_with(PackageData {
+            package_type: Some(PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT\" or malformed".to_string()),
+            other_license_expression_spdx: Some("Apache-2.0".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            spdx_package_license_concluded(Some(&declared_bad_other_ok)),
+            Some("Apache-2.0".to_string())
+        );
+    }
+
+    #[test]
+    fn spdx_license_rdf_resource_uses_document_namespace_for_license_refs() {
+        let ns = "http://spdx.org/spdxdocs/demo";
+        assert_eq!(
+            spdx_license_rdf_resource("MIT", ns),
+            "http://spdx.org/licenses/MIT"
+        );
+        assert_eq!(
+            spdx_license_rdf_resource("LicenseRef-Custom", ns),
+            "http://spdx.org/spdxdocs/demo#LicenseRef-Custom"
+        );
+        assert_eq!(
+            spdx_rdf_license_resource(Some("LicenseRef-Custom"), ns),
+            "http://spdx.org/spdxdocs/demo#LicenseRef-Custom"
+        );
+    }
+
+    #[test]
     fn spdx_package_license_concluded_prefers_declared_then_falls_back_to_other() {
         let declared = output_package_with(PackageData {
             package_type: Some(PackageType::Npm),
@@ -1178,18 +1248,19 @@ mod tests {
 
     #[test]
     fn spdx_rdf_license_resource_only_resolves_a_single_license_id() {
+        let ns = "http://spdx.org/spdxdocs/demo";
         assert_eq!(
-            spdx_rdf_license_resource(Some("MIT")),
+            spdx_rdf_license_resource(Some("MIT"), ns),
             "http://spdx.org/licenses/MIT"
         );
         // A compound expression would need a nested RDF license-set structure
         // this writer doesn't build, so it honestly reports NOASSERTION.
         assert_eq!(
-            spdx_rdf_license_resource(Some("MIT AND Apache-2.0")),
+            spdx_rdf_license_resource(Some("MIT AND Apache-2.0"), ns),
             "http://spdx.org/rdf/terms#noassertion"
         );
         assert_eq!(
-            spdx_rdf_license_resource(None),
+            spdx_rdf_license_resource(None, ns),
             "http://spdx.org/rdf/terms#noassertion"
         );
     }
