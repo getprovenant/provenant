@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::ffi::OsStr;
+use std::path::{Component, Path, PathBuf};
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageUid, TopLevelDependency};
 
@@ -541,12 +542,17 @@ impl TopologyPlan {
 }
 
 /// Maven build output (`target/classes`, `target/test-classes`, …) sits directly
-/// underneath a module directory; skip it so compiled artifacts are not
-/// attributed back to the source package.
+/// underneath a module directory as its immediate `target/` child; skip only
+/// that subtree so compiled artifacts are not attributed back to the source
+/// package. A `target` path segment deeper in the tree (e.g. a source package
+/// literally named `target`, as in `src/main/java/com/example/target/Foo.java`)
+/// is not build output and must still receive ownership.
 fn crosses_maven_build_output_dir(anchor_dir: &Path, file_dir: &Path) -> bool {
     file_dir
         .strip_prefix(anchor_dir)
-        .map(|relative| relative.components().any(|c| c.as_os_str() == "target"))
+        .map(|relative| {
+            relative.components().next() == Some(Component::Normal(OsStr::new("target")))
+        })
         .unwrap_or(false)
 }
 

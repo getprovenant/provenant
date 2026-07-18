@@ -190,6 +190,9 @@ mod tests {
             ),
             create_plain_source_file_info("reactor/module-a/src/main/java/com/example/Foo.java"),
             create_plain_source_file_info("reactor/module-a/target/classes/com/example/Foo.class"),
+            create_plain_source_file_info(
+                "reactor/module-a/src/main/java/com/example/target/Foo.java",
+            ),
             create_maven_pom_file_info(
                 "reactor/module-b/pom.xml",
                 "org.example",
@@ -263,6 +266,16 @@ mod tests {
             )
             .is_empty(),
             "Maven build output under target/ must stay unowned by the source package"
+        );
+        assert_eq!(
+            for_packages_purls(
+                "reactor/module-a/src/main/java/com/example/target/Foo.java",
+                &files
+            ),
+            vec!["pkg:maven/org.example/module-a@1.0"],
+            "a source file merely nested under a directory named `target` deeper in the \
+             tree (not the module's immediate target/ build-output dir) must still attach \
+             to module-a"
         );
     }
 
