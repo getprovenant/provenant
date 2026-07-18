@@ -48,6 +48,11 @@ mod tests {
             .collect();
         assert_eq!(default_deps.len(), 1);
         assert_eq!(default_deps[0].is_runtime, Some(true));
+        // The default/develop section split is provable, but Pipfile.lock's sections are
+        // the full flattened closure (direct + transitive), so neither `is_direct` nor
+        // `is_optional` can be asserted from the lock alone.
+        assert_eq!(default_deps[0].is_direct, None);
+        assert_eq!(default_deps[0].is_optional, None);
 
         let develop_deps: Vec<_> = package_data
             .dependencies
@@ -58,6 +63,8 @@ mod tests {
         for dep in develop_deps {
             assert_eq!(dep.scope, Some("develop".to_string()));
             assert_eq!(dep.is_runtime, Some(false));
+            assert_eq!(dep.is_direct, None);
+            assert_eq!(dep.is_optional, None);
         }
     }
 

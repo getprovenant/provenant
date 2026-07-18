@@ -326,5 +326,6 @@ mod tests {
         assert_eq!(nested.scope.as_deref(), Some("dependencies"));
         assert_eq!(nested.is_runtime, None);
         assert_eq!(nested.is_optional, None);
+        assert_eq!(nested.is_direct, None);
     }
 }

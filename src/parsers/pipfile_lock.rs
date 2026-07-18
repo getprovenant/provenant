@@ -14,7 +14,10 @@
 //!
 //! # Key Features
 //! - Dependency extraction from default and develop sections
-//! - Direct dependency tracking (top-level locks are direct)
+//! - Runtime vs develop scope tracking from lock section membership; Pipfile.lock's
+//!   `default`/`develop` sections are the full flattened closure, so `is_direct` and
+//!   `is_optional` are left unset for the lock (only the Pipfile manifest proves
+//!   `is_direct`)
 //! - Exact version resolution with pinned artifact hashes surfaced as dependency `hash_options`
 //! - Package URL (purl) generation for PyPI packages
 //! - Markers and extras dependency handling
@@ -176,9 +179,9 @@ fn build_lockfile_dependency(
         extracted_requirement: Some(truncate_field(requirement)),
         scope: Some(scope.to_string()),
         is_runtime: Some(is_runtime),
-        is_optional: Some(false),
+        is_optional: None,
         is_pinned: Some(true),
-        is_direct: Some(true),
+        is_direct: None,
         resolved_package: None,
         extra_data: build_lockfile_dependency_extra_data(value),
     })
@@ -315,7 +318,7 @@ fn build_pipfile_dependency(
         extracted_requirement: Some(truncate_field(requirement)),
         scope: Some(scope.to_string()),
         is_runtime: Some(is_runtime),
-        is_optional: Some(false),
+        is_optional: None,
         is_pinned: Some(false),
         is_direct: Some(true),
         resolved_package: None,

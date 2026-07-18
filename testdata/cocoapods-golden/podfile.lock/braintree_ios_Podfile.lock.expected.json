@@ -90,7 +90,7 @@
               "extracted_requirement": "= 9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -134,28 +134,28 @@
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#JSON",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#NSURLSession",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/OHHTTPStubs@9.0.0#OHPathHelpers",
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -181,7 +181,7 @@
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -207,7 +207,7 @@
               "extracted_requirement": "9.0.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
