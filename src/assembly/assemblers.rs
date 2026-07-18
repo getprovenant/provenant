@@ -1389,6 +1389,7 @@ mod tests {
             has_npm_workspace_markers: false,
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
+            has_maven_reactor_markers: false,
         };
 
         assert!(!PostAssemblyPassKind::MixUmbrellaMerge.should_run(&without_markers));
