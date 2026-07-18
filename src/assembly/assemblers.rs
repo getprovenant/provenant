@@ -41,6 +41,7 @@ pub(super) enum PostAssemblyPassKind {
     NpmWorkspaceMerge,
     CargoWorkspaceMerge,
     MixUmbrellaMerge,
+    MavenReactorAssign,
     NugetCpmResolve,
     CargoResourceAssign,
     ComposerResourceAssign,
@@ -75,6 +76,7 @@ pub(super) static POST_ASSEMBLY_PASSES: &[PostAssemblyPassKind] = &[
     PostAssemblyPassKind::NpmWorkspaceMerge,
     PostAssemblyPassKind::CargoWorkspaceMerge,
     PostAssemblyPassKind::MixUmbrellaMerge,
+    PostAssemblyPassKind::MavenReactorAssign,
     PostAssemblyPassKind::NugetCpmResolve,
     PostAssemblyPassKind::CargoResourceAssign,
     PostAssemblyPassKind::ComposerResourceAssign,
@@ -116,6 +118,7 @@ struct PostAssemblyInputs {
     has_npm_workspace_markers: bool,
     has_cargo_workspace_markers: bool,
     has_mix_umbrella_markers: bool,
+    has_maven_reactor_markers: bool,
 }
 
 pub(super) fn run_post_assembly_passes(
@@ -183,6 +186,17 @@ impl PostAssemblyInputs {
                         .is_some_and(|extra_data| extra_data.contains_key("apps_path"))
                 {
                     inputs.has_mix_umbrella_markers = true;
+                }
+
+                if datasource_id == DatasourceId::MavenPom
+                    && package_data
+                        .extra_data
+                        .as_ref()
+                        .and_then(|extra_data| extra_data.get("modules"))
+                        .and_then(|modules| modules.as_array())
+                        .is_some_and(|modules| !modules.is_empty())
+                {
+                    inputs.has_maven_reactor_markers = true;
                 }
             }
         }
@@ -270,6 +284,7 @@ impl PostAssemblyPassKind {
             Self::NpmWorkspaceMerge => inputs.has_npm_workspace_markers,
             Self::CargoWorkspaceMerge => inputs.has_cargo_workspace_markers,
             Self::MixUmbrellaMerge => inputs.has_mix_umbrella_markers,
+            Self::MavenReactorAssign => inputs.has_maven_reactor_markers,
             Self::NugetCpmResolve => {
                 inputs.has_any_file_datasource(NUGET_CPM_CONFIG_DATASOURCE_IDS)
                     && inputs.has_any_file_datasource(NUGET_CPM_PROJECT_DATASOURCE_IDS)
@@ -335,6 +350,7 @@ impl PostAssemblyPassKind {
             Self::MixUmbrellaMerge => {
                 topology_plan.apply_mix_umbrella_domains(files, packages, dependencies)
             }
+            Self::MavenReactorAssign => topology_plan.apply_maven_reactor_domains(files),
             Self::NugetCpmResolve => {
                 nuget_cpm_resolve::resolve_nuget_cpm_versions(files, dependencies)
             }
@@ -1328,6 +1344,7 @@ mod tests {
             has_npm_workspace_markers: true,
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
+            has_maven_reactor_markers: false,
         };
 
         let runnable: HashSet<_> = PostAssemblyPassKind::iter()
@@ -1351,6 +1368,7 @@ mod tests {
             has_npm_workspace_markers: false,
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
+            has_maven_reactor_markers: false,
         };
 
         assert!(!PostAssemblyPassKind::CargoWorkspaceMerge.should_run(&without_markers));
@@ -1371,6 +1389,7 @@ mod tests {
             has_npm_workspace_markers: false,
             has_cargo_workspace_markers: false,
             has_mix_umbrella_markers: false,
+            has_maven_reactor_markers: false,
         };
 
         assert!(!PostAssemblyPassKind::MixUmbrellaMerge.should_run(&without_markers));

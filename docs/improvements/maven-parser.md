@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Maven POM parser in Provenant now improves on the Python reference in nine important areas:
+The Maven POM parser in Provenant now improves on the Python reference in ten important areas:
 
 1. **🔍 Enhanced Extraction**: description handling now matches Maven `name` + `description` semantics without duplicating identical values
 2. **✨ New Feature**: `dependencyManagement` entries are surfaced as dependency records instead of being preserved only as opaque metadata
@@ -13,6 +13,7 @@ The Maven POM parser in Provenant now improves on the Python reference in nine i
 7. **✨ New Feature**: nested `META-INF/maven/**` extracted-JAR cases now follow the intended single-POM versus multi-POM safety behavior
 8. **✨ New Feature**: Maven 4.1.0 POMs are accepted
 9. **🔍 Enhanced Extraction**: packaging aliases and property-resolved dependency scope/optional values are normalized after property resolution
+10. **✨ New Feature**: declared `<modules>` reactor lists now drive reactor-aware assembly, attributing source files nested under each module to the correct module package instead of leaving multi-module source trees as per-directory packages only
 
 ## Improvement 1: Description De-duplication
 
@@ -123,6 +124,20 @@ The Python reference still carries TODOs around some dependency qualifier/type h
 ### Rust Behavior
 
 Rust now resolves dependency scope, optional flags, classifier, and type after property substitution and then recomputes `scope`, `is_runtime`, `is_optional`, dependency PURLs, and pinning from the resolved values. This avoids incorrect dependency flags when Maven properties drive dependency metadata.
+
+## Improvement 10: Reactor / Multi-module Topology
+
+### Python Behavior
+
+The Python reference stores a POM's `<modules>` list on the package (`self.modules`) but never uses it to drive assembly. A Maven source reactor (a parent `pom.xml` plus its module `pom.xml` files) is left as a flat set of per-directory packages, with no explicit ownership link between a module's package and the source files nested under it.
+
+### Rust Behavior
+
+Rust's POM parser already stashes the declared `<modules>` list under `extra_data.modules` (unchanged from prior behavior). What is new is that assembly's `TopologyPlan` now reads that list to build an explicit **Maven reactor domain**: the root POM plus every `<module>` string that resolves to a scanned, purl-bearing `pom.xml` on disk. Module strings that do not resolve (a declared-but-missing or unscanned module) are dropped rather than guessed at, matching the project-wide preference for honest unknowns over speculative scopes.
+
+Each POM in a reactor, root or nested module, still assembles into its own top-level package exactly as before, via the normal per-directory merge — the reactor domain does not change package identity, dependency extraction, or merge which POMs become packages. What it adds is a post-assembly pass that fills in **file ownership**: every currently-unowned file nested under a declared reactor root (source files, resources, a root-level `README`, …) is attributed to the _deepest_ (most specific) enclosing module's package. A module that itself declares further `<modules>` (a nested reactor) contributes its own, more specific anchor, so files under a nested module resolve to that module rather than to any outer root, without explicit recursion. Maven's own build output directory (`target/`) is excluded from this attribution so compiled artifacts are never attached to a source package.
+
+This is deliberately narrower than a full reactor contract: Rust does not synthesize new inter-module dependency edges beyond what the POM parser already extracts (e.g. an explicit `<dependency>` from one module on another), and a file that already belongs to a package (for example, one claimed by another assembler) is left untouched rather than reassigned.
 
 ## Why This Matters
 
