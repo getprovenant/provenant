@@ -12,8 +12,8 @@
         "purl": "pkg:generic/jsr.io/%40std/assert@1.0.19",
         "extracted_requirement": "jsr:@std/assert@1",
         "scope": "imports",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
@@ -29,10 +29,10 @@
               "purl": "pkg:generic/jsr.io/%40std/internal",
               "extracted_requirement": "jsr:@std/internal",
               "scope": "dependencies",
-              "is_runtime": true,
-              "is_optional": false,
+              "is_runtime": null,
+              "is_optional": null,
               "is_pinned": false,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "deno_lock",
@@ -43,8 +43,8 @@
         "purl": "pkg:npm/chalk@5.6.2",
         "extracted_requirement": "npm:chalk@5",
         "scope": "imports",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": true,
         "resolved_package": {
@@ -62,8 +62,8 @@
       {
         "purl": "pkg:generic/jsr.io/%40std/internal@1.0.12",
         "scope": "imports",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": false,
         "resolved_package": {
@@ -83,10 +83,10 @@
         "purl": "pkg:generic/deno.land/x/oak%40v17.2.0/mod.ts",
         "extracted_requirement": "https://deno.land/x/oak/mod.ts",
         "scope": "imports",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {
           "type": "deno",
           "name": "mod.ts",

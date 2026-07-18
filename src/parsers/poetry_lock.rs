@@ -13,7 +13,6 @@
 //! - poetry.lock (TOML-based lockfile with package metadata)
 //!
 //! # Key Features
-//! - Direct vs transitive dependency tracking via `is_direct` flag
 //! - Dependency groups support (main, dev, etc.) via scope field
 //! - Dependency resolution with exact versions
 //! - Package URL (purl) generation for PyPI packages
@@ -336,14 +335,19 @@ fn build_dependency_from_table(dep_name: &str, dep_value: &TomlValue) -> Option<
     let normalized_name = normalize_pypi_name(dep_name);
     let purl = create_pypi_purl(&normalized_name, None);
 
+    // This dependency table entry only proves that the enclosing locked package declares
+    // a version constraint on `dep_name`. It does not prove whether that edge is a
+    // runtime-vs-dev dependency of the scanned project, nor whether it is direct relative
+    // to the project's own manifest (poetry.lock carries no root-project marker), so those
+    // booleans stay unset rather than guessed.
     Some(Dependency {
         purl,
         extracted_requirement: requirement,
         scope: Some(truncate_field(FIELD_DEPENDENCIES.to_string())),
-        is_runtime: Some(true),
+        is_runtime: None,
         is_optional: Some(is_optional),
         is_pinned: Some(false),
-        is_direct: Some(true),
+        is_direct: None,
         resolved_package: None,
         extra_data: None,
     })
@@ -353,6 +357,9 @@ fn build_dependency_from_extra(extra_name: &str, spec: &str) -> Option<Dependenc
     let (name, requirement) = parse_poetry_dependency_spec(spec)?;
     let purl = create_pypi_purl(&name, None);
 
+    // `is_optional` is provable: this entry only exists because it belongs to a named
+    // extra. Whether it is a direct dependency of the scanned project's own manifest is
+    // not provable from poetry.lock alone, so `is_direct` stays unset.
     Some(Dependency {
         purl,
         extracted_requirement: requirement,
@@ -360,7 +367,7 @@ fn build_dependency_from_extra(extra_name: &str, spec: &str) -> Option<Dependenc
         is_runtime: None,
         is_optional: Some(true),
         is_pinned: Some(false),
-        is_direct: Some(true),
+        is_direct: None,
         resolved_package: None,
         extra_data: None,
     })

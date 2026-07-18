@@ -383,8 +383,8 @@ __metadata:
         assert_eq!(resolved.dependencies.len(), 1);
         let peer_dep = &resolved.dependencies[0];
         assert_eq!(peer_dep.scope, Some("peerDependencies".to_string()));
-        assert_eq!(peer_dep.is_optional, Some(true));
-        assert_eq!(peer_dep.is_runtime, Some(false));
+        assert_eq!(peer_dep.is_optional, None);
+        assert_eq!(peer_dep.is_runtime, None);
     }
 
     #[test]

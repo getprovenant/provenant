@@ -130,6 +130,7 @@ python-versions = "^3.8"
         assert_eq!(pytest.scope, Some("tests".to_string()));
         assert_eq!(pytest.is_optional, Some(true));
         assert_eq!(pytest.is_runtime, None);
+        assert_eq!(pytest.is_direct, None);
     }
 
     #[test]
@@ -177,7 +178,8 @@ python-versions = "^3.8"
             .expect("Should find rich dependency");
 
         assert_eq!(rich.scope, Some("dependencies".to_string()));
-        assert_eq!(rich.is_runtime, Some(true));
+        assert_eq!(rich.is_runtime, None);
         assert_eq!(rich.is_optional, Some(true));
+        assert_eq!(rich.is_direct, None);
     }
 }

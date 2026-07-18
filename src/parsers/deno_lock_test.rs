@@ -43,6 +43,7 @@ mod tests {
             .find(|dep| dep.purl.as_deref() == Some("pkg:generic/jsr.io/%40std/assert@1.0.19"))
             .unwrap();
         assert_eq!(direct_assert.is_direct, Some(true));
+        assert_eq!(direct_assert.is_runtime, None);
         assert_eq!(direct_assert.is_pinned, Some(true));
 
         let transitive_internal = package_data
@@ -51,6 +52,7 @@ mod tests {
             .find(|dep| dep.purl.as_deref() == Some("pkg:generic/jsr.io/%40std/internal@1.0.12"))
             .unwrap();
         assert_eq!(transitive_internal.is_direct, Some(false));
+        assert_eq!(transitive_internal.is_runtime, None);
 
         let chalk = package_data
             .dependencies
@@ -58,6 +60,7 @@ mod tests {
             .find(|dep| dep.extracted_requirement.as_deref() == Some("npm:chalk@5"))
             .unwrap();
         assert_eq!(chalk.is_direct, Some(true));
+        assert_eq!(chalk.is_runtime, None);
         assert_eq!(chalk.purl.as_deref(), Some("pkg:npm/chalk@5.6.2"));
 
         let remote = package_data
@@ -67,7 +70,8 @@ mod tests {
                 dep.extracted_requirement.as_deref() == Some("https://deno.land/x/oak/mod.ts")
             })
             .unwrap();
-        assert_eq!(remote.is_direct, Some(true));
+        assert_eq!(remote.is_runtime, None);
+        assert_eq!(remote.is_direct, None);
         assert!(remote.resolved_package.is_some());
     }
 

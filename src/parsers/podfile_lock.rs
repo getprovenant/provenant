@@ -355,6 +355,10 @@ fn build_dependencies_for_resolved(
 
             let purl = create_cocoapods_purl(namespace.as_deref(), &name, final_version.as_deref());
 
+            // These are nested edges from an already-resolved pod's own PODS sub-list, not
+            // the Podfile's own DEPENDENCIES declarations, so `is_direct` is not provable
+            // here (only the top-level `build_pod_dependency` can check DEPENDENCIES
+            // membership).
             Dependency {
                 purl,
                 extracted_requirement: final_requirement,
@@ -362,7 +366,7 @@ fn build_dependencies_for_resolved(
                 is_runtime: None,
                 is_optional: None,
                 is_pinned: Some(true),
-                is_direct: Some(true),
+                is_direct: None,
                 resolved_package: None,
                 extra_data: None,
             }

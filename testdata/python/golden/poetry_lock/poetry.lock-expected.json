@@ -93,7 +93,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -104,7 +104,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -115,7 +115,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -126,7 +126,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -137,7 +137,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -148,7 +148,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -159,7 +159,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -170,7 +170,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -181,7 +181,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -192,7 +192,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -203,7 +203,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -214,7 +214,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -225,7 +225,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -236,7 +236,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -247,7 +247,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -258,7 +258,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -269,7 +269,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -280,7 +280,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -291,7 +291,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -302,7 +302,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -313,7 +313,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -324,7 +324,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -335,7 +335,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -346,7 +346,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -357,7 +357,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -368,7 +368,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -379,7 +379,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -390,7 +390,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -401,7 +401,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -412,7 +412,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -423,7 +423,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -434,7 +434,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -445,7 +445,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -456,7 +456,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             }
@@ -521,10 +521,10 @@
               "purl": "pkg:pypi/pyparsing",
               "extracted_requirement": ">=2.0.2",
               "scope": "dependencies",
-              "is_runtime": true,
+              "is_runtime": null,
               "is_optional": false,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             }
@@ -592,7 +592,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -603,7 +603,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             }
@@ -671,7 +671,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -682,7 +682,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -693,7 +693,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -704,7 +704,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -715,7 +715,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -726,7 +726,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -737,7 +737,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -748,7 +748,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -759,7 +759,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -770,7 +770,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -781,7 +781,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             },
@@ -792,7 +792,7 @@
               "is_runtime": null,
               "is_optional": true,
               "is_pinned": false,
-              "is_direct": true,
+              "is_direct": null,
               "resolved_package": null,
               "extra_data": null
             }

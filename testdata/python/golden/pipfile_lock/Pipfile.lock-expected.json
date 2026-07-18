@@ -42,9 +42,9 @@
         "extracted_requirement": "==1.7.1",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -58,9 +58,9 @@
         "extracted_requirement": "==5.1.1",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -75,9 +75,9 @@
         "extracted_requirement": "==0.4.2",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -101,9 +101,9 @@
         "extracted_requirement": "==2.4",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -116,9 +116,9 @@
         "extracted_requirement": "==0.4.2",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -132,9 +132,9 @@
         "extracted_requirement": "==1.9.4",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -147,9 +147,9 @@
         "extracted_requirement": "==2.2.1",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -163,9 +163,9 @@
         "extracted_requirement": "==3.4",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [
@@ -179,9 +179,9 @@
         "extracted_requirement": "==2.4.0",
         "scope": "install",
         "is_runtime": true,
-        "is_optional": false,
+        "is_optional": null,
         "is_pinned": true,
-        "is_direct": true,
+        "is_direct": null,
         "resolved_package": {},
         "extra_data": {
           "hash_options": [

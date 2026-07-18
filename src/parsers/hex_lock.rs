@@ -229,14 +229,18 @@ fn build_nested_dependency(tuple: DependencyTuple) -> Result<Dependency, String>
             .clone()
             .unwrap_or_else(|| tuple.app_name.clone()),
     );
+    // `optional` is the only intent signal mix.lock actually carries for this edge. It
+    // does not prove runtime-vs-dev status (mix.lock has no `only: :dev`-style scoping
+    // for nested deps), and it does not prove that the edge is direct relative to the
+    // scanned project's own mix.exs, so both stay unset instead of guessed.
     Ok(Dependency {
         purl: build_hex_purl(&package_name, None, tuple.repo.as_deref()).map(truncate_field),
         extracted_requirement: Some(truncate_field(tuple.requirement)),
         scope: Some("dependencies".to_string()),
-        is_runtime: Some(!tuple.optional),
+        is_runtime: None,
         is_optional: Some(tuple.optional),
         is_pinned: Some(false),
-        is_direct: Some(true),
+        is_direct: None,
         resolved_package: None,
         extra_data: None,
     })

@@ -30,7 +30,7 @@
               "extracted_requirement": "0.7.1",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -58,14 +58,14 @@
               "extracted_requirement": "~> 2.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/AFNetworking@2.7.0#NSURLSession",
               "extracted_requirement": "~> 2.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -91,21 +91,21 @@
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/AFNetworking@2.7.0#Security",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/AFNetworking@2.7.0#Serialization",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -131,21 +131,21 @@
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/AFNetworking@2.7.0#Security",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/AFNetworking@2.7.0#Serialization",
               "extracted_requirement": "2.7.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -247,14 +247,14 @@
               "extracted_requirement": "= 1.7.3",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/AppAuth@1.7.3#ExternalUserAgent",
               "extracted_requirement": "= 1.7.3",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -298,7 +298,7 @@
               "extracted_requirement": "1.7.3",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -326,7 +326,7 @@
               "extracted_requirement": "= 4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -352,7 +352,7 @@
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -396,7 +396,7 @@
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -422,7 +422,7 @@
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -448,28 +448,28 @@
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#Core",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#InAppMessage",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             },
             {
               "purl": "pkg:cocoapods/Appboy-iOS-SDK@4.4.4#NewsFeed",
               "extracted_requirement": "4.4.4",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -497,7 +497,7 @@
               "extracted_requirement": "~> 5.0",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"
@@ -543,7 +543,7 @@
               "extracted_requirement": "= 5.0.3",
               "scope": "dependencies",
               "is_pinned": true,
-              "is_direct": true
+              "is_direct": null
             }
           ],
           "datasource_id": "cocoapods_podfile_lock"

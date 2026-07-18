@@ -275,14 +275,18 @@ fn extract_redirect_dependencies(json: &Value) -> Vec<Dependency> {
                 )
             };
 
+            // `redirects` maps any raw URL import to the target it actually resolved to;
+            // it does not distinguish a specifier written directly in the workspace's own
+            // source from one reached transitively through another remote module's own
+            // imports, so `is_runtime`/`is_optional`/`is_direct` are not provable here.
             dependencies.push(Dependency {
                 purl,
                 extracted_requirement: Some(truncate_field(source.to_string())),
                 scope: Some("imports".to_string()),
-                is_runtime: Some(true),
-                is_optional: Some(false),
+                is_runtime: None,
+                is_optional: None,
                 is_pinned: Some(true),
-                is_direct: Some(true),
+                is_direct: None,
                 resolved_package: Some(Box::new(resolved_package)),
                 extra_data: None,
             });
@@ -322,12 +326,17 @@ fn build_jsr_dependency(
     )
     .map(truncate_field);
 
+    // `is_direct` is provable from `workspace.dependencies` (the caller passes whether
+    // this key's specifier is in that list). deno.lock has no runtime-vs-dev or
+    // required-vs-optional distinction once a package.json dependency has been
+    // flattened into `specifiers`, so `is_runtime`/`is_optional` stay unset rather
+    // than guessed.
     Some(Dependency {
         purl: purl.clone(),
         extracted_requirement: extracted_requirement.map(|value| truncate_field(value.to_string())),
         scope: Some("imports".to_string()),
-        is_runtime: Some(true),
-        is_optional: Some(false),
+        is_runtime: None,
+        is_optional: None,
         is_pinned: Some(true),
         is_direct: Some(is_direct),
         resolved_package: Some(Box::new(ResolvedPackage {
@@ -402,12 +411,16 @@ fn build_npm_dependency(
         "deno.lock npm resolved dependencies",
     );
 
+    // Same reasoning as `build_jsr_dependency`: `is_direct` comes from the caller's
+    // `workspace.dependencies` membership check, but deno.lock never records a
+    // runtime-vs-dev or required-vs-optional split, so `is_runtime`/`is_optional`
+    // stay unset.
     Some(Dependency {
         purl: purl.clone(),
         extracted_requirement: extracted_requirement.map(|value| truncate_field(value.to_string())),
         scope: Some("imports".to_string()),
-        is_runtime: Some(true),
-        is_optional: Some(false),
+        is_runtime: None,
+        is_optional: None,
         is_pinned: Some(true),
         is_direct: Some(is_direct),
         resolved_package: Some(Box::new(ResolvedPackage {
@@ -436,15 +449,18 @@ fn build_npm_dependency(
                 .take(resolved_dependency_limit)
                 .filter_map(|value| {
                     let (namespace, name, version) = parse_npm_key(&value)?;
+                    // This is a graph edge from an already-resolved npm package's own
+                    // `dependencies`, not the workspace's own specifier list, so none of
+                    // `is_runtime`/`is_optional`/`is_direct` is provable here.
                     Some(Dependency {
                         purl: create_npm_purl(namespace.as_deref(), &name, Some(version))
                             .map(truncate_field),
                         extracted_requirement: Some(truncate_field(value.clone())),
                         scope: Some("dependencies".to_string()),
-                        is_runtime: Some(true),
-                        is_optional: Some(false),
+                        is_runtime: None,
+                        is_optional: None,
                         is_pinned: Some(true),
-                        is_direct: Some(true),
+                        is_direct: None,
                         resolved_package: None,
                         extra_data: None,
                     })
@@ -478,15 +494,18 @@ fn extract_jsr_resolved_dependencies(
         .capped("deno.lock jsr resolved dependencies")
         .filter_map(|value| {
             let (namespace, name, version) = parse_jsr_dependency_reference(value)?;
+            // A graph edge from an already-resolved jsr package's own `dependencies`
+            // array; not the workspace's own specifier list, so `is_runtime`,
+            // `is_optional`, and `is_direct` are not provable.
             Some(Dependency {
                 purl: create_generic_purl(Some(&format!("jsr.io/{}", namespace)), &name, version)
                     .map(truncate_field),
                 extracted_requirement: Some(truncate_field(value.to_string())),
                 scope: Some("dependencies".to_string()),
-                is_runtime: Some(true),
-                is_optional: Some(false),
+                is_runtime: None,
+                is_optional: None,
                 is_pinned: Some(version.is_some_and(is_exact_version)),
-                is_direct: Some(true),
+                is_direct: None,
                 resolved_package: None,
                 extra_data: None,
             })
