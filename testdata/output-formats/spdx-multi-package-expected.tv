@@ -1,0 +1,91 @@
+## Document Information
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: SPDX Document created by Provenant
+DocumentNamespace: http://spdx.org/spdxdocs/workspace
+DocumentComment: <text>Generated with Provenant and provided on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied. No content created from
+Provenant should be considered or used as legal advice. Consult an attorney
+for legal advice.
+Provenant is a free software code scanning tool.
+Visit https://github.com/getprovenant/provenant/ for support and download.
+SPDX License List: 3.27</text>
+## Creation Information
+Creator: Tool: Provenant-0.2.7-0-g75a53ba7-dirty
+Created: 2026-01-01T00:00:00Z
+## Package Information
+PackageName: widget-a
+SPDXID: SPDXRef-Package-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: c361e706434ebcd03e8857c6c8dd2786adaeb3ef
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: Copyright 2024 Widget A Contributors
+## Package Information
+PackageName: widget-b
+SPDXID: SPDXRef-Package-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 8fe04df3f4570c5b3840493e6159d69afa80ed7d
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: Apache-2.0
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: Copyright 2024 Widget B Contributors
+## Package Information
+PackageName: workspace
+SPDXID: SPDXRef-Package-unassigned
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: e5db70953280561f48271f9a71eb2dd9d6e07b9b
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: NONE
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: Copyright 2024 Umbrella Maintainers
+## File Information
+FileName: ./README.md
+SPDXID: SPDXRef-1
+FileChecksum: SHA1: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: Copyright 2024 Umbrella Maintainers
+
+FileName: ./packages/widget-a/package.json
+SPDXID: SPDXRef-2
+FileChecksum: SHA1: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright 2024 Widget A Contributors
+
+FileName: ./packages/widget-a/src/index.js
+SPDXID: SPDXRef-3
+FileChecksum: SHA1: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./packages/widget-b/package.json
+SPDXID: SPDXRef-4
+FileChecksum: SHA1: cccccccccccccccccccccccccccccccccccccccc
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: Apache-2.0
+FileCopyrightText: Copyright 2024 Widget B Contributors
+
+FileName: ./packages/widget-b/src/index.js
+SPDXID: SPDXRef-5
+FileChecksum: SHA1: dddddddddddddddddddddddddddddddddddddddd
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+## Relationships
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-2
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-3
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-2
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-4
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-5
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-unassigned
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-1
