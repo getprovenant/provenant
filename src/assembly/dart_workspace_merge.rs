@@ -228,12 +228,15 @@ pub(super) fn apply_dart_workspace_domain(
             file.for_packages.push(candidate.package_uid.clone());
             continue;
         }
-        if file_dir.starts_with(&domain.root_dir) {
-            if let Some(root_uid) = &root_uid {
-                file.for_packages.push(root_uid.clone());
-            } else {
-                file.for_packages.extend(all_uids.iter().cloned());
-            }
+        // Root-level files are attributed only when the root `pubspec.yaml`
+        // is itself a real package. A workspace-only root (no package
+        // identity, e.g. `publish_to: none` with no name) leaves its files
+        // unowned rather than over-claiming them into every member package,
+        // which would pollute per-package file and license attribution.
+        if file_dir.starts_with(&domain.root_dir)
+            && let Some(root_uid) = &root_uid
+        {
+            file.for_packages.push(root_uid.clone());
         }
     }
 }

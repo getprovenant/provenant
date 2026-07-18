@@ -1153,7 +1153,7 @@ fn plan_uv_workspace_domains(
                         workspace_pattern_matches(&hint.root_dir, member_dir, pattern)
                     });
                     let excluded = hint.exclude_patterns.iter().any(|pattern| {
-                        workspace_pattern_matches(&hint.root_dir, member_dir, pattern)
+                        workspace_exclude_matches(&hint.root_dir, member_dir, pattern)
                     });
                     (included && !excluded).then_some(idx)
                 })
@@ -1193,6 +1193,32 @@ fn workspace_pattern_matches(root_dir: &Path, member_dir: &Path, pattern: &str) 
     glob::Pattern::new(pattern)
         .ok()
         .is_some_and(|glob| glob.matches_path(relative))
+}
+
+/// Whether `member_dir` is excluded by a uv workspace `exclude` pattern.
+///
+/// Glob excludes match exactly like [`workspace_pattern_matches`]. A literal
+/// (non-glob) exclude additionally rejects any member nested *under* the
+/// excluded directory: `exclude = ["packages/ignored"]` must also drop
+/// `packages/ignored/sub`, which a recursive `members = ["packages/**"]` glob
+/// would otherwise pull back in. `Path::starts_with` is component-wise, so
+/// `packages/ignored` does not spuriously exclude a sibling like
+/// `packages/ignored-2`.
+fn workspace_exclude_matches(root_dir: &Path, member_dir: &Path, pattern: &str) -> bool {
+    let trimmed = pattern.trim().strip_prefix("./").unwrap_or(pattern.trim());
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if !trimmed
+        .chars()
+        .any(|character| matches!(character, '*' | '?' | '['))
+    {
+        let excluded_dir = normalize_lexical_path(&root_dir.join(trimmed));
+        return member_dir.starts_with(&excluded_dir);
+    }
+
+    workspace_pattern_matches(root_dir, member_dir, pattern)
 }
 
 fn collect_go_workspace_hints(files: &[FileInfo]) -> Vec<GoWorkspaceRootHint> {
