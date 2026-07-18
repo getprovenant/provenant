@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::app::request::ScanRequest;
+use crate::app::request::{InputMode, ScanRequest};
 use crate::app::scan_pipeline::execute_request;
 use crate::cli::{Cli, Command, ScanArgs};
 use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
-use crate::output::{OutputWriteConfig, write_output_file};
+use crate::models::{FileType, Output};
+use crate::output::{OutputFormat, OutputWriteConfig, write_output_file};
 use crate::progress::{ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
@@ -20,6 +21,16 @@ use std::time::Instant;
 /// Exit code returned when the `--fail-on` license-policy gate trips, distinct from
 /// the code used for scan/runtime errors (see ADR 0011).
 const POLICY_GATE_EXIT_CODE: u8 = 3;
+
+/// Exit code returned when one or more `--from-json` SBOM output targets were
+/// refused by [`hollow_from_json_sbom_refusal`] because the reshaped input
+/// never ran package detection. Distinct from the scan/runtime error code (1)
+/// and the license-policy gate code (3), so CI can tell "an SBOM target was
+/// skipped for honesty reasons" apart from "the tool broke" or "a policy
+/// violation." Non-SBOM output targets in the same request are still written
+/// (see the output loop in `run`), matching the ADR 0011 pattern of never
+/// losing an artifact to a gate.
+const HOLLOW_SBOM_GUARD_EXIT_CODE: u8 = 4;
 
 pub fn run() -> Result<ExitCode> {
     #[cfg(feature = "golden-tests")]
@@ -101,10 +112,30 @@ pub fn run() -> Result<ExitCode> {
     let progress = executed.progress;
     let start_time = executed.start_time;
 
+    // A hollow-SBOM refusal only blocks the specific SBOM output target(s)
+    // below; it must not short-circuit non-SBOM outputs in the same request
+    // (e.g. `--spdx-tv out.spdx --json out.json`), so it is computed as a
+    // value up front instead of using `?` to bail out of `run` immediately.
+    let hollow_sbom_refusal = hollow_from_json_sbom_refusal(
+        &request,
+        &output,
+        executed.has_hollow_package_detection_input,
+    );
+
     let output_schema_output =
         crate::output_schema::Output::from_with_compat_mode(&output, cli.compat_mode);
     progress.start_output();
     for target in &request.output_targets {
+        if hollow_sbom_refusal.is_some() && SBOM_OUTPUT_FORMATS.contains(&target.format) {
+            log::error!(
+                "Skipping {:?} output to {}: {}",
+                target.format,
+                target.file,
+                hollow_sbom_refusal.as_deref().unwrap_or_default()
+            );
+            continue;
+        }
+
         let output_config = OutputWriteConfig {
             format: target.format,
             custom_template: target.custom_template.clone(),
@@ -133,6 +164,15 @@ pub fn run() -> Result<ExitCode> {
         &format_scancode_timestamp(&start_time),
         &format_scancode_timestamp(&summary_end),
     );
+
+    // Fails the run after all allowed outputs are already written (same
+    // never-lose-the-artifact shape as the license-policy gate below).
+    if let Some(refusal) = hollow_sbom_refusal {
+        log::error!(
+            "Hollow-SBOM guard: {refusal} Failing with exit code {HOLLOW_SBOM_GUARD_EXIT_CODE}."
+        );
+        return Ok(ExitCode::from(HOLLOW_SBOM_GUARD_EXIT_CODE));
+    }
 
     // License-policy gate: evaluated after the report is written so the artifact is
     // never lost to a failing gate (ADR 0011). Covers file-level detections plus
@@ -238,6 +278,107 @@ fn validate_scan_option_compatibility(cli: &ScanArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// SBOM-oriented output formats whose entire value proposition is the package
+/// inventory: an SPDX or CycloneDX document with zero packages looks like a
+/// normal, successful export while actually reporting no components at all.
+const SBOM_OUTPUT_FORMATS: &[OutputFormat] = &[
+    OutputFormat::SpdxTv,
+    OutputFormat::SpdxRdf,
+    OutputFormat::CycloneDxJson,
+    OutputFormat::CycloneDxXml,
+];
+
+fn sbom_output_flag(format: OutputFormat) -> &'static str {
+    match format {
+        OutputFormat::SpdxTv => "--spdx-tv",
+        OutputFormat::SpdxRdf => "--spdx-rdf",
+        OutputFormat::CycloneDxJson => "--cyclonedx",
+        OutputFormat::CycloneDxXml => "--cyclonedx-xml",
+        _ => "<sbom-format>",
+    }
+}
+
+/// Returns a refusal message when a `--from-json` reshape requests an SBOM
+/// format (`--spdx-tv`/`--spdx-rdf`/`--cyclonedx`/`--cyclonedx-xml`) but at
+/// least one merged input would contribute a hollow document: real scanned
+/// files that no package detection ever examined.
+///
+/// `--from-json` reshapes an existing scan without rescanning (see
+/// `docs/CLI_GUIDE.md`), so it cannot recover package data the original scan
+/// never collected. Emitting the SBOM anyway would silently succeed with an
+/// empty (or partially examined) inventory: CycloneDX would write an empty
+/// `components` array and SPDX would fall back to its single-synthetic-package
+/// "no packages" projection, both indistinguishable from a normal successful
+/// export.
+///
+/// This is a query, not a hard gate: it returns `Some(message)` instead of an
+/// `Err` so the caller can skip only the requested SBOM output target(s)
+/// while still writing any other requested output formats in the same
+/// request, then fail the run's exit code once all allowed outputs are
+/// written (see the output loop and [`HOLLOW_SBOM_GUARD_EXIT_CODE`] in `run`).
+///
+/// `has_hollow_package_detection_input` is `true` when *any* merged
+/// `--from-json` input had scanned files, no packages of its own, and never
+/// requested package detection in its own recorded header options
+/// (`--package`, `--package-only`, `--system-package`, or
+/// `--package-in-compiled`) — see `is_hollow_package_detection_input` in
+/// `src/scan_result_shaping/json_input.rs`. This is tracked per input at
+/// merge time, so **one merged input honestly requesting package detection
+/// (or already carrying real packages) can never silence another merged
+/// input's hollow contribution**: the refusal fires even if the overall
+/// `output.packages` ends up non-empty because of a different input.
+///
+/// This intentionally does **not** fire for:
+/// - native scans (only `--from-json` reshapes lack a fresh detection pass);
+/// - requests that do not ask for an SBOM format;
+/// - a truly empty scan document (no files at all) — that keeps the existing
+///   documented empty-SBOM sentinel behavior;
+/// - a `--from-json` input (or merge of inputs) where every input either had
+///   no files or actually requested package detection upstream, since zero
+///   packages then means the codebase honestly has none, not that nothing
+///   looked.
+fn hollow_from_json_sbom_refusal(
+    request: &ScanRequest,
+    output: &Output,
+    has_hollow_package_detection_input: bool,
+) -> Option<String> {
+    if !matches!(request.input_mode, InputMode::FromJson) || !has_hollow_package_detection_input {
+        return None;
+    }
+
+    let scanned_file_count = output
+        .files
+        .iter()
+        .filter(|file| file.file_type == FileType::File)
+        .count();
+    if scanned_file_count == 0 {
+        return None;
+    }
+
+    let requested_sbom_flags: Vec<&'static str> = request
+        .output_targets
+        .iter()
+        .map(|target| target.format)
+        .filter(|format| SBOM_OUTPUT_FORMATS.contains(format))
+        .map(sbom_output_flag)
+        .collect();
+    if requested_sbom_flags.is_empty() {
+        return None;
+    }
+
+    Some(format!(
+        "Refusing to write a hollow SBOM for {}: the merged --from-json input has {} scanned file(s) \
+         overall, but at least one merged source's files were never examined for packages (its recorded \
+         scan options never requested --package, --package-only, --system-package, or \
+         --package-in-compiled), even though another merged source may have. Rerun that source's original \
+         scan with one of those flags before reshaping to an SBOM format, or drop {} if a package-less \
+         scan was intended.",
+        requested_sbom_flags.join(", "),
+        scanned_file_count,
+        requested_sbom_flags.join(", "),
+    ))
 }
 
 fn record_detail_timing<T, F>(progress: &Arc<ScanProgress>, name: impl Into<String>, f: F) -> T

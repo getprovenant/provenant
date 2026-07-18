@@ -3,6 +3,7 @@
 
 use anyhow::{Result, anyhow};
 use serde::Deserialize;
+use serde_json::Value;
 use std::collections::HashSet;
 use std::env;
 use std::fs;
@@ -28,6 +29,7 @@ type JsonInputParts = (
     Vec<String>,
     Option<String>,
     Option<LicenseIndexProvenance>,
+    bool,
 );
 
 #[cfg(test)]
@@ -42,7 +44,7 @@ pub(crate) struct JsonHeaderExtraDataInput {
     license_index_provenance: Option<LicenseIndexProvenance>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub(crate) struct JsonHeaderInput {
     #[serde(default)]
     errors: Vec<String>,
@@ -50,9 +52,36 @@ pub(crate) struct JsonHeaderInput {
     warnings: Vec<String>,
     #[serde(default)]
     extra_data: Option<JsonHeaderExtraDataInput>,
+    /// Raw `header.options` flags recorded by the scan that produced this JSON,
+    /// e.g. `"--package": true`. Used only to detect whether package detection
+    /// was ever requested upstream, distinguishing "no packages because
+    /// nothing looked for them" from "no packages because none exist" so a
+    /// `--from-json` reshape into an SBOM format can tell hollow output from an
+    /// honest empty inventory (see [`Self::requested_package_detection`]).
+    #[serde(default)]
+    options: serde_json::Map<String, serde_json::Value>,
 }
 
-#[derive(Deserialize)]
+/// CLI flags that cause package/dependency metadata to be collected. Mirrors
+/// the flags forbidden alongside `--from-json` in
+/// `validate_scan_option_compatibility`, since those are exactly the flags a
+/// prior *native* scan needed in order to have produced real package data.
+const PACKAGE_DETECTION_OPTION_KEYS: &[&str] = &[
+    "--package",
+    "--package-only",
+    "--system-package",
+    "--package-in-compiled",
+];
+
+impl JsonHeaderInput {
+    fn requested_package_detection(&self) -> bool {
+        PACKAGE_DETECTION_OPTION_KEYS
+            .iter()
+            .any(|key| self.options.get(*key).and_then(Value::as_bool) == Some(true))
+    }
+}
+
+#[derive(Deserialize, Default)]
 pub(crate) struct JsonScanInput {
     #[serde(default)]
     pub(crate) headers: Vec<JsonHeaderInput>,
@@ -70,6 +99,16 @@ pub(crate) struct JsonScanInput {
     pub(crate) license_rule_references: Vec<OutputLicenseRuleReference>,
     #[serde(default)]
     pub(crate) excluded_count: usize,
+    /// Whether *this* loaded input — before merging with any other
+    /// `--from-json` path — has scanned files, no packages of its own, and
+    /// none of its recorded headers requested package detection. Never
+    /// present in the raw JSON; computed by [`load_and_merge_json_inputs`]
+    /// per input and OR'd into the merged value, so one input's real
+    /// packages or package-detection request can never mask another
+    /// merged input's hollow contribution (see
+    /// [`is_hollow_package_detection_input`]).
+    #[serde(skip)]
+    pub(crate) has_hollow_package_detection_input: bool,
 }
 
 impl JsonScanInput {
@@ -93,6 +132,21 @@ impl JsonScanInput {
             .filter(|file| file.file_type == OutputFileType::File)
             .map(|file| file.size)
             .sum()
+    }
+
+    /// Whether this input, considered on its own before any merge, has
+    /// scanned files but no packages, and none of its recorded headers show
+    /// package detection having been requested upstream. This is the
+    /// per-input hollow check; see [`load_and_merge_json_inputs`] for how it
+    /// is combined across merged `--from-json` inputs so one input's real
+    /// packages or request flag cannot silence another's hollow files.
+    fn is_hollow_package_detection_input(&self) -> bool {
+        self.file_count() > 0
+            && self.packages.is_empty()
+            && !self
+                .headers
+                .iter()
+                .any(JsonHeaderInput::requested_package_detection)
     }
 
     pub(crate) fn into_parts(self) -> Result<JsonInputParts> {
@@ -148,6 +202,8 @@ impl JsonScanInput {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| anyhow!("Failed to convert license rule reference from JSON: {}", e))?;
 
+        let has_hollow_package_detection_input = self.has_hollow_package_detection_input;
+
         let imported_spdx_license_list_version =
             consistent_header_value(self.headers.iter().filter_map(|header| {
                 header
@@ -171,6 +227,7 @@ impl JsonScanInput {
                      errors,
                      warnings: _,
                      extra_data: _,
+                     options: _,
                  }| errors,
             )
             .filter(|error| !is_imported_file_summary_error(error, &files))
@@ -191,6 +248,7 @@ impl JsonScanInput {
             preserved_header_errors,
             imported_spdx_license_list_version,
             imported_license_index_provenance,
+            has_hollow_package_detection_input,
         ))
     }
 }
@@ -255,6 +313,14 @@ pub(crate) fn load_and_merge_json_inputs(
             namespace_loaded_input(&mut loaded, index + 1);
         }
 
+        // Computed before merging: hollowness must be judged per merged
+        // input, using only that input's own files/packages/headers.
+        // Deriving it from `acc`/`loaded` after the appends below would let
+        // one input's real packages or package-detection request mask
+        // another input's hollow files (see `hollow_from_json_sbom_refusal`
+        // in `src/cli/run/mod.rs`).
+        let loaded_is_hollow = loaded.is_hollow_package_detection_input();
+
         if let Some(acc) = &mut merged {
             acc.files.append(&mut loaded.files);
             acc.packages.append(&mut loaded.packages);
@@ -267,7 +333,9 @@ pub(crate) fn load_and_merge_json_inputs(
                 .append(&mut loaded.license_rule_references);
             acc.headers.append(&mut loaded.headers);
             acc.excluded_count += loaded.excluded_count;
+            acc.has_hollow_package_detection_input |= loaded_is_hollow;
         } else {
+            loaded.has_hollow_package_detection_input = loaded_is_hollow;
             merged = Some(loaded);
         }
     }

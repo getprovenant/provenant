@@ -64,6 +64,19 @@ pub(crate) struct ScanSession {
     pub(crate) active_license_engine: Option<Arc<LicenseDetectionEngine>>,
     pub(crate) shared_cache_config: Option<CacheConfig>,
     pub(crate) shared_license_cache_config: Option<LicenseCacheConfig>,
+    /// For `--from-json` sessions: whether at least one merged input had
+    /// scanned files but no packages of its own, and its own recorded header
+    /// options never showed a package-detection flag (`--package`,
+    /// `--package-only`, `--system-package`, `--package-in-compiled`) having
+    /// been requested. Tracked per input at merge time (see
+    /// `load_and_merge_json_inputs`) so one input's real packages or
+    /// package-detection request can never mask another merged input's
+    /// hollow contribution. Always `false` for native scans, where every
+    /// file is freshly examined and this distinction does not apply. Lets a
+    /// later SBOM-export guard tell "some reshaped input never ran package
+    /// detection" (hollow) apart from "package detection ran and honestly
+    /// found nothing" (a real empty inventory).
+    pub(crate) has_hollow_package_detection_input: bool,
 }
 
 pub(crate) fn load_scan_session(
@@ -106,6 +119,7 @@ pub(crate) fn load_scan_session(
             extra_errors,
             imported_spdx_license_list_version,
             imported_license_index_provenance,
+            has_hollow_package_detection_input,
         ) = loaded.into_parts()?;
         return Ok(ScanSession {
             scan_result: process_result,
@@ -121,6 +135,7 @@ pub(crate) fn load_scan_session(
             active_license_engine: None,
             shared_cache_config,
             shared_license_cache_config,
+            has_hollow_package_detection_input,
         });
     }
 
@@ -132,6 +147,10 @@ pub(crate) struct ExecutedRequest {
     pub(crate) output: Output,
     pub(crate) progress: Arc<ScanProgress>,
     pub(crate) start_time: DateTime<Utc>,
+    /// Carried from [`ScanSession::has_hollow_package_detection_input`] so
+    /// the CLI layer can gate hollow-SBOM detection without re-deriving it
+    /// from raw header options after the session has been consumed.
+    pub(crate) has_hollow_package_detection_input: bool,
 }
 
 pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> {
@@ -154,6 +173,7 @@ pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> 
     progress.finish_setup();
 
     let session = load_scan_session(request, &scan_plan, &progress)?;
+    let has_hollow_package_detection_input = session.has_hollow_package_detection_input;
     let output = build_output_model(
         session,
         request,
@@ -168,6 +188,7 @@ pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> 
         output,
         progress,
         start_time,
+        has_hollow_package_detection_input,
     })
 }
 
@@ -715,6 +736,7 @@ fn load_native_scan_session(
         active_license_engine: license_engine,
         shared_cache_config,
         shared_license_cache_config,
+        has_hollow_package_detection_input: false,
     })
 }
 

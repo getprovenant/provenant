@@ -253,6 +253,141 @@ fn validate_scan_option_compatibility_allows_multiple_inputs_with_from_json() {
     assert!(validate_scan_option_compatibility(&cli).is_ok());
 }
 
+fn from_json_sbom_request(sbom_flag: &str, output_file: &str) -> ScanRequest {
+    let cli = crate::cli::Cli::try_parse_from([
+        "provenant",
+        sbom_flag,
+        output_file,
+        "--from-json",
+        "input.json",
+    ])
+    .expect("cli parse should succeed");
+    ScanRequest::from(cli.scan_args().expect("scan args should be present"))
+}
+
+fn output_with_files(files: Vec<crate::models::FileInfo>) -> crate::models::Output {
+    crate::models::Output {
+        summary: None,
+        tallies: None,
+        tallies_of_key_files: None,
+        tallies_by_facet: None,
+        headers: vec![],
+        packages: vec![],
+        dependencies: vec![],
+        license_detections: vec![],
+        files,
+        license_references: vec![],
+        license_rule_references: vec![],
+    }
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_fires_when_source_never_ran_package_detection() {
+    let request = from_json_sbom_request("--cyclonedx", "bom.json");
+    let output = output_with_files(vec![json_file(
+        "src/main.rs",
+        crate::models::FileType::File,
+    )]);
+
+    let refusal = hollow_from_json_sbom_refusal(&request, &output, true)
+        .expect("hollow cyclonedx reshape must be refused");
+    assert!(refusal.contains("hollow"));
+    assert!(refusal.contains("--cyclonedx"));
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_fires_even_when_output_packages_are_non_empty() {
+    // Regression for a merge that includes a hollow source (files present,
+    // package detection never requested) alongside another merged input that
+    // did request detection and found real packages: the merged
+    // `output.packages` ends up non-empty, but the hollow input's files were
+    // still never examined, so the refusal must still fire.
+    let request = from_json_sbom_request("--cyclonedx", "bom.json");
+    let mut output = output_with_files(vec![json_file(
+        "src/main.rs",
+        crate::models::FileType::File,
+    )]);
+    output.packages = vec![crate::models::Package::from_package_data(
+        &crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            name: Some("demo".to_string()),
+            version: Some("1.0.0".to_string()),
+            ..Default::default()
+        },
+        "package.json".to_string(),
+    )];
+
+    let refusal = hollow_from_json_sbom_refusal(&request, &output, true)
+        .expect("hollow merged input must not be silenced by another input's real packages");
+    assert!(refusal.contains("hollow"));
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_allows_native_scans() {
+    let cli = crate::cli::Cli::try_parse_from([
+        "provenant",
+        "--cyclonedx",
+        "bom.json",
+        "--package",
+        "sample-dir",
+    ])
+    .expect("cli parse should succeed");
+    let request = ScanRequest::from(cli.scan_args().expect("scan args should be present"));
+    let output = output_with_files(vec![json_file(
+        "src/main.rs",
+        crate::models::FileType::File,
+    )]);
+
+    assert!(hollow_from_json_sbom_refusal(&request, &output, false).is_none());
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_allows_non_sbom_output_formats() {
+    let request = from_json_sbom_request("--json-pp", "-");
+    let output = output_with_files(vec![json_file(
+        "src/main.rs",
+        crate::models::FileType::File,
+    )]);
+
+    assert!(hollow_from_json_sbom_refusal(&request, &output, true).is_none());
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_allows_truly_empty_scan_documents() {
+    let request = from_json_sbom_request("--spdx-tv", "sbom.spdx");
+    let output = output_with_files(vec![]);
+
+    assert!(hollow_from_json_sbom_refusal(&request, &output, true).is_none());
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_allows_honest_zero_packages_when_detection_ran() {
+    let request = from_json_sbom_request("--spdx-rdf", "sbom.rdf");
+    let output = output_with_files(vec![json_file("README.md", crate::models::FileType::File)]);
+
+    assert!(hollow_from_json_sbom_refusal(&request, &output, false).is_none());
+}
+
+#[test]
+fn hollow_from_json_sbom_refusal_allows_requests_with_real_packages() {
+    let request = from_json_sbom_request("--cyclonedx-xml", "bom.xml");
+    let mut output = output_with_files(vec![json_file(
+        "package.json",
+        crate::models::FileType::File,
+    )]);
+    output.packages = vec![crate::models::Package::from_package_data(
+        &crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            name: Some("demo".to_string()),
+            version: Some("1.0.0".to_string()),
+            ..Default::default()
+        },
+        "package.json".to_string(),
+    )];
+
+    assert!(hollow_from_json_sbom_refusal(&request, &output, false).is_none());
+}
+
 #[test]
 fn compile_regex_patterns_rejects_invalid_regex() {
     let result = compile_regex_patterns("--ignore-author", &["[".to_string()]);
@@ -425,6 +560,7 @@ fn from_json_skips_final_native_projection_block() {
         license_references: vec![],
         license_rule_references: vec![],
         excluded_count: 0,
+        has_hollow_package_detection_input: false,
     };
 
     let cli = crate::cli::Cli::try_parse_from([
