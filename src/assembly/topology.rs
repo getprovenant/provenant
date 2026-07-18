@@ -12,6 +12,10 @@ use super::cargo_workspace_merge::{
     collect_cargo_workspace_hints, plan_cargo_workspace_domains,
 };
 use super::hackage_merge;
+use super::mix_umbrella_merge::{
+    MixUmbrellaDomain, MixUmbrellaRootHint, apply_mix_umbrella_domain, collect_mix_umbrella_hints,
+    plan_mix_umbrella_domains,
+};
 use super::npm_workspace_merge::{
     NpmWorkspaceDomain, NpmWorkspaceRootHint, apply_npm_workspace_domain,
     collect_npm_workspace_hints, plan_npm_workspace_domains,
@@ -49,6 +53,7 @@ pub(super) enum TopologyHint {
     CargoWorkspaceRoot(CargoWorkspaceRootHint),
     GoWorkspaceRoot(GoWorkspaceRootHint),
     HackageProject(HackageProjectHint),
+    MixUmbrellaRoot(MixUmbrellaRootHint),
     NpmWorkspaceRoot(NpmWorkspaceRootHint),
     PixiRoot(PixiRootHint),
 }
@@ -57,6 +62,7 @@ pub(super) enum TopologyDomain {
     CargoWorkspace(CargoWorkspaceDomain),
     GoWorkspace(GoWorkspaceDomain),
     HackageProject(HackageProjectDomain),
+    MixUmbrella(MixUmbrellaDomain),
     NpmWorkspace(NpmWorkspaceDomain),
     Pixi(PixiDomain),
 }
@@ -66,6 +72,7 @@ pub(super) struct TopologyPlan {
     claimed_cargo_dirs: HashSet<PathBuf>,
     claimed_go_dirs: HashSet<PathBuf>,
     claimed_hackage_dirs: HashSet<PathBuf>,
+    claimed_mix_dirs: HashSet<PathBuf>,
     claimed_npm_dirs: HashSet<PathBuf>,
     claimed_pixi_dirs: HashSet<PathBuf>,
 }
@@ -89,6 +96,11 @@ impl TopologyPlan {
                 .map(TopologyHint::HackageProject),
         );
         hints.extend(
+            collect_mix_umbrella_hints(files)
+                .into_iter()
+                .map(TopologyHint::MixUmbrellaRoot),
+        );
+        hints.extend(
             collect_npm_workspace_hints(files)
                 .into_iter()
                 .map(TopologyHint::NpmWorkspaceRoot),
@@ -103,6 +115,7 @@ impl TopologyPlan {
         let mut claimed_cargo_dirs = HashSet::new();
         let mut claimed_go_dirs = HashSet::new();
         let mut claimed_hackage_dirs = HashSet::new();
+        let mut claimed_mix_dirs = HashSet::new();
         let mut claimed_npm_dirs = HashSet::new();
         let mut claimed_pixi_dirs = HashSet::new();
 
@@ -112,6 +125,7 @@ impl TopologyPlan {
                 TopologyHint::CargoWorkspaceRoot(hint) => Some(hint),
                 TopologyHint::GoWorkspaceRoot(_) => None,
                 TopologyHint::HackageProject(_) => None,
+                TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(_) => None,
                 TopologyHint::PixiRoot(_) => None,
             })
@@ -129,6 +143,7 @@ impl TopologyPlan {
                 TopologyHint::CargoWorkspaceRoot(_) => None,
                 TopologyHint::GoWorkspaceRoot(hint) => Some(hint),
                 TopologyHint::HackageProject(_) => None,
+                TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(_) => None,
                 TopologyHint::PixiRoot(_) => None,
             })
@@ -145,6 +160,7 @@ impl TopologyPlan {
                 TopologyHint::CargoWorkspaceRoot(_) => None,
                 TopologyHint::GoWorkspaceRoot(_) => None,
                 TopologyHint::HackageProject(hint) => Some(hint),
+                TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(_) => None,
                 TopologyHint::PixiRoot(_) => None,
             })
@@ -155,12 +171,31 @@ impl TopologyPlan {
             domains.push(TopologyDomain::HackageProject(domain));
         }
 
+        let mix_umbrella_hints: Vec<_> = hints
+            .iter()
+            .filter_map(|hint| match hint {
+                TopologyHint::CargoWorkspaceRoot(_) => None,
+                TopologyHint::GoWorkspaceRoot(_) => None,
+                TopologyHint::HackageProject(_) => None,
+                TopologyHint::MixUmbrellaRoot(hint) => Some(hint),
+                TopologyHint::NpmWorkspaceRoot(_) => None,
+                TopologyHint::PixiRoot(_) => None,
+            })
+            .collect();
+
+        for domain in plan_mix_umbrella_domains(files, &mix_umbrella_hints) {
+            claimed_mix_dirs.insert(domain.root_dir.clone());
+            claimed_mix_dirs.extend(domain.members.iter().map(|member| member.dir_path.clone()));
+            domains.push(TopologyDomain::MixUmbrella(domain));
+        }
+
         let npm_workspace_hints: Vec<_> = hints
             .iter()
             .filter_map(|hint| match hint {
                 TopologyHint::CargoWorkspaceRoot(_) => None,
                 TopologyHint::GoWorkspaceRoot(_) => None,
                 TopologyHint::HackageProject(_) => None,
+                TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(hint) => Some(hint),
                 TopologyHint::PixiRoot(_) => None,
             })
@@ -178,6 +213,7 @@ impl TopologyPlan {
                 TopologyHint::CargoWorkspaceRoot(_) => None,
                 TopologyHint::GoWorkspaceRoot(_) => None,
                 TopologyHint::HackageProject(_) => None,
+                TopologyHint::MixUmbrellaRoot(_) => None,
                 TopologyHint::NpmWorkspaceRoot(_) => None,
                 TopologyHint::PixiRoot(hint) => Some(hint),
             })
@@ -193,6 +229,7 @@ impl TopologyPlan {
             claimed_cargo_dirs,
             claimed_go_dirs,
             claimed_hackage_dirs,
+            claimed_mix_dirs,
             claimed_npm_dirs,
             claimed_pixi_dirs,
         }
@@ -225,6 +262,10 @@ impl TopologyPlan {
 
         if config.datasource_ids.contains(&DatasourceId::HackageCabal) {
             return self.claimed_hackage_dirs.contains(parent_dir);
+        }
+
+        if config.datasource_ids.contains(&DatasourceId::HexMixExs) {
+            return self.claimed_mix_dirs.contains(parent_dir);
         }
 
         if !config
@@ -280,7 +321,9 @@ impl TopologyPlan {
 
                     apply_directory_merge_result(files, packages, dependencies, result);
                 }
-                TopologyDomain::CargoWorkspace(_) | TopologyDomain::NpmWorkspace(_) => {}
+                TopologyDomain::CargoWorkspace(_)
+                | TopologyDomain::MixUmbrella(_)
+                | TopologyDomain::NpmWorkspace(_) => {}
             }
         }
     }
@@ -298,6 +341,7 @@ impl TopologyPlan {
                 }
                 TopologyDomain::GoWorkspace(_)
                 | TopologyDomain::HackageProject(_)
+                | TopologyDomain::MixUmbrella(_)
                 | TopologyDomain::NpmWorkspace(_)
                 | TopologyDomain::Pixi(_) => {}
             }
@@ -315,9 +359,30 @@ impl TopologyPlan {
                 TopologyDomain::CargoWorkspace(_)
                 | TopologyDomain::GoWorkspace(_)
                 | TopologyDomain::HackageProject(_)
+                | TopologyDomain::MixUmbrella(_)
                 | TopologyDomain::Pixi(_) => {}
                 TopologyDomain::NpmWorkspace(domain) => {
                     apply_npm_workspace_domain(domain, files, packages, dependencies);
+                }
+            }
+        }
+    }
+
+    pub(super) fn apply_mix_umbrella_domains(
+        &self,
+        files: &mut [FileInfo],
+        packages: &mut Vec<Package>,
+        dependencies: &mut Vec<TopLevelDependency>,
+    ) {
+        for domain in &self.domains {
+            match domain {
+                TopologyDomain::CargoWorkspace(_)
+                | TopologyDomain::GoWorkspace(_)
+                | TopologyDomain::HackageProject(_)
+                | TopologyDomain::NpmWorkspace(_)
+                | TopologyDomain::Pixi(_) => {}
+                TopologyDomain::MixUmbrella(domain) => {
+                    apply_mix_umbrella_domain(domain, files, packages, dependencies);
                 }
             }
         }

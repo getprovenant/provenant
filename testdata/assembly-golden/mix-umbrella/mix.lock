@@ -1,0 +1,4 @@
+%{
+  "phoenix": {:hex, :phoenix, "1.7.10", "abc", [:mix], [], "hexpm", "def"},
+  "ecto": {:hex, :ecto, "3.10.0", "ghi", [:mix], [], "hexpm", "jkl"}
+}

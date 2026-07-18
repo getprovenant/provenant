@@ -759,6 +759,14 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_mix_umbrella() {
+        match run_assembly_golden_test("mix-umbrella") {
+            Ok(_) => (),
+            Err(e) => panic!("Assembly golden test failed for mix-umbrella: {}", e),
+        }
+    }
+
+    #[test]
     fn test_uuid_normalization() {
         let input =
             r#"{"package_uid": "pkg:npm/test@1.0.0?uuid=12345678-1234-1234-1234-123456789abc"}"#;

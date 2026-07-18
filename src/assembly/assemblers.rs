@@ -40,6 +40,7 @@ pub(super) enum PostAssemblyPassKind {
     RpmYumdbMerge,
     NpmWorkspaceMerge,
     CargoWorkspaceMerge,
+    MixUmbrellaMerge,
     NugetCpmResolve,
     CargoResourceAssign,
     ComposerResourceAssign,
@@ -73,6 +74,7 @@ pub(super) static POST_ASSEMBLY_PASSES: &[PostAssemblyPassKind] = &[
     PostAssemblyPassKind::RpmYumdbMerge,
     PostAssemblyPassKind::NpmWorkspaceMerge,
     PostAssemblyPassKind::CargoWorkspaceMerge,
+    PostAssemblyPassKind::MixUmbrellaMerge,
     PostAssemblyPassKind::NugetCpmResolve,
     PostAssemblyPassKind::CargoResourceAssign,
     PostAssemblyPassKind::ComposerResourceAssign,
@@ -113,6 +115,7 @@ struct PostAssemblyInputs {
     file_datasource_ids: HashSet<DatasourceId>,
     has_npm_workspace_markers: bool,
     has_cargo_workspace_markers: bool,
+    has_mix_umbrella_markers: bool,
 }
 
 pub(super) fn run_post_assembly_passes(
@@ -171,6 +174,15 @@ impl PostAssemblyInputs {
                         .is_some_and(|members| !members.is_empty())
                 {
                     inputs.has_cargo_workspace_markers = true;
+                }
+
+                if datasource_id == DatasourceId::HexMixExs
+                    && package_data
+                        .extra_data
+                        .as_ref()
+                        .is_some_and(|extra_data| extra_data.contains_key("apps_path"))
+                {
+                    inputs.has_mix_umbrella_markers = true;
                 }
             }
         }
@@ -257,6 +269,7 @@ impl PostAssemblyPassKind {
             }
             Self::NpmWorkspaceMerge => inputs.has_npm_workspace_markers,
             Self::CargoWorkspaceMerge => inputs.has_cargo_workspace_markers,
+            Self::MixUmbrellaMerge => inputs.has_mix_umbrella_markers,
             Self::NugetCpmResolve => {
                 inputs.has_any_file_datasource(NUGET_CPM_CONFIG_DATASOURCE_IDS)
                     && inputs.has_any_file_datasource(NUGET_CPM_PROJECT_DATASOURCE_IDS)
@@ -318,6 +331,9 @@ impl PostAssemblyPassKind {
             }
             Self::CargoWorkspaceMerge => {
                 topology_plan.apply_cargo_workspace_domains(files, packages, dependencies)
+            }
+            Self::MixUmbrellaMerge => {
+                topology_plan.apply_mix_umbrella_domains(files, packages, dependencies)
             }
             Self::NugetCpmResolve => {
                 nuget_cpm_resolve::resolve_nuget_cpm_versions(files, dependencies)
@@ -1311,6 +1327,7 @@ mod tests {
             file_datasource_ids: HashSet::from([DatasourceId::NpmPackageJson]),
             has_npm_workspace_markers: true,
             has_cargo_workspace_markers: false,
+            has_mix_umbrella_markers: false,
         };
 
         let runnable: HashSet<_> = PostAssemblyPassKind::iter()
@@ -1333,6 +1350,7 @@ mod tests {
             file_datasource_ids: HashSet::from([DatasourceId::CargoToml]),
             has_npm_workspace_markers: false,
             has_cargo_workspace_markers: false,
+            has_mix_umbrella_markers: false,
         };
 
         assert!(!PostAssemblyPassKind::CargoWorkspaceMerge.should_run(&without_markers));
@@ -1343,5 +1361,25 @@ mod tests {
         };
 
         assert!(PostAssemblyPassKind::CargoWorkspaceMerge.should_run(&with_markers));
+    }
+
+    #[test]
+    fn test_mix_umbrella_merge_requires_umbrella_markers() {
+        let without_markers = PostAssemblyInputs {
+            package_types: HashSet::new(),
+            file_datasource_ids: HashSet::from([DatasourceId::HexMixExs]),
+            has_npm_workspace_markers: false,
+            has_cargo_workspace_markers: false,
+            has_mix_umbrella_markers: false,
+        };
+
+        assert!(!PostAssemblyPassKind::MixUmbrellaMerge.should_run(&without_markers));
+
+        let with_markers = PostAssemblyInputs {
+            has_mix_umbrella_markers: true,
+            ..without_markers
+        };
+
+        assert!(PostAssemblyPassKind::MixUmbrellaMerge.should_run(&with_markers));
     }
 }

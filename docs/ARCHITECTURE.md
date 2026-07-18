@@ -256,7 +256,7 @@ After scanning, the assembly system merges related manifests into logical packag
 
 - **SiblingMerge**: Combines sibling files in the same directory (e.g., `package.json` + `package-lock.json` → single npm package)
 - **NestedMerge**: Combines parent/child manifests across directories (e.g., Maven parent POM + module POMs)
-- **TopologyPlan**: Claims directories or multi-directory domains whose package boundaries are defined by project structure instead of plain sibling files (e.g., npm/pnpm workspaces, Cargo workspaces, `go.work`, `pixi.toml`, Hackage project roots)
+- **TopologyPlan**: Claims directories or multi-directory domains whose package boundaries are defined by project structure instead of plain sibling files (e.g., npm/pnpm workspaces, Cargo workspaces, `go.work`, `pixi.toml`, Hackage project roots, Mix umbrella apps)
 - **FileRefResolve**: Resolves `file_references` from package database entries (RPM/Alpine/Debian) against scanned files, sets `for_packages` on matched files, tracks missing references, and resolves RPM namespace from os-release
 - **Post-assembly passes**: Final targeted repair or enrichment steps that still need whole-scan context (for example file-reference resolution and the remaining workspace-specific finalization hooks)
 
