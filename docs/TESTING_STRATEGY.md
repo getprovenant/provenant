@@ -181,6 +181,17 @@ and the resulting package data shape.
 - Validate CLI/runtime behavior and graceful degradation
 - Test output-format and fixture-backed contracts that matter to end users
 
+`tests/output_format_golden.rs` proves output _stability_ against checked-in fixtures. The
+`rust-sharded-tests` integration shard's external-validator step
+(`scripts/validate_output_format_fixtures.py`) is a complementary, narrower check that proves spec
+_conformance_: it runs the official CycloneDX JSON-Schema/XSD validators and the SPDX
+`pyspdxtools` document validator against those same fixtures (plus a tiny live scan for SPDX RDF,
+which has no genuine checked-in RDF/XML fixture). It runs in that shard rather than a standalone
+job because the shard's progress-CLI suite already builds the `provenant` binary it needs, so the
+check adds only a Python install + short script run instead of a second CLI build. A
+change that keeps a golden green by drifting the fixture and the writer together in the same wrong
+direction can still fail this job.
+
 **When to Write**:
 
 - After major scanner changes

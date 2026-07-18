@@ -366,6 +366,30 @@ jobs:
         if: matrix.shard == 'integration'
         run: cargo test --test output_format_golden --profile ci-release --verbose
 
+      # The progress-CLI suite above already builds `provenant` at
+      # `target/ci-release/provenant` (it exercises `CARGO_BIN_EXE_provenant`),
+      # so this reuses that binary instead of paying for a second CLI build in
+      # a standalone job. Official/reference validators for each spec: the
+      # CycloneDX JSON-Schema + XSD (via cyclonedx-python-lib) and the SPDX
+      # tag-value/RDF parser and full document validator (via spdx-tools'
+      # pyspdxtools). Catches schema regressions goldens alone can miss, like
+      # https://github.com/getprovenant/provenant/issues/1288.
+      - name: Set up Python
+        if: matrix.shard == 'integration'
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements-output-format-validators.txt
+
+      - name: Install CycloneDX/SPDX validator tooling
+        if: matrix.shard == 'integration'
+        run: pip install -r scripts/requirements-output-format-validators.txt
+
+      - name: Validate output-format fixtures against official external validators
+        if: matrix.shard == 'integration'
+        run: python3 scripts/validate_output_format_fixtures.py --provenant-bin target/ci-release/provenant
+
   golden-tests:
     name: Golden Tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
