@@ -788,7 +788,7 @@ mod tests {
             .expect("spdx rdf write should succeed");
         let rdf_rendered = String::from_utf8(rdf_bytes).expect("spdx rdf should be utf-8");
         assert!(rdf_rendered.contains(
-            "<spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/licenses/LicenseRef-scancode-unknown-license-reference\"/>"
+            "<spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/spdxdocs/scan#LicenseRef-scancode-unknown-license-reference\"/>"
         ));
         assert!(rdf_rendered.contains(
             "<spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"http://spdx.org/spdxdocs/scan#LicenseRef-scancode-unknown-license-reference\">"
