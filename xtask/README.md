@@ -115,7 +115,9 @@ scan phase reported by the Provenant progress summary: `scan:packages`,
 ### Purpose
 
 `compare-outputs` compares Provenant and ScanCode raw outputs and produces
-reduced comparison artifacts for later manual or agent review.
+reduced comparison artifacts for later manual or agent review. Comparison artifact
+generation (`summary.json`, TSV, and capped samples) is shared with the
+`provenant compare` CLI via `provenant::compare::write_comparison_artifacts`.
 
 It supports two input modes:
 
@@ -228,6 +230,13 @@ richer output, so the rollup is a triage aid and the reviewer decides
 junk-vs-advantage. It is a pure diagnostic: it never feeds `comparison_status`,
 the signal counts, or any pass/fail gate. `summary.json` also surfaces a short
 per-field top-N preview under `field_value_frequency_top`.
+
+File ownership (`files[].for_packages`) is a **secondary informational** compare
+axis. `summary.json` reports `file_ownership_summary`, and capped samples land in
+`comparison/samples/file_ownership_differences.json`. Ownership deltas can raise
+`review_required` via the `non_directional` signal bucket, but they do **not**
+inflate `provenant_favored` or `scancode_favored`. License and copyright remain
+the primary review signal.
 
 Optional diagnostic logs when available:
 
