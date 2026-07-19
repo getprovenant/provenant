@@ -6,30 +6,191 @@
 
 use std::collections::HashSet;
 
-use crate::models::PackageType;
-use crate::models::{DatasourceId, FileInfo, Package, TopLevelDependency};
+use crate::models::{
+    DatasourceId, FileInfo, Package, PackageData, PackageType, TopLevelDependency,
+};
 use strum::EnumIter;
 
 use super::{
-    AssemblerConfig, AssemblyMode, DirectoryMergeOutput, bazel_prune, cargo_resource_assign,
-    clojure_deps_assign, composer_resource_assign, conda_rootfs_merge, debian_source_merge,
-    file_ref_resolve, hackage_merge, ivy_dependencies_properties_assign, nix_flake_compat_merge,
-    npm_resource_assign, nuget_cpm_resolve, python_requirements_assign, ruby_resource_assign,
-    swift_merge, topology,
+    AssemblerConfig, AssemblyMode, DirectoryMergeOutput, bazel_prune, clojure_deps_assign,
+    conda_rootfs_merge, debian_source_merge, file_ref_resolve, ivy_dependencies_properties_assign,
+    nix_flake_compat_merge, npm_resource_assign, nuget_cpm_resolve, python_requirements_assign,
+    resource_assign, swift_merge, topology,
 };
 
-#[derive(Clone, Copy)]
-pub(super) enum SpecialDirectoryMergerKind {
-    Skip,
-    Cocoapods,
-    DebianSource,
-    Hackage,
-    Huggingface,
-    WindowsUpdate,
+// ── Bespoke per-directory mergers (see AssemblerConfig::directory_merger) ──
+//
+// Each wrapper adapts an ecosystem's directory merger to the uniform
+// [`super::DirectoryMergeFn`] signature so it can be attached directly to its
+// `AssemblerConfig` row, replacing the generic per-directory engine for that
+// config's claimed directories.
+
+/// Swift skips per-directory assembly entirely; its packages are formed by the
+/// `SwiftMerge` post-assembly pass instead.
+fn merge_swift_skip(
+    _config: &AssemblerConfig,
+    _files: &[FileInfo],
+    _file_indices: &[usize],
+) -> Vec<DirectoryMergeOutput> {
+    Vec::new()
 }
 
+fn merge_cocoapods(
+    config: &AssemblerConfig,
+    files: &[FileInfo],
+    file_indices: &[usize],
+) -> Vec<DirectoryMergeOutput> {
+    super::cocoapods_merge::assemble_cocoapods_packages(config, files, file_indices)
+}
+
+fn merge_debian_source(
+    config: &AssemblerConfig,
+    files: &[FileInfo],
+    file_indices: &[usize],
+) -> Vec<DirectoryMergeOutput> {
+    debian_source_merge::assemble_debian_source_packages(config, files, file_indices)
+}
+
+fn merge_hackage(
+    _config: &AssemblerConfig,
+    files: &[FileInfo],
+    file_indices: &[usize],
+) -> Vec<DirectoryMergeOutput> {
+    super::hackage_merge::assemble_hackage_packages(files, file_indices)
+}
+
+fn merge_huggingface(
+    _config: &AssemblerConfig,
+    files: &[FileInfo],
+    file_indices: &[usize],
+) -> Vec<DirectoryMergeOutput> {
+    super::huggingface_merge::assemble_huggingface_packages(files, file_indices)
+}
+
+fn merge_windows_update(
+    config: &AssemblerConfig,
+    files: &[FileInfo],
+    file_indices: &[usize],
+) -> Vec<DirectoryMergeOutput> {
+    super::windows_update_merge::assemble_windows_update_packages(config, files, file_indices)
+}
+
+/// A per-file workspace/reactor marker detected while collecting
+/// [`PostAssemblyInputs`]. A pass whose `should_run` needs "did any manifest in
+/// this scan declare a workspace/umbrella/reactor?" consults these instead of
+/// re-scanning every `PackageData`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) enum WorkspaceMarker {
+    NpmWorkspace,
+    CargoWorkspace,
+    MixUmbrella,
+    MavenReactor,
+    GradleMultiProject,
+    UvWorkspace,
+    DartWorkspace,
+}
+
+/// Recognizes a [`WorkspaceMarker`] in a single `PackageData`. Registered rows
+/// are applied once per `PackageData` while collecting [`PostAssemblyInputs`],
+/// so adding a marker is one [`MARKER_DETECTORS`] row rather than a new bool
+/// field plus a hand-copied collect branch.
+struct MarkerDetector {
+    marker: WorkspaceMarker,
+    detect: fn(DatasourceId, &PackageData) -> bool,
+}
+
+static MARKER_DETECTORS: &[MarkerDetector] = &[
+    MarkerDetector {
+        marker: WorkspaceMarker::NpmWorkspace,
+        detect: |datasource_id, data| {
+            matches!(
+                datasource_id,
+                DatasourceId::NpmPackageJson | DatasourceId::PnpmWorkspaceYaml
+            ) && data
+                .extra_data
+                .as_ref()
+                .is_some_and(|extra_data| extra_data.contains_key("workspaces"))
+        },
+    },
+    MarkerDetector {
+        marker: WorkspaceMarker::CargoWorkspace,
+        detect: |datasource_id, data| {
+            datasource_id == DatasourceId::CargoToml
+                && data
+                    .extra_data
+                    .as_ref()
+                    .and_then(|extra_data| extra_data.get("workspace"))
+                    .and_then(|workspace| workspace.get("members"))
+                    .and_then(|members| members.as_array())
+                    .is_some_and(|members| !members.is_empty())
+        },
+    },
+    MarkerDetector {
+        marker: WorkspaceMarker::MixUmbrella,
+        detect: |datasource_id, data| {
+            datasource_id == DatasourceId::HexMixExs
+                && data
+                    .extra_data
+                    .as_ref()
+                    .is_some_and(|extra_data| extra_data.contains_key("apps_path"))
+        },
+    },
+    MarkerDetector {
+        marker: WorkspaceMarker::MavenReactor,
+        detect: |datasource_id, data| {
+            datasource_id == DatasourceId::MavenPom
+                && data
+                    .extra_data
+                    .as_ref()
+                    .and_then(|extra_data| extra_data.get("modules"))
+                    .and_then(|modules| modules.as_array())
+                    .is_some_and(|modules| !modules.is_empty())
+        },
+    },
+    MarkerDetector {
+        marker: WorkspaceMarker::GradleMultiProject,
+        detect: |datasource_id, data| {
+            datasource_id == DatasourceId::GradleSettings
+                && data
+                    .extra_data
+                    .as_ref()
+                    .and_then(|extra_data| extra_data.get("projects"))
+                    .and_then(|projects| projects.as_array())
+                    .is_some_and(|projects| !projects.is_empty())
+        },
+    },
+    MarkerDetector {
+        marker: WorkspaceMarker::UvWorkspace,
+        detect: |datasource_id, data| {
+            matches!(
+                datasource_id,
+                DatasourceId::PypiPyprojectToml | DatasourceId::PypiPoetryPyprojectToml
+            ) && data
+                .extra_data
+                .as_ref()
+                .and_then(|extra_data| extra_data.get("workspace_members"))
+                .and_then(|members| members.as_array())
+                .is_some_and(|members| !members.is_empty())
+        },
+    },
+    MarkerDetector {
+        marker: WorkspaceMarker::DartWorkspace,
+        detect: |datasource_id, data| {
+            datasource_id == DatasourceId::PubspecYaml
+                && data
+                    .extra_data
+                    .as_ref()
+                    .and_then(|extra_data| extra_data.get("workspace_members"))
+                    .and_then(|members| members.as_array())
+                    .is_some_and(|members| !members.is_empty())
+        },
+    },
+];
+
+/// Stable identity of a post-assembly pass, used for registry coverage tests
+/// (mirrors [`super::topology`]'s `TopologyFamilyId`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
-pub(super) enum PostAssemblyPassKind {
+pub(super) enum PostAssemblyPassId {
     SwiftMerge,
     CondaRootfsMerge,
     NpmResourceAssign,
@@ -53,42 +214,203 @@ pub(super) enum PostAssemblyPassKind {
     BazelPrune,
 }
 
-pub(super) fn special_directory_merger_for(
-    config_key: DatasourceId,
-) -> Option<SpecialDirectoryMergerKind> {
-    match config_key {
-        DatasourceId::CocoapodsPodspec => Some(SpecialDirectoryMergerKind::Cocoapods),
-        DatasourceId::DebianControlInSource => Some(SpecialDirectoryMergerKind::DebianSource),
-        DatasourceId::HackageCabal => Some(SpecialDirectoryMergerKind::Hackage),
-        DatasourceId::HuggingfaceModelCard => Some(SpecialDirectoryMergerKind::Huggingface),
-        DatasourceId::MicrosoftUpdateManifestMum => Some(SpecialDirectoryMergerKind::WindowsUpdate),
-        DatasourceId::SwiftPackageManifestJson => Some(SpecialDirectoryMergerKind::Skip),
-        _ => None,
-    }
+/// A registered post-assembly pass: its identity, the gate deciding whether the
+/// scan's inputs make it relevant, and the mutation it applies. Adding a pass is
+/// one [`POST_ASSEMBLY_PASSES`] row (plus a [`MARKER_DETECTORS`] row when it
+/// gates on a workspace marker) rather than an enum variant plus two match arms.
+struct PostAssemblyPass {
+    id: PostAssemblyPassId,
+    should_run: fn(&PostAssemblyInputs) -> bool,
+    run: fn(
+        &mut [FileInfo],
+        &mut Vec<Package>,
+        &mut Vec<TopLevelDependency>,
+        &topology::TopologyPlan,
+    ),
 }
 
-pub(super) static POST_ASSEMBLY_PASSES: &[PostAssemblyPassKind] = &[
-    PostAssemblyPassKind::SwiftMerge,
-    PostAssemblyPassKind::CondaRootfsMerge,
-    PostAssemblyPassKind::NpmResourceAssign,
-    PostAssemblyPassKind::PythonRequirementsAssign,
-    PostAssemblyPassKind::IvyDependenciesPropertiesAssign,
-    PostAssemblyPassKind::ClojureDepsEdnAssign,
-    PostAssemblyPassKind::FileReferenceResolve,
-    PostAssemblyPassKind::RpmYumdbMerge,
-    PostAssemblyPassKind::NpmWorkspaceMerge,
-    PostAssemblyPassKind::CargoWorkspaceMerge,
-    PostAssemblyPassKind::MixUmbrellaMerge,
-    PostAssemblyPassKind::MavenReactorAssign,
-    PostAssemblyPassKind::GradleMultiProjectAssign,
-    PostAssemblyPassKind::UvWorkspaceAssign,
-    PostAssemblyPassKind::DartWorkspaceMerge,
-    PostAssemblyPassKind::NugetCpmResolve,
-    PostAssemblyPassKind::CargoResourceAssign,
-    PostAssemblyPassKind::ComposerResourceAssign,
-    PostAssemblyPassKind::RubyResourceAssign,
-    PostAssemblyPassKind::NixFlakeCompatMerge,
-    PostAssemblyPassKind::BazelPrune,
+static POST_ASSEMBLY_PASSES: &[PostAssemblyPass] = &[
+    PostAssemblyPass {
+        id: PostAssemblyPassId::SwiftMerge,
+        should_run: |inputs| inputs.has_any_file_datasource(SWIFT_POST_ASSEMBLY_DATASOURCE_IDS),
+        run: |files, packages, dependencies, _plan| {
+            swift_merge::assemble_swift_packages(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::CondaRootfsMerge,
+        should_run: |inputs| {
+            inputs.has_all_file_datasources(CONDA_ROOTFS_POST_ASSEMBLY_DATASOURCE_IDS)
+        },
+        run: |files, packages, dependencies, _plan| {
+            conda_rootfs_merge::merge_conda_rootfs_metadata(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::NpmResourceAssign,
+        should_run: |inputs| inputs.has_package_type(PackageType::Npm),
+        run: |files, packages, _dependencies, _plan| {
+            npm_resource_assign::assign_npm_package_resources(files, packages)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::PythonRequirementsAssign,
+        should_run: |inputs| {
+            inputs.has_package_type(PackageType::Pypi)
+                && inputs.has_any_file_datasource(&[DatasourceId::PipRequirements])
+        },
+        run: |files, packages, dependencies, _plan| {
+            python_requirements_assign::assign_python_requirements_to_projects(
+                files,
+                packages,
+                dependencies,
+            )
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::IvyDependenciesPropertiesAssign,
+        should_run: |inputs| {
+            inputs.has_package_type(PackageType::Ivy)
+                && inputs.has_any_file_datasource(&[DatasourceId::AntIvyDependenciesProperties])
+        },
+        run: |files, packages, dependencies, _plan| {
+            ivy_dependencies_properties_assign::assign_ivy_dependencies_properties_to_projects(
+                files,
+                packages,
+                dependencies,
+            )
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::ClojureDepsEdnAssign,
+        should_run: |inputs| {
+            inputs.has_package_type(PackageType::Maven)
+                && inputs.has_all_file_datasources(&[
+                    DatasourceId::ClojureProjectClj,
+                    DatasourceId::ClojureDepsEdn,
+                ])
+        },
+        run: |files, packages, dependencies, _plan| {
+            clojure_deps_assign::assign_clojure_deps_edn_to_projects(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::FileReferenceResolve,
+        should_run: |inputs| {
+            file_ref_resolve::has_relevant_file_reference_datasource_ids(
+                &inputs.file_datasource_ids,
+            )
+        },
+        run: |files, packages, dependencies, _plan| {
+            file_ref_resolve::resolve_file_references(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::RpmYumdbMerge,
+        should_run: |inputs| {
+            inputs.has_any_file_datasource(&[DatasourceId::RpmYumdb])
+                && inputs.has_any_file_datasource(RPM_INSTALLED_DATABASE_DATASOURCE_IDS)
+        },
+        run: |files, packages, _dependencies, _plan| {
+            file_ref_resolve::merge_rpm_yumdb_metadata(files, packages)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::NpmWorkspaceMerge,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::NpmWorkspace),
+        run: |files, packages, dependencies, plan| {
+            plan.apply_npm_workspace_domains(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::CargoWorkspaceMerge,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::CargoWorkspace),
+        run: |files, packages, dependencies, plan| {
+            plan.apply_cargo_workspace_domains(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::MixUmbrellaMerge,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::MixUmbrella),
+        run: |files, packages, dependencies, plan| {
+            plan.apply_mix_umbrella_domains(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::MavenReactorAssign,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::MavenReactor),
+        run: |files, _packages, _dependencies, plan| plan.apply_maven_reactor_domains(files),
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::GradleMultiProjectAssign,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::GradleMultiProject),
+        run: |files, packages, dependencies, plan| {
+            plan.apply_gradle_multi_project_domains(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::UvWorkspaceAssign,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::UvWorkspace),
+        run: |files, _packages, _dependencies, plan| plan.apply_uv_workspace_domains(files),
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::DartWorkspaceMerge,
+        should_run: |inputs| inputs.has_marker(WorkspaceMarker::DartWorkspace),
+        run: |files, packages, dependencies, plan| {
+            plan.apply_dart_workspace_domains(files, packages, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::NugetCpmResolve,
+        should_run: |inputs| {
+            inputs.has_any_file_datasource(NUGET_CPM_CONFIG_DATASOURCE_IDS)
+                && inputs.has_any_file_datasource(NUGET_CPM_PROJECT_DATASOURCE_IDS)
+        },
+        run: |files, _packages, dependencies, _plan| {
+            nuget_cpm_resolve::resolve_nuget_cpm_versions(files, dependencies)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::CargoResourceAssign,
+        should_run: |inputs| inputs.has_package_type(PackageType::Cargo),
+        run: |files, packages, _dependencies, _plan| {
+            resource_assign::assign_resources_for(PackageType::Cargo, files, packages)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::ComposerResourceAssign,
+        should_run: |inputs| inputs.has_package_type(PackageType::Composer),
+        run: |files, packages, _dependencies, _plan| {
+            resource_assign::assign_resources_for(PackageType::Composer, files, packages)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::RubyResourceAssign,
+        should_run: |inputs| inputs.has_package_type(PackageType::Gem),
+        run: |files, packages, _dependencies, _plan| {
+            resource_assign::assign_resources_for(PackageType::Gem, files, packages)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::NixFlakeCompatMerge,
+        should_run: |inputs| {
+            inputs.has_any_file_datasource(&[DatasourceId::NixDefaultNix])
+                && inputs.has_any_file_datasource(&[
+                    DatasourceId::NixFlakeNix,
+                    DatasourceId::NixFlakeLock,
+                ])
+        },
+        run: |files, packages, _dependencies, _plan| {
+            nix_flake_compat_merge::attach_flake_compat_default_files(files, packages)
+        },
+    },
+    PostAssemblyPass {
+        id: PostAssemblyPassId::BazelPrune,
+        should_run: |inputs| inputs.has_package_type(PackageType::Bazel),
+        run: |files, packages, dependencies, _plan| {
+            bazel_prune::prune_unused_bazel_packages(files, packages, dependencies)
+        },
+    },
 ];
 
 const SWIFT_POST_ASSEMBLY_DATASOURCE_IDS: &[DatasourceId] = &[
@@ -121,13 +443,7 @@ const NUGET_CPM_PROJECT_DATASOURCE_IDS: &[DatasourceId] = &[
 struct PostAssemblyInputs {
     package_types: HashSet<PackageType>,
     file_datasource_ids: HashSet<DatasourceId>,
-    has_npm_workspace_markers: bool,
-    has_cargo_workspace_markers: bool,
-    has_mix_umbrella_markers: bool,
-    has_maven_reactor_markers: bool,
-    has_gradle_multi_project_markers: bool,
-    has_uv_workspace_markers: bool,
-    has_dart_workspace_markers: bool,
+    markers: HashSet<WorkspaceMarker>,
 }
 
 pub(super) fn run_post_assembly_passes(
@@ -139,11 +455,12 @@ pub(super) fn run_post_assembly_passes(
     let inputs = PostAssemblyInputs::collect(files, packages);
 
     for pass in POST_ASSEMBLY_PASSES {
-        if !pass.should_run(&inputs) {
+        if !(pass.should_run)(&inputs) {
             continue;
         }
 
-        pass.run(files, packages, dependencies, topology_plan);
+        log::trace!("running post-assembly pass {:?}", pass.id);
+        (pass.run)(files, packages, dependencies, topology_plan);
     }
 }
 
@@ -165,82 +482,12 @@ impl PostAssemblyInputs {
 
                 inputs.file_datasource_ids.insert(datasource_id);
 
-                if matches!(
-                    datasource_id,
-                    DatasourceId::NpmPackageJson | DatasourceId::PnpmWorkspaceYaml
-                ) && package_data
-                    .extra_data
-                    .as_ref()
-                    .is_some_and(|extra_data| extra_data.contains_key("workspaces"))
-                {
-                    inputs.has_npm_workspace_markers = true;
-                }
-
-                if datasource_id == DatasourceId::CargoToml
-                    && package_data
-                        .extra_data
-                        .as_ref()
-                        .and_then(|extra_data| extra_data.get("workspace"))
-                        .and_then(|workspace| workspace.get("members"))
-                        .and_then(|members| members.as_array())
-                        .is_some_and(|members| !members.is_empty())
-                {
-                    inputs.has_cargo_workspace_markers = true;
-                }
-
-                if datasource_id == DatasourceId::HexMixExs
-                    && package_data
-                        .extra_data
-                        .as_ref()
-                        .is_some_and(|extra_data| extra_data.contains_key("apps_path"))
-                {
-                    inputs.has_mix_umbrella_markers = true;
-                }
-
-                if datasource_id == DatasourceId::MavenPom
-                    && package_data
-                        .extra_data
-                        .as_ref()
-                        .and_then(|extra_data| extra_data.get("modules"))
-                        .and_then(|modules| modules.as_array())
-                        .is_some_and(|modules| !modules.is_empty())
-                {
-                    inputs.has_maven_reactor_markers = true;
-                }
-
-                if datasource_id == DatasourceId::GradleSettings
-                    && package_data
-                        .extra_data
-                        .as_ref()
-                        .and_then(|extra_data| extra_data.get("projects"))
-                        .and_then(|projects| projects.as_array())
-                        .is_some_and(|projects| !projects.is_empty())
-                {
-                    inputs.has_gradle_multi_project_markers = true;
-                }
-
-                if matches!(
-                    datasource_id,
-                    DatasourceId::PypiPyprojectToml | DatasourceId::PypiPoetryPyprojectToml
-                ) && package_data
-                    .extra_data
-                    .as_ref()
-                    .and_then(|extra_data| extra_data.get("workspace_members"))
-                    .and_then(|members| members.as_array())
-                    .is_some_and(|members| !members.is_empty())
-                {
-                    inputs.has_uv_workspace_markers = true;
-                }
-
-                if datasource_id == DatasourceId::PubspecYaml
-                    && package_data
-                        .extra_data
-                        .as_ref()
-                        .and_then(|extra_data| extra_data.get("workspace_members"))
-                        .and_then(|members| members.as_array())
-                        .is_some_and(|members| !members.is_empty())
-                {
-                    inputs.has_dart_workspace_markers = true;
+                for detector in MARKER_DETECTORS {
+                    if !inputs.markers.contains(&detector.marker)
+                        && (detector.detect)(datasource_id, package_data)
+                    {
+                        inputs.markers.insert(detector.marker);
+                    }
                 }
             }
         }
@@ -250,6 +497,10 @@ impl PostAssemblyInputs {
 
     fn has_package_type(&self, package_type: PackageType) -> bool {
         self.package_types.contains(&package_type)
+    }
+
+    fn has_marker(&self, marker: WorkspaceMarker) -> bool {
+        self.markers.contains(&marker)
     }
 
     fn has_any_file_datasource(&self, datasource_ids: &[DatasourceId]) -> bool {
@@ -262,168 +513,6 @@ impl PostAssemblyInputs {
         datasource_ids
             .iter()
             .all(|datasource_id| self.file_datasource_ids.contains(datasource_id))
-    }
-}
-
-impl SpecialDirectoryMergerKind {
-    pub(super) fn run(
-        self,
-        config: &AssemblerConfig,
-        files: &[FileInfo],
-        file_indices: &[usize],
-    ) -> Vec<DirectoryMergeOutput> {
-        match self {
-            Self::Skip => Vec::new(),
-            Self::Cocoapods => {
-                super::cocoapods_merge::assemble_cocoapods_packages(config, files, file_indices)
-            }
-            Self::DebianSource => {
-                debian_source_merge::assemble_debian_source_packages(config, files, file_indices)
-            }
-            Self::Hackage => hackage_merge::assemble_hackage_packages(files, file_indices),
-            Self::Huggingface => {
-                super::huggingface_merge::assemble_huggingface_packages(files, file_indices)
-            }
-            Self::WindowsUpdate => super::windows_update_merge::assemble_windows_update_packages(
-                config,
-                files,
-                file_indices,
-            ),
-        }
-    }
-}
-
-impl PostAssemblyPassKind {
-    fn should_run(self, inputs: &PostAssemblyInputs) -> bool {
-        match self {
-            Self::SwiftMerge => inputs.has_any_file_datasource(SWIFT_POST_ASSEMBLY_DATASOURCE_IDS),
-            Self::CondaRootfsMerge => {
-                inputs.has_all_file_datasources(CONDA_ROOTFS_POST_ASSEMBLY_DATASOURCE_IDS)
-            }
-            Self::NpmResourceAssign => inputs.has_package_type(PackageType::Npm),
-            Self::PythonRequirementsAssign => {
-                inputs.has_package_type(PackageType::Pypi)
-                    && inputs.has_any_file_datasource(&[DatasourceId::PipRequirements])
-            }
-            Self::IvyDependenciesPropertiesAssign => {
-                inputs.has_package_type(PackageType::Ivy)
-                    && inputs.has_any_file_datasource(&[DatasourceId::AntIvyDependenciesProperties])
-            }
-            Self::ClojureDepsEdnAssign => {
-                inputs.has_package_type(PackageType::Maven)
-                    && inputs.has_all_file_datasources(&[
-                        DatasourceId::ClojureProjectClj,
-                        DatasourceId::ClojureDepsEdn,
-                    ])
-            }
-            Self::FileReferenceResolve => {
-                file_ref_resolve::has_relevant_file_reference_datasource_ids(
-                    &inputs.file_datasource_ids,
-                )
-            }
-            Self::RpmYumdbMerge => {
-                inputs.has_any_file_datasource(&[DatasourceId::RpmYumdb])
-                    && inputs.has_any_file_datasource(RPM_INSTALLED_DATABASE_DATASOURCE_IDS)
-            }
-            Self::NpmWorkspaceMerge => inputs.has_npm_workspace_markers,
-            Self::CargoWorkspaceMerge => inputs.has_cargo_workspace_markers,
-            Self::MixUmbrellaMerge => inputs.has_mix_umbrella_markers,
-            Self::MavenReactorAssign => inputs.has_maven_reactor_markers,
-            Self::GradleMultiProjectAssign => inputs.has_gradle_multi_project_markers,
-            Self::UvWorkspaceAssign => inputs.has_uv_workspace_markers,
-            Self::DartWorkspaceMerge => inputs.has_dart_workspace_markers,
-            Self::NugetCpmResolve => {
-                inputs.has_any_file_datasource(NUGET_CPM_CONFIG_DATASOURCE_IDS)
-                    && inputs.has_any_file_datasource(NUGET_CPM_PROJECT_DATASOURCE_IDS)
-            }
-            Self::CargoResourceAssign => inputs.has_package_type(PackageType::Cargo),
-            Self::ComposerResourceAssign => inputs.has_package_type(PackageType::Composer),
-            Self::RubyResourceAssign => inputs.has_package_type(PackageType::Gem),
-            Self::NixFlakeCompatMerge => {
-                inputs.has_any_file_datasource(&[DatasourceId::NixDefaultNix])
-                    && inputs.has_any_file_datasource(&[
-                        DatasourceId::NixFlakeNix,
-                        DatasourceId::NixFlakeLock,
-                    ])
-            }
-            Self::BazelPrune => inputs.has_package_type(PackageType::Bazel),
-        }
-    }
-
-    fn run(
-        self,
-        files: &mut [FileInfo],
-        packages: &mut Vec<Package>,
-        dependencies: &mut Vec<TopLevelDependency>,
-        topology_plan: &topology::TopologyPlan,
-    ) {
-        match self {
-            Self::SwiftMerge => swift_merge::assemble_swift_packages(files, packages, dependencies),
-            Self::CondaRootfsMerge => {
-                conda_rootfs_merge::merge_conda_rootfs_metadata(files, packages, dependencies)
-            }
-            Self::NpmResourceAssign => {
-                npm_resource_assign::assign_npm_package_resources(files, packages)
-            }
-            Self::PythonRequirementsAssign => {
-                python_requirements_assign::assign_python_requirements_to_projects(
-                    files,
-                    packages,
-                    dependencies,
-                )
-            }
-            Self::IvyDependenciesPropertiesAssign => {
-                ivy_dependencies_properties_assign::assign_ivy_dependencies_properties_to_projects(
-                    files,
-                    packages,
-                    dependencies,
-                )
-            }
-            Self::ClojureDepsEdnAssign => clojure_deps_assign::assign_clojure_deps_edn_to_projects(
-                files,
-                packages,
-                dependencies,
-            ),
-            Self::FileReferenceResolve => {
-                file_ref_resolve::resolve_file_references(files, packages, dependencies)
-            }
-            Self::RpmYumdbMerge => file_ref_resolve::merge_rpm_yumdb_metadata(files, packages),
-            Self::NpmWorkspaceMerge => {
-                topology_plan.apply_npm_workspace_domains(files, packages, dependencies)
-            }
-            Self::CargoWorkspaceMerge => {
-                topology_plan.apply_cargo_workspace_domains(files, packages, dependencies)
-            }
-            Self::MixUmbrellaMerge => {
-                topology_plan.apply_mix_umbrella_domains(files, packages, dependencies)
-            }
-            Self::MavenReactorAssign => topology_plan.apply_maven_reactor_domains(files),
-            Self::GradleMultiProjectAssign => {
-                topology_plan.apply_gradle_multi_project_domains(files, packages, dependencies)
-            }
-            Self::UvWorkspaceAssign => topology_plan.apply_uv_workspace_domains(files),
-            Self::DartWorkspaceMerge => {
-                topology_plan.apply_dart_workspace_domains(files, packages, dependencies)
-            }
-            Self::NugetCpmResolve => {
-                nuget_cpm_resolve::resolve_nuget_cpm_versions(files, dependencies)
-            }
-            Self::CargoResourceAssign => {
-                cargo_resource_assign::assign_cargo_package_resources(files, packages)
-            }
-            Self::ComposerResourceAssign => {
-                composer_resource_assign::assign_composer_package_resources(files, packages)
-            }
-            Self::RubyResourceAssign => {
-                ruby_resource_assign::assign_ruby_package_resources(files, packages)
-            }
-            Self::NixFlakeCompatMerge => {
-                nix_flake_compat_merge::attach_flake_compat_default_files(files, packages)
-            }
-            Self::BazelPrune => {
-                bazel_prune::prune_unused_bazel_packages(files, packages, dependencies)
-            }
-        }
     }
 }
 
@@ -461,12 +550,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "pnpm-workspace.yaml",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Rust/Cargo ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::CargoToml, DatasourceId::CargoLock],
         sibling_file_patterns: &["Cargo.toml", "Cargo.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Julia ecosystem
     AssemblerConfig {
@@ -476,12 +567,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["Project.toml", "Manifest.toml"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Erlang/OTP Rebar ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::RebarConfig, DatasourceId::RebarLock],
         sibling_file_patterns: &["rebar.config", "rebar.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Elixir/Hex ecosystem: `mix.exs` carries the project identity (app + version)
     // and its direct deps; `mix.lock` contributes the resolved locked deps. They
@@ -492,6 +585,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::HexMixExs, DatasourceId::HexMixLock],
         sibling_file_patterns: &["mix.exs", "mix.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Erlang OTP application resource files (`src/<app>.app.src`). The app name
     // and version live in the `{application, <name>, [{vsn, ...}]}` tuple, so the
@@ -501,6 +595,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::ErlangOtpAppSrc],
         sibling_file_patterns: &["*.app.src"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Carthage ecosystem
     AssemblerConfig {
@@ -510,6 +605,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["Cartfile", "Cartfile.private", "Cartfile.resolved"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // CocoaPods ecosystem
     AssemblerConfig {
@@ -521,6 +617,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["*.podspec", "*.podspec.json", "Podfile", "Podfile.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: Some(merge_cocoapods),
     },
     // PHP Composer ecosystem
     AssemblerConfig {
@@ -532,6 +629,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "composer.*.lock",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Go ecosystem (includes legacy Godeps)
     AssemblerConfig {
@@ -551,34 +649,40 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "Godeps.json",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Dart/Flutter ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PubspecYaml, DatasourceId::PubspecLock],
         sibling_file_patterns: &["pubspec.yaml", "pubspec.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Pixi ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PixiToml, DatasourceId::PixiLock],
         sibling_file_patterns: &["pixi.toml", "pixi.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::NixFlakeNix, DatasourceId::NixFlakeLock],
         sibling_file_patterns: &["flake.nix", "flake.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::NixDefaultNix],
         sibling_file_patterns: &["default.nix"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Helm chart ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::HelmChartYaml, DatasourceId::HelmChartLock],
         sibling_file_patterns: &["Chart.yaml", "Chart.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[
@@ -588,6 +692,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["*.cabal", "cabal.project", "stack.yaml"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: Some(merge_hackage),
     },
     // Chef ecosystem
     AssemblerConfig {
@@ -597,6 +702,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["metadata.json", "metadata.rb"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Conan (C/C++) ecosystem
     AssemblerConfig {
@@ -613,6 +719,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "conandata.yml",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // vcpkg (C/C++) ports and manifests. Each `CONTROL` or `vcpkg.json` that
     // names a port/project is an independent package, so one package per record:
@@ -624,6 +731,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::VcpkgControl, DatasourceId::VcpkgJson],
         sibling_file_patterns: &["CONTROL", "vcpkg.json"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Maven/Java ecosystem (nested merge via META-INF)
     AssemblerConfig {
@@ -642,6 +750,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         // A directory can hold one module (pom.xml + supplementary siblings) or
         // many standalone `.pom` files with distinct GAVs; split per identity.
         mode: AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
     },
     // Leiningen `project.clj` declares a `defproject` with Maven coordinates, so
     // each is an independent package that owns its `:dependencies`. One package
@@ -651,6 +760,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::ClojureProjectClj],
         sibling_file_patterns: &["project.clj"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // sbt `build.sbt` declares a project with Maven coordinates and owns its
     // `libraryDependencies`. One package per record so the project surfaces and
@@ -659,6 +769,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::SbtBuildSbt],
         sibling_file_patterns: &["build.sbt"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::PypiWheel, DatasourceId::PypiPipOriginJson],
@@ -668,6 +779,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         // package per identity. A pip-cache leaf directory (one wheel plus its
         // `origin.json`, sharing the wheel's identity) falls back to one package.
         mode: AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
     },
     // Python/PyPI ecosystem
     AssemblerConfig {
@@ -713,11 +825,13 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "uv.lock",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::DenoJson, DatasourceId::DenoLock],
         sibling_file_patterns: &["deno.json", "deno.jsonc", "deno.lock"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Ruby/RubyGems ecosystem
     AssemblerConfig {
@@ -745,6 +859,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         // others, so split per identity. A single-gem directory (one purled
         // gemspec plus purl-less `Gemfile`/lock siblings) falls back unchanged.
         mode: AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
     },
     // Installed RubyGems specifications (`specifications/*.gemspec`). A
     // `vendor/bundle` / gem-home `specifications` directory holds one gemspec
@@ -754,11 +869,13 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::GemGemspecInstalledSpecifications],
         sibling_file_patterns: &["**/specifications/*.gemspec"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::GemArchive],
         sibling_file_patterns: &["*.gem"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Conda ecosystem: recipes and environment files describe one package per
     // directory, so they sibling-merge.
@@ -784,6 +901,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "*.json",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Conda installed-environment records: each `conda-meta/<pkg>.json` is one
     // installed package, like the Alpine/RPM/Debian installed databases below,
@@ -793,12 +911,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::CondaMetaJson],
         sibling_file_patterns: &["*.json"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // RPM specfile (source packages)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::RpmSpecfile],
         sibling_file_patterns: &["*.spec"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Debian source packages (nested merge via debian/ directory)
     AssemblerConfig {
@@ -808,17 +928,20 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["control", "copyright"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: Some(merge_debian_source),
     },
     // Gradle/Android ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::BuildGradle, DatasourceId::GradleLockfile],
         sibling_file_patterns: &["build.gradle", "build.gradle.kts", "gradle.lockfile"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::GradleModule],
         sibling_file_patterns: &["*.module"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Hugging Face model/dataset metadata. The model-card README.md, Transformers
     // config.json, and Diffusers model_index.json in one repository directory
@@ -834,6 +957,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["README.md", "config.json", "model_index.json"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: Some(merge_huggingface),
     },
     // CPAN/Perl ecosystem
     AssemblerConfig {
@@ -852,6 +976,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "Makefile.PL",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // NuGet/.NET ecosystem
     AssemblerConfig {
@@ -884,11 +1009,13 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         // collapsing the latter into one package loses the others, so split per
         // identity. A single-identity directory falls back to one package.
         mode: AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::NugetDepsJson],
         sibling_file_patterns: &["*.deps.json"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Swift/SPM ecosystem
     AssemblerConfig {
@@ -905,6 +1032,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "swift-show-dependencies.deplock",
         ],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: Some(merge_swift_skip),
     },
     // VS Code extension VSIX manifests. An extracted `extension.vsixmanifest`
     // carries the extension identity (`Publisher`, `Id`, `Version`) and maps
@@ -913,6 +1041,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::VscodeExtensionVsixManifest],
         sibling_file_patterns: &["extension.vsixmanifest"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // ── Standalone assemblers (single file → single package) ──
     //
@@ -924,29 +1053,34 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::BowerJson],
         sibling_file_patterns: &["bower.json"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // CRAN (R language)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::CranDescription],
         sibling_file_patterns: &["DESCRIPTION"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // FreeBSD packages
     AssemblerConfig {
         datasource_ids: &[DatasourceId::FreebsdCompactManifest],
         sibling_file_patterns: &["+COMPACT_MANIFEST"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Haxe ecosystem
     AssemblerConfig {
         datasource_ids: &[DatasourceId::HaxelibJson],
         sibling_file_patterns: &["haxelib.json"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::Gitmodules],
         sibling_file_patterns: &[".gitmodules"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // OCaml/opam ecosystem. A multi-package opam project ships several
     // `<name>.opam` files at its root, each a distinct `pkg:opam/<name>`
@@ -956,23 +1090,27 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::OpamFile],
         sibling_file_patterns: &["opam", "*.opam"],
         mode: AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::RpmYumdb],
         sibling_file_patterns: &["**/var/lib/yum/yumdb/*/*/from_repo"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Microsoft Update Manifest
     AssemblerConfig {
         datasource_ids: &[DatasourceId::MicrosoftUpdateManifestMum],
         sibling_file_patterns: &["*.mum"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: Some(merge_windows_update),
     },
     // Autotools (C/C++ build system)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::AutotoolsConfigure],
         sibling_file_patterns: &["configure", "configure.ac"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Bazel (build system). BUILD targets sibling-merge into one component per
     // build directory rather than one package per target: internal build targets
@@ -983,17 +1121,20 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::BazelBuild],
         sibling_file_patterns: &["BUILD"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::BazelModule],
         sibling_file_patterns: &["MODULE.bazel"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Buck (build system)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::BuckFile, DatasourceId::BuckMetadata],
         sibling_file_patterns: &["BUCK", "METADATA.bzl", ".buckconfig"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Meson (build system). Each `meson.build` that declares a `project()` is an
     // independent package rooted at its directory, so one package per identity
@@ -1006,12 +1147,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::MesonBuild],
         sibling_file_patterns: &["meson.build"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Ant/Ivy (Java dependency management)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::AntIvyXml],
         sibling_file_patterns: &["ivy.xml"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // JVM archives introspected in place (one archive == one package).
     AssemblerConfig {
@@ -1022,12 +1165,14 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["*.jar", "*.war", "*.aar"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Meteor (JavaScript platform)
     AssemblerConfig {
         datasource_ids: &[DatasourceId::MeteorPackage],
         sibling_file_patterns: &["package.js"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // ── One-per-PackageData assemblers (database files with many packages) ──
     //
@@ -1036,11 +1181,13 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         datasource_ids: &[DatasourceId::AlpineInstalledDb],
         sibling_file_patterns: &["installed"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::AlpineApkbuild],
         sibling_file_patterns: &["APKBUILD"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     // Arch Linux package metadata. A `.SRCINFO`/`.PKGINFO`/`.AURINFO` names one
     // or more `pkg:alpm/*` packages (a split recipe emits several subpackages),
@@ -1053,6 +1200,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &[".SRCINFO", ".PKGINFO", ".AURINFO"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // RPM installed package databases (BDB, NDB, SQLite)
     AssemblerConfig {
@@ -1069,17 +1217,20 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "container-manifest-2",
         ],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::RpmArchive],
         sibling_file_patterns: &["*.rpm", "*.srpm"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     // Debian installed package databases
     AssemblerConfig {
         datasource_ids: &[DatasourceId::DebianDeb],
         sibling_file_patterns: &["*.deb"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[
@@ -1088,6 +1239,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["status"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[
@@ -1096,16 +1248,19 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         ],
         sibling_file_patterns: &["control", "md5sums"],
         mode: AssemblyMode::SiblingMerge,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::DebianSourceControlDsc],
         sibling_file_patterns: &["*.dsc"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[DatasourceId::AboutFile],
         sibling_file_patterns: &["*.ABOUT"],
         mode: AssemblyMode::OnePerPackageData,
+        directory_merger: None,
     },
     AssemblerConfig {
         datasource_ids: &[
@@ -1120,6 +1275,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
         // directory (recipe + its `.bbappend`/files) falls back to the
         // one-package result unchanged.
         mode: AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
     },
 ];
 
@@ -1346,39 +1502,50 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_post_assembly_passes_are_unique() {
-        let unique: HashSet<PostAssemblyPassKind> = POST_ASSEMBLY_PASSES.iter().copied().collect();
+    fn pass(id: PostAssemblyPassId) -> &'static PostAssemblyPass {
+        POST_ASSEMBLY_PASSES
+            .iter()
+            .find(|pass| pass.id == id)
+            .expect("every PostAssemblyPassId is registered")
+    }
 
+    #[test]
+    fn test_every_post_assembly_pass_id_is_registered_exactly_once() {
+        for id in PostAssemblyPassId::iter() {
+            let count = POST_ASSEMBLY_PASSES
+                .iter()
+                .filter(|pass| pass.id == id)
+                .count();
+            assert_eq!(
+                count, 1,
+                "post-assembly pass {id:?} should be registered exactly once"
+            );
+        }
         assert_eq!(
-            unique.len(),
             POST_ASSEMBLY_PASSES.len(),
-            "POST_ASSEMBLY_PASSES contains duplicate entries"
+            PostAssemblyPassId::iter().count(),
+            "POST_ASSEMBLY_PASSES contains passes not in PostAssemblyPassId"
         );
     }
 
     #[test]
-    fn test_every_post_assembly_pass_kind_is_registered_once() {
-        let registered: HashSet<PostAssemblyPassKind> =
-            POST_ASSEMBLY_PASSES.iter().copied().collect();
-
-        let missing: Vec<_> = PostAssemblyPassKind::iter()
-            .filter(|pass| !registered.contains(pass))
-            .collect();
-
-        assert!(
-            missing.is_empty(),
-            "Post-assembly pass variants not registered in POST_ASSEMBLY_PASSES: {missing:?}"
-        );
-
-        for pass in PostAssemblyPassKind::iter() {
-            let count = POST_ASSEMBLY_PASSES
+    fn test_every_workspace_marker_has_exactly_one_detector() {
+        for marker in [
+            WorkspaceMarker::NpmWorkspace,
+            WorkspaceMarker::CargoWorkspace,
+            WorkspaceMarker::MixUmbrella,
+            WorkspaceMarker::MavenReactor,
+            WorkspaceMarker::GradleMultiProject,
+            WorkspaceMarker::UvWorkspace,
+            WorkspaceMarker::DartWorkspace,
+        ] {
+            let count = MARKER_DETECTORS
                 .iter()
-                .filter(|registered| **registered == pass)
+                .filter(|detector| detector.marker == marker)
                 .count();
             assert_eq!(
                 count, 1,
-                "Post-assembly pass {pass:?} should be registered exactly once"
+                "workspace marker {marker:?} should have exactly one detector"
             );
         }
     }
@@ -1387,10 +1554,11 @@ mod tests {
     fn test_post_assembly_passes_skip_irrelevant_inputs() {
         let inputs = PostAssemblyInputs::default();
 
-        for pass in PostAssemblyPassKind::iter() {
+        for post_assembly_pass in POST_ASSEMBLY_PASSES {
             assert!(
-                !pass.should_run(&inputs),
-                "{pass:?} should skip when no relevant inputs are present"
+                !(post_assembly_pass.should_run)(&inputs),
+                "{:?} should skip when no relevant inputs are present",
+                post_assembly_pass.id
             );
         }
     }
@@ -1400,24 +1568,20 @@ mod tests {
         let inputs = PostAssemblyInputs {
             package_types: HashSet::from([PackageType::Npm]),
             file_datasource_ids: HashSet::from([DatasourceId::NpmPackageJson]),
-            has_npm_workspace_markers: true,
-            has_cargo_workspace_markers: false,
-            has_mix_umbrella_markers: false,
-            has_maven_reactor_markers: false,
-            has_gradle_multi_project_markers: false,
-            has_uv_workspace_markers: false,
-            has_dart_workspace_markers: false,
+            markers: HashSet::from([WorkspaceMarker::NpmWorkspace]),
         };
 
-        let runnable: HashSet<_> = PostAssemblyPassKind::iter()
-            .filter(|pass| pass.should_run(&inputs))
+        let runnable: HashSet<_> = POST_ASSEMBLY_PASSES
+            .iter()
+            .filter(|post_assembly_pass| (post_assembly_pass.should_run)(&inputs))
+            .map(|post_assembly_pass| post_assembly_pass.id)
             .collect();
 
         assert_eq!(
             runnable,
             HashSet::from([
-                PostAssemblyPassKind::NpmResourceAssign,
-                PostAssemblyPassKind::NpmWorkspaceMerge,
+                PostAssemblyPassId::NpmResourceAssign,
+                PostAssemblyPassId::NpmWorkspaceMerge,
             ])
         );
     }
@@ -1427,23 +1591,21 @@ mod tests {
         let without_markers = PostAssemblyInputs {
             package_types: HashSet::from([PackageType::Cargo]),
             file_datasource_ids: HashSet::from([DatasourceId::CargoToml]),
-            has_npm_workspace_markers: false,
-            has_cargo_workspace_markers: false,
-            has_mix_umbrella_markers: false,
-            has_maven_reactor_markers: false,
-            has_gradle_multi_project_markers: false,
-            has_uv_workspace_markers: false,
-            has_dart_workspace_markers: false,
+            markers: HashSet::new(),
         };
 
-        assert!(!PostAssemblyPassKind::CargoWorkspaceMerge.should_run(&without_markers));
+        assert!(!(pass(PostAssemblyPassId::CargoWorkspaceMerge).should_run)(
+            &without_markers
+        ));
 
         let with_markers = PostAssemblyInputs {
-            has_cargo_workspace_markers: true,
+            markers: HashSet::from([WorkspaceMarker::CargoWorkspace]),
             ..without_markers
         };
 
-        assert!(PostAssemblyPassKind::CargoWorkspaceMerge.should_run(&with_markers));
+        assert!((pass(PostAssemblyPassId::CargoWorkspaceMerge).should_run)(
+            &with_markers
+        ));
     }
 
     #[test]
@@ -1451,22 +1613,20 @@ mod tests {
         let without_markers = PostAssemblyInputs {
             package_types: HashSet::new(),
             file_datasource_ids: HashSet::from([DatasourceId::HexMixExs]),
-            has_npm_workspace_markers: false,
-            has_cargo_workspace_markers: false,
-            has_mix_umbrella_markers: false,
-            has_maven_reactor_markers: false,
-            has_gradle_multi_project_markers: false,
-            has_uv_workspace_markers: false,
-            has_dart_workspace_markers: false,
+            markers: HashSet::new(),
         };
 
-        assert!(!PostAssemblyPassKind::MixUmbrellaMerge.should_run(&without_markers));
+        assert!(!(pass(PostAssemblyPassId::MixUmbrellaMerge).should_run)(
+            &without_markers
+        ));
 
         let with_markers = PostAssemblyInputs {
-            has_mix_umbrella_markers: true,
+            markers: HashSet::from([WorkspaceMarker::MixUmbrella]),
             ..without_markers
         };
 
-        assert!(PostAssemblyPassKind::MixUmbrellaMerge.should_run(&with_markers));
+        assert!((pass(PostAssemblyPassId::MixUmbrellaMerge).should_run)(
+            &with_markers
+        ));
     }
 }

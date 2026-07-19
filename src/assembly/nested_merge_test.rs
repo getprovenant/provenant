@@ -57,6 +57,7 @@ fn test_has_nested_patterns() {
         datasource_ids: &[DatasourceId::MavenPom],
         sibling_file_patterns: &["pom.xml", "**/META-INF/MANIFEST.MF"],
         mode: crate::assembly::AssemblyMode::SiblingMerge,
+        directory_merger: None,
     };
     assert!(has_nested_patterns(&config_nested));
 
@@ -64,6 +65,7 @@ fn test_has_nested_patterns() {
         datasource_ids: &[DatasourceId::NpmPackageJson],
         sibling_file_patterns: &["package.json", "package-lock.json"],
         mode: crate::assembly::AssemblyMode::SiblingMerge,
+        directory_merger: None,
     };
     assert!(!has_nested_patterns(&config_simple));
 }
@@ -228,6 +230,7 @@ fn test_maven_nested_merge_skips_multiple_nested_poms() {
         ],
         sibling_file_patterns: &["pom.xml", "pom.properties", "**/META-INF/MANIFEST.MF"],
         mode: crate::assembly::AssemblyMode::SiblingMerge,
+        directory_merger: None,
     };
 
     let files = vec![
@@ -291,6 +294,7 @@ fn test_maven_nested_merge_skips_source_reactor_poms() {
         ],
         sibling_file_patterns: &["pom.xml", "pom.properties", "**/META-INF/MANIFEST.MF"],
         mode: crate::assembly::AssemblyMode::SiblingMerge,
+        directory_merger: None,
     };
 
     let module = |path: &str, name: &str, version: &str| {

@@ -408,8 +408,9 @@ Keep `sibling_file_patterns` aligned with the real filenames the scanner will se
 only merge package data whose datasource IDs live in the same config.
 
 If the ecosystem needs a brand-new post-assembly behavior rather than just a new datasource entry,
-register that pass in `src/assembly/assemblers.rs` via `PostAssemblyPassKind` and
-`POST_ASSEMBLY_PASSES`.
+register that pass in `src/assembly/assemblers.rs` by adding a `PostAssemblyPass` row (with its
+`should_run` gate and `run` body) to `POST_ASSEMBLY_PASSES`, plus a `MARKER_DETECTORS` row when the
+pass gates on a workspace/reactor marker.
 
 ### File-reference resolution ownership
 

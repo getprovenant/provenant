@@ -33,8 +33,8 @@ pub(super) struct PendingDependency {
 /// different strategy instead: [`assemble_siblings_per_identity`] for the generic
 /// "one package per distinct identity" case
 /// ([`AssemblyMode::SiblingMergePerIdentity`](super::AssemblyMode::SiblingMergePerIdentity)),
-/// or a dedicated module registered through
-/// [`special_directory_merger_for`](super::assemblers::special_directory_merger_for)
+/// or a dedicated module attached through
+/// [`AssemblerConfig::directory_merger`](super::AssemblerConfig::directory_merger)
 /// for bespoke layouts (e.g. CocoaPods).
 pub fn assemble_siblings(
     config: &AssemblerConfig,
@@ -362,7 +362,7 @@ pub(super) fn is_handled_by(pkg_data: &PackageData, config: &AssemblerConfig) ->
 /// Decides whether a candidate `PackageData` must NOT be folded into the
 /// directory's package, keyed by the candidate's own `DatasourceId`. This is the
 /// per-record merge-compatibility analog of
-/// [`special_directory_merger_for`](super::assemblers::special_directory_merger_for):
+/// [`AssemblerConfig::directory_merger`](super::AssemblerConfig::directory_merger):
 /// a new ecosystem registers one [`merge_skip_rule_for`] arm rather than
 /// extending a hand-maintained boolean chain in the generic merger.
 pub(super) fn should_skip_assembly_package_data(
