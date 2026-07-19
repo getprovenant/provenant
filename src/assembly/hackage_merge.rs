@@ -1,12 +1,96 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Hackage cabal/stack assembly and directory-scoped project topology.
+
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, PackageUid, TopLevelDependency};
+
+use super::topology::apply_directory_merge_result;
+
+pub(super) struct HackageProjectHint {
+    pub(super) root_dir: PathBuf,
+}
+
+pub(super) struct HackageProjectDomain {
+    pub(super) root_dir: PathBuf,
+    pub(super) root_dir_file_indices: Vec<usize>,
+}
 
 struct HackageSource<'a> {
     file_index: usize,
     datafile_path: String,
     package_data: &'a PackageData,
+}
+
+pub(super) fn collect_hackage_project_hints(files: &[FileInfo]) -> Vec<HackageProjectHint> {
+    let mut seen = HashSet::new();
+    let mut hints = Vec::new();
+
+    for file in files {
+        let path = Path::new(&file.path);
+        let file_name = path.file_name().and_then(|name| name.to_str());
+        if !matches!(file_name, Some("cabal.project" | "stack.yaml")) {
+            continue;
+        }
+
+        let has_project_surface = file.package_data.iter().any(|pkg_data| {
+            matches!(
+                pkg_data.datasource_id,
+                Some(DatasourceId::HackageCabalProject | DatasourceId::HackageStackYaml)
+            )
+        });
+        if !has_project_surface {
+            continue;
+        }
+
+        let Some(parent) = path.parent() else {
+            continue;
+        };
+        let root_dir = parent.to_path_buf();
+        if seen.insert(root_dir.clone()) {
+            hints.push(HackageProjectHint { root_dir });
+        }
+    }
+
+    hints.sort_by(|left, right| left.root_dir.cmp(&right.root_dir));
+    hints
+}
+
+pub(super) fn plan_hackage_project_domains(
+    dir_files: &HashMap<PathBuf, Vec<usize>>,
+    workspace_hints: &[&HackageProjectHint],
+) -> Vec<HackageProjectDomain> {
+    let mut domains = Vec::new();
+
+    for hint in workspace_hints {
+        let root_dir_file_indices = dir_files.get(&hint.root_dir).cloned().unwrap_or_default();
+        if root_dir_file_indices.is_empty() {
+            continue;
+        }
+
+        domains.push(HackageProjectDomain {
+            root_dir: hint.root_dir.clone(),
+            root_dir_file_indices,
+        });
+    }
+
+    domains.sort_by(|left, right| left.root_dir.cmp(&right.root_dir));
+    domains
+}
+
+pub(super) fn apply_hackage_project_domain(
+    domain: &HackageProjectDomain,
+    files: &mut [FileInfo],
+    packages: &mut Vec<Package>,
+    dependencies: &mut Vec<TopLevelDependency>,
+) {
+    let results = assemble_hackage_packages(files, &domain.root_dir_file_indices);
+    for result in results {
+        apply_directory_merge_result(files, packages, dependencies, result);
+    }
 }
 
 pub fn assemble_hackage_packages(
