@@ -115,7 +115,9 @@ scan phase reported by the Provenant progress summary: `scan:packages`,
 ### Purpose
 
 `compare-outputs` compares Provenant and ScanCode raw outputs and produces
-reduced comparison artifacts for later manual or agent review.
+reduced comparison artifacts for later manual or agent review. Comparison artifact
+generation (`summary.json`, TSV, and capped samples) is shared with the
+`provenant compare` CLI via `provenant::compare::write_comparison_artifacts`.
 
 It supports two input modes:
 
