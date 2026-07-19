@@ -55,6 +55,120 @@ pub trait OutputWriter {
     ) -> io::Result<()>;
 }
 
+type FormatWriterFn = fn(&Output, &mut dyn Write, &OutputWriteConfig) -> io::Result<()>;
+
+/// Canonical, single-source-of-truth entry for one output format: how to
+/// write it, the CLI flag that requests it (for diagnostics such as the
+/// hollow-SBOM guard in `src/cli/run/mod.rs`), and whether it belongs to the
+/// SBOM-oriented family gated by that guard. Adding a new [`OutputFormat`]
+/// variant means adding one row to [`OUTPUT_WRITERS`]; no other dispatch
+/// table or match arm needs to change.
+struct OutputFormatDescriptor {
+    format: OutputFormat,
+    cli_flag: &'static str,
+    is_sbom: bool,
+    write: FormatWriterFn,
+}
+
+/// SBOM-oriented output formats whose entire value proposition is the
+/// package inventory: an SPDX or CycloneDX document with zero packages looks
+/// like a normal, successful export while actually reporting no components
+/// at all. See the hollow-SBOM guard in `src/cli/run/mod.rs`.
+const OUTPUT_WRITERS: &[OutputFormatDescriptor] = &[
+    OutputFormatDescriptor {
+        format: OutputFormat::Json,
+        cli_flag: "--json",
+        is_sbom: false,
+        write: write_json,
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::JsonPretty,
+        cli_flag: "--json-pp",
+        is_sbom: false,
+        write: write_json_pretty,
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::JsonLines,
+        cli_flag: "--json-lines",
+        is_sbom: false,
+        write: |output, writer, _config| jsonl::write_json_lines(output, writer),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::Yaml,
+        cli_flag: "--yaml",
+        is_sbom: false,
+        write: |output, writer, _config| write_yaml(output, writer),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::Debian,
+        cli_flag: "--debian",
+        is_sbom: false,
+        write: |output, writer, _config| debian::write_debian_copyright(output, writer),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::Html,
+        cli_flag: "--html",
+        is_sbom: false,
+        write: |output, writer, _config| html::write_html_report(output, writer),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::CustomTemplate,
+        cli_flag: "--custom-output",
+        is_sbom: false,
+        write: |output, writer, config| template::write_custom_template(output, writer, config),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::SpdxTv,
+        cli_flag: "--spdx-tv",
+        is_sbom: true,
+        write: |output, writer, config| spdx::write_spdx_tag_value(output, writer, config),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::SpdxRdf,
+        cli_flag: "--spdx-rdf",
+        is_sbom: true,
+        write: |output, writer, config| spdx::write_spdx_rdf_xml(output, writer, config),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::CycloneDxJson,
+        cli_flag: "--cyclonedx",
+        is_sbom: true,
+        write: |output, writer, _config| cyclonedx::write_cyclonedx_json(output, writer),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::CycloneDxXml,
+        cli_flag: "--cyclonedx-xml",
+        is_sbom: true,
+        write: |output, writer, _config| cyclonedx::write_cyclonedx_xml(output, writer),
+    },
+    OutputFormatDescriptor {
+        format: OutputFormat::Sarif,
+        cli_flag: "--sarif",
+        is_sbom: false,
+        write: |output, writer, _config| sarif::write_sarif(output, writer),
+    },
+];
+
+fn descriptor_for(format: OutputFormat) -> &'static OutputFormatDescriptor {
+    OUTPUT_WRITERS
+        .iter()
+        .find(|descriptor| descriptor.format == format)
+        .expect("OUTPUT_WRITERS must have an entry for every OutputFormat variant")
+}
+
+/// The CLI flag (e.g. `--cyclonedx`) that requests `format`, for use in
+/// diagnostics. Kept in sync with clap's `long = "..."` attributes on
+/// `ScanArgs` by the registry test below.
+pub(crate) fn cli_flag_for(format: OutputFormat) -> &'static str {
+    descriptor_for(format).cli_flag
+}
+
+/// Whether `format` belongs to the SBOM-oriented family (SPDX/CycloneDX)
+/// gated by the hollow-SBOM guard in `src/cli/run/mod.rs`.
+pub(crate) fn is_sbom_format(format: OutputFormat) -> bool {
+    descriptor_for(format).is_sbom
+}
+
 pub struct FormatWriter {
     format: OutputFormat,
 }
@@ -70,29 +184,28 @@ impl OutputWriter for FormatWriter {
         writer: &mut dyn Write,
         config: &OutputWriteConfig,
     ) -> io::Result<()> {
-        match self.format {
-            OutputFormat::Json => {
-                serde_json::to_writer(&mut *writer, &public_serialize::PublicOutput(output))
-                    .map_err(shared::io_other)?;
-                writer.write_all(b"\n")
-            }
-            OutputFormat::JsonPretty => {
-                serde_json::to_writer_pretty(&mut *writer, &public_serialize::PublicOutput(output))
-                    .map_err(shared::io_other)?;
-                writer.write_all(b"\n")
-            }
-            OutputFormat::Yaml => write_yaml(output, writer),
-            OutputFormat::JsonLines => jsonl::write_json_lines(output, writer),
-            OutputFormat::Debian => debian::write_debian_copyright(output, writer),
-            OutputFormat::Html => html::write_html_report(output, writer),
-            OutputFormat::CustomTemplate => template::write_custom_template(output, writer, config),
-            OutputFormat::SpdxTv => spdx::write_spdx_tag_value(output, writer, config),
-            OutputFormat::SpdxRdf => spdx::write_spdx_rdf_xml(output, writer, config),
-            OutputFormat::CycloneDxJson => cyclonedx::write_cyclonedx_json(output, writer),
-            OutputFormat::CycloneDxXml => cyclonedx::write_cyclonedx_xml(output, writer),
-            OutputFormat::Sarif => sarif::write_sarif(output, writer),
-        }
+        (descriptor_for(self.format).write)(output, writer, config)
     }
+}
+
+fn write_json(
+    output: &Output,
+    writer: &mut dyn Write,
+    _config: &OutputWriteConfig,
+) -> io::Result<()> {
+    serde_json::to_writer(&mut *writer, &public_serialize::PublicOutput(output))
+        .map_err(shared::io_other)?;
+    writer.write_all(b"\n")
+}
+
+fn write_json_pretty(
+    output: &Output,
+    writer: &mut dyn Write,
+    _config: &OutputWriteConfig,
+) -> io::Result<()> {
+    serde_json::to_writer_pretty(&mut *writer, &public_serialize::PublicOutput(output))
+        .map_err(shared::io_other)?;
+    writer.write_all(b"\n")
 }
 
 pub fn write_output_file(
@@ -133,6 +246,59 @@ mod tests {
         Package, PackageData, PackageUid, Sha1Digest, Sha256Digest, SystemEnvironment,
     };
     use crate::output_schema::OutputFileInfo;
+
+    #[test]
+    fn test_output_writers_registry_covers_every_format_exactly_once() {
+        // Keep this list in sync with the `OutputFormat` enum: it is the
+        // only place that asserts every variant has exactly one
+        // `OUTPUT_WRITERS` row.
+        let all_formats = [
+            OutputFormat::Json,
+            OutputFormat::JsonPretty,
+            OutputFormat::Yaml,
+            OutputFormat::JsonLines,
+            OutputFormat::Debian,
+            OutputFormat::Html,
+            OutputFormat::CustomTemplate,
+            OutputFormat::SpdxTv,
+            OutputFormat::SpdxRdf,
+            OutputFormat::CycloneDxJson,
+            OutputFormat::CycloneDxXml,
+            OutputFormat::Sarif,
+        ];
+        assert_eq!(OUTPUT_WRITERS.len(), all_formats.len());
+        for format in all_formats {
+            assert_eq!(
+                OUTPUT_WRITERS
+                    .iter()
+                    .filter(|descriptor| descriptor.format == format)
+                    .count(),
+                1,
+                "missing or duplicate OUTPUT_WRITERS entry for {format:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sbom_formats_are_exactly_spdx_and_cyclonedx() {
+        let sbom_formats: Vec<OutputFormat> = OUTPUT_WRITERS
+            .iter()
+            .filter(|descriptor| descriptor.is_sbom)
+            .map(|descriptor| descriptor.format)
+            .collect();
+        assert_eq!(
+            sbom_formats,
+            vec![
+                OutputFormat::SpdxTv,
+                OutputFormat::SpdxRdf,
+                OutputFormat::CycloneDxJson,
+                OutputFormat::CycloneDxXml,
+            ]
+        );
+        assert_eq!(cli_flag_for(OutputFormat::CycloneDxJson), "--cyclonedx");
+        assert!(is_sbom_format(OutputFormat::SpdxTv));
+        assert!(!is_sbom_format(OutputFormat::Json));
+    }
 
     #[test]
     fn test_yaml_writer_outputs_yaml() {
