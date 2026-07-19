@@ -6,24 +6,25 @@ use std::ffi::OsStr;
 use std::path::{Component, Path, PathBuf};
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageUid, TopLevelDependency};
+use strum::EnumIter;
 
 use super::AssemblerConfig;
 use super::cargo_workspace_merge::{
-    CargoWorkspaceDomain, CargoWorkspaceRootHint, apply_cargo_workspace_domain,
-    collect_cargo_workspace_hints, plan_cargo_workspace_domains,
+    CargoWorkspaceDomain, apply_cargo_workspace_domain, collect_cargo_workspace_hints,
+    plan_cargo_workspace_domains,
 };
 use super::dart_workspace_merge::{
-    DartWorkspaceDomain, DartWorkspaceRootHint, apply_dart_workspace_domain,
-    collect_dart_workspace_hints, plan_dart_workspace_domains,
+    DartWorkspaceDomain, apply_dart_workspace_domain, collect_dart_workspace_hints,
+    plan_dart_workspace_domains,
 };
 use super::hackage_merge;
 use super::mix_umbrella_merge::{
-    MixUmbrellaDomain, MixUmbrellaRootHint, apply_mix_umbrella_domain, collect_mix_umbrella_hints,
+    MixUmbrellaDomain, apply_mix_umbrella_domain, collect_mix_umbrella_hints,
     plan_mix_umbrella_domains,
 };
 use super::npm_workspace_merge::{
-    NpmWorkspaceDomain, NpmWorkspaceRootHint, apply_npm_workspace_domain,
-    collect_npm_workspace_hints, plan_npm_workspace_domains,
+    NpmWorkspaceDomain, apply_npm_workspace_domain, collect_npm_workspace_hints,
+    plan_npm_workspace_domains,
 };
 use super::{ASSEMBLERS, DirectoryMergeOutput, sibling_merge};
 
@@ -99,17 +100,22 @@ pub(super) struct UvWorkspaceDomain {
     member_pyproject_indices: Vec<usize>,
 }
 
-pub(super) enum TopologyHint {
-    CargoWorkspaceRoot(CargoWorkspaceRootHint),
-    DartWorkspaceRoot(DartWorkspaceRootHint),
-    GoWorkspaceRoot(GoWorkspaceRootHint),
-    GradleMultiProjectRoot(GradleMultiProjectRootHint),
-    HackageProject(HackageProjectHint),
-    MixUmbrellaRoot(MixUmbrellaRootHint),
-    MavenReactorRoot(MavenReactorRootHint),
-    NpmWorkspaceRoot(NpmWorkspaceRootHint),
-    PixiRoot(PixiRootHint),
-    UvWorkspaceRoot(UvWorkspaceRootHint),
+/// Identity of a topology family in the [`TOPOLOGY_HANDLERS`] registry.
+///
+/// Keys the per-family set of directories a family claims from the generic
+/// per-directory assembler loop (see [`TopologyPlan::claimed_dirs`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
+pub(super) enum TopologyFamilyId {
+    CargoWorkspace,
+    DartWorkspace,
+    GoWorkspace,
+    GradleMultiProject,
+    HackageProject,
+    MixUmbrella,
+    MavenReactor,
+    NpmWorkspace,
+    Pixi,
+    UvWorkspace,
 }
 
 pub(super) enum TopologyDomain {
@@ -127,245 +133,240 @@ pub(super) enum TopologyDomain {
 
 pub(super) struct TopologyPlan {
     domains: Vec<TopologyDomain>,
-    claimed_cargo_dirs: HashSet<PathBuf>,
-    claimed_dart_dirs: HashSet<PathBuf>,
-    claimed_go_dirs: HashSet<PathBuf>,
-    claimed_hackage_dirs: HashSet<PathBuf>,
-    claimed_mix_dirs: HashSet<PathBuf>,
-    claimed_npm_dirs: HashSet<PathBuf>,
-    claimed_pixi_dirs: HashSet<PathBuf>,
+    /// Directories each family claims from the generic per-directory assembler
+    /// loop, keyed by family. A family that only fills in file ownership after
+    /// assembly (Maven/Gradle/uv) contributes no entry here.
+    claimed_dirs: HashMap<TopologyFamilyId, HashSet<PathBuf>>,
+}
+
+/// Read-only scan inputs handed to every topology family's planner.
+struct TopologyInputs<'a> {
+    files: &'a [FileInfo],
+    dir_files: &'a HashMap<PathBuf, Vec<usize>>,
+}
+
+/// A single family's planning output: the domains it discovered plus the
+/// directories it claims from the generic per-directory assembler loop.
+#[derive(Default)]
+struct PlannedFamily {
+    domains: Vec<TopologyDomain>,
+    claimed_dirs: HashSet<PathBuf>,
+}
+
+/// A registered topology family: its identity, the datasource IDs whose
+/// per-directory assembly it claims, and the planner that turns scan inputs into
+/// domains and claimed directories.
+///
+/// Families differ deliberately. Some claim their directories outright so the
+/// generic loop skips them (Cargo/npm/Mix/Dart claim root and members;
+/// Go/Pixi/Hackage claim their single root), while others claim nothing and only
+/// attribute nested file ownership after assembly (Maven/Gradle/uv). That
+/// difference lives entirely in each planner and its `claim_datasource_ids`,
+/// not in a shared algorithm.
+struct TopologyHandler {
+    family: TopologyFamilyId,
+    /// The datasource IDs whose per-directory assembly this family claims. Empty
+    /// means ownership-only: the family never claims a directory.
+    claim_datasource_ids: &'static [DatasourceId],
+    plan: fn(&TopologyInputs) -> PlannedFamily,
+}
+
+static TOPOLOGY_HANDLERS: &[TopologyHandler] = &[
+    TopologyHandler {
+        family: TopologyFamilyId::CargoWorkspace,
+        claim_datasource_ids: &[DatasourceId::CargoToml],
+        plan: plan_cargo_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::DartWorkspace,
+        claim_datasource_ids: &[DatasourceId::PubspecYaml],
+        plan: plan_dart_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::GoWorkspace,
+        claim_datasource_ids: &[DatasourceId::GoWork],
+        plan: plan_go_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::GradleMultiProject,
+        claim_datasource_ids: &[],
+        plan: plan_gradle_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::HackageProject,
+        claim_datasource_ids: &[DatasourceId::HackageCabal],
+        plan: plan_hackage_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::MixUmbrella,
+        claim_datasource_ids: &[DatasourceId::HexMixExs],
+        plan: plan_mix_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::MavenReactor,
+        claim_datasource_ids: &[],
+        plan: plan_maven_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::NpmWorkspace,
+        claim_datasource_ids: &[DatasourceId::NpmPackageJson],
+        plan: plan_npm_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::Pixi,
+        claim_datasource_ids: &[DatasourceId::PixiToml],
+        plan: plan_pixi_family,
+    },
+    TopologyHandler {
+        family: TopologyFamilyId::UvWorkspace,
+        claim_datasource_ids: &[],
+        plan: plan_uv_family,
+    },
+];
+
+fn plan_cargo_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_cargo_workspace_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_cargo_workspace_domains(inputs.files, inputs.dir_files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned
+            .claimed_dirs
+            .extend(domain.members.iter().map(|member| member.dir_path.clone()));
+        planned.domains.push(TopologyDomain::CargoWorkspace(domain));
+    }
+    planned
+}
+
+fn plan_dart_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_dart_workspace_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_dart_workspace_domains(inputs.files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned
+            .claimed_dirs
+            .extend(domain.members.iter().map(|member| member.dir_path.clone()));
+        planned.domains.push(TopologyDomain::DartWorkspace(domain));
+    }
+    planned
+}
+
+fn plan_go_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_go_workspace_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_go_workspace_domains(inputs.dir_files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned.domains.push(TopologyDomain::GoWorkspace(domain));
+    }
+    planned
+}
+
+fn plan_gradle_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_gradle_multi_project_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_gradle_multi_project_domains(inputs.files, &hint_refs) {
+        planned
+            .domains
+            .push(TopologyDomain::GradleMultiProject(domain));
+    }
+    planned
+}
+
+fn plan_hackage_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_hackage_project_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_hackage_project_domains(inputs.dir_files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned.domains.push(TopologyDomain::HackageProject(domain));
+    }
+    planned
+}
+
+fn plan_mix_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_mix_umbrella_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_mix_umbrella_domains(inputs.files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned
+            .claimed_dirs
+            .extend(domain.members.iter().map(|member| member.dir_path.clone()));
+        planned.domains.push(TopologyDomain::MixUmbrella(domain));
+    }
+    planned
+}
+
+fn plan_maven_family(inputs: &TopologyInputs) -> PlannedFamily {
+    // Maven reactors intentionally claim no directories: unlike
+    // Cargo/npm/Go/Pixi/Hackage, each module `pom.xml` still goes through the
+    // normal per-directory sibling merge to create its own package. This domain
+    // only fills in file ownership for the source trees underneath each module
+    // afterwards; see `apply_maven_reactor_domains`.
+    let hints = collect_maven_reactor_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_maven_reactor_domains(inputs.files, &hint_refs) {
+        planned.domains.push(TopologyDomain::MavenReactor(domain));
+    }
+    planned
+}
+
+fn plan_npm_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_npm_workspace_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_npm_workspace_domains(inputs.files, inputs.dir_files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned
+            .claimed_dirs
+            .extend(domain.members.iter().map(|member| member.dir_path.clone()));
+        planned.domains.push(TopologyDomain::NpmWorkspace(domain));
+    }
+    planned
+}
+
+fn plan_pixi_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_pixi_root_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_pixi_domains(inputs.dir_files, &hint_refs) {
+        planned.claimed_dirs.insert(domain.root_dir.clone());
+        planned.domains.push(TopologyDomain::Pixi(domain));
+    }
+    planned
+}
+
+fn plan_uv_family(inputs: &TopologyInputs) -> PlannedFamily {
+    let hints = collect_uv_workspace_hints(inputs.files);
+    let hint_refs: Vec<_> = hints.iter().collect();
+    let mut planned = PlannedFamily::default();
+    for domain in plan_uv_workspace_domains(inputs.files, &hint_refs) {
+        planned.domains.push(TopologyDomain::UvWorkspace(domain));
+    }
+    planned
 }
 
 impl TopologyPlan {
     pub(super) fn build(files: &[FileInfo], dir_files: &HashMap<PathBuf, Vec<usize>>) -> Self {
-        let mut hints = Vec::new();
-        hints.extend(
-            collect_cargo_workspace_hints(files)
-                .into_iter()
-                .map(TopologyHint::CargoWorkspaceRoot),
-        );
-        hints.extend(
-            collect_dart_workspace_hints(files)
-                .into_iter()
-                .map(TopologyHint::DartWorkspaceRoot),
-        );
-        hints.extend(
-            collect_go_workspace_hints(files)
-                .into_iter()
-                .map(TopologyHint::GoWorkspaceRoot),
-        );
-        hints.extend(
-            collect_gradle_multi_project_hints(files)
-                .into_iter()
-                .map(TopologyHint::GradleMultiProjectRoot),
-        );
-        hints.extend(
-            collect_hackage_project_hints(files)
-                .into_iter()
-                .map(TopologyHint::HackageProject),
-        );
-        hints.extend(
-            collect_mix_umbrella_hints(files)
-                .into_iter()
-                .map(TopologyHint::MixUmbrellaRoot),
-        );
-        hints.extend(
-            collect_maven_reactor_hints(files)
-                .into_iter()
-                .map(TopologyHint::MavenReactorRoot),
-        );
-        hints.extend(
-            collect_npm_workspace_hints(files)
-                .into_iter()
-                .map(TopologyHint::NpmWorkspaceRoot),
-        );
-        hints.extend(
-            collect_pixi_root_hints(files)
-                .into_iter()
-                .map(TopologyHint::PixiRoot),
-        );
-        hints.extend(
-            collect_uv_workspace_hints(files)
-                .into_iter()
-                .map(TopologyHint::UvWorkspaceRoot),
-        );
-
+        let inputs = TopologyInputs { files, dir_files };
         let mut domains = Vec::new();
-        let mut claimed_cargo_dirs = HashSet::new();
-        let mut claimed_dart_dirs = HashSet::new();
-        let mut claimed_go_dirs = HashSet::new();
-        let mut claimed_hackage_dirs = HashSet::new();
-        let mut claimed_mix_dirs = HashSet::new();
-        let mut claimed_npm_dirs = HashSet::new();
-        let mut claimed_pixi_dirs = HashSet::new();
+        let mut claimed_dirs: HashMap<TopologyFamilyId, HashSet<PathBuf>> = HashMap::new();
 
-        let cargo_workspace_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_cargo_workspace_domains(files, dir_files, &cargo_workspace_hints) {
-            claimed_cargo_dirs.insert(domain.root_dir.clone());
-            claimed_cargo_dirs.extend(domain.members.iter().map(|member| member.dir_path.clone()));
-            domains.push(TopologyDomain::CargoWorkspace(domain));
-        }
-
-        let dart_workspace_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::DartWorkspaceRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_dart_workspace_domains(files, &dart_workspace_hints) {
-            claimed_dart_dirs.insert(domain.root_dir.clone());
-            claimed_dart_dirs.extend(domain.members.iter().map(|member| member.dir_path.clone()));
-            domains.push(TopologyDomain::DartWorkspace(domain));
-        }
-
-        let go_workspace_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(_) => None,
-                TopologyHint::GoWorkspaceRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_go_workspace_domains(dir_files, &go_workspace_hints) {
-            claimed_go_dirs.insert(domain.root_dir.clone());
-            domains.push(TopologyDomain::GoWorkspace(domain));
-        }
-
-        let gradle_multi_project_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::GradleMultiProjectRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_gradle_multi_project_domains(files, &gradle_multi_project_hints) {
-            domains.push(TopologyDomain::GradleMultiProject(domain));
-        }
-
-        let hackage_project_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(_) => None,
-                TopologyHint::GoWorkspaceRoot(_) => None,
-                TopologyHint::HackageProject(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_hackage_project_domains(dir_files, &hackage_project_hints) {
-            claimed_hackage_dirs.insert(domain.root_dir.clone());
-            domains.push(TopologyDomain::HackageProject(domain));
-        }
-
-        let mix_umbrella_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(_) => None,
-                TopologyHint::GoWorkspaceRoot(_) => None,
-                TopologyHint::HackageProject(_) => None,
-                TopologyHint::MixUmbrellaRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_mix_umbrella_domains(files, &mix_umbrella_hints) {
-            claimed_mix_dirs.insert(domain.root_dir.clone());
-            claimed_mix_dirs.extend(domain.members.iter().map(|member| member.dir_path.clone()));
-            domains.push(TopologyDomain::MixUmbrella(domain));
-        }
-
-        // Maven reactors intentionally do not populate a `claimed_*_dirs` set:
-        // unlike Cargo/npm/Go/Pixi/Hackage, each module `pom.xml` still goes
-        // through the normal per-directory sibling merge to create its own
-        // package. This domain only fills in file ownership for the source
-        // trees underneath each module afterwards; see
-        // `apply_maven_reactor_domains`.
-        let maven_reactor_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(_) => None,
-                TopologyHint::GoWorkspaceRoot(_) => None,
-                TopologyHint::HackageProject(_) => None,
-                TopologyHint::MixUmbrellaRoot(_) => None,
-                TopologyHint::MavenReactorRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_maven_reactor_domains(files, &maven_reactor_hints) {
-            domains.push(TopologyDomain::MavenReactor(domain));
-        }
-
-        let npm_workspace_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(_) => None,
-                TopologyHint::GoWorkspaceRoot(_) => None,
-                TopologyHint::HackageProject(_) => None,
-                TopologyHint::MixUmbrellaRoot(_) => None,
-                TopologyHint::MavenReactorRoot(_) => None,
-                TopologyHint::NpmWorkspaceRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_npm_workspace_domains(files, dir_files, &npm_workspace_hints) {
-            claimed_npm_dirs.insert(domain.root_dir.clone());
-            claimed_npm_dirs.extend(domain.members.iter().map(|member| member.dir_path.clone()));
-            domains.push(TopologyDomain::NpmWorkspace(domain));
-        }
-
-        let pixi_root_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::CargoWorkspaceRoot(_) => None,
-                TopologyHint::GoWorkspaceRoot(_) => None,
-                TopologyHint::HackageProject(_) => None,
-                TopologyHint::MixUmbrellaRoot(_) => None,
-                TopologyHint::MavenReactorRoot(_) => None,
-                TopologyHint::NpmWorkspaceRoot(_) => None,
-                TopologyHint::PixiRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_pixi_domains(dir_files, &pixi_root_hints) {
-            claimed_pixi_dirs.insert(domain.root_dir.clone());
-            domains.push(TopologyDomain::Pixi(domain));
-        }
-
-        let uv_workspace_hints: Vec<_> = hints
-            .iter()
-            .filter_map(|hint| match hint {
-                TopologyHint::UvWorkspaceRoot(hint) => Some(hint),
-                _ => None,
-            })
-            .collect();
-
-        for domain in plan_uv_workspace_domains(files, &uv_workspace_hints) {
-            domains.push(TopologyDomain::UvWorkspace(domain));
+        for handler in TOPOLOGY_HANDLERS {
+            let planned = (handler.plan)(&inputs);
+            if !planned.claimed_dirs.is_empty() {
+                claimed_dirs.insert(handler.family, planned.claimed_dirs);
+            }
+            domains.extend(planned.domains);
         }
 
         Self {
             domains,
-            claimed_cargo_dirs,
-            claimed_dart_dirs,
-            claimed_go_dirs,
-            claimed_hackage_dirs,
-            claimed_mix_dirs,
-            claimed_npm_dirs,
-            claimed_pixi_dirs,
+            claimed_dirs,
         }
     }
 
@@ -382,38 +383,23 @@ impl TopologyPlan {
             return false;
         };
 
-        if config.datasource_ids.contains(&DatasourceId::CargoToml) {
-            return self.claimed_cargo_dirs.contains(parent_dir);
+        for handler in TOPOLOGY_HANDLERS {
+            if handler.claim_datasource_ids.is_empty() {
+                continue;
+            }
+            if handler
+                .claim_datasource_ids
+                .iter()
+                .any(|dsid| config.datasource_ids.contains(dsid))
+            {
+                return self
+                    .claimed_dirs
+                    .get(&handler.family)
+                    .is_some_and(|dirs| dirs.contains(parent_dir));
+            }
         }
 
-        if config.datasource_ids.contains(&DatasourceId::PubspecYaml) {
-            return self.claimed_dart_dirs.contains(parent_dir);
-        }
-
-        if config.datasource_ids.contains(&DatasourceId::GoWork) {
-            return self.claimed_go_dirs.contains(parent_dir);
-        }
-
-        if config.datasource_ids.contains(&DatasourceId::PixiToml) {
-            return self.claimed_pixi_dirs.contains(parent_dir);
-        }
-
-        if config.datasource_ids.contains(&DatasourceId::HackageCabal) {
-            return self.claimed_hackage_dirs.contains(parent_dir);
-        }
-
-        if config.datasource_ids.contains(&DatasourceId::HexMixExs) {
-            return self.claimed_mix_dirs.contains(parent_dir);
-        }
-
-        if !config
-            .datasource_ids
-            .contains(&DatasourceId::NpmPackageJson)
-        {
-            return false;
-        }
-
-        self.claimed_npm_dirs.contains(parent_dir)
+        false
     }
 
     pub(super) fn apply_directory_scoped_domains(
@@ -459,13 +445,7 @@ impl TopologyPlan {
 
                     apply_directory_merge_result(files, packages, dependencies, result);
                 }
-                TopologyDomain::CargoWorkspace(_)
-                | TopologyDomain::DartWorkspace(_)
-                | TopologyDomain::GradleMultiProject(_)
-                | TopologyDomain::MixUmbrella(_)
-                | TopologyDomain::MavenReactor(_)
-                | TopologyDomain::NpmWorkspace(_)
-                | TopologyDomain::UvWorkspace(_) => {}
+                _ => {}
             }
         }
     }
@@ -477,19 +457,8 @@ impl TopologyPlan {
         dependencies: &mut Vec<TopLevelDependency>,
     ) {
         for domain in &self.domains {
-            match domain {
-                TopologyDomain::CargoWorkspace(domain) => {
-                    apply_cargo_workspace_domain(domain, files, packages, dependencies);
-                }
-                TopologyDomain::GoWorkspace(_)
-                | TopologyDomain::DartWorkspace(_)
-                | TopologyDomain::GradleMultiProject(_)
-                | TopologyDomain::HackageProject(_)
-                | TopologyDomain::MixUmbrella(_)
-                | TopologyDomain::MavenReactor(_)
-                | TopologyDomain::NpmWorkspace(_)
-                | TopologyDomain::Pixi(_)
-                | TopologyDomain::UvWorkspace(_) => {}
+            if let TopologyDomain::CargoWorkspace(domain) = domain {
+                apply_cargo_workspace_domain(domain, files, packages, dependencies);
             }
         }
     }
@@ -501,19 +470,8 @@ impl TopologyPlan {
         dependencies: &mut Vec<TopLevelDependency>,
     ) {
         for domain in &self.domains {
-            match domain {
-                TopologyDomain::CargoWorkspace(_)
-                | TopologyDomain::DartWorkspace(_)
-                | TopologyDomain::GoWorkspace(_)
-                | TopologyDomain::GradleMultiProject(_)
-                | TopologyDomain::HackageProject(_)
-                | TopologyDomain::MixUmbrella(_)
-                | TopologyDomain::MavenReactor(_)
-                | TopologyDomain::Pixi(_)
-                | TopologyDomain::UvWorkspace(_) => {}
-                TopologyDomain::NpmWorkspace(domain) => {
-                    apply_npm_workspace_domain(domain, files, packages, dependencies);
-                }
+            if let TopologyDomain::NpmWorkspace(domain) = domain {
+                apply_npm_workspace_domain(domain, files, packages, dependencies);
             }
         }
     }
@@ -525,19 +483,8 @@ impl TopologyPlan {
         dependencies: &mut Vec<TopLevelDependency>,
     ) {
         for domain in &self.domains {
-            match domain {
-                TopologyDomain::CargoWorkspace(_)
-                | TopologyDomain::DartWorkspace(_)
-                | TopologyDomain::GoWorkspace(_)
-                | TopologyDomain::GradleMultiProject(_)
-                | TopologyDomain::HackageProject(_)
-                | TopologyDomain::MavenReactor(_)
-                | TopologyDomain::NpmWorkspace(_)
-                | TopologyDomain::Pixi(_)
-                | TopologyDomain::UvWorkspace(_) => {}
-                TopologyDomain::MixUmbrella(domain) => {
-                    apply_mix_umbrella_domain(domain, files, packages, dependencies);
-                }
+            if let TopologyDomain::MixUmbrella(domain) = domain {
+                apply_mix_umbrella_domain(domain, files, packages, dependencies);
             }
         }
     }
@@ -1547,4 +1494,40 @@ fn pixi_assembler_config() -> &'static AssemblerConfig {
         .iter()
         .find(|config| config.datasource_ids.contains(&DatasourceId::PixiToml))
         .expect("Pixi assembler config must exist")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn every_topology_family_is_registered_exactly_once() {
+        for family in TopologyFamilyId::iter() {
+            let count = TOPOLOGY_HANDLERS
+                .iter()
+                .filter(|handler| handler.family == family)
+                .count();
+            assert_eq!(
+                count, 1,
+                "topology family {family:?} must be registered exactly once"
+            );
+        }
+        assert_eq!(TOPOLOGY_HANDLERS.len(), TopologyFamilyId::iter().count());
+    }
+
+    #[test]
+    fn claim_datasource_ids_map_to_a_single_family() {
+        let mut seen: HashMap<DatasourceId, TopologyFamilyId> = HashMap::new();
+        for handler in TOPOLOGY_HANDLERS {
+            for &dsid in handler.claim_datasource_ids {
+                if let Some(existing) = seen.insert(dsid, handler.family) {
+                    panic!(
+                        "datasource {dsid:?} claimed by both {existing:?} and {:?}",
+                        handler.family
+                    );
+                }
+            }
+        }
+    }
 }
