@@ -4,8 +4,10 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::{Component, Path, PathBuf};
+use std::str::FromStr;
 
-use crate::models::{DatasourceId, FileInfo, Package, PackageUid, TopLevelDependency};
+use crate::models::{DatasourceId, Dependency, FileInfo, Package, PackageUid, TopLevelDependency};
+use packageurl::PackageUrl;
 use strum::EnumIter;
 
 use super::AssemblerConfig;
@@ -78,6 +80,11 @@ pub(super) struct GradleMultiProjectRootHint {
     root_dir: PathBuf,
     project_paths: Vec<String>,
     root_project_name: Option<String>,
+    /// Literal `project(...).projectDir` remaps parsed from the settings script,
+    /// keyed by a project's default (include-derived) relative directory. A
+    /// remapped project is resolved at its override directory instead of the
+    /// default; see `src/parsers/gradle_settings.rs`.
+    project_dir_overrides: HashMap<String, String>,
 }
 
 pub(super) struct GradleMultiProjectDomain {
@@ -637,7 +644,37 @@ impl TopologyPlan {
         );
     }
 
-    pub(super) fn apply_uv_workspace_domains(&self, files: &mut [FileInfo]) {
+    /// Fill in workspace-aware file ownership and shared-lock attribution for
+    /// every declared uv workspace.
+    ///
+    /// A uv workspace shares one root `uv.lock` that resolves every member's
+    /// dependency set at once, with no per-member partition of which locked
+    /// entry belongs to which member (`src/parsers/uv_lock.rs` therefore hoists
+    /// the whole set onto the root package during ordinary sibling merge).
+    /// Provenant recovers ownership the only way it can prove it statically,
+    /// mirroring the Mix umbrella and Dart workspace rule: a locked entry is
+    /// attributed to every workspace member (or the root, when the root
+    /// `pyproject.toml` is itself a package) whose *own* `[project.dependencies]`
+    /// directly declare that same distribution name. An entry that no member
+    /// declares directly (a pure transitive dependency of the resolved set)
+    /// cannot be attributed without guessing, so it stays hoisted
+    /// (`for_package_uid: None`) — the same honest fallback used for a
+    /// standalone `uv.lock` with no workspace.
+    ///
+    /// This is only attempted when the shared lock actually exists on disk; a
+    /// workspace without a checked-in `uv.lock` keeps whatever attribution
+    /// ordinary assembly already produced.
+    pub(super) fn apply_uv_workspace_domains(
+        &self,
+        files: &mut [FileInfo],
+        dependencies: &mut Vec<TopLevelDependency>,
+    ) {
+        for domain in &self.domains {
+            if let TopologyDomain::UvWorkspace(domain) = domain {
+                attribute_uv_shared_lock(domain, files, dependencies);
+            }
+        }
+
         let mut scope_roots = Vec::new();
         let mut anchor_indices = Vec::new();
         let mut protected_project_dirs = Vec::new();
@@ -913,6 +950,157 @@ fn crosses_maven_build_output_dir(anchor_dir: &Path, file_dir: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// A uv workspace member (or the workspace root) that can own shared-lock
+/// entries: its package identity plus the distribution names its own
+/// `pyproject.toml` declares as direct dependencies.
+struct UvLockCandidate {
+    package_uid: PackageUid,
+    direct_dependency_names: HashSet<String>,
+}
+
+/// Re-attribute a uv workspace's shared root `uv.lock` entries to the members
+/// (or root) whose own manifests declare each locked distribution directly;
+/// entries no member declares stay hoisted. See
+/// [`TopologyPlan::apply_uv_workspace_domains`] for the full contract.
+fn attribute_uv_shared_lock(
+    domain: &UvWorkspaceDomain,
+    files: &mut [FileInfo],
+    dependencies: &mut Vec<TopLevelDependency>,
+) {
+    let Some(lock_idx) = find_uv_lock_index(files, &domain.root_dir) else {
+        return;
+    };
+
+    let mut candidates = Vec::new();
+    if let Some(candidate) = uv_lock_candidate(files, domain.root_pyproject_idx) {
+        candidates.push(candidate);
+    }
+    for &member_idx in &domain.member_pyproject_indices {
+        if let Some(candidate) = uv_lock_candidate(files, member_idx) {
+            candidates.push(candidate);
+        }
+    }
+
+    let lock_path = files[lock_idx].path.clone();
+    let lock_deps: Vec<Dependency> = files[lock_idx]
+        .package_data
+        .iter()
+        .find(|data| data.datasource_id == Some(DatasourceId::PypiUvLock))
+        .map(|data| data.dependencies.clone())
+        .unwrap_or_default();
+
+    if lock_deps.is_empty() {
+        return;
+    }
+
+    // Ordinary sibling merge already hoisted every `uv.lock` entry onto the
+    // workspace root package (or left them unowned). Drop that thin attribution
+    // and re-emit each entry with the member-aware ownership below.
+    dependencies.retain(|dependency| dependency.datafile_path != lock_path);
+
+    for dep in &lock_deps {
+        let locked_name = dep.purl.as_deref().and_then(pypi_purl_name);
+        let owners: Vec<&UvLockCandidate> = candidates
+            .iter()
+            .filter(|candidate| {
+                locked_name
+                    .as_ref()
+                    .is_some_and(|name| candidate.direct_dependency_names.contains(name))
+            })
+            .collect();
+
+        if owners.is_empty() {
+            dependencies.push(TopLevelDependency::from_dependency(
+                dep,
+                lock_path.clone(),
+                DatasourceId::PypiUvLock,
+                None,
+            ));
+            continue;
+        }
+
+        for owner in owners {
+            dependencies.push(TopLevelDependency::from_dependency(
+                dep,
+                lock_path.clone(),
+                DatasourceId::PypiUvLock,
+                Some(owner.package_uid.clone()),
+            ));
+        }
+    }
+}
+
+fn uv_lock_candidate(files: &[FileInfo], pyproject_idx: usize) -> Option<UvLockCandidate> {
+    let package_uid = files[pyproject_idx].for_packages.first().cloned()?;
+    let direct_dependency_names = files[pyproject_idx]
+        .package_data
+        .iter()
+        .find(|data| {
+            matches!(
+                data.datasource_id,
+                Some(DatasourceId::PypiPyprojectToml | DatasourceId::PypiPoetryPyprojectToml)
+            )
+        })
+        .map(|data| {
+            data.dependencies
+                .iter()
+                .filter(|dep| dep.is_direct == Some(true))
+                .filter_map(|dep| dep.purl.as_deref().and_then(pypi_purl_name))
+                .collect::<HashSet<_>>()
+        })
+        .unwrap_or_default();
+
+    Some(UvLockCandidate {
+        package_uid,
+        direct_dependency_names,
+    })
+}
+
+fn find_uv_lock_index(files: &[FileInfo], root_dir: &Path) -> Option<usize> {
+    files.iter().position(|file| {
+        let path = Path::new(&file.path);
+        path.parent() == Some(root_dir)
+            && path.file_name().and_then(|name| name.to_str()) == Some("uv.lock")
+            && file
+                .package_data
+                .iter()
+                .any(|data| data.datasource_id == Some(DatasourceId::PypiUvLock))
+    })
+}
+
+/// Extract a PyPI distribution name from a purl and normalize it per PEP 503
+/// so that a `uv.lock` entry (`normalize_pypi_name`, lower/trim only) compares
+/// equal to a `pyproject.toml` direct dependency (which is dash-normalized).
+fn pypi_purl_name(purl: &str) -> Option<String> {
+    PackageUrl::from_str(purl)
+        .ok()
+        .map(|parsed| normalize_pypi_distribution_name(parsed.name()))
+}
+
+fn normalize_pypi_distribution_name(name: &str) -> String {
+    // Ownership is keyed by distribution identity, which never includes extras.
+    // A direct dependency spelled with extras (`requests[socks]`) normally has
+    // them split off before the purl is built, but strip any surviving
+    // `[extras]` suffix here so a stray extras spelling still matches the base
+    // `uv.lock` entry rather than being missed and left hoisted.
+    let base = name.split('[').next().unwrap_or(name);
+    let lowered = base.trim().to_ascii_lowercase();
+    let mut normalized = String::with_capacity(lowered.len());
+    let mut last_was_separator = false;
+    for character in lowered.chars() {
+        if matches!(character, '-' | '_' | '.') {
+            if !last_was_separator {
+                normalized.push('-');
+                last_was_separator = true;
+            }
+        } else {
+            normalized.push(character);
+            last_was_separator = false;
+        }
+    }
+    normalized
+}
+
 fn collect_gradle_multi_project_hints(files: &[FileInfo]) -> Vec<GradleMultiProjectRootHint> {
     let mut hints = Vec::new();
 
@@ -953,10 +1141,30 @@ fn collect_gradle_multi_project_hints(files: &[FileInfo]) -> Vec<GradleMultiProj
                 .and_then(|value| value.as_str())
                 .map(str::to_string)
         });
+        let project_dir_overrides = file
+            .package_data
+            .iter()
+            .find_map(|data| {
+                (data.datasource_id == Some(DatasourceId::GradleSettings))
+                    .then_some(data.extra_data.as_ref())
+                    .flatten()
+                    .and_then(|extra| extra.get("project_dir_overrides"))
+                    .and_then(|value| value.as_object())
+                    .map(|object| {
+                        object
+                            .iter()
+                            .filter_map(|(key, value)| {
+                                value.as_str().map(|value| (key.clone(), value.to_string()))
+                            })
+                            .collect::<HashMap<_, _>>()
+                    })
+            })
+            .unwrap_or_default();
         hints.push(GradleMultiProjectRootHint {
             root_dir: root_dir.to_path_buf(),
             project_paths,
             root_project_name,
+            project_dir_overrides,
         });
     }
 
@@ -976,7 +1184,14 @@ fn plan_gradle_multi_project_domains(
             .project_paths
             .iter()
             .filter_map(|project| {
-                let project_dir = normalize_lexical_path(&hint.root_dir.join(project));
+                // A literal `projectDir` remap relocates the member's directory;
+                // fall back to the include-derived path when none applies.
+                let relative_dir = hint
+                    .project_dir_overrides
+                    .get(project)
+                    .map(String::as_str)
+                    .unwrap_or(project.as_str());
+                let project_dir = normalize_lexical_path(&hint.root_dir.join(relative_dir));
                 find_gradle_build_index(files, &project_dir)
             })
             .collect::<Vec<_>>();
@@ -1514,6 +1729,30 @@ mod tests {
             );
         }
         assert_eq!(TOPOLOGY_HANDLERS.len(), TopologyFamilyId::iter().count());
+    }
+
+    #[test]
+    fn pypi_distribution_name_normalization_is_pep503_and_extras_free() {
+        // PEP 503 dash-folding so a `uv.lock` entry (lower/trim only) matches a
+        // dash-normalized `pyproject.toml` dependency name.
+        assert_eq!(
+            normalize_pypi_distribution_name("Flask_Login"),
+            "flask-login"
+        );
+        assert_eq!(
+            normalize_pypi_distribution_name("ruamel.yaml"),
+            "ruamel-yaml"
+        );
+        // Extras never change distribution identity for ownership.
+        assert_eq!(
+            normalize_pypi_distribution_name("requests[socks]"),
+            "requests"
+        );
+        // Extraction from a purl folds the same way.
+        assert_eq!(
+            pypi_purl_name("pkg:pypi/Flask_Login@0.6.3").as_deref(),
+            Some("flask-login")
+        );
     }
 
     #[test]

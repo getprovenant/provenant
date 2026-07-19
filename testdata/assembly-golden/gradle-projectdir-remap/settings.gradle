@@ -1,0 +1,3 @@
+rootProject.name = 'gradle-root'
+include ':libs:core'
+project(':libs:core').projectDir = file('vendor/core')

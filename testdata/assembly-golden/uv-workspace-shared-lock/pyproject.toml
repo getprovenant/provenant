@@ -1,0 +1,7 @@
+[project]
+name = "workspace-root"
+version = "1.0.0"
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = ["packages/core"]

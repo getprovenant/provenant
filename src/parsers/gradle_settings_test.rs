@@ -38,9 +38,10 @@ fn test_is_match() {
 fn test_extracts_include_projects_groovy() {
     let tokens =
         lex("rootProject.name = 'my-root'\ninclude ':app', ':libs:core'\ninclude ':libs:util'\n");
-    let (projects, root) = extract_settings(&tokens);
+    let (projects, root, overrides) = extract_settings(&tokens);
     assert_eq!(projects, vec!["app", "libs/core", "libs/util"]);
     assert_eq!(root.as_deref(), Some("my-root"));
+    assert!(overrides.is_empty());
 }
 
 #[test]
@@ -49,7 +50,7 @@ fn test_extracts_include_projects_kotlin_parens() {
 include(":app")
 include(":libs:core", ":libs:util")
 "#);
-    let (projects, root) = extract_settings(&tokens);
+    let (projects, root, _overrides) = extract_settings(&tokens);
     assert_eq!(projects, vec!["app", "libs/core", "libs/util"]);
     assert_eq!(root.as_deref(), Some("kt-root"));
 }
@@ -57,15 +58,55 @@ include(":libs:core", ":libs:util")
 #[test]
 fn test_include_flat_maps_to_sibling_dir() {
     let tokens = lex("includeFlat 'sibling-a', 'sibling-b'\n");
-    let (projects, _root) = extract_settings(&tokens);
+    let (projects, _root, _overrides) = extract_settings(&tokens);
     assert_eq!(projects, vec!["../sibling-a", "../sibling-b"]);
 }
 
 #[test]
 fn test_non_literal_include_arguments_are_skipped() {
     let tokens = lex("include(someVariable)\ninclude ':real'\n");
-    let (projects, _root) = extract_settings(&tokens);
+    let (projects, _root, _overrides) = extract_settings(&tokens);
     assert_eq!(projects, vec!["real"]);
+}
+
+#[test]
+fn test_project_dir_remap_file_helper_groovy() {
+    let tokens = lex("include ':app'\nproject(':app').projectDir = file('custom/app')\n");
+    let (projects, _root, overrides) = extract_settings(&tokens);
+    assert_eq!(projects, vec!["app"]);
+    assert_eq!(overrides.get("app").map(String::as_str), Some("custom/app"));
+}
+
+#[test]
+fn test_project_dir_remap_new_file_with_settings_dir_base() {
+    let tokens = lex(
+        "include ':libs:core'\nproject(':libs:core').projectDir = new File(settingsDir, 'vendor/core')\n",
+    );
+    let (projects, _root, overrides) = extract_settings(&tokens);
+    assert_eq!(projects, vec!["libs/core"]);
+    assert_eq!(
+        overrides.get("libs/core").map(String::as_str),
+        Some("vendor/core")
+    );
+}
+
+#[test]
+fn test_project_dir_remap_kotlin_file_ctor() {
+    let tokens =
+        lex("include(\":app\")\nproject(\":app\").projectDir = File(rootDir, \"custom/app\")\n");
+    let (_projects, _root, overrides) = extract_settings(&tokens);
+    assert_eq!(overrides.get("app").map(String::as_str), Some("custom/app"));
+}
+
+#[test]
+fn test_non_literal_project_dir_remap_is_skipped() {
+    // A computed/base-relative target without a recognized settings-root base,
+    // and a variable project path, are both skipped rather than guessed.
+    let tokens = lex(
+        "project(':app').projectDir = new File(buildDir, 'app')\nproject(someVar).projectDir = file('x')\n",
+    );
+    let (_projects, _root, overrides) = extract_settings(&tokens);
+    assert!(overrides.is_empty());
 }
 
 #[test]
