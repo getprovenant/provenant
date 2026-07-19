@@ -472,8 +472,9 @@ fn paths_file_sbom_completeness_warning_fires_for_native_paths_file_sbom_export(
         "bom.json",
         &["--package", "--paths-file", "changed.txt"],
     );
+    let output = output_with_files(vec![]);
 
-    let warning = paths_file_sbom_completeness_warning(&request)
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
         .expect("--paths-file combined with an SBOM format must warn");
     assert!(warning.contains("--paths-file"));
     assert!(warning.contains("--cyclonedx"));
@@ -486,15 +487,237 @@ fn paths_file_sbom_completeness_warning_allows_non_sbom_output_formats() {
         "-",
         &["--package", "--paths-file", "changed.txt"],
     );
+    let output = output_with_files(vec![]);
 
-    assert!(paths_file_sbom_completeness_warning(&request).is_none());
+    assert!(paths_file_sbom_completeness_warning(&request, &output).is_none());
 }
 
 #[test]
 fn paths_file_sbom_completeness_warning_allows_requests_without_paths_file() {
     let request = native_sbom_request("--spdx-rdf", "sbom.rdf", &["--package"]);
+    let output = output_with_files(vec![]);
 
-    assert!(paths_file_sbom_completeness_warning(&request).is_none());
+    assert!(paths_file_sbom_completeness_warning(&request, &output).is_none());
+}
+
+fn cargo_toml_package_data_with_marker(field: &str) -> crate::models::PackageData {
+    let mut extra_data = std::collections::HashMap::new();
+    extra_data.insert(field.to_string(), json!("workspace"));
+    crate::models::PackageData {
+        package_type: Some(crate::models::PackageType::Cargo),
+        datasource_id: Some(crate::models::DatasourceId::CargoToml),
+        name: Some("member".to_string()),
+        extra_data: Some(extra_data),
+        ..Default::default()
+    }
+}
+
+fn cargo_workspace_root_package_data(members: &[&str]) -> crate::models::PackageData {
+    let mut extra_data = std::collections::HashMap::new();
+    extra_data.insert("workspace".to_string(), json!({ "members": members }));
+    crate::models::PackageData {
+        package_type: Some(crate::models::PackageType::Cargo),
+        datasource_id: Some(crate::models::DatasourceId::CargoToml),
+        extra_data: Some(extra_data),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_names_cargo_workspace_root_gap() {
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let mut member = json_file("crates/member/Cargo.toml", crate::models::FileType::File);
+    member.package_data = vec![cargo_toml_package_data_with_marker("version")];
+    let output = output_with_files(vec![member]);
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn");
+    assert!(warning.contains("Cargo workspace"));
+    assert!(warning.contains("crates/member/Cargo.toml"));
+    assert!(warning.contains("[workspace] table"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_names_cargo_workspace_gap_from_dependency_marker() {
+    let request = native_sbom_request(
+        "--spdx-tv",
+        "sbom.spdx",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let member = json_file("crates/member/Cargo.toml", crate::models::FileType::File);
+    let mut output = output_with_files(vec![member]);
+    let mut extra_data = std::collections::HashMap::new();
+    extra_data.insert("workspace".to_string(), json!(true));
+    output.dependencies = vec![crate::models::TopLevelDependency::from_dependency(
+        &crate::models::Dependency {
+            purl: Some("pkg:cargo/serde".to_string()),
+            extracted_requirement: None,
+            scope: Some("dependencies".to_string()),
+            is_runtime: Some(true),
+            is_optional: Some(false),
+            is_pinned: Some(false),
+            is_direct: Some(true),
+            resolved_package: None,
+            extra_data: Some(extra_data),
+        },
+        "crates/member/Cargo.toml".to_string(),
+        crate::models::DatasourceId::CargoToml,
+        None,
+    )];
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn");
+    assert!(warning.contains("Cargo workspace"));
+    assert!(warning.contains("crates/member/Cargo.toml"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_omits_cargo_gap_when_root_selected() {
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let mut root = json_file("Cargo.toml", crate::models::FileType::File);
+    root.package_data = vec![cargo_workspace_root_package_data(&["crates/member"])];
+    let mut member = json_file("crates/member/Cargo.toml", crate::models::FileType::File);
+    member.package_data = vec![cargo_toml_package_data_with_marker("version")];
+    let output = output_with_files(vec![root, member]);
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn generically");
+    assert!(warning.contains("--paths-file"));
+    assert!(!warning.contains("Cargo workspace member manifest"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_omits_cargo_gap_for_empty_members_root() {
+    // Regression: `[workspace]` with an empty or omitted `members` list is
+    // valid Cargo syntax for a single-package workspace; it must still count
+    // as a selected root instead of being misdetected as absent.
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let mut root = json_file("Cargo.toml", crate::models::FileType::File);
+    root.package_data = vec![cargo_workspace_root_package_data(&[])];
+    let mut member = json_file("crates/member/Cargo.toml", crate::models::FileType::File);
+    member.package_data = vec![cargo_toml_package_data_with_marker("version")];
+    let output = output_with_files(vec![root, member]);
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn generically");
+    assert!(!warning.contains("Cargo workspace member manifest"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_recognizes_pnpm_workspace_yaml_root() {
+    // Regression: pnpm keeps its workspace declaration in a separate
+    // pnpm-workspace.yaml rather than package.json's "workspaces" field.
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let mut root = json_file("pnpm-workspace.yaml", crate::models::FileType::File);
+    root.package_data = vec![crate::models::PackageData {
+        package_type: Some(crate::models::PackageType::Npm),
+        datasource_id: Some(crate::models::DatasourceId::PnpmWorkspaceYaml),
+        ..Default::default()
+    }];
+    let member = json_file("packages/app/package.json", crate::models::FileType::File);
+    let mut output = output_with_files(vec![root, member]);
+    output.dependencies = vec![crate::models::TopLevelDependency::from_dependency(
+        &crate::models::Dependency {
+            purl: Some("pkg:npm/sibling".to_string()),
+            extracted_requirement: Some("workspace:*".to_string()),
+            scope: Some("dependencies".to_string()),
+            is_runtime: Some(true),
+            is_optional: Some(false),
+            is_pinned: Some(false),
+            is_direct: Some(true),
+            resolved_package: None,
+            extra_data: None,
+        },
+        "packages/app/package.json".to_string(),
+        crate::models::DatasourceId::NpmPackageJson,
+        None,
+    )];
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn generically");
+    assert!(!warning.contains("npm/pnpm/yarn workspace member manifest"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_names_npm_workspace_root_gap() {
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let member = json_file("packages/app/package.json", crate::models::FileType::File);
+    let mut output = output_with_files(vec![member]);
+    output.dependencies = vec![crate::models::TopLevelDependency::from_dependency(
+        &crate::models::Dependency {
+            purl: Some("pkg:npm/sibling".to_string()),
+            extracted_requirement: Some("workspace:*".to_string()),
+            scope: Some("dependencies".to_string()),
+            is_runtime: Some(true),
+            is_optional: Some(false),
+            is_pinned: Some(false),
+            is_direct: Some(true),
+            resolved_package: None,
+            extra_data: None,
+        },
+        "packages/app/package.json".to_string(),
+        crate::models::DatasourceId::NpmPackageJson,
+        None,
+    )];
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn");
+    assert!(warning.contains("npm/pnpm/yarn workspace"));
+    assert!(warning.contains("packages/app/package.json"));
+}
+
+#[test]
+fn paths_file_sbom_completeness_warning_names_mix_umbrella_root_gap() {
+    let request = native_sbom_request(
+        "--cyclonedx",
+        "bom.json",
+        &["--package", "--paths-file", "changed.txt"],
+    );
+    let member = json_file("apps/app_one/mix.exs", crate::models::FileType::File);
+    let mut output = output_with_files(vec![member]);
+    let mut extra_data = std::collections::HashMap::new();
+    extra_data.insert("in_umbrella".to_string(), json!(true));
+    output.dependencies = vec![crate::models::TopLevelDependency::from_dependency(
+        &crate::models::Dependency {
+            purl: None,
+            extracted_requirement: None,
+            scope: Some("deps".to_string()),
+            is_runtime: Some(true),
+            is_optional: Some(false),
+            is_pinned: None,
+            is_direct: Some(true),
+            resolved_package: None,
+            extra_data: Some(extra_data),
+        },
+        "apps/app_one/mix.exs".to_string(),
+        crate::models::DatasourceId::HexMixExs,
+        None,
+    )];
+
+    let warning = paths_file_sbom_completeness_warning(&request, &output)
+        .expect("--paths-file combined with an SBOM format must warn");
+    assert!(warning.contains("Mix umbrella"));
+    assert!(warning.contains("apps/app_one/mix.exs"));
 }
 
 #[test]
