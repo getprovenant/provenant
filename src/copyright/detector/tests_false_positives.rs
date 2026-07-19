@@ -882,3 +882,17 @@ fn test_javadoc_author_with_html_anchor_is_extracted() {
         );
     }
 }
+
+#[test]
+fn test_changelog_update_copyright_year_bullet_not_detected() {
+    let content = r#"- Update LICENSE's copyright year. ([#7246](https://github.com/crystal-lang/crystal/pull/7246), thanks @matiasgarciaisaia)
+- Bump NOTICE copyright year ([#15318], thanks @straight-shoota)
+- Update copyright year ([#16550], thanks @HertzDevil)
+"#;
+    let (copyrights, holders, _authors) = detect_copyrights_from_text(content);
+    assert!(
+        copyrights.is_empty(),
+        "unexpected copyrights: {copyrights:?}"
+    );
+    assert!(holders.is_empty(), "unexpected holders: {holders:?}");
+}

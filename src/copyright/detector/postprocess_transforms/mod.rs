@@ -9,7 +9,8 @@ use regex::Regex;
 
 use crate::copyright::line_tracking::{LineNumberIndex, PreparedLines};
 use crate::copyright::refiner::{
-    refine_author, refine_copyright, refine_holder, refine_holder_in_copyright_context,
+    is_junk_copyright, refine_author, refine_copyright, refine_holder,
+    refine_holder_in_copyright_context,
 };
 use crate::copyright::types::{AuthorDetection, CopyrightDetection, HolderDetection};
 use crate::models::LineNumber;
@@ -49,6 +50,9 @@ pub fn refine_final_copyrights(copyrights: &mut Vec<CopyrightDetection>) {
         .iter()
         .filter_map(|c| {
             let text = refine_copyright(&c.copyright)?;
+            if is_junk_copyright(&text) {
+                return None;
+            }
             Some(CopyrightDetection {
                 copyright: text,
                 start_line: c.start_line,

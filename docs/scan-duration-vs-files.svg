@@ -254,6 +254,9 @@ ScanCode: 49.57s</title></rect>
     <rect x="467.92" y="412.86" width="8" height="8" fill="#d97706" rx="1.5"><title>tonsky/FiraCode @ 727682c
 Files: 234
 ScanCode: 94.92s</title></rect>
+    <rect x="469.37" y="431.97" width="8" height="8" fill="#d97706" rx="1.5"><title>elm/compiler @ 1bd5b36
+Files: 239
+ScanCode: 63.35s</title></rect>
     <rect x="469.95" y="423.83" width="8" height="8" fill="#d97706" rx="1.5"><title>boostorg/boost @ 4f1cbeb
 Files: 241
 ScanCode: 75.26s</title></rect>
@@ -476,6 +479,9 @@ ScanCode: 300.33s</title></rect>
     <rect x="603.42" y="377.17" width="8" height="8" fill="#d97706" rx="1.5"><title>PX4/eigen @ 7cf1c01
 Files: 1672
 ScanCode: 202.03s</title></rect>
+    <rect x="605.05" y="387.89" width="8" height="8" fill="#d97706" rx="1.5"><title>ponylang/ponyc @ e540a09
+Files: 1712
+ScanCode: 161.02s</title></rect>
     <rect x="606.64" y="378.96" width="8" height="8" fill="#d97706" rx="1.5"><title>eclipse-vertx/vert.x @ 78ade62
 Files: 1752
 ScanCode: 194.51s</title></rect>
@@ -548,6 +554,9 @@ ScanCode: 418.88s</title></rect>
     <rect x="635.41" y="410.13" width="8" height="8" fill="#d97706" rx="1.5"><title>ifduyue/musl @ b306b16
 Files: 2660
 ScanCode: 100.58s</title></rect>
+    <rect x="636.01" y="362.97" width="8" height="8" fill="#d97706" rx="1.5"><title>crystal-lang/crystal @ 82b5094
+Files: 2683
+ScanCode: 272.86s</title></rect>
     <rect x="638.16" y="373.05" width="8" height="8" fill="#d97706" rx="1.5"><title>jgm/pandoc @ d9838eb
 Files: 2768
 ScanCode: 220.43s</title></rect>
@@ -1012,6 +1021,9 @@ Provenant: 4.66s</title></circle>
     <circle cx="471.92" cy="559.38" r="4.5" fill="#2563eb"><title>tonsky/FiraCode @ 727682c
 Files: 234
 Provenant: 4.65s</title></circle>
+    <circle cx="473.37" cy="558.18" r="4.5" fill="#2563eb"><title>elm/compiler @ 1bd5b36
+Files: 239
+Provenant: 4.77s</title></circle>
     <circle cx="473.95" cy="554.10" r="4.5" fill="#2563eb"><title>boostorg/boost @ 4f1cbeb
 Files: 241
 Provenant: 5.20s</title></circle>
@@ -1234,6 +1246,9 @@ Provenant: 9.99s</title></circle>
     <circle cx="607.42" cy="537.36" r="4.5" fill="#2563eb"><title>PX4/eigen @ 7cf1c01
 Files: 1672
 Provenant: 7.41s</title></circle>
+    <circle cx="609.05" cy="548.86" r="4.5" fill="#2563eb"><title>ponylang/ponyc @ e540a09
+Files: 1712
+Provenant: 5.81s</title></circle>
     <circle cx="610.64" cy="526.68" r="4.5" fill="#2563eb"><title>eclipse-vertx/vert.x @ 78ade62
 Files: 1752
 Provenant: 9.29s</title></circle>
@@ -1306,6 +1321,9 @@ Provenant: 13.09s</title></circle>
     <circle cx="639.41" cy="554.83" r="4.5" fill="#2563eb"><title>ifduyue/musl @ b306b16
 Files: 2660
 Provenant: 5.12s</title></circle>
+    <circle cx="640.01" cy="535.00" r="4.5" fill="#2563eb"><title>crystal-lang/crystal @ 82b5094
+Files: 2683
+Provenant: 7.79s</title></circle>
     <circle cx="642.16" cy="524.25" r="4.5" fill="#2563eb"><title>jgm/pandoc @ d9838eb
 Files: 2768
 Provenant: 9.78s</title></circle>

@@ -111,6 +111,9 @@ pub(super) static AUTHORS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(||
         r"(?i)^.+\bis a software package provided by\b.*$",
         r"(?i)^support\s+for\b.*$",
         r"(?i)^addresses\s+\.+.*$",
+        // Contribution-guide prose that mentions Core Team reviewers, not authors.
+        r"(?i)^core team member\.?\s*only approvals\b",
+        r"(?i)^in (?:january|february|march|april|may|june|july|august|september|october|november|december)$",
     ];
     patterns.iter().filter_map(|p| Regex::new(p).ok()).collect()
 });

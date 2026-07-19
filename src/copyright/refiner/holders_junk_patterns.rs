@@ -8,6 +8,13 @@ use regex::Regex;
 /// Regex patterns for junk holder detections (license boilerplate fragments).
 pub(super) static HOLDERS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     let patterns = [
+        // Changelog / PR thank-you fragments mistaken for holders.
+        r"(?i)^\d+\s*\(\s*thanks\s+@",
+        r"(?i)^year\.\s*\d+\s*\(\s*thanks\s+@",
+        r"(?i)^year\.\s*-\s*bump\b",
+        r"(?i)^in NOTICE\.md$",
+        r"(?i)^remove redundant\b",
+        r"(?i)^merge release/",
         r"(?i)^licenses?,\s+and/or\b",
         r"(?i)^exclude$",
         r"(?i)^with the$",

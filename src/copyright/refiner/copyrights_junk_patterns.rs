@@ -210,6 +210,11 @@ pub(super) static COPYRIGHTS_JUNK_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new
         r"(?i)^copyright rights\b",
         r"(?i)^copyright appears?\b",
         r"(?i)^copyright years? updated\b",
+        // Changelog / release-note bullets that mention bumping a notice year.
+        // Detector prose-stripping often leaves a bare "copyright year ..." remnant.
+        r"(?i)\b(?:update|bump)\b.{0,40}\bcopyright years?\b",
+        r"(?i)^copyright years?\s*[\.(]",
+        r"(?i)^copyright years?\b.*\bthanks\s+@",
         r"(?i)^copyright license\b",
         r"(?i)^copyright licenses specified in the\b",
         r"(?i)^copyright copyright\b",
