@@ -28,6 +28,7 @@ mod npm_workspace_merge;
 mod nuget_cpm_resolve;
 mod project_dependency_assign;
 mod python_requirements_assign;
+mod resource_assign;
 mod ruby_resource_assign;
 mod sibling_merge;
 mod swift_merge;
@@ -98,10 +99,25 @@ pub enum AssemblyMode {
     OnePerPackageData,
 }
 
+/// A bespoke per-directory merge for a layout the generic sibling / per-identity
+/// / one-per engines cannot express.
+///
+/// Runs in place of the generic per-directory engine for the directories a
+/// config claims; the config's [`AssemblyMode`] still governs the later
+/// nested-merge pass, so a config keeps `SiblingMerge` even when it supplies a
+/// merger. Returning an empty result is an explicit "skip per-directory
+/// assembly" (used by Swift, which is assembled by a post-assembly pass).
+pub type DirectoryMergeFn =
+    fn(&AssemblerConfig, &[FileInfo], &[usize]) -> Vec<DirectoryMergeOutput>;
+
 pub struct AssemblerConfig {
     pub datasource_ids: &'static [DatasourceId],
     pub sibling_file_patterns: &'static [&'static str],
     pub mode: AssemblyMode,
+    /// Optional bespoke per-directory merger. When set, it replaces the generic
+    /// [`AssemblyMode`] engine for this config's claimed directories (see
+    /// [`DirectoryMergeFn`]). Most configs leave this `None`.
+    pub directory_merger: Option<DirectoryMergeFn>,
 }
 
 /// Run the assembly phase over all scanned files.
@@ -131,8 +147,8 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
                 continue;
             }
 
-            if let Some(special_merger) = assemblers::special_directory_merger_for(config_key) {
-                let results = special_merger.run(config, files, file_indices);
+            if let Some(directory_merger) = config.directory_merger {
+                let results = directory_merger(config, files, file_indices);
                 apply_directory_merge_results(files, &mut packages, &mut dependencies, results);
                 continue;
             }

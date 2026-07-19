@@ -14,8 +14,8 @@
 //! podspec falls back to the generic single-package
 //! [`assemble_single_sibling_package`](super::sibling_merge::assemble_single_sibling_package).
 //!
-//! Registered for [`DatasourceId::CocoapodsPodspec`] via
-//! [`special_directory_merger_for`](super::assemblers::special_directory_merger_for).
+//! Attached to the CocoaPods [`AssemblerConfig`](super::AssemblerConfig) via its
+//! [`directory_merger`](super::AssemblerConfig::directory_merger) field.
 
 use std::collections::HashSet;
 use std::path::Path;
