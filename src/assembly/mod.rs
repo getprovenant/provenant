@@ -29,6 +29,7 @@ mod nix_flake_compat_merge;
 mod npm_resource_assign;
 mod npm_workspace_merge;
 mod nuget_cpm_resolve;
+mod path_identity;
 mod pixi_topology;
 mod project_dependency_assign;
 mod python_requirements_assign;
@@ -440,12 +441,16 @@ fn active_config_keys(
     groups
 }
 
-/// Group file indices by their parent directory path.
+/// Group file indices by their lexically normalized parent directory.
+///
+/// Keys use [`path_identity::scanned_file_dir`] so a scan root of `.` (paths
+/// like `./go.work`) buckets under the same empty/`module` keys as a
+/// path-rooted scan, matching topology collectors that store normalized roots.
 fn group_files_by_directory(files: &[FileInfo]) -> HashMap<PathBuf, Vec<usize>> {
     let mut groups: HashMap<PathBuf, Vec<usize>> = HashMap::new();
     for (idx, file) in files.iter().enumerate() {
-        if let Some(parent) = std::path::Path::new(&file.path).parent() {
-            groups.entry(parent.to_path_buf()).or_default().push(idx);
+        if let Some(parent) = path_identity::scanned_file_dir(&file.path) {
+            groups.entry(parent).or_default().push(idx);
         }
     }
     groups

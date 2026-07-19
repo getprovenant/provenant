@@ -356,6 +356,10 @@ fn matches_member_pattern(path: &Path, pattern: &str) -> bool {
         .parent()
         .and_then(|parent| parent.to_str())
         .unwrap_or("");
+    let pattern = super::path_identity::strip_declared_dot_slash(pattern);
+    if pattern.is_empty() {
+        return false;
+    }
 
     if !pattern.contains('*') {
         return parent_str == pattern;
@@ -994,5 +998,25 @@ fn assign_for_packages(
         for uid in member_uids {
             file.for_packages.push(uid.clone());
         }
+    }
+}
+
+#[cfg(test)]
+mod matches_member_pattern_tests {
+    use super::*;
+
+    #[test]
+    fn matches_member_pattern_strips_declared_dot_slash() {
+        let path = Path::new("crates/foo/Cargo.toml");
+        assert!(matches_member_pattern(path, "crates/foo"));
+        assert!(
+            matches_member_pattern(path, "./crates/foo"),
+            "declared `./crates/foo` must match the same member as `crates/foo`"
+        );
+        assert!(matches_member_pattern(path, "crates/*"));
+        assert!(
+            matches_member_pattern(path, "./crates/*"),
+            "declared `./crates/*` must match the same members as `crates/*`"
+        );
     }
 }

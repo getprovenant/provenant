@@ -428,6 +428,58 @@ mod tests {
     }
 
     #[test]
+    fn test_maven_reactor_owns_sources_when_scan_paths_use_dot_prefix() {
+        // A CLI input of `.` (used by compare-outputs and some wrappers) keeps a
+        // `./` prefix on scanned paths. Topology must still resolve members and
+        // attribute nested sources to the module package, same as a path-rooted
+        // scan that omits the prefix.
+        let mut files = vec![
+            create_maven_reactor_root_file_info(
+                "./pom.xml",
+                "org.example",
+                "parent",
+                "1.0",
+                &["module-a", "module-b"],
+            ),
+            create_maven_pom_file_info("./module-a/pom.xml", "org.example", "module-a", "1.0"),
+            create_plain_source_file_info("./module-a/src/main/java/com/example/Foo.java"),
+            create_maven_pom_file_info("./module-b/pom.xml", "org.example", "module-b", "1.0"),
+            create_plain_source_file_info("./module-b/src/main/java/com/example/Bar.java"),
+        ];
+
+        let result = assemble(&mut files);
+
+        let owning_purls = |path: &str| -> Vec<String> {
+            let file = files
+                .iter()
+                .find(|f| f.path == path)
+                .unwrap_or_else(|| panic!("file {path} should exist"));
+            file.for_packages
+                .iter()
+                .map(|uid| {
+                    result
+                        .packages
+                        .iter()
+                        .find(|pkg| pkg.package_uid == *uid)
+                        .and_then(|pkg| pkg.purl.clone())
+                        .unwrap_or_default()
+                })
+                .collect()
+        };
+
+        assert_eq!(
+            owning_purls("./module-a/src/main/java/com/example/Foo.java"),
+            vec!["pkg:maven/org.example/module-a@1.0"],
+            "`./`-prefixed module sources must attach to the module, not the reactor parent"
+        );
+        assert_eq!(
+            owning_purls("./module-b/src/main/java/com/example/Bar.java"),
+            vec!["pkg:maven/org.example/module-b@1.0"],
+            "`./`-prefixed module sources must attach to the module, not the reactor parent"
+        );
+    }
+
+    #[test]
     fn test_maven_reactor_rejects_over_escaped_module_paths() {
         // An over-escaped `<module>` path such as `../../../module-a` must not
         // collapse onto an unrelated in-scan `module-a/` just because lexical
@@ -573,6 +625,77 @@ mod tests {
                 .for_packages
                 .is_empty(),
             "an over-escaped declared project must not claim an unrelated directory"
+        );
+    }
+
+    #[test]
+    fn test_gradle_multi_project_owns_sources_when_scan_paths_use_dot_prefix() {
+        // Same contract as the Maven `./` case: a scan root of `.` must still
+        // synthesize the member package and attribute nested sources to it.
+        let mut settings = create_test_file_info(
+            "./settings.gradle",
+            DatasourceId::GradleSettings,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        settings.package_data[0].package_type = Some(PackageType::Maven);
+        settings.package_data[0].extra_data = Some(HashMap::from([
+            ("projects".to_string(), json!(["modules/app"])),
+            ("root_project_name".to_string(), json!("gradle-root")),
+        ]));
+
+        let mut root_build = create_test_file_info(
+            "./build.gradle",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root_build.package_data[0].package_type = Some(PackageType::Maven);
+        root_build.package_data[0].extra_data = Some(HashMap::from([
+            ("group".to_string(), json!("org.example")),
+            ("version".to_string(), json!("1.0")),
+        ]));
+
+        let mut member_build = create_test_file_info(
+            "./modules/app/build.gradle.kts",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        member_build.package_data[0].package_type = Some(PackageType::Maven);
+        member_build.package_data[0].extra_data = Some(HashMap::from([
+            ("group".to_string(), json!("org.example")),
+            ("version".to_string(), json!("1.0")),
+        ]));
+
+        let mut files = vec![
+            settings,
+            root_build,
+            member_build,
+            create_plain_source_file_info("./modules/app/src/main/java/App.java"),
+        ];
+
+        let result = assemble(&mut files);
+        let member = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:maven/org.example/app@1.0"))
+            .expect("member Gradle package must be synthesized under `./` scan paths");
+
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "./modules/app/src/main/java/App.java")
+                .expect("member source")
+                .for_packages
+                .contains(&member.package_uid),
+            "`./`-prefixed Gradle member sources must attach to the member package"
         );
     }
 
@@ -944,6 +1067,57 @@ mod tests {
                 .expect("escaped source")
                 .for_packages
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_dart_workspace_owns_members_when_scan_paths_use_dot_prefix() {
+        // Same `./` scan-root contract as Maven/Gradle: member resolution and
+        // nested file ownership must survive the CLI `.` path prefix.
+        let mut root = create_test_file_info(
+            "./pubspec.yaml",
+            DatasourceId::PubspecYaml,
+            Some("pkg:pub/workspace_root@1.0.0"),
+            Some("workspace_root"),
+            Some("1.0.0"),
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Pub);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace_members".to_string(),
+            json!(["packages/app"]),
+        )]));
+
+        let mut member = create_test_file_info(
+            "./packages/app/pubspec.yaml",
+            DatasourceId::PubspecYaml,
+            Some("pkg:pub/app@0.1.0"),
+            Some("app"),
+            Some("0.1.0"),
+            vec![],
+        );
+        member.package_data[0].package_type = Some(PackageType::Pub);
+
+        let mut files = vec![
+            root,
+            member,
+            create_plain_source_file_info("./packages/app/lib/app.dart"),
+        ];
+        let result = assemble(&mut files);
+        let app = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:pub/app@0.1.0"))
+            .expect("Dart member package must resolve under `./` scan paths");
+
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "./packages/app/lib/app.dart")
+                .expect("Dart member source")
+                .for_packages
+                .contains(&app.package_uid),
+            "`./`-prefixed Dart member sources must attach to the member package"
         );
     }
 

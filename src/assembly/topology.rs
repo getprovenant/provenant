@@ -328,7 +328,8 @@ impl TopologyPlan {
         let Some(&first_idx) = file_indices.first() else {
             return false;
         };
-        let Some(parent_dir) = Path::new(&files[first_idx].path).parent() else {
+        let Some(parent_dir) = super::path_identity::scanned_file_dir(&files[first_idx].path)
+        else {
             return false;
         };
 
@@ -344,7 +345,7 @@ impl TopologyPlan {
                 return self
                     .claimed_dirs
                     .get(&handler.family)
-                    .is_some_and(|dirs| dirs.contains(parent_dir));
+                    .is_some_and(|dirs| dirs.contains(&parent_dir));
             }
         }
 
@@ -486,12 +487,21 @@ pub(super) fn assign_unowned_files_to_anchors(
     excluded_immediate_children: &[&OsStr],
     protected_dirs: &[PathBuf],
 ) {
+    // Normalize so a scan root of `.` (paths like `./module-a/...`) matches the
+    // same lexical parents as a path-rooted scan (`module-a/...`).
+    let scope_roots: Vec<PathBuf> = scope_roots
+        .iter()
+        .map(|root| super::path_identity::normalize_lexical_path(root))
+        .collect();
+    let protected_dirs: Vec<PathBuf> = protected_dirs
+        .iter()
+        .map(|dir| super::path_identity::normalize_lexical_path(dir))
+        .collect();
     let anchors: Vec<(PathBuf, Vec<PackageUid>)> = anchor_indices
         .iter()
         .filter_map(|idx| {
-            Path::new(&files[*idx].path)
-                .parent()
-                .map(|dir| (dir.to_path_buf(), files[*idx].for_packages.clone()))
+            super::path_identity::scanned_file_dir(&files[*idx].path)
+                .map(|dir| (dir, files[*idx].for_packages.clone()))
         })
         .collect();
 
@@ -499,7 +509,7 @@ pub(super) fn assign_unowned_files_to_anchors(
         if !file.for_packages.is_empty() {
             continue;
         }
-        let Some(file_dir) = Path::new(&file.path).parent() else {
+        let Some(file_dir) = super::path_identity::scanned_file_dir(&file.path) else {
             continue;
         };
         if !scope_roots.iter().any(|root| file_dir.starts_with(root)) {
@@ -520,7 +530,7 @@ pub(super) fn assign_unowned_files_to_anchors(
             continue;
         };
         if package_uids.is_empty()
-            || crosses_excluded_build_output(anchor_dir, file_dir, excluded_immediate_children)
+            || crosses_excluded_build_output(anchor_dir, &file_dir, excluded_immediate_children)
         {
             continue;
         }
@@ -551,39 +561,6 @@ fn crosses_excluded_build_output(
                 .iter()
                 .any(|excluded| first == Component::Normal(excluded))
         })
-}
-
-/// Lexically resolve `.` and `..` components in a path without touching the
-/// filesystem, so a declared module path such as `./module-a` or
-/// `../sibling-module` compares equal to the scanned path's own normalized
-/// form.
-///
-/// Unresolved parent components are kept rather than discarded. Dropping them
-/// would let an over-escaped module like `../../../module-a` collapse onto an
-/// unrelated in-scan `module-a/` and incorrectly accept it as a reactor member.
-pub(super) fn normalize_lexical_path(path: &Path) -> PathBuf {
-    let mut normalized = PathBuf::new();
-
-    for component in path.components() {
-        match component {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => match normalized.components().next_back() {
-                Some(std::path::Component::Normal(_)) => {
-                    normalized.pop();
-                }
-                Some(std::path::Component::ParentDir) | None => {
-                    normalized.push(std::path::Component::ParentDir.as_os_str());
-                }
-                // Never escape a filesystem root / Windows prefix.
-                Some(std::path::Component::RootDir) | Some(std::path::Component::Prefix(_)) => {}
-                // CurDir is skipped above, so it never accumulates here.
-                Some(std::path::Component::CurDir) => unreachable!(),
-            },
-            other => normalized.push(other.as_os_str()),
-        }
-    }
-
-    normalized
 }
 
 pub(super) fn apply_directory_merge_result(

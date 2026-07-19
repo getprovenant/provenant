@@ -14,7 +14,8 @@ use crate::models::{
     DatasourceId, Dependency, FileInfo, PackageData, PackageUid, TopLevelDependency,
 };
 
-use super::topology::{assign_unowned_files_to_anchors, normalize_lexical_path};
+use super::path_identity::{normalize_lexical_path, scanned_file_dir, strip_declared_dot_slash};
+use super::topology::assign_unowned_files_to_anchors;
 
 pub(super) struct UvWorkspaceRootHint {
     pub(super) root_dir: PathBuf,
@@ -56,11 +57,11 @@ pub(super) fn collect_uv_workspace_hints(files: &[FileInfo]) -> Vec<UvWorkspaceR
             if member_patterns.is_empty() {
                 continue;
             }
-            let Some(root_dir) = path.parent() else {
+            let Some(root_dir) = scanned_file_dir(&file.path) else {
                 continue;
             };
             hints.push(UvWorkspaceRootHint {
-                root_dir: root_dir.to_path_buf(),
+                root_dir,
                 root_pyproject_idx: idx,
                 member_patterns,
                 exclude_patterns: extra_string_array(data, "workspace_exclude"),
@@ -101,12 +102,12 @@ pub(super) fn plan_uv_workspace_domains(
                     {
                         return None;
                     }
-                    let member_dir = path.parent()?;
+                    let member_dir = scanned_file_dir(&file.path)?;
                     let included = hint.member_patterns.iter().any(|pattern| {
-                        workspace_pattern_matches(&hint.root_dir, member_dir, pattern)
+                        workspace_pattern_matches(&hint.root_dir, &member_dir, pattern)
                     });
                     let excluded = hint.exclude_patterns.iter().any(|pattern| {
-                        workspace_exclude_matches(&hint.root_dir, member_dir, pattern)
+                        workspace_exclude_matches(&hint.root_dir, &member_dir, pattern)
                     });
                     (included && !excluded).then_some(idx)
                 })
@@ -139,7 +140,7 @@ fn extra_string_array(data: &PackageData, key: &str) -> Vec<String> {
 }
 
 fn workspace_pattern_matches(root_dir: &Path, member_dir: &Path, pattern: &str) -> bool {
-    let pattern = pattern.trim().strip_prefix("./").unwrap_or(pattern.trim());
+    let pattern = strip_declared_dot_slash(pattern);
     if pattern.is_empty() {
         return false;
     }
@@ -169,7 +170,7 @@ fn workspace_pattern_matches(root_dir: &Path, member_dir: &Path, pattern: &str) 
 /// `packages/ignored` does not spuriously exclude a sibling like
 /// `packages/ignored-2`.
 fn workspace_exclude_matches(root_dir: &Path, member_dir: &Path, pattern: &str) -> bool {
-    let trimmed = pattern.trim().strip_prefix("./").unwrap_or(pattern.trim());
+    let trimmed = strip_declared_dot_slash(pattern);
     if trimmed.is_empty() {
         return false;
     }
@@ -221,11 +222,11 @@ pub(super) fn apply_uv_workspace_domains<'a>(
     let mut protected_project_dirs = Vec::new();
 
     for domain in &domains {
-        scope_roots.push(domain.root_dir.clone());
+        scope_roots.push(normalize_lexical_path(&domain.root_dir));
         anchor_indices.push(domain.root_pyproject_idx);
         for &member_idx in &domain.member_pyproject_indices {
-            if let Some(member_dir) = Path::new(&files[member_idx].path).parent() {
-                scope_roots.push(member_dir.to_path_buf());
+            if let Some(member_dir) = scanned_file_dir(&files[member_idx].path) {
+                scope_roots.push(member_dir);
             }
             anchor_indices.push(member_idx);
         }
@@ -241,11 +242,11 @@ pub(super) fn apply_uv_workspace_domains<'a>(
         {
             continue;
         }
-        let Some(project_dir) = Path::new(&file.path).parent() else {
+        let Some(project_dir) = scanned_file_dir(&file.path) else {
             continue;
         };
         if scope_roots.iter().any(|root| project_dir.starts_with(root)) {
-            protected_project_dirs.push(project_dir.to_path_buf());
+            protected_project_dirs.push(project_dir);
         }
     }
 
@@ -357,9 +358,10 @@ fn uv_lock_candidate(files: &[FileInfo], pyproject_idx: usize) -> Option<UvLockC
 }
 
 fn find_uv_lock_index(files: &[FileInfo], root_dir: &Path) -> Option<usize> {
+    let root_dir = normalize_lexical_path(root_dir);
     files.iter().position(|file| {
         let path = Path::new(&file.path);
-        path.parent() == Some(root_dir)
+        scanned_file_dir(&file.path).as_deref() == Some(root_dir.as_path())
             && path.file_name().and_then(|name| name.to_str()) == Some("uv.lock")
             && file
                 .package_data

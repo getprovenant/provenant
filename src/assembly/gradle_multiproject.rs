@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, TopLevelDependency};
 
-use super::topology::{assign_unowned_files_to_anchors, normalize_lexical_path};
+use super::path_identity::{normalize_lexical_path, scanned_file_dir};
+use super::topology::assign_unowned_files_to_anchors;
 
 pub(super) struct GradleMultiProjectRootHint {
     pub(super) root_dir: PathBuf,
@@ -61,7 +62,7 @@ pub(super) fn collect_gradle_multi_project_hints(
         if project_paths.is_empty() {
             continue;
         }
-        let Some(root_dir) = path.parent() else {
+        let Some(root_dir) = scanned_file_dir(&file.path) else {
             continue;
         };
         let root_project_name = file.package_data.iter().find_map(|data| {
@@ -92,7 +93,7 @@ pub(super) fn collect_gradle_multi_project_hints(
             })
             .unwrap_or_default();
         hints.push(GradleMultiProjectRootHint {
-            root_dir: root_dir.to_path_buf(),
+            root_dir,
             project_paths,
             root_project_name,
             project_dir_overrides,
@@ -145,7 +146,7 @@ pub(super) fn plan_gradle_multi_project_domains(
 fn find_gradle_build_index(files: &[FileInfo], directory: &Path) -> Option<usize> {
     files.iter().position(|file| {
         let path = Path::new(&file.path);
-        path.parent() == Some(directory)
+        scanned_file_dir(&file.path).as_deref() == Some(directory)
             && matches!(
                 path.file_name().and_then(|name| name.to_str()),
                 Some("build.gradle" | "build.gradle.kts")
@@ -167,7 +168,7 @@ pub(super) fn apply_gradle_multi_project_domains<'a>(
     let mut anchor_indices = Vec::new();
 
     for domain in domains {
-        scope_roots.push(domain.root_dir.clone());
+        scope_roots.push(normalize_lexical_path(&domain.root_dir));
         if let Some(root_idx) = domain.root_build_idx {
             ensure_gradle_package(
                 root_idx,
@@ -179,8 +180,8 @@ pub(super) fn apply_gradle_multi_project_domains<'a>(
             anchor_indices.push(root_idx);
         }
         for &member_idx in &domain.member_build_indices {
-            if let Some(member_dir) = Path::new(&files[member_idx].path).parent() {
-                scope_roots.push(member_dir.to_path_buf());
+            if let Some(member_dir) = scanned_file_dir(&files[member_idx].path) {
+                scope_roots.push(member_dir);
             }
             ensure_gradle_package(member_idx, None, files, packages, dependencies);
             anchor_indices.push(member_idx);
@@ -229,7 +230,7 @@ fn ensure_gradle_package(
     else {
         return;
     };
-    let Some(build_dir) = Path::new(&files[build_idx].path).parent() else {
+    let Some(build_dir) = scanned_file_dir(&files[build_idx].path) else {
         return;
     };
 
@@ -271,7 +272,7 @@ fn ensure_gradle_package(
     let mut datafile_indices = vec![build_idx];
     for (idx, file) in files.iter().enumerate() {
         let path = Path::new(&file.path);
-        if path.parent() != Some(build_dir)
+        if scanned_file_dir(&file.path).as_deref() != Some(build_dir.as_path())
             || path.file_name().and_then(|name| name.to_str()) != Some("gradle.lockfile")
         {
             continue;

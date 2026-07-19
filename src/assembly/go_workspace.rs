@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::models::{DatasourceId, FileInfo, Package, TopLevelDependency};
 
+use super::path_identity::scanned_file_dir;
 use super::topology::apply_directory_merge_result;
 use super::{ASSEMBLERS, AssemblerConfig, sibling_merge};
 
@@ -38,10 +39,9 @@ pub(super) fn collect_go_workspace_hints(files: &[FileInfo]) -> Vec<GoWorkspaceR
             continue;
         }
 
-        let Some(parent) = path.parent() else {
+        let Some(root_dir) = scanned_file_dir(&file.path) else {
             continue;
         };
-        let root_dir = parent.to_path_buf();
         if seen.insert(root_dir.clone()) {
             hints.push(GoWorkspaceRootHint { root_dir });
         }
