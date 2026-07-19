@@ -13,7 +13,12 @@
 //! - `--paths-file` narrows collection to a caller-selected subset of files,
 //!   so assembly can silently understate a monorepo if the selection omits
 //!   sibling manifests or a workspace root (warned, not refused; see
-//!   `paths_file_sbom_completeness_warning` in `src/cli/run/mod.rs`).
+//!   `paths_file_sbom_completeness_warning` in `src/cli/run/mod.rs`). When a
+//!   selected member manifest carries a marker that only makes sense inside a
+//!   real local Cargo/npm/Mix workspace (e.g. `version.workspace = true`) and
+//!   no root manifest for that family was selected, the warning also names
+//!   the specific family and affected member(s) (see `topology_root_gaps` in
+//!   `src/cli/run/mod.rs`).
 
 use std::fs;
 use std::process::Command;
@@ -299,6 +304,134 @@ fn paths_file_cyclonedx_warning_is_visible_even_in_quiet_mode() {
         "the completeness warning must still be visible under --quiet, got: {stderr}"
     );
     assert!(output_file.exists());
+}
+
+fn cargo_workspace_project(temp: &TempDir) -> std::path::PathBuf {
+    let project_dir = temp.path().join("project");
+    let member_dir = project_dir.join("crates").join("member");
+    fs::create_dir_all(&member_dir).expect("create member crate dir");
+    fs::write(
+        project_dir.join("Cargo.toml"),
+        r#"[workspace]
+members = ["crates/member"]
+
+[workspace.package]
+version = "1.0.0"
+"#,
+    )
+    .expect("write workspace root Cargo.toml");
+    fs::write(
+        member_dir.join("Cargo.toml"),
+        r#"[package]
+name = "member"
+version.workspace = true
+"#,
+    )
+    .expect("write member Cargo.toml");
+    fs::write(member_dir.join("src.rs"), "fn main() {}\n").expect("write member src stub");
+    project_dir
+}
+
+#[test]
+fn paths_file_cyclonedx_names_missing_cargo_workspace_root() {
+    let temp = TempDir::new().expect("temp dir");
+    let project_dir = cargo_workspace_project(&temp);
+    let paths_file = temp.path().join("changed.txt");
+    fs::write(&paths_file, "crates/member/Cargo.toml\n").expect("write paths file");
+    let output_file = temp.path().join("bom.json");
+
+    let output = provenant_command()
+        .args([
+            "--cyclonedx",
+            output_file.to_str().expect("utf-8 path"),
+            "--package",
+            "--paths-file",
+            paths_file.to_str().expect("utf-8 path"),
+            project_dir.to_str().expect("utf-8 path"),
+        ])
+        .output()
+        .expect("failed to run provenant");
+
+    assert!(
+        output.status.success(),
+        "a --paths-file selection that omits the workspace root must still warn, not fail: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("--paths-file"),
+        "stderr should still carry the generic completeness warning, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("Cargo workspace") && stderr.contains("crates/member/Cargo.toml"),
+        "stderr should name the specific missing Cargo workspace root and the affected member, got: {stderr}"
+    );
+    assert!(output_file.exists());
+}
+
+#[test]
+fn paths_file_cyclonedx_specific_warning_is_visible_even_in_quiet_mode() {
+    let temp = TempDir::new().expect("temp dir");
+    let project_dir = cargo_workspace_project(&temp);
+    let paths_file = temp.path().join("changed.txt");
+    fs::write(&paths_file, "crates/member/Cargo.toml\n").expect("write paths file");
+    let output_file = temp.path().join("bom.json");
+
+    let output = provenant_command()
+        .args([
+            "--cyclonedx",
+            output_file.to_str().expect("utf-8 path"),
+            "--package",
+            "--paths-file",
+            paths_file.to_str().expect("utf-8 path"),
+            "--quiet",
+            project_dir.to_str().expect("utf-8 path"),
+        ])
+        .output()
+        .expect("failed to run provenant");
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Cargo workspace") && stderr.contains("crates/member/Cargo.toml"),
+        "the specific gap warning must still be visible under --quiet, got: {stderr}"
+    );
+}
+
+#[test]
+fn paths_file_cyclonedx_omits_specific_warning_when_workspace_root_is_selected() {
+    let temp = TempDir::new().expect("temp dir");
+    let project_dir = cargo_workspace_project(&temp);
+    let paths_file = temp.path().join("changed.txt");
+    fs::write(&paths_file, "Cargo.toml\ncrates/member/Cargo.toml\n").expect("write paths file");
+    let output_file = temp.path().join("bom.json");
+
+    let output = provenant_command()
+        .args([
+            "--cyclonedx",
+            output_file.to_str().expect("utf-8 path"),
+            "--package",
+            "--paths-file",
+            paths_file.to_str().expect("utf-8 path"),
+            project_dir.to_str().expect("utf-8 path"),
+        ])
+        .output()
+        .expect("failed to run provenant");
+
+    assert!(
+        output.status.success(),
+        "selecting both the workspace root and its member must still succeed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("--paths-file"),
+        "the generic completeness warning should still fire, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("Cargo workspace member manifest"),
+        "the specific gap warning must not fire once the workspace root is selected, got: {stderr}"
+    );
 }
 
 #[test]

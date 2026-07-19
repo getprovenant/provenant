@@ -6,7 +6,7 @@ use crate::app::scan_pipeline::execute_request;
 use crate::cli::{Cli, Command, ScanArgs};
 use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
-use crate::models::{FileType, Output};
+use crate::models::{DatasourceId, FileType, Output};
 use crate::output::{OutputWriteConfig, write_output_file};
 use crate::progress::{ProgressMode, ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
@@ -133,7 +133,7 @@ pub fn run() -> Result<ExitCode> {
     // target this run, since there is then no written SBOM left to warn
     // about.
     if hollow_sbom_refusal.is_none()
-        && let Some(warning) = paths_file_sbom_completeness_warning(&request)
+        && let Some(warning) = paths_file_sbom_completeness_warning(&request, &output)
     {
         emit_sbom_guard_diagnostic(request.progress_mode, &warning, false);
     }
@@ -506,9 +506,16 @@ fn assembly_skipped_sbom_refusal(request: &ScanRequest, output: &Output) -> Opti
 /// written, and callers who need a guaranteed-complete inventory should
 /// rerun without `--paths-file`.
 ///
+/// Beyond that generic caution, [`topology_root_gaps`] can sometimes name the
+/// *specific* problem instead of just gesturing at the possibility: when a
+/// selected member manifest carries a marker that is only valid Cargo/npm/Mix
+/// syntax inside a real local workspace/umbrella, and no root manifest for
+/// that family was selected, this appends a family-specific paragraph naming
+/// the affected member(s).
+///
 /// Returns `None` when `--paths-file` was not used, the request is not a
 /// native scan, or no SBOM format was requested.
-fn paths_file_sbom_completeness_warning(request: &ScanRequest) -> Option<String> {
+fn paths_file_sbom_completeness_warning(request: &ScanRequest, output: &Output) -> Option<String> {
     if !matches!(request.input_mode, InputMode::Native) || request.paths_files.is_empty() {
         return None;
     }
@@ -518,14 +525,276 @@ fn paths_file_sbom_completeness_warning(request: &ScanRequest) -> Option<String>
         return None;
     }
 
-    Some(format!(
+    let mut message = format!(
         "--paths-file restricted this scan to a caller-selected subset of files, so the {} export \
          only reflects packages whose manifests fell inside that selection. If this repository has \
          sibling member manifests, lockfiles, or a workspace root outside the selection, the \
          resulting inventory may understate the full repository. Rerun without --paths-file (or \
          widen the selection to include the full workspace) if you need a guaranteed-complete SBOM.",
         requested_sbom_flags.join(", "),
-    ))
+    );
+
+    for gap in topology_root_gaps(output) {
+        message.push_str(&describe_topology_root_gap(&gap));
+    }
+
+    Some(message)
+}
+
+/// A family/root-manifest kind where at least one selected file gives
+/// unambiguous, self-declared evidence that it is a *member* of an external
+/// workspace/reactor, yet no root manifest for that family was among the
+/// files this `--paths-file` scan actually selected.
+struct TopologyRootGap {
+    /// Human-readable family name, e.g. `"Cargo workspace"`.
+    family: &'static str,
+    /// What kind of root manifest is missing, e.g. `"a Cargo.toml with a
+    /// [workspace] table"`.
+    root_hint: &'static str,
+    /// Paths of the selected member manifests that carried the evidence,
+    /// sorted and deduplicated.
+    member_paths: Vec<String>,
+}
+
+/// Cargo `field.workspace = true` marker fields whose literal `"workspace"`
+/// extra_data value (see `src/parsers/cargo.rs`) survives untouched on
+/// [`crate::models::PackageData`] whenever no [`CargoWorkspace`] domain ever
+/// claimed the file (i.e. no `[workspace]` root was found in this scan) —
+/// `src/assembly/cargo_workspace_merge.rs::apply_workspace_inheritance` is the
+/// only code that consumes/removes these markers, and it only runs on files
+/// that a discovered workspace domain actually owns.
+///
+/// [`CargoWorkspace`]: crate::assembly
+const CARGO_WORKSPACE_INHERITABLE_MARKER_FIELDS: &[&str] = &[
+    "version",
+    "license",
+    "homepage",
+    "repository",
+    "categories",
+    "keywords",
+    "authors",
+    "description",
+    "include",
+    "exclude",
+    "rust-version",
+    "edition",
+    "documentation",
+    "license-file",
+    "readme",
+    "publish",
+];
+
+/// Detects the subset of topology families where "a selected member manifest
+/// declares workspace/umbrella membership, but the declaring root was not
+/// selected" is decidable from already-parsed scan output alone, with no
+/// re-parsing and no filesystem access beyond the files this `--paths-file`
+/// scan actually selected.
+///
+/// Each family below is included only because at least one of its member
+/// manifests carries a marker that is *only valid* Cargo/npm/Mix syntax when
+/// a real local workspace/umbrella root exists somewhere on disk:
+/// - Cargo: `<field> = { workspace = true }` only resolves inside a real
+///   `[workspace]`; `cargo build` would otherwise fail.
+/// - npm/pnpm/yarn: a `"workspace:"` protocol dependency version only
+///   resolves inside a real workspace install.
+/// - Mix: `{:sibling, in_umbrella: true}` only makes sense inside a real
+///   umbrella project.
+///
+/// Other topology families (Dart workspaces, Maven reactors, Gradle
+/// multi-project, uv workspaces) are deliberately excluded: their member
+/// manifests carry no comparably unambiguous self-declared marker. Maven's
+/// `<parent>` element, for instance, commonly points at a
+/// published, non-local parent POM (e.g. `spring-boot-starter-parent`), so
+/// treating it as reactor-membership evidence would false-positive on the
+/// most common Maven project shape. Guessing there would trade the generic
+/// warning's honest uncertainty for confident wrongness, which is worse.
+fn topology_root_gaps(output: &Output) -> Vec<TopologyRootGap> {
+    let mut gaps = Vec::new();
+
+    if let Some(member_paths) = cargo_workspace_gap_paths(output) {
+        gaps.push(TopologyRootGap {
+            family: "Cargo workspace",
+            root_hint: "a Cargo.toml with a [workspace] table",
+            member_paths,
+        });
+    }
+    if let Some(member_paths) = npm_workspace_gap_paths(output) {
+        gaps.push(TopologyRootGap {
+            family: "npm/pnpm/yarn workspace",
+            root_hint: "a package.json with a \"workspaces\" field, or a pnpm-workspace.yaml",
+            member_paths,
+        });
+    }
+    if let Some(member_paths) = mix_umbrella_gap_paths(output) {
+        gaps.push(TopologyRootGap {
+            family: "Mix umbrella",
+            root_hint: "a mix.exs with an apps_path",
+            member_paths,
+        });
+    }
+
+    gaps
+}
+
+fn cargo_workspace_gap_paths(output: &Output) -> Option<Vec<String>> {
+    // Any `[workspace]` table at all — even with an empty or omitted `members`
+    // list, which is valid Cargo syntax for a single-package workspace — means
+    // a real Cargo workspace root was selected. Requiring a non-empty
+    // `members` array here would false-positive on that legitimate shape.
+    let has_root = output.files.iter().any(|file| {
+        file.package_data.iter().any(|pkg| {
+            pkg.datasource_id == Some(DatasourceId::CargoToml)
+                && pkg
+                    .extra_data
+                    .as_ref()
+                    .is_some_and(|extra| extra.get("workspace").is_some())
+        })
+    });
+    if has_root {
+        return None;
+    }
+
+    let mut member_paths: Vec<String> = output
+        .files
+        .iter()
+        .filter(|file| {
+            file.package_data.iter().any(|pkg| {
+                pkg.datasource_id == Some(DatasourceId::CargoToml)
+                    && pkg.extra_data.as_ref().is_some_and(|extra| {
+                        CARGO_WORKSPACE_INHERITABLE_MARKER_FIELDS
+                            .iter()
+                            .any(|field| {
+                                extra.get(*field).and_then(|value| value.as_str())
+                                    == Some("workspace")
+                            })
+                    })
+            })
+        })
+        .map(|file| file.path.clone())
+        .collect();
+
+    member_paths.extend(
+        output
+            .dependencies
+            .iter()
+            .filter(|dependency| {
+                dependency.datasource_id == DatasourceId::CargoToml
+                    && dependency
+                        .extra_data
+                        .as_ref()
+                        .and_then(|extra| extra.get("workspace"))
+                        .and_then(|value| value.as_bool())
+                        == Some(true)
+            })
+            .map(|dependency| dependency.datafile_path.clone()),
+    );
+
+    member_paths.sort();
+    member_paths.dedup();
+    (!member_paths.is_empty()).then_some(member_paths)
+}
+
+fn npm_workspace_gap_paths(output: &Output) -> Option<Vec<String>> {
+    // A workspace root is either a package.json with a "workspaces" field
+    // (npm/yarn) or a pnpm-workspace.yaml (pnpm keeps its workspace
+    // declaration in a separate file rather than package.json).
+    let has_root = output.files.iter().any(|file| {
+        file.package_data.iter().any(|pkg| {
+            (pkg.datasource_id == Some(DatasourceId::NpmPackageJson)
+                && pkg
+                    .extra_data
+                    .as_ref()
+                    .is_some_and(|extra| extra.contains_key("workspaces")))
+                || pkg.datasource_id == Some(DatasourceId::PnpmWorkspaceYaml)
+        })
+    });
+    if has_root {
+        return None;
+    }
+
+    let mut member_paths: Vec<String> = output
+        .dependencies
+        .iter()
+        .filter(|dependency| {
+            dependency.datasource_id == DatasourceId::NpmPackageJson
+                && dependency
+                    .extracted_requirement
+                    .as_deref()
+                    .is_some_and(|requirement| requirement.starts_with("workspace:"))
+        })
+        .map(|dependency| dependency.datafile_path.clone())
+        .collect();
+
+    member_paths.sort();
+    member_paths.dedup();
+    (!member_paths.is_empty()).then_some(member_paths)
+}
+
+fn mix_umbrella_gap_paths(output: &Output) -> Option<Vec<String>> {
+    let has_root = output.files.iter().any(|file| {
+        file.package_data.iter().any(|pkg| {
+            pkg.datasource_id == Some(DatasourceId::HexMixExs)
+                && pkg
+                    .extra_data
+                    .as_ref()
+                    .is_some_and(|extra| extra.contains_key("apps_path"))
+        })
+    });
+    if has_root {
+        return None;
+    }
+
+    let mut member_paths: Vec<String> = output
+        .dependencies
+        .iter()
+        .filter(|dependency| {
+            dependency.datasource_id == DatasourceId::HexMixExs
+                && dependency
+                    .extra_data
+                    .as_ref()
+                    .and_then(|extra| extra.get("in_umbrella"))
+                    .and_then(|value| value.as_bool())
+                    == Some(true)
+        })
+        .map(|dependency| dependency.datafile_path.clone())
+        .collect();
+
+    member_paths.sort();
+    member_paths.dedup();
+    (!member_paths.is_empty()).then_some(member_paths)
+}
+
+/// At most this many member paths are named individually in a
+/// [`TopologyRootGap`] message before collapsing the rest into "and N more".
+const MAX_NAMED_GAP_MEMBER_PATHS: usize = 3;
+
+fn describe_topology_root_gap(gap: &TopologyRootGap) -> String {
+    let TopologyRootGap {
+        family,
+        root_hint,
+        member_paths,
+    } = gap;
+
+    let mut named = member_paths
+        .iter()
+        .take(MAX_NAMED_GAP_MEMBER_PATHS)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let remaining = member_paths
+        .len()
+        .saturating_sub(MAX_NAMED_GAP_MEMBER_PATHS);
+    if remaining > 0 {
+        named.push_str(&format!(", and {remaining} more"));
+    }
+
+    format!(
+        " Specifically, this selection includes {} {family} member manifest(s) that declare \
+         workspace/umbrella membership ({named}), but never included its {root_hint}: without it, \
+         their inherited package identity, license, and dependency data cannot be resolved, so the \
+         {family} inventory in this export is understated beyond the general risk above.",
+        member_paths.len(),
+    )
 }
 
 fn record_detail_timing<T, F>(progress: &Arc<ScanProgress>, name: impl Into<String>, f: F) -> T
