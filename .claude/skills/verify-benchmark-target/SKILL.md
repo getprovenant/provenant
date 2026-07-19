@@ -98,10 +98,15 @@ Find a recent commit SHA or tag for `--repo-ref`. Do not use branch names — th
 
 After each compare-outputs run, inspect the artifacts under `.provenant/compare-runs/<run-id>/`:
 
-- `comparison/summary.json` — high-level delta counts, `comparison_status`, and directional counts in `comparison_signal_summary`
-- `comparison/summary.tsv` — tab-separated per-file summary
-- `comparison/samples/*.json` — detailed per-field diff samples
+- `comparison/summary.json` — high-level delta counts, `comparison_status`, directional counts in `comparison_signal_summary`, and `review_queue_summary`
+- `comparison/samples/scancode_favored_review_queue.json` — **start here** for ScanCode-better triage: flat `(metric, path)` queue with sample/display values
+- `comparison/samples/field_value_frequency.json` — cross-file value rollups for systematic junk/advantage patterns
+- `comparison/summary.tsv` — tab-separated metric summary
+- `comparison/samples/*.json` — detailed per-field diff samples when a queue entry needs more context
+- `run-manifest.json` — target identity plus `provenant.duration_secs` / `scancode.duration_secs` for benchmark timing
 - `raw/provenant.json` and `raw/scancode.json` — full scanner outputs
+
+Do **not** invent ad hoc scripts to reconstruct ScanCode-favored lists or timings; those belong in the artifacts above. Open the underlying source file (from the repo cache / retained checkout) only after a queue entry identifies the path.
 
 **Triage rules**:
 

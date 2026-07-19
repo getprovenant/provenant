@@ -91,6 +91,9 @@ pub struct ScancodeManifest {
     pub cache_key: Option<String>,
     pub cache_dir: Option<PathBuf>,
     pub cache_hit: bool,
+    /// Wall-clock scan duration in seconds from ScanCode's JSON header when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_secs: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -101,6 +104,9 @@ pub struct ProvenantManifest {
     pub runtime_revision: Option<String>,
     pub runtime_dirty: bool,
     pub runtime_diff_hash: Option<String>,
+    /// Wall-clock scan duration in seconds parsed from Provenant stdout when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_secs: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]

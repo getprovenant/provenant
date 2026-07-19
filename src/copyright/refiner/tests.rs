@@ -778,6 +778,25 @@ fn test_is_junk_holder_cc_license_prose() {
 }
 
 #[test]
+fn test_is_junk_holder_changelog_pr_thank_you_fragments() {
+    assert!(is_junk_holder("10166 ( thanks @matiasgarciaisaia)"));
+    assert!(is_junk_holder("year. 7246 ( thanks @matiasgarciaisaia)"));
+    assert!(is_junk_holder("in NOTICE.md"));
+    assert!(is_junk_holder("Remove redundant begin'/end blocks"));
+    assert!(is_junk_holder(
+        "Merge release/1.14'@1.14.1 - Update distribution-scripts - Make bin/crystal work"
+    ));
+    assert!(!is_junk_holder("Manas Technology Solutions"));
+}
+
+#[test]
+fn test_is_junk_author_contribution_guide_and_month_prose() {
+    assert!(is_junk_author("Core Team member. Only approvals based"));
+    assert!(is_junk_author("in August"));
+    assert!(!is_junk_author("Crystal Core Team <crystal@manas.tech>"));
+}
+
+#[test]
 fn test_cc_prose_suppression_preserves_real_notices() {
     // Real copyright notices and holders must survive even when they share
     // tokens with CC prose; the year guard protects weak-marker phrases.
@@ -1713,6 +1732,25 @@ fn test_is_junk_copyright_drops_cc0_and_libgcrypt_junk_fragments() {
     ));
     assert!(is_junk_copyright("copyright was owned solely by FSF"));
     assert!(is_junk_copyright("copyright years may be listed"));
+    assert!(is_junk_copyright(
+        "- Update LICENSE's copyright year. ([#7246], thanks @matiasgarciaisaia)"
+    ));
+    assert!(is_junk_copyright(
+        "- Bump NOTICE copyright year ([#15318], thanks @straight-shoota)"
+    ));
+    assert!(is_junk_copyright(
+        "copyright year. ( 7246 (https://github.com/crystal-lang/crystal/pull/7246), thanks @matiasgarciaisaia) - Bump NOTICE"
+    ));
+    assert!(is_junk_copyright(
+        "copyright year ( 16550 thanks @HertzDevil)"
+    ));
+    assert!(!is_junk_copyright(
+        "Copyright 2012-2026 Manas Technology Solutions."
+    ));
+    // Embedded "update copyright year" instructions inside a real notice must stay.
+    assert!(!is_junk_copyright(
+        "Copyright 2024 Example Corp. Please update copyright year when modifying."
+    ));
 }
 
 #[test]
@@ -3153,4 +3191,26 @@ fn test_refine_holder_strips_contributors_file_reference() {
         refine_holder("Audrius Butkevicius and Contributors (see the CONTRIBUTORS file)"),
         Some("Audrius Butkevicius and Contributors".to_string())
     );
+}
+
+#[test]
+fn test_changelog_copyright_year_update_is_junk_after_refine() {
+    let samples = [
+        "- Update LICENSE's copyright year. ([#7246](https://github.com/crystal-lang/crystal/pull/7246), thanks @matiasgarciaisaia)",
+        "- Bump NOTICE copyright year ([#15318], thanks @straight-shoota)",
+        "- Update copyright year ([#16550], thanks @HertzDevil)",
+        "- Update copyright year in NOTICE.md ([#14329], thanks @HertzDevil)",
+        "copyright year. ( 7246 (https://github.com/crystal-lang/crystal/pull/7246), thanks @matiasgarciaisaia) - Bump NOTICE",
+        "copyright year ( 16550 thanks @HertzDevil)",
+    ];
+    for sample in samples {
+        let refined = refine_copyright(sample);
+        assert!(
+            refined
+                .as_ref()
+                .map(|s| is_junk_copyright(s))
+                .unwrap_or(true),
+            "expected junk for {sample:?}, refined={refined:?}"
+        );
+    }
 }

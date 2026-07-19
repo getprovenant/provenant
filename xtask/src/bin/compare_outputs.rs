@@ -1453,6 +1453,32 @@ fn raw_dependency_differences(scancode: &Value, provenant: &Value) -> Vec<ValueD
     differences
 }
 
+fn parse_provenant_duration_secs(stdout_path: &Path) -> Option<f64> {
+    let text = fs::read_to_string(stdout_path).ok()?;
+    for line in text.lines().rev() {
+        let trimmed = line.trim();
+        let Some(rest) = trimmed.strip_prefix("total:") else {
+            continue;
+        };
+        let value = rest.trim().trim_end_matches('s').trim();
+        if let Ok(secs) = value.parse::<f64>() {
+            return Some(secs);
+        }
+    }
+    None
+}
+
+fn parse_scancode_duration_secs(scancode_json_path: &Path) -> Option<f64> {
+    let text = fs::read_to_string(scancode_json_path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+    value
+        .get("headers")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|headers| headers.first())
+        .and_then(|header| header.get("duration"))
+        .and_then(serde_json::Value::as_f64)
+}
+
 fn write_manifest(context: &ContextState) -> Result<()> {
     let commands = match context.compare_mode {
         CompareMode::ScanTarget => {
@@ -1521,6 +1547,7 @@ fn write_manifest(context: &ContextState) -> Result<()> {
             runtime_revision: context.provenant_runtime_revision.clone(),
             runtime_dirty: context.provenant_runtime_dirty,
             runtime_diff_hash: context.provenant_runtime_diff_hash.clone(),
+            duration_secs: parse_provenant_duration_secs(&context.provenant_stdout),
         },
         scancode: ScancodeManifest {
             image: context.scancode_image.clone(),
@@ -1536,6 +1563,7 @@ fn write_manifest(context: &ContextState) -> Result<()> {
             cache_key: context.scancode_cache_key.clone(),
             cache_dir: context.scancode_cache_dir.clone(),
             cache_hit: context.scancode_cache_hit,
+            duration_secs: parse_scancode_duration_secs(&context.scancode_json),
         },
     };
     write_pretty_json(&context.run_manifest, &manifest)?;

@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 252 of 252 recorded runs, with a **19.6× median speedup** and **19.6× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
+> Provenant is faster on 255 of 255 recorded runs, with a **19.6× median speedup** and **19.6× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1470,6 +1470,20 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `6.40s`; ScanCode `95.91s`
 - Far broader Hackage package and dependency extraction (`76` vs `1` packages, `525` vs `4` dependencies) from the root `stack.cabal`, `stack.yaml`, `cabal.project`, and committed integration-fixture manifests, with richer maintainer identity on Cabal metadata
 
+##### [crystal-lang/crystal @ 82b5094](https://github.com/crystal-lang/crystal/tree/82b5094b716b1e9a3f4fe6c601fd48272fc35d01) — **35.03× faster**
+
+- Files: 2,683
+- Run context: 2026-07-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `7.79s`; ScanCode `272.86s`
+- More correct dual-license `OR` expressions on the Dragonbox and Ryu float-printer ports where the source offers Apache-2.0-with-LLVM-exception alternatively with BSL-1.0, Unicode-preserving `Johannes Müller` holder recovery without REUSE `SPDX-License-Identifier` field bleed, rejection of example-name authors and `git@…` SSH strings as emails, safer credential-stripping URL normalization, and cleaner rejection of changelog copyright-year bump prose as copyright or holder noise
+
+##### [elm/compiler @ 1bd5b36](https://github.com/elm/compiler/tree/1bd5b36915a38335195ca7792fe3995f53d84d5e) — **13.28× faster**
+
+- Files: 239
+- Run context: 2026-07-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `4.77s`; ScanCode `63.35s`
+- Far broader Hackage and npm package and dependency extraction (`8` vs `1` packages, `74` vs `5` dependencies) from sibling `elm.cabal` / `worker/elm.cabal` manifests plus the installer `package.json` binary packages, with avoidance of the weak `Apache-2.0 OR BSD-3-Clause` false positive on `terminal/src/Publish.hs` LICENSE UI strings and of SPDX catalog-name license clues in `Elm.Licenses.hs`
+
 ##### [HaxeFlixel/flixel @ ec54c5a](https://github.com/HaxeFlixel/flixel/tree/ec54c5a582b252de3aca69283045719d3201778b) — **17.08× faster**
 
 - Files: 446
@@ -1581,6 +1595,13 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Run context: 2026-06-20 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
 - Timing: Provenant `10.08s`; ScanCode `137.21s`
 - Matched Haxe package and dependency coverage on the repo-root `haxelib.json`, with richer bundled Windows executable identity on `assets/templates/bin/openfl.exe`, extra Docker package visibility on `Dockerfile`, and cleaner URL normalization across shipped font metadata
+
+##### [ponylang/ponyc @ e540a09](https://github.com/ponylang/ponyc/tree/e540a0940715e1001342466c044aeb64169cfa29) — **27.71× faster**
+
+- Files: 1,712
+- Run context: 2026-07-19 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
+- Timing: Provenant `5.81s`; ScanCode `161.02s`
+- Broader Docker and submodule dependency extraction (`13` vs `0`) from committed CI/release Dockerfiles and `.gitmodules`, with rejection of workflow-filename author noise and `git@github.com` SSH strings as emails, plus safer credential-stripping URL normalization and repaired `http://` archive URLs
 
 ##### [univention/Nubus @ fef2258](https://github.com/univention/Nubus/tree/fef2258483c56cce0e1f14e4c8d8fce24d26b891) — **8.64× faster**
 

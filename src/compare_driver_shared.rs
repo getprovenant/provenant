@@ -735,6 +735,11 @@ pub fn tsv_row(
 /// artifact readable while still surfacing the systematic patterns.
 pub const FIELD_VALUE_FREQUENCY_TOP_N: usize = 50;
 
+/// Maximum entries retained in each directional review-queue sample. The queue
+/// is the primary triage starting point; unbounded dumps become unreadable on
+/// huge trees, so oversized queues set `truncated: true`.
+pub const REVIEW_QUEUE_ENTRY_CAP: usize = 500;
+
 #[derive(Debug, Serialize, Clone)]
 pub struct FieldValueFrequencyEntry {
     pub value: String,

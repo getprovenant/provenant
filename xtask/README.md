@@ -231,6 +231,23 @@ junk-vs-advantage. It is a pure diagnostic: it never feeds `comparison_status`,
 the signal counts, or any pass/fail gate. `summary.json` also surfaces a short
 per-field top-N preview under `field_value_frequency_top`.
 
+For path-by-path triage, start with the flat review queues:
+
+- `comparison/samples/scancode_favored_review_queue.json`
+- `comparison/samples/provenant_favored_review_queue.json`
+
+Each queue collapses count deltas and value-level missing/extra findings into
+one entry per `(metric, path)`, with short `display` strings for license clues
+(expression only instead of the full serialized clue object). `summary.json`
+exposes `review_queue_summary`, and stdout prints a triage pointer when the
+ScanCode-favored queue is non-empty. Like `field_value_frequency`, these queues
+are diagnostic only.
+
+`run-manifest.json` also records wall-clock durations when available:
+`provenant.duration_secs` (from Provenant stdout `total:`) and
+`scancode.duration_secs` (from the ScanCode JSON `headers[].duration`, including
+on ScanCode cache hits).
+
 File ownership (`files[].for_packages`) is a **secondary informational** compare
 axis. `summary.json` reports `file_ownership_summary`, and capped samples land in
 `comparison/samples/file_ownership_differences.json`. Ownership deltas can raise
