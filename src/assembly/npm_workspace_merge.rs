@@ -420,6 +420,10 @@ fn discover_members(files: &[FileInfo], workspace_root: &NpmWorkspaceRootHint) -
 fn matches_workspace_pattern(path: &Path, pattern: &str) -> bool {
     // Convert path to string with forward slashes
     let path_str = path.to_str().unwrap_or("");
+    let pattern = super::path_identity::strip_declared_dot_slash(pattern);
+    if pattern.is_empty() {
+        return false;
+    }
 
     // Handle simple patterns without wildcards
     if !pattern.contains('*') && !pattern.contains('?') {
@@ -891,12 +895,20 @@ mod tests {
         let path = Path::new("packages/foo/package.json");
         assert!(matches_workspace_pattern(path, "packages/foo"));
         assert!(!matches_workspace_pattern(path, "packages/bar"));
+        assert!(
+            matches_workspace_pattern(path, "./packages/foo"),
+            "declared `./` prefixes must still match relative member paths"
+        );
     }
 
     #[test]
     fn test_matches_workspace_pattern_single_star() {
         let path = Path::new("packages/foo/package.json");
         assert!(matches_workspace_pattern(path, "packages/*"));
+        assert!(
+            matches_workspace_pattern(path, "./packages/*"),
+            "declared `./packages/*` must match the same members as `packages/*`"
+        );
 
         let nested = Path::new("packages/foo/bar/package.json");
         assert!(!matches_workspace_pattern(nested, "packages/*"));

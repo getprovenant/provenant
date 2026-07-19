@@ -5,10 +5,12 @@
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, TopLevelDependency};
+
+use super::path_identity::scanned_path;
 use packageurl::PackageUrl;
 use strum::EnumIter;
 
@@ -250,7 +252,7 @@ fn resolve_relative_to_datafile_parent(
             } else {
                 format!("{}/{}", root, file_ref.path.trim_start_matches('/'))
             };
-            if let Some(&file_idx) = path_index.get(&resolved_path) {
+            if let Some(file_idx) = path_index_lookup(path_index, &resolved_path) {
                 let package_uid = package.package_uid.clone();
                 if !files[file_idx].for_packages.contains(&package_uid) {
                     files[file_idx].for_packages.push(package_uid);
@@ -289,7 +291,7 @@ fn resolve_attached_manifest_file_references(
             format!("{}/{}", root, file_ref.path.trim_start_matches('/'))
         };
 
-        if let Some(&file_idx) = path_index.get(&resolved_path) {
+        if let Some(file_idx) = path_index_lookup(path_index, &resolved_path) {
             let package_uid = package.package_uid.clone();
             if !files[file_idx].for_packages.contains(&package_uid) {
                 files[file_idx].for_packages.push(package_uid);
@@ -330,7 +332,7 @@ fn resolve_conda_file_references(
     let mut missing_refs = Vec::new();
     for file_ref in &file_references {
         let resolved_path = format!("{}{}", root, file_ref.path.trim_start_matches('/'));
-        if let Some(&file_idx) = path_index.get(&resolved_path) {
+        if let Some(file_idx) = path_index_lookup(path_index, &resolved_path) {
             let package_uid = package.package_uid.clone();
             if !files[file_idx].for_packages.contains(&package_uid) {
                 files[file_idx].for_packages.push(package_uid);
@@ -387,7 +389,7 @@ fn resolve_installed_db_file_references(
             format!("{}{}", root, ref_path)
         };
 
-        if let Some(&file_idx) = path_index.get(&resolved_path) {
+        if let Some(file_idx) = path_index_lookup(path_index, &resolved_path) {
             let package_uid = package.package_uid.clone();
             if !files[file_idx].for_packages.contains(&package_uid) {
                 files[file_idx].for_packages.push(package_uid);
@@ -427,7 +429,7 @@ fn resolve_debian_extracted_deb_file_references(
     };
     let root = extracted_root.to_string_lossy().to_string();
 
-    let Some(&file_idx) = path_index.get(datafile_path) else {
+    let Some(file_idx) = path_index_lookup(path_index, datafile_path) else {
         return;
     };
     let file_references: Vec<_> = files[file_idx]
@@ -447,7 +449,7 @@ fn resolve_debian_extracted_deb_file_references(
             format!("{}/{}", root, file_ref.path.trim_start_matches('/'))
         };
 
-        if let Some(&file_idx) = path_index.get(&resolved_path) {
+        if let Some(file_idx) = path_index_lookup(path_index, &resolved_path) {
             let package_uid = package.package_uid.clone();
             if !files[file_idx].for_packages.contains(&package_uid) {
                 files[file_idx].for_packages.push(package_uid);
@@ -496,7 +498,7 @@ fn resolve_python_metadata_file_references(
             continue;
         };
 
-        if let Some(&file_idx) = path_index.get(&resolved_path) {
+        if let Some(file_idx) = path_index_lookup(path_index, &resolved_path) {
             let package_uid = package.package_uid.clone();
             if !files[file_idx].for_packages.contains(&package_uid) {
                 files[file_idx].for_packages.push(package_uid);
@@ -607,24 +609,34 @@ fn find_python_metadata_root(package: &Package) -> Option<PythonMetadataResoluti
 
 fn normalize_relative_path(base: &str, allowed_root: &str, relative: &str) -> Option<String> {
     let joined = Path::new(base).join(relative.trim_start_matches('/'));
-    let mut normalized = Path::new("").to_path_buf();
+    let normalized = normalize_file_ref_path(&joined);
+    let allowed = normalize_file_ref_path(Path::new(allowed_root));
 
-    for component in joined.components() {
+    let normalized_str = normalized.to_string_lossy().to_string();
+    if normalized.starts_with(&allowed) {
+        Some(normalized_str)
+    } else {
+        None
+    }
+}
+
+/// Lexically collapse `.` / `..` for file-reference joins.
+///
+/// Unlike assembly [`super::path_identity::normalize_lexical_path`], unresolved
+/// `..` components are discarded (via `pop` on an empty path) so references
+/// cannot escape the allowed root by over-escaping.
+fn normalize_file_ref_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
         match component {
             std::path::Component::CurDir => {}
             std::path::Component::ParentDir => {
                 normalized.pop();
             }
-            _ => normalized.push(component.as_os_str()),
+            other => normalized.push(other.as_os_str()),
         }
     }
-
-    let normalized_str = normalized.to_string_lossy().to_string();
-    if Path::new(&normalized_str).starts_with(Path::new(allowed_root)) {
-        Some(normalized_str)
-    } else {
-        None
-    }
+    normalized
 }
 
 fn compute_conda_root(datafile_path: Option<&str>) -> Option<String> {
@@ -742,8 +754,16 @@ fn build_path_index(files: &[FileInfo]) -> HashMap<String, usize> {
     files
         .iter()
         .enumerate()
-        .map(|(idx, file)| (file.path.clone(), idx))
+        .map(|(idx, file)| (path_index_key(&file.path), idx))
         .collect()
+}
+
+fn path_index_key(path: &str) -> String {
+    scanned_path(path).to_string_lossy().into_owned()
+}
+
+fn path_index_lookup(path_index: &HashMap<String, usize>, path: &str) -> Option<usize> {
+    path_index.get(&path_index_key(path)).copied()
 }
 
 fn find_db_config(package: &Package) -> Option<&'static DbPathConfig> {
@@ -801,9 +821,8 @@ fn collect_file_references(
     config_datasource_ids: &[DatasourceId],
     package_purl: Option<&str>,
 ) -> Vec<crate::models::FileReference> {
-    let file_idx = match path_index.get(datafile_path) {
-        Some(&idx) => idx,
-        None => return Vec::new(),
+    let Some(file_idx) = path_index_lookup(path_index, datafile_path) else {
+        return Vec::new();
     };
 
     let file = &files[file_idx];
@@ -1063,7 +1082,7 @@ fn resolve_rpm_namespace(
     ];
 
     for os_release_path in &os_release_paths {
-        if let Some(&file_idx) = path_index.get(os_release_path) {
+        if let Some(file_idx) = path_index_lookup(path_index, os_release_path) {
             let file = &files[file_idx];
             for pkg_data in &file.package_data {
                 if pkg_data.datasource_id == Some(DatasourceId::EtcOsRelease)

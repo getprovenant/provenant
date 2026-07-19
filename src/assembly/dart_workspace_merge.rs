@@ -11,7 +11,7 @@ use packageurl::PackageUrl;
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, PackageUid, TopLevelDependency};
 
-use super::topology::normalize_lexical_path;
+use super::path_identity::{normalize_lexical_path, scanned_file_dir, scanned_path};
 use super::{ASSEMBLERS, AssemblerConfig, sibling_merge};
 
 pub(super) struct DartWorkspaceRootHint {
@@ -62,11 +62,11 @@ pub(super) fn collect_dart_workspace_hints(files: &[FileInfo]) -> Vec<DartWorksp
             if member_paths.is_empty() {
                 continue;
             }
-            let Some(root_dir) = path.parent() else {
+            let Some(root_dir) = scanned_file_dir(&file.path) else {
                 continue;
             };
             hints.push(DartWorkspaceRootHint {
-                root_dir: root_dir.to_path_buf(),
+                root_dir,
                 root_pubspec_idx: idx,
                 member_paths,
             });
@@ -89,7 +89,7 @@ pub(super) fn plan_dart_workspace_domains(
                 let dir_path = normalize_lexical_path(&hint.root_dir.join(member));
                 let manifest_path = dir_path.join("pubspec.yaml");
                 let pubspec_idx = files.iter().position(|file| {
-                    Path::new(&file.path) == manifest_path
+                    scanned_path(&file.path) == manifest_path
                         && file.package_data.iter().any(|data| {
                             data.datasource_id == Some(DatasourceId::PubspecYaml)
                                 && data.purl.is_some()
@@ -99,7 +99,8 @@ pub(super) fn plan_dart_workspace_domains(
                     .iter()
                     .enumerate()
                     .filter_map(|(idx, file)| {
-                        (Path::new(&file.path).parent() == Some(dir_path.as_path())).then_some(idx)
+                        (scanned_file_dir(&file.path).as_deref() == Some(dir_path.as_path()))
+                            .then_some(idx)
                     })
                     .collect();
                 Some(DartWorkspaceMemberDomain {
@@ -209,11 +210,12 @@ pub(super) fn apply_dart_workspace_domain(
         .iter()
         .find(|candidate| candidate.manifest_idx == domain.root_pubspec_idx)
         .map(|candidate| candidate.package_uid.clone());
+    let root_dir = normalize_lexical_path(&domain.root_dir);
     for file in files.iter_mut() {
         if !file.for_packages.is_empty() {
             continue;
         }
-        let Some(file_dir) = Path::new(&file.path).parent() else {
+        let Some(file_dir) = scanned_file_dir(&file.path) else {
             continue;
         };
         if let Some(member) = domain
@@ -233,7 +235,7 @@ pub(super) fn apply_dart_workspace_domain(
         // identity, e.g. `publish_to: none` with no name) leaves its files
         // unowned rather than over-claiming them into every member package,
         // which would pollute per-package file and license attribution.
-        if file_dir.starts_with(&domain.root_dir)
+        if file_dir.starts_with(&root_dir)
             && let Some(root_uid) = &root_uid
         {
             file.for_packages.push(root_uid.clone());
@@ -304,9 +306,10 @@ fn pubspec_data(file: &FileInfo) -> Option<&PackageData> {
 }
 
 fn find_root_lock(files: &[FileInfo], root_dir: &Path) -> Option<usize> {
+    let root_dir = normalize_lexical_path(root_dir);
     files.iter().position(|file| {
         let path = Path::new(&file.path);
-        path.parent() == Some(root_dir)
+        scanned_file_dir(&file.path).as_deref() == Some(root_dir.as_path())
             && path.file_name().and_then(|name| name.to_str()) == Some("pubspec.lock")
             && file
                 .package_data

@@ -8,7 +8,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::models::{DatasourceId, FileInfo, PackageUid};
 
-use super::topology::normalize_lexical_path;
+use super::path_identity::{normalize_lexical_path, scanned_file_dir, scanned_path};
 
 /// A `pom.xml` that declares a non-empty `<modules>` list (stashed by the parser
 /// under `extra_data.modules`). Every such POM — root or nested — contributes its
@@ -61,12 +61,12 @@ pub(super) fn collect_maven_reactor_hints(files: &[FileInfo]) -> Vec<MavenReacto
                 continue;
             }
 
-            let Some(parent) = path.parent() else {
+            let Some(root_dir) = scanned_file_dir(&file.path) else {
                 continue;
             };
 
             hints.push(MavenReactorRootHint {
-                root_dir: parent.to_path_buf(),
+                root_dir,
                 root_pom_idx: idx,
                 module_paths,
             });
@@ -109,10 +109,12 @@ fn resolve_maven_reactor_members(files: &[FileInfo], hint: &MavenReactorRootHint
     for module in &hint.module_paths {
         let candidate_path = normalize_lexical_path(&hint.root_dir.join(module)).join("pom.xml");
 
-        let Some(found_idx) = files
-            .iter()
-            .position(|file| Path::new(&file.path) == candidate_path)
-        else {
+        let Some(found_idx) = files.iter().position(|file| {
+            // Scan roots of `.` keep a `./` prefix on file paths; compare the
+            // lexically normalized form so `./module-a/pom.xml` matches
+            // `module-a/pom.xml`.
+            scanned_path(&file.path) == candidate_path
+        }) else {
             continue;
         };
 
@@ -161,17 +163,14 @@ pub(super) fn apply_maven_reactor_domains<'a>(
     let mut anchors: Vec<(PathBuf, Vec<PackageUid>)> = Vec::new();
 
     for domain in domains {
-        scope_roots.push(domain.root_dir.clone());
-        anchors.push((
-            domain.root_dir.clone(),
-            files[domain.root_pom_idx].for_packages.clone(),
-        ));
+        let root_dir = normalize_lexical_path(&domain.root_dir);
+        scope_roots.push(root_dir.clone());
+        anchors.push((root_dir, files[domain.root_pom_idx].for_packages.clone()));
 
         for &member_idx in &domain.member_pom_indices {
-            let Some(member_dir) = Path::new(&files[member_idx].path).parent() else {
+            let Some(member_dir) = scanned_file_dir(&files[member_idx].path) else {
                 continue;
             };
-            let member_dir = member_dir.to_path_buf();
             // A declared module normally lives under the reactor root
             // directory, which already covers it via `scope_roots` above.
             // But `<module>` strings may legally escape it with a `../`
@@ -194,8 +193,7 @@ pub(super) fn apply_maven_reactor_domains<'a>(
             continue;
         }
 
-        let file_path = Path::new(&file.path);
-        let Some(file_dir) = file_path.parent() else {
+        let Some(file_dir) = scanned_file_dir(&file.path) else {
             continue;
         };
 
@@ -211,7 +209,7 @@ pub(super) fn apply_maven_reactor_domains<'a>(
             continue;
         };
 
-        if package_uids.is_empty() || crosses_maven_build_output_dir(anchor_dir, file_dir) {
+        if package_uids.is_empty() || crosses_maven_build_output_dir(anchor_dir, &file_dir) {
             continue;
         }
 

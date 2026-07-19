@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, PackageUid, TopLevelDependency};
 
+use super::path_identity::scanned_file_dir;
 use super::topology::apply_directory_merge_result;
 
 pub(super) struct HackageProjectHint {
@@ -46,10 +47,9 @@ pub(super) fn collect_hackage_project_hints(files: &[FileInfo]) -> Vec<HackagePr
             continue;
         }
 
-        let Some(parent) = path.parent() else {
+        let Some(root_dir) = scanned_file_dir(&file.path) else {
             continue;
         };
-        let root_dir = parent.to_path_buf();
         if seen.insert(root_dir.clone()) {
             hints.push(HackageProjectHint { root_dir });
         }
