@@ -21,6 +21,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Kept separate from Code Quality: recursive ScanCode submodule checkout is
+  # specialized cost we do not want on every lint/clippy run.
   license-index:
     name: Verify Embedded License Index
     runs-on: ubuntu-latest
@@ -143,6 +145,29 @@ jobs:
       - name: Check for unused dependencies
         run: ./scripts/check_unused_deps.sh
 
+      # Folded from Documentation Quality: Node checks share this checkout/toolchain
+      # slot and stay under the ~10m critical path without a separate runner.
+      - name: Set up Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version: "24"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Check agent skills mirror
+        run: npm run skills:check
+
+      - name: Check formatting (Prettier)
+        run: npm run format:check
+
+      - name: Validate URLs
+        run: npm run validate:urls
+        continue-on-error: true
+
+      - name: Lint Markdown
+        run: npm run lint:md
+
   rust-library-tests:
     name: Rust Library Tests
     runs-on: ubuntu-latest
@@ -171,8 +196,30 @@ jobs:
       - name: Run doctests
         run: cargo test -p provenant-cli --doc --profile ci-release --verbose
 
-      # Folded from a standalone job: cheap signal relative to another full
-      # checkout/toolchain/cache setup, and it shares this runner slot.
+  # Kept separate from Rust Library Tests: folding it in serialized a second
+  # feature-set build after ci-release lib+doctests and pushed that job to ~18m.
+  no-default-features-smoke:
+    name: No-default-features Smoke Test
+    runs-on: ubuntu-latest
+    if: |
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
+        with:
+          cache: false
+          rustflags: ""
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: no-default-features-smoke
+
       - name: Check no-default-features build
         run: cargo check --lib --no-default-features
 
@@ -376,24 +423,16 @@ jobs:
         if: matrix.shard == 'integration'
         run: python3 scripts/validate_output_format_fixtures.py --provenant-bin target/ci-release/provenant
 
-  # One job per cargo profile so suites share a compile, cutting runner-queue
-  # contention from six short golden jobs. Suites still run as separate cargo
+  # All golden suites in one job: debug then ci-release. Empirically each profile
+  # group is ~3–4m, so the combined job should stay under the ~10m critical path
+  # while cutting another runner-queue slot. Suites stay as separate cargo
   # invocations so a failure names the owning suite in the log.
   golden-tests:
-    name: Golden Tests (${{ matrix.profile }})
+    name: Golden Tests
     runs-on: ubuntu-latest
-    # ci-release goldens alone can exceed 15m of test time after one compile.
-    timeout-minutes: 40
+    timeout-minutes: 25
     if: |
       !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - profile: debug
-            suites: "assembly_golden finder_golden parsers_golden"
-          - profile: ci-release
-            suites: "copyright_golden license_detection_golden post_processing_golden"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -409,54 +448,22 @@ jobs:
       - name: Set up Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: golden-tests-${{ matrix.profile }}
+          shared-key: golden-tests
 
-      - name: Run golden suites (${{ matrix.profile }})
+      - name: Run debug-profile golden suites
         shell: bash
         run: |
           set -euo pipefail
-          profile_args=()
-          if [[ "${{ matrix.profile }}" == "ci-release" ]]; then
-            profile_args=(--profile ci-release)
-          fi
-          for suite in ${{ matrix.suites }}; do
-            echo "Running golden suite: ${suite} (${{ matrix.profile }})"
-            cargo test --test "${suite}" "${profile_args[@]}" --verbose --features golden-tests
+          for suite in assembly_golden finder_golden parsers_golden; do
+            echo "Running golden suite: ${suite} (debug)"
+            cargo test --test "${suite}" --verbose --features golden-tests
           done
 
-  docs-quality:
-    name: Documentation Quality
-    runs-on: ubuntu-latest
-    if: |
-      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          submodules: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
-        with:
-          node-version: "24"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check agent skills mirror
-        run: npm run skills:check
-
-      - name: Check formatting (Prettier)
-        run: npm run format:check
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
-        with:
-          cache: false
-          rustflags: ""
-
-      - name: Validate URLs
-        run: npm run validate:urls
-        continue-on-error: true
-
-      - name: Lint Markdown
-        run: npm run lint:md
+      - name: Run ci-release-profile golden suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in copyright_golden license_detection_golden post_processing_golden; do
+            echo "Running golden suite: ${suite} (ci-release)"
+            cargo test --test "${suite}" --profile ci-release --verbose --features golden-tests
+          done

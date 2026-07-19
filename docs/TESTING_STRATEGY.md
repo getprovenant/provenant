@@ -417,7 +417,7 @@ Golden suites are gated behind the `golden-tests` feature flag, so local ignored
 
 Quality gates run automatically in CI on pushes to `main` and on pull requests, with local pre-commit checks handled by Lefthook.
 
-The CI workflow in `.github/workflows/check.yml` is the canonical source for the exact job matrix and command lines. It splits code quality, library/doctest coverage (including no-default-features smoke), platform smokes, parser contract and integration suites, and golden suites grouped by cargo profile (`debug` vs `ci-release`) so heavy Rust layers share compiles without saturating the runner queue.
+The CI workflow in `.github/workflows/check.yml` is the canonical source for the exact job matrix and command lines. Code Quality covers Rust lint/policy checks plus documentation formatting/lint (Node); embedded license-index verify stays on its own job because it needs a recursive ScanCode submodule checkout. Library tests, no-default-features smoke, platform smokes, contract/integration suites, and a single golden job (debug then ci-release suites) stay separate so the longest jobs stay near the ~10m critical path without flooding the runner queue.
 
 For local work, prefer the narrowest command that proves your change and use `xtask/README.md` plus the owning test file or suite as the command reference, rather than mirroring the full CI matrix in this document.
 
