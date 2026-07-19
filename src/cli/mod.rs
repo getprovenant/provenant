@@ -707,97 +707,42 @@ fn parse_max_in_memory(value: &str) -> Result<MemoryMode, String> {
     }
 }
 
+type OutputTargetFieldAccessor = fn(&ScanArgs) -> &Option<String>;
+
+/// Single source of truth mapping each plain-file `ScanArgs` output flag to
+/// its [`OutputFormat`], in the order `output_targets` should emit them.
+/// `--custom-output` is handled separately (see `output_targets`) since it
+/// also needs `--custom-template` attached. Adding a new plain output flag
+/// means adding its clap field above, one row here, and one row in
+/// `output::OUTPUT_WRITERS` (`src/output/mod.rs`).
+const OUTPUT_TARGET_FIELDS: &[(OutputFormat, OutputTargetFieldAccessor)] = &[
+    (OutputFormat::Json, |args| &args.output_json),
+    (OutputFormat::JsonPretty, |args| &args.output_json_pp),
+    (OutputFormat::JsonLines, |args| &args.output_json_lines),
+    (OutputFormat::Yaml, |args| &args.output_yaml),
+    (OutputFormat::Debian, |args| &args.output_debian),
+    (OutputFormat::Html, |args| &args.output_html),
+    (OutputFormat::SpdxTv, |args| &args.output_spdx_tv),
+    (OutputFormat::SpdxRdf, |args| &args.output_spdx_rdf),
+    (OutputFormat::CycloneDxJson, |args| &args.output_cyclonedx),
+    (OutputFormat::CycloneDxXml, |args| {
+        &args.output_cyclonedx_xml
+    }),
+    (OutputFormat::Sarif, |args| &args.output_sarif),
+];
+
 impl ScanArgs {
     pub(crate) fn output_targets(&self) -> Vec<OutputTarget> {
-        let mut targets = Vec::new();
-
-        if let Some(file) = &self.output_json {
-            targets.push(OutputTarget {
-                format: OutputFormat::Json,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_json_pp {
-            targets.push(OutputTarget {
-                format: OutputFormat::JsonPretty,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_json_lines {
-            targets.push(OutputTarget {
-                format: OutputFormat::JsonLines,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_yaml {
-            targets.push(OutputTarget {
-                format: OutputFormat::Yaml,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_debian {
-            targets.push(OutputTarget {
-                format: OutputFormat::Debian,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_html {
-            targets.push(OutputTarget {
-                format: OutputFormat::Html,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_spdx_tv {
-            targets.push(OutputTarget {
-                format: OutputFormat::SpdxTv,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_spdx_rdf {
-            targets.push(OutputTarget {
-                format: OutputFormat::SpdxRdf,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_cyclonedx {
-            targets.push(OutputTarget {
-                format: OutputFormat::CycloneDxJson,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_cyclonedx_xml {
-            targets.push(OutputTarget {
-                format: OutputFormat::CycloneDxXml,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
-
-        if let Some(file) = &self.output_sarif {
-            targets.push(OutputTarget {
-                format: OutputFormat::Sarif,
-                file: file.clone(),
-                custom_template: None,
-            });
-        }
+        let mut targets: Vec<OutputTarget> = OUTPUT_TARGET_FIELDS
+            .iter()
+            .filter_map(|(format, field)| {
+                field(self).as_ref().map(|file| OutputTarget {
+                    format: *format,
+                    file: file.clone(),
+                    custom_template: None,
+                })
+            })
+            .collect();
 
         if let Some(file) = &self.custom_output {
             targets.push(OutputTarget {

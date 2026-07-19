@@ -7,7 +7,7 @@ use crate::cli::{Cli, Command, ScanArgs};
 use crate::compare::compare_json_files;
 use crate::license_detection::dataset::export_embedded_license_dataset;
 use crate::models::{FileType, Output};
-use crate::output::{OutputFormat, OutputWriteConfig, write_output_file};
+use crate::output::{OutputWriteConfig, write_output_file};
 use crate::progress::{ProgressMode, ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
@@ -142,7 +142,7 @@ pub fn run() -> Result<ExitCode> {
         crate::output_schema::Output::from_with_compat_mode(&output, cli.compat_mode);
     progress.start_output();
     for target in &request.output_targets {
-        if hollow_sbom_refusal.is_some() && SBOM_OUTPUT_FORMATS.contains(&target.format) {
+        if hollow_sbom_refusal.is_some() && crate::output::is_sbom_format(target.format) {
             emit_sbom_guard_diagnostic(
                 request.progress_mode,
                 &format!(
@@ -327,34 +327,15 @@ fn emit_sbom_guard_diagnostic(progress_mode: ProgressMode, message: &str, is_err
     }
 }
 
-/// SBOM-oriented output formats whose entire value proposition is the package
-/// inventory: an SPDX or CycloneDX document with zero packages looks like a
-/// normal, successful export while actually reporting no components at all.
-const SBOM_OUTPUT_FORMATS: &[OutputFormat] = &[
-    OutputFormat::SpdxTv,
-    OutputFormat::SpdxRdf,
-    OutputFormat::CycloneDxJson,
-    OutputFormat::CycloneDxXml,
-];
-
-fn sbom_output_flag(format: OutputFormat) -> &'static str {
-    match format {
-        OutputFormat::SpdxTv => "--spdx-tv",
-        OutputFormat::SpdxRdf => "--spdx-rdf",
-        OutputFormat::CycloneDxJson => "--cyclonedx",
-        OutputFormat::CycloneDxXml => "--cyclonedx-xml",
-        _ => "<sbom-format>",
-    }
-}
-
-/// CLI flags for whichever SBOM formats (see [`SBOM_OUTPUT_FORMATS`]) appear
-/// among `output_targets`, in request order. Empty when none were requested.
+/// CLI flags for whichever SBOM-oriented formats (see
+/// `crate::output::is_sbom_format`; SPDX and CycloneDX today) appear among
+/// `output_targets`, in request order. Empty when none were requested.
 fn requested_sbom_flags(output_targets: &[OutputTarget]) -> Vec<&'static str> {
     output_targets
         .iter()
         .map(|target| target.format)
-        .filter(|format| SBOM_OUTPUT_FORMATS.contains(format))
-        .map(sbom_output_flag)
+        .filter(|format| crate::output::is_sbom_format(*format))
+        .map(crate::output::cli_flag_for)
         .collect()
 }
 
