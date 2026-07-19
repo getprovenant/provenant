@@ -35,7 +35,8 @@ pub(crate) mod app;
 pub mod assembly;
 pub mod cache;
 pub mod cli;
-pub(crate) mod compare;
+#[doc(hidden)]
+pub mod compare;
 #[doc(hidden)]
 pub mod compare_driver_shared;
 #[doc(hidden)]
