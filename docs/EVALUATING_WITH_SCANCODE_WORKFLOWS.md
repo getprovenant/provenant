@@ -117,7 +117,19 @@ If your downstream workflow needs the historic ScanCode-style rendered value in 
 provenant scan --json-pp scan.json --copyright --compat-mode scancode /path/to/project
 ```
 
-### 6. Parser behavior can be more capable than ScanCode on some documented surfaces
+### 6. Monorepo and workspace inventories are topology-aware
+
+On multi-package trees, ScanCode often stops at per-directory package rows: a Maven reactor’s module sources, a Gradle multiproject’s nested files, or a uv/Cargo/npm/Mix/Dart workspace’s shared lock may not be attributed to the declaring packages in a way that matches how the project is structured.
+
+Provenant’s assembly uses declared project topology (workspace members, reactor `<modules>`, Gradle `include`, Mix umbrellas, and similar) so that:
+
+- nested sources under a member belong to that member’s package when ownership is proven
+- a shared root lockfile (for example `uv.lock`, `pubspec.lock`, or Mix lock state) is attributed to members that actually declare the locked dependency, and otherwise stays honestly hoisted
+- incomplete selections are called out when you combine `--paths-file` with an SBOM export — including named missing Cargo/npm/Mix workspace roots when the selected files carry an unambiguous member marker
+
+If you evaluate Provenant on a monorepo primarily by counting packages, prefer inspecting `for_packages` / file ownership and shared-lock attribution, not only package cardinality. Details live in [Architecture](ARCHITECTURE.md) (TopologyPlan) and the relevant [improvement notes](improvements/README.md) (Maven, Gradle, uv, npm workspace, Cargo, Dart, Mix).
+
+### 7. Parser behavior can be more capable than ScanCode on some documented surfaces
 
 Provenant includes many documented parser fixes and intentional differences and improvements, for example in:
 
@@ -131,7 +143,7 @@ These are documented improvements on specific surfaces, not random incompatibili
 
 See [Intentional Differences and Improvements](improvements/README.md) for the full index.
 
-### 7. Path selection is split more explicitly between patterns and exact rooted paths
+### 8. Path selection is split more explicitly between patterns and exact rooted paths
 
 If you previously relied on `--include` as a rough way to express “scan this subtree”, pay close attention to Provenant's newer split here.
 
@@ -144,6 +156,8 @@ That means Provenant now prefers:
 - `--include '*.rs' --include 'src/**/*.toml'` when you mean pattern filtering
 - `--paths-file changed-files.txt /path/to/repo` when you already know the exact rooted file or directory list
 
+When the selection is incomplete relative to a workspace or reactor, SBOM exports still write, but Provenant warns that the inventory may understate the full tree — see [CLI Guide](CLI_GUIDE.md) section 10.
+
 This is a workflow-level difference worth knowing if you are testing Provenant against existing ScanCode habits or shell wrappers.
 
 See also:
@@ -151,7 +165,7 @@ See also:
 - [CLI Guide](CLI_GUIDE.md)
 - [CLI Workflows](improvements/cli-workflows.md)
 
-### 8. Custom templates expose ScanCode variables under a `scancode` namespace
+### 9. Custom templates expose ScanCode variables under a `scancode` namespace
 
 If you drive `--custom-output`/`--custom-template` with your own report templates, note two things.
 
@@ -197,9 +211,10 @@ If you are moving an existing ScanCode workflow to Provenant:
 
 1. start with the same broad scan shape you already use
 2. compare outputs on one representative codebase with `provenant compare`
-3. check this guide if you see a meaningful delta
-4. use the exported dataset workflow if you previously customized license/rule data in a ScanCode checkout
-5. if your old workflow used `--include` to approximate explicit path lists, consider switching that part to `--paths-file`
+3. for monorepos, pick a target that declares workspace/reactor/multiproject structure and review file ownership and shared-lock attribution, not only package counts
+4. check this guide if you see a meaningful delta
+5. use the exported dataset workflow if you previously customized license/rule data in a ScanCode checkout
+6. if your old workflow used `--include` to approximate explicit path lists, consider switching that part to `--paths-file`
 
 ## Other differences worth knowing
 
