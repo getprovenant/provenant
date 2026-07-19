@@ -24,7 +24,7 @@ Use this skill when the task mentions:
 - `docs/SUPPORTED_FORMATS.md` can drift when parser metadata changes even if parser tests pass.
 - `generate-benchmark-chart` reads timing rows from `docs/BENCHMARKS.md`; the SVG and headline are not independent data sources.
 - `npm run check:docs` uses `git ls-files`, so untracked new Markdown needs explicit targeted formatting/lint checks before it is staged.
-- URL validation is informational in CI, but broken production links should still be reviewed.
+- URL validation is a blocking CI check: a broken/removed production link fails `check.yml`. Re-point rotted benchmark-artifact URLs to a committed `testdata/` fixture, or remove the non-reproducible row.
 - Prettier and markdownlint are Node/npm-managed, so docs validation needs the repo's Node toolchain.
 
 ## Source Documents

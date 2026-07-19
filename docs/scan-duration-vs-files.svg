@@ -458,9 +458,6 @@ ScanCode: 74.98s</title></rect>
     <rect x="584.90" y="379.72" width="8" height="8" fill="#d97706" rx="1.5"><title>aboutcode-org/dejacode @ 4938cd4
 Files: 1278
 ScanCode: 191.41s</title></rect>
-    <rect x="585.23" y="404.76" width="8" height="8" fill="#d97706" rx="1.5"><title>restic/restic @ 29446b0
-Files: 1284
-ScanCode: 112.67s</title></rect>
     <rect x="585.49" y="388.57" width="8" height="8" fill="#d97706" rx="1.5"><title>cli/cli @ 71fb4f5
 Files: 1289
 ScanCode: 158.71s</title></rect>
@@ -1225,9 +1222,6 @@ Provenant: 5.87s</title></circle>
     <circle cx="588.90" cy="517.51" r="4.5" fill="#2563eb"><title>aboutcode-org/dejacode @ 4938cd4
 Files: 1278
 Provenant: 11.28s</title></circle>
-    <circle cx="589.23" cy="509.69" r="4.5" fill="#2563eb"><title>restic/restic @ 29446b0
-Files: 1284
-Provenant: 13.31s</title></circle>
     <circle cx="589.49" cy="541.35" r="4.5" fill="#2563eb"><title>cli/cli @ 71fb4f5
 Files: 1289
 Provenant: 6.81s</title></circle>

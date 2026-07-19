@@ -480,7 +480,8 @@ fn extract_urls_from_rust(file_path: &Path) -> Vec<UrlOccurrence> {
 fn validate_url(url: &str, timeout_secs: u64) -> UrlValidationResult {
     let normalized = normalize_extracted_url(url);
 
-    if ["{", "<", "...", "example.com"]
+    // `…` (U+2026) mirrors the ASCII `...` elision used in illustrative URLs.
+    if ["{", "<", "...", "…", "example.com"]
         .iter()
         .any(|placeholder| normalized.contains(placeholder))
         || normalized == "http://"
@@ -520,6 +521,14 @@ fn validate_url(url: &str, timeout_secs: u64) -> UrlValidationResult {
         };
     }
 
+    if is_loopback_host(&parsed) {
+        return UrlValidationResult {
+            url: normalized,
+            status: UrlStatus::Skip,
+            message: "Loopback/local host (example server URL)".to_string(),
+        };
+    }
+
     let allowlist_patterns = ["crates.io"];
     if allowlist_patterns
         .iter()
@@ -532,18 +541,29 @@ fn validate_url(url: &str, timeout_secs: u64) -> UrlValidationResult {
         };
     }
 
-    let output = Command::new("curl")
-        .arg("-sS")
-        .arg("--connect-timeout")
-        .arg("5")
-        .arg("--max-time")
-        .arg(timeout_secs.to_string())
-        .arg("-o")
-        .arg("/dev/null")
-        .arg("-w")
-        .arg("%{http_code}")
-        .arg(&normalized)
-        .output();
+    // Probe with a single-byte ranged GET first: it is authoritative for any
+    // server that returns a resource status (so a link that answers HEAD but
+    // genuinely fails GET is still caught), while fetching only one byte from
+    // Range-honoring hosts so multi-megabyte artifacts are not downloaded in
+    // full. Fall back to a cheap HEAD probe when the ranged GET fails for a
+    // reason attributable to the probe itself rather than a broken resource:
+    //   - a transport failure (curl error / `000`) — e.g. a server that ignores
+    //     `Range:` and streams the whole body until timeout, or a network blip;
+    //   - a range-specific rejection — `416 Range Not Satisfiable` or `501 Not
+    //     Implemented` from a server that does not support byte ranges.
+    // Any other definitive status (2xx, 3xx, 404, 410, other 5xx …) is trusted
+    // and never re-probed with HEAD.
+    let mut output = run_curl(&normalized, timeout_secs, CurlMethod::RangeGet);
+    let needs_fallback = match &output {
+        Ok(result) => {
+            let code = String::from_utf8_lossy(&result.stdout).trim().to_string();
+            !result.status.success() || matches!(code.as_str(), "" | "000" | "416" | "501")
+        }
+        Err(_) => true,
+    };
+    if needs_fallback {
+        output = run_curl(&normalized, timeout_secs, CurlMethod::Head);
+    }
 
     let Ok(output) = output else {
         return UrlValidationResult {
@@ -581,6 +601,58 @@ fn validate_url(url: &str, timeout_secs: u64) -> UrlValidationResult {
         status,
         message,
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum CurlMethod {
+    Head,
+    RangeGet,
+}
+
+fn run_curl(
+    url: &str,
+    timeout_secs: u64,
+    method: CurlMethod,
+) -> std::io::Result<std::process::Output> {
+    let mut command = Command::new("curl");
+    command
+        .arg("-sS")
+        .arg("--connect-timeout")
+        .arg("5")
+        .arg("--max-time")
+        .arg(timeout_secs.to_string())
+        // Retry transient failures (connection resets, timeouts, 429, 5xx) so a
+        // network blip on one of many URLs does not fail the whole check. Genuine
+        // 4xx (e.g. 404) is not in curl's transient set and still fails fast.
+        .arg("--retry")
+        .arg("2")
+        .arg("--retry-delay")
+        .arg("1")
+        .arg("--retry-connrefused");
+    match method {
+        CurlMethod::Head => {
+            command.arg("-I");
+        }
+        CurlMethod::RangeGet => {
+            command.arg("-r").arg("0-0");
+        }
+    }
+    command
+        .arg("-o")
+        .arg("/dev/null")
+        .arg("-w")
+        .arg("%{http_code}")
+        .arg(url)
+        .output()
+}
+
+fn is_loopback_host(parsed: &Url) -> bool {
+    matches!(
+        parsed.host_str(),
+        Some("localhost" | "127.0.0.1" | "0.0.0.0" | "::1" | "[::1]")
+    ) || parsed
+        .host_str()
+        .is_some_and(|host| host.starts_with("127."))
 }
 
 fn normalize_extracted_url(url: &str) -> String {
@@ -704,6 +776,23 @@ mod tests {
     #[test]
     fn validate_url_skips_github_placeholder_path() {
         let result = validate_url("https://github.com/user/repo.git", 10);
+        assert_eq!(result.status, UrlStatus::Skip);
+    }
+
+    #[test]
+    fn validate_url_skips_loopback_hosts() {
+        for url in [
+            "http://127.0.0.1:8080",
+            "http://localhost:3000/health",
+            "http://[::1]:8080",
+        ] {
+            assert_eq!(validate_url(url, 10).status, UrlStatus::Skip, "url: {url}");
+        }
+    }
+
+    #[test]
+    fn validate_url_skips_unicode_ellipsis_placeholder() {
+        let result = validate_url("https://www.example-host.com…", 10);
         assert_eq!(result.status, UrlStatus::Skip);
     }
 

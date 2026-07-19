@@ -100,7 +100,7 @@ fn extract_sfnt_font_metadata_text(bytes: &[u8], include_permissions: bool) -> O
 /// safe alternative to scraping raw printable strings from the font binary,
 /// where packed UTF-16 name-table storage glues consecutive records (e.g.
 /// designer, vendor URL, description) into run-on tokens such as
-/// `bulenkovhttps://www.jetbrains.comThis`, corrupting downstream URL and
+/// `bulenkovhttps://www.jetbrains.comThis…`, corrupting downstream URL and
 /// copyright extraction.
 pub(crate) fn extract_font_name_table_strings(bytes: &[u8]) -> String {
     let mut lines = Vec::new();

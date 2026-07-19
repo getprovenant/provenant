@@ -493,7 +493,15 @@ Exit codes:
 - `0`: all URLs valid
 - `1`: some URLs failed validation
 
-This command is informational in CI and does not block PRs.
+This command is a blocking CI check: a failed URL fails the `check.yml` run. It
+probes with a single-byte ranged GET (falling back to HTTP HEAD only when the
+ranged request itself is at fault — a transport failure such as a server that
+ignores `Range:` and streams a large body, or a `416`/`501` range rejection)
+and retries transient failures, so it flags genuinely broken or removed
+links rather than large-download timeouts or momentary network blips.
+Loopback/example hosts and `…`/`...` placeholder URLs are skipped. When a
+benchmark artifact URL rots, re-point it to the committed `testdata/` fixture or
+remove the non-reproducible row rather than leaving a dead link.
 
 ## `generate-supported-formats`
 

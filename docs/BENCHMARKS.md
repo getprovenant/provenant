@@ -12,7 +12,7 @@ The chart below uses a log-log scatter plot: file count on the x-axis, wall-cloc
 
 ![Scan duration vs. file count for Provenant and ScanCode](scan-duration-vs-files.svg)
 
-> Provenant is faster on 255 of 255 recorded runs, with a **19.6× median speedup** and **19.6× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
+> Provenant is faster on 254 of 254 recorded runs, with a **19.7× median speedup** and **19.7× geometric-mean speedup** overall; the median gap grows from **9.1×** on sub-100-file targets to **37.2×** on 10k+ file targets.
 > Generated from the benchmark timing rows in this document via `cargo run --manifest-path xtask/Cargo.toml --bin generate-benchmark-chart`.
 
 ## Current benchmark examples
@@ -1056,13 +1056,6 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `11.16s`; ScanCode `272.71s`
 - Direct `pkg:autotools/jemalloc` package identity (`bsd-simplified`) assembled from the vendored `deps/jemalloc` build manifests where ScanCode surfaces no package at all, cleaner per-file license expressions — the vendored `deps/jemalloc/test` SFMT sources resolve to a clean `bsd-new` where ScanCode bolts on the whole repo-license blob (`bsd-new AND (bsd-new AND generic-cla AND mongodb-sspl-1.0 AND agpl-3.0 AND unknown-license-reference …)`) — and source-faithful copyright capture that keeps complete multi-holder notices and their obfuscated-email contacts across the vendored `deps/hiredis` and `deps/fpconv` sources where ScanCode truncates to a single holder
 
-##### [restic/restic @ 29446b0](https://github.com/restic/restic/tree/29446b0fd853b7765f652584ff90e817890ee389) — **8.47× faster**
-
-- Files: 1,284
-- Run context: 2026-05-18 · restic-116171 · Linux 6.17 · Intel i5-12400 · 46 GB · x86_64 · 4 proc
-- Timing: Provenant `13.31s`; ScanCode `112.67s`
-- Broader Go module and RPM spec dependency extraction (`2` vs `1` packages, `352` vs `348` dependencies) from `go.mod`/`go.sum` plus `contrib/restic.spec`, with correct `rpm_specfile` datasource spelling and valid RPM purl construction where ScanCode emits a typo (`rpm_spefile`) and null purl, cleaner `BSD-2-Clause` detection without ScanCode's low-relevance `unknown-license-reference` false positive on README.md, extra Docker package visibility on `docker/Dockerfile`, and correct rejection of `sftp.X` Go-identifier URLs, `dnf copr` copyright noise, and bash `${var[@]}` array-expansion copyright artifacts
-
 ##### [rpm-software-management/dnf @ e47634f](https://github.com/rpm-software-management/dnf/tree/e47634fbe3565d0580e89ec21adb7c1b308642ce) — **18.95× faster**
 
 - Files: 655
@@ -1732,7 +1725,7 @@ The quick index below links to benchmark sections. Each benchmark entry then rec
 - Timing: Provenant `4.58s`; ScanCode `40.09s`
 - Matched shipped Debian package coverage (`1` vs `1`) with broader dependency extraction (`9` vs `0`) from the archive control metadata, plus the correct `pkg:deb` `arch=amd64` qualifier where ScanCode uses the nonstandard `architecture` key; the exact `bash_5.2.15-2+b10_amd64.deb` bytes are retained on the Debian snapshot archive at `https://snapshot.debian.org/file/bd6a22d6918ec3e917cc5840d8ac13235220553e`
 
-##### [FreeBSD bash 5.3.15 +COMPACT_MANIFEST @ sha256:88cea96](https://pkg.freebsd.org/FreeBSD:14:amd64/latest/All/Hashed/bash-5.3.15~a16f84ceed.pkg) — **9.09× faster**
+##### [FreeBSD bash 5.3.15 +COMPACT_MANIFEST @ sha256:88cea96](../testdata/freebsd/benchmark-bash-5.3.15/+COMPACT_MANIFEST) — **9.09× faster**
 
 - Files: 1
 - Run context: 2026-06-22 · macOS 26.5.1 · Apple M5 Pro · 64 GB · arm64 · 4 proc
