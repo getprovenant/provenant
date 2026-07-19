@@ -11,6 +11,12 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+# Cancel superseded PR runs so they do not consume the shared runner pool.
+# Keep main/renovate pushes non-cancelling so overlapping merges are not aborted.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -165,28 +171,8 @@ jobs:
       - name: Run doctests
         run: cargo test -p provenant-cli --doc --profile ci-release --verbose
 
-  no-default-features-smoke:
-    name: No-default-features Smoke Test
-    runs-on: ubuntu-latest
-    if: |
-      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          submodules: false
-          lfs: false
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606
-        with:
-          cache: false
-          rustflags: ""
-
-      - name: Set up Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: no-default-features-smoke
-
+      # Folded from a standalone job: cheap signal relative to another full
+      # checkout/toolchain/cache setup, and it shares this runner slot.
       - name: Check no-default-features build
         run: cargo check --lib --no-default-features
 
@@ -390,39 +376,24 @@ jobs:
         if: matrix.shard == 'integration'
         run: python3 scripts/validate_output_format_fixtures.py --provenant-bin target/ci-release/provenant
 
+  # One job per cargo profile so suites share a compile, cutting runner-queue
+  # contention from six short golden jobs. Suites still run as separate cargo
+  # invocations so a failure names the owning suite in the log.
   golden-tests:
-    name: Golden Tests (${{ matrix.shard }})
+    name: Golden Tests (${{ matrix.profile }})
     runs-on: ubuntu-latest
+    # ci-release goldens alone can exceed 15m of test time after one compile.
+    timeout-minutes: 40
     if: |
       !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/'))
     strategy:
       fail-fast: false
       matrix:
         include:
-          - shard: copyright
-            filter: "copyright_golden"
-            profile: ci-release
-            test-target: integration
-          - shard: assembly
-            filter: "assembly_golden"
-            profile: debug
-            test-target: integration
-          - shard: finder
-            filter: "finder_golden"
-            profile: debug
-            test-target: integration
-          - shard: license-detection
-            filter: "license_detection_golden"
-            profile: ci-release
-            test-target: integration
-          - shard: post-processing
-            filter: "post_processing_golden"
-            profile: ci-release
-            test-target: integration
-          - shard: parsers
-            filter: "parsers_golden"
-            profile: debug
-            test-target: integration
+          - profile: debug
+            suites: "assembly_golden finder_golden parsers_golden"
+          - profile: ci-release
+            suites: "copyright_golden license_detection_golden post_processing_golden"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -440,27 +411,18 @@ jobs:
         with:
           shared-key: golden-tests-${{ matrix.profile }}
 
-      - name: Run golden test shard
+      - name: Run golden suites (${{ matrix.profile }})
         shell: bash
         run: |
           set -euo pipefail
-          cargo_args=(test --lib --verbose --features golden-tests "${{ matrix.filter }}")
-          if [[ "${{ matrix.test-target }}" == "bin" ]]; then
-            cargo_args=(test --bin provenant --verbose --features golden-tests "${{ matrix.filter }}")
-          elif [[ "${{ matrix.test-target }}" == "integration" ]]; then
-            cargo_args=(test --test "${{ matrix.filter }}" --verbose --features golden-tests)
-          fi
+          profile_args=()
           if [[ "${{ matrix.profile }}" == "ci-release" ]]; then
-            cargo_args=(test --lib --profile ci-release --verbose --features golden-tests "${{ matrix.filter }}")
-            if [[ "${{ matrix.test-target }}" == "bin" ]]; then
-              cargo_args=(test --bin provenant --profile ci-release --verbose --features golden-tests "${{ matrix.filter }}")
-            elif [[ "${{ matrix.test-target }}" == "integration" ]]; then
-              cargo_args=(test --test "${{ matrix.filter }}" --profile ci-release --verbose --features golden-tests)
-            fi
+            profile_args=(--profile ci-release)
           fi
-
-          echo "Running golden filter: ${{ matrix.filter }} (${{ matrix.profile }}, ${{ matrix.test-target }})"
-          cargo "${cargo_args[@]}"
+          for suite in ${{ matrix.suites }}; do
+            echo "Running golden suite: ${suite} (${{ matrix.profile }})"
+            cargo test --test "${suite}" "${profile_args[@]}" --verbose --features golden-tests
+          done
 
   docs-quality:
     name: Documentation Quality
