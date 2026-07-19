@@ -229,6 +229,13 @@ junk-vs-advantage. It is a pure diagnostic: it never feeds `comparison_status`,
 the signal counts, or any pass/fail gate. `summary.json` also surfaces a short
 per-field top-N preview under `field_value_frequency_top`.
 
+File ownership (`files[].for_packages`) is a **secondary informational** compare
+axis. `summary.json` reports `file_ownership_summary`, and capped samples land in
+`comparison/samples/file_ownership_differences.json`. Ownership deltas can raise
+`review_required` via the `non_directional` signal bucket, but they do **not**
+inflate `provenant_favored` or `scancode_favored`. License and copyright remain
+the primary review signal.
+
 Optional diagnostic logs when available:
 
 - `raw/scancode-stdout.txt`

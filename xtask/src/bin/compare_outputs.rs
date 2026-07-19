@@ -1167,7 +1167,13 @@ fn build_provenant_invocation(context: &ContextState) -> (PathBuf, Vec<String>) 
             context.target_input_args.clone(),
         )
     } else {
-        (context.target_dir.clone(), vec![".".to_string()])
+        // Path-root the scan input instead of cwd ".". ScanCode mounts the target
+        // at /input; Provenant scanning "." can emit ./ paths that break assembly
+        // path identity and unfairly skew ownership/package compare fairness.
+        (
+            context.project_root.clone(),
+            vec![context.target_dir.display().to_string()],
+        )
     }
 }
 
@@ -1769,6 +1775,18 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
     scancode_favored_signal_count += raw_dependency_missing;
     provenant_favored_signal_count += raw_dependency_extra;
     non_directional_signal_count += license_deltas.len();
+
+    // File ownership (files[].for_packages) is always computed when both outputs
+    // expose a files array (via common_paths). It is a secondary informational
+    // axis: deltas feed non_directional only and never boost favored counts.
+    let file_ownership = compare_file_ownership(&scancode_files, &provenant_files, &common_paths);
+    let file_ownership_only_in_provenant = file_ownership.only_in_provenant.len();
+    let file_ownership_only_in_scancode = file_ownership.only_in_scancode.len();
+    let file_ownership_set_mismatch = file_ownership.set_mismatch.len();
+    let file_ownership_difference_count = file_ownership.total_differences();
+    non_directional_signal_count += file_ownership_difference_count;
+    let file_ownership_summary = file_ownership.summary_json();
+
     rows.push(tsv_row(
         "top_level_packages_missing_in_provenant",
         top_level_package_missing as i64,
@@ -1846,6 +1864,27 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         license_deltas.len() as i64,
         0,
         "expressions with different top-level detection counts",
+    ));
+    rows.push(tsv_row(
+        "file_ownership_only_in_provenant",
+        file_ownership_only_in_provenant as i64,
+        file_ownership_only_in_provenant as i64,
+        0,
+        "secondary informational: common-path files with for_packages only in Provenant (does not boost favored signal counts)",
+    ));
+    rows.push(tsv_row(
+        "file_ownership_only_in_scancode",
+        file_ownership_only_in_scancode as i64,
+        file_ownership_only_in_scancode as i64,
+        0,
+        "secondary informational: common-path files with for_packages only in ScanCode (does not boost favored signal counts)",
+    ));
+    rows.push(tsv_row(
+        "file_ownership_set_mismatch",
+        file_ownership_set_mismatch as i64,
+        file_ownership_set_mismatch as i64,
+        0,
+        "secondary informational: common-path files where both sides own the file but normalized for_packages sets differ",
     ));
 
     let comparison_status = if scancode_favored_signal_count > 0
@@ -1936,6 +1975,10 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
             "field_value_frequency",
             context.samples_dir.join("field_value_frequency.json"),
         ),
+        (
+            "file_ownership_differences",
+            context.samples_dir.join("file_ownership_differences.json"),
+        ),
     ];
     write_pretty_json(&sample_paths[0].1, &scancode_only_output_paths)?;
     write_pretty_json(&sample_paths[1].1, &provenant_only_output_paths)?;
@@ -1955,6 +1998,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         &package_field_content_value_differences,
     )?;
     write_pretty_json(&sample_paths[14].1, &field_value_frequency)?;
+    write_pretty_json(&sample_paths[15].1, &file_ownership.samples_json())?;
 
     let summary = json!({
         "comparison_status": comparison_status,
@@ -1984,6 +2028,7 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         "top_level_dependency_summary": top_level_dependency_summary,
         "raw_dependency_summary": raw_dependency_summary,
         "package_field_content_summary": package_field_content_summary,
+        "file_ownership_summary": file_ownership_summary,
         "comparison_context": {
             "only_findings_active": only_findings_active,
             "path_presence_semantics": "final_output_membership",
@@ -2016,7 +2061,165 @@ fn generate_comparison_artifacts(context: &ContextState) -> Result<()> {
         &["metric", "scancode", "provenant", "delta", "notes"],
         &rows,
     )?;
+    if file_ownership_difference_count > 0 {
+        println!(
+            "Note: {file_ownership_difference_count} file-ownership difference(s); see comparison/samples/file_ownership_differences.json"
+        );
+    }
     Ok(())
+}
+
+/// Cap for ownership difference samples written under comparison/samples/.
+const FILE_OWNERSHIP_SAMPLE_CAP: usize = 50;
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+struct FileOwnershipDifferenceEntry {
+    path: String,
+    scancode_owners: Vec<String>,
+    provenant_owners: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+struct FileOwnershipComparison {
+    paths_compared: usize,
+    only_in_provenant: Vec<FileOwnershipDifferenceEntry>,
+    only_in_scancode: Vec<FileOwnershipDifferenceEntry>,
+    set_mismatch: Vec<FileOwnershipDifferenceEntry>,
+}
+
+impl FileOwnershipComparison {
+    fn total_differences(&self) -> usize {
+        self.only_in_provenant.len() + self.only_in_scancode.len() + self.set_mismatch.len()
+    }
+
+    fn summary_json(&self) -> Value {
+        json!({
+            "paths_compared": self.paths_compared,
+            "only_in_provenant": self.only_in_provenant.len(),
+            "only_in_scancode": self.only_in_scancode.len(),
+            "set_mismatch": self.set_mismatch.len(),
+            "note": "Secondary informational axis: files[].for_packages deltas feed non_directional review signals only and do not boost provenant_favored or scancode_favored counts. License/copyright remain the primary review signal.",
+        })
+    }
+
+    fn samples_json(&self) -> Value {
+        json!({
+            "only_in_provenant": capped_file_ownership_samples(&self.only_in_provenant),
+            "only_in_scancode": capped_file_ownership_samples(&self.only_in_scancode),
+            "set_mismatch": capped_file_ownership_samples(&self.set_mismatch),
+            "sample_cap": FILE_OWNERSHIP_SAMPLE_CAP,
+        })
+    }
+}
+
+fn capped_file_ownership_samples(
+    entries: &[FileOwnershipDifferenceEntry],
+) -> &[FileOwnershipDifferenceEntry] {
+    let end = entries.len().min(FILE_OWNERSHIP_SAMPLE_CAP);
+    &entries[..end]
+}
+
+/// Strip the trailing scan-local UUID suffix from a package UID.
+///
+/// Provenant and ScanCode append a generated UUID as the package_uid uniqueness
+/// suffix on every assembled package (`PackageUid::with_uuid_suffix`):
+/// `?uuid=<scan>` when the base has no query, otherwise `&uuid=<scan>`.
+///
+/// Therefore a sole trailing hex `?uuid=` in `files[].for_packages` **is** the
+/// scan-local suffix (the common form). A real Package URL `uuid` identity on
+/// the purl becomes an earlier qualifier with scan-local appended after it
+/// (`...?uuid=<identity>&uuid=<scan>`); that earlier qualifier is preserved.
+/// Non-UUID trailing `uuid=` values are left untouched.
+fn normalize_ownership_package_uid(uid: &str) -> String {
+    let q_pos = uid.rfind("?uuid=");
+    let a_pos = uid.rfind("&uuid=");
+    let (start, marker) = match (q_pos, a_pos) {
+        (Some(q), Some(a)) if a > q => (a, "&uuid="),
+        (Some(q), _) => (q, "?uuid="),
+        (None, Some(a)) => (a, "&uuid="),
+        (None, None) => return uid.to_string(),
+    };
+    let after_eq = start + marker.len();
+    let end = uid[after_eq..]
+        .find(['&', '#'])
+        .map(|i| after_eq + i)
+        .unwrap_or(uid.len());
+    // Trailing qualifier only: a `&` after the value means this was not rightmost.
+    if uid[end..].starts_with('&') || !is_hex_uuid(&uid[after_eq..end]) {
+        return uid.to_string();
+    }
+    let mut out = String::with_capacity(uid.len());
+    out.push_str(&uid[..start]);
+    out.push_str(&uid[end..]);
+    out
+}
+
+fn is_hex_uuid(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    if bytes.len() != 36 {
+        return false;
+    }
+    for (idx, byte) in bytes.iter().enumerate() {
+        match idx {
+            8 | 13 | 18 | 23 => {
+                if *byte != b'-' {
+                    return false;
+                }
+            }
+            _ => {
+                if !byte.is_ascii_hexdigit() {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+fn for_packages_owners(file: &Value) -> BTreeSet<String> {
+    file.get("for_packages")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(normalize_ownership_package_uid)
+        .filter(|uid| !uid.is_empty())
+        .collect()
+}
+
+fn compare_file_ownership(
+    scancode_files: &BTreeMap<String, Value>,
+    provenant_files: &BTreeMap<String, Value>,
+    common_paths: &[String],
+) -> FileOwnershipComparison {
+    let mut result = FileOwnershipComparison {
+        paths_compared: common_paths.len(),
+        ..Default::default()
+    };
+    for path in common_paths {
+        let Some(scancode_file) = scancode_files.get(path) else {
+            continue;
+        };
+        let Some(provenant_file) = provenant_files.get(path) else {
+            continue;
+        };
+        let scancode_owners = for_packages_owners(scancode_file);
+        let provenant_owners = for_packages_owners(provenant_file);
+        if scancode_owners == provenant_owners {
+            continue;
+        }
+        let entry = FileOwnershipDifferenceEntry {
+            path: path.clone(),
+            scancode_owners: scancode_owners.iter().cloned().collect(),
+            provenant_owners: provenant_owners.iter().cloned().collect(),
+        };
+        match (scancode_owners.is_empty(), provenant_owners.is_empty()) {
+            (true, false) => result.only_in_provenant.push(entry),
+            (false, true) => result.only_in_scancode.push(entry),
+            _ => result.set_mismatch.push(entry),
+        }
+    }
+    result
 }
 
 fn top_level_counts(value: &Value) -> TopLevelCounts {
@@ -3527,6 +3730,252 @@ mod tests {
 
         assert_eq!(working_dir, staged_input);
         assert_eq!(input_args, vec!["fixture.txt"]);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn build_provenant_invocation_uses_path_rooted_target_for_directory_scans() {
+        let mut context = test_context();
+        context.project_root = PathBuf::from("/tmp/project");
+        context.target_dir = PathBuf::from("/tmp/scan-target");
+        context.target_uses_staged_inputs = false;
+
+        let (working_dir, input_args) = build_provenant_invocation(&context);
+        let args = build_provenant_args(&context);
+
+        assert_eq!(working_dir, PathBuf::from("/tmp/project"));
+        assert_eq!(input_args, vec!["/tmp/scan-target".to_string()]);
+        assert_eq!(args.last().map(String::as_str), Some("/tmp/scan-target"));
+        assert!(!args.iter().any(|arg| arg == "."));
+    }
+
+    #[test]
+    fn file_ownership_classifies_only_in_provenant() {
+        let scancode_files = BTreeMap::from([(
+            "src/lib.rs".to_string(),
+            json!({"path": "src/lib.rs", "type": "file", "for_packages": []}),
+        )]);
+        let provenant_files = BTreeMap::from([(
+            "src/lib.rs".to_string(),
+            json!({
+                "path": "src/lib.rs",
+                "type": "file",
+                "for_packages": ["pkg:npm/demo@1.0.0?uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]
+            }),
+        )]);
+        let common = vec!["src/lib.rs".to_string()];
+
+        let result = compare_file_ownership(&scancode_files, &provenant_files, &common);
+
+        assert_eq!(result.paths_compared, 1);
+        assert_eq!(result.only_in_provenant.len(), 1);
+        assert!(result.only_in_scancode.is_empty());
+        assert!(result.set_mismatch.is_empty());
+        assert_eq!(
+            result.only_in_provenant[0].provenant_owners,
+            vec!["pkg:npm/demo@1.0.0".to_string()]
+        );
+    }
+
+    #[test]
+    fn file_ownership_classifies_only_in_scancode() {
+        let scancode_files = BTreeMap::from([(
+            "src/lib.rs".to_string(),
+            json!({
+                "path": "src/lib.rs",
+                "type": "file",
+                "for_packages": ["pkg:npm/demo@1.0.0?uuid=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"]
+            }),
+        )]);
+        let provenant_files = BTreeMap::from([(
+            "src/lib.rs".to_string(),
+            json!({"path": "src/lib.rs", "type": "file"}),
+        )]);
+        let common = vec!["src/lib.rs".to_string()];
+
+        let result = compare_file_ownership(&scancode_files, &provenant_files, &common);
+
+        assert_eq!(result.only_in_scancode.len(), 1);
+        assert!(result.only_in_provenant.is_empty());
+        assert!(result.set_mismatch.is_empty());
+        assert_eq!(
+            result.only_in_scancode[0].scancode_owners,
+            vec!["pkg:npm/demo@1.0.0".to_string()]
+        );
+    }
+
+    #[test]
+    fn file_ownership_classifies_set_mismatch_for_dual_vs_single() {
+        let scancode_files = BTreeMap::from([(
+            "packages/foo/index.js".to_string(),
+            json!({
+                "path": "packages/foo/index.js",
+                "type": "file",
+                "for_packages": [
+                    "pkg:npm/workspace@1.0.0?uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                    "pkg:npm/foo@1.0.0?uuid=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                ]
+            }),
+        )]);
+        let provenant_files = BTreeMap::from([(
+            "packages/foo/index.js".to_string(),
+            json!({
+                "path": "packages/foo/index.js",
+                "type": "file",
+                "for_packages": ["pkg:npm/foo@1.0.0?uuid=cccccccc-cccc-cccc-cccc-cccccccccccc"]
+            }),
+        )]);
+        let common = vec!["packages/foo/index.js".to_string()];
+
+        let result = compare_file_ownership(&scancode_files, &provenant_files, &common);
+
+        assert_eq!(result.set_mismatch.len(), 1);
+        assert!(result.only_in_provenant.is_empty());
+        assert!(result.only_in_scancode.is_empty());
+        assert_eq!(
+            result.set_mismatch[0].scancode_owners,
+            vec![
+                "pkg:npm/foo@1.0.0".to_string(),
+                "pkg:npm/workspace@1.0.0".to_string()
+            ]
+        );
+        assert_eq!(
+            result.set_mismatch[0].provenant_owners,
+            vec!["pkg:npm/foo@1.0.0".to_string()]
+        );
+    }
+
+    #[test]
+    fn file_ownership_strips_only_trailing_scan_local_uuid() {
+        assert_eq!(
+            normalize_ownership_package_uid(
+                "pkg:pypi/demo@1?uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+            ),
+            "pkg:pypi/demo@1"
+        );
+        assert_eq!(
+            normalize_ownership_package_uid(
+                "pkg:pypi/demo@1?uuid=AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
+            ),
+            "pkg:pypi/demo@1"
+        );
+        // Non-UUID trailing uuid= values are left untouched.
+        assert_eq!(
+            normalize_ownership_package_uid("pkg:pypi/demo@1?uuid=scancode-root"),
+            "pkg:pypi/demo@1?uuid=scancode-root"
+        );
+        // UUID-shaped Package URL identity is preserved when scan-local is appended
+        // as trailing &uuid= (PackageUid::with_uuid_suffix).
+        assert_eq!(
+            normalize_ownership_package_uid(
+                "pkg:generic/foo?uuid=11111111-1111-1111-1111-111111111111&uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+            ),
+            "pkg:generic/foo?uuid=11111111-1111-1111-1111-111111111111"
+        );
+        assert_ne!(
+            normalize_ownership_package_uid(
+                "pkg:generic/foo?uuid=11111111-1111-1111-1111-111111111111&uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+            ),
+            normalize_ownership_package_uid(
+                "pkg:generic/foo?uuid=22222222-2222-2222-2222-222222222222&uuid=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+            )
+        );
+        assert_ne!(
+            normalize_ownership_package_uid("pkg:generic/foo@1?uuid=identity-a"),
+            normalize_ownership_package_uid("pkg:generic/foo@1?uuid=identity-b")
+        );
+
+        let scancode_files = BTreeMap::from([(
+            "setup.py".to_string(),
+            json!({
+                "path": "setup.py",
+                "type": "file",
+                "for_packages": ["pkg:pypi/demo@1?uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]
+            }),
+        )]);
+        let provenant_files = BTreeMap::from([(
+            "setup.py".to_string(),
+            json!({
+                "path": "setup.py",
+                "type": "file",
+                "for_packages": ["pkg:pypi/demo@1?uuid=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"]
+            }),
+        )]);
+        let common = vec!["setup.py".to_string()];
+
+        let result = compare_file_ownership(&scancode_files, &provenant_files, &common);
+
+        assert_eq!(result.total_differences(), 0);
+        assert_eq!(result.paths_compared, 1);
+    }
+
+    #[test]
+    fn generate_comparison_artifacts_surfaces_file_ownership_as_non_directional() {
+        let temp_root = unique_temp_dir("file-ownership-axis");
+        fs::create_dir_all(&temp_root).unwrap();
+        let mut context = test_context();
+        context.compare_mode = CompareMode::DirectJson;
+        context.scan_args = Vec::new();
+        context.run_dir = temp_root.join("run");
+        context.raw_dir = context.run_dir.join("raw");
+        context.comparison_dir = context.run_dir.join("comparison");
+        context.samples_dir = context.comparison_dir.join("samples");
+        context.run_manifest = context.run_dir.join("run-manifest.json");
+        context.summary_json = context.comparison_dir.join("summary.json");
+        context.summary_tsv = context.comparison_dir.join("summary.tsv");
+        context.scancode_json = context.raw_dir.join("scancode.json");
+        context.provenant_json = context.raw_dir.join("provenant.json");
+        fs::create_dir_all(&context.raw_dir).unwrap();
+        fs::create_dir_all(&context.samples_dir).unwrap();
+
+        let scancode = json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "for_packages": [
+                    "pkg:npm/root@1.0.0?uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                    "pkg:npm/mod@1.0.0?uuid=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                ]
+            }],
+            "packages": [], "dependencies": [],
+            "license_detections": [], "license_references": [], "license_rule_references": []
+        });
+        let provenant = json!({
+            "files": [{
+                "path": "src/lib.rs",
+                "type": "file",
+                "for_packages": ["pkg:npm/mod@1.0.0?uuid=cccccccc-cccc-cccc-cccc-cccccccccccc"]
+            }],
+            "packages": [], "dependencies": [],
+            "license_detections": [], "license_references": [], "license_rule_references": []
+        });
+        fs::write(&context.scancode_json, scancode.to_string()).unwrap();
+        fs::write(&context.provenant_json, provenant.to_string()).unwrap();
+
+        generate_comparison_artifacts(&context).unwrap();
+
+        let summary: Value =
+            serde_json::from_str(&fs::read_to_string(&context.summary_json).unwrap()).unwrap();
+        assert_eq!(summary["file_ownership_summary"]["paths_compared"], 1);
+        assert_eq!(summary["file_ownership_summary"]["set_mismatch"], 1);
+        assert_eq!(summary["file_ownership_summary"]["only_in_provenant"], 0);
+        assert_eq!(summary["file_ownership_summary"]["only_in_scancode"], 0);
+        assert_eq!(summary["comparison_signal_summary"]["non_directional"], 1);
+        assert_eq!(summary["comparison_signal_summary"]["provenant_favored"], 0);
+        assert_eq!(summary["comparison_signal_summary"]["scancode_favored"], 0);
+        assert_eq!(summary["comparison_status"], "review_required");
+
+        let samples: Value = serde_json::from_str(
+            &fs::read_to_string(context.samples_dir.join("file_ownership_differences.json"))
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(samples["set_mismatch"][0]["path"], "src/lib.rs");
+        assert_eq!(
+            samples["set_mismatch"][0]["provenant_owners"],
+            json!(["pkg:npm/mod@1.0.0"])
+        );
 
         let _ = fs::remove_dir_all(&temp_root);
     }
