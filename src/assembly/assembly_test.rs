@@ -577,6 +577,82 @@ mod tests {
     }
 
     #[test]
+    fn test_gradle_multi_project_resolves_project_dir_remap() {
+        // `include ':libs:core'` declares the default directory `libs/core`, but
+        // a literal `project(':libs:core').projectDir = file('vendor/core')`
+        // relocates it. Topology must resolve the member at its remapped
+        // directory and own its nested sources there.
+        let mut settings = create_test_file_info(
+            "repo/settings.gradle",
+            DatasourceId::GradleSettings,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        settings.package_data[0].package_type = Some(PackageType::Maven);
+        settings.package_data[0].extra_data = Some(HashMap::from([
+            ("projects".to_string(), json!(["libs/core"])),
+            ("root_project_name".to_string(), json!("gradle-root")),
+            (
+                "project_dir_overrides".to_string(),
+                json!({ "libs/core": "vendor/core" }),
+            ),
+        ]));
+
+        let mut root_build = create_test_file_info(
+            "repo/build.gradle",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        root_build.package_data[0].package_type = Some(PackageType::Maven);
+        root_build.package_data[0].extra_data = Some(HashMap::from([
+            ("group".to_string(), json!("org.example")),
+            ("version".to_string(), json!("1.0")),
+        ]));
+
+        let mut member_build = create_test_file_info(
+            "repo/vendor/core/build.gradle",
+            DatasourceId::BuildGradle,
+            None,
+            None,
+            None,
+            vec![],
+        );
+        member_build.package_data[0].package_type = Some(PackageType::Maven);
+        member_build.package_data[0].extra_data = Some(HashMap::from([
+            ("group".to_string(), json!("org.example")),
+            ("version".to_string(), json!("1.0")),
+        ]));
+
+        let mut files = vec![
+            settings,
+            root_build,
+            member_build,
+            create_plain_source_file_info("repo/vendor/core/src/main/java/Core.java"),
+        ];
+
+        let result = assemble(&mut files);
+        let member = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:maven/org.example/core@1.0"))
+            .expect("remapped member Gradle package");
+
+        assert!(
+            files
+                .iter()
+                .find(|file| file.path == "repo/vendor/core/src/main/java/Core.java")
+                .expect("remapped member source")
+                .for_packages
+                .contains(&member.package_uid)
+        );
+    }
+
+    #[test]
     fn test_uv_workspace_owns_only_resolved_non_excluded_members() {
         let mut root = create_test_file_info(
             "repo/pyproject.toml",
@@ -653,6 +729,112 @@ mod tests {
                 .for_packages
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn test_uv_workspace_attributes_shared_lock_to_declaring_members() {
+        // A uv workspace shares one root `uv.lock`. A locked entry that a
+        // member's own `pyproject.toml` declares directly is attributed to that
+        // member; a transitive-only entry that no member declares stays hoisted.
+        let mut root = create_test_file_info(
+            "repo/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/workspace-root@1.0.0"),
+            Some("workspace-root"),
+            Some("1.0.0"),
+            vec![],
+        );
+        root.package_data[0].package_type = Some(PackageType::Pypi);
+        root.package_data[0].extra_data = Some(HashMap::from([(
+            "workspace_members".to_string(),
+            json!(["packages/core"]),
+        )]));
+
+        let direct_requests = Dependency {
+            purl: Some("pkg:pypi/requests".to_string()),
+            extracted_requirement: Some(">=2.0".to_string()),
+            scope: Some("dependencies".to_string()),
+            is_runtime: Some(true),
+            is_optional: Some(false),
+            is_pinned: Some(false),
+            is_direct: Some(true),
+            resolved_package: None,
+            extra_data: None,
+        };
+        let mut member = create_test_file_info(
+            "repo/packages/core/pyproject.toml",
+            DatasourceId::PypiPyprojectToml,
+            Some("pkg:pypi/core@0.1.0"),
+            Some("core"),
+            Some("0.1.0"),
+            vec![direct_requests],
+        );
+        member.package_data[0].package_type = Some(PackageType::Pypi);
+
+        let mut lock = create_test_file_info(
+            "repo/uv.lock",
+            DatasourceId::PypiUvLock,
+            None,
+            None,
+            None,
+            vec![
+                Dependency {
+                    purl: Some("pkg:pypi/requests@2.31.0".to_string()),
+                    extracted_requirement: None,
+                    scope: None,
+                    is_runtime: Some(true),
+                    is_optional: Some(false),
+                    is_pinned: Some(true),
+                    is_direct: Some(false),
+                    resolved_package: None,
+                    extra_data: None,
+                },
+                Dependency {
+                    purl: Some("pkg:pypi/urllib3@2.2.0".to_string()),
+                    extracted_requirement: None,
+                    scope: None,
+                    is_runtime: Some(true),
+                    is_optional: Some(false),
+                    is_pinned: Some(true),
+                    is_direct: Some(false),
+                    resolved_package: None,
+                    extra_data: None,
+                },
+            ],
+        );
+        lock.package_data[0].package_type = Some(PackageType::Pypi);
+
+        let mut files = vec![
+            root,
+            lock,
+            member,
+            create_plain_source_file_info("repo/packages/core/src/core.py"),
+        ];
+        let result = assemble(&mut files);
+
+        let core = result
+            .packages
+            .iter()
+            .find(|package| package.purl.as_deref() == Some("pkg:pypi/core@0.1.0"))
+            .expect("uv member package");
+
+        // The directly-declared entry is attributed to the member that declares it.
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:pypi/requests@2.31.0")
+                && dependency.for_package_uid.as_ref() == Some(&core.package_uid)
+        }));
+        // The transitive-only entry no member declares stays hoisted.
+        assert!(result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:pypi/urllib3@2.2.0")
+                && dependency.for_package_uid.is_none()
+        }));
+        // No shared-lock entry remains hoisted onto the root as a stale thin
+        // attribution when a member declares it.
+        assert!(!result.dependencies.iter().any(|dependency| {
+            dependency.purl.as_deref() == Some("pkg:pypi/requests@2.31.0")
+                && dependency.datafile_path == "repo/uv.lock"
+                && dependency.for_package_uid.as_ref() != Some(&core.package_uid)
+        }));
     }
 
     #[test]

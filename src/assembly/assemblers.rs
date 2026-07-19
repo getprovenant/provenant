@@ -351,7 +351,9 @@ static POST_ASSEMBLY_PASSES: &[PostAssemblyPass] = &[
     PostAssemblyPass {
         id: PostAssemblyPassId::UvWorkspaceAssign,
         should_run: |inputs| inputs.has_marker(WorkspaceMarker::UvWorkspace),
-        run: |files, _packages, _dependencies, plan| plan.apply_uv_workspace_domains(files),
+        run: |files, _packages, dependencies, plan| {
+            plan.apply_uv_workspace_domains(files, dependencies)
+        },
     },
     PostAssemblyPass {
         id: PostAssemblyPassId::DartWorkspaceMerge,

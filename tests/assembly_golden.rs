@@ -580,6 +580,28 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_uv_workspace_shared_lock() {
+        match run_assembly_golden_test("uv-workspace-shared-lock") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for uv-workspace-shared-lock: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
+    fn test_assembly_gradle_projectdir_remap() {
+        match run_assembly_golden_test("gradle-projectdir-remap") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for gradle-projectdir-remap: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
     fn test_assembly_dart_workspace() {
         match run_assembly_golden_test("dart-workspace") {
             Ok(_) => (),
