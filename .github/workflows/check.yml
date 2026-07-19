@@ -163,7 +163,6 @@ jobs:
 
       - name: Validate URLs
         run: npm run validate:urls
-        continue-on-error: true
 
       - name: Lint Markdown
         run: npm run lint:md
