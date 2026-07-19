@@ -358,6 +358,7 @@ fn write_manifest(context: &BenchContext) -> Result<()> {
             runtime_revision: context.provenant_runtime_revision.clone(),
             runtime_dirty: context.provenant_runtime_dirty,
             runtime_diff_hash: context.provenant_runtime_diff_hash.clone(),
+            duration_secs: None,
         },
     };
     write_pretty_json(&context.manifest_path, &manifest)?;

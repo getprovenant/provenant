@@ -841,6 +841,26 @@ pub fn write_comparison_artifacts(
     let field_value_frequency =
         field_value_frequency_rollup(&value_differences, FIELD_VALUE_FREQUENCY_TOP_N);
 
+    // Flat triage queues: one entry per (metric, path) that still needs
+    // classification on the ScanCode-favored or Provenant-favored side. Diagnostic
+    // only — never feeds signal counts or `comparison_status`.
+    let scancode_favored_review_queue = build_file_metric_review_queue(
+        ReviewQueueDirection::ScancodeFavored,
+        &metrics,
+        &lower_counts,
+        &higher_counts,
+        &value_differences,
+        REVIEW_QUEUE_ENTRY_CAP,
+    );
+    let provenant_favored_review_queue = build_file_metric_review_queue(
+        ReviewQueueDirection::ProvenantFavored,
+        &metrics,
+        &lower_counts,
+        &higher_counts,
+        &value_differences,
+        REVIEW_QUEUE_ENTRY_CAP,
+    );
+
     let sample_paths = [
         (
             "scancode_only_output_paths",
@@ -918,6 +938,18 @@ pub fn write_comparison_artifacts(
             "file_ownership_differences",
             layout.samples_dir.join("file_ownership_differences.json"),
         ),
+        (
+            "scancode_favored_review_queue",
+            layout
+                .samples_dir
+                .join("scancode_favored_review_queue.json"),
+        ),
+        (
+            "provenant_favored_review_queue",
+            layout
+                .samples_dir
+                .join("provenant_favored_review_queue.json"),
+        ),
     ];
 
     write_pretty_json(&sample_paths[0].1, &scancode_only_output_paths)?;
@@ -939,6 +971,8 @@ pub fn write_comparison_artifacts(
     )?;
     write_pretty_json(&sample_paths[14].1, &field_value_frequency)?;
     write_pretty_json(&sample_paths[15].1, &file_ownership.samples_json())?;
+    write_pretty_json(&sample_paths[16].1, &scancode_favored_review_queue)?;
+    write_pretty_json(&sample_paths[17].1, &provenant_favored_review_queue)?;
 
     let summary = json!({
         "comparison_status": comparison_status,
@@ -993,6 +1027,18 @@ pub fn write_comparison_artifacts(
         "top_level_provenant_favored_differences": top_level_provenant_favored_differences,
         "top_level_license_expression_delta_count": license_deltas.len(),
         "field_value_frequency_top": field_value_frequency_summary(&field_value_frequency, FIELD_VALUE_FREQUENCY_SUMMARY_TOP_N),
+        "review_queue_summary": {
+            "scancode_favored": {
+                "entry_count": scancode_favored_review_queue["entry_count"],
+                "truncated": scancode_favored_review_queue["truncated"],
+                "sample": "scancode_favored_review_queue",
+            },
+            "provenant_favored": {
+                "entry_count": provenant_favored_review_queue["entry_count"],
+                "truncated": provenant_favored_review_queue["truncated"],
+                "sample": "provenant_favored_review_queue",
+            },
+        },
         "sample_artifacts": BTreeMap::from(sample_paths.map(|(name, path)| (name.to_string(), path.display().to_string()))),
     });
 
@@ -1005,6 +1051,14 @@ pub fn write_comparison_artifacts(
     if file_ownership_difference_count > 0 {
         println!(
             "Note: {file_ownership_difference_count} file-ownership difference(s); see comparison/samples/file_ownership_differences.json"
+        );
+    }
+    let sc_queue_count = scancode_favored_review_queue["entry_count"]
+        .as_u64()
+        .unwrap_or(0);
+    if sc_queue_count > 0 {
+        println!(
+            "Triage: {sc_queue_count} ScanCode-favored file-metric item(s); start with comparison/samples/scancode_favored_review_queue.json (then field_value_frequency.json for cross-file patterns)."
         );
     }
 
@@ -1382,6 +1436,149 @@ impl FileOwnershipComparison {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum ReviewQueueDirection {
+    ScancodeFavored,
+    ProvenantFavored,
+}
+
+fn build_file_metric_review_queue(
+    direction: ReviewQueueDirection,
+    metrics: &[&str],
+    lower_counts: &BTreeMap<String, Vec<CountDeltaEntry>>,
+    higher_counts: &BTreeMap<String, Vec<CountDeltaEntry>>,
+    value_differences: &BTreeMap<String, Vec<ValueDifferenceEntry>>,
+    entry_cap: usize,
+) -> Value {
+    let mut owned_entries: Vec<Value> = Vec::new();
+    for metric in metrics {
+        // scan_errors invert the usual "more is better" signal.
+        let count_bucket = match (direction, *metric) {
+            (ReviewQueueDirection::ScancodeFavored, "scan_errors") => &higher_counts[*metric],
+            (ReviewQueueDirection::ProvenantFavored, "scan_errors") => &lower_counts[*metric],
+            (ReviewQueueDirection::ScancodeFavored, _) => &lower_counts[*metric],
+            (ReviewQueueDirection::ProvenantFavored, _) => &higher_counts[*metric],
+        };
+        let mut paths: BTreeSet<String> = BTreeSet::new();
+        for entry in count_bucket {
+            paths.insert(entry.path.clone());
+        }
+        for entry in &value_differences[*metric] {
+            let relevant = match (direction, *metric) {
+                (ReviewQueueDirection::ScancodeFavored, "scan_errors") => {
+                    !entry.extra_in_provenant.is_empty()
+                }
+                (ReviewQueueDirection::ProvenantFavored, "scan_errors") => {
+                    !entry.missing_in_provenant.is_empty()
+                }
+                (ReviewQueueDirection::ScancodeFavored, _) => {
+                    !entry.missing_in_provenant.is_empty()
+                }
+                (ReviewQueueDirection::ProvenantFavored, _) => !entry.extra_in_provenant.is_empty(),
+            };
+            if relevant {
+                paths.insert(entry.path.clone());
+            }
+        }
+
+        for path in paths {
+            let count_entry = count_bucket.iter().find(|entry| entry.path == path);
+            let value_entry = value_differences[*metric]
+                .iter()
+                .find(|entry| entry.path == path);
+            let (missing, extra) = match value_entry {
+                Some(entry) => (
+                    &entry.missing_in_provenant[..],
+                    &entry.extra_in_provenant[..],
+                ),
+                None => (&[][..], &[][..]),
+            };
+            let (sc_count, pr_count, delta) = if let Some(entry) = count_entry {
+                (entry.scancode, entry.provenant, entry.delta)
+            } else if let Some(entry) = value_entry {
+                (
+                    entry.scancode,
+                    entry.provenant,
+                    entry.provenant as isize - entry.scancode as isize,
+                )
+            } else {
+                continue;
+            };
+            let sc_samples = count_entry
+                .map(|entry| {
+                    entry
+                        .scancode_sample_values
+                        .iter()
+                        .map(|value| triage_display_value(metric, value))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let pr_samples = count_entry
+                .map(|entry| {
+                    entry
+                        .provenant_sample_values
+                        .iter()
+                        .map(|value| triage_display_value(metric, value))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
+            owned_entries.push(json!({
+                "metric": metric,
+                "path": path,
+                "scancode_count": sc_count,
+                "provenant_count": pr_count,
+                "delta": delta,
+                "scancode_sample_values": sc_samples,
+                "provenant_sample_values": pr_samples,
+                "missing_in_provenant": missing.iter().map(|entry| json!({
+                    "value": entry.value,
+                    "display": triage_display_value(metric, &entry.value),
+                    "count": entry.count,
+                })).collect::<Vec<_>>(),
+                "extra_in_provenant": extra.iter().map(|entry| json!({
+                    "value": entry.value,
+                    "display": triage_display_value(metric, &entry.value),
+                    "count": entry.count,
+                })).collect::<Vec<_>>(),
+            }));
+        }
+    }
+
+    let total = owned_entries.len();
+    let truncated = total > entry_cap;
+    owned_entries.truncate(entry_cap);
+    let direction_label = match direction {
+        ReviewQueueDirection::ScancodeFavored => "scancode_favored",
+        ReviewQueueDirection::ProvenantFavored => "provenant_favored",
+    };
+    json!({
+        "purpose": "Flat file-metric triage queue. Open each path against the scanned source (or raw/*.json) and classify as Provenant-better, ScanCode-better, or cosmetic. Does not feed comparison_status or signal counts.",
+        "direction": direction_label,
+        "entry_count": total,
+        "truncated": truncated,
+        "entry_cap": entry_cap,
+        "entries": owned_entries,
+    })
+}
+
+/// Prefer a short license expression when the stored value is a serialized clue
+/// / detection object; otherwise return the value unchanged.
+fn triage_display_value(metric: &str, value: &str) -> String {
+    if !matches!(metric, "license_clues" | "license_detections") {
+        return value.to_string();
+    }
+    if let Ok(parsed) = serde_json::from_str::<Value>(value)
+        && let Some(expr) = parsed
+            .get("license_expression_spdx")
+            .or_else(|| parsed.get("license_expression"))
+            .and_then(Value::as_str)
+    {
+        return expr.to_string();
+    }
+    value.to_string()
+}
+
 fn capped_file_ownership_samples(
     entries: &[FileOwnershipDifferenceEntry],
 ) -> &[FileOwnershipDifferenceEntry] {
@@ -1502,6 +1699,73 @@ mod tests {
             .map(|d| d.as_nanos())
             .unwrap_or(0);
         std::env::temp_dir().join(format!("provenant-compare-test-{label}-{nanos}"))
+    }
+
+    #[test]
+    fn write_comparison_artifacts_produces_scancode_favored_review_queue() {
+        let temp_root = unique_temp_dir("review-queue");
+        let layout = prepare_layout(&temp_root).unwrap();
+
+        let scancode = json!({
+            "files": [
+                {
+                    "path": "a.rs",
+                    "type": "file",
+                    "authors": [{"author": "John Doe"}],
+                    "license_clues": [{
+                        "license_expression": "mit",
+                        "license_expression_spdx": "MIT",
+                        "rule_identifier": "mit_1.RULE"
+                    }]
+                }
+            ],
+            "packages": [], "dependencies": [],
+            "license_detections": [], "license_references": [], "license_rule_references": []
+        });
+        let provenant = json!({
+            "files": [
+                {"path": "a.rs", "type": "file", "authors": [], "license_clues": []}
+            ],
+            "packages": [], "dependencies": [],
+            "license_detections": [], "license_references": [], "license_rule_references": []
+        });
+        fs::write(&layout.scancode_json, scancode.to_string()).unwrap();
+        fs::write(&layout.provenant_json, provenant.to_string()).unwrap();
+
+        let summary =
+            write_comparison_artifacts(&layout.scancode_json, &layout.provenant_json, &layout, &[])
+                .unwrap();
+
+        let queue: Value = serde_json::from_str(
+            &fs::read_to_string(
+                layout
+                    .samples_dir
+                    .join("scancode_favored_review_queue.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(queue["direction"], "scancode_favored");
+        assert!(queue["entry_count"].as_u64().unwrap() >= 2);
+        let authors = queue["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|entry| entry["metric"] == "authors")
+            .expect("authors queue entry");
+        assert_eq!(authors["path"], "a.rs");
+        assert_eq!(authors["scancode_sample_values"][0], "John Doe");
+        let clues = queue["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|entry| entry["metric"] == "license_clues")
+            .expect("license_clues queue entry");
+        assert_eq!(clues["missing_in_provenant"][0]["display"], "MIT");
+        assert_eq!(
+            summary["review_queue_summary"]["scancode_favored"]["sample"],
+            "scancode_favored_review_queue"
+        );
     }
 
     #[test]

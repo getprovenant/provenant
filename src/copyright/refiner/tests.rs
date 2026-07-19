@@ -1747,6 +1747,10 @@ fn test_is_junk_copyright_drops_cc0_and_libgcrypt_junk_fragments() {
     assert!(!is_junk_copyright(
         "Copyright 2012-2026 Manas Technology Solutions."
     ));
+    // Embedded "update copyright year" instructions inside a real notice must stay.
+    assert!(!is_junk_copyright(
+        "Copyright 2024 Example Corp. Please update copyright year when modifying."
+    ));
 }
 
 #[test]
