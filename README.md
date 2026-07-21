@@ -36,7 +36,7 @@ Not on Homebrew (or on Windows)? `cargo install provenant-cli`, grab a [prebuilt
 - [Documented parser and detection fixes](docs/improvements/README.md) that cut noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
 - CI license-compliance gating — policy severities with a build-failing [`--fail-on`](docs/CLI_GUIDE.md#17-i-want-policy-aware-license-review) gate and SARIF output for the code-scanning UI
 - Native workflows: `--incremental` cache reuse, `--paths-file` changed-file scans with SBOM completeness warnings when a selection may understate a workspace, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
-- Source-faithful file-level copyright by default — e.g. `Copyright (c) 2024 Example Corp. All rights reserved.` is kept verbatim, not trimmed to `Copyright (c) 2024 Example Corp.`
+- Source-faithful file-level copyright by default — e.g. `Copyright © 2024 Example Corp. All rights reserved.` is kept verbatim, not ASCII-folded and trimmed to `Copyright (c) 2024 Example Corp.`
 - Single self-contained binary with parallel native execution
 - [Security-first](docs/adr/0004-security-first-parsing.md) static parsing — no execution of scanned code or package-manager code, with bounded resource use
 
