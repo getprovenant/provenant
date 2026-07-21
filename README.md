@@ -1,6 +1,6 @@
 # Provenant
 
-[Why Provenant?](#why-provenant) · [Choose a Workflow](#choose-a-workflow) · [Install](#install) · [CLI Guide](docs/CLI_GUIDE.md) · [Benchmarks](docs/BENCHMARKS.md) · [Supported Formats](docs/SUPPORTED_FORMATS.md) · [Architecture](docs/ARCHITECTURE.md)
+[Website](https://getprovenant.github.io) · [Why Provenant?](#why-provenant) · [Choose a Workflow](#choose-a-workflow) · [Install](#install) · [CLI Guide](docs/CLI_GUIDE.md) · [Benchmarks](docs/BENCHMARKS.md) · [Supported Formats](docs/SUPPORTED_FORMATS.md) · [Architecture](docs/ARCHITECTURE.md)
 
 [![Latest Release](https://img.shields.io/github/v/release/getprovenant/provenant?display_name=tag)](https://github.com/getprovenant/provenant/releases/latest)
 [![Crates.io](https://img.shields.io/crates/v/provenant-cli.svg)](https://crates.io/crates/provenant-cli)
@@ -13,7 +13,7 @@ Across documented benchmark targets, Provenant is frequently about an order of m
 
 ![Provenant and ScanCode racing the same astral-sh/uv scan side by side](docs/provenant-demo.gif)
 
-_The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flags (`--license --package`), one process each: Provenant finishes in seconds while ScanCode is still going. Full comparisons: [benchmarks](docs/BENCHMARKS.md)._
+_The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flags (`--license --package`), one process each: Provenant finishes in seconds while ScanCode is still going. See the annotated [speed &amp; output-quality comparison](https://getprovenant.github.io/compare/), or the full [benchmarks](docs/BENCHMARKS.md)._
 
 > [!IMPORTANT]
 > **Project status:** production-usable and compatibility-focused.
