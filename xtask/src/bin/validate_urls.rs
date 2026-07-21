@@ -529,15 +529,25 @@ fn validate_url(url: &str, timeout_secs: u64) -> UrlValidationResult {
         };
     }
 
-    let allowlist_patterns = ["crates.io"];
-    if allowlist_patterns
-        .iter()
-        .any(|pattern| normalized.contains(pattern))
-    {
+    // Canonical, rarely-changing hosts that intermittently refuse or time out
+    // connections from CI runner IP ranges (not the resource being broken):
+    //   - `crates.io` blocks CI user agents.
+    //   - `gnu.org` (and its subdomains such as `www.`/`ftp.`/`gcc.`) frequently
+    //     times out at connect from GitHub-hosted runners even when the page is
+    //     served fine elsewhere.
+    // Matched against the parsed host (exact or subdomain), never a raw substring,
+    // so unrelated hosts like `notgnu.org` or a `gnu.org` value inside a query
+    // string are still validated.
+    let allowlist_hosts = ["crates.io", "gnu.org"];
+    if parsed.host_str().is_some_and(|host| {
+        allowlist_hosts
+            .iter()
+            .any(|allowed| host_is_allowlisted(host, allowed))
+    }) {
         return UrlValidationResult {
             url: normalized,
             status: UrlStatus::Skip,
-            message: "Allowlisted (blocks CI user agents)".to_string(),
+            message: "Allowlisted (flaky/blocked from CI)".to_string(),
         };
     }
 
@@ -646,6 +656,15 @@ fn run_curl(
         .output()
 }
 
+/// Whether `host` is `allowed` itself or a subdomain of it (e.g. `www.gnu.org`
+/// for `gnu.org`), without matching lookalikes such as `notgnu.org`.
+fn host_is_allowlisted(host: &str, allowed: &str) -> bool {
+    host == allowed
+        || host
+            .strip_suffix(allowed)
+            .is_some_and(|prefix| prefix.ends_with('.'))
+}
+
 fn is_loopback_host(parsed: &Url) -> bool {
     matches!(
         parsed.host_str(),
@@ -707,7 +726,7 @@ fn is_placeholder_github_url(parsed: &Url) -> bool {
 mod tests {
     use super::{
         UrlStatus, extract_markdown_link_url, extract_urls_from_markdown, find_markdown_files,
-        find_rust_files, validate_url,
+        find_rust_files, host_is_allowlisted, validate_url,
     };
     use std::fs;
     use std::path::Path;
@@ -788,6 +807,32 @@ mod tests {
         ] {
             assert_eq!(validate_url(url, 10).status, UrlStatus::Skip, "url: {url}");
         }
+    }
+
+    #[test]
+    fn validate_url_skips_ci_flaky_allowlisted_hosts() {
+        for url in [
+            "https://crates.io/crates/provenant",
+            "http://www.gnu.org/licenses/lgpl.html",
+            "https://www.gnu.org/software/autoconf/",
+            "http://ftp.gnu.org/gnu/tar/",
+        ] {
+            assert_eq!(validate_url(url, 10).status, UrlStatus::Skip, "url: {url}");
+        }
+    }
+
+    #[test]
+    fn host_is_allowlisted_matches_host_and_subdomains_only() {
+        assert!(host_is_allowlisted("gnu.org", "gnu.org"));
+        assert!(host_is_allowlisted("www.gnu.org", "gnu.org"));
+        assert!(host_is_allowlisted("ftp.gnu.org", "gnu.org"));
+        assert!(host_is_allowlisted("crates.io", "crates.io"));
+
+        // Lookalike hosts and substring matches must not be allowlisted, so the
+        // blocking check still validates genuinely-unrelated links.
+        assert!(!host_is_allowlisted("notgnu.org", "gnu.org"));
+        assert!(!host_is_allowlisted("gnu.org.evil.com", "gnu.org"));
+        assert!(!host_is_allowlisted("example.com", "gnu.org"));
     }
 
     #[test]
