@@ -31,9 +31,9 @@ Not on Homebrew (or on Windows)? `cargo install provenant-cli`, grab a [prebuilt
 ## Why Provenant?
 
 - [Benchmark-backed](docs/BENCHMARKS.md) speedups — frequently about an order of magnitude faster than ScanCode on recorded same-host runs
-- Broader package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), with intentional parser improvements on surfaces that overlap ScanCode
-- Clearer monorepo inventories — workspace, reactor, and multiproject layouts (Cargo, npm/pnpm/yarn, Maven, Gradle, uv, Mix, Dart, and related) attribute nested sources and shared locks to the right packages instead of leaving a flat per-directory view
-- [Documented parser and detection fixes](docs/improvements/README.md) that cut noisy results and false-positive classes, including better bare-word GPL/LGPL clue handling
+- Package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), reading manifests and lockfiles into structured package metadata and dependency graphs
+- Monorepo-aware inventories — workspace, reactor, and multiproject layouts (Cargo, npm/pnpm/yarn, Maven, Gradle, uv, Mix, Dart, and related) attribute nested sources and shared locks to the package that owns them
+- Low-noise license and copyright detection — suppresses common false-positive classes such as code and prose bleed, and treats bare-word GPL/LGPL mentions as license clues; see [documented improvements](docs/improvements/README.md)
 - CI license-compliance gating — policy severities with a build-failing [`--fail-on`](docs/CLI_GUIDE.md#17-i-want-policy-aware-license-review) gate and SARIF output for the code-scanning UI
 - Native workflows: `--incremental` cache reuse, `--paths-file` changed-file scans with SBOM completeness warnings when a selection may understate a workspace, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
 - Source-faithful file-level copyright by default — e.g. `Copyright © 2024 Example Corp. All rights reserved.` is kept verbatim, not ASCII-folded and trimmed to `Copyright (c) 2024 Example Corp.`
