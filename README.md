@@ -22,11 +22,11 @@ _The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flag
 ## Quick Start
 
 ```sh
-cargo install provenant-cli
+brew install getprovenant/tap/provenant
 provenant scan --json-pp - --license --package /path/to/repo
 ```
 
-On macOS or Linux you can also `brew install getprovenant/tap/provenant`. Prefer release binaries? Download precompiled archives from [GitHub Releases](https://github.com/getprovenant/provenant/releases).
+Not on Homebrew (or on Windows)? `cargo install provenant-cli`, grab a [prebuilt archive](https://github.com/getprovenant/provenant/releases), or run the [container image](#container-image).
 
 ## Why Provenant?
 
