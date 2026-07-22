@@ -533,6 +533,33 @@ fn test_et_al_does_not_absorb_following_code_line() {
     );
 }
 
+// The marker terminates forward absorption in its BARE (period-less) form too:
+// `et al` without a period tokenizes differently (`al` as a plain noun) but
+// must still stop the walk before a following code line. The marker stays bare
+// (no period is force-added), and no code leaks into the copyright or holder.
+#[test]
+fn test_bare_et_al_does_not_absorb_following_code_line() {
+    let input = "# Copyright (c) 2020 Acme Corp, et al\nx=1\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al"],
+        "bare et al preserved (no period added); no next-line code absorbed: {copyrights:?}"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Acme Corp"],
+        "holder is the party name only, without et al or code bleed: {holders:?}"
+    );
+}
+
 // The marker's trailing period is source-faithful: a source `et al.` keeps its
 // period (the Latin abbreviation's period is intrinsic, like `Inc.`/`Ltd.`),
 // while a bare source `et al` stays bare. No period is ever force-added.
