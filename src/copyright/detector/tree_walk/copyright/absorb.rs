@@ -22,6 +22,21 @@ use super::node_classify::{
     is_year_only_copyright_clause_node, last_leaf_ends_with_comma,
 };
 
+/// Whether `token` closes an additional-holders marker — the `Oth` tag
+/// ("others", "et al.", "et.al") or the `al`/`al.` of a split `et al.`
+/// (tagged `AuthDot`). Bare `AuthDot` words like "authors." are excluded so
+/// only the genuine "and unnamed others" marker terminates absorption.
+fn is_additional_holders_marker_leaf(token: &Token) -> bool {
+    match token.tag {
+        PosTag::Oth => true,
+        PosTag::AuthDot => token
+            .value
+            .trim_matches(|c: char| !c.is_ascii_alphanumeric())
+            .eq_ignore_ascii_case("al"),
+        _ => false,
+    }
+}
+
 pub fn should_start_absorbing(
     copyright_node: &ParseNode,
     tree: &[ParseNode],
@@ -473,8 +488,23 @@ pub fn collect_trailing_orphan_tokens<'a>(
         .last()
         .map(|t| t.start_line);
 
+    // Line on which an additional-holders marker ("et al", "and others") was
+    // absorbed, if any. Such a marker conventionally means "and unnamed
+    // others", so nothing meaningful follows it in a copyright statement.
+    // Once it is reached, forward absorption must not cross onto a later line
+    // (into an SPDX tag, code, or prose) regardless of what that line holds.
+    let mut additional_holders_marker_line: Option<LineNumber> = None;
+
     while j < tree.len() {
         let node = &tree[j];
+
+        if let Some(marker_line) = additional_holders_marker_line
+            && detector::token_utils::collect_all_leaves(node)
+                .first()
+                .is_some_and(|t| t.start_line > marker_line)
+        {
+            break;
+        }
 
         if let Some(last_line) = last_line
             && matches!(
@@ -525,6 +555,10 @@ pub fn collect_trailing_orphan_tokens<'a>(
             .any(|t| matches!(t.tag, PosTag::Url | PosTag::Url2));
         if already_have_url && leaves_have_url {
             break;
+        }
+
+        if let Some(marker) = leaves.iter().find(|t| is_additional_holders_marker_leaf(t)) {
+            additional_holders_marker_line = Some(marker.start_line);
         }
 
         tokens.extend(leaves);

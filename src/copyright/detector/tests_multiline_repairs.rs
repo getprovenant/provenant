@@ -504,3 +504,31 @@ fn test_and_others_preserved_without_spdx_bleed_or_duplicate() {
         "and others is preserved exactly once, no SPDX/code bleed: {copyrights:?}"
     );
 }
+
+// The additional-holders marker is a hard terminator for forward absorption:
+// once the walk reaches `et al.`, it must not pull in any token from a later
+// line, whatever that line holds (here: a plain code line). This is the general
+// rule — not tied to the SPDX-License-Identifier token specifically.
+#[test]
+fn test_et_al_does_not_absorb_following_code_line() {
+    let input =
+        "/* Copyright (C) Jane Doe, et al. */\nint compute_something(void) { return 42; }\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) Jane Doe, et al"],
+        "et al preserved; no code from the next line absorbed: {copyrights:?}"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Jane Doe"],
+        "holder is the party name only, without et al or code bleed: {holders:?}"
+    );
+}
