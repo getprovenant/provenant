@@ -9,11 +9,11 @@
 
 Provenant is a fast, Rust-based code scanner for licenses, copyrights, package metadata, file metadata, and related provenance data, focused on correctness, safe static parsing, and native execution.
 
-Across documented benchmark targets, Provenant is frequently about an order of magnitude faster than [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit), whose scanning engine it ports to Rust and builds on. On top of that it adds broader package and dependency extraction, cleaner results, and CI-ready compliance gating — see [Why Provenant?](#why-provenant).
+Provenant ports the [ScanCode Toolkit](https://github.com/aboutcode-org/scancode-toolkit) engine to Rust and builds on it; on documented workloads it is typically well over 10× faster — and more on large repositories — while adding broader package and dependency extraction, lower-noise results, and CI-ready compliance gating. See [Why Provenant?](#why-provenant).
 
-![Provenant and ScanCode racing the same astral-sh/uv scan side by side](docs/provenant-demo.gif)
+![Provenant and the reference scanner racing the same astral-sh/uv scan side by side](docs/provenant-demo.gif)
 
-_The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flags (`--license --package`), one process each: Provenant finishes in seconds while ScanCode is still going. See the annotated [speed &amp; output-quality comparison](https://getprovenant.github.io/compare/), or the full [benchmarks](docs/BENCHMARKS.md)._
+_The same [`astral-sh/uv`](https://github.com/astral-sh/uv) scan, identical flags (`--license --package`), one process each: Provenant finishes in seconds while the reference is still going. See the annotated [speed &amp; output-quality comparison](https://getprovenant.github.io/compare/), or the full [benchmarks](docs/BENCHMARKS.md)._
 
 > [!IMPORTANT]
 > **Project status:** production-usable and compatibility-focused.
@@ -30,7 +30,7 @@ Not on Homebrew (or on Windows)? `cargo install provenant-cli`, grab a [prebuilt
 
 ## Why Provenant?
 
-- [Benchmark-backed](docs/BENCHMARKS.md) speedups — frequently about an order of magnitude faster than ScanCode on recorded same-host runs
+- [Benchmark-backed](docs/BENCHMARKS.md) speed — well over 10× faster than the reference on same-host runs, and more on large repositories
 - Package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), reading manifests and lockfiles into structured package metadata and dependency graphs
 - Monorepo-aware inventories — workspace, reactor, and multiproject layouts (Cargo, npm/pnpm/yarn, Maven, Gradle, uv, Mix, Dart, and related) attribute nested sources and shared locks to the package that owns them
 - Low-noise license and copyright detection — suppresses common false-positive classes such as code and prose bleed, and treats bare-word GPL/LGPL mentions as license clues; see [documented improvements](docs/improvements/README.md)
@@ -38,6 +38,7 @@ Not on Homebrew (or on Windows)? `cargo install provenant-cli`, grab a [prebuilt
 - Native workflows: `--incremental` cache reuse, `--paths-file` changed-file scans with SBOM completeness warnings when a selection may understate a workspace, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
 - Source-faithful file-level copyright by default — e.g. `Copyright © 2024 Example Corp. All rights reserved.` is kept verbatim, not ASCII-folded and trimmed to `Copyright (c) 2024 Example Corp.`
 - Single self-contained binary with parallel native execution
+- Attested releases — every release binary and container image ships with [SLSA build-provenance attestation](https://slsa.dev), verifiable with `gh attestation verify`
 - [Security-first](docs/adr/0004-security-first-parsing.md) static parsing — no execution of scanned code or package-manager code, with bounded resource use
 
 ## Choose a Workflow
