@@ -192,6 +192,14 @@ fn build_pattern_list() -> Vec<(String, PosTag)> {
         PosTag::SpdxContrib,
     );
 
+    // SPDX-License-Identifier is a license declaration, never part of a
+    // copyright statement or holder. Tag it as Junk so it acts as a hard
+    // statement boundary: it terminates forward absorption onto a copyright
+    // node and is dropped from any copyright/holder value. This keeps a
+    // trailing "et al." on the copyright line from running a multiline
+    // continuation into the following SPDX tag (and any code/prose after it).
+    add(r"^[Ss][Pp][Dd][Xx]-[Ll]icense-[Ii]dentifier", PosTag::Junk);
+
     ////////////////////////////////////////////////////////////////////////////
     // ALL RIGHTS RESERVED (Python lines 732-788)
     ////////////////////////////////////////////////////////////////////////////

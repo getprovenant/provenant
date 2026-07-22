@@ -409,6 +409,18 @@ pub fn drop_shadowed_prefix_holders(holders: &mut Vec<HolderDetection>) {
     });
 }
 
+/// Whether `tail` (the suffix of a longer same-span copyright after a shorter
+/// one) is only an additional-holders marker — `et al`, `et.al`, or `and
+/// others`, with an optional leading comma and optional trailing period. Such a
+/// tail signals more holders rather than a distinct copyright statement.
+fn is_additional_holders_marker_tail(tail: &str) -> bool {
+    let tail = tail
+        .trim_start_matches(|c: char| c == ',' || c.is_whitespace())
+        .trim_end_matches(|c: char| c == '.' || c.is_whitespace())
+        .to_ascii_lowercase();
+    matches!(tail.as_str(), "et al" | "et.al" | "and others")
+}
+
 pub fn drop_shadowed_prefix_copyrights(copyrights: &mut Vec<CopyrightDetection>) {
     if copyrights.len() < 2 {
         return;
@@ -431,6 +443,22 @@ pub fn drop_shadowed_prefix_copyrights(copyrights: &mut Vec<CopyrightDetection>)
         let Some(group_texts) = by_span.get(&span) else {
             return true;
         };
+
+        // A same-span sibling that only appends an additional-holders marker
+        // ("et al", "and others") is the fuller statement; drop the barer one.
+        // The two arise from distinct extraction passes (flat-span vs tree-node
+        // absorption) and are otherwise identical, so keeping only the marked
+        // form avoids emitting a duplicate that differs only by the trailing
+        // "et al"/"and others".
+        if group_texts.iter().any(|other| {
+            if other.len() <= short.len() || !other.starts_with(short) {
+                return false;
+            }
+            let tail = other.get(short.len()..).unwrap_or("");
+            is_additional_holders_marker_tail(tail)
+        }) {
+            return false;
+        }
 
         if group_texts.iter().any(|other| {
             if other.len() <= short.len() || !other.starts_with(short) {
@@ -721,4 +749,70 @@ pub fn drop_shadowed_dashless_holders(holders: &mut Vec<HolderDetection>) {
         let norm = normalize_whitespace(&h.holder);
         !shadowed.contains(&norm) || h.holder.contains('-')
     });
+}
+
+#[cfg(test)]
+mod cleanup_shadow_tests {
+    use super::*;
+    use crate::models::LineNumber;
+
+    fn cr(text: &str, start: u32, end: u32) -> CopyrightDetection {
+        CopyrightDetection {
+            copyright: text.to_string(),
+            start_line: LineNumber::new(start as usize).unwrap(),
+            end_line: LineNumber::new(end as usize).unwrap(),
+        }
+    }
+
+    #[test]
+    fn test_additional_holders_marker_tail() {
+        assert!(is_additional_holders_marker_tail(" et al"));
+        assert!(is_additional_holders_marker_tail(", et al."));
+        assert!(is_additional_holders_marker_tail(" and others"));
+        assert!(is_additional_holders_marker_tail(" et.al"));
+        assert!(!is_additional_holders_marker_tail(" and others inc"));
+        assert!(!is_additional_holders_marker_tail(" Corp"));
+        assert!(!is_additional_holders_marker_tail(""));
+    }
+
+    #[test]
+    fn test_same_span_et_al_variant_is_shadowed() {
+        // The barer statement and the `et al` variant come from two extraction
+        // passes over the same span; only the fuller (marked) form survives.
+        let mut copyrights = vec![
+            cr(
+                "Copyright (c) 1998-2005 Julian Smart, Robert Roebling",
+                10,
+                10,
+            ),
+            cr(
+                "Copyright (c) 1998-2005 Julian Smart, Robert Roebling et al",
+                10,
+                10,
+            ),
+        ];
+        drop_shadowed_prefix_copyrights(&mut copyrights);
+        assert_eq!(
+            copyrights
+                .iter()
+                .map(|c| c.copyright.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Copyright (c) 1998-2005 Julian Smart, Robert Roebling et al"],
+        );
+    }
+
+    #[test]
+    fn test_distinct_same_span_copyrights_are_not_shadowed() {
+        // A different holder is not an additional-holders marker, so both stay.
+        let mut copyrights = vec![
+            cr("Copyright (c) 2020 Acme Corp", 5, 5),
+            cr("Copyright (c) 2020 Acme Corp and Globex", 5, 5),
+        ];
+        drop_shadowed_prefix_copyrights(&mut copyrights);
+        assert_eq!(
+            copyrights.len(),
+            2,
+            "distinct holders must both survive: {copyrights:?}"
+        );
+    }
 }

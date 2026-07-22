@@ -58,7 +58,12 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = normalize_angle_bracket_comma_spacing(&c);
     c = strip_trailing_secondary_angle_email_after_comma(&c);
     c = strip_trailing_short_surname_paren_list_in_copyright(&c);
-    c = strip_trailing_et_al(&c);
+    // A trailing "et al." (or ", et al.") signals additional holders and is a
+    // genuine part of the copyright statement, so it is preserved here. It is
+    // still stripped from the holder value (holders are individual party names,
+    // and "et al." is not one). The SPDX-License-Identifier token boundary (see
+    // `patterns.rs`) prevents the trailing marker from running a multiline
+    // continuation into a following license tag, code, or prose.
     c = strip_trailing_authors_clause(&c);
     c = strip_trailing_document_authors_clause(&c);
     c = strip_trailing_parenthesized_descriptor_after_by_holder(&c);

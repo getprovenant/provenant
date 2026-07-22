@@ -1190,12 +1190,15 @@ fn test_refine_copyright_strips_trailing_dash_software() {
 }
 
 #[test]
-fn test_refine_copyright_strips_trailing_et_al() {
+fn test_refine_copyright_preserves_trailing_et_al() {
+    // A trailing `, et al.` signals additional holders and is a genuine part of
+    // the copyright statement, so it is preserved (it is only stripped from the
+    // holder value — see the holder refiner test).
     let result =
         refine_copyright("Copyright (c) 1998-2001, Daniel Stenberg, <daniel@haxx.se> , et al");
     assert_eq!(
         result,
-        Some("Copyright (c) 1998-2001, Daniel Stenberg, <daniel@haxx.se>".to_string())
+        Some("Copyright (c) 1998-2001, Daniel Stenberg, <daniel@haxx.se>, et al".to_string())
     );
 }
 

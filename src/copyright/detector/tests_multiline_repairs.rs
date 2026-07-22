@@ -426,3 +426,81 @@ fn test_copyright_does_not_bleed_across_multiple_rulers() {
         "no copyright should absorb a post-ruler line: {copyrights:?}"
     );
 }
+
+// An `SPDX-License-Identifier:` line is a license declaration and must never be
+// absorbed into a copyright statement or holder, even when the preceding
+// copyright line ends with a trailing `, et al.` that would otherwise drive a
+// multiline continuation into it (and into any code/prose after it).
+#[test]
+fn test_et_al_copyright_does_not_bleed_into_following_spdx_license_identifier() {
+    let input = "# Copyright (c) 2020 Acme Corp, et al.\n# SPDX-License-Identifier: Apache-2.0\nprint(\"hi\")\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al"],
+        "et al is preserved and SPDX/code never bleed in: {copyrights:?}"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Acme Corp"],
+        "holder is the party name only, without et al or SPDX bleed: {holders:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.to_ascii_uppercase().contains("SPDX")
+                && !c.copyright.contains("print")),
+        "no SPDX/code bleed: {copyrights:?}"
+    );
+}
+
+// A blank comment line already breaks the group between the copyright and the
+// SPDX tag, but the trailing `, et al.` must still be preserved on the
+// copyright statement (previously it was dropped entirely).
+#[test]
+fn test_et_al_preserved_with_blank_comment_line_before_spdx() {
+    let input = "/*\n * Copyright (c) Jane Doe, <jane@example.com>, et al.\n *\n * SPDX-License-Identifier: MIT\n */\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) Jane Doe, <jane@example.com>, et al"),
+        "et al must be preserved on the copyright statement: {copyrights:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.to_ascii_uppercase().contains("SPDX")),
+        "no SPDX bleed: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Jane Doe"),
+        "holder is the party name only: {holders:?}"
+    );
+}
+
+// The `and others` additional-holders marker behaves like `et al`: preserved on
+// the copyright statement, no SPDX/code bleed, and never duplicated into a
+// second same-span copyright that differs only by the marker.
+#[test]
+fn test_and_others_preserved_without_spdx_bleed_or_duplicate() {
+    let input = "/* Copyright (c) 2020 Acme Corp and others\n * SPDX-License-Identifier: MIT\n */\nint x;\n";
+    let (copyrights, _h, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp and others"],
+        "and others is preserved exactly once, no SPDX/code bleed: {copyrights:?}"
+    );
+}
