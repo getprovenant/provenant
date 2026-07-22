@@ -22,6 +22,46 @@ use super::node_classify::{
     is_year_only_copyright_clause_node, last_leaf_ends_with_comma,
 };
 
+/// Lowercase a token value and trim leading/trailing non-alphanumerics,
+/// keeping any internal punctuation (so `al.` -> `al`, `others,` -> `others`,
+/// `et.al.` -> `et.al`).
+fn marker_word(value: &str) -> String {
+    value
+        .to_ascii_lowercase()
+        .trim_matches(|c: char| !c.is_ascii_alphanumeric())
+        .to_string()
+}
+
+/// If `leaves` ends with an additional-holders marker — `et al` / `et.al` /
+/// `and others`, with or without a trailing period — return the line of the
+/// marker's final token. Recognition is by the marker words, not the presence
+/// of the period, so the bare and period-bearing forms behave identically.
+/// A trailing `Oth` token (`others`, `et al`, `et.al`) also counts. Bare
+/// `AuthDot` words such as `authors.` do not, since only the genuine "and
+/// unnamed others" marker must terminate forward absorption.
+fn tail_additional_holders_marker_line(leaves: &[&Token]) -> Option<LineNumber> {
+    let last = leaves.last()?;
+    if last.tag == PosTag::Oth {
+        return Some(last.start_line);
+    }
+
+    let last_word = marker_word(&last.value);
+    let prev_word = leaves
+        .len()
+        .checked_sub(2)
+        .map(|i| marker_word(&leaves[i].value))
+        .unwrap_or_default();
+
+    if last_word == "et.al"
+        || (last_word == "al" && prev_word == "et")
+        || (last_word == "others" && prev_word == "and")
+    {
+        return Some(last.start_line);
+    }
+
+    None
+}
+
 pub fn should_start_absorbing(
     copyright_node: &ParseNode,
     tree: &[ParseNode],
@@ -473,8 +513,28 @@ pub fn collect_trailing_orphan_tokens<'a>(
         .last()
         .map(|t| t.start_line);
 
+    // Line on which an additional-holders marker ("et al", "et.al", "and
+    // others" — with or without a trailing period) has been reached, if any.
+    // Such a marker conventionally means "and unnamed others", so nothing
+    // meaningful follows it in a copyright statement. Once it is reached,
+    // forward absorption must not cross onto a later line (into an SPDX tag,
+    // code, or prose) regardless of what that line holds. Seeded from the
+    // copyright node in case the marker was already parsed into it.
+    let mut additional_holders_marker_line: Option<LineNumber> =
+        tail_additional_holders_marker_line(&detector::token_utils::collect_all_leaves(
+            copyright_node,
+        ));
+
     while j < tree.len() {
         let node = &tree[j];
+
+        if let Some(marker_line) = additional_holders_marker_line
+            && detector::token_utils::collect_all_leaves(node)
+                .first()
+                .is_some_and(|t| t.start_line > marker_line)
+        {
+            break;
+        }
 
         if let Some(last_line) = last_line
             && matches!(
@@ -529,6 +589,10 @@ pub fn collect_trailing_orphan_tokens<'a>(
 
         tokens.extend(leaves);
         j += 1;
+
+        if additional_holders_marker_line.is_none() {
+            additional_holders_marker_line = tail_additional_holders_marker_line(&tokens);
+        }
     }
 
     let skip = j - start;

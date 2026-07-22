@@ -68,6 +68,11 @@ fn test_spdx() {
     assert_eq!(p.match_token("SPDX-FileCopyrightText"), PosTag::Copy);
     assert_eq!(p.match_token("SPDX-SnippetCopyrightText"), PosTag::Copy);
     assert_eq!(p.match_token("SPDX-FileContributor"), PosTag::SpdxContrib);
+    // SPDX-License-Identifier is a license declaration, tagged Junk so it acts
+    // as a hard boundary and never lands in a copyright/holder value. The lexer
+    // strips the trailing colon before tagging, so match the bare tag here.
+    assert_eq!(p.match_token("SPDX-License-Identifier"), PosTag::Junk);
+    assert_eq!(p.match_token("spdx-license-identifier"), PosTag::Junk);
 }
 
 #[test]

@@ -426,3 +426,162 @@ fn test_copyright_does_not_bleed_across_multiple_rulers() {
         "no copyright should absorb a post-ruler line: {copyrights:?}"
     );
 }
+
+// An `SPDX-License-Identifier:` line is a license declaration and must never be
+// absorbed into a copyright statement or holder, even when the preceding
+// copyright line ends with a trailing `, et al.` that would otherwise drive a
+// multiline continuation into it (and into any code/prose after it).
+#[test]
+fn test_et_al_copyright_does_not_bleed_into_following_spdx_license_identifier() {
+    let input = "# Copyright (c) 2020 Acme Corp, et al.\n# SPDX-License-Identifier: Apache-2.0\nprint(\"hi\")\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al."],
+        "et al. is preserved with its source period; SPDX/code never bleed in: {copyrights:?}"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Acme Corp"],
+        "holder is the party name only, without et al or SPDX bleed: {holders:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.to_ascii_uppercase().contains("SPDX")
+                && !c.copyright.contains("print")),
+        "no SPDX/code bleed: {copyrights:?}"
+    );
+}
+
+// A blank comment line already breaks the group between the copyright and the
+// SPDX tag, but the trailing `, et al.` must still be preserved on the
+// copyright statement (previously it was dropped entirely).
+#[test]
+fn test_et_al_preserved_with_blank_comment_line_before_spdx() {
+    let input = "/*\n * Copyright (c) Jane Doe, <jane@example.com>, et al.\n *\n * SPDX-License-Identifier: MIT\n */\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert!(
+        copyrights
+            .iter()
+            .any(|c| c.copyright == "Copyright (c) Jane Doe, <jane@example.com>, et al."),
+        "et al. must be preserved (with its source period) on the copyright statement: {copyrights:?}"
+    );
+    assert!(
+        copyrights
+            .iter()
+            .all(|c| !c.copyright.to_ascii_uppercase().contains("SPDX")),
+        "no SPDX bleed: {copyrights:?}"
+    );
+    assert!(
+        holders.iter().any(|h| h.holder == "Jane Doe"),
+        "holder is the party name only: {holders:?}"
+    );
+}
+
+// The `and others` additional-holders marker behaves like `et al`: preserved on
+// the copyright statement, no SPDX/code bleed, and never duplicated into a
+// second same-span copyright that differs only by the marker.
+#[test]
+fn test_and_others_preserved_without_spdx_bleed_or_duplicate() {
+    let input = "/* Copyright (c) 2020 Acme Corp and others\n * SPDX-License-Identifier: MIT\n */\nint x;\n";
+    let (copyrights, _h, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp and others"],
+        "and others is preserved exactly once, no SPDX/code bleed: {copyrights:?}"
+    );
+}
+
+// The additional-holders marker is a hard terminator for forward absorption:
+// once the walk reaches `et al.`, it must not pull in any token from a later
+// line, whatever that line holds (here: a plain code line). This is the general
+// rule — not tied to the SPDX-License-Identifier token specifically.
+#[test]
+fn test_et_al_does_not_absorb_following_code_line() {
+    let input =
+        "/* Copyright (C) Jane Doe, et al. */\nint compute_something(void) { return 42; }\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) Jane Doe, et al."],
+        "et al. preserved with its source period; no code from the next line absorbed: {copyrights:?}"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Jane Doe"],
+        "holder is the party name only, without et al or code bleed: {holders:?}"
+    );
+}
+
+// The marker terminates forward absorption in its BARE (period-less) form too:
+// `et al` without a period tokenizes differently (`al` as a plain noun) but
+// must still stop the walk before a following code line. The marker stays bare
+// (no period is force-added), and no code leaks into the copyright or holder.
+#[test]
+fn test_bare_et_al_does_not_absorb_following_code_line() {
+    let input = "# Copyright (c) 2020 Acme Corp, et al\nx=1\n";
+    let (copyrights, holders, _a) = detect_copyrights_from_text(input);
+
+    assert_eq!(
+        copyrights
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al"],
+        "bare et al preserved (no period added); no next-line code absorbed: {copyrights:?}"
+    );
+    assert_eq!(
+        holders
+            .iter()
+            .map(|h| h.holder.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Acme Corp"],
+        "holder is the party name only, without et al or code bleed: {holders:?}"
+    );
+}
+
+// The marker's trailing period is source-faithful: a source `et al.` keeps its
+// period (the Latin abbreviation's period is intrinsic, like `Inc.`/`Ltd.`),
+// while a bare source `et al` stays bare. No period is ever force-added.
+#[test]
+fn test_et_al_trailing_period_is_source_faithful() {
+    let (with_period, _h, _a) =
+        detect_copyrights_from_text("Copyright (c) 2020 Acme Corp, et al.\n");
+    assert_eq!(
+        with_period
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al."],
+        "source period must be preserved: {with_period:?}"
+    );
+
+    let (bare, _h, _a) = detect_copyrights_from_text("Copyright (c) 2020 Acme Corp, et al\n");
+    assert_eq!(
+        bare.iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al"],
+        "bare marker must stay bare (no period force-added): {bare:?}"
+    );
+}
