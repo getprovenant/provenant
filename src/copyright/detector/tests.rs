@@ -1540,11 +1540,13 @@ fn test_detect_contributors_as_noted_in_authors_file() {
 
 #[test]
 fn test_detect_contributors_et_al() {
+    // The copyright statement keeps the source `et.al.` period (source-faithful,
+    // scoped to the statement); the holder value is unchanged (`et.al`).
     let input = "Copyright (c) 2017 Contributors et.al.";
     let (c, h, _a) = detect_copyrights_from_text(input);
     assert!(
         c.iter()
-            .any(|cr| cr.copyright == "Copyright (c) 2017 Contributors et.al"),
+            .any(|cr| cr.copyright == "Copyright (c) 2017 Contributors et.al."),
         "Missing copyright, got: {:?}",
         c.iter().map(|cr| &cr.copyright).collect::<Vec<_>>()
     );

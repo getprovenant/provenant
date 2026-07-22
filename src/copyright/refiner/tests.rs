@@ -1203,6 +1203,22 @@ fn test_refine_copyright_preserves_trailing_et_al() {
 }
 
 #[test]
+fn test_refine_copyright_preserves_trailing_et_al_source_period() {
+    // The Latin abbreviation's period is intrinsic ("al" is not a word), so it
+    // is kept exactly as it appears in the source — like `Inc.`/`Ltd.` — rather
+    // than stripped as an ordinary sentence-final period.
+    assert_eq!(
+        refine_copyright("Copyright (c) 2020 Acme Corp, et al."),
+        Some("Copyright (c) 2020 Acme Corp, et al.".to_string())
+    );
+    // A bare source marker stays bare; no period is force-added.
+    assert_eq!(
+        refine_copyright("Copyright (c) 2020 Acme Corp, et al"),
+        Some("Copyright (c) 2020 Acme Corp, et al".to_string())
+    );
+}
+
+#[test]
 fn test_refine_copyright_drops_bare_copyrighted_software_phrase() {
     assert_eq!(refine_copyright("copyrighted software"), None);
 }

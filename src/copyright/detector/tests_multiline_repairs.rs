@@ -441,8 +441,8 @@ fn test_et_al_copyright_does_not_bleed_into_following_spdx_license_identifier() 
             .iter()
             .map(|c| c.copyright.as_str())
             .collect::<Vec<_>>(),
-        vec!["Copyright (c) 2020 Acme Corp, et al"],
-        "et al is preserved and SPDX/code never bleed in: {copyrights:?}"
+        vec!["Copyright (c) 2020 Acme Corp, et al."],
+        "et al. is preserved with its source period; SPDX/code never bleed in: {copyrights:?}"
     );
     assert_eq!(
         holders
@@ -472,8 +472,8 @@ fn test_et_al_preserved_with_blank_comment_line_before_spdx() {
     assert!(
         copyrights
             .iter()
-            .any(|c| c.copyright == "Copyright (c) Jane Doe, <jane@example.com>, et al"),
-        "et al must be preserved on the copyright statement: {copyrights:?}"
+            .any(|c| c.copyright == "Copyright (c) Jane Doe, <jane@example.com>, et al."),
+        "et al. must be preserved (with its source period) on the copyright statement: {copyrights:?}"
     );
     assert!(
         copyrights
@@ -520,8 +520,8 @@ fn test_et_al_does_not_absorb_following_code_line() {
             .iter()
             .map(|c| c.copyright.as_str())
             .collect::<Vec<_>>(),
-        vec!["Copyright (c) Jane Doe, et al"],
-        "et al preserved; no code from the next line absorbed: {copyrights:?}"
+        vec!["Copyright (c) Jane Doe, et al."],
+        "et al. preserved with its source period; no code from the next line absorbed: {copyrights:?}"
     );
     assert_eq!(
         holders
@@ -530,5 +530,31 @@ fn test_et_al_does_not_absorb_following_code_line() {
             .collect::<Vec<_>>(),
         vec!["Jane Doe"],
         "holder is the party name only, without et al or code bleed: {holders:?}"
+    );
+}
+
+// The marker's trailing period is source-faithful: a source `et al.` keeps its
+// period (the Latin abbreviation's period is intrinsic, like `Inc.`/`Ltd.`),
+// while a bare source `et al` stays bare. No period is ever force-added.
+#[test]
+fn test_et_al_trailing_period_is_source_faithful() {
+    let (with_period, _h, _a) =
+        detect_copyrights_from_text("Copyright (c) 2020 Acme Corp, et al.\n");
+    assert_eq!(
+        with_period
+            .iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al."],
+        "source period must be preserved: {with_period:?}"
+    );
+
+    let (bare, _h, _a) = detect_copyrights_from_text("Copyright (c) 2020 Acme Corp, et al\n");
+    assert_eq!(
+        bare.iter()
+            .map(|c| c.copyright.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Copyright (c) 2020 Acme Corp, et al"],
+        "bare marker must stay bare (no period force-added): {bare:?}"
     );
 }

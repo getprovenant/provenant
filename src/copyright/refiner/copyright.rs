@@ -127,7 +127,12 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = truncate_long_words(&c);
     c = strip_trailing_single_digit_token(&c);
     c = strip_trailing_period(&c);
-    let result = c.trim().to_string();
+    // Source-faithful additional-holders marker: `et al.`/`et.al.` in the
+    // source keeps its trailing period (intrinsic to the Latin abbreviation,
+    // like `Inc.`/`Ltd.`) instead of having it stripped as an ordinary
+    // sentence-final period. A bare source marker stays bare — no period is
+    // force-added. Scoped to the copyright statement; the holder is unchanged.
+    let result = restore_source_et_al_period(c.trim(), &original);
 
     static SOFTWARE_COPYRIGHT_C_RE: LazyLock<Regex> = LazyLock::new(|| {
         compile_static_regex(r"(?ix)\bsoftware\s+copyright\s*\(c\)\s*(?:19\d{2}|20\d{2})\b")
@@ -193,6 +198,23 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     } else {
         Some(result)
     }
+}
+
+/// Restore a source-faithful trailing period on the additional-holders marker.
+/// If the source copyright ended with `et al.` / `et.al.` but the refined result
+/// ended with the bare marker (its period stripped as an ordinary sentence
+/// period), re-append the period. A bare source marker (no period) is left bare.
+fn restore_source_et_al_period(result: &str, original: &str) -> String {
+    let orig_lower = original.trim_end().to_ascii_lowercase();
+    if !(orig_lower.ends_with("et al.") || orig_lower.ends_with("et.al.")) {
+        return result.to_string();
+    }
+    let trimmed = result.trim_end();
+    let res_lower = trimmed.to_ascii_lowercase();
+    if res_lower.ends_with("et al") || res_lower.ends_with("et.al") {
+        return format!("{trimmed}.");
+    }
+    result.to_string()
 }
 
 pub(super) fn is_explicit_junk_copyright_phrase(s: &str) -> bool {
