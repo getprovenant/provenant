@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:b1c72b94-7cb9-4735-8c98-69ec7962da64",
+  "serialNumber": "urn:uuid:25e50a03-8450-46b0-b06a-42b0ff0b606c",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T20:19:14Z",
+    "timestamp": "2026-07-23T22:12:12Z",
     "tools": [
       {
         "name": "Provenant",

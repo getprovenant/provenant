@@ -10,6 +10,7 @@ use std::path::Path;
 
 use sha1::{Digest, Sha1};
 
+use crate::license_detection::spdx_lid::is_spdx_exception;
 use crate::output_schema::{
     Output, OutputFileInfo as FileInfo, OutputFileType, OutputMatch as Match, OutputPackage,
 };
@@ -18,7 +19,8 @@ use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_t
 use super::sbom;
 use super::shared::{sorted_files, xml_escape};
 use super::spdx_plan::{
-    inventory_spdx_ids, plan_spdx_packages, primary_package_name, sanitize_spdx_package_name,
+    SpdxPackagePlan, inventory_spdx_ids, plan_spdx_packages, primary_package_name,
+    sanitize_spdx_package_name,
 };
 use super::{OutputWriteConfig, SPDX_DOCUMENT_NOTICE};
 
@@ -77,57 +79,27 @@ pub(crate) fn write_spdx_tag_value(
     writeln!(writer, "Creator: {}", creator)?;
     writeln!(writer, "Created: {}", created)?;
 
-    for plan in &plans {
-        let package_copyright_text = spdx_package_copyright_text(&plan.files);
-        let package_license_concluded = spdx_package_license_concluded(plan.package);
-        let package_license_declared = spdx_package_license_declared(plan.package);
-
-        writeln!(writer, "## Package Information")?;
-        writeln!(writer, "PackageName: {}", plan.name)?;
-        writeln!(writer, "SPDXID: {}", plan.spdx_id)?;
-        writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
-        writeln!(writer, "FilesAnalyzed: {}", plan.role.files_analyzed())?;
-        // SPDX 2.2: a package verification code and per-file license info are
-        // only meaningful (and only valid) when files were analyzed. A promoted
-        // dependency owns no scanned files, so both are omitted for it.
-        if plan.role.files_analyzed() {
-            writeln!(
-                writer,
-                "PackageVerificationCode: {}",
-                spdx_package_verification_code(&plan.files)
-            )?;
-        }
-        writeln!(
-            writer,
-            "PackageLicenseConcluded: {}",
-            spdx_tv_license_value(package_license_concluded.as_deref())
-        )?;
-        if plan.role.files_analyzed() {
-            let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
-            for license_id in &package_license_info_from_files {
-                writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
-            }
-            if package_license_info_from_files.is_empty() {
-                writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
-            }
-        }
-        writeln!(
-            writer,
-            "PackageLicenseDeclared: {}",
-            spdx_tv_license_value(package_license_declared.as_deref())
-        )?;
-        writeln!(
-            writer,
-            "PackageCopyrightText: {}",
-            format_spdx_text_field(&package_copyright_text)
-        )?;
+    // Emit the scanned-subject packages (FilesAnalyzed: true) before the file
+    // section. In SPDX tag-value, a file's package association is positional —
+    // files bind to the most recently declared package — so promoted-dependency
+    // packages (FilesAnalyzed: false, which own no scanned files) MUST come
+    // after the file section, or the files would bind to a FilesAnalyzed: false
+    // package and fail spec validation.
+    for plan in plans.iter().filter(|plan| plan.role.files_analyzed()) {
+        write_spdx_tag_value_package(writer, plan)?;
     }
 
     writeln!(writer, "## File Information")?;
     for (file_index, file) in (1usize..).zip(files.iter()) {
         let sha1 = file.sha1.as_deref().unwrap_or(EMPTY_SHA1_HEX);
-        let file_license_info = spdx_file_license_info(file);
-        let file_license_concluded = spdx_file_license_concluded(file);
+        // Exception symbols are not licenses; keep them out of the id list, and
+        // strip any floating (non-`WITH`) exception from the concluded expression.
+        let file_license_info: Vec<String> = spdx_file_license_info(file)
+            .into_iter()
+            .filter(|id| !is_spdx_exception(id))
+            .collect();
+        let file_license_concluded = spdx_file_license_concluded(file)
+            .and_then(|expression| strip_unattached_exceptions(&expression));
         writeln!(
             writer,
             "FileName: {}",
@@ -167,6 +139,13 @@ pub(crate) fn write_spdx_tag_value(
         writeln!(writer)?;
     }
 
+    // Promoted-dependency packages (FilesAnalyzed: false) trail the file
+    // section so no file positionally binds to them (see the subject-package
+    // loop above).
+    for plan in plans.iter().filter(|plan| !plan.role.files_analyzed()) {
+        write_spdx_tag_value_package(writer, plan)?;
+    }
+
     writeln!(writer, "## Relationships")?;
     for plan in &plans {
         // The document DESCRIBES the scanned subject packages; promoted
@@ -198,6 +177,12 @@ pub(crate) fn write_spdx_tag_value(
         }
     }
 
+    // Exception refs are stripped from every expression above, so drop their
+    // now-unreferenced ExtractedLicensingInfo declarations too.
+    let extracted_license_infos: Vec<ExtractedLicenseInfo> = extracted_license_infos
+        .into_iter()
+        .filter(|info| !is_spdx_exception(&info.license_id))
+        .collect();
     if !extracted_license_infos.is_empty() {
         writeln!(writer, "## License Information")?;
         for info in extracted_license_infos {
@@ -218,6 +203,65 @@ pub(crate) fn write_spdx_tag_value(
         }
     }
 
+    Ok(())
+}
+
+/// Write one SPDX tag-value `## Package Information` block. Called for the
+/// scanned-subject packages before the file section and the promoted-dependency
+/// packages after it (see `write_spdx_tag_value`).
+fn write_spdx_tag_value_package(
+    writer: &mut dyn Write,
+    plan: &SpdxPackagePlan<'_>,
+) -> io::Result<()> {
+    let package_copyright_text = spdx_package_copyright_text(&plan.files);
+    let package_license_concluded = spdx_package_license_concluded(plan.package)
+        .and_then(|expression| strip_unattached_exceptions(&expression));
+    let package_license_declared = spdx_package_license_declared(plan.package)
+        .and_then(|expression| strip_unattached_exceptions(&expression));
+
+    writeln!(writer, "## Package Information")?;
+    writeln!(writer, "PackageName: {}", plan.name)?;
+    writeln!(writer, "SPDXID: {}", plan.spdx_id)?;
+    writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
+    writeln!(writer, "FilesAnalyzed: {}", plan.role.files_analyzed())?;
+    // SPDX 2.2: a package verification code and per-file license info are
+    // only meaningful (and only valid) when files were analyzed. A promoted
+    // dependency owns no scanned files, so both are omitted for it.
+    if plan.role.files_analyzed() {
+        writeln!(
+            writer,
+            "PackageVerificationCode: {}",
+            spdx_package_verification_code(&plan.files)
+        )?;
+    }
+    writeln!(
+        writer,
+        "PackageLicenseConcluded: {}",
+        spdx_tv_license_value(package_license_concluded.as_deref())
+    )?;
+    if plan.role.files_analyzed() {
+        let package_license_info_from_files: Vec<String> =
+            spdx_package_license_info_from_files(&plan.files)
+                .into_iter()
+                .filter(|id| !is_spdx_exception(id))
+                .collect();
+        for license_id in &package_license_info_from_files {
+            writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
+        }
+        if package_license_info_from_files.is_empty() {
+            writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
+        }
+    }
+    writeln!(
+        writer,
+        "PackageLicenseDeclared: {}",
+        spdx_tv_license_value(package_license_declared.as_deref())
+    )?;
+    writeln!(
+        writer,
+        "PackageCopyrightText: {}",
+        format_spdx_text_field(&package_copyright_text)
+    )?;
     Ok(())
 }
 
@@ -259,8 +303,10 @@ pub(crate) fn write_spdx_rdf_xml(
     for plan in &plans {
         let package_copyright_text = xml_escape(&spdx_package_copyright_text(&plan.files));
         let package_name = xml_escape(&plan.name);
-        let package_license_concluded = spdx_package_license_concluded(plan.package);
-        let package_license_declared = spdx_package_license_declared(plan.package);
+        let package_license_concluded = spdx_package_license_concluded(plan.package)
+            .and_then(|expression| strip_unattached_exceptions(&expression));
+        let package_license_declared = spdx_package_license_declared(plan.package)
+            .and_then(|expression| strip_unattached_exceptions(&expression));
         let files_analyzed = plan.role.files_analyzed();
 
         xml.push_str("  <spdx:Package rdf:about=\"");
@@ -291,7 +337,11 @@ pub(crate) fn write_spdx_rdf_xml(
         // Per-file license info and a verification code are only valid when
         // files were analyzed; a promoted dependency owns no files (ADR 0012).
         if files_analyzed {
-            let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+            let package_license_info_from_files: Vec<String> =
+                spdx_package_license_info_from_files(&plan.files)
+                    .into_iter()
+                    .filter(|id| !is_spdx_exception(id))
+                    .collect();
             if package_license_info_from_files.is_empty() {
                 xml.push_str(
                     "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
@@ -332,8 +382,12 @@ pub(crate) fn write_spdx_rdf_xml(
             let Some(file_id) = file_spdx_ids.get(file.path.as_str()) else {
                 continue;
             };
-            let file_license_info = spdx_file_license_info(file);
-            let file_license_concluded = spdx_file_license_concluded(file);
+            let file_license_info: Vec<String> = spdx_file_license_info(file)
+                .into_iter()
+                .filter(|id| !is_spdx_exception(id))
+                .collect();
+            let file_license_concluded = spdx_file_license_concluded(file)
+                .and_then(|expression| strip_unattached_exceptions(&expression));
             xml.push_str("    <spdx:relationship><spdx:Relationship>");
             xml.push_str("<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_contains\"/>");
             xml.push_str("<spdx:relatedSpdxElement><spdx:File rdf:about=\"");
@@ -407,7 +461,10 @@ pub(crate) fn write_spdx_rdf_xml(
     xml.push_str("    <rdfs:comment>");
     xml.push_str(&xml_escape(SPDX_DOCUMENT_NOTICE));
     xml.push_str("</rdfs:comment>\n");
-    for info in extracted_license_infos {
+    for info in extracted_license_infos
+        .into_iter()
+        .filter(|info| !is_spdx_exception(&info.license_id))
+    {
         xml.push_str(
             "    <spdx:hasExtractedLicensingInfo><spdx:ExtractedLicensingInfo rdf:about=\"",
         );
@@ -692,16 +749,28 @@ fn spdx_license_rdf_resource(license_id: &str, document_namespace: &str) -> Stri
     }
 }
 
+/// Split an SPDX expression into the individual *license* identifiers it names,
+/// for the id-list fields (`LicenseInfoInFile`, `PackageLicenseInfoFromFiles`)
+/// and single-id RDF resolution. The token immediately after `WITH` is a
+/// license *exception*, not a license id; it is only valid inside a `WITH`
+/// statement, so it is dropped here (the full `… WITH …` expression is still
+/// rendered verbatim in the `LicenseConcluded`/`LicenseDeclared` fields).
 fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
     let mut ids = Vec::new();
     let mut token = String::new();
+    let mut expect_exception = false;
 
-    let flush = |token: &mut String, ids: &mut Vec<String>| {
+    let flush = |token: &mut String, ids: &mut Vec<String>, expect_exception: &mut bool| {
         if token.is_empty() {
             return;
         }
-        if !matches!(token.as_str(), "AND" | "OR" | "WITH") {
-            ids.push(token.clone());
+        match token.as_str() {
+            "AND" | "OR" => {}
+            "WITH" => *expect_exception = true,
+            // The symbol following `WITH` is an exception; consume it without
+            // emitting it as a standalone license id.
+            _ if *expect_exception => *expect_exception = false,
+            _ => ids.push(token.clone()),
         }
         token.clear();
     };
@@ -711,12 +780,87 @@ fn spdx_ids_from_expression(expression: &str) -> Vec<String> {
         if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '.' | '+' | '_') {
             token.push(ch);
         } else {
-            flush(&mut token, &mut ids);
+            flush(&mut token, &mut ids, &mut expect_exception);
         }
     }
-    flush(&mut token, &mut ids);
+    flush(&mut token, &mut ids, &mut expect_exception);
 
     ids
+}
+
+fn non_empty(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
+/// Split an SPDX expression into its top-level operands and the `AND`/`OR`
+/// operators between them, respecting parenthesis depth (a `WITH` stays inside
+/// its operand).
+fn split_top_level_operands(expression: &str) -> (Vec<String>, Vec<String>) {
+    let mut operands = Vec::new();
+    let mut operators = Vec::new();
+    let mut depth: i32 = 0;
+    let mut current = String::new();
+    for token in expression.split_whitespace() {
+        if depth == 0 && (token == "AND" || token == "OR") {
+            operands.push(current.trim().to_string());
+            operators.push(token.to_string());
+            current.clear();
+            continue;
+        }
+        depth += token.matches('(').count() as i32 - token.matches(')').count() as i32;
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(token);
+    }
+    operands.push(current.trim().to_string());
+    (operands, operators)
+}
+
+/// Remove exception operands that are not attached to a license via `WITH`.
+/// SPDX cannot represent a standalone or `AND`/`OR`-joined exception, so a
+/// detected floating exception (e.g. ScanCode's
+/// `LicenseRef-scancode-generic-exception`) is dropped from the expression,
+/// while a valid `license WITH exception` operand is kept intact. Returns
+/// `None` when nothing valid remains.
+fn strip_unattached_exceptions(expression: &str) -> Option<String> {
+    let (operands, operators) = split_top_level_operands(expression);
+    let cleaned: Vec<Option<String>> = operands
+        .iter()
+        .map(|operand| clean_spdx_operand(operand))
+        .collect();
+
+    let mut result = String::new();
+    for (index, operand) in cleaned.iter().enumerate() {
+        let Some(text) = operand else { continue };
+        if !result.is_empty() {
+            let operator = operators
+                .get(index.wrapping_sub(1))
+                .map(String::as_str)
+                .unwrap_or("AND");
+            result.push_str(&format!(" {operator} "));
+        }
+        result.push_str(text);
+    }
+    non_empty(&result)
+}
+
+/// Clean a single top-level operand: recurse into a parenthesized group, drop a
+/// bare exception symbol, or keep the operand (including a `license WITH
+/// exception`) unchanged.
+fn clean_spdx_operand(operand: &str) -> Option<String> {
+    let operand = operand.trim();
+    if let Some(inner) = operand.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
+        return strip_unattached_exceptions(inner.trim()).map(|cleaned| format!("({cleaned})"));
+    }
+    // A bare, unattached exception (single token, no `WITH`) cannot stand in an
+    // SPDX expression, so drop it. `license WITH exception` contains a space and
+    // is kept.
+    if !operand.contains(' ') && is_spdx_exception(operand) {
+        return None;
+    }
+    Some(operand.to_string())
 }
 
 fn spdx_creator() -> String {
@@ -1190,6 +1334,56 @@ mod tests {
         undetected.license_detections = vec![];
         let schema_undetected = crate::output_schema::OutputFileInfo::from(&undetected);
         assert_eq!(spdx_file_license_concluded(&schema_undetected), None);
+    }
+
+    #[test]
+    fn spdx_ids_from_expression_drops_the_with_exception_symbol() {
+        // The exception after WITH is not a standalone license id (SPDX rejects
+        // it in LicenseInfoInFile), but the licenses around it are kept.
+        assert_eq!(
+            spdx_ids_from_expression("Apache-2.0 WITH LLVM-exception"),
+            vec!["Apache-2.0".to_string()]
+        );
+        assert_eq!(
+            spdx_ids_from_expression("(GPL-2.0-only WITH Classpath-exception-2.0) OR MIT"),
+            vec!["GPL-2.0-only".to_string(), "MIT".to_string()]
+        );
+        // Plain expressions are unaffected.
+        assert_eq!(
+            spdx_ids_from_expression("MIT AND Apache-2.0"),
+            vec!["MIT".to_string(), "Apache-2.0".to_string()]
+        );
+    }
+
+    #[test]
+    fn strip_unattached_exceptions_drops_floating_exceptions_but_keeps_with() {
+        // Floating exception joined with AND is dropped; the licenses stay.
+        assert_eq!(
+            strip_unattached_exceptions(
+                "MIT AND Unlicense AND LicenseRef-scancode-generic-exception"
+            ),
+            Some("MIT AND Unlicense".to_string())
+        );
+        // A standalone exception leaves nothing valid.
+        assert_eq!(
+            strip_unattached_exceptions("LicenseRef-scancode-generic-exception"),
+            None
+        );
+        // A validly-attached `WITH` exception is preserved, at top level and in
+        // a parenthesized group.
+        assert_eq!(
+            strip_unattached_exceptions("Apache-2.0 WITH LLVM-exception"),
+            Some("Apache-2.0 WITH LLVM-exception".to_string())
+        );
+        assert_eq!(
+            strip_unattached_exceptions("(GPL-2.0-only WITH Classpath-exception-2.0) OR MIT"),
+            Some("(GPL-2.0-only WITH Classpath-exception-2.0) OR MIT".to_string())
+        );
+        // Plain expressions are untouched.
+        assert_eq!(
+            strip_unattached_exceptions("MIT OR Apache-2.0"),
+            Some("MIT OR Apache-2.0".to_string())
+        );
     }
 
     #[test]

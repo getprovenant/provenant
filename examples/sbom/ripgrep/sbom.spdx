@@ -13,7 +13,7 @@ Visit https://github.com/getprovenant/provenant/ for support and download.
 SPDX License List: 3.27</text>
 ## Creation Information
 Creator: Tool: Provenant-1.0.1
-Created: 2026-07-23T20:19:13Z
+Created: 2026-07-23T22:12:12Z
 ## Package Information
 PackageName: fuzz
 SPDXID: SPDXRef-Package-1
@@ -139,7 +139,6 @@ PackageLicenseInfoFromFiles: BSD-2-Clause
 PackageLicenseInfoFromFiles: BSD-3-Clause
 PackageLicenseInfoFromFiles: CC-BY-4.0
 PackageLicenseInfoFromFiles: LGPL-2.0-or-later
-PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-gutenberg-2020
 PackageLicenseInfoFromFiles: LicenseRef-scancode-other-copyleft
 PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
@@ -149,830 +148,6 @@ PackageLicenseDeclared: MIT OR Unlicense
 PackageCopyrightText: <text>Copyright (c) 2011 Github
 Copyright (c) 2011 Github zsh-users - http://github.com/zsh-users
 Copyright (c) 2015 Andrew Gallant</text>
-## Package Information
-PackageName: aho-corasick
-SPDXID: SPDXRef-Package-Dependency-1
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: aho-corasick
-SPDXID: SPDXRef-Package-Dependency-2
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: aho-corasick
-SPDXID: SPDXRef-Package-Dependency-3
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: anyhow
-SPDXID: SPDXRef-Package-Dependency-4
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: anyhow
-SPDXID: SPDXRef-Package-Dependency-5
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: arbitrary
-SPDXID: SPDXRef-Package-Dependency-6
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: arbitrary
-SPDXID: SPDXRef-Package-Dependency-7
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: arbitrary
-SPDXID: SPDXRef-Package-Dependency-8
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: bstr
-SPDXID: SPDXRef-Package-Dependency-9
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: bstr
-SPDXID: SPDXRef-Package-Dependency-10
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: bstr
-SPDXID: SPDXRef-Package-Dependency-11
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: cc
-SPDXID: SPDXRef-Package-Dependency-12
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: cc
-SPDXID: SPDXRef-Package-Dependency-13
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: cfg-if
-SPDXID: SPDXRef-Package-Dependency-14
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: crossbeam-channel
-SPDXID: SPDXRef-Package-Dependency-15
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: crossbeam-channel
-SPDXID: SPDXRef-Package-Dependency-16
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: crossbeam-deque
-SPDXID: SPDXRef-Package-Dependency-17
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: crossbeam-deque
-SPDXID: SPDXRef-Package-Dependency-18
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: crossbeam-epoch
-SPDXID: SPDXRef-Package-Dependency-19
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: crossbeam-utils
-SPDXID: SPDXRef-Package-Dependency-20
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: derive_arbitrary
-SPDXID: SPDXRef-Package-Dependency-21
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: derive_arbitrary
-SPDXID: SPDXRef-Package-Dependency-22
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: encoding_rs
-SPDXID: SPDXRef-Package-Dependency-23
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: encoding_rs
-SPDXID: SPDXRef-Package-Dependency-24
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: encoding_rs_io
-SPDXID: SPDXRef-Package-Dependency-25
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: encoding_rs_io
-SPDXID: SPDXRef-Package-Dependency-26
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: find-msvc-tools
-SPDXID: SPDXRef-Package-Dependency-27
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: getrandom
-SPDXID: SPDXRef-Package-Dependency-28
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: glob
-SPDXID: SPDXRef-Package-Dependency-29
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: glob
-SPDXID: SPDXRef-Package-Dependency-30
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: globset
-SPDXID: SPDXRef-Package-Dependency-31
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: globset
-SPDXID: SPDXRef-Package-Dependency-32
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep
-SPDXID: SPDXRef-Package-Dependency-33
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep-cli
-SPDXID: SPDXRef-Package-Dependency-34
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep-matcher
-SPDXID: SPDXRef-Package-Dependency-35
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep-pcre2
-SPDXID: SPDXRef-Package-Dependency-36
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep-printer
-SPDXID: SPDXRef-Package-Dependency-37
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep-regex
-SPDXID: SPDXRef-Package-Dependency-38
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: grep-searcher
-SPDXID: SPDXRef-Package-Dependency-39
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: ignore
-SPDXID: SPDXRef-Package-Dependency-40
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: itoa
-SPDXID: SPDXRef-Package-Dependency-41
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: jobserver
-SPDXID: SPDXRef-Package-Dependency-42
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: jobserver
-SPDXID: SPDXRef-Package-Dependency-43
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: lexopt
-SPDXID: SPDXRef-Package-Dependency-44
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: lexopt
-SPDXID: SPDXRef-Package-Dependency-45
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: libc
-SPDXID: SPDXRef-Package-Dependency-46
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: libc
-SPDXID: SPDXRef-Package-Dependency-47
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: libfuzzer-sys
-SPDXID: SPDXRef-Package-Dependency-48
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: libfuzzer-sys
-SPDXID: SPDXRef-Package-Dependency-49
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: log
-SPDXID: SPDXRef-Package-Dependency-50
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: log
-SPDXID: SPDXRef-Package-Dependency-51
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: log
-SPDXID: SPDXRef-Package-Dependency-52
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: memchr
-SPDXID: SPDXRef-Package-Dependency-53
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: memchr
-SPDXID: SPDXRef-Package-Dependency-54
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: memchr
-SPDXID: SPDXRef-Package-Dependency-55
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: memmap
-SPDXID: SPDXRef-Package-Dependency-56
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: memmap2
-SPDXID: SPDXRef-Package-Dependency-57
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: once_cell
-SPDXID: SPDXRef-Package-Dependency-58
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: pcre2
-SPDXID: SPDXRef-Package-Dependency-59
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: pcre2-sys
-SPDXID: SPDXRef-Package-Dependency-60
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: pcre2
-SPDXID: SPDXRef-Package-Dependency-61
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: pkg-config
-SPDXID: SPDXRef-Package-Dependency-62
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: proc-macro2
-SPDXID: SPDXRef-Package-Dependency-63
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: proc-macro2
-SPDXID: SPDXRef-Package-Dependency-64
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: quote
-SPDXID: SPDXRef-Package-Dependency-65
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: quote
-SPDXID: SPDXRef-Package-Dependency-66
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: r-efi
-SPDXID: SPDXRef-Package-Dependency-67
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex
-SPDXID: SPDXRef-Package-Dependency-68
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex-automata
-SPDXID: SPDXRef-Package-Dependency-69
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex-automata
-SPDXID: SPDXRef-Package-Dependency-70
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex-automata
-SPDXID: SPDXRef-Package-Dependency-71
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex-syntax
-SPDXID: SPDXRef-Package-Dependency-72
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex-syntax
-SPDXID: SPDXRef-Package-Dependency-73
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex-syntax
-SPDXID: SPDXRef-Package-Dependency-74
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: regex
-SPDXID: SPDXRef-Package-Dependency-75
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: same-file
-SPDXID: SPDXRef-Package-Dependency-76
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: same-file
-SPDXID: SPDXRef-Package-Dependency-77
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde
-SPDXID: SPDXRef-Package-Dependency-78
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde
-SPDXID: SPDXRef-Package-Dependency-79
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde
-SPDXID: SPDXRef-Package-Dependency-80
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_core
-SPDXID: SPDXRef-Package-Dependency-81
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_derive
-SPDXID: SPDXRef-Package-Dependency-82
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_derive
-SPDXID: SPDXRef-Package-Dependency-83
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_derive
-SPDXID: SPDXRef-Package-Dependency-84
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_json
-SPDXID: SPDXRef-Package-Dependency-85
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_json
-SPDXID: SPDXRef-Package-Dependency-86
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: shlex
-SPDXID: SPDXRef-Package-Dependency-87
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: syn
-SPDXID: SPDXRef-Package-Dependency-88
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: syn
-SPDXID: SPDXRef-Package-Dependency-89
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: termcolor
-SPDXID: SPDXRef-Package-Dependency-90
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: termcolor
-SPDXID: SPDXRef-Package-Dependency-91
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: textwrap
-SPDXID: SPDXRef-Package-Dependency-92
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: textwrap
-SPDXID: SPDXRef-Package-Dependency-93
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tikv-jemalloc-sys
-SPDXID: SPDXRef-Package-Dependency-94
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tikv-jemallocator
-SPDXID: SPDXRef-Package-Dependency-95
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: unicode-ident
-SPDXID: SPDXRef-Package-Dependency-96
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: unicode-ident
-SPDXID: SPDXRef-Package-Dependency-97
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: walkdir
-SPDXID: SPDXRef-Package-Dependency-98
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: walkdir
-SPDXID: SPDXRef-Package-Dependency-99
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: winapi-util
-SPDXID: SPDXRef-Package-Dependency-100
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: windows-link
-SPDXID: SPDXRef-Package-Dependency-101
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: windows-sys
-SPDXID: SPDXRef-Package-Dependency-102
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: zmij
-SPDXID: SPDXRef-Package-Dependency-103
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
 ## File Information
 FileName: ./.cargo/config.toml
 SPDXID: SPDXRef-1
@@ -1089,8 +264,7 @@ FileCopyrightText: NONE
 FileName: ./GUIDE.md
 SPDXID: SPDXRef-16
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
-LicenseConcluded: MIT AND Unlicense AND LicenseRef-scancode-generic-exception
-LicenseInfoInFile: LicenseRef-scancode-generic-exception
+LicenseConcluded: MIT AND Unlicense
 LicenseInfoInFile: MIT
 LicenseInfoInFile: Unlicense
 FileCopyrightText: NONE
@@ -2541,6 +1715,830 @@ LicenseConcluded: NOASSERTION
 LicenseInfoInFile: NONE
 FileCopyrightText: NONE
 
+## Package Information
+PackageName: aho-corasick
+SPDXID: SPDXRef-Package-Dependency-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: aho-corasick
+SPDXID: SPDXRef-Package-Dependency-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: aho-corasick
+SPDXID: SPDXRef-Package-Dependency-3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: anyhow
+SPDXID: SPDXRef-Package-Dependency-4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: anyhow
+SPDXID: SPDXRef-Package-Dependency-5
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: arbitrary
+SPDXID: SPDXRef-Package-Dependency-6
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: arbitrary
+SPDXID: SPDXRef-Package-Dependency-7
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: arbitrary
+SPDXID: SPDXRef-Package-Dependency-8
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: bstr
+SPDXID: SPDXRef-Package-Dependency-9
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: bstr
+SPDXID: SPDXRef-Package-Dependency-10
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: bstr
+SPDXID: SPDXRef-Package-Dependency-11
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: cc
+SPDXID: SPDXRef-Package-Dependency-12
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: cc
+SPDXID: SPDXRef-Package-Dependency-13
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: cfg-if
+SPDXID: SPDXRef-Package-Dependency-14
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: crossbeam-channel
+SPDXID: SPDXRef-Package-Dependency-15
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: crossbeam-channel
+SPDXID: SPDXRef-Package-Dependency-16
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: crossbeam-deque
+SPDXID: SPDXRef-Package-Dependency-17
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: crossbeam-deque
+SPDXID: SPDXRef-Package-Dependency-18
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: crossbeam-epoch
+SPDXID: SPDXRef-Package-Dependency-19
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: crossbeam-utils
+SPDXID: SPDXRef-Package-Dependency-20
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: derive_arbitrary
+SPDXID: SPDXRef-Package-Dependency-21
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: derive_arbitrary
+SPDXID: SPDXRef-Package-Dependency-22
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: encoding_rs
+SPDXID: SPDXRef-Package-Dependency-23
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: encoding_rs
+SPDXID: SPDXRef-Package-Dependency-24
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: encoding_rs_io
+SPDXID: SPDXRef-Package-Dependency-25
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: encoding_rs_io
+SPDXID: SPDXRef-Package-Dependency-26
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: find-msvc-tools
+SPDXID: SPDXRef-Package-Dependency-27
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: getrandom
+SPDXID: SPDXRef-Package-Dependency-28
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: glob
+SPDXID: SPDXRef-Package-Dependency-29
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: glob
+SPDXID: SPDXRef-Package-Dependency-30
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: globset
+SPDXID: SPDXRef-Package-Dependency-31
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: globset
+SPDXID: SPDXRef-Package-Dependency-32
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep
+SPDXID: SPDXRef-Package-Dependency-33
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep-cli
+SPDXID: SPDXRef-Package-Dependency-34
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep-matcher
+SPDXID: SPDXRef-Package-Dependency-35
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep-pcre2
+SPDXID: SPDXRef-Package-Dependency-36
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep-printer
+SPDXID: SPDXRef-Package-Dependency-37
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep-regex
+SPDXID: SPDXRef-Package-Dependency-38
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: grep-searcher
+SPDXID: SPDXRef-Package-Dependency-39
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: ignore
+SPDXID: SPDXRef-Package-Dependency-40
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: itoa
+SPDXID: SPDXRef-Package-Dependency-41
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: jobserver
+SPDXID: SPDXRef-Package-Dependency-42
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: jobserver
+SPDXID: SPDXRef-Package-Dependency-43
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: lexopt
+SPDXID: SPDXRef-Package-Dependency-44
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: lexopt
+SPDXID: SPDXRef-Package-Dependency-45
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: libc
+SPDXID: SPDXRef-Package-Dependency-46
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: libc
+SPDXID: SPDXRef-Package-Dependency-47
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: libfuzzer-sys
+SPDXID: SPDXRef-Package-Dependency-48
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: libfuzzer-sys
+SPDXID: SPDXRef-Package-Dependency-49
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: log
+SPDXID: SPDXRef-Package-Dependency-50
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: log
+SPDXID: SPDXRef-Package-Dependency-51
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: log
+SPDXID: SPDXRef-Package-Dependency-52
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: memchr
+SPDXID: SPDXRef-Package-Dependency-53
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: memchr
+SPDXID: SPDXRef-Package-Dependency-54
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: memchr
+SPDXID: SPDXRef-Package-Dependency-55
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: memmap
+SPDXID: SPDXRef-Package-Dependency-56
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: memmap2
+SPDXID: SPDXRef-Package-Dependency-57
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: once_cell
+SPDXID: SPDXRef-Package-Dependency-58
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pcre2
+SPDXID: SPDXRef-Package-Dependency-59
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pcre2-sys
+SPDXID: SPDXRef-Package-Dependency-60
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pcre2
+SPDXID: SPDXRef-Package-Dependency-61
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pkg-config
+SPDXID: SPDXRef-Package-Dependency-62
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: proc-macro2
+SPDXID: SPDXRef-Package-Dependency-63
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: proc-macro2
+SPDXID: SPDXRef-Package-Dependency-64
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: quote
+SPDXID: SPDXRef-Package-Dependency-65
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: quote
+SPDXID: SPDXRef-Package-Dependency-66
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: r-efi
+SPDXID: SPDXRef-Package-Dependency-67
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex
+SPDXID: SPDXRef-Package-Dependency-68
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex-automata
+SPDXID: SPDXRef-Package-Dependency-69
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex-automata
+SPDXID: SPDXRef-Package-Dependency-70
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex-automata
+SPDXID: SPDXRef-Package-Dependency-71
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex-syntax
+SPDXID: SPDXRef-Package-Dependency-72
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex-syntax
+SPDXID: SPDXRef-Package-Dependency-73
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex-syntax
+SPDXID: SPDXRef-Package-Dependency-74
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: regex
+SPDXID: SPDXRef-Package-Dependency-75
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: same-file
+SPDXID: SPDXRef-Package-Dependency-76
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: same-file
+SPDXID: SPDXRef-Package-Dependency-77
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde
+SPDXID: SPDXRef-Package-Dependency-78
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde
+SPDXID: SPDXRef-Package-Dependency-79
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde
+SPDXID: SPDXRef-Package-Dependency-80
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_core
+SPDXID: SPDXRef-Package-Dependency-81
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_derive
+SPDXID: SPDXRef-Package-Dependency-82
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_derive
+SPDXID: SPDXRef-Package-Dependency-83
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_derive
+SPDXID: SPDXRef-Package-Dependency-84
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_json
+SPDXID: SPDXRef-Package-Dependency-85
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_json
+SPDXID: SPDXRef-Package-Dependency-86
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: shlex
+SPDXID: SPDXRef-Package-Dependency-87
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: syn
+SPDXID: SPDXRef-Package-Dependency-88
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: syn
+SPDXID: SPDXRef-Package-Dependency-89
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: termcolor
+SPDXID: SPDXRef-Package-Dependency-90
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: termcolor
+SPDXID: SPDXRef-Package-Dependency-91
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: textwrap
+SPDXID: SPDXRef-Package-Dependency-92
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: textwrap
+SPDXID: SPDXRef-Package-Dependency-93
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tikv-jemalloc-sys
+SPDXID: SPDXRef-Package-Dependency-94
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tikv-jemallocator
+SPDXID: SPDXRef-Package-Dependency-95
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: unicode-ident
+SPDXID: SPDXRef-Package-Dependency-96
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: unicode-ident
+SPDXID: SPDXRef-Package-Dependency-97
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: walkdir
+SPDXID: SPDXRef-Package-Dependency-98
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: walkdir
+SPDXID: SPDXRef-Package-Dependency-99
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: winapi-util
+SPDXID: SPDXRef-Package-Dependency-100
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: windows-link
+SPDXID: SPDXRef-Package-Dependency-101
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: windows-sys
+SPDXID: SPDXRef-Package-Dependency-102
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: zmij
+SPDXID: SPDXRef-Package-Dependency-103
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
 Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-192
@@ -3046,12 +3044,6 @@ ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-to
 </text>
 LicenseName: LicenseRef-scancode-other-copyleft
 LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/other-copyleft_16.RULE
-</text>
-LicenseID: LicenseRef-scancode-generic-exception
-ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/license-intro_8.RULE
-</text>
-LicenseName: LicenseRef-scancode-generic-exception
-LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/license-intro_8.RULE
 </text>
 LicenseID: LicenseRef-scancode-gutenberg-2020
 ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/gutenberg-2020_3.RULE
