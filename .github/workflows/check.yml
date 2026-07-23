@@ -106,6 +106,13 @@ jobs:
       - name: Check output field reference document
         run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-output-field-reference -- --check
 
+      # Builds a release provenant, shallow-fetches each pinned example repo, and
+      # rescans them, so it is heavier than the other generated-doc checks. It
+      # needs no Docker/ScanCode (that is verification-time only), just network
+      # access to the pinned upstream repositories.
+      - name: Check SBOM examples
+        run: cargo run --quiet --locked --manifest-path xtask/Cargo.toml --bin generate-sbom-examples -- --check
+
       - name: Verify packaged crate builds and check size
         run: ./scripts/check_crate_size.sh
 

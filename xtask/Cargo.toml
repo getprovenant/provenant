@@ -64,6 +64,10 @@ name = "generate-legalese-artifact"
 path = "src/bin/generate_legalese_artifact/main.rs"
 
 [[bin]]
+name = "generate-sbom-examples"
+path = "src/bin/generate_sbom_examples.rs"
+
+[[bin]]
 name = "classify-rule-overmatch"
 path = "src/bin/classify_rule_overmatch.rs"
 

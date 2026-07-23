@@ -1,0 +1,2088 @@
+## Document Information
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: SPDX Document created by Provenant
+DocumentNamespace: http://spdx.org/spdxdocs/ripgrep
+DocumentComment: <text>Generated with Provenant and provided on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied. No content created from
+Provenant should be considered or used as legal advice. Consult an attorney
+for legal advice.
+Provenant is a free software code scanning tool.
+Visit https://github.com/getprovenant/provenant/ for support and download.
+SPDX License List: 3.27</text>
+## Creation Information
+Creator: Tool: Provenant-1.0.0
+Created: 2026-07-23T17:24:13Z
+## Package Information
+PackageName: fuzz
+SPDXID: SPDXRef-Package-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 2e0767dbc9bb91ae59bf5f4297e72f9c2874882f
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: NONE
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: globset
+SPDXID: SPDXRef-Package-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: a4641fc7440f9435dd38377ec029842221bf09f2
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep-cli
+SPDXID: SPDXRef-Package-3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 0daec6527430984dfbfdcfa3a357a12e1b5d0eca
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep-matcher
+SPDXID: SPDXRef-Package-4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 01472b4d18bdd34567f7f2edc91523083ff525ef
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep-pcre2
+SPDXID: SPDXRef-Package-5
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 4a55ed8385f20049c341a93c614634ab225c3506
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep-printer
+SPDXID: SPDXRef-Package-6
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 016a80314935f80eae19154c6bf99520ba63eff3
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep-regex
+SPDXID: SPDXRef-Package-7
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: a6eebff08f9c03fe260145837a6e59a0ca67570a
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep-searcher
+SPDXID: SPDXRef-Package-8
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 835822eb40ce254ad0cf4cb1df89c814613d47ea
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: grep
+SPDXID: SPDXRef-Package-9
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 4a55ed8385f20049c341a93c614634ab225c3506
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: ignore
+SPDXID: SPDXRef-Package-10
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: ff7a120ddcac30925f40819e3f4254c91d372057
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: Apache-2.0
+PackageLicenseInfoFromFiles: BSD-2-Clause
+PackageLicenseInfoFromFiles: CC-BY-4.0
+PackageLicenseInfoFromFiles: LGPL-2.0-or-later
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: Copyright (c) 2015 Andrew Gallant
+## Package Information
+PackageName: ripgrep
+SPDXID: SPDXRef-Package-11
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 5da12ee7757ca1904c357805da062b8b7da23282
+PackageLicenseConcluded: MIT OR Unlicense
+PackageLicenseInfoFromFiles: Apache-2.0
+PackageLicenseInfoFromFiles: BSD-2-Clause
+PackageLicenseInfoFromFiles: BSD-3-Clause
+PackageLicenseInfoFromFiles: CC-BY-4.0
+PackageLicenseInfoFromFiles: LGPL-2.0-or-later
+PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-exception
+PackageLicenseInfoFromFiles: LicenseRef-scancode-gutenberg-2020
+PackageLicenseInfoFromFiles: LicenseRef-scancode-other-copyleft
+PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
+PackageLicenseInfoFromFiles: MIT
+PackageLicenseInfoFromFiles: Unlicense
+PackageLicenseDeclared: MIT OR Unlicense
+PackageCopyrightText: <text>Copyright (c) 2011 Github
+Copyright (c) 2011 Github zsh-users - http://github.com/zsh-users
+Copyright (c) 2015 Andrew Gallant</text>
+## File Information
+FileName: ./.cargo/config.toml
+SPDXID: SPDXRef-1
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/FUNDING.yml
+SPDXID: SPDXRef-2
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/ISSUE_TEMPLATE/bug_report.yml
+SPDXID: SPDXRef-3
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/ISSUE_TEMPLATE/config.yml
+SPDXID: SPDXRef-4
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/ISSUE_TEMPLATE/feature_request.md
+SPDXID: SPDXRef-5
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/workflows/ci.yml
+SPDXID: SPDXRef-6
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/workflows/release.yml
+SPDXID: SPDXRef-7
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense AND MIT
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./.ignore
+SPDXID: SPDXRef-8
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./AI_POLICY.md
+SPDXID: SPDXRef-9
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./CHANGELOG.md
+SPDXID: SPDXRef-10
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./CONTRIBUTING.md
+SPDXID: SPDXRef-11
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./COPYING
+SPDXID: SPDXRef-12
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./Cargo.lock
+SPDXID: SPDXRef-13
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./Cargo.toml
+SPDXID: SPDXRef-14
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT AND Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./FAQ.md
+SPDXID: SPDXRef-15
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: (Unlicense OR MIT OR LicenseRef-scancode-unknown-license-reference) AND LGPL-2.0-or-later AND LicenseRef-scancode-other-copyleft
+LicenseInfoInFile: LGPL-2.0-or-later
+LicenseInfoInFile: LicenseRef-scancode-other-copyleft
+LicenseInfoInFile: LicenseRef-scancode-unknown-license-reference
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./GUIDE.md
+SPDXID: SPDXRef-16
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT AND Unlicense AND LicenseRef-scancode-generic-exception
+LicenseInfoInFile: LicenseRef-scancode-generic-exception
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./LICENSE-MIT
+SPDXID: SPDXRef-17
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./README.md
+SPDXID: SPDXRef-18
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./RELEASE-CHECKLIST.md
+SPDXID: SPDXRef-19
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./UNLICENSE
+SPDXID: SPDXRef-20
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/benchsuite
+SPDXID: SPDXRef-21
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-17-ubuntu1604-ec2/README.SETUP
+SPDXID: SPDXRef-22
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-17-ubuntu1604-ec2/raw.csv
+SPDXID: SPDXRef-23
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-17-ubuntu1604-ec2/summary
+SPDXID: SPDXRef-24
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-20-ubuntu1604-ec2/README.SETUP
+SPDXID: SPDXRef-25
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-20-ubuntu1604-ec2/raw.csv
+SPDXID: SPDXRef-26
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-20-ubuntu1604-ec2/summary
+SPDXID: SPDXRef-27
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-22-archlinux-cheetah/raw.csv
+SPDXID: SPDXRef-28
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-09-22-archlinux-cheetah/summary
+SPDXID: SPDXRef-29
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-glibc-jemalloc/raw.csv
+SPDXID: SPDXRef-30
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-glibc-jemalloc/summary
+SPDXID: SPDXRef-31
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-glibc-system/raw.csv
+SPDXID: SPDXRef-32
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-glibc-system/summary
+SPDXID: SPDXRef-33
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-musl-jemalloc/raw.csv
+SPDXID: SPDXRef-34
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-musl-jemalloc/summary
+SPDXID: SPDXRef-35
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-musl-system/raw.csv
+SPDXID: SPDXRef-36
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah-musl-system/summary
+SPDXID: SPDXRef-37
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah/raw.csv
+SPDXID: SPDXRef-38
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-24-archlinux-cheetah/summary
+SPDXID: SPDXRef-39
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-30-archlinux-cheetah/raw.csv
+SPDXID: SPDXRef-40
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2016-12-30-archlinux-cheetah/summary
+SPDXID: SPDXRef-41
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2018-01-08-archlinux-cheetah/README
+SPDXID: SPDXRef-42
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2018-01-08-archlinux-cheetah/raw.csv
+SPDXID: SPDXRef-43
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2018-01-08-archlinux-cheetah/summary
+SPDXID: SPDXRef-44
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2020-10-14-archlinux-frink/README.md
+SPDXID: SPDXRef-45
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2020-10-14-archlinux-frink/raw.csv
+SPDXID: SPDXRef-46
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2020-10-14-archlinux-frink/summary
+SPDXID: SPDXRef-47
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2022-12-16-archlinux-duff/README.md
+SPDXID: SPDXRef-48
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2022-12-16-archlinux-duff/raw.csv
+SPDXID: SPDXRef-49
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./benchsuite/runs/2022-12-16-archlinux-duff/summary
+SPDXID: SPDXRef-50
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./build.rs
+SPDXID: SPDXRef-51
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./ci/sha256-releases
+SPDXID: SPDXRef-52
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./ci/test-complete
+SPDXID: SPDXRef-53
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./ci/ubuntu-install-packages
+SPDXID: SPDXRef-54
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./ci/utils.sh
+SPDXID: SPDXRef-55
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/Cargo.toml
+SPDXID: SPDXRef-56
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/LICENSE-MIT
+SPDXID: SPDXRef-57
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/cli/README.md
+SPDXID: SPDXRef-58
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/UNLICENSE
+SPDXID: SPDXRef-59
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/decompress.rs
+SPDXID: SPDXRef-60
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/escape.rs
+SPDXID: SPDXRef-61
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/hostname.rs
+SPDXID: SPDXRef-62
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/human.rs
+SPDXID: SPDXRef-63
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/lib.rs
+SPDXID: SPDXRef-64
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/pattern.rs
+SPDXID: SPDXRef-65
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/process.rs
+SPDXID: SPDXRef-66
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/cli/src/wtr.rs
+SPDXID: SPDXRef-67
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/README.md
+SPDXID: SPDXRef-68
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/bash.rs
+SPDXID: SPDXRef-69
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/encodings.sh
+SPDXID: SPDXRef-70
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/fish.rs
+SPDXID: SPDXRef-71
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/mod.rs
+SPDXID: SPDXRef-72
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/powershell.rs
+SPDXID: SPDXRef-73
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/prelude.fish
+SPDXID: SPDXRef-74
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/complete/rg.zsh
+SPDXID: SPDXRef-75
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: Copyright (c) 2011 Github\nCopyright (c) 2011 Github zsh-users - http://github.com/zsh-users
+
+FileName: ./crates/core/flags/complete/zsh.rs
+SPDXID: SPDXRef-76
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/config.rs
+SPDXID: SPDXRef-77
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/defs.rs
+SPDXID: SPDXRef-78
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/help.rs
+SPDXID: SPDXRef-79
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/man.rs
+SPDXID: SPDXRef-80
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/mod.rs
+SPDXID: SPDXRef-81
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/template.long.help
+SPDXID: SPDXRef-82
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/template.rg.1
+SPDXID: SPDXRef-83
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/template.short.help
+SPDXID: SPDXRef-84
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/doc/version.rs
+SPDXID: SPDXRef-85
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/hiargs.rs
+SPDXID: SPDXRef-86
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/lowargs.rs
+SPDXID: SPDXRef-87
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/mod.rs
+SPDXID: SPDXRef-88
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/flags/parse.rs
+SPDXID: SPDXRef-89
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/haystack.rs
+SPDXID: SPDXRef-90
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/logger.rs
+SPDXID: SPDXRef-91
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/main.rs
+SPDXID: SPDXRef-92
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/messages.rs
+SPDXID: SPDXRef-93
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/core/search.rs
+SPDXID: SPDXRef-94
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/COPYING
+SPDXID: SPDXRef-95
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/Cargo.toml
+SPDXID: SPDXRef-96
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/LICENSE-MIT
+SPDXID: SPDXRef-97
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/globset/README.md
+SPDXID: SPDXRef-98
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/UNLICENSE
+SPDXID: SPDXRef-99
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/benches/bench.rs
+SPDXID: SPDXRef-100
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/src/fnv.rs
+SPDXID: SPDXRef-101
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/src/glob.rs
+SPDXID: SPDXRef-102
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/src/lib.rs
+SPDXID: SPDXRef-103
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/src/pathutil.rs
+SPDXID: SPDXRef-104
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/globset/src/serde_impl.rs
+SPDXID: SPDXRef-105
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/grep/COPYING
+SPDXID: SPDXRef-106
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/grep/Cargo.toml
+SPDXID: SPDXRef-107
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/grep/LICENSE-MIT
+SPDXID: SPDXRef-108
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/grep/README.md
+SPDXID: SPDXRef-109
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/grep/UNLICENSE
+SPDXID: SPDXRef-110
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/grep/examples/simplegrep.rs
+SPDXID: SPDXRef-111
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/grep/src/lib.rs
+SPDXID: SPDXRef-112
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/COPYING
+SPDXID: SPDXRef-113
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/Cargo.toml
+SPDXID: SPDXRef-114
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/LICENSE-MIT
+SPDXID: SPDXRef-115
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/ignore/README.md
+SPDXID: SPDXRef-116
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/UNLICENSE
+SPDXID: SPDXRef-117
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/examples/walk.rs
+SPDXID: SPDXRef-118
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/default_types.rs
+SPDXID: SPDXRef-119
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-2-Clause AND LGPL-2.0-or-later AND Apache-2.0 AND CC-BY-4.0
+LicenseInfoInFile: Apache-2.0
+LicenseInfoInFile: BSD-2-Clause
+LicenseInfoInFile: CC-BY-4.0
+LicenseInfoInFile: LGPL-2.0-or-later
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/dir.rs
+SPDXID: SPDXRef-120
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/gitignore.rs
+SPDXID: SPDXRef-121
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/lib.rs
+SPDXID: SPDXRef-122
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/overrides.rs
+SPDXID: SPDXRef-123
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/pathutil.rs
+SPDXID: SPDXRef-124
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/types.rs
+SPDXID: SPDXRef-125
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/src/walk.rs
+SPDXID: SPDXRef-126
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/tests/gitignore_matched_path_or_any_parents_tests.gitignore
+SPDXID: SPDXRef-127
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/tests/gitignore_matched_path_or_any_parents_tests.rs
+SPDXID: SPDXRef-128
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/tests/gitignore_skip_bom.gitignore
+SPDXID: SPDXRef-129
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/ignore/tests/gitignore_skip_bom.rs
+SPDXID: SPDXRef-130
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/Cargo.toml
+SPDXID: SPDXRef-131
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/LICENSE-MIT
+SPDXID: SPDXRef-132
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/matcher/README.md
+SPDXID: SPDXRef-133
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/UNLICENSE
+SPDXID: SPDXRef-134
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/src/interpolate.rs
+SPDXID: SPDXRef-135
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/src/lib.rs
+SPDXID: SPDXRef-136
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/tests/test_matcher.rs
+SPDXID: SPDXRef-137
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/tests/tests.rs
+SPDXID: SPDXRef-138
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/matcher/tests/util.rs
+SPDXID: SPDXRef-139
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/pcre2/Cargo.toml
+SPDXID: SPDXRef-140
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/pcre2/LICENSE-MIT
+SPDXID: SPDXRef-141
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/pcre2/README.md
+SPDXID: SPDXRef-142
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/pcre2/UNLICENSE
+SPDXID: SPDXRef-143
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/pcre2/src/error.rs
+SPDXID: SPDXRef-144
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/pcre2/src/lib.rs
+SPDXID: SPDXRef-145
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/pcre2/src/matcher.rs
+SPDXID: SPDXRef-146
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/Cargo.toml
+SPDXID: SPDXRef-147
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/LICENSE-MIT
+SPDXID: SPDXRef-148
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/printer/README.md
+SPDXID: SPDXRef-149
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/UNLICENSE
+SPDXID: SPDXRef-150
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/color.rs
+SPDXID: SPDXRef-151
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/counter.rs
+SPDXID: SPDXRef-152
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/hyperlink/aliases.rs
+SPDXID: SPDXRef-153
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/hyperlink/mod.rs
+SPDXID: SPDXRef-154
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/json.rs
+SPDXID: SPDXRef-155
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/jsont.rs
+SPDXID: SPDXRef-156
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/lib.rs
+SPDXID: SPDXRef-157
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/macros.rs
+SPDXID: SPDXRef-158
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/path.rs
+SPDXID: SPDXRef-159
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/standard.rs
+SPDXID: SPDXRef-160
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/stats.rs
+SPDXID: SPDXRef-161
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/summary.rs
+SPDXID: SPDXRef-162
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/printer/src/util.rs
+SPDXID: SPDXRef-163
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/Cargo.toml
+SPDXID: SPDXRef-164
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/LICENSE-MIT
+SPDXID: SPDXRef-165
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/regex/README.md
+SPDXID: SPDXRef-166
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/UNLICENSE
+SPDXID: SPDXRef-167
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/ast.rs
+SPDXID: SPDXRef-168
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/ban.rs
+SPDXID: SPDXRef-169
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/config.rs
+SPDXID: SPDXRef-170
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/error.rs
+SPDXID: SPDXRef-171
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/lib.rs
+SPDXID: SPDXRef-172
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/literal.rs
+SPDXID: SPDXRef-173
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/matcher.rs
+SPDXID: SPDXRef-174
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/non_matching.rs
+SPDXID: SPDXRef-175
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/regex/src/strip.rs
+SPDXID: SPDXRef-176
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/Cargo.toml
+SPDXID: SPDXRef-177
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/LICENSE-MIT
+SPDXID: SPDXRef-178
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT
+LicenseInfoInFile: MIT
+FileCopyrightText: Copyright (c) 2015 Andrew Gallant
+
+FileName: ./crates/searcher/README.md
+SPDXID: SPDXRef-179
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: MIT OR Unlicense
+LicenseInfoInFile: MIT
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/UNLICENSE
+SPDXID: SPDXRef-180
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: Unlicense
+LicenseInfoInFile: Unlicense
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/examples/search-stdin.rs
+SPDXID: SPDXRef-181
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/lib.rs
+SPDXID: SPDXRef-182
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/line_buffer.rs
+SPDXID: SPDXRef-183
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/lines.rs
+SPDXID: SPDXRef-184
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/macros.rs
+SPDXID: SPDXRef-185
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/searcher/core.rs
+SPDXID: SPDXRef-186
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/searcher/glue.rs
+SPDXID: SPDXRef-187
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/searcher/mmap.rs
+SPDXID: SPDXRef-188
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/searcher/mod.rs
+SPDXID: SPDXRef-189
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/sink.rs
+SPDXID: SPDXRef-190
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./crates/searcher/src/testutil.rs
+SPDXID: SPDXRef-191
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./fuzz/Cargo.lock
+SPDXID: SPDXRef-192
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./fuzz/Cargo.toml
+SPDXID: SPDXRef-193
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./fuzz/README.md
+SPDXID: SPDXRef-194
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./fuzz/fuzz_targets/fuzz_glob.rs
+SPDXID: SPDXRef-195
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./pkg/brew/ripgrep-bin.rb
+SPDXID: SPDXRef-196
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./pkg/windows/Manifest.xml
+SPDXID: SPDXRef-197
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./pkg/windows/README.md
+SPDXID: SPDXRef-198
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./rustfmt.toml
+SPDXID: SPDXRef-199
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./scripts/copy-examples
+SPDXID: SPDXRef-200
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/binary.rs
+SPDXID: SPDXRef-201
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock-nul.txt
+SPDXID: SPDXRef-202
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: LicenseRef-scancode-gutenberg-2020
+LicenseInfoInFile: LicenseRef-scancode-gutenberg-2020
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.Z
+SPDXID: SPDXRef-203
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.br
+SPDXID: SPDXRef-204
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.bz2
+SPDXID: SPDXRef-205
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.gz
+SPDXID: SPDXRef-206
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.lz4
+SPDXID: SPDXRef-207
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.lzma
+SPDXID: SPDXRef-208
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.xz
+SPDXID: SPDXRef-209
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/data/sherlock.zst
+SPDXID: SPDXRef-210
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/feature.rs
+SPDXID: SPDXRef-211
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/hay.rs
+SPDXID: SPDXRef-212
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/json.rs
+SPDXID: SPDXRef-213
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/macros.rs
+SPDXID: SPDXRef-214
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/misc.rs
+SPDXID: SPDXRef-215
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/multiline.rs
+SPDXID: SPDXRef-216
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/regression.rs
+SPDXID: SPDXRef-217
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/tests.rs
+SPDXID: SPDXRef-218
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/util.rs
+SPDXID: SPDXRef-219
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+## Relationships
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-192
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-193
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-194
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-195
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-2
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-95
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-96
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-97
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-98
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-99
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-100
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-101
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-102
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-103
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-104
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-105
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-3
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-56
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-57
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-58
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-59
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-60
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-61
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-62
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-63
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-64
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-65
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-66
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-67
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-4
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-131
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-132
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-133
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-134
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-135
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-136
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-137
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-138
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-139
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-5
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-140
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-141
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-142
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-143
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-144
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-145
+Relationship: SPDXRef-Package-5 CONTAINS SPDXRef-146
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-6
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-147
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-148
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-149
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-150
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-151
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-152
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-153
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-154
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-155
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-156
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-157
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-158
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-159
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-160
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-161
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-162
+Relationship: SPDXRef-Package-6 CONTAINS SPDXRef-163
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-7
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-164
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-165
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-166
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-167
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-168
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-169
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-170
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-171
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-172
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-173
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-174
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-175
+Relationship: SPDXRef-Package-7 CONTAINS SPDXRef-176
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-8
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-177
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-178
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-179
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-180
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-181
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-182
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-183
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-184
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-185
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-186
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-187
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-188
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-189
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-190
+Relationship: SPDXRef-Package-8 CONTAINS SPDXRef-191
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-9
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-106
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-107
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-108
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-109
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-110
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-111
+Relationship: SPDXRef-Package-9 CONTAINS SPDXRef-112
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-10
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-113
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-114
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-115
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-116
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-117
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-118
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-119
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-120
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-121
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-122
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-123
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-124
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-125
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-126
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-127
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-128
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-129
+Relationship: SPDXRef-Package-10 CONTAINS SPDXRef-130
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-11
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-1
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-2
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-3
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-4
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-5
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-6
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-7
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-8
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-9
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-10
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-11
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-12
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-13
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-14
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-15
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-16
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-17
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-18
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-19
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-20
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-21
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-22
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-23
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-24
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-25
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-26
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-27
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-28
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-29
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-30
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-31
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-32
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-33
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-34
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-35
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-36
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-37
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-38
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-39
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-40
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-41
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-42
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-43
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-44
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-45
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-46
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-47
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-48
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-49
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-50
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-51
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-52
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-53
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-54
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-55
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-56
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-57
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-58
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-59
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-60
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-61
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-62
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-63
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-64
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-65
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-66
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-67
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-68
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-69
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-70
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-71
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-72
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-73
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-74
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-75
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-76
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-77
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-78
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-79
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-80
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-81
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-82
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-83
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-84
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-85
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-86
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-87
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-88
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-89
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-90
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-91
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-92
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-93
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-94
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-95
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-96
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-97
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-98
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-99
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-100
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-101
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-102
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-103
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-104
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-105
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-106
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-107
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-108
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-109
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-110
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-111
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-112
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-113
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-114
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-115
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-116
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-117
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-118
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-119
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-120
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-121
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-122
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-123
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-124
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-125
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-126
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-127
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-128
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-129
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-130
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-131
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-132
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-133
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-134
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-135
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-136
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-137
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-138
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-139
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-140
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-141
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-142
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-143
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-144
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-145
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-146
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-147
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-148
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-149
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-150
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-151
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-152
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-153
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-154
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-155
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-156
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-157
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-158
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-159
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-160
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-161
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-162
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-163
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-164
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-165
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-166
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-167
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-168
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-169
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-170
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-171
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-172
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-173
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-174
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-175
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-176
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-177
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-178
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-179
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-180
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-181
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-182
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-183
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-184
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-185
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-186
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-187
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-188
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-189
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-190
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-191
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-192
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-193
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-194
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-195
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-196
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-197
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-198
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-199
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-200
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-201
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-202
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-203
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-204
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-205
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-206
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-207
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-208
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-209
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-210
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-211
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-212
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-213
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-214
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-215
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-216
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-217
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-218
+Relationship: SPDXRef-Package-11 CONTAINS SPDXRef-219
+## License Information
+LicenseID: LicenseRef-scancode-unknown-license-reference
+ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/lead-in_unknown_30.RULE
+</text>
+LicenseName: LicenseRef-scancode-unknown-license-reference
+LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/lead-in_unknown_30.RULE
+</text>
+LicenseID: LicenseRef-scancode-other-copyleft
+ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/other-copyleft_16.RULE
+</text>
+LicenseName: LicenseRef-scancode-other-copyleft
+LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/other-copyleft_16.RULE
+</text>
+LicenseID: LicenseRef-scancode-generic-exception
+ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/license-intro_8.RULE
+</text>
+LicenseName: LicenseRef-scancode-generic-exception
+LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/license-intro_8.RULE
+</text>
+LicenseID: LicenseRef-scancode-gutenberg-2020
+ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/gutenberg-2020_3.RULE
+</text>
+LicenseName: LicenseRef-scancode-gutenberg-2020
+LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/gutenberg-2020_3.RULE
+</text>

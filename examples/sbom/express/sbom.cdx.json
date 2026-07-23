@@ -1,0 +1,140 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "serialNumber": "urn:uuid:6ff1452f-c708-4e0f-a02a-3b67847a2bc6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-07-23T17:24:16Z",
+    "tools": [
+      {
+        "name": "Provenant",
+        "version": "1.0.0"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "express",
+      "version": "5.2.1",
+      "description": "Fast, unopinionated, minimalist web framework",
+      "author": "TJ Holowaychuk",
+      "purl": "pkg:npm/express@5.2.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://registry.npmjs.org/express/5.2.1"
+        },
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/express/-/express-5.2.1.tgz"
+        },
+        {
+          "type": "website",
+          "url": "https://expressjs.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://www.npmjs.com/package/express"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/expressjs/express"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/express@5.2.1",
+      "name": "express",
+      "version": "5.2.1",
+      "description": "Fast, unopinionated, minimalist web framework",
+      "author": "TJ Holowaychuk",
+      "scope": "required",
+      "purl": "pkg:npm/express@5.2.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://registry.npmjs.org/express/5.2.1"
+        },
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/express/-/express-5.2.1.tgz"
+        },
+        {
+          "type": "website",
+          "url": "https://expressjs.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://www.npmjs.com/package/express"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/expressjs/express"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/express@5.2.1",
+      "dependsOn": [
+        "pkg:npm/accepts",
+        "pkg:npm/after",
+        "pkg:npm/body-parser",
+        "pkg:npm/connect-redis",
+        "pkg:npm/content-disposition",
+        "pkg:npm/content-type",
+        "pkg:npm/cookie",
+        "pkg:npm/cookie-parser",
+        "pkg:npm/cookie-session",
+        "pkg:npm/cookie-signature",
+        "pkg:npm/debug",
+        "pkg:npm/depd",
+        "pkg:npm/ejs",
+        "pkg:npm/encodeurl",
+        "pkg:npm/escape-html",
+        "pkg:npm/eslint",
+        "pkg:npm/etag",
+        "pkg:npm/express-session",
+        "pkg:npm/finalhandler",
+        "pkg:npm/fresh",
+        "pkg:npm/hbs",
+        "pkg:npm/http-errors",
+        "pkg:npm/marked",
+        "pkg:npm/merge-descriptors",
+        "pkg:npm/method-override",
+        "pkg:npm/mime-types",
+        "pkg:npm/mocha",
+        "pkg:npm/morgan",
+        "pkg:npm/nyc",
+        "pkg:npm/on-finished",
+        "pkg:npm/once",
+        "pkg:npm/parseurl",
+        "pkg:npm/pbkdf2-password",
+        "pkg:npm/proxy-addr",
+        "pkg:npm/qs",
+        "pkg:npm/range-parser",
+        "pkg:npm/router",
+        "pkg:npm/send",
+        "pkg:npm/serve-static",
+        "pkg:npm/statuses",
+        "pkg:npm/supertest",
+        "pkg:npm/type-is",
+        "pkg:npm/vary",
+        "pkg:npm/vhost"
+      ]
+    }
+  ]
+}

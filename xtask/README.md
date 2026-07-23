@@ -28,6 +28,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 | `generate-supported-formats`      | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
 | `generate-benchmark-chart`        | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
 | `generate-index-artifact`         | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
+| `generate-sbom-examples`          | Regenerate the checked-in SBOM examples under `examples/sbom/` from pinned upstream targets.                                                |
 | `classify-rule-overmatch`         | Classify upstream license rules by overmatch-risk class and rank un-covered overlay candidates.                                             |
 | `scancode-triage`                 | Weekly triage of upstream ScanCode issues for Provenant relevance, via GitHub Models with real reproduction scans.                          |
 
@@ -576,6 +577,36 @@ Examples:
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact -- --check
+```
+
+## `generate-sbom-examples`
+
+`generate-sbom-examples` regenerates the checked-in SBOM examples under
+[`examples/sbom/`](../examples/sbom/README.md). For each verified target it
+shallow-fetches the repository at its pinned commit through the shared repo
+cache, runs the current-build `provenant` release binary with
+`scan --license --package --copyright`, and writes an SPDX tag-value document
+plus a CycloneDX JSON document (and a short provenance README) per target. The
+embedded Provenant version is pinned to the workspace package version so the
+committed output is deterministic regardless of `git describe` state.
+
+`--check` regenerates into memory and compares against the committed files after
+normalizing every per-run volatile field — the SPDX `Created` timestamp, the
+CycloneDX `serialNumber` and `metadata.timestamp`, the embedded tool version
+(in SPDX, CycloneDX, and the READMEs), and any random package-UID suffix. Tool
+versions are normalized so a routine release version bump does not fail the
+check before the examples are regenerated. It requires network access to the
+pinned upstream repositories but does **not** require Docker or ScanCode (those
+are only used to verify a target before it is added).
+
+The target list is verified against ScanCode with `compare-outputs` before a
+target is added; see [`examples/sbom/README.md`](../examples/sbom/README.md).
+
+Examples:
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
+cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples -- --check
 ```
 
 ## `classify-rule-overmatch`

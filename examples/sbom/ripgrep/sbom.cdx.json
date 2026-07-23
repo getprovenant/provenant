@@ -1,0 +1,650 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "serialNumber": "urn:uuid:ebde45ba-560d-4afa-bd79-d9dd1fbe0192",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-07-23T17:24:14Z",
+    "tools": [
+      {
+        "name": "Provenant",
+        "version": "1.0.0"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "ripgrep",
+      "version": "15.2.0",
+      "description": "ripgrep is a line-oriented search tool that recursively searches the current\ndirectory for a regex pattern while respecting gitignore rules. ripgrep has\nfirst class support on Windows, macOS and Linux.",
+      "author": "Andrew Gallant",
+      "purl": "pkg:cargo/ripgrep@15.2.0",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/ripgrep"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/ripgrep/15.2.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/ripgrep"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/fuzz@0.0.1",
+      "name": "fuzz",
+      "version": "0.0.1",
+      "scope": "required",
+      "purl": "pkg:cargo/fuzz@0.0.1",
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/fuzz"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/fuzz/0.0.1/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/fuzz"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/globset@0.4.19",
+      "name": "globset",
+      "version": "0.4.19",
+      "description": "Cross platform single glob and glob set matching. Glob set matching is the\nprocess of matching one or more glob patterns against a single candidate path\nsimultaneously, and returning all of the globs that matched.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/globset@0.4.19",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/globset"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/globset/0.4.19/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/globset"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-cli@0.1.12",
+      "name": "grep-cli",
+      "version": "0.1.12",
+      "description": "Utilities for search oriented command line applications.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-cli@0.1.12",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep-cli"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep-cli/0.1.12/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/cli"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep-cli"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/cli"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-matcher@0.1.9",
+      "name": "grep-matcher",
+      "version": "0.1.9",
+      "description": "A trait for regular expressions, with a focus on line oriented search.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-matcher@0.1.9",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep-matcher"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep-matcher/0.1.9/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep-matcher"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-pcre2@0.1.10",
+      "name": "grep-pcre2",
+      "version": "0.1.10",
+      "description": "Use PCRE2 with the 'grep' crate.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-pcre2@0.1.10",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep-pcre2"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep-pcre2/0.1.10/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/pcre2"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep-pcre2"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/pcre2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-printer@0.3.1",
+      "name": "grep-printer",
+      "version": "0.3.1",
+      "description": "An implementation of the grep crate's Sink trait that provides standard\nprinting of search results, similar to grep itself.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-printer@0.3.1",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep-printer"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep-printer/0.3.1/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/printer"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep-printer"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/printer"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-regex@0.1.14",
+      "name": "grep-regex",
+      "version": "0.1.14",
+      "description": "Use Rust's regex library with the 'grep' crate.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-regex@0.1.14",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep-regex"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep-regex/0.1.14/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/regex"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep-regex"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/regex"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-searcher@0.1.17",
+      "name": "grep-searcher",
+      "version": "0.1.17",
+      "description": "Fast line oriented regex searching as a library.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-searcher@0.1.17",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep-searcher"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep-searcher/0.1.17/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/searcher"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep-searcher"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/searcher"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep@0.4.1",
+      "name": "grep",
+      "version": "0.4.1",
+      "description": "Fast line oriented regex searching as a library.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/grep@0.4.1",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/grep"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/grep/0.4.1/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/grep"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/grep"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/grep"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/ignore@0.4.29",
+      "name": "ignore",
+      "version": "0.4.29",
+      "description": "A fast library for efficiently matching ignore files such as `.gitignore`\nagainst file paths.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/ignore@0.4.29",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/ignore"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/ignore/0.4.29/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/ignore"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/ripgrep@15.2.0",
+      "name": "ripgrep",
+      "version": "15.2.0",
+      "description": "ripgrep is a line-oriented search tool that recursively searches the current\ndirectory for a regex pattern while respecting gitignore rules. ripgrep has\nfirst class support on Windows, macOS and Linux.",
+      "author": "Andrew Gallant",
+      "scope": "required",
+      "purl": "pkg:cargo/ripgrep@15.2.0",
+      "licenses": [
+        {
+          "expression": "MIT OR Unlicense"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/ripgrep"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/ripgrep/15.2.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/BurntSushi/ripgrep"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/ripgrep"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:cargo/fuzz@0.0.1",
+      "dependsOn": [
+        "pkg:cargo/aho-corasick@1.1.2",
+        "pkg:cargo/arbitrary@1.3.2",
+        "pkg:cargo/bstr@1.9.0",
+        "pkg:cargo/cc@1.0.83",
+        "pkg:cargo/derive_arbitrary@1.3.2",
+        "pkg:cargo/globset",
+        "pkg:cargo/globset@0.4.16",
+        "pkg:cargo/jobserver@0.1.27",
+        "pkg:cargo/libc@0.2.152",
+        "pkg:cargo/libfuzzer-sys",
+        "pkg:cargo/libfuzzer-sys@0.4.7",
+        "pkg:cargo/log@0.4.20",
+        "pkg:cargo/memchr@2.7.1",
+        "pkg:cargo/once_cell@1.19.0",
+        "pkg:cargo/proc-macro2@1.0.78",
+        "pkg:cargo/quote@1.0.35",
+        "pkg:cargo/regex-automata@0.4.4",
+        "pkg:cargo/regex-syntax@0.8.2",
+        "pkg:cargo/serde@1.0.195",
+        "pkg:cargo/serde_derive@1.0.195",
+        "pkg:cargo/syn@2.0.48",
+        "pkg:cargo/unicode-ident@1.0.12"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/globset@0.4.19",
+      "dependsOn": [
+        "pkg:cargo/aho-corasick",
+        "pkg:cargo/arbitrary",
+        "pkg:cargo/bstr",
+        "pkg:cargo/glob",
+        "pkg:cargo/log",
+        "pkg:cargo/regex-automata",
+        "pkg:cargo/regex-syntax",
+        "pkg:cargo/serde",
+        "pkg:cargo/serde_json"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep-cli@0.1.12",
+      "dependsOn": [
+        "pkg:cargo/bstr",
+        "pkg:cargo/globset",
+        "pkg:cargo/log",
+        "pkg:cargo/termcolor"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep-matcher@0.1.9",
+      "dependsOn": [
+        "pkg:cargo/memchr",
+        "pkg:cargo/regex"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep-pcre2@0.1.10",
+      "dependsOn": [
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/log",
+        "pkg:cargo/pcre2"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep-printer@0.3.1",
+      "dependsOn": [
+        "pkg:cargo/bstr",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/grep-regex",
+        "pkg:cargo/grep-searcher",
+        "pkg:cargo/log",
+        "pkg:cargo/serde",
+        "pkg:cargo/serde_json",
+        "pkg:cargo/termcolor"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep-regex@0.1.14",
+      "dependsOn": [
+        "pkg:cargo/bstr",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/log",
+        "pkg:cargo/regex-automata",
+        "pkg:cargo/regex-syntax"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep-searcher@0.1.17",
+      "dependsOn": [
+        "pkg:cargo/bstr",
+        "pkg:cargo/encoding_rs",
+        "pkg:cargo/encoding_rs_io",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/grep-regex",
+        "pkg:cargo/log",
+        "pkg:cargo/memchr",
+        "pkg:cargo/memmap",
+        "pkg:cargo/regex"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/grep@0.4.1",
+      "dependsOn": [
+        "pkg:cargo/grep-cli",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/grep-pcre2",
+        "pkg:cargo/grep-printer",
+        "pkg:cargo/grep-regex",
+        "pkg:cargo/grep-searcher",
+        "pkg:cargo/termcolor",
+        "pkg:cargo/walkdir"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/ignore@0.4.29",
+      "dependsOn": [
+        "pkg:cargo/bstr",
+        "pkg:cargo/crossbeam-channel",
+        "pkg:cargo/crossbeam-deque",
+        "pkg:cargo/globset",
+        "pkg:cargo/log",
+        "pkg:cargo/memchr",
+        "pkg:cargo/regex-automata",
+        "pkg:cargo/same-file",
+        "pkg:cargo/walkdir"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/ripgrep@15.2.0",
+      "dependsOn": [
+        "pkg:cargo/aho-corasick@1.1.4",
+        "pkg:cargo/anyhow",
+        "pkg:cargo/anyhow@1.0.103",
+        "pkg:cargo/arbitrary@1.4.2",
+        "pkg:cargo/bstr",
+        "pkg:cargo/bstr@1.13.0",
+        "pkg:cargo/cc@1.2.67",
+        "pkg:cargo/cfg-if@1.0.4",
+        "pkg:cargo/crossbeam-channel@0.5.16",
+        "pkg:cargo/crossbeam-deque@0.8.7",
+        "pkg:cargo/crossbeam-epoch@0.9.20",
+        "pkg:cargo/crossbeam-utils@0.8.22",
+        "pkg:cargo/derive_arbitrary@1.4.2",
+        "pkg:cargo/encoding_rs@0.8.35",
+        "pkg:cargo/encoding_rs_io@0.1.7",
+        "pkg:cargo/find-msvc-tools@0.1.9",
+        "pkg:cargo/getrandom@0.4.3",
+        "pkg:cargo/glob@0.3.3",
+        "pkg:cargo/globset@0.4.19",
+        "pkg:cargo/grep",
+        "pkg:cargo/grep-cli@0.1.12",
+        "pkg:cargo/grep-matcher@0.1.9",
+        "pkg:cargo/grep-pcre2@0.1.10",
+        "pkg:cargo/grep-printer@0.3.1",
+        "pkg:cargo/grep-regex@0.1.14",
+        "pkg:cargo/grep-searcher@0.1.17",
+        "pkg:cargo/grep@0.4.1",
+        "pkg:cargo/ignore",
+        "pkg:cargo/ignore@0.4.29",
+        "pkg:cargo/itoa@1.0.18",
+        "pkg:cargo/jobserver@0.1.35",
+        "pkg:cargo/lexopt",
+        "pkg:cargo/lexopt@0.3.2",
+        "pkg:cargo/libc@0.2.186",
+        "pkg:cargo/log",
+        "pkg:cargo/log@0.4.33",
+        "pkg:cargo/memchr@2.8.3",
+        "pkg:cargo/memmap2@0.9.11",
+        "pkg:cargo/pcre2-sys@0.2.10",
+        "pkg:cargo/pcre2@0.2.11",
+        "pkg:cargo/pkg-config@0.3.33",
+        "pkg:cargo/proc-macro2@1.0.106",
+        "pkg:cargo/quote@1.0.46",
+        "pkg:cargo/r-efi@6.0.0",
+        "pkg:cargo/regex-automata@0.4.15",
+        "pkg:cargo/regex-syntax@0.8.11",
+        "pkg:cargo/regex@1.13.0",
+        "pkg:cargo/same-file@1.0.6",
+        "pkg:cargo/serde",
+        "pkg:cargo/serde@1.0.228",
+        "pkg:cargo/serde_core@1.0.228",
+        "pkg:cargo/serde_derive",
+        "pkg:cargo/serde_derive@1.0.228",
+        "pkg:cargo/serde_json",
+        "pkg:cargo/serde_json@1.0.150",
+        "pkg:cargo/shlex@2.0.1",
+        "pkg:cargo/syn@2.0.119",
+        "pkg:cargo/termcolor",
+        "pkg:cargo/termcolor@1.4.1",
+        "pkg:cargo/textwrap",
+        "pkg:cargo/textwrap@0.16.2",
+        "pkg:cargo/tikv-jemalloc-sys@0.7.1%2B5.3.1-0-g81034ce1f1373e37dc865038e1bc8eeecf559ce8",
+        "pkg:cargo/tikv-jemallocator@0.7.0",
+        "pkg:cargo/unicode-ident@1.0.24",
+        "pkg:cargo/walkdir",
+        "pkg:cargo/walkdir@2.5.0",
+        "pkg:cargo/winapi-util@0.1.11",
+        "pkg:cargo/windows-link@0.2.1",
+        "pkg:cargo/windows-sys@0.61.2",
+        "pkg:cargo/zmij@1.0.23"
+      ]
+    }
+  ]
+}
