@@ -32,7 +32,7 @@ The forces that made the fix non-obvious:
 - **Licenses.** A resolved dependency's license is only sometimes knowable
   statically. Provenant must never fetch it (the static / bounded / no-network
   guarantee) and never guess it (honest-unknowns-over-guessed-defaults).
-- **Dedup.** A vendored dependency can be *both* a detected package and a
+- **Dedup.** A vendored dependency can be _both_ a detected package and a
   lockfile entry; it must collapse to one component, not double-count.
 - **Identity.** Promoted components need stable `bom-ref` / SPDX ids that the
   dependency graph can resolve, including unversioned declared deps.
@@ -51,8 +51,10 @@ Promote **every resolved dependency to a component (CycloneDX) / package
   `output.dependencies` keep their existing shape and field semantics. This
   honors ADR 0008 — promotion is an output-shaping concern, computed at render
   time, never a new domain field.
-- The shared promotion logic lives in `src/output/sbom.rs` so CycloneDX and
-  SPDX build the identical inventory from the identical rules.
+- The shared inventory and edge resolution live in `src/output/sbom.rs` so
+  CycloneDX and SPDX build the identical inventory and graph endpoints from
+  the identical rules. Format-specific presentation (CycloneDX `scope`, SPDX
+  `FilesAnalyzed` / `DESCRIBES`) is derived at the renderer boundary.
 
 ### Dedup
 
@@ -87,7 +89,7 @@ determine it statically**:
   fields are copied faithfully. This is a license declared in a present
   manifest or lockfile — truthful, no network.
 - A vendored dependency whose license was **detected in source that is in the
-  repo** is a *detected package*; it flows through the existing package path
+  repo** is a _detected package_; it flows through the existing package path
   (and dedup keeps it as the single component for that purl).
 - Otherwise the license is left **unset** (CycloneDX: no `licenses`; SPDX:
   `NOASSERTION`). Provenant never fetches and never guesses.
@@ -108,8 +110,9 @@ determine it statically**:
 
 - The `dependsOn` / `DEPENDS_ON` graph resolves to real components — no dangling
   refs. The BOM is a complete inventory plus a valid graph.
-- CycloneDX and SPDX share one promotion/dedup implementation, so the two
-  formats can never drift on which dependencies they list.
+- CycloneDX and SPDX share one inventory + edge implementation, so the two
+  formats can never drift on which dependencies they list or which graph
+  endpoints resolve.
 - Honest licenses and metadata: consumers can trust that a populated license was
   statically determined, and that an absent one is genuinely unknown.
 

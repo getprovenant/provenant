@@ -7,26 +7,144 @@
 //! from top-level detected packages (`output.packages`), leaving the resolved
 //! dependencies (`output.dependencies`) as graph edges that referenced nothing
 //! — a dangling, incomplete BOM. This module promotes every resolved
-//! dependency to a component so those edges resolve to real inventory entries.
+//! dependency into one shared inventory so those edges resolve to real
+//! inventory entries in both formats.
 //!
 //! See ADR 0012 for the dedup, identity, license-honesty, and metadata-honesty
 //! rules this module implements.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::str::FromStr;
 
 use packageurl::PackageUrl;
 
 use crate::output_schema::{
-    OutputPackage, OutputResolvedPackage, OutputTopLevelDependency as TopLevelDependency,
+    Output, OutputPackage, OutputResolvedPackage, OutputTopLevelDependency as TopLevelDependency,
 };
 
-/// A resolved dependency promoted to an SBOM component, paired with the honest
-/// CycloneDX `scope` derived from proven dependency intent (`None` when intent
-/// was not proven; SPDX ignores this).
-pub(crate) struct PromotedComponent {
-    pub package: OutputPackage,
-    pub scope: Option<&'static str>,
+/// One member of the shared SBOM inventory.
+///
+/// Detected packages borrow from the scan output; promoted dependencies own a
+/// synthesized [`OutputPackage`]. Format-specific presentation (CycloneDX
+/// `scope`, SPDX `FilesAnalyzed` / `DESCRIBES`) is derived from the entry kind
+/// and proven `is_optional` — never stored as format vocabulary here.
+pub(crate) enum InventoryEntry<'a> {
+    Detected {
+        package: &'a OutputPackage,
+    },
+    Promoted {
+        // Boxed so the borrowed Detected variant does not inflate every entry
+        // to the size of a full OutputPackage (clippy::large_enum_variant).
+        package: Box<OutputPackage>,
+        /// Merged proven optionality across duplicate purls (`None` = unknown).
+        is_optional: Option<bool>,
+    },
+}
+
+impl<'a> InventoryEntry<'a> {
+    pub(crate) fn package(&self) -> &OutputPackage {
+        match self {
+            Self::Detected { package } => package,
+            Self::Promoted { package, .. } => package.as_ref(),
+        }
+    }
+
+    pub(crate) fn is_promoted(&self) -> bool {
+        matches!(self, Self::Promoted { .. })
+    }
+
+    /// Proven optionality for a promoted dependency; detected packages are
+    /// treated as required for CycloneDX scope mapping.
+    pub(crate) fn is_optional(&self) -> Option<bool> {
+        match self {
+            Self::Detected { .. } => Some(false),
+            Self::Promoted { is_optional, .. } => *is_optional,
+        }
+    }
+}
+
+/// The identical component/package inventory used by CycloneDX and SPDX.
+pub(crate) struct SbomInventory<'a> {
+    pub entries: Vec<InventoryEntry<'a>>,
+}
+
+impl<'a> SbomInventory<'a> {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub(crate) fn packages(&self) -> impl Iterator<Item = &OutputPackage> {
+        self.entries.iter().map(InventoryEntry::package)
+    }
+}
+
+/// Build the shared inventory: detected packages, then every resolved
+/// dependency promoted and deduped by purl (ADR 0012).
+pub(crate) fn build_inventory(output: &Output) -> SbomInventory<'_> {
+    let mut entries: Vec<InventoryEntry<'_>> = output
+        .packages
+        .iter()
+        .map(|package| InventoryEntry::Detected { package })
+        .collect();
+
+    for (package, is_optional) in promote_dependencies(&output.packages, &output.dependencies) {
+        entries.push(InventoryEntry::Promoted {
+            package: Box::new(package),
+            is_optional,
+        });
+    }
+
+    SbomInventory { entries }
+}
+
+/// Resolve owner→child dependency edges among inventory members.
+///
+/// `entry_ids` is parallel to `inventory.entries` (CycloneDX `bom-ref` or SPDX
+/// package id). Children resolve only to inventory members that share the
+/// dependency purl; unresolved endpoints and self-edges are dropped so every
+/// emitted edge points at a real inventory entry.
+pub(crate) fn dependency_edges(
+    inventory: &SbomInventory<'_>,
+    dependencies: &[TopLevelDependency],
+    entry_ids: &[String],
+) -> BTreeMap<String, BTreeSet<String>> {
+    debug_assert_eq!(inventory.entries.len(), entry_ids.len());
+
+    let mut uid_to_id: HashMap<&str, &str> = HashMap::new();
+    let mut purl_to_ids: HashMap<&str, Vec<&str>> = HashMap::new();
+    for (entry, id) in inventory.entries.iter().zip(entry_ids.iter()) {
+        let package = entry.package();
+        uid_to_id.insert(package.package_uid.as_str(), id.as_str());
+        if let Some(purl) = package.purl.as_deref() {
+            purl_to_ids.entry(purl).or_default().push(id.as_str());
+        }
+    }
+
+    let mut edges: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for dep in dependencies {
+        let Some(owner_uid) = dep.for_package_uid.as_deref() else {
+            continue;
+        };
+        let Some(owner_id) = uid_to_id.get(owner_uid).copied() else {
+            continue;
+        };
+        let Some(purl) = dependency_edge_purl(dep) else {
+            continue;
+        };
+        let Some(child_ids) = purl_to_ids.get(purl.as_str()) else {
+            continue;
+        };
+        for &child_id in child_ids {
+            if owner_id != child_id {
+                edges
+                    .entry(owner_id.to_string())
+                    .or_default()
+                    .insert(child_id.to_string());
+            }
+        }
+    }
+
+    edges
 }
 
 /// The purl a dependency edge points at: the dependency's own purl, falling
@@ -38,64 +156,57 @@ pub(crate) fn dependency_edge_purl(dep: &TopLevelDependency) -> Option<String> {
         .filter(|purl| !purl.is_empty())
 }
 
-/// Promote resolved dependencies to components, deduped by purl.
+/// Promote resolved dependencies, deduped by purl.
 ///
 /// A dependency whose purl a detected package already owns is skipped (the
 /// package is the richer, file-backed representation). Dependencies that share
-/// a purl collapse to one component whose `scope` merges their proven intent.
-/// Order is stable: first appearance of each new purl wins its position.
-pub(crate) fn promote_dependencies(
+/// a purl collapse to one component whose proven `is_optional` is merged and
+/// whose empty metadata fields are filled from later richer
+/// `resolved_package` values. Order is stable: first appearance of each new
+/// purl wins its position.
+fn promote_dependencies(
     packages: &[OutputPackage],
     dependencies: &[TopLevelDependency],
-) -> Vec<PromotedComponent> {
-    let existing_purls: HashMap<&str, ()> = packages
+) -> Vec<(OutputPackage, Option<bool>)> {
+    let existing_purls: HashSet<&str> = packages
         .iter()
-        .filter_map(|pkg| pkg.purl.as_deref().map(|purl| (purl, ())))
+        .filter_map(|pkg| pkg.purl.as_deref())
         .collect();
 
     let mut index_by_purl: HashMap<String, usize> = HashMap::new();
-    let mut promoted: Vec<PromotedComponent> = Vec::new();
+    let mut promoted: Vec<(OutputPackage, Option<bool>)> = Vec::new();
 
     for dep in dependencies {
         let Some(purl) = dependency_edge_purl(dep) else {
             continue;
         };
-        if existing_purls.contains_key(purl.as_str()) {
+        if existing_purls.contains(purl.as_str()) {
             continue;
         }
 
         if let Some(&idx) = index_by_purl.get(&purl) {
-            promoted[idx].scope = merge_scope(promoted[idx].scope, dep.is_optional);
+            let (package, is_optional) = &mut promoted[idx];
+            *is_optional = merge_optional(*is_optional, dep.is_optional);
+            if let Some(resolved) = dep.resolved_package.as_deref() {
+                fill_missing_from_resolved(package, resolved);
+            }
             continue;
         }
 
         index_by_purl.insert(purl.clone(), promoted.len());
-        promoted.push(PromotedComponent {
-            package: synthesize_package(dep, &purl),
-            scope: scope_from_optional(dep.is_optional),
-        });
+        promoted.push((synthesize_package(dep, &purl), dep.is_optional));
     }
 
     promoted
 }
 
-/// CycloneDX component `scope` from a proven `is_optional`. Unknown → omitted.
-fn scope_from_optional(is_optional: Option<bool>) -> Option<&'static str> {
-    match is_optional {
-        Some(true) => Some("optional"),
-        Some(false) => Some("required"),
-        None => None,
-    }
-}
-
-/// Merge a new occurrence's proven intent into an existing scope. A proven
-/// `required` is the strongest claim and always wins; `optional` fills an
-/// otherwise-unknown scope; unknown never overrides a known scope.
-fn merge_scope(current: Option<&'static str>, is_optional: Option<bool>) -> Option<&'static str> {
-    match (current, scope_from_optional(is_optional)) {
-        (Some("required"), _) | (_, Some("required")) => Some("required"),
-        (Some(existing), _) => Some(existing),
-        (None, other) => other,
+/// Merge proven optionality. A proven `required` (`Some(false)`) always wins;
+/// `optional` fills an otherwise-unknown value; unknown never overrides known.
+fn merge_optional(current: Option<bool>, next: Option<bool>) -> Option<bool> {
+    match (current, next) {
+        (Some(false), _) | (_, Some(false)) => Some(false),
+        (Some(true), _) | (_, Some(true)) => Some(true),
+        (None, None) => None,
     }
 }
 
@@ -182,19 +293,7 @@ fn purl_identity_package(purl: &str, dependency_uid: &str) -> OutputPackage {
 /// Identity fields already set from the purl are only overwritten when the
 /// resolved package carries a non-empty value.
 fn enrich_from_resolved(package: &mut OutputPackage, resolved: &OutputResolvedPackage) {
-    if package.package_type.is_none() {
-        package.package_type = Some(resolved.package_type.clone());
-    }
-    if package.namespace.is_none() && !resolved.namespace.is_empty() {
-        package.namespace = Some(resolved.namespace.clone());
-    }
-    if package.name.is_none() && !resolved.name.is_empty() {
-        package.name = Some(resolved.name.clone());
-    }
-    if package.version.is_none() && !resolved.version.is_empty() {
-        package.version = Some(resolved.version.clone());
-    }
-
+    fill_identity_from_resolved(package, resolved);
     package.qualifiers = resolved.qualifiers.clone();
     package.subpath = resolved.subpath.clone();
     package.primary_language = resolved.primary_language.clone();
@@ -233,6 +332,130 @@ fn enrich_from_resolved(package: &mut OutputPackage, resolved: &OutputResolvedPa
     package.api_data_url = resolved.api_data_url.clone();
     if let Some(datasource_id) = resolved.datasource_id.clone() {
         package.datasource_ids = vec![datasource_id];
+    }
+}
+
+/// On purl collision, only fill fields that are still empty so a later richer
+/// `resolved_package` upgrades a bare first occurrence without wiping earlier
+/// evidence.
+fn fill_missing_from_resolved(package: &mut OutputPackage, resolved: &OutputResolvedPackage) {
+    fill_identity_from_resolved(package, resolved);
+    if package.qualifiers.is_none() {
+        package.qualifiers = resolved.qualifiers.clone();
+    }
+    if package.subpath.is_none() {
+        package.subpath = resolved.subpath.clone();
+    }
+    if package.primary_language.is_none() {
+        package.primary_language = resolved.primary_language.clone();
+    }
+    if package.description.is_none() {
+        package.description = resolved.description.clone();
+    }
+    if package.release_date.is_none() {
+        package.release_date = resolved.release_date.clone();
+    }
+    if package.parties.is_empty() {
+        package.parties = resolved.parties.clone();
+    }
+    if package.keywords.is_empty() {
+        package.keywords = resolved.keywords.clone();
+    }
+    if package.homepage_url.is_none() {
+        package.homepage_url = resolved.homepage_url.clone();
+    }
+    if package.download_url.is_none() {
+        package.download_url = resolved.download_url.clone();
+    }
+    if package.size.is_none() {
+        package.size = resolved.size;
+    }
+    if package.sha1.is_none() {
+        package.sha1 = resolved.sha1.clone();
+    }
+    if package.md5.is_none() {
+        package.md5 = resolved.md5.clone();
+    }
+    if package.sha256.is_none() {
+        package.sha256 = resolved.sha256.clone();
+    }
+    if package.sha512.is_none() {
+        package.sha512 = resolved.sha512.clone();
+    }
+    if package.bug_tracking_url.is_none() {
+        package.bug_tracking_url = resolved.bug_tracking_url.clone();
+    }
+    if package.code_view_url.is_none() {
+        package.code_view_url = resolved.code_view_url.clone();
+    }
+    if package.vcs_url.is_none() {
+        package.vcs_url = resolved.vcs_url.clone();
+    }
+    if package.copyright.is_none() {
+        package.copyright = resolved.copyright.clone();
+    }
+    if package.holder.is_none() {
+        package.holder = resolved.holder.clone();
+    }
+    if package.declared_license_expression.is_none() {
+        package.declared_license_expression = resolved.declared_license_expression.clone();
+    }
+    if package.declared_license_expression_spdx.is_none() {
+        package.declared_license_expression_spdx =
+            resolved.declared_license_expression_spdx.clone();
+    }
+    if package.license_detections.is_empty() {
+        package.license_detections = resolved.license_detections.clone();
+    }
+    if package.other_license_expression.is_none() {
+        package.other_license_expression = resolved.other_license_expression.clone();
+    }
+    if package.other_license_expression_spdx.is_none() {
+        package.other_license_expression_spdx = resolved.other_license_expression_spdx.clone();
+    }
+    if package.other_license_detections.is_empty() {
+        package.other_license_detections = resolved.other_license_detections.clone();
+    }
+    if package.extracted_license_statement.is_none() {
+        package.extracted_license_statement = resolved.extracted_license_statement.clone();
+    }
+    if package.notice_text.is_none() {
+        package.notice_text = resolved.notice_text.clone();
+    }
+    if package.source_packages.is_empty() {
+        package.source_packages = resolved.source_packages.clone();
+    }
+    if package.extra_data.is_none() {
+        package.extra_data = resolved.extra_data.clone();
+    }
+    if package.repository_homepage_url.is_none() {
+        package.repository_homepage_url = resolved.repository_homepage_url.clone();
+    }
+    if package.repository_download_url.is_none() {
+        package.repository_download_url = resolved.repository_download_url.clone();
+    }
+    if package.api_data_url.is_none() {
+        package.api_data_url = resolved.api_data_url.clone();
+    }
+    if package.datasource_ids.is_empty()
+        && let Some(datasource_id) = resolved.datasource_id.clone()
+    {
+        package.datasource_ids = vec![datasource_id];
+    }
+}
+
+fn fill_identity_from_resolved(package: &mut OutputPackage, resolved: &OutputResolvedPackage) {
+    if package.package_type.is_none() {
+        package.package_type = Some(resolved.package_type.clone());
+    }
+    if package.namespace.is_none() && !resolved.namespace.is_empty() {
+        package.namespace = Some(resolved.namespace.clone());
+    }
+    if package.name.is_none() && !resolved.name.is_empty() {
+        package.name = Some(resolved.name.clone());
+    }
+    if package.version.is_none() && !resolved.version.is_empty() {
+        package.version = Some(resolved.version.clone());
     }
 }
 
@@ -284,6 +507,13 @@ mod tests {
         })
     }
 
+    fn promoted_optional(entries: &[InventoryEntry<'_>]) -> Option<bool> {
+        match entries.iter().find(|e| e.is_promoted()) {
+            Some(InventoryEntry::Promoted { is_optional, .. }) => *is_optional,
+            _ => None,
+        }
+    }
+
     #[test]
     fn skips_dependency_already_represented_by_a_detected_package() {
         let packages = vec![detected_package("pkg:npm/dep@1.0.0")];
@@ -293,34 +523,71 @@ mod tests {
             None,
             "d1",
         )];
-        let promoted = promote_dependencies(&packages, &deps);
-        assert!(
-            promoted.is_empty(),
-            "a dependency whose purl a package already owns must not double-count"
-        );
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages,
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let inventory = build_inventory(&output);
+        assert_eq!(inventory.entries.len(), 1);
+        assert!(!inventory.entries[0].is_promoted());
     }
 
     #[test]
-    fn collapses_shared_purls_and_merges_scope_to_required() {
+    fn collapses_shared_purls_and_merges_optional_to_required() {
         let deps = vec![
             dependency(Some("pkg:npm/dep@1.0.0"), Some(true), None, "d1"),
             dependency(Some("pkg:npm/dep@1.0.0"), Some(false), None, "d2"),
         ];
-        let promoted = promote_dependencies(&[], &deps);
-        assert_eq!(promoted.len(), 1, "shared purls collapse to one component");
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let inventory = build_inventory(&output);
+        assert_eq!(inventory.entries.len(), 1, "shared purls collapse to one");
         assert_eq!(
-            promoted[0].scope,
-            Some("required"),
-            "a single proven-required occurrence wins the merged scope"
+            promoted_optional(&inventory.entries),
+            Some(false),
+            "a single proven-required occurrence wins the merged optionality"
         );
     }
 
     #[test]
     fn bare_dependency_gets_identity_from_purl_and_no_license() {
         let deps = vec![dependency(Some("pkg:npm/bare@3.0.0"), None, None, "d1")];
-        let promoted = promote_dependencies(&[], &deps);
-        assert_eq!(promoted.len(), 1);
-        let package = &promoted[0].package;
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let inventory = build_inventory(&output);
+        assert_eq!(inventory.entries.len(), 1);
+        let package = inventory.entries[0].package();
         assert_eq!(package.name.as_deref(), Some("bare"));
         assert_eq!(package.version.as_deref(), Some("3.0.0"));
         assert_eq!(package.purl.as_deref(), Some("pkg:npm/bare@3.0.0"));
@@ -328,8 +595,9 @@ mod tests {
         assert!(package.declared_license_expression.is_none());
         assert!(package.license_detections.is_empty());
         assert_eq!(
-            promoted[0].scope, None,
-            "unproven optionality leaves scope unset"
+            promoted_optional(&inventory.entries),
+            None,
+            "unproven optionality stays unset"
         );
     }
 
@@ -351,11 +619,24 @@ mod tests {
             Some(resolved),
             "d1",
         )];
-        let promoted = promote_dependencies(&[], &deps);
-        assert_eq!(promoted.len(), 1);
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let inventory = build_inventory(&output);
+        assert_eq!(inventory.entries.len(), 1);
         assert_eq!(
-            promoted[0]
-                .package
+            inventory.entries[0]
+                .package()
                 .declared_license_expression_spdx
                 .as_deref(),
             Some("MIT")
@@ -363,9 +644,63 @@ mod tests {
     }
 
     #[test]
+    fn purl_collision_fills_license_from_later_richer_resolved_package() {
+        let mut resolved = ResolvedPackage::new(
+            PackageType::Npm,
+            String::new(),
+            "dep".to_string(),
+            "1.0.0".to_string(),
+        );
+        resolved.purl = Some("pkg:npm/dep@1.0.0".to_string());
+        resolved.declared_license_expression_spdx = Some("MIT".to_string());
+
+        let deps = vec![
+            dependency(Some("pkg:npm/dep@1.0.0"), Some(true), None, "d1"),
+            dependency(Some("pkg:npm/dep@1.0.0"), Some(false), Some(resolved), "d2"),
+        ];
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let inventory = build_inventory(&output);
+        assert_eq!(inventory.entries.len(), 1);
+        assert_eq!(
+            inventory.entries[0]
+                .package()
+                .declared_license_expression_spdx
+                .as_deref(),
+            Some("MIT"),
+            "bare-then-licensed collapse must retain the license"
+        );
+        assert_eq!(promoted_optional(&inventory.entries), Some(false));
+    }
+
+    #[test]
     fn skips_dependency_without_a_purl() {
         let deps = vec![dependency(None, Some(false), None, "d1")];
-        assert!(promote_dependencies(&[], &deps).is_empty());
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        assert!(build_inventory(&output).is_empty());
     }
 
     #[test]
@@ -378,11 +713,67 @@ mod tests {
         );
         resolved.purl = Some("pkg:npm/resolved-only@2.0.0".to_string());
         let deps = vec![dependency(None, None, Some(resolved), "d1")];
-        let promoted = promote_dependencies(&[], &deps);
-        assert_eq!(promoted.len(), 1);
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let inventory = build_inventory(&output);
+        assert_eq!(inventory.entries.len(), 1);
         assert_eq!(
-            promoted[0].package.purl.as_deref(),
+            inventory.entries[0].package().purl.as_deref(),
             Some("pkg:npm/resolved-only@2.0.0")
+        );
+    }
+
+    #[test]
+    fn dependency_edges_drop_unresolved_endpoints() {
+        let mut root = detected_package("pkg:npm/root@1.0.0");
+        root.package_uid = "uid-root".to_string();
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![root],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        // Inventory has only the root; the edge targets a purl that is not in
+        // inventory (simulating a pre-promotion dangling ref).
+        let inventory = build_inventory(&output);
+        let dangling = TopLevelDependency::from(&crate::models::TopLevelDependency {
+            purl: Some("pkg:npm/missing@1.0.0".to_string()),
+            extracted_requirement: None,
+            scope: None,
+            is_runtime: None,
+            is_optional: Some(false),
+            is_pinned: None,
+            is_direct: None,
+            resolved_package: None,
+            extra_data: None,
+            dependency_uid: crate::models::DependencyUid::from_raw("d-missing".to_string()),
+            for_package_uid: Some(crate::models::PackageUid::from_raw("uid-root".to_string())),
+            datafile_path: "package-lock.json".to_string(),
+            datasource_id: DatasourceId::NpmPackageLockJson,
+            namespace: None,
+        });
+        let edges = dependency_edges(&inventory, &[dangling], &["bom-root".to_string()]);
+        assert!(
+            edges.is_empty(),
+            "an edge whose target is not in inventory must not be emitted"
         );
     }
 }
