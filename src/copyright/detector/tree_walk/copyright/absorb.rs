@@ -293,6 +293,22 @@ pub fn should_start_absorbing(
         }
     }
 
+    // A trailing standalone acronym-with-period on the same line — lexed as
+    // `Pn` because of the sentence-final period (e.g. `CERN.`, `DMTF.`) — is the
+    // holder of an otherwise year-only copyright, so absorb it. Its period-less
+    // spelling (`CERN`) lexes as `Caps`, reduces to a `NameCaps` node, and is
+    // already absorbed via `strong_first` below; handling the `Pn` leaf here
+    // keeps the two source-faithful spellings consistent instead of dropping
+    // the holder whenever a period trails it. Scoped to a lone leaf following a
+    // holder-less, year-bearing clause so it cannot swallow ordinary prose.
+    if let ParseNode::Leaf(token) = first
+        && token.tag == PosTag::Pn
+        && last_line.is_some_and(|l| l == token.start_line)
+        && is_year_only_copyright_clause_node(copyright_node)
+    {
+        return true;
+    }
+
     if let ParseNode::Leaf(token) = first
         && last_line.is_some_and(|l| l == token.start_line)
         && (token.value == "," || token.tag == PosTag::Cc)
