@@ -28,6 +28,7 @@ cargo run --manifest-path xtask/Cargo.toml --bin <command> -- ...
 | `generate-supported-formats`      | Regenerate `docs/SUPPORTED_FORMATS.md` from parser metadata.                                                                                |
 | `generate-benchmark-chart`        | Regenerate the benchmark duration-vs-files SVG from timing rows in `docs/BENCHMARKS.md`.                                                    |
 | `generate-index-artifact`         | Regenerate the embedded license index artifact from ScanCode rules and licenses.                                                            |
+| `generate-sbom-examples`          | Regenerate the checked-in SBOM examples under `examples/sbom/` from pinned upstream targets.                                                |
 | `classify-rule-overmatch`         | Classify upstream license rules by overmatch-risk class and rank un-covered overlay candidates.                                             |
 | `scancode-triage`                 | Weekly triage of upstream ScanCode issues for Provenant relevance, via GitHub Models with real reproduction scans.                          |
 
@@ -576,6 +577,40 @@ Examples:
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact
 cargo run --manifest-path xtask/Cargo.toml --bin generate-index-artifact -- --check
+```
+
+## `generate-sbom-examples`
+
+`generate-sbom-examples` regenerates the checked-in SBOM examples under
+[`examples/sbom/`](../examples/sbom/README.md). For each verified target it
+shallow-fetches the repository at its pinned commit through the shared repo
+cache, runs the current-build `provenant` release binary with
+`scan --license --package --copyright`, and writes an SPDX tag-value document
+plus a CycloneDX JSON document (and a short provenance README) per target. The
+embedded Provenant version is pinned to the workspace package version so the
+committed output is deterministic regardless of `git describe` state. It
+requires network access to the pinned upstream repositories but does **not**
+require Docker or ScanCode (those are only used to verify a target before it is
+added).
+
+These are illustrative artifacts, not golden fixtures: regenerate them **on
+demand** — when cutting a release, when a detection or output change is worth
+showcasing, or when adding a target — rather than drift-checking them on every
+change. There is no `--check` mode and no CI or release-time gate. Add a target
+by extending the `TARGETS` list in the bin after verifying it against ScanCode
+with `compare-outputs`; see
+[`examples/sbom/README.md`](../examples/sbom/README.md).
+
+The embedded version defaults to the workspace package version. Set
+`PROVENANT_BUILD_VERSION` to stamp a specific release when the examples showcase
+behavior that ships in a version not yet cut (e.g. `1.0.1` before its release).
+
+Example:
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
+# stamp a specific release (e.g. before it is cut):
+PROVENANT_BUILD_VERSION=1.0.1 cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
 ```
 
 ## `classify-rule-overmatch`

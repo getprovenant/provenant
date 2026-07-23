@@ -1,0 +1,2399 @@
+## Document Information
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: SPDX Document created by Provenant
+DocumentNamespace: http://spdx.org/spdxdocs/flask
+DocumentComment: <text>Generated with Provenant and provided on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied. No content created from
+Provenant should be considered or used as legal advice. Consult an attorney
+for legal advice.
+Provenant is a free software code scanning tool.
+Visit https://github.com/getprovenant/provenant/ for support and download.
+SPDX License List: 3.27</text>
+## Creation Information
+Creator: Tool: Provenant-1.0.1
+Created: 2026-07-23T20:19:17Z
+## Package Information
+PackageName: flask-example-celery
+SPDXID: SPDXRef-Package-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 94e723dc305f28b58ba1aba04e14aade037baa95
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: NONE
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: Flask
+SPDXID: SPDXRef-Package-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 10a34637ad661d98ba3344717656fcc76209c2f8
+PackageLicenseConcluded: BSD-3-Clause
+PackageLicenseInfoFromFiles: BSD-3-Clause
+PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
+PackageLicenseDeclared: BSD-3-Clause
+PackageCopyrightText: NONE
+## Package Information
+PackageName: flaskr
+SPDXID: SPDXRef-Package-3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 10a34637ad661d98ba3344717656fcc76209c2f8
+PackageLicenseConcluded: BSD-3-Clause
+PackageLicenseInfoFromFiles: BSD-3-Clause
+PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
+PackageLicenseDeclared: BSD-3-Clause
+PackageCopyrightText: NONE
+## Package Information
+PackageName: js_example
+SPDXID: SPDXRef-Package-4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 10a34637ad661d98ba3344717656fcc76209c2f8
+PackageLicenseConcluded: BSD-3-Clause
+PackageLicenseInfoFromFiles: BSD-3-Clause
+PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
+PackageLicenseDeclared: BSD-3-Clause
+PackageCopyrightText: NONE
+## Package Information
+PackageName: flask
+SPDXID: SPDXRef-Package-unassigned
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 1915b7afdb6a10669beefbfab188bf6821d4a8a7
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: BSD-3-Clause
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: <text>(c) Copyright 2010 by <a href="http://domain.invalid/">you</a>.
+Copyright 2010 Pallets
+Copyright © 2015 CERN.
+copyright = "2010 Pallets"</text>
+## Package Information
+PackageName: amqp
+SPDXID: SPDXRef-Package-Dependency-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: asgiref
+SPDXID: SPDXRef-Package-Dependency-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: async-timeout
+SPDXID: SPDXRef-Package-Dependency-3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: billiard
+SPDXID: SPDXRef-Package-Dependency-4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: blinker
+SPDXID: SPDXRef-Package-Dependency-5
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: blinker
+SPDXID: SPDXRef-Package-Dependency-6
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: celery
+SPDXID: SPDXRef-Package-Dependency-7
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: celery
+SPDXID: SPDXRef-Package-Dependency-8
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: click
+SPDXID: SPDXRef-Package-Dependency-9
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: click-didyoumean
+SPDXID: SPDXRef-Package-Dependency-10
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: click-plugins
+SPDXID: SPDXRef-Package-Dependency-11
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: click-repl
+SPDXID: SPDXRef-Package-Dependency-12
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: click
+SPDXID: SPDXRef-Package-Dependency-13
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: cryptography
+SPDXID: SPDXRef-Package-Dependency-14
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: flask
+SPDXID: SPDXRef-Package-Dependency-15
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: flask
+SPDXID: SPDXRef-Package-Dependency-16
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: gha-update
+SPDXID: SPDXRef-Package-Dependency-17
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: greenlet
+SPDXID: SPDXRef-Package-Dependency-18
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: importlib-metadata
+SPDXID: SPDXRef-Package-Dependency-19
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: itsdangerous
+SPDXID: SPDXRef-Package-Dependency-20
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: itsdangerous
+SPDXID: SPDXRef-Package-Dependency-21
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: jinja2
+SPDXID: SPDXRef-Package-Dependency-22
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: jinja2
+SPDXID: SPDXRef-Package-Dependency-23
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: kombu
+SPDXID: SPDXRef-Package-Dependency-24
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: markupsafe
+SPDXID: SPDXRef-Package-Dependency-25
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: markupsafe
+SPDXID: SPDXRef-Package-Dependency-26
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: mypy
+SPDXID: SPDXRef-Package-Dependency-27
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pallets-sphinx-themes
+SPDXID: SPDXRef-Package-Dependency-28
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pre-commit
+SPDXID: SPDXRef-Package-Dependency-29
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pre-commit-uv
+SPDXID: SPDXRef-Package-Dependency-30
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: prompt-toolkit
+SPDXID: SPDXRef-Package-Dependency-31
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pyright
+SPDXID: SPDXRef-Package-Dependency-32
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pytest
+SPDXID: SPDXRef-Package-Dependency-33
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: python-dotenv
+SPDXID: SPDXRef-Package-Dependency-34
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pytz
+SPDXID: SPDXRef-Package-Dependency-35
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: redis
+SPDXID: SPDXRef-Package-Dependency-36
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: ruff
+SPDXID: SPDXRef-Package-Dependency-37
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: six
+SPDXID: SPDXRef-Package-Dependency-38
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: sphinx
+SPDXID: SPDXRef-Package-Dependency-39
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: sphinx-autobuild
+SPDXID: SPDXRef-Package-Dependency-40
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: sphinx-tabs
+SPDXID: SPDXRef-Package-Dependency-41
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: sphinxcontrib-log-cabinet
+SPDXID: SPDXRef-Package-Dependency-42
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tox
+SPDXID: SPDXRef-Package-Dependency-43
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tox-uv
+SPDXID: SPDXRef-Package-Dependency-44
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: types-contextvars
+SPDXID: SPDXRef-Package-Dependency-45
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: types-dataclasses
+SPDXID: SPDXRef-Package-Dependency-46
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: vine
+SPDXID: SPDXRef-Package-Dependency-47
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: wcwidth
+SPDXID: SPDXRef-Package-Dependency-48
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: werkzeug
+SPDXID: SPDXRef-Package-Dependency-49
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: werkzeug
+SPDXID: SPDXRef-Package-Dependency-50
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## File Information
+FileName: ./.devcontainer/devcontainer.json
+SPDXID: SPDXRef-1
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.devcontainer/on-create-command.sh
+SPDXID: SPDXRef-2
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.editorconfig
+SPDXID: SPDXRef-3
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/ISSUE_TEMPLATE/bug-report.md
+SPDXID: SPDXRef-4
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/ISSUE_TEMPLATE/config.yml
+SPDXID: SPDXRef-5
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/ISSUE_TEMPLATE/feature-request.md
+SPDXID: SPDXRef-6
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/pull_request_template.md
+SPDXID: SPDXRef-7
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/workflows/lock.yaml
+SPDXID: SPDXRef-8
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/workflows/pre-commit.yaml
+SPDXID: SPDXRef-9
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/workflows/publish.yaml
+SPDXID: SPDXRef-10
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.github/workflows/tests.yaml
+SPDXID: SPDXRef-11
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.pre-commit-config.yaml
+SPDXID: SPDXRef-12
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./.readthedocs.yaml
+SPDXID: SPDXRef-13
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./CHANGES.rst
+SPDXID: SPDXRef-14
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./LICENSE.txt
+SPDXID: SPDXRef-15
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: Copyright 2010 Pallets
+
+FileName: ./README.md
+SPDXID: SPDXRef-16
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/Makefile
+SPDXID: SPDXRef-17
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/_static/debugger.png
+SPDXID: SPDXRef-18
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/_static/flask-icon.svg
+SPDXID: SPDXRef-19
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/_static/flask-logo.svg
+SPDXID: SPDXRef-20
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/_static/flask-name.svg
+SPDXID: SPDXRef-21
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/_static/pycharm-run-config.png
+SPDXID: SPDXRef-22
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/api.rst
+SPDXID: SPDXRef-23
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/appcontext.rst
+SPDXID: SPDXRef-24
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/async-await.rst
+SPDXID: SPDXRef-25
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/blueprints.rst
+SPDXID: SPDXRef-26
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/changes.rst
+SPDXID: SPDXRef-27
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/cli.rst
+SPDXID: SPDXRef-28
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/conf.py
+SPDXID: SPDXRef-29
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: copyright = "2010 Pallets"
+
+FileName: ./docs/config.rst
+SPDXID: SPDXRef-30
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/contributing.rst
+SPDXID: SPDXRef-31
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/debugging.rst
+SPDXID: SPDXRef-32
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/apache-httpd.rst
+SPDXID: SPDXRef-33
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/asgi.rst
+SPDXID: SPDXRef-34
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/eventlet.rst
+SPDXID: SPDXRef-35
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/gevent.rst
+SPDXID: SPDXRef-36
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/gunicorn.rst
+SPDXID: SPDXRef-37
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/index.rst
+SPDXID: SPDXRef-38
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/mod_wsgi.rst
+SPDXID: SPDXRef-39
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/nginx.rst
+SPDXID: SPDXRef-40
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/proxy_fix.rst
+SPDXID: SPDXRef-41
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/uwsgi.rst
+SPDXID: SPDXRef-42
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/deploying/waitress.rst
+SPDXID: SPDXRef-43
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/design.rst
+SPDXID: SPDXRef-44
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/errorhandling.rst
+SPDXID: SPDXRef-45
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/extensiondev.rst
+SPDXID: SPDXRef-46
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/extensions.rst
+SPDXID: SPDXRef-47
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/gevent.rst
+SPDXID: SPDXRef-48
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/index.rst
+SPDXID: SPDXRef-49
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/installation.rst
+SPDXID: SPDXRef-50
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/license.rst
+SPDXID: SPDXRef-51
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: NONE
+
+FileName: ./docs/lifecycle.rst
+SPDXID: SPDXRef-52
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/logging.rst
+SPDXID: SPDXRef-53
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/make.bat
+SPDXID: SPDXRef-54
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/appdispatch.rst
+SPDXID: SPDXRef-55
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/appfactories.rst
+SPDXID: SPDXRef-56
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/caching.rst
+SPDXID: SPDXRef-57
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/celery.rst
+SPDXID: SPDXRef-58
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/deferredcallbacks.rst
+SPDXID: SPDXRef-59
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/favicon.rst
+SPDXID: SPDXRef-60
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/fileuploads.rst
+SPDXID: SPDXRef-61
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/flashing.rst
+SPDXID: SPDXRef-62
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/index.rst
+SPDXID: SPDXRef-63
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/javascript.rst
+SPDXID: SPDXRef-64
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/jquery.rst
+SPDXID: SPDXRef-65
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/lazyloading.rst
+SPDXID: SPDXRef-66
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/methodoverrides.rst
+SPDXID: SPDXRef-67
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/mongoengine.rst
+SPDXID: SPDXRef-68
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/packages.rst
+SPDXID: SPDXRef-69
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/requestchecksum.rst
+SPDXID: SPDXRef-70
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/singlepageapplications.rst
+SPDXID: SPDXRef-71
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/sqlalchemy.rst
+SPDXID: SPDXRef-72
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/sqlite3.rst
+SPDXID: SPDXRef-73
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/streaming.rst
+SPDXID: SPDXRef-74
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/subclassing.rst
+SPDXID: SPDXRef-75
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/templateinheritance.rst
+SPDXID: SPDXRef-76
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: (c) Copyright 2010 by <a href="http://domain.invalid/">you</a>.
+
+FileName: ./docs/patterns/urlprocessors.rst
+SPDXID: SPDXRef-77
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/viewdecorators.rst
+SPDXID: SPDXRef-78
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/patterns/wtforms.rst
+SPDXID: SPDXRef-79
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/quickstart.rst
+SPDXID: SPDXRef-80
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/reqcontext.rst
+SPDXID: SPDXRef-81
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/server.rst
+SPDXID: SPDXRef-82
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/shell.rst
+SPDXID: SPDXRef-83
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/signals.rst
+SPDXID: SPDXRef-84
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/templating.rst
+SPDXID: SPDXRef-85
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/testing.rst
+SPDXID: SPDXRef-86
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/blog.rst
+SPDXID: SPDXRef-87
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/database.rst
+SPDXID: SPDXRef-88
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/deploy.rst
+SPDXID: SPDXRef-89
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/factory.rst
+SPDXID: SPDXRef-90
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/flaskr_edit.png
+SPDXID: SPDXRef-91
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/flaskr_index.png
+SPDXID: SPDXRef-92
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/flaskr_login.png
+SPDXID: SPDXRef-93
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/index.rst
+SPDXID: SPDXRef-94
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/install.rst
+SPDXID: SPDXRef-95
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/layout.rst
+SPDXID: SPDXRef-96
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/next.rst
+SPDXID: SPDXRef-97
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/static.rst
+SPDXID: SPDXRef-98
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/templates.rst
+SPDXID: SPDXRef-99
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/tests.rst
+SPDXID: SPDXRef-100
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/tutorial/views.rst
+SPDXID: SPDXRef-101
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/views.rst
+SPDXID: SPDXRef-102
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./docs/web-security.rst
+SPDXID: SPDXRef-103
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/README.md
+SPDXID: SPDXRef-104
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/make_celery.py
+SPDXID: SPDXRef-105
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/pyproject.toml
+SPDXID: SPDXRef-106
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/requirements.txt
+SPDXID: SPDXRef-107
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/src/task_app/__init__.py
+SPDXID: SPDXRef-108
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/src/task_app/tasks.py
+SPDXID: SPDXRef-109
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/src/task_app/templates/index.html
+SPDXID: SPDXRef-110
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/celery/src/task_app/views.py
+SPDXID: SPDXRef-111
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/LICENSE.txt
+SPDXID: SPDXRef-112
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: Copyright 2010 Pallets
+
+FileName: ./examples/javascript/README.rst
+SPDXID: SPDXRef-113
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/js_example/__init__.py
+SPDXID: SPDXRef-114
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/js_example/templates/base.html
+SPDXID: SPDXRef-115
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/js_example/templates/fetch.html
+SPDXID: SPDXRef-116
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/js_example/templates/jquery.html
+SPDXID: SPDXRef-117
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/js_example/templates/xhr.html
+SPDXID: SPDXRef-118
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/js_example/views.py
+SPDXID: SPDXRef-119
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/pyproject.toml
+SPDXID: SPDXRef-120
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+LicenseInfoInFile: LicenseRef-scancode-unknown-license-reference
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/tests/conftest.py
+SPDXID: SPDXRef-121
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/javascript/tests/test_js_example.py
+SPDXID: SPDXRef-122
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/LICENSE.txt
+SPDXID: SPDXRef-123
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: Copyright 2010 Pallets
+
+FileName: ./examples/tutorial/README.rst
+SPDXID: SPDXRef-124
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/__init__.py
+SPDXID: SPDXRef-125
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/auth.py
+SPDXID: SPDXRef-126
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/blog.py
+SPDXID: SPDXRef-127
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/db.py
+SPDXID: SPDXRef-128
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/schema.sql
+SPDXID: SPDXRef-129
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/static/style.css
+SPDXID: SPDXRef-130
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/templates/auth/login.html
+SPDXID: SPDXRef-131
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/templates/auth/register.html
+SPDXID: SPDXRef-132
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/templates/base.html
+SPDXID: SPDXRef-133
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/templates/blog/create.html
+SPDXID: SPDXRef-134
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/templates/blog/index.html
+SPDXID: SPDXRef-135
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/flaskr/templates/blog/update.html
+SPDXID: SPDXRef-136
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/pyproject.toml
+SPDXID: SPDXRef-137
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+LicenseInfoInFile: LicenseRef-scancode-unknown-license-reference
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/tests/conftest.py
+SPDXID: SPDXRef-138
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/tests/data.sql
+SPDXID: SPDXRef-139
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/tests/test_auth.py
+SPDXID: SPDXRef-140
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/tests/test_blog.py
+SPDXID: SPDXRef-141
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/tests/test_db.py
+SPDXID: SPDXRef-142
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./examples/tutorial/tests/test_factory.py
+SPDXID: SPDXRef-143
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./pyproject.toml
+SPDXID: SPDXRef-144
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+LicenseInfoInFile: LicenseRef-scancode-unknown-license-reference
+FileCopyrightText: NONE
+
+FileName: ./src/flask/__init__.py
+SPDXID: SPDXRef-145
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/__main__.py
+SPDXID: SPDXRef-146
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/app.py
+SPDXID: SPDXRef-147
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/blueprints.py
+SPDXID: SPDXRef-148
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/cli.py
+SPDXID: SPDXRef-149
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/config.py
+SPDXID: SPDXRef-150
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/ctx.py
+SPDXID: SPDXRef-151
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/debughelpers.py
+SPDXID: SPDXRef-152
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/globals.py
+SPDXID: SPDXRef-153
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/helpers.py
+SPDXID: SPDXRef-154
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/json/__init__.py
+SPDXID: SPDXRef-155
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/json/provider.py
+SPDXID: SPDXRef-156
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/json/tag.py
+SPDXID: SPDXRef-157
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/logging.py
+SPDXID: SPDXRef-158
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/py.typed
+SPDXID: SPDXRef-159
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/sansio/README.md
+SPDXID: SPDXRef-160
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/sansio/app.py
+SPDXID: SPDXRef-161
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/sansio/blueprints.py
+SPDXID: SPDXRef-162
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/sansio/scaffold.py
+SPDXID: SPDXRef-163
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/sessions.py
+SPDXID: SPDXRef-164
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/signals.py
+SPDXID: SPDXRef-165
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/templating.py
+SPDXID: SPDXRef-166
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/testing.py
+SPDXID: SPDXRef-167
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/typing.py
+SPDXID: SPDXRef-168
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/views.py
+SPDXID: SPDXRef-169
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./src/flask/wrappers.py
+SPDXID: SPDXRef-170
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/conftest.py
+SPDXID: SPDXRef-171
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/static/config.json
+SPDXID: SPDXRef-172
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/static/config.toml
+SPDXID: SPDXRef-173
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/static/index.html
+SPDXID: SPDXRef-174
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/_macro.html
+SPDXID: SPDXRef-175
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/context_template.html
+SPDXID: SPDXRef-176
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/escaping_template.html
+SPDXID: SPDXRef-177
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/mail.txt
+SPDXID: SPDXRef-178
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/nested/nested.txt
+SPDXID: SPDXRef-179
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/non_escaping_template.txt
+SPDXID: SPDXRef-180
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/simple_template.html
+SPDXID: SPDXRef-181
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/template_filter.html
+SPDXID: SPDXRef-182
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/templates/template_test.html
+SPDXID: SPDXRef-183
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_appctx.py
+SPDXID: SPDXRef-184
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/.env
+SPDXID: SPDXRef-185
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/.flaskenv
+SPDXID: SPDXRef-186
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/__init__.py
+SPDXID: SPDXRef-187
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/__init__.py
+SPDXID: SPDXRef-188
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/admin/__init__.py
+SPDXID: SPDXRef-189
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/admin/static/css/test.css
+SPDXID: SPDXRef-190
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/admin/static/test.txt
+SPDXID: SPDXRef-191
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/admin/templates/admin/index.html
+SPDXID: SPDXRef-192
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/frontend/__init__.py
+SPDXID: SPDXRef-193
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/blueprintapp/apps/frontend/templates/frontend/index.html
+SPDXID: SPDXRef-194
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/__init__.py
+SPDXID: SPDXRef-195
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/app.py
+SPDXID: SPDXRef-196
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/factory.py
+SPDXID: SPDXRef-197
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/importerrorapp.py
+SPDXID: SPDXRef-198
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/inner1/__init__.py
+SPDXID: SPDXRef-199
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/inner1/inner2/__init__.py
+SPDXID: SPDXRef-200
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/inner1/inner2/flask.py
+SPDXID: SPDXRef-201
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/message.txt
+SPDXID: SPDXRef-202
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/cliapp/multiapp.py
+SPDXID: SPDXRef-203
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/helloworld/hello.py
+SPDXID: SPDXRef-204
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/helloworld/wsgi.py
+SPDXID: SPDXRef-205
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/subdomaintestmodule/__init__.py
+SPDXID: SPDXRef-206
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_apps/subdomaintestmodule/static/hello.txt
+SPDXID: SPDXRef-207
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_async.py
+SPDXID: SPDXRef-208
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_basic.py
+SPDXID: SPDXRef-209
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_blueprints.py
+SPDXID: SPDXRef-210
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_cli.py
+SPDXID: SPDXRef-211
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: BSD-3-Clause
+LicenseInfoInFile: BSD-3-Clause
+FileCopyrightText: Copyright © 2015 CERN.
+
+FileName: ./tests/test_config.py
+SPDXID: SPDXRef-212
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_converters.py
+SPDXID: SPDXRef-213
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_helpers.py
+SPDXID: SPDXRef-214
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_instance_config.py
+SPDXID: SPDXRef-215
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_json.py
+SPDXID: SPDXRef-216
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_json_tag.py
+SPDXID: SPDXRef-217
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_logging.py
+SPDXID: SPDXRef-218
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_regression.py
+SPDXID: SPDXRef-219
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_reqctx.py
+SPDXID: SPDXRef-220
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_request.py
+SPDXID: SPDXRef-221
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_session_interface.py
+SPDXID: SPDXRef-222
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_signals.py
+SPDXID: SPDXRef-223
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_subclassing.py
+SPDXID: SPDXRef-224
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_templating.py
+SPDXID: SPDXRef-225
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_testing.py
+SPDXID: SPDXRef-226
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_user_error_handler.py
+SPDXID: SPDXRef-227
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/test_views.py
+SPDXID: SPDXRef-228
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/type_check/typing_app_decorators.py
+SPDXID: SPDXRef-229
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/type_check/typing_error_handler.py
+SPDXID: SPDXRef-230
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./tests/type_check/typing_route.py
+SPDXID: SPDXRef-231
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./uv.lock
+SPDXID: SPDXRef-232
+FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+## Relationships
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-106
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-107
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-2
+Relationship: SPDXRef-Package-2 CONTAINS SPDXRef-144
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-3
+Relationship: SPDXRef-Package-3 CONTAINS SPDXRef-137
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-4
+Relationship: SPDXRef-Package-4 CONTAINS SPDXRef-120
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-unassigned
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-1
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-2
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-3
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-4
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-5
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-6
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-7
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-8
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-9
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-10
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-11
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-12
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-13
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-14
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-15
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-16
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-17
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-18
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-19
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-20
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-21
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-22
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-23
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-24
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-25
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-26
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-27
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-28
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-29
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-30
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-31
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-32
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-33
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-34
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-35
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-36
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-37
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-38
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-39
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-40
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-41
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-42
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-43
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-44
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-45
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-46
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-47
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-48
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-49
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-50
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-51
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-52
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-53
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-54
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-55
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-56
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-57
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-58
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-59
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-60
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-61
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-62
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-63
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-64
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-65
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-66
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-67
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-68
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-69
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-70
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-71
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-72
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-73
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-74
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-75
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-76
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-77
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-78
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-79
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-80
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-81
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-82
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-83
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-84
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-85
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-86
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-87
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-88
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-89
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-90
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-91
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-92
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-93
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-94
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-95
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-96
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-97
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-98
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-99
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-100
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-101
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-102
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-103
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-104
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-105
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-108
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-109
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-110
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-111
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-112
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-113
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-114
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-115
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-116
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-117
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-118
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-119
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-121
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-122
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-123
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-124
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-125
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-126
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-127
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-128
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-129
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-130
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-131
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-132
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-133
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-134
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-135
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-136
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-138
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-139
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-140
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-141
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-142
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-143
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-145
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-146
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-147
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-148
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-149
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-150
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-151
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-152
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-153
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-154
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-155
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-156
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-157
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-158
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-159
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-160
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-161
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-162
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-163
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-164
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-165
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-166
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-167
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-168
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-169
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-170
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-171
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-172
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-173
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-174
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-175
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-176
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-177
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-178
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-179
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-180
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-181
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-182
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-183
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-184
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-185
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-186
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-187
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-188
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-189
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-190
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-191
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-192
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-193
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-194
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-195
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-196
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-197
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-198
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-199
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-200
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-201
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-202
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-203
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-204
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-205
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-206
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-207
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-208
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-209
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-210
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-211
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-212
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-213
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-214
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-215
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-216
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-217
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-218
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-219
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-220
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-221
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-222
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-223
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-224
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-225
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-226
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-227
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-228
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-229
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-230
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-231
+Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-232
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-1
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-10
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-11
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-12
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-13
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-15
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-16
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-21
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-23
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-24
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-26
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-3
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-31
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-35
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-36
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-38
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-4
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-47
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-48
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-50
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-6
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-7
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-8
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-14
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-17
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-18
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-19
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-2
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-20
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-22
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-25
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-27
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-28
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-29
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-30
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-32
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-33
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-34
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-37
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-39
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-40
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-41
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-42
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-43
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-44
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-45
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-46
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-49
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-5
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-9
+Relationship: SPDXRef-Package-3 DEPENDS_ON SPDXRef-Package-Dependency-15
+Relationship: SPDXRef-Package-3 DEPENDS_ON SPDXRef-Package-Dependency-33
+Relationship: SPDXRef-Package-4 DEPENDS_ON SPDXRef-Package-Dependency-15
+Relationship: SPDXRef-Package-4 DEPENDS_ON SPDXRef-Package-Dependency-33
+## License Information
+LicenseID: LicenseRef-scancode-unknown-license-reference
+ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/unknown-license-reference_see_license_at_manifest_2.RULE
+</text>
+LicenseName: LicenseRef-scancode-unknown-license-reference
+LicenseComment: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/unknown-license-reference_see_license_at_manifest_2.RULE
+</text>
