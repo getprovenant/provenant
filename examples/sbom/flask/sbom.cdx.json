@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:88db785b-d225-4d9b-8b53-4e1a3aabb710",
+  "serialNumber": "urn:uuid:fa96cca5-bfc3-453a-9e16-32d77dba59d1",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T17:24:19Z",
+    "timestamp": "2026-07-23T19:21:41Z",
     "tools": [
       {
         "name": "Provenant",
@@ -149,9 +149,469 @@
           "url": "https://pypi.org/project/js_example"
         }
       ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/amqp@5.1.1",
+      "name": "amqp",
+      "version": "5.1.1",
+      "scope": "required",
+      "purl": "pkg:pypi/amqp@5.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/asgiref",
+      "name": "asgiref",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/asgiref"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/async-timeout@4.0.2",
+      "name": "async-timeout",
+      "version": "4.0.2",
+      "scope": "required",
+      "purl": "pkg:pypi/async-timeout@4.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/billiard@3.6.4.0",
+      "name": "billiard",
+      "version": "3.6.4.0",
+      "scope": "required",
+      "purl": "pkg:pypi/billiard@3.6.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/blinker",
+      "name": "blinker",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/blinker"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/blinker@1.6.2",
+      "name": "blinker",
+      "version": "1.6.2",
+      "scope": "required",
+      "purl": "pkg:pypi/blinker@1.6.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/celery",
+      "name": "celery",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/celery"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/celery@5.2.7",
+      "name": "celery",
+      "version": "5.2.7",
+      "scope": "required",
+      "purl": "pkg:pypi/celery@5.2.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/click",
+      "name": "click",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/click"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/click-didyoumean@0.3.0",
+      "name": "click-didyoumean",
+      "version": "0.3.0",
+      "scope": "required",
+      "purl": "pkg:pypi/click-didyoumean@0.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/click-plugins@1.1.1",
+      "name": "click-plugins",
+      "version": "1.1.1",
+      "scope": "required",
+      "purl": "pkg:pypi/click-plugins@1.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/click-repl@0.2.0",
+      "name": "click-repl",
+      "version": "0.2.0",
+      "scope": "required",
+      "purl": "pkg:pypi/click-repl@0.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/click@8.1.3",
+      "name": "click",
+      "version": "8.1.3",
+      "scope": "required",
+      "purl": "pkg:pypi/click@8.1.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cryptography",
+      "name": "cryptography",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/cryptography"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/flask",
+      "name": "flask",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/flask"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/flask@2.3.2",
+      "name": "flask",
+      "version": "2.3.2",
+      "scope": "required",
+      "purl": "pkg:pypi/flask@2.3.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/gha-update",
+      "name": "gha-update",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/gha-update"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/greenlet",
+      "name": "greenlet",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/greenlet"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/importlib-metadata",
+      "name": "importlib-metadata",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/importlib-metadata"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/itsdangerous",
+      "name": "itsdangerous",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/itsdangerous"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/itsdangerous@2.1.2",
+      "name": "itsdangerous",
+      "version": "2.1.2",
+      "scope": "required",
+      "purl": "pkg:pypi/itsdangerous@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jinja2",
+      "name": "jinja2",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/jinja2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jinja2@3.1.2",
+      "name": "jinja2",
+      "version": "3.1.2",
+      "scope": "required",
+      "purl": "pkg:pypi/jinja2@3.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/kombu@5.2.4",
+      "name": "kombu",
+      "version": "5.2.4",
+      "scope": "required",
+      "purl": "pkg:pypi/kombu@5.2.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/markupsafe",
+      "name": "markupsafe",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/markupsafe"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/markupsafe@2.1.2",
+      "name": "markupsafe",
+      "version": "2.1.2",
+      "scope": "required",
+      "purl": "pkg:pypi/markupsafe@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mypy",
+      "name": "mypy",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/mypy"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pallets-sphinx-themes",
+      "name": "pallets-sphinx-themes",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/pallets-sphinx-themes"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pre-commit",
+      "name": "pre-commit",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/pre-commit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pre-commit-uv",
+      "name": "pre-commit-uv",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/pre-commit-uv"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/prompt-toolkit@3.0.38",
+      "name": "prompt-toolkit",
+      "version": "3.0.38",
+      "scope": "required",
+      "purl": "pkg:pypi/prompt-toolkit@3.0.38"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyright",
+      "name": "pyright",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/pyright"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pytest",
+      "name": "pytest",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/pytest"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/python-dotenv",
+      "name": "python-dotenv",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/python-dotenv"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pytz@2023.3",
+      "name": "pytz",
+      "version": "2023.3",
+      "scope": "required",
+      "purl": "pkg:pypi/pytz@2023.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/redis@4.5.4",
+      "name": "redis",
+      "version": "4.5.4",
+      "scope": "required",
+      "purl": "pkg:pypi/redis@4.5.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/ruff",
+      "name": "ruff",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/ruff"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/six@1.16.0",
+      "name": "six",
+      "version": "1.16.0",
+      "scope": "required",
+      "purl": "pkg:pypi/six@1.16.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sphinx",
+      "name": "sphinx",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/sphinx"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sphinx-autobuild",
+      "name": "sphinx-autobuild",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/sphinx-autobuild"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sphinx-tabs",
+      "name": "sphinx-tabs",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/sphinx-tabs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sphinxcontrib-log-cabinet",
+      "name": "sphinxcontrib-log-cabinet",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/sphinxcontrib-log-cabinet"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tox",
+      "name": "tox",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/tox"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tox-uv",
+      "name": "tox-uv",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/tox-uv"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/types-contextvars",
+      "name": "types-contextvars",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/types-contextvars"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/types-dataclasses",
+      "name": "types-dataclasses",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:pypi/types-dataclasses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/vine@5.0.0",
+      "name": "vine",
+      "version": "5.0.0",
+      "scope": "required",
+      "purl": "pkg:pypi/vine@5.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/wcwidth@0.2.6",
+      "name": "wcwidth",
+      "version": "0.2.6",
+      "scope": "required",
+      "purl": "pkg:pypi/wcwidth@0.2.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/werkzeug",
+      "name": "werkzeug",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:pypi/werkzeug"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/werkzeug@2.3.3",
+      "name": "werkzeug",
+      "version": "2.3.3",
+      "scope": "required",
+      "purl": "pkg:pypi/werkzeug@2.3.3"
     }
   ],
   "dependencies": [
+    {
+      "ref": "pkg:pypi/amqp@5.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/asgiref",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/async-timeout@4.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/billiard@3.6.4.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/blinker",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/blinker@1.6.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/celery",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/celery@5.2.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/click",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/click-didyoumean@0.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/click-plugins@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/click-repl@0.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/click@8.1.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/cryptography",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/flask",
+      "dependsOn": []
+    },
     {
       "ref": "pkg:pypi/flask-example-celery@1.0.0",
       "dependsOn": [
@@ -179,6 +639,10 @@
         "pkg:pypi/wcwidth@0.2.6",
         "pkg:pypi/werkzeug@2.3.3"
       ]
+    },
+    {
+      "ref": "pkg:pypi/flask@2.3.2",
+      "dependsOn": []
     },
     {
       "ref": "pkg:pypi/flask@3.1.3",
@@ -220,11 +684,147 @@
       ]
     },
     {
+      "ref": "pkg:pypi/gha-update",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/greenlet",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/importlib-metadata",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/itsdangerous",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/itsdangerous@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/jinja2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/jinja2@3.1.2",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:pypi/js-example@1.1.0",
       "dependsOn": [
         "pkg:pypi/flask",
         "pkg:pypi/pytest"
       ]
+    },
+    {
+      "ref": "pkg:pypi/kombu@5.2.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/markupsafe",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/markupsafe@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/mypy",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pallets-sphinx-themes",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pre-commit",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pre-commit-uv",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/prompt-toolkit@3.0.38",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pyright",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pytest",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/python-dotenv",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pytz@2023.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/redis@4.5.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/ruff",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/six@1.16.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/sphinx",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/sphinx-autobuild",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/sphinx-tabs",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/sphinxcontrib-log-cabinet",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/tox",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/tox-uv",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/types-contextvars",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/types-dataclasses",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/vine@5.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/wcwidth@0.2.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/werkzeug",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/werkzeug@2.3.3",
+      "dependsOn": []
     }
   ]
 }

@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:6ff1452f-c708-4e0f-a02a-3b67847a2bc6",
+  "serialNumber": "urn:uuid:4d83e013-19f5-4205-9e9a-855a4ea3b537",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T17:24:16Z",
+    "timestamp": "2026-07-23T19:21:38Z",
     "tools": [
       {
         "name": "Provenant",
@@ -84,9 +84,433 @@
           "url": "https://github.com/expressjs/express"
         }
       ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/accepts",
+      "name": "accepts",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/accepts"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/after",
+      "name": "after",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/after"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/body-parser",
+      "name": "body-parser",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/body-parser"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/connect-redis",
+      "name": "connect-redis",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/connect-redis"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/content-disposition",
+      "name": "content-disposition",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/content-disposition"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/content-type",
+      "name": "content-type",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/content-type"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/cookie",
+      "name": "cookie",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/cookie"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/cookie-parser",
+      "name": "cookie-parser",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/cookie-parser"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/cookie-session",
+      "name": "cookie-session",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/cookie-session"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/cookie-signature",
+      "name": "cookie-signature",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/cookie-signature"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/debug",
+      "name": "debug",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/debug"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/depd",
+      "name": "depd",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/depd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/ejs",
+      "name": "ejs",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/ejs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/encodeurl",
+      "name": "encodeurl",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/encodeurl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/escape-html",
+      "name": "escape-html",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/escape-html"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/eslint",
+      "name": "eslint",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/eslint"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/etag",
+      "name": "etag",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/etag"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/express-session",
+      "name": "express-session",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/express-session"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/finalhandler",
+      "name": "finalhandler",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/finalhandler"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/fresh",
+      "name": "fresh",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/fresh"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/hbs",
+      "name": "hbs",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/hbs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/http-errors",
+      "name": "http-errors",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/http-errors"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/marked",
+      "name": "marked",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/marked"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/merge-descriptors",
+      "name": "merge-descriptors",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/merge-descriptors"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/method-override",
+      "name": "method-override",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/method-override"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/mime-types",
+      "name": "mime-types",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/mime-types"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/mocha",
+      "name": "mocha",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/mocha"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/morgan",
+      "name": "morgan",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/morgan"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/nyc",
+      "name": "nyc",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/nyc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/on-finished",
+      "name": "on-finished",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/on-finished"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/once",
+      "name": "once",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/once"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/parseurl",
+      "name": "parseurl",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/parseurl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/pbkdf2-password",
+      "name": "pbkdf2-password",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/pbkdf2-password"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/proxy-addr",
+      "name": "proxy-addr",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/proxy-addr"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/qs",
+      "name": "qs",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/qs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/range-parser",
+      "name": "range-parser",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/range-parser"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/router",
+      "name": "router",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/router"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/send",
+      "name": "send",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/send"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/serve-static",
+      "name": "serve-static",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/serve-static"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/statuses",
+      "name": "statuses",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/statuses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/supertest",
+      "name": "supertest",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/supertest"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/type-is",
+      "name": "type-is",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/type-is"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vary",
+      "name": "vary",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:npm/vary"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vhost",
+      "name": "vhost",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:npm/vhost"
     }
   ],
   "dependencies": [
+    {
+      "ref": "pkg:npm/accepts",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/after",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/body-parser",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/connect-redis",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/content-disposition",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/content-type",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/cookie",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/cookie-parser",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/cookie-session",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/cookie-signature",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/debug",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/depd",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/ejs",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/encodeurl",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/escape-html",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/eslint",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/etag",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/express-session",
+      "dependsOn": []
+    },
     {
       "ref": "pkg:npm/express@5.2.1",
       "dependsOn": [
@@ -135,6 +559,110 @@
         "pkg:npm/vary",
         "pkg:npm/vhost"
       ]
+    },
+    {
+      "ref": "pkg:npm/finalhandler",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/fresh",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/hbs",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/http-errors",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/marked",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/merge-descriptors",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/method-override",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/mime-types",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/mocha",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/morgan",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/nyc",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/on-finished",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/once",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/parseurl",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/pbkdf2-password",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/proxy-addr",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/qs",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/range-parser",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/router",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/send",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/serve-static",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/statuses",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/supertest",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/type-is",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vary",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vhost",
+      "dependsOn": []
     }
   ]
 }
