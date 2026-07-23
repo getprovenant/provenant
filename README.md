@@ -31,13 +31,12 @@ Not on Homebrew (or on Windows)? `cargo install provenant-cli`, grab a [prebuilt
 ## Why Provenant?
 
 - [Benchmark-backed](docs/BENCHMARKS.md) speed — well over 10× faster than the reference on same-host runs, and more on large repositories
-- Package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), reading manifests and lockfiles into structured package metadata and dependency graphs
+- Package and dependency extraction across [many ecosystems](docs/SUPPORTED_FORMATS.md), reading manifests and lockfiles into structured package metadata and dependencies
+- Complete SBOMs — SPDX and CycloneDX exports promote every resolved dependency to a component with a package URL and a closed dependency graph, not a packages-only summary that references materials it never lists; see real, verified examples in [`examples/sbom/`](examples/sbom/)
 - Monorepo-aware inventories — workspace, reactor, and multiproject layouts (Cargo, npm/pnpm/yarn, Maven, Gradle, uv, Mix, Dart, and related) attribute nested sources and shared locks to the package that owns them
 - Low-noise license and copyright detection — suppresses common false-positive classes such as code and prose bleed, and treats bare-word GPL/LGPL mentions as license clues; see [documented improvements](docs/improvements/README.md)
 - CI license-compliance gating — policy severities with a build-failing [`--fail-on`](docs/CLI_GUIDE.md#17-i-want-policy-aware-license-review) gate and SARIF output for the code-scanning UI
-- Native workflows: `--incremental` cache reuse, `--paths-file` changed-file scans with SBOM completeness warnings when a selection may understate a workspace, and long-lived HTTP service mode via [`provenant serve`](docs/SERVE_API_GUIDE.md)
 - Source-faithful file-level copyright by default — accented names are kept as written (e.g. `Björn`, not ASCII-folded to `Bjorn`) and statements such as `All rights reserved.` aren't trimmed away
-- Single self-contained binary with parallel native execution
 - Attested releases — every release binary and container image ships with [SLSA build-provenance attestation](https://slsa.dev), verifiable with `gh attestation verify`
 - [Security-first](docs/adr/0004-security-first-parsing.md) static parsing — no execution of scanned code or package-manager code, with bounded resource use
 
