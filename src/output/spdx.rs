@@ -6,7 +6,7 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use sha1::{Digest, Sha1};
 
@@ -15,8 +15,14 @@ use crate::output_schema::{
 };
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
+use super::sbom;
 use super::shared::{sorted_files, xml_escape};
+use super::spdx_plan::{
+    inventory_spdx_ids, plan_spdx_packages, primary_package_name, sanitize_spdx_package_name,
+};
 use super::{OutputWriteConfig, SPDX_DOCUMENT_NOTICE};
+
+const DEPENDS_ON_RELATIONSHIP: &str = "http://spdx.org/rdf/terms#relationshipType_dependsOn";
 
 const EMPTY_SHA1_HEX: &str = "da39a3ee5e6b4b0d3255bfef95601890afd80709";
 
@@ -27,30 +33,24 @@ struct ExtractedLicenseInfo {
     comment: String,
 }
 
-/// One SPDX Package to emit, with the files it owns.
-struct SpdxPackagePlan<'a> {
-    spdx_id: String,
-    name: String,
-    files: Vec<&'a FileInfo>,
-    /// The assembled package this plan was built from, when there is one.
-    /// `None` for the no-package synthetic plan and the unassigned-files
-    /// fallback bucket, which have no package-level license data to draw on.
-    package: Option<&'a OutputPackage>,
-}
-
 pub(crate) fn write_spdx_tag_value(
     output: &Output,
     writer: &mut dyn Write,
     config: &OutputWriteConfig,
 ) -> io::Result<()> {
     let files = spdx_files(output);
+    let inventory = sbom::build_inventory(output);
     let fallback_name = primary_package_name(output, config);
-    if files.is_empty() {
+    // Promoted dependencies intentionally own no scanned files; do not treat
+    // an empty file list as "no results" when the inventory still has packages.
+    if files.is_empty() && inventory.is_empty() {
         writeln!(writer, "# No results for package '{}'.", fallback_name)?;
         return Ok(());
     }
 
-    let plans = plan_spdx_packages(output, &files, config);
+    let plans = plan_spdx_packages(output, &files, config, &inventory);
+    let entry_ids = inventory_spdx_ids(&inventory);
+    let dependency_edges = sbom::dependency_edges(&inventory, &output.dependencies, &entry_ids);
     let document_namespace = document_namespace_for(output, config);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
     let created = spdx_created_timestamp(output);
@@ -78,8 +78,6 @@ pub(crate) fn write_spdx_tag_value(
     writeln!(writer, "Created: {}", created)?;
 
     for plan in &plans {
-        let package_verification_code = spdx_package_verification_code(&plan.files);
-        let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
         let package_copyright_text = spdx_package_copyright_text(&plan.files);
         let package_license_concluded = spdx_package_license_concluded(plan.package);
         let package_license_declared = spdx_package_license_declared(plan.package);
@@ -88,22 +86,30 @@ pub(crate) fn write_spdx_tag_value(
         writeln!(writer, "PackageName: {}", plan.name)?;
         writeln!(writer, "SPDXID: {}", plan.spdx_id)?;
         writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
-        writeln!(writer, "FilesAnalyzed: true")?;
-        writeln!(
-            writer,
-            "PackageVerificationCode: {}",
-            package_verification_code
-        )?;
+        writeln!(writer, "FilesAnalyzed: {}", plan.role.files_analyzed())?;
+        // SPDX 2.2: a package verification code and per-file license info are
+        // only meaningful (and only valid) when files were analyzed. A promoted
+        // dependency owns no scanned files, so both are omitted for it.
+        if plan.role.files_analyzed() {
+            writeln!(
+                writer,
+                "PackageVerificationCode: {}",
+                spdx_package_verification_code(&plan.files)
+            )?;
+        }
         writeln!(
             writer,
             "PackageLicenseConcluded: {}",
             spdx_tv_license_value(package_license_concluded.as_deref())
         )?;
-        for license_id in &package_license_info_from_files {
-            writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
-        }
-        if package_license_info_from_files.is_empty() {
-            writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
+        if plan.role.files_analyzed() {
+            let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+            for license_id in &package_license_info_from_files {
+                writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
+            }
+            if package_license_info_from_files.is_empty() {
+                writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
+            }
         }
         writeln!(
             writer,
@@ -163,11 +169,15 @@ pub(crate) fn write_spdx_tag_value(
 
     writeln!(writer, "## Relationships")?;
     for plan in &plans {
-        writeln!(
-            writer,
-            "Relationship: SPDXRef-DOCUMENT DESCRIBES {}",
-            plan.spdx_id
-        )?;
+        // The document DESCRIBES the scanned subject packages; promoted
+        // dependencies are attached to the graph via DEPENDS_ON below instead.
+        if plan.role.is_described_by_document() {
+            writeln!(
+                writer,
+                "Relationship: SPDXRef-DOCUMENT DESCRIBES {}",
+                plan.spdx_id
+            )?;
+        }
         for file in &plan.files {
             if let Some(file_id) = file_spdx_ids.get(file.path.as_str()) {
                 writeln!(
@@ -176,6 +186,15 @@ pub(crate) fn write_spdx_tag_value(
                     plan.spdx_id, file_id
                 )?;
             }
+        }
+    }
+    for (owner_id, dependency_ids) in &dependency_edges {
+        for dependency_id in dependency_ids {
+            writeln!(
+                writer,
+                "Relationship: {} DEPENDS_ON {}",
+                owner_id, dependency_id
+            )?;
         }
     }
 
@@ -209,7 +228,8 @@ pub(crate) fn write_spdx_rdf_xml(
 ) -> io::Result<()> {
     let fallback_name = primary_package_name(output, config);
     let files = spdx_files(output);
-    if files.is_empty() {
+    let inventory = sbom::build_inventory(output);
+    if files.is_empty() && inventory.is_empty() {
         writeln!(
             writer,
             "<!-- No results for package '{}'. -->",
@@ -218,7 +238,9 @@ pub(crate) fn write_spdx_rdf_xml(
         return Ok(());
     }
 
-    let plans = plan_spdx_packages(output, &files, config);
+    let plans = plan_spdx_packages(output, &files, config, &inventory);
+    let entry_ids = inventory_spdx_ids(&inventory);
+    let dependency_edges = sbom::dependency_edges(&inventory, &output.dependencies, &entry_ids);
     let document_namespace = document_namespace_for(output, config);
     let document_namespace_xml = xml_escape(&document_namespace);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
@@ -235,19 +257,22 @@ pub(crate) fn write_spdx_rdf_xml(
     xml.push_str("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\" xmlns:spdx=\"http://spdx.org/rdf/terms#\">\n");
 
     for plan in &plans {
-        let package_verification_code = spdx_package_verification_code(&plan.files);
-        let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
         let package_copyright_text = xml_escape(&spdx_package_copyright_text(&plan.files));
         let package_name = xml_escape(&plan.name);
         let package_license_concluded = spdx_package_license_concluded(plan.package);
         let package_license_declared = spdx_package_license_declared(plan.package);
+        let files_analyzed = plan.role.files_analyzed();
 
         xml.push_str("  <spdx:Package rdf:about=\"");
         xml.push_str(&document_namespace_xml);
         xml.push('#');
         xml.push_str(&xml_escape(&plan.spdx_id));
         xml.push_str("\">\n");
-        xml.push_str("    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">true</spdx:filesAnalyzed>\n");
+        xml.push_str(
+            "    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">",
+        );
+        xml.push_str(if files_analyzed { "true" } else { "false" });
+        xml.push_str("</spdx:filesAnalyzed>\n");
         xml.push_str(
             "    <spdx:downloadLocation rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
         );
@@ -263,23 +288,45 @@ pub(crate) fn write_spdx_rdf_xml(
             &document_namespace,
         )));
         xml.push_str("\"/>\n");
-        if package_license_info_from_files.is_empty() {
-            xml.push_str(
-                "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
-            );
-        } else {
-            for license_id in &package_license_info_from_files {
-                xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
-                xml.push_str(&xml_escape(&spdx_license_rdf_resource(
-                    license_id,
-                    &document_namespace,
-                )));
-                xml.push_str("\"/>\n");
+        // Per-file license info and a verification code are only valid when
+        // files were analyzed; a promoted dependency owns no files (ADR 0012).
+        if files_analyzed {
+            let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+            if package_license_info_from_files.is_empty() {
+                xml.push_str(
+                    "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
+                );
+            } else {
+                for license_id in &package_license_info_from_files {
+                    xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
+                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(
+                        license_id,
+                        &document_namespace,
+                    )));
+                    xml.push_str("\"/>\n");
+                }
+            }
+            xml.push_str("    <spdx:packageVerificationCode><spdx:PackageVerificationCode><spdx:packageVerificationCodeValue>");
+            xml.push_str(&spdx_package_verification_code(&plan.files));
+            xml.push_str("</spdx:packageVerificationCodeValue></spdx:PackageVerificationCode></spdx:packageVerificationCode>\n");
+        }
+
+        // DEPENDS_ON relationships to the packages this one resolves to.
+        if let Some(dependency_ids) = dependency_edges.get(&plan.spdx_id) {
+            for dependency_id in dependency_ids {
+                xml.push_str("    <spdx:relationship><spdx:Relationship>");
+                xml.push_str(&format!(
+                    "<spdx:relationshipType rdf:resource=\"{}\"/>",
+                    DEPENDS_ON_RELATIONSHIP
+                ));
+                xml.push_str("<spdx:relatedSpdxElement rdf:resource=\"");
+                xml.push_str(&document_namespace_xml);
+                xml.push('#');
+                xml.push_str(&xml_escape(dependency_id));
+                xml.push_str("\"/>");
+                xml.push_str("</spdx:Relationship></spdx:relationship>\n");
             }
         }
-        xml.push_str("    <spdx:packageVerificationCode><spdx:PackageVerificationCode><spdx:packageVerificationCodeValue>");
-        xml.push_str(&package_verification_code);
-        xml.push_str("</spdx:packageVerificationCodeValue></spdx:PackageVerificationCode></spdx:packageVerificationCode>\n");
 
         for file in &plan.files {
             let Some(file_id) = file_spdx_ids.get(file.path.as_str()) else {
@@ -393,6 +440,11 @@ pub(crate) fn write_spdx_rdf_xml(
     xml.push_str("</spdx:created>");
     xml.push_str("</spdx:CreationInfo></spdx:creationInfo>\n");
     for plan in &plans {
+        // The document DESCRIBES the scanned subject packages; promoted
+        // dependencies are reached via DEPENDS_ON on their owning package.
+        if !plan.role.is_described_by_document() {
+            continue;
+        }
         xml.push_str("    <spdx:relationship><spdx:Relationship>");
         xml.push_str(
             "<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_describes\"/>",
@@ -408,46 +460,6 @@ pub(crate) fn write_spdx_rdf_xml(
 
     xml.push_str("</rdf:RDF>\n");
     writer.write_all(xml.as_bytes())
-}
-
-fn primary_package_name(output: &Output, config: &OutputWriteConfig) -> String {
-    if output.packages.len() == 1
-        && let Some(name) = output.packages.first().and_then(|p| p.name.clone())
-    {
-        return sanitize_spdx_package_name(&name);
-    }
-
-    if let Some(scanned_path) = &config.scanned_path {
-        let path = PathBuf::from(scanned_path);
-        if let Some(name) = path.file_name().and_then(|n| n.to_str())
-            && !name.is_empty()
-        {
-            return sanitize_spdx_package_name(name);
-        }
-    }
-
-    output
-        .packages
-        .first()
-        .and_then(|p| p.name.clone())
-        .map(|name| sanitize_spdx_package_name(&name))
-        .unwrap_or_else(|| "provenant-analyzed-package".to_string())
-}
-
-fn sanitize_spdx_package_name(name: &str) -> String {
-    let mut out = String::with_capacity(name.len());
-    for ch in name.chars() {
-        if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' || ch == '.' {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        "provenant-analyzed-package".to_string()
-    } else {
-        out
-    }
 }
 
 fn spdx_files(output: &Output) -> Vec<&FileInfo> {
@@ -763,74 +775,6 @@ fn trim_spdx_dot_slash(path: &str) -> &str {
     path.trim_start_matches("./")
 }
 
-/// Plan SPDX packages: one per assembled package (with owned files), plus a
-/// scan-root fallback package for files that no assembled package claims.
-/// When there are no assembled packages, keep a single synthetic package
-/// (`SPDXRef-001`) owning every file — the historic no-package contract.
-fn plan_spdx_packages<'a>(
-    output: &'a Output,
-    files: &[&'a FileInfo],
-    config: &OutputWriteConfig,
-) -> Vec<SpdxPackagePlan<'a>> {
-    if output.packages.is_empty() {
-        return vec![SpdxPackagePlan {
-            spdx_id: "SPDXRef-001".to_string(),
-            name: primary_package_name(output, config),
-            files: files.to_vec(),
-            package: None,
-        }];
-    }
-
-    let mut assigned_paths: HashSet<&str> = HashSet::new();
-    let mut plans = Vec::with_capacity(output.packages.len() + 1);
-
-    for (idx, package) in output.packages.iter().enumerate() {
-        let owned: Vec<&FileInfo> = files
-            .iter()
-            .copied()
-            .filter(|file| {
-                file.for_packages
-                    .iter()
-                    .any(|uid| uid == &package.package_uid)
-            })
-            .collect();
-        for file in &owned {
-            assigned_paths.insert(file.path.as_str());
-        }
-        plans.push(SpdxPackagePlan {
-            spdx_id: format!("SPDXRef-Package-{}", idx + 1),
-            name: spdx_assembled_package_name(package, idx),
-            files: owned,
-            package: Some(package),
-        });
-    }
-
-    let unassigned: Vec<&FileInfo> = files
-        .iter()
-        .copied()
-        .filter(|file| !assigned_paths.contains(file.path.as_str()))
-        .collect();
-    if !unassigned.is_empty() {
-        plans.push(SpdxPackagePlan {
-            spdx_id: "SPDXRef-Package-unassigned".to_string(),
-            name: primary_package_name(output, config),
-            files: unassigned,
-            package: None,
-        });
-    }
-
-    plans
-}
-
-fn spdx_assembled_package_name(package: &OutputPackage, idx: usize) -> String {
-    package
-        .name
-        .as_deref()
-        .filter(|name| !name.is_empty())
-        .map(sanitize_spdx_package_name)
-        .unwrap_or_else(|| format!("package-{}", idx + 1))
-}
-
 fn document_namespace_for(output: &Output, config: &OutputWriteConfig) -> String {
     let base = if output.packages.len() > 1 {
         config
@@ -1015,6 +959,7 @@ mod tests {
         };
         let schema = Output::from(&output);
         let files = spdx_files(&schema);
+        let inventory = sbom::build_inventory(&schema);
         let plans = plan_spdx_packages(
             &schema,
             &files,
@@ -1023,6 +968,7 @@ mod tests {
                 custom_template: None,
                 scanned_path: Some("umbrella".to_string()),
             },
+            &inventory,
         );
         assert_eq!(plans.len(), 3);
         assert_eq!(plans[0].spdx_id, "SPDXRef-Package-1");

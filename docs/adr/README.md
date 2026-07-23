@@ -37,6 +37,7 @@ Each ADR follows a consistent structure:
 | [0009](0009-parser-submodule-structure.md)               | Parser Submodule Structure for Large Ecosystems       | Accepted | 2026-04-17 |
 | [0010](0010-package-license-from-cohosted-files.md)      | Package Declared License From Co-hosted License Files | Accepted | 2026-06-25 |
 | [0011](0011-license-compliance-gating-and-sarif.md)      | License Compliance Gating and SARIF Output            | Accepted | 2026-07-11 |
+| [0012](0012-sbom-resolved-dependency-components.md)      | Promote Resolved Dependencies to SBOM Components      | Accepted | 2026-07-23 |
 
 ## When to Create a New ADR
 

@@ -15,8 +15,10 @@ mod html;
 mod jsonl;
 mod public_serialize;
 mod sarif;
+mod sbom;
 mod shared;
 mod spdx;
+mod spdx_plan;
 mod template;
 
 pub(crate) const SPDX_DOCUMENT_NOTICE: &str = "Generated with Provenant and provided on an \"AS IS\" BASIS, WITHOUT WARRANTIES\nOR CONDITIONS OF ANY KIND, either express or implied. No content created from\nProvenant should be considered or used as legal advice. Consult an attorney\nfor legal advice.\nProvenant is a free software code scanning tool.\nVisit https://github.com/getprovenant/provenant/ for support and download.\nSPDX License List: 3.27";

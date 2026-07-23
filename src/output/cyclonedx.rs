@@ -14,7 +14,18 @@ use crate::output_schema::{
 };
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
+use super::sbom::{self, InventoryEntry, SbomInventory};
 use super::shared::{io_other, xml_escape};
+
+/// CycloneDX `scope` from shared inventory intent. Detected packages are
+/// `required`; promoted dependencies map proven `is_optional` only.
+fn cyclonedx_scope(entry: &InventoryEntry<'_>) -> Option<&'static str> {
+    match entry.is_optional() {
+        Some(true) => Some("optional"),
+        Some(false) => Some("required"),
+        None => None,
+    }
+}
 
 pub(crate) fn write_cyclonedx_json(output: &Output, writer: &mut dyn Write) -> io::Result<()> {
     let bom = build_cyclonedx_json(output);
@@ -29,8 +40,10 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
         .first()
         .and_then(|h| convert_header_timestamp_to_iso_utc(&h.end_timestamp))
         .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string());
-    let component_refs = component_bom_refs(&output.packages);
-    let dependency_graph = build_dependency_graph(output, &component_refs);
+    let inventory = sbom::build_inventory(output);
+    let component_refs = component_bom_refs_for(&inventory);
+    let dependency_graph =
+        build_dependency_graph(&inventory, &output.dependencies, &component_refs);
 
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -55,14 +68,20 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
             &output.packages[root_idx],
             None,
             "application",
-            false,
+            None,
         );
     }
     xml.push_str("  </metadata>\n");
 
     xml.push_str("  <components>\n");
-    for (idx, pkg) in output.packages.iter().enumerate() {
-        write_component_xml(&mut xml, pkg, Some(&component_refs[idx]), "library", true);
+    for (idx, entry) in inventory.entries.iter().enumerate() {
+        write_component_xml(
+            &mut xml,
+            entry.package(),
+            Some(&component_refs[idx]),
+            "library",
+            cyclonedx_scope(entry),
+        );
     }
     xml.push_str("  </components>\n");
 
@@ -103,7 +122,7 @@ fn write_component_xml(
     pkg: &Package,
     bom_ref: Option<&str>,
     component_type: &str,
-    include_scope: bool,
+    scope: Option<&str>,
 ) {
     let name = pkg.name.as_deref().unwrap_or("unknown");
     let version = pkg.version.as_deref().unwrap_or("unknown");
@@ -130,8 +149,10 @@ fn write_component_xml(
         xml.push_str(&xml_escape(description));
         xml.push_str("</description>\n");
     }
-    if include_scope {
-        xml.push_str("      <scope>required</scope>\n");
+    if let Some(scope) = scope {
+        xml.push_str("      <scope>");
+        xml.push_str(&xml_escape(scope));
+        xml.push_str("</scope>\n");
     }
     let hashes = component_hashes(pkg);
     if !hashes.is_empty() {
@@ -177,21 +198,27 @@ fn build_cyclonedx_json(output: &Output) -> Value {
         .first()
         .and_then(|h| convert_header_timestamp_to_iso_utc(&h.end_timestamp))
         .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string());
-    let component_refs = component_bom_refs(&output.packages);
+    let inventory = sbom::build_inventory(output);
+    let component_refs = component_bom_refs_for(&inventory);
 
-    let components = output
-        .packages
+    let components = inventory
+        .entries
         .iter()
         .enumerate()
-        .map(|(idx, pkg)| {
+        .map(|(idx, entry)| {
             let mut obj = Map::new();
             obj.insert("type".to_string(), Value::String("library".to_string()));
-            component_json_fields(&mut obj, pkg, Some(&component_refs[idx]), true);
+            component_json_fields(
+                &mut obj,
+                entry.package(),
+                Some(&component_refs[idx]),
+                cyclonedx_scope(entry),
+            );
             Value::Object(obj)
         })
         .collect::<Vec<_>>();
 
-    let dependencies = build_dependency_graph(output, &component_refs)
+    let dependencies = build_dependency_graph(&inventory, &output.dependencies, &component_refs)
         .into_iter()
         .map(|(reference, depends_on)| {
             json!({
@@ -222,7 +249,7 @@ fn build_cyclonedx_json(output: &Output) -> Value {
             // No `bom-ref`: CycloneDX 1.3 requires every `bom-ref` in a
             // document to be unique, and the root package's existing
             // `components` entry already carries that `bom-ref`.
-            component_json_fields(&mut root_obj, &output.packages[root_idx], None, false);
+            component_json_fields(&mut root_obj, &output.packages[root_idx], None, None);
             metadata.insert("component".to_string(), Value::Object(root_obj));
         }
 
@@ -248,7 +275,7 @@ fn component_json_fields(
     obj: &mut Map<String, Value>,
     pkg: &Package,
     bom_ref: Option<&str>,
-    include_scope: bool,
+    scope: Option<&str>,
 ) {
     if let Some(bom_ref) = bom_ref {
         obj.insert("bom-ref".to_string(), Value::String(bom_ref.to_string()));
@@ -270,8 +297,8 @@ fn component_json_fields(
     if let Some(author) = package_author(pkg) {
         obj.insert("author".to_string(), Value::String(author));
     }
-    if include_scope {
-        obj.insert("scope".to_string(), Value::String("required".to_string()));
+    if let Some(scope) = scope {
+        obj.insert("scope".to_string(), Value::String(scope.to_string()));
     }
     if let Some(purl) = &pkg.purl {
         obj.insert("purl".to_string(), Value::String(purl.clone()));
@@ -303,9 +330,14 @@ fn component_json_fields(
 
 /// Assign a unique `bom-ref` per package. Prefer purl when it does not collide;
 /// fall back to `package_uid` (always unique) or a synthetic index-based ref.
-fn component_bom_refs(packages: &[Package]) -> Vec<String> {
+fn component_bom_refs_for(inventory: &SbomInventory<'_>) -> Vec<String> {
+    component_bom_refs(inventory.packages())
+}
+
+fn component_bom_refs<'a>(packages: impl IntoIterator<Item = &'a Package>) -> Vec<String> {
+    let packages: Vec<&Package> = packages.into_iter().collect();
     let mut purl_counts: HashMap<&str, usize> = HashMap::new();
-    for pkg in packages {
+    for pkg in &packages {
         if let Some(purl) = pkg.purl.as_deref() {
             *purl_counts.entry(purl).or_default() += 1;
         }
@@ -369,24 +401,17 @@ fn package_min_datafile_depth(pkg: &Package) -> Option<usize> {
         .min()
 }
 
-/// Build a CycloneDX dependency graph: one unique entry per `ref`, with
-/// `dependsOn` listing component `bom-ref`s (or dependency purls when the
-/// target is not itself a component).
+/// Build a CycloneDX dependency graph: one unique entry per inventory
+/// `bom-ref`, with `dependsOn` listing only inventory members.
 ///
-/// Edges are owner → dependency (`for_package_uid` → package bom-ref). Child
-/// refs are resolved through [`resolve_depends_on_refs`] so a disambiguated
-/// `package_uid` bom-ref is used whenever the dependency purl maps to
-/// component(s). Self-edges are dropped. Components with no outgoing edges
-/// still get an empty `dependsOn` entry so the graph is complete.
+/// Edges come from the shared [`sbom::dependency_edges`] walker. Components
+/// with no outgoing edges still get an empty `dependsOn` entry so the graph
+/// is complete. Unresolved endpoints are never emitted as bare purls.
 fn build_dependency_graph(
-    output: &Output,
+    inventory: &SbomInventory<'_>,
+    dependencies: &[TopLevelDependency],
     component_refs: &[String],
 ) -> BTreeMap<String, BTreeSet<String>> {
-    let mut uid_to_ref: HashMap<&str, &str> = HashMap::new();
-    for (pkg, bom_ref) in output.packages.iter().zip(component_refs.iter()) {
-        uid_to_ref.insert(pkg.package_uid.as_str(), bom_ref.as_str());
-    }
-
     let mut graph: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
 
     // Every component appears in the graph (CycloneDX recommends empty nodes for
@@ -395,70 +420,11 @@ fn build_dependency_graph(
         graph.entry(bom_ref.clone()).or_default();
     }
 
-    for dep in &output.dependencies {
-        let Some(dep_purl) = dependency_edge_purl(dep) else {
-            continue;
-        };
-        let child_refs = resolve_depends_on_refs(&dep_purl, &output.packages, component_refs);
-
-        if let Some(owner_uid) = dep.for_package_uid.as_deref()
-            && let Some(owner_ref) = uid_to_ref.get(owner_uid).copied()
-        {
-            for child_ref in child_refs {
-                if owner_ref != child_ref {
-                    graph
-                        .entry(owner_ref.to_string())
-                        .or_default()
-                        .insert(child_ref);
-                }
-            }
-            continue;
-        }
-
-        // Unowned / unknown-owner dependency: emit as a leaf node so its ref
-        // still appears once (no duplicate refs across hoisted rows).
-        for child_ref in child_refs {
-            graph.entry(child_ref).or_default();
-        }
+    for (owner_ref, children) in sbom::dependency_edges(inventory, dependencies, component_refs) {
+        graph.entry(owner_ref).or_default().extend(children);
     }
 
     graph
-}
-
-/// Map a dependency purl onto component `bom-ref`s.
-///
-/// When the purl uniquely identifies a component, returns that component's
-/// bom-ref (purl or disambiguated `package_uid`). When several assembled
-/// packages share the purl, returns every matching bom-ref so `dependsOn`
-/// never points at a bare purl that no component owns. When no component
-/// matches, returns the purl itself (external / unresolved dependency).
-fn resolve_depends_on_refs(
-    dep_purl: &str,
-    packages: &[Package],
-    component_refs: &[String],
-) -> Vec<String> {
-    let matching: Vec<String> = packages
-        .iter()
-        .zip(component_refs.iter())
-        .filter(|(pkg, _)| pkg.purl.as_deref() == Some(dep_purl))
-        .map(|(_, bom_ref)| bom_ref.clone())
-        .collect();
-    if matching.is_empty() {
-        vec![dep_purl.to_string()]
-    } else {
-        matching
-    }
-}
-
-fn dependency_edge_purl(dep: &TopLevelDependency) -> Option<String> {
-    dep.purl
-        .clone()
-        .or_else(|| {
-            dep.resolved_package
-                .as_ref()
-                .and_then(|resolved| resolved.purl.clone())
-        })
-        .filter(|purl| !purl.is_empty())
 }
 
 fn cyclonedx_license_expression(pkg: &Package) -> Option<String> {
@@ -609,10 +575,12 @@ mod tests {
             license_references: vec![],
             license_rule_references: vec![],
         };
-        let refs = component_bom_refs(&output.packages);
-        let graph = build_dependency_graph(&output, &refs);
+        let inventory = sbom::build_inventory(&output);
+        let refs = component_bom_refs_for(&inventory);
+        let graph = build_dependency_graph(&inventory, &output.dependencies, &refs);
 
-        assert_eq!(graph.len(), 2, "one unique entry per owner package");
+        // Owners + promoted unique deps (jason, plug).
+        assert_eq!(graph.len(), 4);
         assert_eq!(
             graph["pkg:hex/a@0.1.0"],
             BTreeSet::from([
@@ -627,9 +595,13 @@ mod tests {
                 "pkg:hex/plug@1.15.0".to_string()
             ])
         );
-        // No self-edges and no duplicate refs.
+        assert!(graph["pkg:hex/jason@1.4.1"].is_empty());
+        assert!(graph["pkg:hex/plug@1.15.0"].is_empty());
         for (r, deps) in &graph {
             assert!(!deps.contains(r), "self-edge on {r}");
+            for child in deps {
+                assert!(graph.contains_key(child), "dangling dependsOn ref: {child}");
+            }
         }
     }
 
@@ -639,7 +611,7 @@ mod tests {
         let mut b = sample_package("shared", "1.0.0", "uid-2");
         a.purl = Some("pkg:hex/shared@1.0.0".to_string());
         b.purl = Some("pkg:hex/shared@1.0.0".to_string());
-        let refs = component_bom_refs(&[a, b]);
+        let refs = component_bom_refs([&a, &b]);
         assert_eq!(refs[0], "uid-1");
         assert_eq!(refs[1], "uid-2");
         assert_ne!(refs[0], refs[1]);
@@ -663,8 +635,9 @@ mod tests {
             license_references: vec![],
             license_rule_references: vec![],
         };
-        let refs = component_bom_refs(&output.packages);
-        let graph = build_dependency_graph(&output, &refs);
+        let inventory = sbom::build_inventory(&output);
+        let refs = component_bom_refs_for(&inventory);
+        let graph = build_dependency_graph(&inventory, &output.dependencies, &refs);
         assert_eq!(
             graph["pkg:hex/app@1.0.0"],
             BTreeSet::from(["pkg:hex/lib@2.0.0".to_string()])
@@ -691,10 +664,11 @@ mod tests {
             license_references: vec![],
             license_rule_references: vec![],
         };
-        let refs = component_bom_refs(&output.packages);
+        let inventory = sbom::build_inventory(&output);
+        let refs = component_bom_refs_for(&inventory);
         assert_eq!(refs[1], "uid-shared-a");
         assert_eq!(refs[2], "uid-shared-b");
-        let graph = build_dependency_graph(&output, &refs);
+        let graph = build_dependency_graph(&inventory, &output.dependencies, &refs);
         assert_eq!(
             graph["pkg:hex/app@1.0.0"],
             BTreeSet::from(["uid-shared-a".to_string(), "uid-shared-b".to_string()])
