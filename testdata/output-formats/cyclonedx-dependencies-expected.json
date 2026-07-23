@@ -34,9 +34,21 @@
       "version": "1.0.0",
       "scope": "required",
       "purl": "pkg:npm/other@1.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/dep@2.0.0",
+      "name": "dep",
+      "version": "2.0.0",
+      "scope": "required",
+      "purl": "pkg:npm/dep@2.0.0"
     }
   ],
   "dependencies": [
+    {
+      "ref": "pkg:npm/dep@2.0.0",
+      "dependsOn": []
+    },
     {
       "ref": "pkg:npm/other@1.0.0",
       "dependsOn": ["pkg:npm/dep@2.0.0"]

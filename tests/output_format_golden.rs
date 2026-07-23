@@ -2486,6 +2486,207 @@ fn sample_cyclonedx_dependency_output() -> Output {
     )
 }
 
+/// A root package with two resolved dependencies exercising ADR 0012
+/// promotion: `licensed` carries a `resolved_package` that declares MIT and is
+/// a required (`is_optional=false`) dependency; `bare` is an optional
+/// (`is_optional=true`) lockfile entry with no resolved metadata, so its
+/// license must stay unset. The root owns a manifest file so SPDX has files to
+/// analyze.
+fn sample_sbom_dependency_promotion_output() -> Output {
+    let root_uid = PackageUid::from_raw(
+        "pkg:npm/root@1.0.0?uuid=00000000-0000-0000-0000-000000000000".to_string(),
+    );
+    let root_pkg = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("root".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/root@1.0.0".to_string()),
+                ..Default::default()
+            },
+            "scan/package.json".to_string(),
+        );
+        pkg.package_uid = root_uid.clone();
+        pkg
+    };
+
+    let mut manifest = sample_plain_text_file(
+        "package.json",
+        "package",
+        ".json",
+        "scan/package.json",
+        20,
+        EMPTY_SHA1,
+        vec![],
+    );
+    manifest.for_packages = vec![root_uid.clone()];
+
+    let licensed_resolved = {
+        let mut rp = ResolvedPackage::new(
+            PackageType::Npm,
+            String::new(),
+            "licensed".to_string(),
+            "1.0.0".to_string(),
+        );
+        rp.purl = Some("pkg:npm/licensed@1.0.0".to_string());
+        rp.declared_license_expression = Some("mit".to_string());
+        rp.declared_license_expression_spdx = Some("MIT".to_string());
+        rp
+    };
+    let licensed_dep = TopLevelDependency {
+        purl: Some("pkg:npm/licensed@1.0.0".to_string()),
+        extracted_requirement: Some("^1.0.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(false),
+        is_pinned: Some(true),
+        is_direct: Some(true),
+        resolved_package: Some(Box::new(licensed_resolved)),
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/licensed@1.0.0?uuid=00000000-0000-0000-0000-000000000001".to_string(),
+        ),
+        for_package_uid: Some(root_uid.clone()),
+        datafile_path: "scan/package-lock.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageLockJson,
+        namespace: None,
+    };
+
+    let bare_dep = TopLevelDependency {
+        purl: Some("pkg:npm/bare@3.0.0".to_string()),
+        extracted_requirement: Some("^3.0.0".to_string()),
+        scope: Some("optionalDependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(true),
+        is_pinned: Some(true),
+        is_direct: Some(true),
+        resolved_package: None,
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/bare@3.0.0?uuid=00000000-0000-0000-0000-000000000002".to_string(),
+        ),
+        for_package_uid: Some(root_uid),
+        datafile_path: "scan/package-lock.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageLockJson,
+        namespace: None,
+    };
+
+    sample_output_with_sections(
+        1,
+        0,
+        vec![root_pkg],
+        vec![licensed_dep, bare_dep],
+        vec![manifest],
+    )
+}
+
+#[test]
+fn test_cyclonedx_promotes_resolved_dependencies_with_honest_licenses_and_scope() {
+    let output = sample_sbom_dependency_promotion_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::CycloneDxJson)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::CycloneDxJson,
+                custom_template: None,
+                scanned_path: Some("scan".to_string()),
+            },
+        )
+        .expect("cyclonedx json output should be generated");
+    let bom: Value = serde_json::from_slice(&bytes).expect("cyclonedx json should parse");
+
+    let components = bom["components"].as_array().expect("components array");
+    let by_ref = |bom_ref: &str| {
+        components
+            .iter()
+            .find(|c| c["bom-ref"] == bom_ref)
+            .unwrap_or_else(|| panic!("component {bom_ref} should be present"))
+    };
+
+    // Every resolved dependency is now a real component.
+    let licensed = by_ref("pkg:npm/licensed@1.0.0");
+    assert_eq!(licensed["name"], "licensed");
+    assert_eq!(licensed["version"], "1.0.0");
+    // Declared license from the resolved manifest is attached truthfully.
+    assert_eq!(licensed["licenses"][0]["expression"], "MIT");
+    // is_optional=false is proven required.
+    assert_eq!(licensed["scope"], "required");
+
+    let bare = by_ref("pkg:npm/bare@3.0.0");
+    assert_eq!(bare["name"], "bare");
+    assert_eq!(bare["version"], "3.0.0");
+    // No statically-known license: it must be unset, never guessed or fetched.
+    assert!(
+        bare.get("licenses").is_none(),
+        "a dependency with no known license must not carry one"
+    );
+    // is_optional=true is proven optional.
+    assert_eq!(bare["scope"], "optional");
+
+    // The dependency graph resolves to real components: no dangling dependsOn.
+    let component_refs: std::collections::BTreeSet<&str> = components
+        .iter()
+        .map(|c| c["bom-ref"].as_str().expect("bom-ref"))
+        .collect();
+    for dependency in bom["dependencies"].as_array().expect("dependencies array") {
+        for target in dependency["dependsOn"].as_array().expect("dependsOn array") {
+            let target = target.as_str().expect("dependsOn ref");
+            assert!(
+                component_refs.contains(target),
+                "dangling dependsOn ref: {target}"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_spdx_tv_promotes_resolved_dependencies_as_packages_with_depends_on() {
+    let output = sample_sbom_dependency_promotion_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::SpdxTv)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::SpdxTv,
+                custom_template: None,
+                scanned_path: Some("scan".to_string()),
+            },
+        )
+        .expect("spdx tv output should be generated");
+    let rendered = String::from_utf8(bytes).expect("spdx tv should be utf-8");
+
+    // Both resolved dependencies become packages that own no scanned files.
+    assert!(rendered.contains("PackageName: licensed"));
+    assert!(rendered.contains("PackageName: bare"));
+    assert!(rendered.contains("SPDXID: SPDXRef-Package-Dependency-1"));
+    assert!(rendered.contains("SPDXID: SPDXRef-Package-Dependency-2"));
+    assert!(
+        rendered.contains("FilesAnalyzed: false"),
+        "promoted dependencies own no files and must report FilesAnalyzed: false"
+    );
+
+    // Declared license flows through only where truthfully known.
+    assert!(rendered.contains("PackageLicenseDeclared: MIT"));
+
+    // The graph is represented as DEPENDS_ON from the owning package.
+    assert!(
+        rendered
+            .contains("Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-1")
+    );
+    assert!(
+        rendered
+            .contains("Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-2")
+    );
+    // A promoted dependency is not a DESCRIBES subject of the document.
+    assert!(!rendered.contains("DESCRIBES SPDXRef-Package-Dependency-1"));
+}
+
 fn empty_output() -> Output {
     Output {
         summary: None,

@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -12,11 +12,15 @@ use sha1::{Digest, Sha1};
 
 use crate::output_schema::{
     Output, OutputFileInfo as FileInfo, OutputFileType, OutputMatch as Match, OutputPackage,
+    OutputTopLevelDependency as TopLevelDependency,
 };
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
+use super::sbom::{self, PromotedComponent};
 use super::shared::{sorted_files, xml_escape};
 use super::{OutputWriteConfig, SPDX_DOCUMENT_NOTICE};
+
+const DEPENDS_ON_RELATIONSHIP: &str = "http://spdx.org/rdf/terms#relationshipType_dependsOn";
 
 const EMPTY_SHA1_HEX: &str = "da39a3ee5e6b4b0d3255bfef95601890afd80709";
 
@@ -36,6 +40,19 @@ struct SpdxPackagePlan<'a> {
     /// `None` for the no-package synthetic plan and the unassigned-files
     /// fallback bucket, which have no package-level license data to draw on.
     package: Option<&'a OutputPackage>,
+    /// A resolved dependency promoted to a package (ADR 0012): it owns no
+    /// scanned files, so it is emitted with `FilesAnalyzed: false` (no
+    /// verification code, no per-file license info) and is connected to the
+    /// graph through `DEPENDS_ON` relationships rather than `DESCRIBES`.
+    is_dependency: bool,
+}
+
+impl SpdxPackagePlan<'_> {
+    /// A promoted-dependency plan owns no scanned files, so SPDX requires
+    /// `FilesAnalyzed: false` and forbids a package verification code.
+    fn files_analyzed(&self) -> bool {
+        !self.is_dependency
+    }
 }
 
 pub(crate) fn write_spdx_tag_value(
@@ -50,7 +67,9 @@ pub(crate) fn write_spdx_tag_value(
         return Ok(());
     }
 
-    let plans = plan_spdx_packages(output, &files, config);
+    let promoted = sbom::promote_dependencies(&output.packages, &output.dependencies);
+    let plans = plan_spdx_packages(output, &files, config, &promoted);
+    let dependency_edges = spdx_dependency_edges(&output.dependencies, &plans);
     let document_namespace = document_namespace_for(output, config);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
     let created = spdx_created_timestamp(output);
@@ -78,8 +97,6 @@ pub(crate) fn write_spdx_tag_value(
     writeln!(writer, "Created: {}", created)?;
 
     for plan in &plans {
-        let package_verification_code = spdx_package_verification_code(&plan.files);
-        let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
         let package_copyright_text = spdx_package_copyright_text(&plan.files);
         let package_license_concluded = spdx_package_license_concluded(plan.package);
         let package_license_declared = spdx_package_license_declared(plan.package);
@@ -88,22 +105,30 @@ pub(crate) fn write_spdx_tag_value(
         writeln!(writer, "PackageName: {}", plan.name)?;
         writeln!(writer, "SPDXID: {}", plan.spdx_id)?;
         writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
-        writeln!(writer, "FilesAnalyzed: true")?;
-        writeln!(
-            writer,
-            "PackageVerificationCode: {}",
-            package_verification_code
-        )?;
+        writeln!(writer, "FilesAnalyzed: {}", plan.files_analyzed())?;
+        // SPDX 2.2: a package verification code and per-file license info are
+        // only meaningful (and only valid) when files were analyzed. A promoted
+        // dependency owns no scanned files, so both are omitted for it.
+        if plan.files_analyzed() {
+            writeln!(
+                writer,
+                "PackageVerificationCode: {}",
+                spdx_package_verification_code(&plan.files)
+            )?;
+        }
         writeln!(
             writer,
             "PackageLicenseConcluded: {}",
             spdx_tv_license_value(package_license_concluded.as_deref())
         )?;
-        for license_id in &package_license_info_from_files {
-            writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
-        }
-        if package_license_info_from_files.is_empty() {
-            writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
+        if plan.files_analyzed() {
+            let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+            for license_id in &package_license_info_from_files {
+                writeln!(writer, "PackageLicenseInfoFromFiles: {}", license_id)?;
+            }
+            if package_license_info_from_files.is_empty() {
+                writeln!(writer, "PackageLicenseInfoFromFiles: NONE")?;
+            }
         }
         writeln!(
             writer,
@@ -163,11 +188,15 @@ pub(crate) fn write_spdx_tag_value(
 
     writeln!(writer, "## Relationships")?;
     for plan in &plans {
-        writeln!(
-            writer,
-            "Relationship: SPDXRef-DOCUMENT DESCRIBES {}",
-            plan.spdx_id
-        )?;
+        // The document DESCRIBES the scanned subject packages; promoted
+        // dependencies are attached to the graph via DEPENDS_ON below instead.
+        if !plan.is_dependency {
+            writeln!(
+                writer,
+                "Relationship: SPDXRef-DOCUMENT DESCRIBES {}",
+                plan.spdx_id
+            )?;
+        }
         for file in &plan.files {
             if let Some(file_id) = file_spdx_ids.get(file.path.as_str()) {
                 writeln!(
@@ -176,6 +205,15 @@ pub(crate) fn write_spdx_tag_value(
                     plan.spdx_id, file_id
                 )?;
             }
+        }
+    }
+    for (owner_id, dependency_ids) in &dependency_edges {
+        for dependency_id in dependency_ids {
+            writeln!(
+                writer,
+                "Relationship: {} DEPENDS_ON {}",
+                owner_id, dependency_id
+            )?;
         }
     }
 
@@ -218,7 +256,9 @@ pub(crate) fn write_spdx_rdf_xml(
         return Ok(());
     }
 
-    let plans = plan_spdx_packages(output, &files, config);
+    let promoted = sbom::promote_dependencies(&output.packages, &output.dependencies);
+    let plans = plan_spdx_packages(output, &files, config, &promoted);
+    let dependency_edges = spdx_dependency_edges(&output.dependencies, &plans);
     let document_namespace = document_namespace_for(output, config);
     let document_namespace_xml = xml_escape(&document_namespace);
     let extracted_license_infos = spdx_extracted_license_infos(output, &files);
@@ -235,19 +275,22 @@ pub(crate) fn write_spdx_rdf_xml(
     xml.push_str("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\" xmlns:spdx=\"http://spdx.org/rdf/terms#\">\n");
 
     for plan in &plans {
-        let package_verification_code = spdx_package_verification_code(&plan.files);
-        let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
         let package_copyright_text = xml_escape(&spdx_package_copyright_text(&plan.files));
         let package_name = xml_escape(&plan.name);
         let package_license_concluded = spdx_package_license_concluded(plan.package);
         let package_license_declared = spdx_package_license_declared(plan.package);
+        let files_analyzed = plan.files_analyzed();
 
         xml.push_str("  <spdx:Package rdf:about=\"");
         xml.push_str(&document_namespace_xml);
         xml.push('#');
         xml.push_str(&xml_escape(&plan.spdx_id));
         xml.push_str("\">\n");
-        xml.push_str("    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">true</spdx:filesAnalyzed>\n");
+        xml.push_str(
+            "    <spdx:filesAnalyzed rdf:datatype=\"http://www.w3.org/2001/XMLSchema#boolean\">",
+        );
+        xml.push_str(if files_analyzed { "true" } else { "false" });
+        xml.push_str("</spdx:filesAnalyzed>\n");
         xml.push_str(
             "    <spdx:downloadLocation rdf:resource=\"http://spdx.org/rdf/terms#noassertion\"/>\n",
         );
@@ -263,23 +306,45 @@ pub(crate) fn write_spdx_rdf_xml(
             &document_namespace,
         )));
         xml.push_str("\"/>\n");
-        if package_license_info_from_files.is_empty() {
-            xml.push_str(
-                "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
-            );
-        } else {
-            for license_id in &package_license_info_from_files {
-                xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
-                xml.push_str(&xml_escape(&spdx_license_rdf_resource(
-                    license_id,
-                    &document_namespace,
-                )));
-                xml.push_str("\"/>\n");
+        // Per-file license info and a verification code are only valid when
+        // files were analyzed; a promoted dependency owns no files (ADR 0012).
+        if files_analyzed {
+            let package_license_info_from_files = spdx_package_license_info_from_files(&plan.files);
+            if package_license_info_from_files.is_empty() {
+                xml.push_str(
+                    "    <spdx:licenseInfoFromFiles rdf:resource=\"http://spdx.org/rdf/terms#none\"/>\n",
+                );
+            } else {
+                for license_id in &package_license_info_from_files {
+                    xml.push_str("    <spdx:licenseInfoFromFiles rdf:resource=\"");
+                    xml.push_str(&xml_escape(&spdx_license_rdf_resource(
+                        license_id,
+                        &document_namespace,
+                    )));
+                    xml.push_str("\"/>\n");
+                }
+            }
+            xml.push_str("    <spdx:packageVerificationCode><spdx:PackageVerificationCode><spdx:packageVerificationCodeValue>");
+            xml.push_str(&spdx_package_verification_code(&plan.files));
+            xml.push_str("</spdx:packageVerificationCodeValue></spdx:PackageVerificationCode></spdx:packageVerificationCode>\n");
+        }
+
+        // DEPENDS_ON relationships to the packages this one resolves to.
+        if let Some(dependency_ids) = dependency_edges.get(&plan.spdx_id) {
+            for dependency_id in dependency_ids {
+                xml.push_str("    <spdx:relationship><spdx:Relationship>");
+                xml.push_str(&format!(
+                    "<spdx:relationshipType rdf:resource=\"{}\"/>",
+                    DEPENDS_ON_RELATIONSHIP
+                ));
+                xml.push_str("<spdx:relatedSpdxElement rdf:resource=\"");
+                xml.push_str(&document_namespace_xml);
+                xml.push('#');
+                xml.push_str(&xml_escape(dependency_id));
+                xml.push_str("\"/>");
+                xml.push_str("</spdx:Relationship></spdx:relationship>\n");
             }
         }
-        xml.push_str("    <spdx:packageVerificationCode><spdx:PackageVerificationCode><spdx:packageVerificationCodeValue>");
-        xml.push_str(&package_verification_code);
-        xml.push_str("</spdx:packageVerificationCodeValue></spdx:PackageVerificationCode></spdx:packageVerificationCode>\n");
 
         for file in &plan.files {
             let Some(file_id) = file_spdx_ids.get(file.path.as_str()) else {
@@ -393,6 +458,11 @@ pub(crate) fn write_spdx_rdf_xml(
     xml.push_str("</spdx:created>");
     xml.push_str("</spdx:CreationInfo></spdx:creationInfo>\n");
     for plan in &plans {
+        // The document DESCRIBES the scanned subject packages; promoted
+        // dependencies are reached via DEPENDS_ON on their owning package.
+        if plan.is_dependency {
+            continue;
+        }
         xml.push_str("    <spdx:relationship><spdx:Relationship>");
         xml.push_str(
             "<spdx:relationshipType rdf:resource=\"http://spdx.org/rdf/terms#relationshipType_describes\"/>",
@@ -771,18 +841,20 @@ fn plan_spdx_packages<'a>(
     output: &'a Output,
     files: &[&'a FileInfo],
     config: &OutputWriteConfig,
+    promoted: &'a [PromotedComponent],
 ) -> Vec<SpdxPackagePlan<'a>> {
-    if output.packages.is_empty() {
+    if output.packages.is_empty() && promoted.is_empty() {
         return vec![SpdxPackagePlan {
             spdx_id: "SPDXRef-001".to_string(),
             name: primary_package_name(output, config),
             files: files.to_vec(),
             package: None,
+            is_dependency: false,
         }];
     }
 
     let mut assigned_paths: HashSet<&str> = HashSet::new();
-    let mut plans = Vec::with_capacity(output.packages.len() + 1);
+    let mut plans = Vec::with_capacity(output.packages.len() + promoted.len() + 1);
 
     for (idx, package) in output.packages.iter().enumerate() {
         let owned: Vec<&FileInfo> = files
@@ -802,6 +874,7 @@ fn plan_spdx_packages<'a>(
             name: spdx_assembled_package_name(package, idx),
             files: owned,
             package: Some(package),
+            is_dependency: false,
         });
     }
 
@@ -816,10 +889,67 @@ fn plan_spdx_packages<'a>(
             name: primary_package_name(output, config),
             files: unassigned,
             package: None,
+            is_dependency: false,
+        });
+    }
+
+    // Promoted resolved dependencies: one package each, owning no scanned files.
+    for (idx, component) in promoted.iter().enumerate() {
+        plans.push(SpdxPackagePlan {
+            spdx_id: format!("SPDXRef-Package-Dependency-{}", idx + 1),
+            name: spdx_assembled_package_name(&component.package, idx),
+            files: Vec::new(),
+            package: Some(&component.package),
+            is_dependency: true,
         });
     }
 
     plans
+}
+
+/// Build the SPDX dependency graph: `owner SPDXRef → set of dependency SPDXRef`.
+/// Owners are resolved from `for_package_uid`; dependency targets from the
+/// dependency purl, mapped onto whatever plan (detected package or promoted
+/// dependency) carries that purl. Self-edges and unresolved endpoints are
+/// dropped so every emitted relationship points at a real package.
+fn spdx_dependency_edges(
+    dependencies: &[TopLevelDependency],
+    plans: &[SpdxPackagePlan<'_>],
+) -> BTreeMap<String, BTreeSet<String>> {
+    let mut uid_to_id: HashMap<&str, &str> = HashMap::new();
+    let mut purl_to_id: HashMap<&str, &str> = HashMap::new();
+    for plan in plans {
+        if let Some(package) = plan.package {
+            uid_to_id.insert(package.package_uid.as_str(), plan.spdx_id.as_str());
+            if let Some(purl) = package.purl.as_deref() {
+                purl_to_id.entry(purl).or_insert(plan.spdx_id.as_str());
+            }
+        }
+    }
+
+    let mut edges: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for dep in dependencies {
+        let Some(owner_uid) = dep.for_package_uid.as_deref() else {
+            continue;
+        };
+        let Some(owner_id) = uid_to_id.get(owner_uid).copied() else {
+            continue;
+        };
+        let Some(purl) = sbom::dependency_edge_purl(dep) else {
+            continue;
+        };
+        let Some(child_id) = purl_to_id.get(purl.as_str()).copied() else {
+            continue;
+        };
+        if owner_id != child_id {
+            edges
+                .entry(owner_id.to_string())
+                .or_default()
+                .insert(child_id.to_string());
+        }
+    }
+
+    edges
 }
 
 fn spdx_assembled_package_name(package: &OutputPackage, idx: usize) -> String {
@@ -1023,6 +1153,7 @@ mod tests {
                 custom_template: None,
                 scanned_path: Some("umbrella".to_string()),
             },
+            &[],
         );
         assert_eq!(plans.len(), 3);
         assert_eq!(plans[0].spdx_id, "SPDXRef-Package-1");

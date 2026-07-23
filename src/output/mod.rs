@@ -15,6 +15,7 @@ mod html;
 mod jsonl;
 mod public_serialize;
 mod sarif;
+mod sbom;
 mod shared;
 mod spdx;
 mod template;
