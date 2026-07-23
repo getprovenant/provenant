@@ -161,7 +161,10 @@ jobs:
       - name: Check formatting (Prettier)
         run: npm run format:check
 
+      # Soft-fail: external hosts (e.g. googlesource) often return transient
+      # 5xx/timeouts that flake Code Quality without reflecting a real docs bug.
       - name: Validate URLs
+        continue-on-error: true
         run: npm run validate:urls
 
       - name: Lint Markdown
