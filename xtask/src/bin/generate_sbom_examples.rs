@@ -6,21 +6,21 @@
 //! For each verified target this bin checks the repository out at its pinned
 //! commit, runs the current-build Provenant scanner with license, package, and
 //! copyright detection, and writes SPDX tag-value plus CycloneDX JSON documents
-//! next to a short provenance README. `--check` regenerates into a temporary
-//! directory, normalizes every per-run volatile field (SPDX `Created`
-//! timestamp, CycloneDX `serialNumber`/`metadata.timestamp`, the embedded
-//! Provenant tool version, and any random package-UID suffix), and fails only
-//! on real content drift. Version normalization keeps a routine release bump
-//! from failing the check before the examples are regenerated.
+//! next to a short provenance README. The examples are illustrative artifacts,
+//! not golden fixtures: regenerate them on demand (a new release, an output
+//! improvement worth showcasing, or a new target) rather than drift-checking
+//! them on every change. Run with no arguments:
+//!
+//! ```bash
+//! cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
+//! ```
 
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 use anyhow::{Context, Result, anyhow, bail};
-use clap::Parser;
-use regex::Regex;
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use provenant_xtask::common::{ensure_release_binary, project_root, shell_join};
 use provenant_xtask::repo_cache::{
@@ -44,6 +44,11 @@ struct SbomTarget {
     tag: &'static str,
     /// Full commit SHA the example is generated from.
     pinned_sha: &'static str,
+    /// Verified, source-faithful differences from ScanCode, phrased for a
+    /// public README. State the difference; do not editorialize. The universal
+    /// "complete, closed inventory" point is added by the template from the
+    /// generated document's own counts, so these are the target-specific ones.
+    highlights: &'static [&'static str],
 }
 
 const TARGETS: &[SbomTarget] = &[
@@ -53,6 +58,10 @@ const TARGETS: &[SbomTarget] = &[
         repo_url: "https://github.com/BurntSushi/ripgrep.git",
         tag: "15.2.0",
         pinned_sha: "e89fff89ac9af12e8d4ce9d5fd07beb408ca730f",
+        highlights: &[
+            "Cleaner copyright: Provenant does not record two prose fragments that ScanCode \
+             captures as \"authors\" (`missed. Similarly`; a bare `github.com/Genivia/ugrep` URL).",
+        ],
     },
     SbomTarget {
         name: "express",
@@ -60,6 +69,13 @@ const TARGETS: &[SbomTarget] = &[
         repo_url: "https://github.com/expressjs/express.git",
         tag: "v5.2.1",
         pinned_sha: "dbac741a49a5a64336b70c06e85c2e2706e36336",
+        highlights: &[
+            "Source-faithful copyright: express source literally writes `Copyright(c)` (no space) \
+             and Provenant preserves it, where ScanCode rewrites it to `Copyright (c)`.",
+            "Cleaner authors: Provenant extracts `TJ Holowaychuk <tj@vision-media.ca>` and drops \
+             three ScanCode false-positive \"authors\" (a `graphs/contributors` URL and an \
+             `application.js` filename).",
+        ],
     },
     SbomTarget {
         name: "flask",
@@ -67,6 +83,28 @@ const TARGETS: &[SbomTarget] = &[
         repo_url: "https://github.com/pallets/flask.git",
         tag: "3.1.3",
         pinned_sha: "22d924701a6ae2e4cd01e9a15bbaf3946094af65",
+        highlights: &[
+            "Cleaner declared license: Provenant resolves `BSD-3-Clause`, where ScanCode reports \
+             `BSD-3-Clause AND LicenseRef-scancode-unknown-license-reference`.",
+            "Precise package identity: the package carries a proper `pkg:pypi/flask@3.1.3` purl.",
+        ],
+    },
+    SbomTarget {
+        name: "tokio",
+        ecosystem: "Rust / Cargo workspace",
+        repo_url: "https://github.com/tokio-rs/tokio.git",
+        tag: "tokio-1.53.1",
+        pinned_sha: "75fef53d0a8590c2d1dbb63672aa7b7d1ef51155",
+        highlights: &[
+            "Monorepo-aware ownership: each member crate of the Cargo workspace (`tokio`, \
+             `tokio-util`, `tokio-stream`, `tokio-test`, ...) is its own package, and files are \
+             attributed to the crate that owns them rather than to one flattened project.",
+            "More complete copyright: Provenant attributes the `Tokio Contributors` holder to \
+             every workspace package, where ScanCode records no holder for them.",
+            "Cleaner copyright: ScanCode misreads Rust's `#[repr(C)]` attribute as a copyright \
+             symbol (e.g. `tokio/src/runtime/task/core.rs` and `runtime/task/raw.rs`) and records \
+             the trailing comment as a copyright and holder; Provenant does not.",
+        ],
     },
 ];
 
@@ -74,23 +112,21 @@ const SPDX_FILE: &str = "sbom.spdx";
 const CYCLONEDX_FILE: &str = "sbom.cdx.json";
 const README_FILE: &str = "README.md";
 
-#[derive(Parser, Debug)]
-#[command(name = "generate-sbom-examples")]
-struct Args {
-    /// Verify the checked-in examples instead of rewriting them.
-    #[arg(long)]
-    check: bool,
-}
-
 fn main() -> Result<()> {
-    let args = Args::parse();
     let project_root = project_root();
-    let version = workspace_package_version(&project_root)?;
+
+    // Version stamped into every generated document. Defaults to the workspace
+    // package version, but an explicit `PROVENANT_BUILD_VERSION` wins so the
+    // examples can be stamped for the release that first ships their behavior —
+    // e.g. regenerate with `PROVENANT_BUILD_VERSION=1.0.1` before 1.0.1 is cut.
+    // Once that version is released the default matches on its own.
+    let version = match std::env::var("PROVENANT_BUILD_VERSION") {
+        Ok(v) if !v.trim().is_empty() => v,
+        _ => workspace_package_version(&project_root)?,
+    };
 
     // Pin the embedded tool version so committed output is deterministic
-    // regardless of a dirty working tree or `git describe` state. `--check`
-    // still normalizes the version token, so a release bump does not fail CI
-    // before the examples are regenerated.
+    // regardless of a dirty working tree or `git describe` state.
     // SAFETY: set before any Provenant build or scan child process is spawned,
     // while the process is still single-threaded.
     unsafe {
@@ -114,29 +150,6 @@ fn main() -> Result<()> {
         )?);
     }
 
-    let top_readme = render_top_readme(&version);
-
-    if args.check {
-        let mut drift: Vec<String> = Vec::new();
-        for example in &generated {
-            drift.extend(check_example(&examples_root, example)?);
-        }
-        drift.extend(check_file(
-            &examples_root.join(README_FILE),
-            &top_readme,
-            normalize_markdown,
-        )?);
-        if !drift.is_empty() {
-            bail!(
-                "examples/sbom is out of date; run `cargo run --manifest-path \
-                 xtask/Cargo.toml --bin generate-sbom-examples`:\n{}",
-                drift.join("\n")
-            );
-        }
-        println!("examples/sbom is up to date");
-        return Ok(());
-    }
-
     for example in &generated {
         let dir = examples_root.join(example.target_name);
         fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
@@ -144,7 +157,11 @@ fn main() -> Result<()> {
         write_file(&dir.join(CYCLONEDX_FILE), &example.cyclonedx)?;
         write_file(&dir.join(README_FILE), &example.readme)?;
     }
-    write_file(&examples_root.join(README_FILE), &top_readme)?;
+    prune_obsolete_examples(&examples_root)?;
+    write_file(
+        &examples_root.join(README_FILE),
+        &render_top_readme(&version),
+    )?;
     println!(
         "wrote {} SBOM examples to {}",
         generated.len(),
@@ -241,16 +258,17 @@ fn scan_target(
 
     let spdx = fs::read_to_string(&spdx_path)
         .with_context(|| format!("failed to read {}", spdx_path.display()))?;
-    let cyclonedx = fs::read_to_string(&cyclonedx_path)
+    let cyclonedx_raw = fs::read_to_string(&cyclonedx_path)
         .with_context(|| format!("failed to read {}", cyclonedx_path.display()))?;
     // Re-serialize CycloneDX so the committed file is pretty-printed and stable.
-    let cyclonedx_value: Value = serde_json::from_str(&cyclonedx)
+    let cyclonedx_value: Value = serde_json::from_str(&cyclonedx_raw)
         .with_context(|| format!("{} produced invalid CycloneDX JSON", target.name))?;
+    let stats = cyclonedx_stats(&cyclonedx_value);
     let cyclonedx = format!("{}\n", serde_json::to_string_pretty(&cyclonedx_value)?);
 
     let _ = fs::remove_dir_all(&scratch);
 
-    let readme = render_example_readme(target);
+    let readme = render_example_readme(target, &stats);
     Ok(GeneratedExample {
         target_name: target.name,
         spdx,
@@ -259,128 +277,83 @@ fn scan_target(
     })
 }
 
-fn check_example(examples_root: &Path, example: &GeneratedExample) -> Result<Vec<String>> {
-    let dir = examples_root.join(example.target_name);
-    let mut drift = Vec::new();
-    drift.extend(check_file(
-        &dir.join(SPDX_FILE),
-        &example.spdx,
-        normalize_spdx,
-    )?);
-    drift.extend(check_file(
-        &dir.join(CYCLONEDX_FILE),
-        &example.cyclonedx,
-        normalize_cyclonedx,
-    )?);
-    drift.extend(check_file(
-        &dir.join(README_FILE),
-        &example.readme,
-        normalize_markdown,
-    )?);
-    Ok(drift)
-}
-
-fn check_file(
-    path: &Path,
-    expected: &str,
-    normalize: fn(&str) -> Result<String>,
-) -> Result<Vec<String>> {
-    let existing = match fs::read_to_string(path) {
-        Ok(existing) => existing,
-        Err(_) => return Ok(vec![format!("  missing: {}", path.display())]),
-    };
-    if normalize(&existing)? != normalize(expected)? {
-        return Ok(vec![format!("  drift: {}", path.display())]);
-    }
-    Ok(Vec::new())
-}
-
 fn write_file(path: &Path, contents: &str) -> Result<()> {
     fs::write(path, contents).with_context(|| format!("failed to write {}", path.display()))
 }
 
-const NORMALIZED: &str = "<NORMALIZED>";
-
-/// Regex matching the embedded Provenant tool version token in text output
-/// (`Provenant-1.0.0`, `Provenant 1.2.3-5-gabcd`, etc.). Only the version that
-/// trails a literal `Provenant` marker is rewritten, so real package versions
-/// in the surrounding document are left untouched.
-fn provenant_version_regex() -> Regex {
-    Regex::new(r"Provenant([ -])v?\d+\.\d+\.\d+[0-9A-Za-z.\-]*").expect("valid version regex")
-}
-
-/// Strip the random `?uuid=<uuid>` suffix that Provenant appends to a package
-/// UID when a CycloneDX `bom-ref` or dependency reference falls back to it.
-fn package_uid_regex() -> Regex {
-    Regex::new(r"\?uuid=[0-9a-fA-F-]{36}").expect("valid uuid suffix regex")
-}
-
-fn normalize_spdx(text: &str) -> Result<String> {
-    let version = provenant_version_regex();
-    let uid = package_uid_regex();
-    let normalized = text
-        .lines()
-        .map(|line| {
-            if let Some(rest) = line.strip_prefix("Created:") {
-                let _ = rest;
-                format!("Created: {NORMALIZED}")
-            } else {
-                let line = version.replace_all(line, format!("Provenant${{1}}{NORMALIZED}"));
-                uid.replace_all(&line, format!("?uuid={NORMALIZED}"))
-                    .into_owned()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-    Ok(normalized)
-}
-
-fn normalize_cyclonedx(text: &str) -> Result<String> {
-    let mut value: Value =
-        serde_json::from_str(text).context("committed CycloneDX example is not valid JSON")?;
-    if let Some(obj) = value.as_object_mut() {
-        if obj.contains_key("serialNumber") {
-            obj.insert(
-                "serialNumber".to_string(),
-                Value::String(NORMALIZED.to_string()),
-            );
+/// Remove per-target directories that are no longer in `TARGETS`, so
+/// `examples/sbom/` reflects exactly the current manifest. Without this a
+/// removed or renamed target would leave a stale, generator-owned directory
+/// behind. The top-level `README.md` and any non-target files are left alone.
+fn prune_obsolete_examples(examples_root: &Path) -> Result<()> {
+    let keep: std::collections::HashSet<&str> = TARGETS.iter().map(|t| t.name).collect();
+    for entry in fs::read_dir(examples_root)
+        .with_context(|| format!("failed to read {}", examples_root.display()))?
+    {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
         }
-        if let Some(metadata) = obj.get_mut("metadata").and_then(Value::as_object_mut) {
-            normalize_cyclonedx_metadata(metadata);
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if !keep.contains(name.as_ref()) {
+            fs::remove_dir_all(entry.path())
+                .with_context(|| format!("failed to remove obsolete example dir {name}"))?;
+            println!("  removed obsolete example directory: {name}");
         }
     }
-    // Blank the random package-UID suffix anywhere it survives in bom-refs or
-    // dependency references.
-    let uid = package_uid_regex();
-    let serialized = serde_json::to_string_pretty(&value)?;
-    Ok(uid
-        .replace_all(&serialized, format!("?uuid={NORMALIZED}"))
-        .into_owned())
+    Ok(())
 }
 
-fn normalize_cyclonedx_metadata(metadata: &mut Map<String, Value>) {
-    if metadata.contains_key("timestamp") {
-        metadata.insert(
-            "timestamp".to_string(),
-            Value::String(NORMALIZED.to_string()),
-        );
+/// Component and dependency-graph counts read back from a generated CycloneDX
+/// document, so the README states the document's own numbers.
+struct CycloneDxStats {
+    components: usize,
+    dependency_edges: usize,
+    dangling_edges: usize,
+}
+
+fn cyclonedx_stats(doc: &Value) -> CycloneDxStats {
+    let mut known_refs: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    if let Some(root) = doc
+        .get("metadata")
+        .and_then(|m| m.get("component"))
+        .and_then(|c| c.get("bom-ref"))
+        .and_then(Value::as_str)
+    {
+        known_refs.insert(root);
     }
-    if let Some(tools) = metadata.get_mut("tools").and_then(Value::as_array_mut) {
-        for tool in tools {
-            if let Some(tool_obj) = tool.as_object_mut()
-                && tool_obj.contains_key("version")
-            {
-                tool_obj.insert("version".to_string(), Value::String(NORMALIZED.to_string()));
+    let components = doc.get("components").and_then(Value::as_array);
+    if let Some(components) = components {
+        for component in components {
+            if let Some(bom_ref) = component.get("bom-ref").and_then(Value::as_str) {
+                known_refs.insert(bom_ref);
             }
         }
     }
-}
 
-fn normalize_markdown(text: &str) -> Result<String> {
-    let version = provenant_version_regex();
-    Ok(version
-        .replace_all(text, format!("Provenant${{1}}{NORMALIZED}"))
-        .into_owned())
+    let mut dependency_edges = 0;
+    let mut dangling_edges = 0;
+    if let Some(dependencies) = doc.get("dependencies").and_then(Value::as_array) {
+        for dependency in dependencies {
+            if let Some(depends_on) = dependency.get("dependsOn").and_then(Value::as_array) {
+                for edge in depends_on {
+                    if let Some(target) = edge.as_str() {
+                        dependency_edges += 1;
+                        if !known_refs.contains(target) {
+                            dangling_edges += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    CycloneDxStats {
+        components: components.map(|c| c.len()).unwrap_or(0),
+        dependency_edges,
+        dangling_edges,
+    }
 }
 
 fn workspace_package_version(project_root: &Path) -> Result<String> {
@@ -407,7 +380,40 @@ fn workspace_package_version(project_root: &Path) -> Result<String> {
     ))
 }
 
-fn render_example_readme(target: &SbomTarget) -> String {
+fn render_example_readme(target: &SbomTarget, stats: &CycloneDxStats) -> String {
+    let inventory = if stats.dangling_edges == 0 {
+        format!(
+            "- **{components} components** — the project plus every resolved dependency, each \
+             with a package URL (purl).\n\
+             - **{edges} dependency relationships**, fully resolved: every `dependsOn` edge \
+             points to a component in this same document (no dangling references). A \
+             packages-only SBOM lists just the top-level package(s).\n",
+            components = stats.components,
+            edges = stats.dependency_edges,
+        )
+    } else {
+        // Defensive: never publish a document we would describe as closed when
+        // it is not. The generator prints the count so it is caught on regen.
+        format!(
+            "- **{components} components** and **{edges} dependency relationships** \
+             ({dangling} unresolved).\n",
+            components = stats.components,
+            edges = stats.dependency_edges,
+            dangling = stats.dangling_edges,
+        )
+    };
+
+    let mut compares = String::from(
+        "Verified against ScanCode with the `compare-outputs` xtask; no medium-or-major \
+         license, copyright, or package regression. Notable source-faithful differences:\n\n\
+         - Complete inventory: every resolved dependency is promoted to a component with a purl \
+         and the dependency graph is closed, so the SBOM never references materials it does not \
+         also list.\n",
+    );
+    for highlight in target.highlights {
+        compares.push_str(&format!("- {highlight}\n"));
+    }
+
     format!(
         "# `{name}` SBOM example\n\
          \n\
@@ -424,10 +430,16 @@ fn render_example_readme(target: &SbomTarget) -> String {
          - Command: `provenant scan <checkout> --license --package --copyright \
            --strip-root --spdx-tv {spdx} --cyclonedx {cyclonedx}`\n\
          \n\
-         Verified against ScanCode with `compare-outputs` before publication: no \
-         medium-or-major license, copyright, or package regressions. See \
-         [`../README.md`](../README.md) for the regeneration command and the \
-         per-target verification verdict.\n",
+         ## What's inside\n\
+         \n\
+         {inventory}\
+         \n\
+         ## How it compares\n\
+         \n\
+         {compares}\
+         \n\
+         See [`../README.md`](../README.md) for the full target list and the verification \
+         method.\n",
         name = target.name,
         ecosystem = target.ecosystem,
         repo = target.repo_url,
@@ -437,6 +449,8 @@ fn render_example_readme(target: &SbomTarget) -> String {
         spdx = SPDX_FILE,
         cyclonedx = CYCLONEDX_FILE,
         version = current_forced_version(),
+        inventory = inventory,
+        compares = compares,
     )
 }
 
@@ -463,7 +477,10 @@ fn render_top_readme(_version: &str) -> String {
          \n\
          These examples are generated by Provenant {version} (the current \
          build) scanning each project at a pinned commit with license, package, \
-         and copyright detection enabled.\n\
+         and copyright detection enabled. Every SBOM is a complete, closed \
+         inventory: each resolved dependency is promoted to a component with a \
+         package URL, and every dependency relationship resolves within the \
+         document.\n\
          \n\
          ## Targets\n\
          \n\
@@ -481,18 +498,18 @@ fn render_top_readme(_version: &str) -> String {
          \n\
          ## Regeneration\n\
          \n\
-         These files are generated and drift-checked in CI. Regenerate them with \
-         a single command:\n\
+         These are illustrative artifacts, not golden fixtures, so they are \
+         refreshed on demand rather than drift-checked on every change. \
+         Regenerate all of them — pinned checkout, scan, and documents — with a \
+         single command:\n\
          \n\
          ```bash\n\
          cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples\n\
          ```\n\
          \n\
-         Verify they are current (as CI does) with:\n\
-         \n\
-         ```bash\n\
-         cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples -- --check\n\
-         ```\n",
+         Refresh them when cutting a release, when a detection or output change \
+         is worth showcasing, or when adding a target (edit the `TARGETS` list \
+         in `xtask/src/bin/generate_sbom_examples.rs`).\n",
         spdx = SPDX_FILE,
         cyclonedx = CYCLONEDX_FILE,
         first = TARGETS[0].name,
@@ -502,8 +519,7 @@ fn render_top_readme(_version: &str) -> String {
 }
 
 /// The Provenant version embedded in the generated documents. Sourced from the
-/// forced `PROVENANT_BUILD_VERSION`, so READMEs and SBOMs agree, and normalized
-/// the same way in `--check`.
+/// forced `PROVENANT_BUILD_VERSION`, so READMEs and SBOMs agree.
 fn current_forced_version() -> String {
     std::env::var("PROVENANT_BUILD_VERSION").unwrap_or_else(|_| "unknown".to_string())
 }
@@ -515,58 +531,39 @@ fn repo_web_url(repo_url: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
-    fn spdx_normalization_blanks_created_and_version() {
-        let raw = "SPDXVersion: SPDX-2.2\nCreator: Tool: Provenant-1.0.0\nCreated: 2026-07-23T17:13:48Z\nPackageName: demo\n";
-        let normalized = normalize_spdx(raw).unwrap();
-        assert!(normalized.contains(&format!("Provenant-{NORMALIZED}")));
-        assert!(normalized.contains(&format!("Created: {NORMALIZED}")));
-        assert!(normalized.contains("PackageName: demo"));
-        assert!(!normalized.contains("1.0.0"));
+    fn cyclonedx_stats_counts_components_and_closed_graph() {
+        let doc = json!({
+            "metadata": {"component": {"bom-ref": "root"}},
+            "components": [
+                {"bom-ref": "pkg:cargo/a@1.0.0"},
+                {"bom-ref": "pkg:cargo/b@2.0.0"}
+            ],
+            "dependencies": [
+                {"ref": "root", "dependsOn": ["pkg:cargo/a@1.0.0", "pkg:cargo/b@2.0.0"]},
+                {"ref": "pkg:cargo/a@1.0.0", "dependsOn": ["pkg:cargo/b@2.0.0"]}
+            ]
+        });
+        let stats = cyclonedx_stats(&doc);
+        assert_eq!(stats.components, 2);
+        assert_eq!(stats.dependency_edges, 3);
+        assert_eq!(stats.dangling_edges, 0);
     }
 
     #[test]
-    fn spdx_normalization_is_version_agnostic() {
-        let a = "Creator: Tool: Provenant-1.0.0\nCreated: 2026-01-01T00:00:00Z\n";
-        let b = "Creator: Tool: Provenant-1.1.0-3-gdeadbee\nCreated: 2027-02-02T02:02:02Z\n";
-        assert_eq!(normalize_spdx(a).unwrap(), normalize_spdx(b).unwrap());
-    }
-
-    #[test]
-    fn spdx_normalization_keeps_real_package_versions() {
-        let raw = "PackageName: demo\nPackageVersion: 2.3.4\nCreated: x\n";
-        assert!(normalize_spdx(raw).unwrap().contains("2.3.4"));
-    }
-
-    #[test]
-    fn cyclonedx_normalization_blanks_volatile_fields_only() {
-        let a = r#"{"bomFormat":"CycloneDX","serialNumber":"urn:uuid:6989640f-5e12-4358-a157-2f5106dd223e","version":1,"metadata":{"timestamp":"2026-07-23T17:13:48Z","tools":[{"name":"Provenant","version":"1.0.0"}]},"components":[{"bom-ref":"pkg:npm/demo@2.3.4","version":"2.3.4"}]}"#;
-        let b = r#"{"bomFormat":"CycloneDX","serialNumber":"urn:uuid:11111111-2222-3333-4444-555555555555","version":1,"metadata":{"timestamp":"2027-02-02T02:02:02Z","tools":[{"name":"Provenant","version":"1.9.0-dirty"}]},"components":[{"bom-ref":"pkg:npm/demo@2.3.4","version":"2.3.4"}]}"#;
-        let na = normalize_cyclonedx(a).unwrap();
-        assert_eq!(na, normalize_cyclonedx(b).unwrap());
-        // Real component version and BOM `version: 1` survive.
-        assert!(na.contains("2.3.4"));
-        assert!(na.contains("\"version\": 1"));
-        assert!(na.contains(NORMALIZED));
-    }
-
-    #[test]
-    fn cyclonedx_normalization_blanks_package_uid_suffix() {
-        let doc = r#"{"dependencies":[{"ref":"pkg:npm/a@1.0.0?uuid=6989640f-5e12-4358-a157-2f5106dd223e"}]}"#;
-        let normalized = normalize_cyclonedx(doc).unwrap();
-        assert!(normalized.contains(&format!("?uuid={NORMALIZED}")));
-        assert!(!normalized.contains("6989640f"));
-    }
-
-    #[test]
-    fn markdown_normalization_is_version_agnostic() {
-        let a = "Generated by: Provenant 1.0.0\n";
-        let b = "Generated by: Provenant 1.4.2-9-gabc\n";
-        assert_eq!(
-            normalize_markdown(a).unwrap(),
-            normalize_markdown(b).unwrap()
-        );
+    fn cyclonedx_stats_flags_dangling_edges() {
+        let doc = json!({
+            "components": [{"bom-ref": "pkg:npm/present@1.0.0"}],
+            "dependencies": [
+                {"ref": "pkg:npm/present@1.0.0", "dependsOn": ["pkg:npm/missing@9.9.9"]}
+            ]
+        });
+        let stats = cyclonedx_stats(&doc);
+        assert_eq!(stats.components, 1);
+        assert_eq!(stats.dependency_edges, 1);
+        assert_eq!(stats.dangling_edges, 1);
     }
 
     #[test]

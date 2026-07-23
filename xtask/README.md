@@ -588,25 +588,29 @@ cache, runs the current-build `provenant` release binary with
 `scan --license --package --copyright`, and writes an SPDX tag-value document
 plus a CycloneDX JSON document (and a short provenance README) per target. The
 embedded Provenant version is pinned to the workspace package version so the
-committed output is deterministic regardless of `git describe` state.
+committed output is deterministic regardless of `git describe` state. It
+requires network access to the pinned upstream repositories but does **not**
+require Docker or ScanCode (those are only used to verify a target before it is
+added).
 
-`--check` regenerates into memory and compares against the committed files after
-normalizing every per-run volatile field — the SPDX `Created` timestamp, the
-CycloneDX `serialNumber` and `metadata.timestamp`, the embedded tool version
-(in SPDX, CycloneDX, and the READMEs), and any random package-UID suffix. Tool
-versions are normalized so a routine release version bump does not fail the
-check before the examples are regenerated. It requires network access to the
-pinned upstream repositories but does **not** require Docker or ScanCode (those
-are only used to verify a target before it is added).
+These are illustrative artifacts, not golden fixtures: regenerate them **on
+demand** — when cutting a release, when a detection or output change is worth
+showcasing, or when adding a target — rather than drift-checking them on every
+change. There is no `--check` mode and no CI or release-time gate. Add a target
+by extending the `TARGETS` list in the bin after verifying it against ScanCode
+with `compare-outputs`; see
+[`examples/sbom/README.md`](../examples/sbom/README.md).
 
-The target list is verified against ScanCode with `compare-outputs` before a
-target is added; see [`examples/sbom/README.md`](../examples/sbom/README.md).
+The embedded version defaults to the workspace package version. Set
+`PROVENANT_BUILD_VERSION` to stamp a specific release when the examples showcase
+behavior that ships in a version not yet cut (e.g. `1.0.1` before its release).
 
-Examples:
+Example:
 
 ```bash
 cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
-cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples -- --check
+# stamp a specific release (e.g. before it is cut):
+PROVENANT_BUILD_VERSION=1.0.1 cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
 ```
 
 ## `classify-rule-overmatch`

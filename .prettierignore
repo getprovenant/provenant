@@ -26,7 +26,7 @@ testdata/**
 *.min.json
 docs/openapi/provenant-serve.openapi.json
 
-# Generated SBOM examples (regenerated and drift-checked by the
+# Generated SBOM examples (regenerated on demand by the
 # generate-sbom-examples xtask; see examples/sbom/README.md)
 examples/sbom/**/*.json
 examples/sbom/**/*.md

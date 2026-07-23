@@ -121,13 +121,6 @@ run_release_step version "$RELEASE_TYPE"
 run_release_step replace
 run_release_step hook
 
-# Refresh the committed SBOM examples so their embedded Provenant version line
-# tracks the release. Runs after the version bump so the regenerated documents
-# carry the new version; the release commit below stages them via `git add -u`.
-# In dry-run mode the version is unchanged, so this is a no-op regeneration.
-echo "🔧 Regenerating SBOM examples..."
-cargo run --manifest-path xtask/Cargo.toml --bin generate-sbom-examples
-
 echo "🔎 Verifying release version sync..."
 ./scripts/check_release_version_sync.sh
 

@@ -1,14 +1,14 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:4d83e013-19f5-4205-9e9a-855a4ea3b537",
+  "serialNumber": "urn:uuid:7d872aba-ff30-46a4-85c2-e82390230f22",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T19:21:38Z",
+    "timestamp": "2026-07-23T20:19:16Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.0"
+        "version": "1.0.1"
       }
     ],
     "component": {

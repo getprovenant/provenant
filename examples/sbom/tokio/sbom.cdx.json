@@ -1,0 +1,994 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "serialNumber": "urn:uuid:7d04cf5c-bc48-4ce7-9c58-c3f33d0a17ce",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-07-23T20:19:20Z",
+    "tools": [
+      {
+        "name": "Provenant",
+        "version": "1.0.1"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/benches@0.0.0",
+      "name": "benches",
+      "version": "0.0.0",
+      "scope": "required",
+      "purl": "pkg:cargo/benches@0.0.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/benches"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/benches/0.0.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/benches"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/examples@0.0.0",
+      "name": "examples",
+      "version": "0.0.0",
+      "scope": "required",
+      "purl": "pkg:cargo/examples@0.0.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/examples"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/examples/0.0.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/examples"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/stress-test@0.1.0",
+      "name": "stress-test",
+      "version": "0.1.0",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/stress-test@0.1.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/stress-test"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/stress-test/0.1.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/stress-test"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tests-build@0.1.0",
+      "name": "tests-build",
+      "version": "0.1.0",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tests-build@0.1.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tests-build"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tests-build/0.1.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tests-build"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tests-integration@0.1.0",
+      "name": "tests-integration",
+      "version": "0.1.0",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tests-integration@0.1.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tests-integration"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tests-integration/0.1.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tests-integration"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-fuzz@0.0.0",
+      "name": "tokio-fuzz",
+      "version": "0.0.0",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-fuzz@0.0.0",
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio-fuzz"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio-fuzz/0.0.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio-fuzz"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-macros@2.7.1",
+      "name": "tokio-macros",
+      "version": "2.7.1",
+      "description": "Tokio's proc macros.",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-macros@2.7.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio-macros"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio-macros/2.7.1/download"
+        },
+        {
+          "type": "website",
+          "url": "https://tokio.rs"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio-macros"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-stream-fuzz@0.0.0",
+      "name": "tokio-stream-fuzz",
+      "version": "0.0.0",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-stream-fuzz@0.0.0",
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio-stream-fuzz"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio-stream-fuzz/0.0.0/download"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio-stream-fuzz"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-stream@0.1.18",
+      "name": "tokio-stream",
+      "version": "0.1.18",
+      "description": "Utilities to work with `Stream` and `tokio`.",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-stream@0.1.18",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio-stream"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio-stream/0.1.18/download"
+        },
+        {
+          "type": "website",
+          "url": "https://tokio.rs"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio-stream"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-test@0.4.5",
+      "name": "tokio-test",
+      "version": "0.4.5",
+      "description": "Testing utilities for Tokio- and futures-based code",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-test@0.4.5",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio-test"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio-test/0.4.5/download"
+        },
+        {
+          "type": "website",
+          "url": "https://tokio.rs"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio-test"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-util@0.7.18",
+      "name": "tokio-util",
+      "version": "0.7.18",
+      "description": "Additional utilities for working with Tokio.",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-util@0.7.18",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio-util"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio-util/0.7.18/download"
+        },
+        {
+          "type": "website",
+          "url": "https://tokio.rs"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio-util"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio@1.53.1",
+      "name": "tokio",
+      "version": "1.53.1",
+      "description": "An event-driven, non-blocking I/O platform for writing asynchronous I/O\nbacked applications.",
+      "author": "Tokio Contributors",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio@1.53.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "bom",
+          "url": "https://crates.io/api/v1/crates/tokio"
+        },
+        {
+          "type": "distribution",
+          "url": "https://crates.io/api/v1/crates/tokio/1.53.1/download"
+        },
+        {
+          "type": "website",
+          "url": "https://tokio.rs"
+        },
+        {
+          "type": "website",
+          "url": "https://crates.io/crates/tokio"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/async-stream",
+      "name": "async-stream",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/async-stream"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/bytes",
+      "name": "bytes",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/bytes"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/criterion",
+      "name": "criterion",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/criterion"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/doc-comment",
+      "name": "doc-comment",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/doc-comment"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures",
+      "name": "futures",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/futures"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures-concurrency",
+      "name": "futures-concurrency",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/futures-concurrency"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures-core",
+      "name": "futures-core",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/futures-core"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures-io",
+      "name": "futures-io",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:cargo/futures-io"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures-sink",
+      "name": "futures-sink",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/futures-sink"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures-test",
+      "name": "futures-test",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/futures-test"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/futures-util",
+      "name": "futures-util",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/futures-util"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/hashbrown",
+      "name": "hashbrown",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:cargo/hashbrown"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/http",
+      "name": "http",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/http"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/httparse",
+      "name": "httparse",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/httparse"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/httpdate",
+      "name": "httpdate",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/httpdate"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/libfuzzer-sys",
+      "name": "libfuzzer-sys",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/libfuzzer-sys"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/mio",
+      "name": "mio",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:cargo/mio"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/mockall",
+      "name": "mockall",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/mockall"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/once_cell",
+      "name": "once_cell",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/once_cell"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/parking_lot",
+      "name": "parking_lot",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/parking_lot"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/pin-project-lite",
+      "name": "pin-project-lite",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/pin-project-lite"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/proc-macro2",
+      "name": "proc-macro2",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/proc-macro2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/quote",
+      "name": "quote",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/quote"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/rand",
+      "name": "rand",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/rand"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/rand_chacha",
+      "name": "rand_chacha",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/rand_chacha"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/serde",
+      "name": "serde",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/serde"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/serde_derive",
+      "name": "serde_derive",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/serde_derive"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/serde_json",
+      "name": "serde_json",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/serde_json"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/slab",
+      "name": "slab",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:cargo/slab"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/syn",
+      "name": "syn",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/syn"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tempfile",
+      "name": "tempfile",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tempfile"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio",
+      "name": "tokio",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-macros",
+      "name": "tokio-macros",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:cargo/tokio-macros"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-stream",
+      "name": "tokio-stream",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-stream"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-test",
+      "name": "tokio-test",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-test"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tokio-util",
+      "name": "tokio-util",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tokio-util"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tracing",
+      "name": "tracing",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tracing"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/tracing-subscriber",
+      "name": "tracing-subscriber",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/tracing-subscriber"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/trybuild",
+      "name": "trybuild",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/trybuild"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:cargo/async-stream",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/benches@0.0.0",
+      "dependsOn": [
+        "pkg:cargo/criterion",
+        "pkg:cargo/rand",
+        "pkg:cargo/rand_chacha",
+        "pkg:cargo/tokio",
+        "pkg:cargo/tokio-stream",
+        "pkg:cargo/tokio-util"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/bytes",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/criterion",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/doc-comment",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/examples@0.0.0",
+      "dependsOn": [
+        "pkg:cargo/bytes",
+        "pkg:cargo/futures",
+        "pkg:cargo/http",
+        "pkg:cargo/httparse",
+        "pkg:cargo/httpdate",
+        "pkg:cargo/once_cell",
+        "pkg:cargo/serde",
+        "pkg:cargo/serde_derive",
+        "pkg:cargo/serde_json",
+        "pkg:cargo/tokio",
+        "pkg:cargo/tokio-stream",
+        "pkg:cargo/tokio-util",
+        "pkg:cargo/tracing",
+        "pkg:cargo/tracing-subscriber"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/futures",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/futures-concurrency",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/futures-core",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/futures-io",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/futures-sink",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/futures-test",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/futures-util",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/hashbrown",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/http",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/httparse",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/httpdate",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/libfuzzer-sys",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/mio",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/mockall",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/once_cell",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/parking_lot",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/pin-project-lite",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/proc-macro2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/quote",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/rand",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/rand_chacha",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/serde",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/serde_derive",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/serde_json",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/slab",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/stress-test@0.1.0",
+      "dependsOn": [
+        "pkg:cargo/rand",
+        "pkg:cargo/tokio"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/syn",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tempfile",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tests-build@0.1.0",
+      "dependsOn": [
+        "pkg:cargo/tokio",
+        "pkg:cargo/trybuild"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tests-integration@0.1.0",
+      "dependsOn": [
+        "pkg:cargo/bytes",
+        "pkg:cargo/doc-comment",
+        "pkg:cargo/futures",
+        "pkg:cargo/tokio",
+        "pkg:cargo/tokio-test"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tokio-fuzz@0.0.0",
+      "dependsOn": [
+        "pkg:cargo/libfuzzer-sys",
+        "pkg:cargo/tokio"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio-macros",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tokio-macros@2.7.1",
+      "dependsOn": [
+        "pkg:cargo/proc-macro2",
+        "pkg:cargo/quote",
+        "pkg:cargo/syn",
+        "pkg:cargo/tokio"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio-stream",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tokio-stream-fuzz@0.0.0",
+      "dependsOn": [
+        "pkg:cargo/libfuzzer-sys",
+        "pkg:cargo/tokio-stream",
+        "pkg:cargo/tokio-test"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio-stream@0.1.18",
+      "dependsOn": [
+        "pkg:cargo/async-stream",
+        "pkg:cargo/futures",
+        "pkg:cargo/futures-core",
+        "pkg:cargo/parking_lot",
+        "pkg:cargo/pin-project-lite",
+        "pkg:cargo/tokio",
+        "pkg:cargo/tokio-test",
+        "pkg:cargo/tokio-util"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio-test",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tokio-test@0.4.5",
+      "dependsOn": [
+        "pkg:cargo/futures-core",
+        "pkg:cargo/futures-util",
+        "pkg:cargo/tokio",
+        "pkg:cargo/tokio-stream"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio-util",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tokio-util@0.7.18",
+      "dependsOn": [
+        "pkg:cargo/async-stream",
+        "pkg:cargo/bytes",
+        "pkg:cargo/futures",
+        "pkg:cargo/futures-core",
+        "pkg:cargo/futures-io",
+        "pkg:cargo/futures-sink",
+        "pkg:cargo/futures-test",
+        "pkg:cargo/futures-util",
+        "pkg:cargo/hashbrown",
+        "pkg:cargo/parking_lot",
+        "pkg:cargo/pin-project-lite",
+        "pkg:cargo/slab",
+        "pkg:cargo/tempfile",
+        "pkg:cargo/tokio",
+        "pkg:cargo/tokio-stream",
+        "pkg:cargo/tokio-test",
+        "pkg:cargo/tracing"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tokio@1.53.1",
+      "dependsOn": [
+        "pkg:cargo/async-stream",
+        "pkg:cargo/bytes",
+        "pkg:cargo/futures",
+        "pkg:cargo/futures-concurrency",
+        "pkg:cargo/futures-test",
+        "pkg:cargo/mio",
+        "pkg:cargo/mockall",
+        "pkg:cargo/parking_lot",
+        "pkg:cargo/pin-project-lite",
+        "pkg:cargo/tokio-macros",
+        "pkg:cargo/tokio-stream",
+        "pkg:cargo/tokio-test",
+        "pkg:cargo/tokio-util"
+      ]
+    },
+    {
+      "ref": "pkg:cargo/tracing",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/tracing-subscriber",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/trybuild",
+      "dependsOn": []
+    }
+  ]
+}

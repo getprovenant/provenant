@@ -12,8 +12,8 @@ Provenant is a free software code scanning tool.
 Visit https://github.com/getprovenant/provenant/ for support and download.
 SPDX License List: 3.27</text>
 ## Creation Information
-Creator: Tool: Provenant-1.0.0
-Created: 2026-07-23T19:21:35Z
+Creator: Tool: Provenant-1.0.1
+Created: 2026-07-23T20:19:13Z
 ## Package Information
 PackageName: fuzz
 SPDXID: SPDXRef-Package-1
