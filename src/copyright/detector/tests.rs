@@ -2347,3 +2347,84 @@ fn test_single_holder_obfuscated_email_kept_in_copyright() {
     assert_eq!(h.len(), 1);
     assert_eq!(h[0].holder, "Salvatore Sanfilippo");
 }
+
+// ── Trailing acronym-with-period holder (e.g. `CERN.`) ───────────
+//
+// A single all-caps acronym carrying a sentence-final period lexes as a `Pn`
+// token (`CERN.`), unlike its period-less spelling `CERN`, which lexes as
+// `Caps`. Before the absorption fix, a trailing `Pn` was dropped from a
+// year-only copyright whenever prose preceded the marker (so the copyright
+// statement began mid-line), yielding a holder-less `Copyright (c) <year>`.
+// Observed on flask `tests/test_cli.py`: `... Revised BSD License. Copyright ©
+// 2015 CERN.` reported `Copyright (c) 2015` with no holder.
+
+#[test]
+fn test_trailing_acronym_period_holder_kept_after_leading_prose() {
+    // The flask `tests/test_cli.py` shape: prose ending in a sentence, then the
+    // copyright mid-line. The `CERN.` holder must survive.
+    let input = "its Revised BSD License. Copyright \u{00A9} 2015 CERN.";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert_eq!(
+        c.iter().map(|x| x.copyright.as_str()).collect::<Vec<_>>(),
+        vec!["Copyright (c) 2015 CERN."],
+        "holder acronym must stay in the copyright statement"
+    );
+    assert_eq!(
+        h.iter().map(|x| x.holder.as_str()).collect::<Vec<_>>(),
+        vec!["CERN"],
+        "CERN must be captured as the holder"
+    );
+}
+
+#[test]
+fn test_trailing_acronym_period_holder_variants() {
+    // Each holder form must be captured when the copyright is preceded by prose
+    // (which forces the mid-line span path rather than the line-anchored repair).
+    for (input, want_copyright, want_holder) in [
+        (
+            "foo bar baz. Copyright \u{00A9} 2015 CERN.",
+            "Copyright (c) 2015 CERN.",
+            "CERN",
+        ),
+        (
+            "foo bar baz. Copyright (c) 2020 Example Corp",
+            "Copyright (c) 2020 Example Corp",
+            "Example Corp",
+        ),
+        (
+            "foo bar baz. Copyright \u{00A9} 2019 Bj\u{00F6}rn",
+            "Copyright (c) 2019 Bj\u{00F6}rn",
+            "Bj\u{00F6}rn",
+        ),
+    ] {
+        let (c, h, _a) = detect_copyrights_from_text(input);
+        assert!(
+            c.iter().any(|x| x.copyright == want_copyright),
+            "input {input:?}: expected copyright {want_copyright:?}, got {:?}",
+            c.iter().map(|x| &x.copyright).collect::<Vec<_>>()
+        );
+        assert!(
+            h.iter().any(|x| x.holder == want_holder),
+            "input {input:?}: expected holder {want_holder:?}, got {:?}",
+            h.iter().map(|x| &x.holder).collect::<Vec<_>>()
+        );
+    }
+}
+
+#[test]
+fn test_year_only_copyright_after_prose_has_no_holder() {
+    // Guard against over-correction: a genuinely holder-less year-only copyright
+    // must not manufacture a holder from surrounding prose.
+    let input = "foo bar baz. Copyright \u{00A9} 2015";
+    let (c, h, _a) = detect_copyrights_from_text(input);
+    assert_eq!(
+        c.iter().map(|x| x.copyright.as_str()).collect::<Vec<_>>(),
+        vec!["Copyright (c) 2015"],
+        "year-only copyright stays year-only"
+    );
+    assert!(
+        h.is_empty(),
+        "no holder should be invented, got {:?}",
+        h.iter().map(|x| &x.holder).collect::<Vec<_>>()
+    );
+}
