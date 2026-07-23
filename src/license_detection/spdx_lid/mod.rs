@@ -494,7 +494,7 @@ fn is_likely_license_key(text: &str) -> bool {
     true
 }
 
-fn is_spdx_exception(text: &str) -> bool {
+pub(crate) fn is_spdx_exception(text: &str) -> bool {
     let lowered = text.to_lowercase();
     if lowered.ends_with("-exception")
         || lowered.contains("-exception-")

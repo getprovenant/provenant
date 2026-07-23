@@ -13,7 +13,7 @@ Visit https://github.com/getprovenant/provenant/ for support and download.
 SPDX License List: 3.27</text>
 ## Creation Information
 Creator: Tool: Provenant-1.0.1
-Created: 2026-07-23T20:19:20Z
+Created: 2026-07-23T22:12:17Z
 ## Package Information
 PackageName: benches
 SPDXID: SPDXRef-Package-1
@@ -22,7 +22,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 5a81fff35ef5c81e42ebcbcef9537afcde153a5a
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -35,7 +34,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 39464e61fe27a50459cd14ae93d09e177b0542b7
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -48,7 +46,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 30fd08be04f99aadba1d69d7a35b492a7645482e
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -61,7 +58,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 39464e61fe27a50459cd14ae93d09e177b0542b7
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -74,7 +70,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 43e08c01a8b8a3c516f98e6ef7b1083a92536974
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -97,7 +92,6 @@ FilesAnalyzed: true
 PackageVerificationCode: f55b97d80aed21c1644c24c49e35cc86aa8c9bb9
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -121,7 +115,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 8fa7072d1e15a3e9a6c95d428b2b954294d58e5e
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -134,7 +127,6 @@ FilesAnalyzed: true
 PackageVerificationCode: 1836b8628c3230a8677fcb87ad28bad263e7eb94
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -147,7 +139,6 @@ FilesAnalyzed: true
 PackageVerificationCode: f852916d00afee02b0e8a70733712d23e8323ebe
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
@@ -160,323 +151,10 @@ FilesAnalyzed: true
 PackageVerificationCode: 9688db982320e1d79a81501339bc4593b0c3099a
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: Apache-2.0
-PackageLicenseInfoFromFiles: LLVM-exception
 PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
-## Package Information
-PackageName: async-stream
-SPDXID: SPDXRef-Package-Dependency-1
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: bytes
-SPDXID: SPDXRef-Package-Dependency-2
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: criterion
-SPDXID: SPDXRef-Package-Dependency-3
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: doc-comment
-SPDXID: SPDXRef-Package-Dependency-4
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures
-SPDXID: SPDXRef-Package-Dependency-5
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures-concurrency
-SPDXID: SPDXRef-Package-Dependency-6
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures-core
-SPDXID: SPDXRef-Package-Dependency-7
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures-io
-SPDXID: SPDXRef-Package-Dependency-8
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures-sink
-SPDXID: SPDXRef-Package-Dependency-9
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures-test
-SPDXID: SPDXRef-Package-Dependency-10
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: futures-util
-SPDXID: SPDXRef-Package-Dependency-11
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: hashbrown
-SPDXID: SPDXRef-Package-Dependency-12
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: http
-SPDXID: SPDXRef-Package-Dependency-13
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: httparse
-SPDXID: SPDXRef-Package-Dependency-14
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: httpdate
-SPDXID: SPDXRef-Package-Dependency-15
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: libfuzzer-sys
-SPDXID: SPDXRef-Package-Dependency-16
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: mio
-SPDXID: SPDXRef-Package-Dependency-17
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: mockall
-SPDXID: SPDXRef-Package-Dependency-18
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: once_cell
-SPDXID: SPDXRef-Package-Dependency-19
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: parking_lot
-SPDXID: SPDXRef-Package-Dependency-20
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: pin-project-lite
-SPDXID: SPDXRef-Package-Dependency-21
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: proc-macro2
-SPDXID: SPDXRef-Package-Dependency-22
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: quote
-SPDXID: SPDXRef-Package-Dependency-23
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: rand
-SPDXID: SPDXRef-Package-Dependency-24
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: rand_chacha
-SPDXID: SPDXRef-Package-Dependency-25
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde
-SPDXID: SPDXRef-Package-Dependency-26
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_derive
-SPDXID: SPDXRef-Package-Dependency-27
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: serde_json
-SPDXID: SPDXRef-Package-Dependency-28
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: slab
-SPDXID: SPDXRef-Package-Dependency-29
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: syn
-SPDXID: SPDXRef-Package-Dependency-30
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tempfile
-SPDXID: SPDXRef-Package-Dependency-31
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tokio
-SPDXID: SPDXRef-Package-Dependency-32
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tokio-macros
-SPDXID: SPDXRef-Package-Dependency-33
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tokio-stream
-SPDXID: SPDXRef-Package-Dependency-34
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tokio-test
-SPDXID: SPDXRef-Package-Dependency-35
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tokio-util
-SPDXID: SPDXRef-Package-Dependency-36
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tracing
-SPDXID: SPDXRef-Package-Dependency-37
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: tracing-subscriber
-SPDXID: SPDXRef-Package-Dependency-38
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: trybuild
-SPDXID: SPDXRef-Package-Dependency-39
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
 ## File Information
 FileName: ./.github/FUNDING.yml
 SPDXID: SPDXRef-1
@@ -630,7 +308,6 @@ SPDXID: SPDXRef-22
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 LicenseConcluded: MIT
 LicenseInfoInFile: Apache-2.0
-LicenseInfoInFile: LLVM-exception
 LicenseInfoInFile: LicenseRef-scancode-generic-cla
 LicenseInfoInFile: MIT
 FileCopyrightText: NONE
@@ -1278,7 +955,6 @@ SPDXID: SPDXRef-114
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 LicenseConcluded: MIT
 LicenseInfoInFile: Apache-2.0
-LicenseInfoInFile: LLVM-exception
 LicenseInfoInFile: LicenseRef-scancode-generic-cla
 LicenseInfoInFile: MIT
 FileCopyrightText: NONE
@@ -1330,7 +1006,6 @@ SPDXID: SPDXRef-121
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 LicenseConcluded: MIT
 LicenseInfoInFile: Apache-2.0
-LicenseInfoInFile: LLVM-exception
 LicenseInfoInFile: LicenseRef-scancode-generic-cla
 LicenseInfoInFile: MIT
 FileCopyrightText: NONE
@@ -1865,7 +1540,6 @@ SPDXID: SPDXRef-197
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 LicenseConcluded: MIT
 LicenseInfoInFile: Apache-2.0
-LicenseInfoInFile: LLVM-exception
 LicenseInfoInFile: LicenseRef-scancode-generic-cla
 LicenseInfoInFile: MIT
 FileCopyrightText: NONE
@@ -1966,7 +1640,6 @@ SPDXID: SPDXRef-211
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 LicenseConcluded: MIT
 LicenseInfoInFile: Apache-2.0
-LicenseInfoInFile: LLVM-exception
 LicenseInfoInFile: LicenseRef-scancode-generic-cla
 LicenseInfoInFile: MIT
 FileCopyrightText: NONE
@@ -2620,7 +2293,6 @@ SPDXID: SPDXRef-304
 FileChecksum: SHA1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 LicenseConcluded: MIT
 LicenseInfoInFile: Apache-2.0
-LicenseInfoInFile: LLVM-exception
 LicenseInfoInFile: LicenseRef-scancode-generic-cla
 LicenseInfoInFile: MIT
 FileCopyrightText: NONE
@@ -6531,6 +6203,318 @@ LicenseConcluded: NOASSERTION
 LicenseInfoInFile: NONE
 FileCopyrightText: NONE
 
+## Package Information
+PackageName: async-stream
+SPDXID: SPDXRef-Package-Dependency-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: bytes
+SPDXID: SPDXRef-Package-Dependency-2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: criterion
+SPDXID: SPDXRef-Package-Dependency-3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: doc-comment
+SPDXID: SPDXRef-Package-Dependency-4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures
+SPDXID: SPDXRef-Package-Dependency-5
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures-concurrency
+SPDXID: SPDXRef-Package-Dependency-6
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures-core
+SPDXID: SPDXRef-Package-Dependency-7
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures-io
+SPDXID: SPDXRef-Package-Dependency-8
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures-sink
+SPDXID: SPDXRef-Package-Dependency-9
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures-test
+SPDXID: SPDXRef-Package-Dependency-10
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: futures-util
+SPDXID: SPDXRef-Package-Dependency-11
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: hashbrown
+SPDXID: SPDXRef-Package-Dependency-12
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: http
+SPDXID: SPDXRef-Package-Dependency-13
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: httparse
+SPDXID: SPDXRef-Package-Dependency-14
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: httpdate
+SPDXID: SPDXRef-Package-Dependency-15
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: libfuzzer-sys
+SPDXID: SPDXRef-Package-Dependency-16
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: mio
+SPDXID: SPDXRef-Package-Dependency-17
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: mockall
+SPDXID: SPDXRef-Package-Dependency-18
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: once_cell
+SPDXID: SPDXRef-Package-Dependency-19
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: parking_lot
+SPDXID: SPDXRef-Package-Dependency-20
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: pin-project-lite
+SPDXID: SPDXRef-Package-Dependency-21
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: proc-macro2
+SPDXID: SPDXRef-Package-Dependency-22
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: quote
+SPDXID: SPDXRef-Package-Dependency-23
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: rand
+SPDXID: SPDXRef-Package-Dependency-24
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: rand_chacha
+SPDXID: SPDXRef-Package-Dependency-25
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde
+SPDXID: SPDXRef-Package-Dependency-26
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_derive
+SPDXID: SPDXRef-Package-Dependency-27
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: serde_json
+SPDXID: SPDXRef-Package-Dependency-28
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: slab
+SPDXID: SPDXRef-Package-Dependency-29
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: syn
+SPDXID: SPDXRef-Package-Dependency-30
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tempfile
+SPDXID: SPDXRef-Package-Dependency-31
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tokio
+SPDXID: SPDXRef-Package-Dependency-32
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tokio-macros
+SPDXID: SPDXRef-Package-Dependency-33
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tokio-stream
+SPDXID: SPDXRef-Package-Dependency-34
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tokio-test
+SPDXID: SPDXRef-Package-Dependency-35
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tokio-util
+SPDXID: SPDXRef-Package-Dependency-36
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tracing
+SPDXID: SPDXRef-Package-Dependency-37
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: tracing-subscriber
+SPDXID: SPDXRef-Package-Dependency-38
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Package Information
+PackageName: trybuild
+SPDXID: SPDXRef-Package-Dependency-39
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
 Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-1

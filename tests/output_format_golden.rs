@@ -2486,6 +2486,136 @@ fn sample_cyclonedx_dependency_output() -> Output {
     )
 }
 
+/// A scanned subject package that owns files, plus one promoted resolved
+/// dependency. Unlike [`sample_cyclonedx_dependency_output`], this carries real
+/// files so it exercises SPDX tag-value's positional file→package association.
+fn sample_spdx_dependency_output() -> Output {
+    let root_uid = PackageUid::from_raw(
+        "pkg:npm/root@1.0.0?uuid=00000000-0000-0000-0000-000000000000".to_string(),
+    );
+    let root_pkg = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("root".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/root@1.0.0".to_string()),
+                declared_license_expression: Some("mit".to_string()),
+                declared_license_expression_spdx: Some("MIT".to_string()),
+                ..Default::default()
+            },
+            "scan/package.json".to_string(),
+        );
+        pkg.package_uid = root_uid.clone();
+        pkg
+    };
+
+    let owned_dep = TopLevelDependency {
+        purl: Some("pkg:npm/dep@2.0.0".to_string()),
+        extracted_requirement: Some("2.0.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(false),
+        is_pinned: Some(true),
+        is_direct: Some(true),
+        resolved_package: Some(Box::new(ResolvedPackage {
+            purl: Some("pkg:npm/dep@2.0.0".to_string()),
+            ..ResolvedPackage::new(
+                PackageType::Npm,
+                String::new(),
+                "dep".to_string(),
+                "2.0.0".to_string(),
+            )
+        })),
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/dep@2.0.0?uuid=00000000-0000-0000-0000-000000000001".to_string(),
+        ),
+        for_package_uid: Some(root_uid.clone()),
+        datafile_path: "scan/package-lock.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageLockJson,
+        namespace: None,
+    };
+
+    let mut manifest = sample_plain_text_file(
+        "package.json",
+        "package",
+        ".json",
+        "scan/package.json",
+        30,
+        "b8a793cce3c3a4cd3a4646ddbe86edd542ed0cd8",
+        vec![],
+    );
+    manifest.for_packages = vec![root_uid.clone()];
+    let mut source = sample_plain_text_file(
+        "index.js",
+        "index",
+        ".js",
+        "scan/index.js",
+        20,
+        "e2466d5b764d27fb301ceb439ffb5da22e43ab1d",
+        vec![],
+    );
+    source.for_packages = vec![root_uid];
+
+    sample_output_with_sections(
+        2,
+        0,
+        vec![root_pkg],
+        vec![owned_dep],
+        vec![manifest, source],
+    )
+}
+
+// Regression (SPDX tag-value): promoted-dependency packages are `FilesAnalyzed:
+// false` and own no files. Because tag-value binds a file to the most recently
+// declared package, every such package MUST be emitted AFTER the file section —
+// otherwise the scanned files positionally bind to a `FilesAnalyzed: false`
+// package and the document fails official SPDX validation (spdx-tools). This
+// once shipped inverted (all packages before the file section); the four
+// checked-in `examples/sbom/*/sbom.spdx` all failed `pyspdxtools` validation.
+#[test]
+fn test_spdx_tag_value_emits_promoted_dependency_packages_after_file_section() {
+    let output = sample_spdx_dependency_output();
+    let schema_output = OutputSchemaOutput::from(&output);
+    let mut bytes = Vec::new();
+    writer_for_format(OutputFormat::SpdxTv)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::SpdxTv,
+                custom_template: None,
+                scanned_path: Some("scan".to_string()),
+            },
+        )
+        .expect("spdx tag-value output should be generated");
+    let actual = String::from_utf8(bytes).expect("spdx output should be utf-8");
+
+    let file_info_at = actual
+        .find("## File Information")
+        .expect("document has a file section");
+    let subject_at = actual
+        .find("FilesAnalyzed: true")
+        .expect("scanned subject package present");
+    let promoted_at = actual
+        .find("FilesAnalyzed: false")
+        .expect("promoted dependency package present");
+    assert!(
+        subject_at < file_info_at,
+        "the scanned-subject package (FilesAnalyzed: true) must precede the file section"
+    );
+    assert!(
+        promoted_at > file_info_at,
+        "a promoted-dependency package (FilesAnalyzed: false) must not precede the file section, \
+         or files positionally bind to it and SPDX validation fails"
+    );
+
+    let expected = fs::read_to_string("testdata/output-formats/spdx-dependencies-expected.tv")
+        .expect("spdx dependency fixture should be readable");
+    assert_eq!(actual, expected);
+}
+
 fn empty_output() -> Output {
     Output {
         summary: None,

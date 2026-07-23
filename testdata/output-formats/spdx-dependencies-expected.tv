@@ -1,0 +1,54 @@
+## Document Information
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: SPDX Document created by Provenant
+DocumentNamespace: http://spdx.org/spdxdocs/root
+DocumentComment: <text>Generated with Provenant and provided on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied. No content created from
+Provenant should be considered or used as legal advice. Consult an attorney
+for legal advice.
+Provenant is a free software code scanning tool.
+Visit https://github.com/getprovenant/provenant/ for support and download.
+SPDX License List: 3.27</text>
+## Creation Information
+Creator: Tool: Provenant-1.0.1-g934b1ca7-dirty
+Created: 2026-01-01T00:00:00Z
+## Package Information
+PackageName: root
+SPDXID: SPDXRef-Package-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: true
+PackageVerificationCode: 2a4976b2c9ac8e1fc0747dba6f0c5588b1318680
+PackageLicenseConcluded: MIT
+PackageLicenseInfoFromFiles: NONE
+PackageLicenseDeclared: MIT
+PackageCopyrightText: NONE
+## File Information
+FileName: ./index.js
+SPDXID: SPDXRef-1
+FileChecksum: SHA1: e2466d5b764d27fb301ceb439ffb5da22e43ab1d
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+FileName: ./package.json
+SPDXID: SPDXRef-2
+FileChecksum: SHA1: b8a793cce3c3a4cd3a4646ddbe86edd542ed0cd8
+LicenseConcluded: NOASSERTION
+LicenseInfoInFile: NONE
+FileCopyrightText: NONE
+
+## Package Information
+PackageName: dep
+SPDXID: SPDXRef-Package-Dependency-1
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+## Relationships
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-1
+Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-2
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-1

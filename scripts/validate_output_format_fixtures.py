@@ -60,6 +60,10 @@ CYCLONEDX_XML_FIXTURES = [
 # validation.
 SPDX_TAGVALUE_FIXTURES = [
     "spdx-simple-expected.tv",
+    # Exercises promoted resolved-dependency packages (FilesAnalyzed: false):
+    # regression guard for their placement relative to the file section and for
+    # WITH-exception license handling. `spdx-simple` has neither.
+    "spdx-dependencies-expected.tv",
 ]
 
 CYCLONEDX_SPEC_VERSION = "1.3"
