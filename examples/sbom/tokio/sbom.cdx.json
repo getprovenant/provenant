@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:8c52a871-dde8-4702-aa98-ffbbb205c6a9",
+  "serialNumber": "urn:uuid:affd4893-61f4-4be1-91b6-49e89907c769",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T22:12:18Z",
+    "timestamp": "2026-07-24T07:16:31Z",
     "tools": [
       {
         "name": "Provenant",
@@ -630,46 +630,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/tokio",
-      "name": "tokio",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/tokio"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/tokio-macros",
-      "name": "tokio-macros",
-      "version": "unknown",
-      "scope": "optional",
-      "purl": "pkg:cargo/tokio-macros"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/tokio-stream",
-      "name": "tokio-stream",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/tokio-stream"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/tokio-test",
-      "name": "tokio-test",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/tokio-test"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/tokio-util",
-      "name": "tokio-util",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/tokio-util"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/tracing",
       "name": "tracing",
       "version": "unknown",
@@ -704,9 +664,9 @@
         "pkg:cargo/criterion",
         "pkg:cargo/rand",
         "pkg:cargo/rand_chacha",
-        "pkg:cargo/tokio",
-        "pkg:cargo/tokio-stream",
-        "pkg:cargo/tokio-util"
+        "pkg:cargo/tokio-stream@0.1.18",
+        "pkg:cargo/tokio-util@0.7.18",
+        "pkg:cargo/tokio@1.53.1"
       ]
     },
     {
@@ -733,9 +693,9 @@
         "pkg:cargo/serde",
         "pkg:cargo/serde_derive",
         "pkg:cargo/serde_json",
-        "pkg:cargo/tokio",
-        "pkg:cargo/tokio-stream",
-        "pkg:cargo/tokio-util",
+        "pkg:cargo/tokio-stream@0.1.18",
+        "pkg:cargo/tokio-util@0.7.18",
+        "pkg:cargo/tokio@1.53.1",
         "pkg:cargo/tracing",
         "pkg:cargo/tracing-subscriber"
       ]
@@ -844,7 +804,7 @@
       "ref": "pkg:cargo/stress-test@0.1.0",
       "dependsOn": [
         "pkg:cargo/rand",
-        "pkg:cargo/tokio"
+        "pkg:cargo/tokio@1.53.1"
       ]
     },
     {
@@ -858,7 +818,7 @@
     {
       "ref": "pkg:cargo/tests-build@0.1.0",
       "dependsOn": [
-        "pkg:cargo/tokio",
+        "pkg:cargo/tokio@1.53.1",
         "pkg:cargo/trybuild"
       ]
     },
@@ -868,24 +828,16 @@
         "pkg:cargo/bytes",
         "pkg:cargo/doc-comment",
         "pkg:cargo/futures",
-        "pkg:cargo/tokio",
-        "pkg:cargo/tokio-test"
+        "pkg:cargo/tokio-test@0.4.5",
+        "pkg:cargo/tokio@1.53.1"
       ]
-    },
-    {
-      "ref": "pkg:cargo/tokio",
-      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/tokio-fuzz@0.0.0",
       "dependsOn": [
         "pkg:cargo/libfuzzer-sys",
-        "pkg:cargo/tokio"
+        "pkg:cargo/tokio@1.53.1"
       ]
-    },
-    {
-      "ref": "pkg:cargo/tokio-macros",
-      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/tokio-macros@2.7.1",
@@ -893,19 +845,15 @@
         "pkg:cargo/proc-macro2",
         "pkg:cargo/quote",
         "pkg:cargo/syn",
-        "pkg:cargo/tokio"
+        "pkg:cargo/tokio@1.53.1"
       ]
-    },
-    {
-      "ref": "pkg:cargo/tokio-stream",
-      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/tokio-stream-fuzz@0.0.0",
       "dependsOn": [
         "pkg:cargo/libfuzzer-sys",
-        "pkg:cargo/tokio-stream",
-        "pkg:cargo/tokio-test"
+        "pkg:cargo/tokio-stream@0.1.18",
+        "pkg:cargo/tokio-test@0.4.5"
       ]
     },
     {
@@ -916,27 +864,19 @@
         "pkg:cargo/futures-core",
         "pkg:cargo/parking_lot",
         "pkg:cargo/pin-project-lite",
-        "pkg:cargo/tokio",
-        "pkg:cargo/tokio-test",
-        "pkg:cargo/tokio-util"
+        "pkg:cargo/tokio-test@0.4.5",
+        "pkg:cargo/tokio-util@0.7.18",
+        "pkg:cargo/tokio@1.53.1"
       ]
-    },
-    {
-      "ref": "pkg:cargo/tokio-test",
-      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/tokio-test@0.4.5",
       "dependsOn": [
         "pkg:cargo/futures-core",
         "pkg:cargo/futures-util",
-        "pkg:cargo/tokio",
-        "pkg:cargo/tokio-stream"
+        "pkg:cargo/tokio-stream@0.1.18",
+        "pkg:cargo/tokio@1.53.1"
       ]
-    },
-    {
-      "ref": "pkg:cargo/tokio-util",
-      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/tokio-util@0.7.18",
@@ -954,9 +894,9 @@
         "pkg:cargo/pin-project-lite",
         "pkg:cargo/slab",
         "pkg:cargo/tempfile",
-        "pkg:cargo/tokio",
-        "pkg:cargo/tokio-stream",
-        "pkg:cargo/tokio-test",
+        "pkg:cargo/tokio-stream@0.1.18",
+        "pkg:cargo/tokio-test@0.4.5",
+        "pkg:cargo/tokio@1.53.1",
         "pkg:cargo/tracing"
       ]
     },
@@ -972,10 +912,10 @@
         "pkg:cargo/mockall",
         "pkg:cargo/parking_lot",
         "pkg:cargo/pin-project-lite",
-        "pkg:cargo/tokio-macros",
-        "pkg:cargo/tokio-stream",
-        "pkg:cargo/tokio-test",
-        "pkg:cargo/tokio-util"
+        "pkg:cargo/tokio-macros@2.7.1",
+        "pkg:cargo/tokio-stream@0.1.18",
+        "pkg:cargo/tokio-test@0.4.5",
+        "pkg:cargo/tokio-util@0.7.18"
       ]
     },
     {

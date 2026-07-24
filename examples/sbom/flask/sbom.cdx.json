@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:4d23bf82-3939-4f54-b4e2-e1a2a4c59ee8",
+  "serialNumber": "urn:uuid:f38ece06-0b4c-4c7d-867e-d60b1d3e2ba9",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T22:12:16Z",
+    "timestamp": "2026-07-24T07:16:28Z",
     "tools": [
       {
         "name": "Provenant",
@@ -184,27 +184,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:pypi/blinker",
-      "name": "blinker",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:pypi/blinker"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:pypi/blinker@1.6.2",
       "name": "blinker",
       "version": "1.6.2",
       "scope": "required",
       "purl": "pkg:pypi/blinker@1.6.2"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:pypi/celery",
-      "name": "celery",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:pypi/celery"
     },
     {
       "type": "library",
@@ -216,11 +200,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:pypi/click",
+      "bom-ref": "pkg:pypi/click@8.1.3",
       "name": "click",
-      "version": "unknown",
+      "version": "8.1.3",
       "scope": "required",
-      "purl": "pkg:pypi/click"
+      "purl": "pkg:pypi/click@8.1.3"
     },
     {
       "type": "library",
@@ -245,14 +229,6 @@
       "version": "0.2.0",
       "scope": "required",
       "purl": "pkg:pypi/click-repl@0.2.0"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:pypi/click@8.1.3",
-      "name": "click",
-      "version": "8.1.3",
-      "scope": "required",
-      "purl": "pkg:pypi/click@8.1.3"
     },
     {
       "type": "library",
@@ -304,27 +280,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:pypi/itsdangerous",
-      "name": "itsdangerous",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:pypi/itsdangerous"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:pypi/itsdangerous@2.1.2",
       "name": "itsdangerous",
       "version": "2.1.2",
       "scope": "required",
       "purl": "pkg:pypi/itsdangerous@2.1.2"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:pypi/jinja2",
-      "name": "jinja2",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:pypi/jinja2"
     },
     {
       "type": "library",
@@ -341,14 +301,6 @@
       "version": "5.2.4",
       "scope": "required",
       "purl": "pkg:pypi/kombu@5.2.4"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:pypi/markupsafe",
-      "name": "markupsafe",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:pypi/markupsafe"
     },
     {
       "type": "library",
@@ -536,14 +488,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:pypi/werkzeug",
-      "name": "werkzeug",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:pypi/werkzeug"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:pypi/werkzeug@2.3.3",
       "name": "werkzeug",
       "version": "2.3.3",
@@ -569,23 +513,11 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/blinker",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:pypi/blinker@1.6.2",
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/celery",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:pypi/celery@5.2.7",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:pypi/click",
       "dependsOn": []
     },
     {
@@ -619,7 +551,6 @@
         "pkg:pypi/async-timeout@4.0.2",
         "pkg:pypi/billiard@3.6.4.0",
         "pkg:pypi/blinker@1.6.2",
-        "pkg:pypi/celery",
         "pkg:pypi/celery@5.2.7",
         "pkg:pypi/click-didyoumean@0.3.0",
         "pkg:pypi/click-plugins@1.1.1",
@@ -648,15 +579,15 @@
       "ref": "pkg:pypi/flask@3.1.3",
       "dependsOn": [
         "pkg:pypi/asgiref",
-        "pkg:pypi/blinker",
-        "pkg:pypi/click",
+        "pkg:pypi/blinker@1.6.2",
+        "pkg:pypi/click@8.1.3",
         "pkg:pypi/cryptography",
         "pkg:pypi/gha-update",
         "pkg:pypi/greenlet",
         "pkg:pypi/importlib-metadata",
-        "pkg:pypi/itsdangerous",
-        "pkg:pypi/jinja2",
-        "pkg:pypi/markupsafe",
+        "pkg:pypi/itsdangerous@2.1.2",
+        "pkg:pypi/jinja2@3.1.2",
+        "pkg:pypi/markupsafe@2.1.2",
         "pkg:pypi/mypy",
         "pkg:pypi/pallets-sphinx-themes",
         "pkg:pypi/pre-commit",
@@ -673,7 +604,7 @@
         "pkg:pypi/tox-uv",
         "pkg:pypi/types-contextvars",
         "pkg:pypi/types-dataclasses",
-        "pkg:pypi/werkzeug"
+        "pkg:pypi/werkzeug@2.3.3"
       ]
     },
     {
@@ -696,15 +627,7 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/itsdangerous",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:pypi/itsdangerous@2.1.2",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:pypi/jinja2",
       "dependsOn": []
     },
     {
@@ -720,10 +643,6 @@
     },
     {
       "ref": "pkg:pypi/kombu@5.2.4",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:pypi/markupsafe",
       "dependsOn": []
     },
     {
@@ -816,10 +735,6 @@
     },
     {
       "ref": "pkg:pypi/wcwidth@0.2.6",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:pypi/werkzeug",
       "dependsOn": []
     },
     {

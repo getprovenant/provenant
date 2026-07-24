@@ -104,6 +104,48 @@ determine it statically**:
 - No other dependency-intent flag (`is_runtime`, `is_direct`, `is_pinned`) is
   invented for a component when it is not proven.
 
+## Amendment (issue #1320): versioned purls and the vendored-license join
+
+The original decision keyed promotion and graph edges on the dependency's
+*declared* purl. For an ecosystem that resolves versions in a lockfile that is a
+separate datasource from the manifest (npm, Cargo, PyPI, …), that produced two
+shortcomings visible in a real scan:
+
+- A dependency promoted from a manifest requirement carried the **unversioned**
+  purl (`pkg:npm/leftpad`) even when the lockfile had already resolved it to a
+  version — the versioned coordinate that makes the purl a usable join key for
+  downstream license enrichment (deps.dev, ClearlyDefined, an SCA tool).
+- When the dependency's source or metadata was on disk (`node_modules/<dep>/`,
+  `*.dist-info/METADATA`, vendored source), Provenant detected and licensed it
+  as a package at its **versioned** purl, but the manifest requirement was
+  promoted as a **separate, unversioned, unlicensed** component. The same
+  dependency appeared twice, and the licensed copy was not the purl-keyed one.
+
+### Decision
+
+Resolve each dependency edge purl to its **versioned coordinate** before
+promotion and edge resolution, using only static evidence already in the
+document. `SbomInventory` builds a version index mapping each version-less purl
+identity (type + namespace + name) to the single versioned purl that shares it,
+drawn from detected packages, dependency purls, and resolved-package purls. An
+unversioned edge whose identity has exactly one versioned sibling is upgraded to
+that versioned purl; an identity with zero or multiple versioned siblings is
+left unversioned (honest-unknowns — Provenant does not guess which version a
+range resolved to). Both promotion dedup and `dependsOn`/`DEPENDS_ON` edge
+resolution route through the same canonicalization, so a component and the edges
+that target it always agree and the graph stays closed.
+
+This closes both gaps with the existing purl-dedup: once the unversioned
+requirement is canonicalized to the resolved coordinate, it dedups against the
+detected package (vendored case → one licensed, versioned component) or against
+the versioned lockfile edge (source-absent case → one versioned component,
+license carried from `resolved_package` when present, otherwise unset). Nothing
+is fetched; the license and version come only from what was scanned.
+
+Still static and no-network: the change is purely a render-time join over data
+already extracted. When neither a detected package nor a resolved version exists
+for an identity, the component keeps its unversioned purl and unset license.
+
 ## Consequences
 
 ### Benefits
@@ -147,6 +189,7 @@ determine it statically**:
 ## References
 
 - Issue #1319
+- Issue #1320 (versioned purls + vendored-license join amendment)
 - Promotion/dedup: `src/output/sbom.rs`
 - CycloneDX renderer: `src/output/cyclonedx.rs`
 - SPDX renderer: `src/output/spdx.rs`

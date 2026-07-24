@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.3" serialNumber="urn:uuid:ce548f93-c5aa-499a-834c-a0233495928f" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.3" serialNumber="urn:uuid:f96cc859-3f38-4291-95c5-ec709966664f" version="1">
   <metadata>
-    <timestamp>2023-03-31T10:36:22Z</timestamp>
+    <timestamp>2026-01-01T00:00:01Z</timestamp>
     <tools>
-      <tool>
-        <vendor>Provenant</vendor>
-        <name>Provenant</name>
-        <version>0.0.5</version>
-      </tool>
+      <tool><vendor>Provenant</vendor><name>Provenant</name><version>1.0.1</version></tool>
     </tools>
     <component type="application">
       <name>root</name>
@@ -34,15 +30,25 @@
       <scope>required</scope>
       <purl>pkg:npm/dep@2.0.0</purl>
     </component>
+    <component type="library" bom-ref="pkg:npm/left-pad@1.3.0">
+      <name>left-pad</name>
+      <version>1.3.0</version>
+      <scope>required</scope>
+      <licenses><expression>MIT</expression></licenses>
+      <purl>pkg:npm/left-pad@1.3.0</purl>
+    </component>
   </components>
   <dependencies>
     <dependency ref="pkg:npm/dep@2.0.0">
+    </dependency>
+    <dependency ref="pkg:npm/left-pad@1.3.0">
     </dependency>
     <dependency ref="pkg:npm/other@1.0.0">
       <dependency ref="pkg:npm/dep@2.0.0"/>
     </dependency>
     <dependency ref="pkg:npm/root@1.0.0">
       <dependency ref="pkg:npm/dep@2.0.0"/>
+      <dependency ref="pkg:npm/left-pad@1.3.0"/>
     </dependency>
   </dependencies>
 </bom>

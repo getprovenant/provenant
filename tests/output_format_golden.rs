@@ -2477,11 +2477,63 @@ fn sample_cyclonedx_dependency_output() -> Output {
         namespace: None,
     };
 
+    // Versioned-purl + vendored-license join (issue #1320): the manifest declares
+    // an *unversioned* requirement while the lockfile resolves the same
+    // dependency to a version and carries its license. The two must collapse into
+    // one licensed, versioned component (`pkg:npm/left-pad@1.3.0` / MIT), not a
+    // bare `pkg:npm/left-pad` plus a separate versioned one.
+    let leftpad_requirement = TopLevelDependency {
+        purl: Some("pkg:npm/left-pad".to_string()),
+        extracted_requirement: Some("^1.3.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(false),
+        is_pinned: Some(false),
+        is_direct: Some(true),
+        resolved_package: None,
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/left-pad?uuid=00000000-0000-0000-0000-000000000003".to_string(),
+        ),
+        for_package_uid: Some(root_uid.clone()),
+        datafile_path: "scan/package.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageJson,
+        namespace: None,
+    };
+    let leftpad_resolved = TopLevelDependency {
+        purl: Some("pkg:npm/left-pad@1.3.0".to_string()),
+        extracted_requirement: Some("1.3.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(false),
+        is_pinned: Some(true),
+        is_direct: Some(false),
+        resolved_package: Some(Box::new(ResolvedPackage {
+            purl: Some("pkg:npm/left-pad@1.3.0".to_string()),
+            declared_license_expression: Some("mit".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            ..ResolvedPackage::new(
+                PackageType::Npm,
+                String::new(),
+                "left-pad".to_string(),
+                "1.3.0".to_string(),
+            )
+        })),
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/left-pad@1.3.0?uuid=00000000-0000-0000-0000-000000000004".to_string(),
+        ),
+        for_package_uid: Some(root_uid),
+        datafile_path: "scan/package-lock.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageLockJson,
+        namespace: None,
+    };
+
     sample_output_with_sections(
         0,
         0,
         vec![root_pkg, other_pkg],
-        vec![owned_dep, shared_dep],
+        vec![owned_dep, shared_dep, leftpad_requirement, leftpad_resolved],
         vec![],
     )
 }
@@ -2537,6 +2589,57 @@ fn sample_spdx_dependency_output() -> Output {
         namespace: None,
     };
 
+    // Versioned-purl + vendored-license join (issue #1320): an unversioned
+    // manifest requirement and the lockfile's versioned, licensed resolution of
+    // the same dependency collapse to one `pkg:npm/left-pad@1.3.0` package
+    // carrying MIT.
+    let leftpad_requirement = TopLevelDependency {
+        purl: Some("pkg:npm/left-pad".to_string()),
+        extracted_requirement: Some("^1.3.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(false),
+        is_pinned: Some(false),
+        is_direct: Some(true),
+        resolved_package: None,
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/left-pad?uuid=00000000-0000-0000-0000-000000000003".to_string(),
+        ),
+        for_package_uid: Some(root_uid.clone()),
+        datafile_path: "scan/package.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageJson,
+        namespace: None,
+    };
+    let leftpad_resolved = TopLevelDependency {
+        purl: Some("pkg:npm/left-pad@1.3.0".to_string()),
+        extracted_requirement: Some("1.3.0".to_string()),
+        scope: Some("dependencies".to_string()),
+        is_runtime: Some(true),
+        is_optional: Some(false),
+        is_pinned: Some(true),
+        is_direct: Some(false),
+        resolved_package: Some(Box::new(ResolvedPackage {
+            purl: Some("pkg:npm/left-pad@1.3.0".to_string()),
+            declared_license_expression: Some("mit".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            ..ResolvedPackage::new(
+                PackageType::Npm,
+                String::new(),
+                "left-pad".to_string(),
+                "1.3.0".to_string(),
+            )
+        })),
+        extra_data: None,
+        dependency_uid: DependencyUid::from_raw(
+            "pkg:npm/left-pad@1.3.0?uuid=00000000-0000-0000-0000-000000000004".to_string(),
+        ),
+        for_package_uid: Some(root_uid.clone()),
+        datafile_path: "scan/package-lock.json".to_string(),
+        datasource_id: DatasourceId::NpmPackageLockJson,
+        namespace: None,
+    };
+
     let mut manifest = sample_plain_text_file(
         "package.json",
         "package",
@@ -2562,7 +2665,7 @@ fn sample_spdx_dependency_output() -> Output {
         2,
         0,
         vec![root_pkg],
-        vec![owned_dep],
+        vec![owned_dep, leftpad_requirement, leftpad_resolved],
         vec![manifest, source],
     )
 }
@@ -2613,7 +2716,10 @@ fn test_spdx_tag_value_emits_promoted_dependency_packages_after_file_section() {
 
     let expected = fs::read_to_string("testdata/output-formats/spdx-dependencies-expected.tv")
         .expect("spdx dependency fixture should be readable");
-    assert_eq!(actual, expected);
+    // Normalize away the build-specific Creator/Created lines like every other
+    // SPDX tag-value golden; the ordering assertions above already cover the
+    // section layout this fixture is here to protect.
+    assert_eq!(normalize_spdx_tv(&actual), normalize_spdx_tv(&expected));
 }
 
 fn empty_output() -> Output {
