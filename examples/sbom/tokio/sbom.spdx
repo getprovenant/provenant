@@ -13,10 +13,11 @@ Visit https://github.com/getprovenant/provenant/ for support and download.
 SPDX License List: 3.27</text>
 ## Creation Information
 Creator: Tool: Provenant-1.0.1
-Created: 2026-07-23T22:12:17Z
+Created: 2026-07-24T08:01:50Z
 ## Package Information
 PackageName: benches
 SPDXID: SPDXRef-Package-1
+PackageVersion: 0.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 5a81fff35ef5c81e42ebcbcef9537afcde153a5a
@@ -26,9 +27,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/benches@0.0.0
 ## Package Information
 PackageName: examples
 SPDXID: SPDXRef-Package-2
+PackageVersion: 0.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 39464e61fe27a50459cd14ae93d09e177b0542b7
@@ -38,9 +41,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/examples@0.0.0
 ## Package Information
 PackageName: stress-test
 SPDXID: SPDXRef-Package-3
+PackageVersion: 0.1.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 30fd08be04f99aadba1d69d7a35b492a7645482e
@@ -50,9 +55,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/stress-test@0.1.0
 ## Package Information
 PackageName: tests-build
 SPDXID: SPDXRef-Package-4
+PackageVersion: 0.1.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 39464e61fe27a50459cd14ae93d09e177b0542b7
@@ -62,9 +69,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tests-build@0.1.0
 ## Package Information
 PackageName: tests-integration
 SPDXID: SPDXRef-Package-5
+PackageVersion: 0.1.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 43e08c01a8b8a3c516f98e6ef7b1083a92536974
@@ -74,9 +83,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tests-integration@0.1.0
 ## Package Information
 PackageName: tokio-fuzz
 SPDXID: SPDXRef-Package-6
+PackageVersion: 0.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 94e723dc305f28b58ba1aba04e14aade037baa95
@@ -84,9 +95,11 @@ PackageLicenseConcluded: NOASSERTION
 PackageLicenseInfoFromFiles: NONE
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-fuzz@0.0.0
 ## Package Information
 PackageName: tokio-macros
 SPDXID: SPDXRef-Package-7
+PackageVersion: 2.7.1
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: f55b97d80aed21c1644c24c49e35cc86aa8c9bb9
@@ -97,9 +110,11 @@ PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: <text>Copyright (c) 2019 Yoshua Wuyts
 Copyright (c) Tokio Contributors</text>
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-macros@2.7.1
 ## Package Information
 PackageName: tokio-stream-fuzz
 SPDXID: SPDXRef-Package-8
+PackageVersion: 0.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 94e723dc305f28b58ba1aba04e14aade037baa95
@@ -107,9 +122,11 @@ PackageLicenseConcluded: NOASSERTION
 PackageLicenseInfoFromFiles: NONE
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-stream-fuzz@0.0.0
 ## Package Information
 PackageName: tokio-stream
 SPDXID: SPDXRef-Package-9
+PackageVersion: 0.1.18
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 8fa7072d1e15a3e9a6c95d428b2b954294d58e5e
@@ -119,9 +136,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-stream@0.1.18
 ## Package Information
 PackageName: tokio-test
 SPDXID: SPDXRef-Package-10
+PackageVersion: 0.4.5
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 1836b8628c3230a8677fcb87ad28bad263e7eb94
@@ -131,9 +150,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-test@0.4.5
 ## Package Information
 PackageName: tokio-util
 SPDXID: SPDXRef-Package-11
+PackageVersion: 0.7.18
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: f852916d00afee02b0e8a70733712d23e8323ebe
@@ -143,9 +164,11 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-util@0.7.18
 ## Package Information
 PackageName: tokio
 SPDXID: SPDXRef-Package-12
+PackageVersion: 1.53.1
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 9688db982320e1d79a81501339bc4593b0c3099a
@@ -155,6 +178,7 @@ PackageLicenseInfoFromFiles: LicenseRef-scancode-generic-cla
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: Copyright (c) Tokio Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio@1.53.1
 ## File Information
 FileName: ./.github/FUNDING.yml
 SPDXID: SPDXRef-1
@@ -6211,6 +6235,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/async-stream
 ## Package Information
 PackageName: bytes
 SPDXID: SPDXRef-Package-Dependency-2
@@ -6219,6 +6244,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/bytes
 ## Package Information
 PackageName: criterion
 SPDXID: SPDXRef-Package-Dependency-3
@@ -6227,6 +6253,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/criterion
 ## Package Information
 PackageName: doc-comment
 SPDXID: SPDXRef-Package-Dependency-4
@@ -6235,6 +6262,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/doc-comment
 ## Package Information
 PackageName: futures
 SPDXID: SPDXRef-Package-Dependency-5
@@ -6243,6 +6271,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures
 ## Package Information
 PackageName: futures-concurrency
 SPDXID: SPDXRef-Package-Dependency-6
@@ -6251,6 +6280,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures-concurrency
 ## Package Information
 PackageName: futures-core
 SPDXID: SPDXRef-Package-Dependency-7
@@ -6259,6 +6289,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures-core
 ## Package Information
 PackageName: futures-io
 SPDXID: SPDXRef-Package-Dependency-8
@@ -6267,6 +6298,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures-io
 ## Package Information
 PackageName: futures-sink
 SPDXID: SPDXRef-Package-Dependency-9
@@ -6275,6 +6307,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures-sink
 ## Package Information
 PackageName: futures-test
 SPDXID: SPDXRef-Package-Dependency-10
@@ -6283,6 +6316,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures-test
 ## Package Information
 PackageName: futures-util
 SPDXID: SPDXRef-Package-Dependency-11
@@ -6291,6 +6325,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/futures-util
 ## Package Information
 PackageName: hashbrown
 SPDXID: SPDXRef-Package-Dependency-12
@@ -6299,6 +6334,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/hashbrown
 ## Package Information
 PackageName: http
 SPDXID: SPDXRef-Package-Dependency-13
@@ -6307,6 +6343,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/http
 ## Package Information
 PackageName: httparse
 SPDXID: SPDXRef-Package-Dependency-14
@@ -6315,6 +6352,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/httparse
 ## Package Information
 PackageName: httpdate
 SPDXID: SPDXRef-Package-Dependency-15
@@ -6323,6 +6361,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/httpdate
 ## Package Information
 PackageName: libfuzzer-sys
 SPDXID: SPDXRef-Package-Dependency-16
@@ -6331,6 +6370,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/libfuzzer-sys
 ## Package Information
 PackageName: mio
 SPDXID: SPDXRef-Package-Dependency-17
@@ -6339,6 +6379,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/mio
 ## Package Information
 PackageName: mockall
 SPDXID: SPDXRef-Package-Dependency-18
@@ -6347,6 +6388,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/mockall
 ## Package Information
 PackageName: once_cell
 SPDXID: SPDXRef-Package-Dependency-19
@@ -6355,6 +6397,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/once_cell
 ## Package Information
 PackageName: parking_lot
 SPDXID: SPDXRef-Package-Dependency-20
@@ -6363,6 +6406,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/parking_lot
 ## Package Information
 PackageName: pin-project-lite
 SPDXID: SPDXRef-Package-Dependency-21
@@ -6371,6 +6415,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/pin-project-lite
 ## Package Information
 PackageName: proc-macro2
 SPDXID: SPDXRef-Package-Dependency-22
@@ -6379,6 +6424,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/proc-macro2
 ## Package Information
 PackageName: quote
 SPDXID: SPDXRef-Package-Dependency-23
@@ -6387,6 +6433,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/quote
 ## Package Information
 PackageName: rand
 SPDXID: SPDXRef-Package-Dependency-24
@@ -6395,6 +6442,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/rand
 ## Package Information
 PackageName: rand_chacha
 SPDXID: SPDXRef-Package-Dependency-25
@@ -6403,6 +6451,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/rand_chacha
 ## Package Information
 PackageName: serde
 SPDXID: SPDXRef-Package-Dependency-26
@@ -6411,6 +6460,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/serde
 ## Package Information
 PackageName: serde_derive
 SPDXID: SPDXRef-Package-Dependency-27
@@ -6419,6 +6469,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/serde_derive
 ## Package Information
 PackageName: serde_json
 SPDXID: SPDXRef-Package-Dependency-28
@@ -6427,6 +6478,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/serde_json
 ## Package Information
 PackageName: slab
 SPDXID: SPDXRef-Package-Dependency-29
@@ -6435,6 +6487,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/slab
 ## Package Information
 PackageName: syn
 SPDXID: SPDXRef-Package-Dependency-30
@@ -6443,6 +6496,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/syn
 ## Package Information
 PackageName: tempfile
 SPDXID: SPDXRef-Package-Dependency-31
@@ -6451,6 +6505,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tempfile
 ## Package Information
 PackageName: tokio
 SPDXID: SPDXRef-Package-Dependency-32
@@ -6459,6 +6514,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio
 ## Package Information
 PackageName: tokio-macros
 SPDXID: SPDXRef-Package-Dependency-33
@@ -6467,6 +6523,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-macros
 ## Package Information
 PackageName: tokio-stream
 SPDXID: SPDXRef-Package-Dependency-34
@@ -6475,6 +6532,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-stream
 ## Package Information
 PackageName: tokio-test
 SPDXID: SPDXRef-Package-Dependency-35
@@ -6483,6 +6541,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-test
 ## Package Information
 PackageName: tokio-util
 SPDXID: SPDXRef-Package-Dependency-36
@@ -6491,6 +6550,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tokio-util
 ## Package Information
 PackageName: tracing
 SPDXID: SPDXRef-Package-Dependency-37
@@ -6499,6 +6559,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tracing
 ## Package Information
 PackageName: tracing-subscriber
 SPDXID: SPDXRef-Package-Dependency-38
@@ -6507,6 +6568,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/tracing-subscriber
 ## Package Information
 PackageName: trybuild
 SPDXID: SPDXRef-Package-Dependency-39
@@ -6515,6 +6577,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:cargo/trybuild
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
 Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-1

@@ -17,6 +17,7 @@ Created: 2026-01-01T00:00:00Z
 ## Package Information
 PackageName: widget-mit
 SPDXID: SPDXRef-Package-1
+PackageVersion: 1.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 0a05a9e69e5757ac71c75a50418622624f042c97
@@ -24,9 +25,11 @@ PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/widget-mit@1.0.0
 ## Package Information
 PackageName: widget-other
 SPDXID: SPDXRef-Package-2
+PackageVersion: 1.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 4ef6c88cdec9dbcc9bd8b7fa0fdfe4cc43bfed4f
@@ -34,6 +37,7 @@ PackageLicenseConcluded: Apache-2.0
 PackageLicenseInfoFromFiles: NONE
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/widget-other@1.0.0
 ## File Information
 FileName: ./widget-mit/package.json
 SPDXID: SPDXRef-1

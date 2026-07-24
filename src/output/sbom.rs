@@ -66,6 +66,12 @@ impl<'a> InventoryEntry<'a> {
 /// The identical component/package inventory used by CycloneDX and SPDX.
 pub(crate) struct SbomInventory<'a> {
     pub entries: Vec<InventoryEntry<'a>>,
+    /// Per-owner version evidence: `(owner package_uid, version-less purl
+    /// identity)` → the versioned purls that owner's own dependency edges
+    /// resolved that identity to. Scoped by owner so an unversioned requirement
+    /// under one package never inherits a version another package resolved the
+    /// same name to. See ADR 0012.
+    version_index: VersionIndex,
 }
 
 impl<'a> SbomInventory<'a> {
@@ -76,25 +82,43 @@ impl<'a> SbomInventory<'a> {
     pub(crate) fn packages(&self) -> impl Iterator<Item = &OutputPackage> {
         self.entries.iter().map(InventoryEntry::package)
     }
+
+    /// Resolve a dependency edge to the purl its component and graph edges use.
+    /// An already-versioned edge keeps its purl; an unversioned one is upgraded
+    /// only from that edge's own `resolved_package`, or from a single
+    /// unambiguous versioned sibling under the **same owner** — never across
+    /// owners and never by guessing among multiple versions. Promotion and
+    /// graph-edge resolution both route through this so a versioned component
+    /// and the edges that target it stay consistent and the graph stays closed.
+    pub(crate) fn resolve_edge_purl(&self, dep: &TopLevelDependency) -> Option<String> {
+        resolve_edge_purl(dep, &self.version_index)
+    }
 }
 
 /// Build the shared inventory: detected packages, then every resolved
 /// dependency promoted and deduped by purl (ADR 0012).
 pub(crate) fn build_inventory(output: &Output) -> SbomInventory<'_> {
+    let version_index = build_version_index(&output.dependencies);
+
     let mut entries: Vec<InventoryEntry<'_>> = output
         .packages
         .iter()
         .map(|package| InventoryEntry::Detected { package })
         .collect();
 
-    for (package, is_optional) in promote_dependencies(&output.packages, &output.dependencies) {
+    for (package, is_optional) in
+        promote_dependencies(&output.packages, &output.dependencies, &version_index)
+    {
         entries.push(InventoryEntry::Promoted {
             package: Box::new(package),
             is_optional,
         });
     }
 
-    SbomInventory { entries }
+    SbomInventory {
+        entries,
+        version_index,
+    }
 }
 
 /// Resolve owner→child dependency edges among inventory members.
@@ -128,7 +152,7 @@ pub(crate) fn dependency_edges(
         let Some(owner_id) = uid_to_id.get(owner_uid).copied() else {
             continue;
         };
-        let Some(purl) = dependency_edge_purl(dep) else {
+        let Some(purl) = inventory.resolve_edge_purl(dep) else {
             continue;
         };
         let Some(child_ids) = purl_to_ids.get(purl.as_str()) else {
@@ -156,6 +180,127 @@ pub(crate) fn dependency_edge_purl(dep: &TopLevelDependency) -> Option<String> {
         .filter(|purl| !purl.is_empty())
 }
 
+/// Per-owner version evidence keyed by `(owner package_uid, version-less purl
+/// identity)`. The value is the set of distinct versioned purls that owner's
+/// dependency edges resolved that identity to.
+type VersionIndex = HashMap<(String, String), BTreeSet<String>>;
+
+/// A purl's version-less identity and whether it carries a version. `None` when
+/// the string does not parse as a purl.
+///
+/// The identity strips **only** the version: type, namespace, name,
+/// qualifiers, and subpath are all preserved (rebuilt through `PackageUrl` so
+/// the string is canonical, with qualifiers sorted). Two purls therefore share
+/// an identity only when they are the same coordinate at different versions —
+/// variants that differ by a qualifier (`?arch=`, `?classifier=`, …) or subpath
+/// stay distinct and are never conflated.
+fn purl_version_less_identity(purl: &str) -> Option<(String, bool)> {
+    let parsed = PackageUrl::from_str(purl).ok()?;
+    let versioned = parsed.version().is_some();
+
+    let mut identity = PackageUrl::new(parsed.ty().to_string(), parsed.name().to_string()).ok()?;
+    if let Some(namespace) = parsed.namespace() {
+        identity.with_namespace(namespace.to_string()).ok()?;
+    }
+    for (key, value) in parsed.qualifiers() {
+        identity
+            .add_qualifier(key.to_string(), value.to_string())
+            .ok()?;
+    }
+    if let Some(subpath) = parsed.subpath() {
+        identity.with_subpath(subpath.to_string()).ok()?;
+    }
+    Some((identity.to_string(), versioned))
+}
+
+/// The concrete owner (`for_package_uid`) of a dependency edge, if any. An
+/// absent or empty owner is **not** a shared coalescing bucket: distinct
+/// ownerless (e.g. hoisted, or from separate workspaces/datafiles) edges must
+/// never pool their versions, so such edges have no sibling-index key at all.
+fn concrete_owner(dep: &TopLevelDependency) -> Option<&str> {
+    dep.for_package_uid
+        .as_deref()
+        .filter(|owner| !owner.is_empty())
+}
+
+/// Build per-owner version evidence from dependency edges only. Each edge with a
+/// concrete owner records the versioned purls it carries (its own purl and its
+/// resolved package's purl) under `(owner, version-less identity)`. Ownerless
+/// edges are excluded so they can never pool versions with each other, and
+/// detected packages are excluded because they are not owner-scoped — either
+/// could otherwise assign one context's resolved version to another's
+/// requirement.
+fn build_version_index(dependencies: &[TopLevelDependency]) -> VersionIndex {
+    let mut index: VersionIndex = HashMap::new();
+    for dep in dependencies {
+        let Some(owner) = concrete_owner(dep) else {
+            continue;
+        };
+        let purls = [
+            dep.purl.as_deref(),
+            dep.resolved_package
+                .as_ref()
+                .and_then(|rp| rp.purl.as_deref()),
+        ];
+        for purl in purls.into_iter().flatten() {
+            if let Some((identity, true)) = purl_version_less_identity(purl) {
+                index
+                    .entry((owner.to_string(), identity))
+                    .or_default()
+                    .insert(purl.to_string());
+            }
+        }
+    }
+    index
+}
+
+/// Resolve a dependency edge to the purl its component and graph edges use.
+///
+/// An already-versioned edge keeps its purl. An unversioned edge is upgraded
+/// only from proof about that same edge — first its own `resolved_package`
+/// purl, then a single unambiguous versioned sibling recorded under the **same
+/// concrete owner** and identity. When the edge is ownerless, or its owner has
+/// zero or several candidate versions for the identity, the edge keeps its
+/// unversioned purl (honest-unknown); a version is never borrowed from a
+/// different owner or pooled across ownerless contexts.
+fn resolve_edge_purl(dep: &TopLevelDependency, version_index: &VersionIndex) -> Option<String> {
+    let declared = dependency_edge_purl(dep)?;
+    // A non-empty purl must never be dropped. If it does not parse we cannot
+    // canonicalize or dedup it, but the coordinate is still real — the native
+    // output keeps it — so pass it through unchanged rather than erase the
+    // component and its graph edge (only a genuinely empty purl is absent).
+    let Some((identity, versioned)) = purl_version_less_identity(&declared) else {
+        return Some(declared);
+    };
+    if versioned {
+        return Some(declared);
+    }
+
+    // The edge's own resolved-package purl is its actual resolution — trust it
+    // when it is versioned and the same coordinate.
+    if let Some(resolved_purl) = dep
+        .resolved_package
+        .as_ref()
+        .and_then(|rp| rp.purl.as_deref())
+        && let Some((resolved_identity, true)) = purl_version_less_identity(resolved_purl)
+        && resolved_identity == identity
+    {
+        return Some(resolved_purl.to_string());
+    }
+
+    // Same-owner sibling evidence, only for a concrete owner and only when
+    // unambiguous. Ownerless edges never consult the index.
+    if let Some(owner) = concrete_owner(dep)
+        && let Some(candidates) = version_index.get(&(owner.to_string(), identity))
+        && candidates.len() == 1
+        && let Some(only) = candidates.iter().next()
+    {
+        return Some(only.clone());
+    }
+
+    Some(declared)
+}
+
 /// Promote resolved dependencies, deduped by purl.
 ///
 /// A dependency whose purl a detected package already owns is skipped (the
@@ -167,6 +312,7 @@ pub(crate) fn dependency_edge_purl(dep: &TopLevelDependency) -> Option<String> {
 fn promote_dependencies(
     packages: &[OutputPackage],
     dependencies: &[TopLevelDependency],
+    version_index: &VersionIndex,
 ) -> Vec<(OutputPackage, Option<bool>)> {
     let existing_purls: HashSet<&str> = packages
         .iter()
@@ -177,7 +323,10 @@ fn promote_dependencies(
     let mut promoted: Vec<(OutputPackage, Option<bool>)> = Vec::new();
 
     for dep in dependencies {
-        let Some(purl) = dependency_edge_purl(dep) else {
+        // Upgrade an unversioned requirement edge to its resolved coordinate so
+        // it dedups against the detected package or lockfile-resolved component
+        // for the same dependency instead of becoming a second, unversioned one.
+        let Some(purl) = resolve_edge_purl(dep, version_index) else {
             continue;
         };
         if existing_purls.contains(purl.as_str()) {
@@ -507,6 +656,30 @@ mod tests {
         })
     }
 
+    fn dependency_owned(
+        purl: Option<&str>,
+        resolved: Option<ResolvedPackage>,
+        uid: &str,
+        owner: &str,
+    ) -> TopLevelDependency {
+        TopLevelDependency::from(&crate::models::TopLevelDependency {
+            purl: purl.map(str::to_string),
+            extracted_requirement: None,
+            scope: None,
+            is_runtime: None,
+            is_optional: Some(false),
+            is_pinned: None,
+            is_direct: None,
+            resolved_package: resolved.map(Box::new),
+            extra_data: None,
+            dependency_uid: crate::models::DependencyUid::from_raw(uid.to_string()),
+            for_package_uid: Some(crate::models::PackageUid::from_raw(owner.to_string())),
+            datafile_path: "package-lock.json".to_string(),
+            datasource_id: DatasourceId::NpmPackageLockJson,
+            namespace: None,
+        })
+    }
+
     fn promoted_optional(entries: &[InventoryEntry<'_>]) -> Option<bool> {
         match entries.iter().find(|e| e.is_promoted()) {
             Some(InventoryEntry::Promoted { is_optional, .. }) => *is_optional,
@@ -774,6 +947,322 @@ mod tests {
         assert!(
             edges.is_empty(),
             "an edge whose target is not in inventory must not be emitted"
+        );
+    }
+
+    fn output_with(packages: Vec<OutputPackage>, deps: Vec<TopLevelDependency>) -> Output {
+        Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages,
+            dependencies: deps,
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        }
+    }
+
+    fn licensed_detected_package(purl: &str, spdx: &str) -> OutputPackage {
+        let tail = purl.rsplit('/').next().unwrap_or("pkg");
+        let (name, version) = tail
+            .split_once('@')
+            .map(|(n, v)| (n.to_string(), Some(v.to_string())))
+            .unwrap_or_else(|| (tail.to_string(), None));
+        OutputPackage::from(&crate::models::Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some(name),
+                version,
+                purl: Some(purl.to_string()),
+                declared_license_expression: Some(spdx.to_lowercase()),
+                declared_license_expression_spdx: Some(spdx.to_string()),
+                ..Default::default()
+            },
+            "package.json".to_string(),
+        ))
+    }
+
+    // Vendored join (issue #1320): with `node_modules/<dep>/package.json` on
+    // disk the dependency is a detected, licensed package at its versioned purl.
+    // The manifest yields an unversioned requirement edge and the lockfile a
+    // versioned resolution — both under the same owner. The unversioned edge
+    // resolves onto the detected package, leaving ONE licensed, versioned
+    // component — never a second bare `pkg:npm/leftpad`.
+    #[test]
+    fn unversioned_requirement_merges_into_vendored_detected_package() {
+        let packages = vec![licensed_detected_package("pkg:npm/leftpad@1.0.0", "MIT")];
+        let deps = vec![
+            dependency_owned(Some("pkg:npm/leftpad"), None, "req", "owner-1"),
+            dependency_owned(Some("pkg:npm/leftpad@1.0.0"), None, "lock", "owner-1"),
+        ];
+        let output = output_with(packages, deps);
+        let inventory = build_inventory(&output);
+
+        assert_eq!(
+            inventory.entries.len(),
+            1,
+            "must not add a second component"
+        );
+        assert!(!inventory.entries[0].is_promoted());
+        let package = inventory.entries[0].package();
+        assert_eq!(package.purl.as_deref(), Some("pkg:npm/leftpad@1.0.0"));
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+    }
+
+    // P1 (cross-owner): two packages can resolve the same requirement to
+    // different versions. An unversioned edge must take its version only from
+    // its own owner's resolution — never from another owner's.
+    #[test]
+    fn unversioned_requirement_never_inherits_version_across_owners() {
+        let deps = vec![
+            // owner A: requirement + its own resolution to 1.0.0
+            dependency_owned(Some("pkg:npm/lib"), None, "a-req", "owner-a"),
+            dependency_owned(Some("pkg:npm/lib@1.0.0"), None, "a-lock", "owner-a"),
+            // owner B: requirement + its own resolution to 2.0.0
+            dependency_owned(Some("pkg:npm/lib"), None, "b-req", "owner-b"),
+            dependency_owned(Some("pkg:npm/lib@2.0.0"), None, "b-lock", "owner-b"),
+        ];
+        let index = build_version_index(&deps);
+        // Each owner's unversioned requirement resolves to that owner's version.
+        assert_eq!(
+            resolve_edge_purl(&deps[0], &index).as_deref(),
+            Some("pkg:npm/lib@1.0.0"),
+            "owner A keeps its own 1.0.0"
+        );
+        assert_eq!(
+            resolve_edge_purl(&deps[2], &index).as_deref(),
+            Some("pkg:npm/lib@2.0.0"),
+            "owner B keeps its own 2.0.0 — no cross-owner assignment"
+        );
+
+        // Both versioned components still exist and the graph stays closed.
+        let output = output_with(vec![], deps);
+        let inventory = build_inventory(&output);
+        let purls: BTreeSet<&str> = inventory
+            .packages()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        assert_eq!(
+            purls,
+            BTreeSet::from(["pkg:npm/lib@1.0.0", "pkg:npm/lib@2.0.0"])
+        );
+        let ids: Vec<String> = (0..inventory.entries.len())
+            .map(|i| format!("id-{i}"))
+            .collect();
+        let edges = dependency_edges(&inventory, &output.dependencies, &ids);
+        for children in edges.values() {
+            for child in children {
+                assert!(
+                    ids.contains(child),
+                    "every edge resolves within the document"
+                );
+            }
+        }
+    }
+
+    // P1 (qualifiers/subpath): purls that differ only by a qualifier or subpath
+    // are DIFFERENT coordinates. An unversioned edge for one must not be rewritten
+    // to a versioned sibling that carries a different qualifier/subpath.
+    #[test]
+    fn qualifier_and_subpath_variants_are_not_conflated() {
+        let deps = vec![
+            // A versioned candidate that carries a qualifier.
+            dependency_owned(
+                Some("pkg:maven/g/a@1.0.0?classifier=sources"),
+                None,
+                "v",
+                "owner-1",
+            ),
+            // An unversioned requirement WITHOUT that qualifier — different identity.
+            dependency_owned(Some("pkg:maven/g/a"), None, "req", "owner-1"),
+        ];
+        let index = build_version_index(&deps);
+        assert_eq!(
+            resolve_edge_purl(&deps[1], &index).as_deref(),
+            Some("pkg:maven/g/a"),
+            "a qualifier-bearing sibling must not version a bare requirement"
+        );
+
+        // And a subpath variant is likewise its own identity.
+        let subpath_deps = vec![
+            dependency_owned(Some("pkg:golang/ex.com/m@1.0.0#sub"), None, "v", "owner-1"),
+            dependency_owned(Some("pkg:golang/ex.com/m"), None, "req", "owner-1"),
+        ];
+        let subpath_index = build_version_index(&subpath_deps);
+        assert_eq!(
+            resolve_edge_purl(&subpath_deps[1], &subpath_index).as_deref(),
+            Some("pkg:golang/ex.com/m"),
+            "a subpath-bearing sibling must not version a bare requirement"
+        );
+    }
+
+    // P1 (ownerless): an absent owner is not a shared coalescing bucket. Two
+    // ownerless dependencies from different contexts (e.g. separate workspaces
+    // or datafiles) must not pool versions — a bare ownerless requirement stays
+    // unversioned rather than borrow an unrelated ownerless sibling's version.
+    #[test]
+    fn ownerless_requirement_does_not_borrow_sibling_version() {
+        let deps = vec![
+            // A versioned ownerless dependency from one context.
+            dependency(Some("pkg:npm/lib@1.0.0"), Some(false), None, "ctx-a"),
+            // A bare ownerless requirement from an unrelated context.
+            dependency(Some("pkg:npm/lib"), Some(false), None, "ctx-b"),
+        ];
+        let index = build_version_index(&deps);
+        assert_eq!(
+            resolve_edge_purl(&deps[1], &index).as_deref(),
+            Some("pkg:npm/lib"),
+            "an ownerless requirement must not borrow an unrelated ownerless version"
+        );
+
+        let output = output_with(vec![], deps);
+        let inventory = build_inventory(&output);
+        let purls: BTreeSet<&str> = inventory
+            .packages()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        assert_eq!(
+            purls,
+            BTreeSet::from(["pkg:npm/lib", "pkg:npm/lib@1.0.0"]),
+            "both components present; the bare requirement stays unversioned"
+        );
+        let ids: Vec<String> = (0..inventory.entries.len())
+            .map(|i| format!("id-{i}"))
+            .collect();
+        let edges = dependency_edges(&inventory, &output.dependencies, &ids);
+        for children in edges.values() {
+            for child in children {
+                assert!(
+                    ids.contains(child),
+                    "every edge resolves within the document"
+                );
+            }
+        }
+    }
+
+    // P1 (unparseable purl): a non-empty purl the `PackageUrl` parser rejects
+    // must never erase the dependency. The component keeps its original
+    // coordinate and its owner→dep edge, so both CycloneDX and SPDX still emit
+    // it and the graph stays closed. Only a genuinely empty purl may be absent.
+    #[test]
+    fn unparseable_purl_is_retained_as_component_and_edge() {
+        let malformed = "not-a-purl";
+        assert!(
+            PackageUrl::from_str(malformed).is_err(),
+            "test requires a genuinely unparseable purl"
+        );
+
+        let mut owner = detected_package("pkg:npm/app@1.0.0");
+        owner.package_uid = "owner-1".to_string();
+        let dep = dependency_owned(Some(malformed), None, "d1", "owner-1");
+        let output = output_with(vec![owner], vec![dep]);
+        let inventory = build_inventory(&output);
+
+        let promoted: Vec<&str> = inventory
+            .entries
+            .iter()
+            .filter(|entry| entry.is_promoted())
+            .filter_map(|entry| entry.package().purl.as_deref())
+            .collect();
+        assert_eq!(
+            promoted,
+            vec![malformed],
+            "an unparseable but non-empty purl is retained as a component"
+        );
+
+        // bom-ref/id per entry: purl when present, else package_uid — the same
+        // scheme the renderers use, so the edge ref must equal the retained purl.
+        let ids: Vec<String> = inventory
+            .packages()
+            .map(|pkg| pkg.purl.clone().unwrap_or_else(|| pkg.package_uid.clone()))
+            .collect();
+        let owner_id = &ids[0];
+        let edges = dependency_edges(&inventory, &output.dependencies, &ids);
+        assert!(
+            edges
+                .get(owner_id)
+                .is_some_and(|children| children.contains(malformed)),
+            "the owner→dep edge to the unparseable coordinate is retained"
+        );
+        for children in edges.values() {
+            for child in children {
+                assert!(
+                    ids.contains(child),
+                    "every edge resolves within the document (graph closed)"
+                );
+            }
+        }
+    }
+
+    // Versioned-purl gap (issue #1320): the resolved version lives only on a
+    // sibling lockfile edge. An unversioned requirement edge with no detected
+    // package must still be promoted at the resolved coordinate and pick up the
+    // license the sibling's resolved package carries.
+    #[test]
+    fn unversioned_requirement_coalesces_to_versioned_sibling_edge() {
+        let mut resolved = ResolvedPackage::new(
+            PackageType::Npm,
+            String::new(),
+            "left-pad".to_string(),
+            "1.3.0".to_string(),
+        );
+        resolved.purl = Some("pkg:npm/left-pad@1.3.0".to_string());
+        resolved.declared_license_expression_spdx = Some("MIT".to_string());
+
+        let deps = vec![
+            dependency_owned(Some("pkg:npm/left-pad"), None, "req", "owner-1"),
+            dependency_owned(
+                Some("pkg:npm/left-pad@1.3.0"),
+                Some(resolved),
+                "lock",
+                "owner-1",
+            ),
+        ];
+        let output = output_with(vec![], deps);
+        let inventory = build_inventory(&output);
+
+        assert_eq!(inventory.entries.len(), 1, "the two edges collapse to one");
+        let package = inventory.entries[0].package();
+        assert_eq!(package.purl.as_deref(), Some("pkg:npm/left-pad@1.3.0"));
+        assert_eq!(package.version.as_deref(), Some("1.3.0"));
+        assert_eq!(
+            package.declared_license_expression_spdx.as_deref(),
+            Some("MIT")
+        );
+    }
+
+    // Honest-unknowns: when one owner's requirement could match more than one
+    // resolved version, Provenant must not guess. The edge keeps its unversioned
+    // purl and each resolved version remains its own component.
+    #[test]
+    fn ambiguous_versions_leave_unversioned_requirement_unresolved() {
+        let deps = vec![
+            dependency_owned(Some("pkg:npm/multi"), None, "req", "owner-1"),
+            dependency_owned(Some("pkg:npm/multi@1.0.0"), None, "v1", "owner-1"),
+            dependency_owned(Some("pkg:npm/multi@2.0.0"), None, "v2", "owner-1"),
+        ];
+        let output = output_with(vec![], deps);
+        let inventory = build_inventory(&output);
+
+        let purls: BTreeSet<&str> = inventory
+            .packages()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        assert_eq!(
+            purls,
+            BTreeSet::from([
+                "pkg:npm/multi",
+                "pkg:npm/multi@1.0.0",
+                "pkg:npm/multi@2.0.0",
+            ]),
+            "an ambiguous unversioned requirement stays unversioned"
         );
     }
 }

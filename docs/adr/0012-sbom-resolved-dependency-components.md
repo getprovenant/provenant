@@ -104,6 +104,80 @@ determine it statically**:
 - No other dependency-intent flag (`is_runtime`, `is_direct`, `is_pinned`) is
   invented for a component when it is not proven.
 
+## Amendment (issue #1320): versioned purls and the vendored-license join
+
+The original decision keyed promotion and graph edges on the dependency's
+_declared_ purl. For an ecosystem that resolves versions in a lockfile that is a
+separate datasource from the manifest (npm, Cargo, PyPI, …), that produced two
+shortcomings visible in a real scan:
+
+- A dependency promoted from a manifest requirement carried the **unversioned**
+  purl (`pkg:npm/leftpad`) even when the lockfile had already resolved it to a
+  version — the versioned coordinate that makes the purl a usable join key for
+  downstream license enrichment (deps.dev, ClearlyDefined, an SCA tool).
+- When the dependency's source or metadata was on disk (`node_modules/<dep>/`,
+  `*.dist-info/METADATA`, vendored source), Provenant detected and licensed it
+  as a package at its **versioned** purl, but the manifest requirement was
+  promoted as a **separate, unversioned, unlicensed** component. The same
+  dependency appeared twice, and the licensed copy was not the purl-keyed one.
+
+### Decision
+
+Resolve each dependency edge purl to its **versioned coordinate** before
+promotion and edge resolution, using only static evidence already in the
+document. An already-versioned edge keeps its purl. An unversioned edge is
+upgraded only from proof about that same edge:
+
+1. the edge's own `resolved_package` purl (its actual resolution), else
+2. a **single unambiguous** versioned sibling recorded under the **same owner**
+   (`for_package_uid`) and the same identity.
+
+`SbomInventory` builds that evidence as a per-owner version index keyed by
+`(owner, version-less identity)` from dependency edges only — never from
+detected packages, which are not owner-scoped. Two correctness rules make the
+join safe:
+
+- **Owner-scoped.** A version is never borrowed across owners. Two packages can
+  resolve the same requirement to different versions; each edge takes its
+  version only from its own owner's resolution. An absent or empty owner is not
+  a shared bucket either: ownerless edges never contribute to or consult the
+  sibling index, so a bare hoisted requirement can only take a version from its
+  own `resolved_package`, never from an unrelated ownerless dependency.
+- **Identity strips only the version.** Type, namespace, name, qualifiers, and
+  subpath are all preserved, so variants that differ by a qualifier (`?arch=`,
+  `?classifier=`, …) or subpath are distinct coordinates and never conflated.
+- **A non-empty purl is never dropped.** When a purl cannot be parsed it cannot
+  be canonicalized or deduped, but it is a real coordinate the native output
+  keeps, so it is passed through unchanged as the component/edge purl rather
+  than erased. Only a genuinely empty purl is absent.
+
+When the owner has zero or multiple candidate versions for an identity, the edge
+keeps its unversioned purl (honest-unknowns — Provenant does not guess which
+version a range resolved to; e.g. a workspace member whose lockfile edges are
+owned elsewhere, or a diamond that resolves two versions). Both promotion dedup
+and `dependsOn`/`DEPENDS_ON` edge resolution route through the same resolver, so
+a component and the edges that target it always agree and the graph stays
+closed.
+
+This closes both gaps with the existing purl-dedup: once the unversioned
+requirement is resolved to the coordinate, it dedups against the detected
+package (vendored case → one licensed, versioned component) or against the
+versioned lockfile edge (source-absent case → one versioned component, license
+carried from `resolved_package` when present, otherwise unset). Nothing is
+fetched; the license and version come only from what was scanned.
+
+Both formats render the versioned coordinate. CycloneDX components carry the
+versioned purl as `bom-ref` and `purl`. SPDX packages (subject and promoted
+dependency alike) now emit `PackageVersion` and a package-manager purl
+`ExternalRef` — tag-value `ExternalRef: PACKAGE-MANAGER purl <purl>` and RDF
+`spdx:versionInfo` + `spdx:externalRef` (referenceCategory `packageManager`,
+referenceType `purl`) — so the join key is usable from SPDX too.
+
+Still static and no-network: the change is purely a render-time join over data
+already extracted. When neither a detected package nor a same-owner resolved
+version exists for an identity, the component keeps its unversioned purl and
+unset license.
+
 ## Consequences
 
 ### Benefits
@@ -147,6 +221,7 @@ determine it statically**:
 ## References
 
 - Issue #1319
+- Issue #1320 (versioned purls + vendored-license join amendment)
 - Promotion/dedup: `src/output/sbom.rs`
 - CycloneDX renderer: `src/output/cyclonedx.rs`
 - SPDX renderer: `src/output/spdx.rs`

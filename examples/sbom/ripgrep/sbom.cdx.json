@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:25e50a03-8450-46b0-b06a-42b0ff0b606c",
+  "serialNumber": "urn:uuid:97629256-60c7-481d-ada9-0cce9f7deb94",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-23T22:12:12Z",
+    "timestamp": "2026-07-24T08:01:39Z",
     "tools": [
       {
         "name": "Provenant",
@@ -464,17 +464,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/anyhow",
-      "name": "anyhow",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/anyhow"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/anyhow@1.0.103",
       "name": "anyhow",
       "version": "1.0.103",
+      "scope": "required",
       "purl": "pkg:cargo/anyhow@1.0.103"
     },
     {
@@ -512,6 +505,7 @@
       "bom-ref": "pkg:cargo/bstr@1.13.0",
       "name": "bstr",
       "version": "1.13.0",
+      "scope": "required",
       "purl": "pkg:cargo/bstr@1.13.0"
     },
     {
@@ -661,26 +655,19 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/globset@0.4.16",
+      "name": "globset",
+      "version": "0.4.16",
+      "scope": "required",
+      "purl": "pkg:cargo/globset@0.4.16"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/globset",
       "name": "globset",
       "version": "unknown",
       "scope": "required",
       "purl": "pkg:cargo/globset"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/globset@0.4.16",
-      "name": "globset",
-      "version": "0.4.16",
-      "purl": "pkg:cargo/globset@0.4.16"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/grep",
-      "name": "grep",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/grep"
     },
     {
       "type": "library",
@@ -732,14 +719,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/ignore",
-      "name": "ignore",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/ignore"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/itoa@1.0.18",
       "name": "itoa",
       "version": "1.0.18",
@@ -761,17 +740,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/lexopt",
-      "name": "lexopt",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/lexopt"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/lexopt@0.3.2",
       "name": "lexopt",
       "version": "0.3.2",
+      "scope": "required",
       "purl": "pkg:cargo/lexopt@0.3.2"
     },
     {
@@ -790,17 +762,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/libfuzzer-sys",
-      "name": "libfuzzer-sys",
-      "version": "unknown",
-      "scope": "required",
-      "purl": "pkg:cargo/libfuzzer-sys"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/libfuzzer-sys@0.4.7",
       "name": "libfuzzer-sys",
       "version": "0.4.7",
+      "scope": "required",
       "purl": "pkg:cargo/libfuzzer-sys@0.4.7"
     },
     {
@@ -813,17 +778,18 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/log@0.4.33",
+      "name": "log",
+      "version": "0.4.33",
+      "scope": "required",
+      "purl": "pkg:cargo/log@0.4.33"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/log@0.4.20",
       "name": "log",
       "version": "0.4.20",
       "purl": "pkg:cargo/log@0.4.20"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/log@0.4.33",
-      "name": "log",
-      "version": "0.4.33",
-      "purl": "pkg:cargo/log@0.4.33"
     },
     {
       "type": "library",
@@ -1012,8 +978,16 @@
       "bom-ref": "pkg:cargo/serde",
       "name": "serde",
       "version": "unknown",
-      "scope": "required",
+      "scope": "optional",
       "purl": "pkg:cargo/serde"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/serde@1.0.228",
+      "name": "serde",
+      "version": "1.0.228",
+      "scope": "required",
+      "purl": "pkg:cargo/serde@1.0.228"
     },
     {
       "type": "library",
@@ -1024,13 +998,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/serde@1.0.228",
-      "name": "serde",
-      "version": "1.0.228",
-      "purl": "pkg:cargo/serde@1.0.228"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/serde_core@1.0.228",
       "name": "serde_core",
       "version": "1.0.228",
@@ -1038,11 +1005,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/serde_derive",
+      "bom-ref": "pkg:cargo/serde_derive@1.0.228",
       "name": "serde_derive",
-      "version": "unknown",
+      "version": "1.0.228",
       "scope": "required",
-      "purl": "pkg:cargo/serde_derive"
+      "purl": "pkg:cargo/serde_derive@1.0.228"
     },
     {
       "type": "library",
@@ -1050,13 +1017,6 @@
       "name": "serde_derive",
       "version": "1.0.195",
       "purl": "pkg:cargo/serde_derive@1.0.195"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/serde_derive@1.0.228",
-      "name": "serde_derive",
-      "version": "1.0.228",
-      "purl": "pkg:cargo/serde_derive@1.0.228"
     },
     {
       "type": "library",
@@ -1071,6 +1031,7 @@
       "bom-ref": "pkg:cargo/serde_json@1.0.150",
       "name": "serde_json",
       "version": "1.0.150",
+      "scope": "required",
       "purl": "pkg:cargo/serde_json@1.0.150"
     },
     {
@@ -1107,21 +1068,15 @@
       "bom-ref": "pkg:cargo/termcolor@1.4.1",
       "name": "termcolor",
       "version": "1.4.1",
-      "purl": "pkg:cargo/termcolor@1.4.1"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/textwrap",
-      "name": "textwrap",
-      "version": "unknown",
       "scope": "required",
-      "purl": "pkg:cargo/textwrap"
+      "purl": "pkg:cargo/termcolor@1.4.1"
     },
     {
       "type": "library",
       "bom-ref": "pkg:cargo/textwrap@0.16.2",
       "name": "textwrap",
       "version": "0.16.2",
+      "scope": "required",
       "purl": "pkg:cargo/textwrap@0.16.2"
     },
     {
@@ -1154,18 +1109,19 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/walkdir@2.5.0",
+      "name": "walkdir",
+      "version": "2.5.0",
+      "scope": "required",
+      "purl": "pkg:cargo/walkdir@2.5.0"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/walkdir",
       "name": "walkdir",
       "version": "unknown",
       "scope": "required",
       "purl": "pkg:cargo/walkdir"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/walkdir@2.5.0",
-      "name": "walkdir",
-      "version": "2.5.0",
-      "purl": "pkg:cargo/walkdir@2.5.0"
     },
     {
       "type": "library",
@@ -1207,10 +1163,6 @@
     },
     {
       "ref": "pkg:cargo/aho-corasick@1.1.4",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:cargo/anyhow",
       "dependsOn": []
     },
     {
@@ -1313,11 +1265,9 @@
         "pkg:cargo/bstr@1.9.0",
         "pkg:cargo/cc@1.0.83",
         "pkg:cargo/derive_arbitrary@1.3.2",
-        "pkg:cargo/globset",
         "pkg:cargo/globset@0.4.16",
         "pkg:cargo/jobserver@0.1.27",
         "pkg:cargo/libc@0.2.152",
-        "pkg:cargo/libfuzzer-sys",
         "pkg:cargo/libfuzzer-sys@0.4.7",
         "pkg:cargo/log@0.4.20",
         "pkg:cargo/memchr@2.7.1",
@@ -1365,10 +1315,6 @@
         "pkg:cargo/serde",
         "pkg:cargo/serde_json"
       ]
-    },
-    {
-      "ref": "pkg:cargo/grep",
-      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/grep-cli",
@@ -1469,10 +1415,6 @@
       ]
     },
     {
-      "ref": "pkg:cargo/ignore",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:cargo/ignore@0.4.29",
       "dependsOn": [
         "pkg:cargo/bstr",
@@ -1499,10 +1441,6 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:cargo/lexopt",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:cargo/lexopt@0.3.2",
       "dependsOn": []
     },
@@ -1512,10 +1450,6 @@
     },
     {
       "ref": "pkg:cargo/libc@0.2.186",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:cargo/libfuzzer-sys",
       "dependsOn": []
     },
     {
@@ -1630,10 +1564,8 @@
       "ref": "pkg:cargo/ripgrep@15.2.0",
       "dependsOn": [
         "pkg:cargo/aho-corasick@1.1.4",
-        "pkg:cargo/anyhow",
         "pkg:cargo/anyhow@1.0.103",
         "pkg:cargo/arbitrary@1.4.2",
-        "pkg:cargo/bstr",
         "pkg:cargo/bstr@1.13.0",
         "pkg:cargo/cc@1.2.67",
         "pkg:cargo/cfg-if@1.0.4",
@@ -1648,7 +1580,6 @@
         "pkg:cargo/getrandom@0.4.3",
         "pkg:cargo/glob@0.3.3",
         "pkg:cargo/globset@0.4.19",
-        "pkg:cargo/grep",
         "pkg:cargo/grep-cli@0.1.12",
         "pkg:cargo/grep-matcher@0.1.9",
         "pkg:cargo/grep-pcre2@0.1.10",
@@ -1656,14 +1587,11 @@
         "pkg:cargo/grep-regex@0.1.14",
         "pkg:cargo/grep-searcher@0.1.17",
         "pkg:cargo/grep@0.4.1",
-        "pkg:cargo/ignore",
         "pkg:cargo/ignore@0.4.29",
         "pkg:cargo/itoa@1.0.18",
         "pkg:cargo/jobserver@0.1.35",
-        "pkg:cargo/lexopt",
         "pkg:cargo/lexopt@0.3.2",
         "pkg:cargo/libc@0.2.186",
-        "pkg:cargo/log",
         "pkg:cargo/log@0.4.33",
         "pkg:cargo/memchr@2.8.3",
         "pkg:cargo/memmap2@0.9.11",
@@ -1677,23 +1605,17 @@
         "pkg:cargo/regex-syntax@0.8.11",
         "pkg:cargo/regex@1.13.0",
         "pkg:cargo/same-file@1.0.6",
-        "pkg:cargo/serde",
         "pkg:cargo/serde@1.0.228",
         "pkg:cargo/serde_core@1.0.228",
-        "pkg:cargo/serde_derive",
         "pkg:cargo/serde_derive@1.0.228",
-        "pkg:cargo/serde_json",
         "pkg:cargo/serde_json@1.0.150",
         "pkg:cargo/shlex@2.0.1",
         "pkg:cargo/syn@2.0.119",
-        "pkg:cargo/termcolor",
         "pkg:cargo/termcolor@1.4.1",
-        "pkg:cargo/textwrap",
         "pkg:cargo/textwrap@0.16.2",
         "pkg:cargo/tikv-jemalloc-sys@0.7.1%2B5.3.1-0-g81034ce1f1373e37dc865038e1bc8eeecf559ce8",
         "pkg:cargo/tikv-jemallocator@0.7.0",
         "pkg:cargo/unicode-ident@1.0.24",
-        "pkg:cargo/walkdir",
         "pkg:cargo/walkdir@2.5.0",
         "pkg:cargo/winapi-util@0.1.11",
         "pkg:cargo/windows-link@0.2.1",
@@ -1723,10 +1645,6 @@
     },
     {
       "ref": "pkg:cargo/serde_core@1.0.228",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:cargo/serde_derive",
       "dependsOn": []
     },
     {
@@ -1763,10 +1681,6 @@
     },
     {
       "ref": "pkg:cargo/termcolor@1.4.1",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:cargo/textwrap",
       "dependsOn": []
     },
     {
