@@ -1,10 +1,11 @@
 {
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
-  "specVersion": "1.3",
-  "serialNumber": "urn:uuid:2c9df26a-01e0-43f5-8646-3d3dc6dc87ca",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:c92e1b1c-6b2b-4ff6-ab6a-b5dbe1f2272d",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T13:04:59Z",
+    "timestamp": "2026-07-24T14:05:43Z",
     "tools": [
       {
         "name": "Provenant",
@@ -20,7 +21,8 @@
       "purl": "pkg:cargo/ripgrep@15.2.0",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -81,7 +83,8 @@
       "purl": "pkg:cargo/globset@0.4.19",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -118,7 +121,8 @@
       "purl": "pkg:cargo/grep-cli@0.1.12",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -155,7 +159,8 @@
       "purl": "pkg:cargo/grep-matcher@0.1.9",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -192,7 +197,8 @@
       "purl": "pkg:cargo/grep-pcre2@0.1.10",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -229,7 +235,8 @@
       "purl": "pkg:cargo/grep-printer@0.3.1",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -266,7 +273,8 @@
       "purl": "pkg:cargo/grep-regex@0.1.14",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -303,7 +311,8 @@
       "purl": "pkg:cargo/grep-searcher@0.1.17",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -340,7 +349,8 @@
       "purl": "pkg:cargo/grep@0.4.1",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -377,7 +387,8 @@
       "purl": "pkg:cargo/ignore@0.4.29",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -414,7 +425,8 @@
       "purl": "pkg:cargo/ripgrep@15.2.0",
       "licenses": [
         {
-          "expression": "MIT OR Unlicense"
+          "expression": "MIT OR Unlicense",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [

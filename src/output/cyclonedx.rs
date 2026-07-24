@@ -17,6 +17,32 @@ use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_t
 use super::sbom::{self, InventoryEntry, SbomInventory};
 use super::shared::{io_other, xml_escape};
 
+/// CycloneDX specification version this renderer emits.
+const CYCLONEDX_SPEC_VERSION: &str = "1.7";
+/// Canonical `$schema` URL for the emitted JSON spec version.
+const CYCLONEDX_JSON_SCHEMA: &str = "http://cyclonedx.org/schema/bom-1.7.schema.json";
+/// XML namespace for the emitted spec version.
+const CYCLONEDX_XML_NAMESPACE: &str = "http://cyclonedx.org/schema/bom/1.7";
+
+/// How a component's license expression was established, mapped onto the
+/// CycloneDX `licenses[].acknowledgement` field. A parser-declared expression
+/// (the same source SPDX renders as `PackageLicenseDeclared`) is `declared`; a
+/// file/source-detected expression is `concluded`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum LicenseAcknowledgement {
+    Declared,
+    Concluded,
+}
+
+impl LicenseAcknowledgement {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Declared => "declared",
+            Self::Concluded => "concluded",
+        }
+    }
+}
+
 /// CycloneDX `scope` from shared inventory intent. Detected packages are
 /// `required`; promoted dependencies map proven `is_optional` only.
 fn cyclonedx_scope(entry: &InventoryEntry<'_>) -> Option<&'static str> {
@@ -48,7 +74,8 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str(&format!(
-        "<bom xmlns=\"http://cyclonedx.org/schema/bom/1.3\" serialNumber=\"{}\" version=\"1\">\n",
+        "<bom xmlns=\"{}\" serialNumber=\"{}\" version=\"1\">\n",
+        CYCLONEDX_XML_NAMESPACE,
         xml_escape(&serial)
     ));
     xml.push_str("  <metadata>\n");
@@ -61,7 +88,7 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
     xml.push_str("</version></tool>\n");
     xml.push_str("    </tools>\n");
     // `component` (the BOM subject) must follow `tools` per the CycloneDX
-    // 1.3 XSD `metadata` element order.
+    // 1.7 XSD `metadata` element order.
     if let Some(root_idx) = select_root_package_index(&output.packages) {
         write_component_xml(
             &mut xml,
@@ -108,11 +135,11 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
 }
 
 /// Write a single `<component>` element (used for both `metadata.component`
-/// and entries in `<components>`), in the CycloneDX 1.3 XSD element order:
+/// and entries in `<components>`), in the CycloneDX 1.7 XSD element order:
 /// `author` precedes `name`/`version`, which precede `description`, which
 /// precedes `scope`, `hashes`, `licenses`, `purl`, `externalReferences`.
 ///
-/// `bom_ref` is `None` for `metadata.component`: CycloneDX 1.3 requires
+/// `bom_ref` is `None` for `metadata.component`: CycloneDX requires
 /// every `bom-ref` in a document to be unique, so the root package's
 /// existing `components` entry (which already carries that `bom-ref`) is
 /// the single source of truth for it and `metadata.component` does not
@@ -166,12 +193,15 @@ fn write_component_xml(
         }
         xml.push_str("      </hashes>\n");
     }
-    if let Some(license_expression) = cyclonedx_license_expression(pkg) {
-        xml.push_str("      <licenses><expression>");
+    if let Some((license_expression, acknowledgement)) = cyclonedx_license_expression(pkg) {
+        xml.push_str(&format!(
+            "      <licenses><expression acknowledgement=\"{}\">",
+            acknowledgement.as_str()
+        ));
         xml.push_str(&xml_escape(&license_expression));
         xml.push_str("</expression></licenses>\n");
     }
-    // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.3 XSD.
+    // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.7 XSD.
     if let Some(purl) = &pkg.purl {
         xml.push_str("      <purl>");
         xml.push_str(&xml_escape(purl));
@@ -230,8 +260,9 @@ fn build_cyclonedx_json(output: &Output) -> Value {
 
     if components.is_empty() && dependencies.is_empty() {
         json!({
+            "$schema": CYCLONEDX_JSON_SCHEMA,
             "bomFormat": "CycloneDX",
-            "specVersion": "1.3",
+            "specVersion": CYCLONEDX_SPEC_VERSION,
             "version": 1,
             "components": [],
             "dependencies": [],
@@ -246,7 +277,7 @@ fn build_cyclonedx_json(output: &Output) -> Value {
         if let Some(root_idx) = select_root_package_index(&output.packages) {
             let mut root_obj = Map::new();
             root_obj.insert("type".to_string(), Value::String("application".to_string()));
-            // No `bom-ref`: CycloneDX 1.3 requires every `bom-ref` in a
+            // No `bom-ref`: CycloneDX requires every `bom-ref` in a
             // document to be unique, and the root package's existing
             // `components` entry already carries that `bom-ref`.
             component_json_fields(&mut root_obj, &output.packages[root_idx], None, None);
@@ -254,8 +285,9 @@ fn build_cyclonedx_json(output: &Output) -> Value {
         }
 
         json!({
+            "$schema": CYCLONEDX_JSON_SCHEMA,
             "bomFormat": "CycloneDX",
-            "specVersion": "1.3",
+            "specVersion": CYCLONEDX_SPEC_VERSION,
             "serialNumber": format!("urn:uuid:{}", Uuid::new_v4()),
             "version": 1,
             "metadata": metadata,
@@ -310,10 +342,13 @@ fn component_json_fields(
     if !hashes.is_empty() {
         obj.insert("hashes".to_string(), Value::Array(hashes));
     }
-    if let Some(license_expression) = cyclonedx_license_expression(pkg) {
+    if let Some((license_expression, acknowledgement)) = cyclonedx_license_expression(pkg) {
         obj.insert(
             "licenses".to_string(),
-            Value::Array(vec![json!({ "expression": license_expression })]),
+            Value::Array(vec![json!({
+                "expression": license_expression,
+                "acknowledgement": acknowledgement.as_str(),
+            })]),
         );
     }
     let external_refs = component_external_references(pkg)
@@ -427,14 +462,22 @@ fn build_dependency_graph(
     graph
 }
 
-fn cyclonedx_license_expression(pkg: &Package) -> Option<String> {
+/// The single license expression to emit for a component, paired with how it
+/// was established. Preference order: declared SPDX expression, then declared
+/// raw expression (both parser-`declared`), then the first source/file
+/// detection (`concluded`).
+fn cyclonedx_license_expression(pkg: &Package) -> Option<(String, LicenseAcknowledgement)> {
     pkg.declared_license_expression_spdx
         .clone()
         .or_else(|| pkg.declared_license_expression.clone())
+        .map(|expression| (expression, LicenseAcknowledgement::Declared))
         .or_else(|| {
-            pkg.license_detections
-                .first()
-                .map(|d| d.license_expression_spdx.clone())
+            pkg.license_detections.first().map(|d| {
+                (
+                    d.license_expression_spdx.clone(),
+                    LicenseAcknowledgement::Concluded,
+                )
+            })
         })
 }
 
@@ -740,9 +783,127 @@ mod tests {
         assert_eq!(select_root_package_index(&packages), Some(1));
     }
 
+    fn package_from_data(data: crate::models::PackageData) -> Package {
+        Package::from(&crate::models::Package::from_package_data(
+            &data,
+            "package.json".to_string(),
+        ))
+    }
+
+    #[test]
+    fn license_expression_tags_parser_declared_as_declared() {
+        let pkg = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            declared_license_expression: Some("mit".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            cyclonedx_license_expression(&pkg),
+            Some(("MIT".to_string(), LicenseAcknowledgement::Declared))
+        );
+    }
+
+    #[test]
+    fn license_expression_tags_source_detection_as_concluded() {
+        let pkg = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            // No declared expression: the only evidence is a source/file
+            // detection, which CycloneDX marks `concluded`.
+            license_detections: vec![crate::models::LicenseDetection {
+                license_expression: "apache-2.0".to_string(),
+                license_expression_spdx: "Apache-2.0".to_string(),
+                matches: vec![],
+                detection_log: vec![],
+                identifier: String::new(),
+            }],
+            ..Default::default()
+        });
+        assert_eq!(
+            cyclonedx_license_expression(&pkg),
+            Some(("Apache-2.0".to_string(), LicenseAcknowledgement::Concluded))
+        );
+    }
+
+    #[test]
+    fn license_expression_prefers_declared_over_detection() {
+        // A package that both declares and has a detection reports the declared
+        // expression tagged `declared` (unchanged selection, matching SPDX).
+        let pkg = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            license_detections: vec![crate::models::LicenseDetection {
+                license_expression: "apache-2.0".to_string(),
+                license_expression_spdx: "Apache-2.0".to_string(),
+                matches: vec![],
+                detection_log: vec![],
+                identifier: String::new(),
+            }],
+            ..Default::default()
+        });
+        assert_eq!(
+            cyclonedx_license_expression(&pkg),
+            Some(("MIT".to_string(), LicenseAcknowledgement::Declared))
+        );
+    }
+
+    #[test]
+    fn json_emits_spec_version_schema_and_license_acknowledgement() {
+        let mut declared = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            name: Some("declared-pkg".to_string()),
+            version: Some("1.0.0".to_string()),
+            purl: Some("pkg:npm/declared-pkg@1.0.0".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            ..Default::default()
+        });
+        declared.package_uid = "uid-declared".to_string();
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![declared],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+
+        let bom = build_cyclonedx_json(&output);
+        assert_eq!(bom["specVersion"], "1.7");
+        assert_eq!(bom["$schema"], CYCLONEDX_JSON_SCHEMA);
+        assert_eq!(bom["bomFormat"], "CycloneDX");
+        let license = &bom["components"][0]["licenses"][0];
+        assert_eq!(license["expression"], "MIT");
+        assert_eq!(license["acknowledgement"], "declared");
+    }
+
+    #[test]
+    fn empty_document_carries_spec_version_and_schema() {
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let bom = build_cyclonedx_json(&output);
+        assert_eq!(bom["specVersion"], "1.7");
+        assert_eq!(bom["$schema"], CYCLONEDX_JSON_SCHEMA);
+    }
+
     #[test]
     fn metadata_component_has_no_bom_ref_to_avoid_duplicating_the_unique_key() {
-        // CycloneDX 1.3 requires every `bom-ref` in a document to be unique.
+        // CycloneDX requires every `bom-ref` in a document to be unique.
         // The root package already gets a `bom-ref` in `components`, so
         // `metadata.component` must not repeat it (schema-guard against
         // reintroducing the duplicate-key regression).

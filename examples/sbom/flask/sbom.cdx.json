@@ -1,10 +1,11 @@
 {
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
-  "specVersion": "1.3",
-  "serialNumber": "urn:uuid:79885f4f-877f-440d-8d66-832ee74c9f54",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:258f8af3-9f4f-4016-94ad-5ef0ccb6390c",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T13:05:04Z",
+    "timestamp": "2026-07-24T14:05:49Z",
     "tools": [
       {
         "name": "Provenant",
@@ -20,7 +21,8 @@
       "purl": "pkg:pypi/flask@3.1.3",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -74,7 +76,8 @@
       "purl": "pkg:pypi/flask@3.1.3",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -103,7 +106,8 @@
       "purl": "pkg:pypi/flaskr@1.0.0",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -132,7 +136,8 @@
       "purl": "pkg:pypi/js-example@1.1.0",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [

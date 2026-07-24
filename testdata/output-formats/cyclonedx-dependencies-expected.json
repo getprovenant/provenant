@@ -1,6 +1,7 @@
 {
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
-  "specVersion": "1.3",
+  "specVersion": "1.7",
   "serialNumber": "urn:uuid:4504b45a-f05a-47e3-81c8-5080f4eecd2b",
   "version": 1,
   "metadata": {
@@ -52,7 +53,8 @@
       "purl": "pkg:npm/left-pad@1.3.0",
       "licenses": [
         {
-          "expression": "MIT"
+          "expression": "MIT",
+          "acknowledgement": "declared"
         }
       ]
     }

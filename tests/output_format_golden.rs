@@ -1093,7 +1093,11 @@ fn test_cyclonedx_rich_output_contains_enriched_fields_json_and_xml() {
         .expect("cyclonedx json output should be generated");
     let json_value: Value = serde_json::from_slice(&json_bytes).expect("json must parse");
     assert_eq!(json_value["bomFormat"], "CycloneDX");
-    assert_eq!(json_value["specVersion"], "1.3");
+    assert_eq!(json_value["specVersion"], "1.7");
+    assert_eq!(
+        json_value["$schema"],
+        "http://cyclonedx.org/schema/bom-1.7.schema.json"
+    );
     assert_eq!(json_value["version"], 1);
     assert!(
         json_value["serialNumber"]
@@ -1108,6 +1112,9 @@ fn test_cyclonedx_rich_output_contains_enriched_fields_json_and_xml() {
     assert_eq!(component["scope"], "required");
     assert!(component["hashes"].is_array());
     assert!(component["externalReferences"].is_array());
+    // The npm package declares its license, so CycloneDX marks it `declared`.
+    assert_eq!(component["licenses"][0]["expression"], "Artistic-2.0");
+    assert_eq!(component["licenses"][0]["acknowledgement"], "declared");
 
     let mut xml_bytes = Vec::new();
     writer_for_format(OutputFormat::CycloneDxXml)
@@ -1122,12 +1129,16 @@ fn test_cyclonedx_rich_output_contains_enriched_fields_json_and_xml() {
         )
         .expect("cyclonedx xml output should be generated");
     let xml = String::from_utf8(xml_bytes).expect("xml must be utf-8");
+    assert!(xml.contains("xmlns=\"http://cyclonedx.org/schema/bom/1.7\""));
     assert!(xml.contains("<vendor>Provenant</vendor>"));
     assert!(xml.contains("<description>a package manager for JavaScript</description>"));
     assert!(xml.contains("<author>Isaac Z. Schlueter</author>"));
     assert!(xml.contains("<scope>required</scope>"));
     assert!(xml.contains("<hashes>"));
     assert!(xml.contains("<externalReferences>"));
+    assert!(xml.contains(
+        "<licenses><expression acknowledgement=\"declared\">Artistic-2.0</expression></licenses>"
+    ));
 }
 
 #[test]
@@ -1308,7 +1319,7 @@ fn normalize_cyclonedx_xml(xml: &str) -> String {
 
     let normalized = bom_open_re.replace_all(
         xml,
-        "<bom xmlns=\"http://cyclonedx.org/schema/bom/1.3\" version=\"1\" serialNumber=\"urn:uuid:NORMALIZED\">",
+        "<bom xmlns=\"http://cyclonedx.org/schema/bom/1.7\" version=\"1\" serialNumber=\"urn:uuid:NORMALIZED\">",
     );
     let normalized = serial_re.replace_all(&normalized, "serialNumber=\"urn:uuid:NORMALIZED\"");
     let normalized = timestamp_re.replace_all(&normalized, "<timestamp>NORMALIZED</timestamp>");

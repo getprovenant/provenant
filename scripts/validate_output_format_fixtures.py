@@ -13,7 +13,7 @@ order, a missing required field, a duplicate id that violates `uniqueItems`,
 This script instead runs the actual reference tooling from each spec:
 
 - CycloneDX JSON/XML fixtures are validated against the official CycloneDX
-  1.3 JSON Schema / XSD, via the `cyclonedx-python-lib` validators.
+  1.7 JSON Schema / XSD, via the `cyclonedx-python-lib` validators.
 - SPDX tag-value fixtures are validated with `pyspdxtools` (spdx-tools),
   which parses and runs full SPDX-2.2/2.3 document validation.
 
@@ -66,7 +66,7 @@ SPDX_TAGVALUE_FIXTURES = [
     "spdx-dependencies-expected.tv",
 ]
 
-CYCLONEDX_SPEC_VERSION = "1.3"
+CYCLONEDX_SPEC_VERSION = "1.7"
 
 
 def report_ok(label: str) -> None:
@@ -87,7 +87,7 @@ def validate_cyclonedx_json(path: Path, errors: list[str], label: str) -> None:
     from cyclonedx.schema import OutputFormat, SchemaVersion
     from cyclonedx.validation import make_schemabased_validator
 
-    validator = make_schemabased_validator(OutputFormat.JSON, SchemaVersion.V1_3)
+    validator = make_schemabased_validator(OutputFormat.JSON, SchemaVersion.V1_7)
     error = validator.validate_str(path.read_text())
     if error is None:
         report_ok(label)
@@ -99,7 +99,7 @@ def validate_cyclonedx_xml(path: Path, errors: list[str], label: str) -> None:
     from cyclonedx.schema import OutputFormat, SchemaVersion
     from cyclonedx.validation import make_schemabased_validator
 
-    validator = make_schemabased_validator(OutputFormat.XML, SchemaVersion.V1_3)
+    validator = make_schemabased_validator(OutputFormat.XML, SchemaVersion.V1_7)
     error = validator.validate_str(path.read_text())
     if error is None:
         report_ok(label)

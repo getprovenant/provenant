@@ -977,7 +977,11 @@ mod tests {
         let rendered = String::from_utf8(bytes).expect("cyclonedx json should be utf-8");
         let value: Value = serde_json::from_str(&rendered).expect("valid json");
         assert_eq!(value["bomFormat"], "CycloneDX");
-        assert_eq!(value["specVersion"], "1.3");
+        assert_eq!(value["specVersion"], "1.7");
+        assert_eq!(
+            value["$schema"],
+            "http://cyclonedx.org/schema/bom-1.7.schema.json"
+        );
     }
 
     #[test]
@@ -1456,7 +1460,7 @@ mod tests {
             .expect("cyclonedx xml write should succeed");
 
         let rendered = String::from_utf8(bytes).expect("cyclonedx xml should be utf-8");
-        assert!(rendered.contains("<bom xmlns=\"http://cyclonedx.org/schema/bom/1.3\""));
+        assert!(rendered.contains("<bom xmlns=\"http://cyclonedx.org/schema/bom/1.7\""));
         assert!(rendered.contains("<components>"));
     }
 

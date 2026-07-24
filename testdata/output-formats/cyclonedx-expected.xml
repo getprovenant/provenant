@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.3" version="1" serialNumber="urn:uuid:ce548f93-c5aa-499a-834c-a0233495928f">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" version="1" serialNumber="urn:uuid:ce548f93-c5aa-499a-834c-a0233495928f">
   <metadata>
     <timestamp>2023-03-31T10:36:22Z</timestamp>
     <tools>
@@ -18,7 +18,7 @@
         <hash alg="SHA-1">a124386bce4a90506f28ad4b1d1a804a17baaf32</hash>
       </hashes>
       <licenses>
-        <expression>Artistic-2.0</expression>
+        <expression acknowledgement="declared">Artistic-2.0</expression>
       </licenses>
       <purl>pkg:npm/npm@2.13.5</purl>
       <externalReferences>
@@ -39,7 +39,7 @@
         <hash alg="SHA-1">a124386bce4a90506f28ad4b1d1a804a17baaf32</hash>
       </hashes>
       <licenses>
-        <expression>Artistic-2.0</expression>
+        <expression acknowledgement="declared">Artistic-2.0</expression>
       </licenses>
       <purl>pkg:npm/npm@2.13.5</purl>
       <externalReferences>
