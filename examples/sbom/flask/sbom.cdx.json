@@ -1,14 +1,15 @@
 {
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
-  "specVersion": "1.3",
-  "serialNumber": "urn:uuid:79885f4f-877f-440d-8d66-832ee74c9f54",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:96b8310d-ea47-490f-8934-9194fa93de20",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T13:05:04Z",
+    "timestamp": "2026-07-24T14:34:31Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.2"
+        "version": "1.0.3"
       }
     ],
     "component": {
@@ -20,7 +21,8 @@
       "purl": "pkg:pypi/flask@3.1.3",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -36,7 +38,24 @@
           "type": "website",
           "url": "https://pypi.org/project/Flask"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "pyproject.toml",
+            "line": 6
+          },
+          {
+            "location": "pyproject.toml",
+            "line": 7
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     }
   },
   "components": [
@@ -74,7 +93,8 @@
       "purl": "pkg:pypi/flask@3.1.3",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -90,7 +110,24 @@
           "type": "website",
           "url": "https://pypi.org/project/Flask"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "pyproject.toml",
+            "line": 6
+          },
+          {
+            "location": "pyproject.toml",
+            "line": 7
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -103,7 +140,8 @@
       "purl": "pkg:pypi/flaskr@1.0.0",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -119,7 +157,24 @@
           "type": "website",
           "url": "https://pypi.org/project/flaskr"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "examples/tutorial/LICENSE.txt",
+            "line": 3
+          },
+          {
+            "location": "examples/tutorial/pyproject.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -132,7 +187,8 @@
       "purl": "pkg:pypi/js-example@1.1.0",
       "licenses": [
         {
-          "expression": "BSD-3-Clause"
+          "expression": "BSD-3-Clause",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -148,7 +204,24 @@
           "type": "website",
           "url": "https://pypi.org/project/js_example"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "examples/javascript/LICENSE.txt",
+            "line": 3
+          },
+          {
+            "location": "examples/javascript/pyproject.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     },
     {
       "type": "library",

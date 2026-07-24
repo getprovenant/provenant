@@ -178,6 +178,40 @@ already extracted. When neither a detected package nor a same-owner resolved
 version exists for an identity, the component keeps its unversioned purl and
 unset license.
 
+## Amendment: license acknowledgement in CycloneDX
+
+The CycloneDX renderer carries the declared-vs-concluded distinction — the same
+one SPDX renders as `PackageLicenseDeclared` / `PackageLicenseConcluded`
+(`src/output/spdx.rs`) — via `licenses[].acknowledgement`. Scope is the
+CycloneDX renderer only; SPDX and the native ScanCode-compatible output are
+unchanged (ADR 0008).
+
+- **Spec version.** The renderer emits a single current CycloneDX schema
+  version — recent enough to define `licenses[].acknowledgement` — via
+  `specVersion`, the JSON `$schema`, and the XML `bom` namespace. The exact
+  version string, schema URL, and namespace are owned by `src/output/cyclonedx.rs`
+  and the validator config, not this record. Feature areas outside Provenant's
+  use (crypto/CBOM/formulation) are not emitted.
+- **Acknowledgement is honest, not stamped.** It comes from the same package
+  fields SPDX uses: a parser-declared expression
+  (`declared_license_expression_spdx`, then raw `declared_license_expression`)
+  is `declared`; a license concluded from source/file detection
+  (`license_detections`) is `concluded`. The field tags provenance without
+  altering the expression a component reports. In JSON it sits beside
+  `expression`; in XML it is the `acknowledgement` attribute on `<expression>`.
+- **License evidence is source-faithful.** Each component carries
+  `component.evidence` built from the file-content license detections of the
+  files it owns, using the same file→package ownership assembly computes
+  (`file.for_packages`): the distinct observed SPDX expressions as
+  `evidence.licenses`, and the file+line of each detection as
+  `evidence.occurrences`. Only detected packages own scanned files; a promoted
+  resolved dependency owns none, so it carries no evidence. This is
+  render-time reuse of data already in the document — nothing is re-detected.
+- **Conformance is externally gated.** Goldens prove stability, not conformance;
+  all CycloneDX goldens and the four `examples/sbom` validate against the
+  official CycloneDX schema + XSD for the emitted version via
+  `scripts/validate_output_format_fixtures.py` (`cyclonedx-python-lib`).
+
 ## Consequences
 
 ### Benefits
@@ -222,6 +256,7 @@ unset license.
 
 - Issue #1319
 - Issue #1320 (versioned purls + vendored-license join amendment)
+- Issue #1328 (CycloneDX 1.7 + license acknowledgement/evidence amendment)
 - Promotion/dedup: `src/output/sbom.rs`
 - CycloneDX renderer: `src/output/cyclonedx.rs`
 - SPDX renderer: `src/output/spdx.rs`

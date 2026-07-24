@@ -10,12 +10,127 @@ use std::io::{self, Write};
 use uuid::Uuid;
 
 use crate::output_schema::{
-    Output, OutputPackage as Package, OutputTopLevelDependency as TopLevelDependency,
+    Output, OutputFileInfo, OutputFileType, OutputPackage as Package,
+    OutputTopLevelDependency as TopLevelDependency,
 };
 use crate::utils::time::{convert_header_timestamp_to_iso_utc, fallback_iso_utc_timestamp};
 
 use super::sbom::{self, InventoryEntry, SbomInventory};
 use super::shared::{io_other, xml_escape};
+
+/// CycloneDX specification version this renderer emits.
+const CYCLONEDX_SPEC_VERSION: &str = "1.7";
+/// Canonical `$schema` URL for the emitted JSON spec version.
+const CYCLONEDX_JSON_SCHEMA: &str = "http://cyclonedx.org/schema/bom-1.7.schema.json";
+/// XML namespace for the emitted spec version.
+const CYCLONEDX_XML_NAMESPACE: &str = "http://cyclonedx.org/schema/bom/1.7";
+
+/// How a component's license expression was established, mapped onto the
+/// CycloneDX `licenses[].acknowledgement` field. A parser-declared expression
+/// (the same source SPDX renders as `PackageLicenseDeclared`) is `declared`; a
+/// file/source-detected expression is `concluded`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum LicenseAcknowledgement {
+    Declared,
+    Concluded,
+}
+
+impl LicenseAcknowledgement {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Declared => "declared",
+            Self::Concluded => "concluded",
+        }
+    }
+}
+
+/// A single file+line where a license was observed, for CycloneDX
+/// `component.evidence.occurrences`.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+struct LicenseOccurrence {
+    location: String,
+    line: Option<u64>,
+}
+
+/// Observed license evidence for one component: the distinct license
+/// expressions detected in the files the component owns, and the file+line
+/// occurrences that substantiate them (CycloneDX `component.evidence`).
+struct LicenseEvidence {
+    licenses: Vec<String>,
+    occurrences: Vec<LicenseOccurrence>,
+}
+
+/// Map each package `package_uid` to the license evidence observed in the
+/// files it owns. Only file-content detections (`file.license_detections`) are
+/// treated as evidence — the source-faithful "where a license was detected"
+/// record — using the file→package ownership assembly already computed
+/// (`file.for_packages`). A package that owns no scanned files with detections
+/// (e.g. a promoted resolved dependency) has no entry, so it gets no evidence.
+fn build_license_evidence(files: &[OutputFileInfo]) -> HashMap<String, LicenseEvidence> {
+    let mut licenses: HashMap<&str, BTreeSet<String>> = HashMap::new();
+    let mut occurrences: HashMap<&str, BTreeSet<LicenseOccurrence>> = HashMap::new();
+
+    for file in files {
+        if file.file_type != OutputFileType::File
+            || file.for_packages.is_empty()
+            || file.license_detections.is_empty()
+        {
+            continue;
+        }
+        for detection in &file.license_detections {
+            let expression = detection.license_expression_spdx.trim();
+            if expression.is_empty() {
+                continue;
+            }
+            // Each match records where the license text was found; a detection
+            // without matches still evidences the license at the file itself.
+            let detection_occurrences: Vec<LicenseOccurrence> = if detection.matches.is_empty() {
+                vec![LicenseOccurrence {
+                    location: file.path.clone(),
+                    line: None,
+                }]
+            } else {
+                detection
+                    .matches
+                    .iter()
+                    .map(|m| LicenseOccurrence {
+                        location: m
+                            .from_file
+                            .as_deref()
+                            .filter(|from| !from.is_empty())
+                            .unwrap_or(file.path.as_str())
+                            .to_string(),
+                        line: Some(m.start_line),
+                    })
+                    .collect()
+            };
+            for uid in &file.for_packages {
+                licenses
+                    .entry(uid.as_str())
+                    .or_default()
+                    .insert(expression.to_string());
+                occurrences
+                    .entry(uid.as_str())
+                    .or_default()
+                    .extend(detection_occurrences.iter().cloned());
+            }
+        }
+    }
+
+    licenses
+        .into_iter()
+        .map(|(uid, license_set)| {
+            let occurrence_set = occurrences.remove(uid).unwrap_or_default();
+            (
+                uid.to_string(),
+                LicenseEvidence {
+                    licenses: license_set.into_iter().collect(),
+                    occurrences: occurrence_set.into_iter().collect(),
+                },
+            )
+        })
+        .collect()
+}
 
 /// CycloneDX `scope` from shared inventory intent. Detected packages are
 /// `required`; promoted dependencies map proven `is_optional` only.
@@ -42,13 +157,15 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
         .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string());
     let inventory = sbom::build_inventory(output);
     let component_refs = component_bom_refs_for(&inventory);
+    let evidence_by_uid = build_license_evidence(&output.files);
     let dependency_graph =
         build_dependency_graph(&inventory, &output.dependencies, &component_refs);
 
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str(&format!(
-        "<bom xmlns=\"http://cyclonedx.org/schema/bom/1.3\" serialNumber=\"{}\" version=\"1\">\n",
+        "<bom xmlns=\"{}\" serialNumber=\"{}\" version=\"1\">\n",
+        CYCLONEDX_XML_NAMESPACE,
         xml_escape(&serial)
     ));
     xml.push_str("  <metadata>\n");
@@ -61,14 +178,16 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
     xml.push_str("</version></tool>\n");
     xml.push_str("    </tools>\n");
     // `component` (the BOM subject) must follow `tools` per the CycloneDX
-    // 1.3 XSD `metadata` element order.
+    // 1.7 XSD `metadata` element order.
     if let Some(root_idx) = select_root_package_index(&output.packages) {
+        let root_pkg = &output.packages[root_idx];
         write_component_xml(
             &mut xml,
-            &output.packages[root_idx],
+            root_pkg,
             None,
             "application",
             None,
+            evidence_by_uid.get(root_pkg.package_uid.as_str()),
         );
     }
     xml.push_str("  </metadata>\n");
@@ -81,6 +200,7 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
             Some(&component_refs[idx]),
             "library",
             cyclonedx_scope(entry),
+            evidence_by_uid.get(entry.package().package_uid.as_str()),
         );
     }
     xml.push_str("  </components>\n");
@@ -108,11 +228,11 @@ pub(crate) fn write_cyclonedx_xml(output: &Output, writer: &mut dyn Write) -> io
 }
 
 /// Write a single `<component>` element (used for both `metadata.component`
-/// and entries in `<components>`), in the CycloneDX 1.3 XSD element order:
+/// and entries in `<components>`), in the CycloneDX 1.7 XSD element order:
 /// `author` precedes `name`/`version`, which precede `description`, which
 /// precedes `scope`, `hashes`, `licenses`, `purl`, `externalReferences`.
 ///
-/// `bom_ref` is `None` for `metadata.component`: CycloneDX 1.3 requires
+/// `bom_ref` is `None` for `metadata.component`: CycloneDX requires
 /// every `bom-ref` in a document to be unique, so the root package's
 /// existing `components` entry (which already carries that `bom-ref`) is
 /// the single source of truth for it and `metadata.component` does not
@@ -123,6 +243,7 @@ fn write_component_xml(
     bom_ref: Option<&str>,
     component_type: &str,
     scope: Option<&str>,
+    evidence: Option<&LicenseEvidence>,
 ) {
     let name = pkg.name.as_deref().unwrap_or("unknown");
     let version = pkg.version.as_deref().unwrap_or("unknown");
@@ -166,12 +287,15 @@ fn write_component_xml(
         }
         xml.push_str("      </hashes>\n");
     }
-    if let Some(license_expression) = cyclonedx_license_expression(pkg) {
-        xml.push_str("      <licenses><expression>");
+    if let Some((license_expression, acknowledgement)) = cyclonedx_license_expression(pkg) {
+        xml.push_str(&format!(
+            "      <licenses><expression acknowledgement=\"{}\">",
+            acknowledgement.as_str()
+        ));
         xml.push_str(&xml_escape(&license_expression));
         xml.push_str("</expression></licenses>\n");
     }
-    // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.3 XSD.
+    // `purl` must follow `licenses`/`copyright`/`cpe` per the CycloneDX 1.7 XSD.
     if let Some(purl) = &pkg.purl {
         xml.push_str("      <purl>");
         xml.push_str(&xml_escape(purl));
@@ -189,6 +313,36 @@ fn write_component_xml(
         }
         xml.push_str("      </externalReferences>\n");
     }
+    // `evidence` is the last `component` child per the CycloneDX 1.7 XSD, and
+    // within it `occurrences` precedes `licenses`.
+    if let Some(evidence) = evidence
+        && (!evidence.occurrences.is_empty() || !evidence.licenses.is_empty())
+    {
+        xml.push_str("      <evidence>\n");
+        if !evidence.occurrences.is_empty() {
+            xml.push_str("        <occurrences>\n");
+            for occurrence in &evidence.occurrences {
+                xml.push_str("          <occurrence><location>");
+                xml.push_str(&xml_escape(&occurrence.location));
+                xml.push_str("</location>");
+                if let Some(line) = occurrence.line {
+                    xml.push_str(&format!("<line>{line}</line>"));
+                }
+                xml.push_str("</occurrence>\n");
+            }
+            xml.push_str("        </occurrences>\n");
+        }
+        if !evidence.licenses.is_empty() {
+            xml.push_str("        <licenses>");
+            for expression in &evidence.licenses {
+                xml.push_str("<expression>");
+                xml.push_str(&xml_escape(expression));
+                xml.push_str("</expression>");
+            }
+            xml.push_str("</licenses>\n");
+        }
+        xml.push_str("      </evidence>\n");
+    }
     xml.push_str("    </component>\n");
 }
 
@@ -200,6 +354,7 @@ fn build_cyclonedx_json(output: &Output) -> Value {
         .unwrap_or_else(|| fallback_iso_utc_timestamp().to_string());
     let inventory = sbom::build_inventory(output);
     let component_refs = component_bom_refs_for(&inventory);
+    let evidence_by_uid = build_license_evidence(&output.files);
 
     let components = inventory
         .entries
@@ -213,6 +368,7 @@ fn build_cyclonedx_json(output: &Output) -> Value {
                 entry.package(),
                 Some(&component_refs[idx]),
                 cyclonedx_scope(entry),
+                evidence_by_uid.get(entry.package().package_uid.as_str()),
             );
             Value::Object(obj)
         })
@@ -230,8 +386,9 @@ fn build_cyclonedx_json(output: &Output) -> Value {
 
     if components.is_empty() && dependencies.is_empty() {
         json!({
+            "$schema": CYCLONEDX_JSON_SCHEMA,
             "bomFormat": "CycloneDX",
-            "specVersion": "1.3",
+            "specVersion": CYCLONEDX_SPEC_VERSION,
             "version": 1,
             "components": [],
             "dependencies": [],
@@ -246,16 +403,24 @@ fn build_cyclonedx_json(output: &Output) -> Value {
         if let Some(root_idx) = select_root_package_index(&output.packages) {
             let mut root_obj = Map::new();
             root_obj.insert("type".to_string(), Value::String("application".to_string()));
-            // No `bom-ref`: CycloneDX 1.3 requires every `bom-ref` in a
+            // No `bom-ref`: CycloneDX requires every `bom-ref` in a
             // document to be unique, and the root package's existing
             // `components` entry already carries that `bom-ref`.
-            component_json_fields(&mut root_obj, &output.packages[root_idx], None, None);
+            let root_pkg = &output.packages[root_idx];
+            component_json_fields(
+                &mut root_obj,
+                root_pkg,
+                None,
+                None,
+                evidence_by_uid.get(root_pkg.package_uid.as_str()),
+            );
             metadata.insert("component".to_string(), Value::Object(root_obj));
         }
 
         json!({
+            "$schema": CYCLONEDX_JSON_SCHEMA,
             "bomFormat": "CycloneDX",
-            "specVersion": "1.3",
+            "specVersion": CYCLONEDX_SPEC_VERSION,
             "serialNumber": format!("urn:uuid:{}", Uuid::new_v4()),
             "version": 1,
             "metadata": metadata,
@@ -269,13 +434,14 @@ fn build_cyclonedx_json(output: &Output) -> Value {
 /// an optional `bom-ref` (omitted for `metadata.component`, see
 /// [`build_cyclonedx_json`]), `name`, `version`, `description`, `author`,
 /// an optional `scope` (regular components only; `metadata.component` has
-/// no scope of its own), `purl`, `hashes`, `licenses`,
-/// `externalReferences`. Callers insert `type` before calling this.
+/// no scope of its own), `purl`, `hashes`, `licenses`, `externalReferences`,
+/// and observed license `evidence`. Callers insert `type` before calling this.
 fn component_json_fields(
     obj: &mut Map<String, Value>,
     pkg: &Package,
     bom_ref: Option<&str>,
     scope: Option<&str>,
+    evidence: Option<&LicenseEvidence>,
 ) {
     if let Some(bom_ref) = bom_ref {
         obj.insert("bom-ref".to_string(), Value::String(bom_ref.to_string()));
@@ -310,10 +476,13 @@ fn component_json_fields(
     if !hashes.is_empty() {
         obj.insert("hashes".to_string(), Value::Array(hashes));
     }
-    if let Some(license_expression) = cyclonedx_license_expression(pkg) {
+    if let Some((license_expression, acknowledgement)) = cyclonedx_license_expression(pkg) {
         obj.insert(
             "licenses".to_string(),
-            Value::Array(vec![json!({ "expression": license_expression })]),
+            Value::Array(vec![json!({
+                "expression": license_expression,
+                "acknowledgement": acknowledgement.as_str(),
+            })]),
         );
     }
     let external_refs = component_external_references(pkg)
@@ -325,6 +494,38 @@ fn component_json_fields(
             "externalReferences".to_string(),
             Value::Array(external_refs),
         );
+    }
+    if let Some(evidence) = evidence {
+        let mut evidence_obj = Map::new();
+        if !evidence.occurrences.is_empty() {
+            let occurrences = evidence
+                .occurrences
+                .iter()
+                .map(|occurrence| {
+                    let mut entry = Map::new();
+                    entry.insert(
+                        "location".to_string(),
+                        Value::String(occurrence.location.clone()),
+                    );
+                    if let Some(line) = occurrence.line {
+                        entry.insert("line".to_string(), json!(line));
+                    }
+                    Value::Object(entry)
+                })
+                .collect();
+            evidence_obj.insert("occurrences".to_string(), Value::Array(occurrences));
+        }
+        if !evidence.licenses.is_empty() {
+            let licenses = evidence
+                .licenses
+                .iter()
+                .map(|expression| json!({ "expression": expression }))
+                .collect();
+            evidence_obj.insert("licenses".to_string(), Value::Array(licenses));
+        }
+        if !evidence_obj.is_empty() {
+            obj.insert("evidence".to_string(), Value::Object(evidence_obj));
+        }
     }
 }
 
@@ -427,14 +628,22 @@ fn build_dependency_graph(
     graph
 }
 
-fn cyclonedx_license_expression(pkg: &Package) -> Option<String> {
+/// The single license expression to emit for a component, paired with how it
+/// was established. Preference order: declared SPDX expression, then declared
+/// raw expression (both parser-`declared`), then the first source/file
+/// detection (`concluded`).
+fn cyclonedx_license_expression(pkg: &Package) -> Option<(String, LicenseAcknowledgement)> {
     pkg.declared_license_expression_spdx
         .clone()
         .or_else(|| pkg.declared_license_expression.clone())
+        .map(|expression| (expression, LicenseAcknowledgement::Declared))
         .or_else(|| {
-            pkg.license_detections
-                .first()
-                .map(|d| d.license_expression_spdx.clone())
+            pkg.license_detections.first().map(|d| {
+                (
+                    d.license_expression_spdx.clone(),
+                    LicenseAcknowledgement::Concluded,
+                )
+            })
         })
 }
 
@@ -740,9 +949,218 @@ mod tests {
         assert_eq!(select_root_package_index(&packages), Some(1));
     }
 
+    fn package_from_data(data: crate::models::PackageData) -> Package {
+        Package::from(&crate::models::Package::from_package_data(
+            &data,
+            "package.json".to_string(),
+        ))
+    }
+
+    #[test]
+    fn license_expression_tags_parser_declared_as_declared() {
+        let pkg = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            declared_license_expression: Some("mit".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            cyclonedx_license_expression(&pkg),
+            Some(("MIT".to_string(), LicenseAcknowledgement::Declared))
+        );
+    }
+
+    #[test]
+    fn license_expression_tags_source_detection_as_concluded() {
+        let pkg = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            // No declared expression: the only evidence is a source/file
+            // detection, which CycloneDX marks `concluded`.
+            license_detections: vec![crate::models::LicenseDetection {
+                license_expression: "apache-2.0".to_string(),
+                license_expression_spdx: "Apache-2.0".to_string(),
+                matches: vec![],
+                detection_log: vec![],
+                identifier: String::new(),
+            }],
+            ..Default::default()
+        });
+        assert_eq!(
+            cyclonedx_license_expression(&pkg),
+            Some(("Apache-2.0".to_string(), LicenseAcknowledgement::Concluded))
+        );
+    }
+
+    #[test]
+    fn license_expression_prefers_declared_over_detection() {
+        // A package that both declares and has a detection reports the declared
+        // expression tagged `declared` (unchanged selection, matching SPDX).
+        let pkg = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            license_detections: vec![crate::models::LicenseDetection {
+                license_expression: "apache-2.0".to_string(),
+                license_expression_spdx: "Apache-2.0".to_string(),
+                matches: vec![],
+                detection_log: vec![],
+                identifier: String::new(),
+            }],
+            ..Default::default()
+        });
+        assert_eq!(
+            cyclonedx_license_expression(&pkg),
+            Some(("MIT".to_string(), LicenseAcknowledgement::Declared))
+        );
+    }
+
+    #[test]
+    fn json_emits_spec_version_schema_and_license_acknowledgement() {
+        let mut declared = package_from_data(crate::models::PackageData {
+            package_type: Some(crate::models::PackageType::Npm),
+            name: Some("declared-pkg".to_string()),
+            version: Some("1.0.0".to_string()),
+            purl: Some("pkg:npm/declared-pkg@1.0.0".to_string()),
+            declared_license_expression_spdx: Some("MIT".to_string()),
+            ..Default::default()
+        });
+        declared.package_uid = "uid-declared".to_string();
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![declared],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+
+        let bom = build_cyclonedx_json(&output);
+        assert_eq!(bom["specVersion"], "1.7");
+        assert_eq!(bom["$schema"], CYCLONEDX_JSON_SCHEMA);
+        assert_eq!(bom["bomFormat"], "CycloneDX");
+        let license = &bom["components"][0]["licenses"][0];
+        assert_eq!(license["expression"], "MIT");
+        assert_eq!(license["acknowledgement"], "declared");
+    }
+
+    #[test]
+    fn license_evidence_maps_file_detections_to_owning_package() {
+        use crate::models::{FileInfo, FileType, LicenseDetection, LineNumber, Match, MatchScore};
+        let detection = |spdx: &str, path: &str, line: usize| LicenseDetection {
+            license_expression: spdx.to_lowercase(),
+            license_expression_spdx: spdx.to_string(),
+            matches: vec![Match {
+                license_expression: spdx.to_lowercase(),
+                license_expression_spdx: spdx.to_string(),
+                from_file: Some(path.to_string()),
+                start_line: LineNumber::new(line).unwrap(),
+                end_line: LineNumber::new(line).unwrap(),
+                matcher: crate::license_detection::MatcherKind::Hash,
+                score: MatchScore::MAX,
+                matched_length: Some(1),
+                match_coverage: Some(100.0),
+                rule_relevance: Some(100),
+                rule_identifier: String::new(),
+                rule_url: None,
+                matched_text: None,
+                referenced_filenames: None,
+                matched_text_diagnostics: None,
+            }],
+            detection_log: vec![],
+            identifier: String::new(),
+        };
+        let make_file = |path: &str, det: LicenseDetection| {
+            let mut file = FileInfo::new(
+                path.to_string(),
+                path.to_string(),
+                String::new(),
+                path.to_string(),
+                FileType::File,
+                None,
+                None,
+                1,
+                None,
+                None,
+                None,
+                None,
+                None,
+                vec![],
+                None,
+                vec![det],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+            );
+            file.for_packages = vec![crate::models::PackageUid::from_raw(
+                "uid-widget".to_string(),
+            )];
+            crate::output_schema::OutputFileInfo::from(&file)
+        };
+
+        let files = vec![
+            make_file("scan/LICENSE", detection("MIT", "scan/LICENSE", 1)),
+            make_file(
+                "scan/src/main.js",
+                detection("Apache-2.0", "scan/src/main.js", 5),
+            ),
+        ];
+        let evidence = build_license_evidence(&files);
+        let widget = evidence.get("uid-widget").expect("owning package evidence");
+        // Licenses are deduped + sorted; occurrences sorted by (location, line).
+        assert_eq!(
+            widget.licenses,
+            vec!["Apache-2.0".to_string(), "MIT".to_string()]
+        );
+        assert_eq!(
+            widget.occurrences,
+            vec![
+                LicenseOccurrence {
+                    location: "scan/LICENSE".to_string(),
+                    line: Some(1)
+                },
+                LicenseOccurrence {
+                    location: "scan/src/main.js".to_string(),
+                    line: Some(5)
+                },
+            ]
+        );
+
+        // A package that owns no files with detections gets no evidence entry.
+        assert!(build_license_evidence(&[]).is_empty());
+    }
+
+    #[test]
+    fn empty_document_carries_spec_version_and_schema() {
+        let output = Output {
+            summary: None,
+            tallies: None,
+            tallies_of_key_files: None,
+            tallies_by_facet: None,
+            headers: vec![],
+            packages: vec![],
+            dependencies: vec![],
+            license_detections: vec![],
+            files: vec![],
+            license_references: vec![],
+            license_rule_references: vec![],
+        };
+        let bom = build_cyclonedx_json(&output);
+        assert_eq!(bom["specVersion"], "1.7");
+        assert_eq!(bom["$schema"], CYCLONEDX_JSON_SCHEMA);
+    }
+
     #[test]
     fn metadata_component_has_no_bom_ref_to_avoid_duplicating_the_unique_key() {
-        // CycloneDX 1.3 requires every `bom-ref` in a document to be unique.
+        // CycloneDX requires every `bom-ref` in a document to be unique.
         // The root package already gets a `bom-ref` in `components`, so
         // `metadata.component` must not repeat it (schema-guard against
         // reintroducing the duplicate-key regression).

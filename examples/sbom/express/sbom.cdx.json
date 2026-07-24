@@ -1,14 +1,15 @@
 {
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
-  "specVersion": "1.3",
-  "serialNumber": "urn:uuid:88b5de63-2310-40c2-9151-0bc05ffaba28",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:9a30ff04-67e1-468e-aa86-b8e480c4b564",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T13:05:02Z",
+    "timestamp": "2026-07-24T14:34:28Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.2"
+        "version": "1.0.3"
       }
     ],
     "component": {
@@ -20,7 +21,8 @@
       "purl": "pkg:npm/express@5.2.1",
       "licenses": [
         {
-          "expression": "MIT"
+          "expression": "MIT",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -44,7 +46,60 @@
           "type": "vcs",
           "url": "https://github.com/expressjs/express"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 7
+          },
+          {
+            "location": "Readme.md",
+            "line": 261
+          },
+          {
+            "location": "index.js",
+            "line": 6
+          },
+          {
+            "location": "lib/application.js",
+            "line": 6
+          },
+          {
+            "location": "lib/express.js",
+            "line": 6
+          },
+          {
+            "location": "lib/request.js",
+            "line": 6
+          },
+          {
+            "location": "lib/response.js",
+            "line": 5
+          },
+          {
+            "location": "lib/utils.js",
+            "line": 5
+          },
+          {
+            "location": "lib/view.js",
+            "line": 6
+          },
+          {
+            "location": "package.json",
+            "line": 15
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     }
   },
   "components": [
@@ -59,7 +114,8 @@
       "purl": "pkg:npm/express@5.2.1",
       "licenses": [
         {
-          "expression": "MIT"
+          "expression": "MIT",
+          "acknowledgement": "declared"
         }
       ],
       "externalReferences": [
@@ -83,7 +139,60 @@
           "type": "vcs",
           "url": "https://github.com/expressjs/express"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 7
+          },
+          {
+            "location": "Readme.md",
+            "line": 261
+          },
+          {
+            "location": "index.js",
+            "line": 6
+          },
+          {
+            "location": "lib/application.js",
+            "line": 6
+          },
+          {
+            "location": "lib/express.js",
+            "line": 6
+          },
+          {
+            "location": "lib/request.js",
+            "line": 6
+          },
+          {
+            "location": "lib/response.js",
+            "line": 5
+          },
+          {
+            "location": "lib/utils.js",
+            "line": 5
+          },
+          {
+            "location": "lib/view.js",
+            "line": 6
+          },
+          {
+            "location": "package.json",
+            "line": 15
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",

@@ -1,0 +1,90 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:de659fb0-e048-459f-a959-88e2bab03856",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-01T00:00:01Z",
+    "tools": [
+      {
+        "name": "Provenant",
+        "version": "1.0.2-2-g480e2d6b-dirty"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "widget",
+      "version": "1.0.0",
+      "purl": "pkg:npm/widget@1.0.0",
+      "licenses": [
+        {
+          "expression": "MIT",
+          "acknowledgement": "declared"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "scan/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "scan/src/main.js",
+            "line": 5
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/widget@1.0.0",
+      "name": "widget",
+      "version": "1.0.0",
+      "scope": "required",
+      "purl": "pkg:npm/widget@1.0.0",
+      "licenses": [
+        {
+          "expression": "MIT",
+          "acknowledgement": "declared"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "scan/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "scan/src/main.js",
+            "line": 5
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/widget@1.0.0",
+      "dependsOn": []
+    }
+  ]
+}

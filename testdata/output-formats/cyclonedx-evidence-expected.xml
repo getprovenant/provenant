@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:ee9954a5-24d2-49fb-87e9-33ced2e65466" version="1">
+  <metadata>
+    <timestamp>2026-01-01T00:00:01Z</timestamp>
+    <tools>
+      <tool><vendor>Provenant</vendor><name>Provenant</name><version>1.0.2-2-g480e2d6b-dirty</version></tool>
+    </tools>
+    <component type="application">
+      <name>widget</name>
+      <version>1.0.0</version>
+      <licenses><expression acknowledgement="declared">MIT</expression></licenses>
+      <purl>pkg:npm/widget@1.0.0</purl>
+      <evidence>
+        <occurrences>
+          <occurrence><location>scan/LICENSE</location><line>1</line></occurrence>
+          <occurrence><location>scan/src/main.js</location><line>5</line></occurrence>
+        </occurrences>
+        <licenses><expression>Apache-2.0</expression><expression>MIT</expression></licenses>
+      </evidence>
+    </component>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="pkg:npm/widget@1.0.0">
+      <name>widget</name>
+      <version>1.0.0</version>
+      <scope>required</scope>
+      <licenses><expression acknowledgement="declared">MIT</expression></licenses>
+      <purl>pkg:npm/widget@1.0.0</purl>
+      <evidence>
+        <occurrences>
+          <occurrence><location>scan/LICENSE</location><line>1</line></occurrence>
+          <occurrence><location>scan/src/main.js</location><line>5</line></occurrence>
+        </occurrences>
+        <licenses><expression>Apache-2.0</expression><expression>MIT</expression></licenses>
+      </evidence>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="pkg:npm/widget@1.0.0">
+    </dependency>
+  </dependencies>
+</bom>
