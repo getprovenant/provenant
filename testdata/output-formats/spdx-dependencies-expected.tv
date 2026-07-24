@@ -17,6 +17,7 @@ Created: 2026-01-01T00:00:00Z
 ## Package Information
 PackageName: root
 SPDXID: SPDXRef-Package-1
+PackageVersion: 1.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 2a4976b2c9ac8e1fc0747dba6f0c5588b1318680
@@ -24,6 +25,7 @@ PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: NONE
 PackageLicenseDeclared: MIT
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/root@1.0.0
 ## File Information
 FileName: ./index.js
 SPDXID: SPDXRef-1
@@ -42,19 +44,23 @@ FileCopyrightText: NONE
 ## Package Information
 PackageName: dep
 SPDXID: SPDXRef-Package-Dependency-1
+PackageVersion: 2.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/dep@2.0.0
 ## Package Information
 PackageName: left-pad
 SPDXID: SPDXRef-Package-Dependency-2
+PackageVersion: 1.3.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: MIT
 PackageLicenseDeclared: MIT
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/left-pad@1.3.0
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
 Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-1

@@ -66,12 +66,12 @@ impl<'a> InventoryEntry<'a> {
 /// The identical component/package inventory used by CycloneDX and SPDX.
 pub(crate) struct SbomInventory<'a> {
     pub entries: Vec<InventoryEntry<'a>>,
-    /// Version-less purl identity → the single versioned purl that shares it,
-    /// when exactly one exists across the document. Lets an unversioned
-    /// requirement edge (e.g. `pkg:npm/leftpad` declared in a manifest) resolve
-    /// to the resolved coordinate (`pkg:npm/leftpad@1.0.0`) recovered from the
-    /// lockfile, a detected package, or resolved-package metadata. See ADR 0012.
-    version_index: HashMap<String, String>,
+    /// Per-owner version evidence: `(owner package_uid, version-less purl
+    /// identity)` → the versioned purls that owner's own dependency edges
+    /// resolved that identity to. Scoped by owner so an unversioned requirement
+    /// under one package never inherits a version another package resolved the
+    /// same name to. See ADR 0012.
+    version_index: VersionIndex,
 }
 
 impl<'a> SbomInventory<'a> {
@@ -83,22 +83,22 @@ impl<'a> SbomInventory<'a> {
         self.entries.iter().map(InventoryEntry::package)
     }
 
-    /// Resolve a dependency edge purl to its versioned coordinate. An
-    /// unversioned purl whose version-less identity has exactly one versioned
-    /// sibling in the document is upgraded to that versioned purl; anything
-    /// already versioned, ambiguous (multiple versions), or without a sibling is
-    /// returned unchanged. Promotion and graph-edge resolution both route
-    /// through this so a versioned component and the edges that target it stay
-    /// consistent and the graph stays closed.
-    pub(crate) fn canonical_purl(&self, purl: &str) -> String {
-        canonicalize_purl(purl, &self.version_index)
+    /// Resolve a dependency edge to the purl its component and graph edges use.
+    /// An already-versioned edge keeps its purl; an unversioned one is upgraded
+    /// only from that edge's own `resolved_package`, or from a single
+    /// unambiguous versioned sibling under the **same owner** — never across
+    /// owners and never by guessing among multiple versions. Promotion and
+    /// graph-edge resolution both route through this so a versioned component
+    /// and the edges that target it stay consistent and the graph stays closed.
+    pub(crate) fn resolve_edge_purl(&self, dep: &TopLevelDependency) -> Option<String> {
+        resolve_edge_purl(dep, &self.version_index)
     }
 }
 
 /// Build the shared inventory: detected packages, then every resolved
 /// dependency promoted and deduped by purl (ADR 0012).
 pub(crate) fn build_inventory(output: &Output) -> SbomInventory<'_> {
-    let version_index = build_version_index(&output.packages, &output.dependencies);
+    let version_index = build_version_index(&output.dependencies);
 
     let mut entries: Vec<InventoryEntry<'_>> = output
         .packages
@@ -152,10 +152,9 @@ pub(crate) fn dependency_edges(
         let Some(owner_id) = uid_to_id.get(owner_uid).copied() else {
             continue;
         };
-        let Some(purl) = dependency_edge_purl(dep) else {
+        let Some(purl) = inventory.resolve_edge_purl(dep) else {
             continue;
         };
-        let purl = inventory.canonical_purl(&purl);
         let Some(child_ids) = purl_to_ids.get(purl.as_str()) else {
             continue;
         };
@@ -181,76 +180,109 @@ pub(crate) fn dependency_edge_purl(dep: &TopLevelDependency) -> Option<String> {
         .filter(|purl| !purl.is_empty())
 }
 
-/// A purl's version-less identity key and whether it carries a version. `None`
-/// when the string does not parse as a purl. The key joins the type, namespace,
-/// and name (NUL-separated to avoid delimiter collisions) so purls that differ
-/// only in version share one key.
-fn purl_identity(purl: &str) -> Option<(String, bool)> {
+/// Per-owner version evidence keyed by `(owner package_uid, version-less purl
+/// identity)`. The value is the set of distinct versioned purls that owner's
+/// dependency edges resolved that identity to.
+type VersionIndex = HashMap<(String, String), BTreeSet<String>>;
+
+/// A purl's version-less identity and whether it carries a version. `None` when
+/// the string does not parse as a purl.
+///
+/// The identity strips **only** the version: type, namespace, name,
+/// qualifiers, and subpath are all preserved (rebuilt through `PackageUrl` so
+/// the string is canonical, with qualifiers sorted). Two purls therefore share
+/// an identity only when they are the same coordinate at different versions —
+/// variants that differ by a qualifier (`?arch=`, `?classifier=`, …) or subpath
+/// stay distinct and are never conflated.
+fn purl_version_less_identity(purl: &str) -> Option<(String, bool)> {
     let parsed = PackageUrl::from_str(purl).ok()?;
-    let base = format!(
-        "{}\u{0}{}\u{0}{}",
-        parsed.ty(),
-        parsed.namespace().unwrap_or(""),
-        parsed.name()
-    );
-    Some((base, parsed.version().is_some()))
+    let versioned = parsed.version().is_some();
+
+    let mut identity = PackageUrl::new(parsed.ty().to_string(), parsed.name().to_string()).ok()?;
+    if let Some(namespace) = parsed.namespace() {
+        identity.with_namespace(namespace.to_string()).ok()?;
+    }
+    for (key, value) in parsed.qualifiers() {
+        identity
+            .add_qualifier(key.to_string(), value.to_string())
+            .ok()?;
+    }
+    if let Some(subpath) = parsed.subpath() {
+        identity.with_subpath(subpath.to_string()).ok()?;
+    }
+    Some((identity.to_string(), versioned))
 }
 
-/// Map each version-less purl identity to the one versioned purl that shares it,
-/// drawn from detected packages and every dependency edge (its own purl and its
-/// resolved-package purl). An identity with zero or multiple distinct versioned
-/// purls is omitted, so an unversioned edge for an ambiguous identity keeps its
-/// unversioned purl rather than guess a version (ADR 0012 honest-unknowns).
-fn build_version_index(
-    packages: &[OutputPackage],
-    dependencies: &[TopLevelDependency],
-) -> HashMap<String, String> {
-    let mut by_base: HashMap<String, BTreeSet<String>> = HashMap::new();
-    let mut record = |purl: &str| {
-        if let Some((base, true)) = purl_identity(purl) {
-            by_base.entry(base).or_default().insert(purl.to_string());
-        }
-    };
+/// Owner (`for_package_uid`) key for a dependency edge; `None` collapses to an
+/// empty owner so unowned edges only ever match each other, never a real owner.
+fn owner_key(dep: &TopLevelDependency) -> String {
+    dep.for_package_uid.clone().unwrap_or_default()
+}
 
-    for pkg in packages {
-        if let Some(purl) = pkg.purl.as_deref() {
-            record(purl);
-        }
-    }
+/// Build per-owner version evidence from dependency edges only. Each edge
+/// records the versioned purls it carries (its own purl and its resolved
+/// package's purl) under its owner and version-less identity. Detected packages
+/// are intentionally excluded — they are not owner-scoped, so using them as
+/// version evidence could assign one package's resolved version to another
+/// package's requirement.
+fn build_version_index(dependencies: &[TopLevelDependency]) -> VersionIndex {
+    let mut index: VersionIndex = HashMap::new();
     for dep in dependencies {
-        if let Some(purl) = dep.purl.as_deref() {
-            record(purl);
-        }
-        if let Some(purl) = dep
-            .resolved_package
-            .as_ref()
-            .and_then(|rp| rp.purl.as_deref())
-        {
-            record(purl);
+        let owner = owner_key(dep);
+        let purls = [
+            dep.purl.as_deref(),
+            dep.resolved_package
+                .as_ref()
+                .and_then(|rp| rp.purl.as_deref()),
+        ];
+        for purl in purls.into_iter().flatten() {
+            if let Some((identity, true)) = purl_version_less_identity(purl) {
+                index
+                    .entry((owner.clone(), identity))
+                    .or_default()
+                    .insert(purl.to_string());
+            }
         }
     }
-
-    by_base
-        .into_iter()
-        .filter_map(|(base, versioned)| {
-            let mut it = versioned.into_iter();
-            let only = it.next()?;
-            it.next().is_none().then_some((base, only))
-        })
-        .collect()
+    index
 }
 
-/// Upgrade an unversioned purl to its unique versioned sibling from
-/// `version_index`; return the purl unchanged when it is already versioned,
-/// ambiguous, unmatched, or unparseable.
-fn canonicalize_purl(purl: &str, version_index: &HashMap<String, String>) -> String {
-    match purl_identity(purl) {
-        Some((base, false)) => version_index
-            .get(&base)
-            .cloned()
-            .unwrap_or_else(|| purl.to_string()),
-        _ => purl.to_string(),
+/// Resolve a dependency edge to the purl its component and graph edges use.
+///
+/// An already-versioned edge keeps its purl. An unversioned edge is upgraded
+/// only from proof about that same edge — first its own `resolved_package`
+/// purl, then a single unambiguous versioned sibling recorded under the **same
+/// owner** and identity. When the owner has zero or several candidate versions
+/// for the identity, the edge keeps its unversioned purl (honest-unknown), and
+/// no version is ever borrowed from a different owner.
+fn resolve_edge_purl(dep: &TopLevelDependency, version_index: &VersionIndex) -> Option<String> {
+    let declared = dependency_edge_purl(dep)?;
+    let (identity, versioned) = purl_version_less_identity(&declared)?;
+    if versioned {
+        return Some(declared);
     }
+
+    // The edge's own resolved-package purl is its actual resolution — trust it
+    // when it is versioned and the same coordinate.
+    if let Some(resolved_purl) = dep
+        .resolved_package
+        .as_ref()
+        .and_then(|rp| rp.purl.as_deref())
+        && let Some((resolved_identity, true)) = purl_version_less_identity(resolved_purl)
+        && resolved_identity == identity
+    {
+        return Some(resolved_purl.to_string());
+    }
+
+    // Same-owner sibling evidence, only when unambiguous.
+    if let Some(candidates) = version_index.get(&(owner_key(dep), identity))
+        && candidates.len() == 1
+        && let Some(only) = candidates.iter().next()
+    {
+        return Some(only.clone());
+    }
+
+    Some(declared)
 }
 
 /// Promote resolved dependencies, deduped by purl.
@@ -264,7 +296,7 @@ fn canonicalize_purl(purl: &str, version_index: &HashMap<String, String>) -> Str
 fn promote_dependencies(
     packages: &[OutputPackage],
     dependencies: &[TopLevelDependency],
-    version_index: &HashMap<String, String>,
+    version_index: &VersionIndex,
 ) -> Vec<(OutputPackage, Option<bool>)> {
     let existing_purls: HashSet<&str> = packages
         .iter()
@@ -275,13 +307,12 @@ fn promote_dependencies(
     let mut promoted: Vec<(OutputPackage, Option<bool>)> = Vec::new();
 
     for dep in dependencies {
-        let Some(purl) = dependency_edge_purl(dep) else {
-            continue;
-        };
         // Upgrade an unversioned requirement edge to its resolved coordinate so
         // it dedups against the detected package or lockfile-resolved component
         // for the same dependency instead of becoming a second, unversioned one.
-        let purl = canonicalize_purl(&purl, version_index);
+        let Some(purl) = resolve_edge_purl(dep, version_index) else {
+            continue;
+        };
         if existing_purls.contains(purl.as_str()) {
             continue;
         }
@@ -609,6 +640,30 @@ mod tests {
         })
     }
 
+    fn dependency_owned(
+        purl: Option<&str>,
+        resolved: Option<ResolvedPackage>,
+        uid: &str,
+        owner: &str,
+    ) -> TopLevelDependency {
+        TopLevelDependency::from(&crate::models::TopLevelDependency {
+            purl: purl.map(str::to_string),
+            extracted_requirement: None,
+            scope: None,
+            is_runtime: None,
+            is_optional: Some(false),
+            is_pinned: None,
+            is_direct: None,
+            resolved_package: resolved.map(Box::new),
+            extra_data: None,
+            dependency_uid: crate::models::DependencyUid::from_raw(uid.to_string()),
+            for_package_uid: Some(crate::models::PackageUid::from_raw(owner.to_string())),
+            datafile_path: "package-lock.json".to_string(),
+            datasource_id: DatasourceId::NpmPackageLockJson,
+            namespace: None,
+        })
+    }
+
     fn promoted_optional(entries: &[InventoryEntry<'_>]) -> Option<bool> {
         match entries.iter().find(|e| e.is_promoted()) {
             Some(InventoryEntry::Promoted { is_optional, .. }) => *is_optional,
@@ -916,14 +971,18 @@ mod tests {
     }
 
     // Vendored join (issue #1320): with `node_modules/<dep>/package.json` on
-    // disk the dependency is a detected, licensed package at its versioned purl,
-    // while the manifest yields an unversioned requirement edge. The unversioned
-    // edge must resolve onto the detected package, leaving ONE licensed,
-    // versioned component — never a second bare `pkg:npm/leftpad`.
+    // disk the dependency is a detected, licensed package at its versioned purl.
+    // The manifest yields an unversioned requirement edge and the lockfile a
+    // versioned resolution — both under the same owner. The unversioned edge
+    // resolves onto the detected package, leaving ONE licensed, versioned
+    // component — never a second bare `pkg:npm/leftpad`.
     #[test]
     fn unversioned_requirement_merges_into_vendored_detected_package() {
         let packages = vec![licensed_detected_package("pkg:npm/leftpad@1.0.0", "MIT")];
-        let deps = vec![dependency(Some("pkg:npm/leftpad"), Some(false), None, "d1")];
+        let deps = vec![
+            dependency_owned(Some("pkg:npm/leftpad"), None, "req", "owner-1"),
+            dependency_owned(Some("pkg:npm/leftpad@1.0.0"), None, "lock", "owner-1"),
+        ];
         let output = output_with(packages, deps);
         let inventory = build_inventory(&output);
 
@@ -938,6 +997,93 @@ mod tests {
         assert_eq!(
             package.declared_license_expression_spdx.as_deref(),
             Some("MIT")
+        );
+    }
+
+    // P1 (cross-owner): two packages can resolve the same requirement to
+    // different versions. An unversioned edge must take its version only from
+    // its own owner's resolution — never from another owner's.
+    #[test]
+    fn unversioned_requirement_never_inherits_version_across_owners() {
+        let deps = vec![
+            // owner A: requirement + its own resolution to 1.0.0
+            dependency_owned(Some("pkg:npm/lib"), None, "a-req", "owner-a"),
+            dependency_owned(Some("pkg:npm/lib@1.0.0"), None, "a-lock", "owner-a"),
+            // owner B: requirement + its own resolution to 2.0.0
+            dependency_owned(Some("pkg:npm/lib"), None, "b-req", "owner-b"),
+            dependency_owned(Some("pkg:npm/lib@2.0.0"), None, "b-lock", "owner-b"),
+        ];
+        let index = build_version_index(&deps);
+        // Each owner's unversioned requirement resolves to that owner's version.
+        assert_eq!(
+            resolve_edge_purl(&deps[0], &index).as_deref(),
+            Some("pkg:npm/lib@1.0.0"),
+            "owner A keeps its own 1.0.0"
+        );
+        assert_eq!(
+            resolve_edge_purl(&deps[2], &index).as_deref(),
+            Some("pkg:npm/lib@2.0.0"),
+            "owner B keeps its own 2.0.0 — no cross-owner assignment"
+        );
+
+        // Both versioned components still exist and the graph stays closed.
+        let output = output_with(vec![], deps);
+        let inventory = build_inventory(&output);
+        let purls: BTreeSet<&str> = inventory
+            .packages()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        assert_eq!(
+            purls,
+            BTreeSet::from(["pkg:npm/lib@1.0.0", "pkg:npm/lib@2.0.0"])
+        );
+        let ids: Vec<String> = (0..inventory.entries.len())
+            .map(|i| format!("id-{i}"))
+            .collect();
+        let edges = dependency_edges(&inventory, &output.dependencies, &ids);
+        for children in edges.values() {
+            for child in children {
+                assert!(
+                    ids.contains(child),
+                    "every edge resolves within the document"
+                );
+            }
+        }
+    }
+
+    // P1 (qualifiers/subpath): purls that differ only by a qualifier or subpath
+    // are DIFFERENT coordinates. An unversioned edge for one must not be rewritten
+    // to a versioned sibling that carries a different qualifier/subpath.
+    #[test]
+    fn qualifier_and_subpath_variants_are_not_conflated() {
+        let deps = vec![
+            // A versioned candidate that carries a qualifier.
+            dependency_owned(
+                Some("pkg:maven/g/a@1.0.0?classifier=sources"),
+                None,
+                "v",
+                "owner-1",
+            ),
+            // An unversioned requirement WITHOUT that qualifier — different identity.
+            dependency_owned(Some("pkg:maven/g/a"), None, "req", "owner-1"),
+        ];
+        let index = build_version_index(&deps);
+        assert_eq!(
+            resolve_edge_purl(&deps[1], &index).as_deref(),
+            Some("pkg:maven/g/a"),
+            "a qualifier-bearing sibling must not version a bare requirement"
+        );
+
+        // And a subpath variant is likewise its own identity.
+        let subpath_deps = vec![
+            dependency_owned(Some("pkg:golang/ex.com/m@1.0.0#sub"), None, "v", "owner-1"),
+            dependency_owned(Some("pkg:golang/ex.com/m"), None, "req", "owner-1"),
+        ];
+        let subpath_index = build_version_index(&subpath_deps);
+        assert_eq!(
+            resolve_edge_purl(&subpath_deps[1], &subpath_index).as_deref(),
+            Some("pkg:golang/ex.com/m"),
+            "a subpath-bearing sibling must not version a bare requirement"
         );
     }
 

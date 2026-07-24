@@ -13,10 +13,11 @@ Visit https://github.com/getprovenant/provenant/ for support and download.
 SPDX License List: 3.27</text>
 ## Creation Information
 Creator: Tool: Provenant-1.0.1
-Created: 2026-07-24T07:16:25Z
+Created: 2026-07-24T08:01:40Z
 ## Package Information
 PackageName: express
 SPDXID: SPDXRef-Package-1
+PackageVersion: 5.2.1
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: ea2aa897220d8ebe58a2faf63f08c3f2bc9421f6
@@ -29,6 +30,7 @@ Copyright (c) 2014-2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 Copyright(c) 2009-2013 TJ Holowaychuk
 Copyright(c) 2013 Roman Shtylman
 Copyright(c) 2014-2015 Douglas Christopher Wilson</text>
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/express@5.2.1
 ## File Information
 FileName: ./.editorconfig
 SPDXID: SPDXRef-1
@@ -1557,6 +1559,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/accepts
 ## Package Information
 PackageName: after
 SPDXID: SPDXRef-Package-Dependency-2
@@ -1565,6 +1568,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/after
 ## Package Information
 PackageName: body-parser
 SPDXID: SPDXRef-Package-Dependency-3
@@ -1573,6 +1577,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/body-parser
 ## Package Information
 PackageName: connect-redis
 SPDXID: SPDXRef-Package-Dependency-4
@@ -1581,6 +1586,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/connect-redis
 ## Package Information
 PackageName: content-disposition
 SPDXID: SPDXRef-Package-Dependency-5
@@ -1589,6 +1595,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/content-disposition
 ## Package Information
 PackageName: content-type
 SPDXID: SPDXRef-Package-Dependency-6
@@ -1597,6 +1604,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/content-type
 ## Package Information
 PackageName: cookie
 SPDXID: SPDXRef-Package-Dependency-7
@@ -1605,6 +1613,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/cookie
 ## Package Information
 PackageName: cookie-parser
 SPDXID: SPDXRef-Package-Dependency-8
@@ -1613,6 +1622,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/cookie-parser
 ## Package Information
 PackageName: cookie-session
 SPDXID: SPDXRef-Package-Dependency-9
@@ -1621,6 +1631,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/cookie-session
 ## Package Information
 PackageName: cookie-signature
 SPDXID: SPDXRef-Package-Dependency-10
@@ -1629,6 +1640,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/cookie-signature
 ## Package Information
 PackageName: debug
 SPDXID: SPDXRef-Package-Dependency-11
@@ -1637,6 +1649,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/debug
 ## Package Information
 PackageName: depd
 SPDXID: SPDXRef-Package-Dependency-12
@@ -1645,6 +1658,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/depd
 ## Package Information
 PackageName: ejs
 SPDXID: SPDXRef-Package-Dependency-13
@@ -1653,6 +1667,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/ejs
 ## Package Information
 PackageName: encodeurl
 SPDXID: SPDXRef-Package-Dependency-14
@@ -1661,6 +1676,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/encodeurl
 ## Package Information
 PackageName: escape-html
 SPDXID: SPDXRef-Package-Dependency-15
@@ -1669,6 +1685,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/escape-html
 ## Package Information
 PackageName: eslint
 SPDXID: SPDXRef-Package-Dependency-16
@@ -1677,6 +1694,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/eslint
 ## Package Information
 PackageName: etag
 SPDXID: SPDXRef-Package-Dependency-17
@@ -1685,6 +1703,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/etag
 ## Package Information
 PackageName: express-session
 SPDXID: SPDXRef-Package-Dependency-18
@@ -1693,6 +1712,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/express-session
 ## Package Information
 PackageName: finalhandler
 SPDXID: SPDXRef-Package-Dependency-19
@@ -1701,6 +1721,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/finalhandler
 ## Package Information
 PackageName: fresh
 SPDXID: SPDXRef-Package-Dependency-20
@@ -1709,6 +1730,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/fresh
 ## Package Information
 PackageName: hbs
 SPDXID: SPDXRef-Package-Dependency-21
@@ -1717,6 +1739,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/hbs
 ## Package Information
 PackageName: http-errors
 SPDXID: SPDXRef-Package-Dependency-22
@@ -1725,6 +1748,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/http-errors
 ## Package Information
 PackageName: marked
 SPDXID: SPDXRef-Package-Dependency-23
@@ -1733,6 +1757,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/marked
 ## Package Information
 PackageName: merge-descriptors
 SPDXID: SPDXRef-Package-Dependency-24
@@ -1741,6 +1766,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/merge-descriptors
 ## Package Information
 PackageName: method-override
 SPDXID: SPDXRef-Package-Dependency-25
@@ -1749,6 +1775,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/method-override
 ## Package Information
 PackageName: mime-types
 SPDXID: SPDXRef-Package-Dependency-26
@@ -1757,6 +1784,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/mime-types
 ## Package Information
 PackageName: mocha
 SPDXID: SPDXRef-Package-Dependency-27
@@ -1765,6 +1793,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/mocha
 ## Package Information
 PackageName: morgan
 SPDXID: SPDXRef-Package-Dependency-28
@@ -1773,6 +1802,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/morgan
 ## Package Information
 PackageName: nyc
 SPDXID: SPDXRef-Package-Dependency-29
@@ -1781,6 +1811,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/nyc
 ## Package Information
 PackageName: on-finished
 SPDXID: SPDXRef-Package-Dependency-30
@@ -1789,6 +1820,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/on-finished
 ## Package Information
 PackageName: once
 SPDXID: SPDXRef-Package-Dependency-31
@@ -1797,6 +1829,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/once
 ## Package Information
 PackageName: parseurl
 SPDXID: SPDXRef-Package-Dependency-32
@@ -1805,6 +1838,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/parseurl
 ## Package Information
 PackageName: pbkdf2-password
 SPDXID: SPDXRef-Package-Dependency-33
@@ -1813,6 +1847,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/pbkdf2-password
 ## Package Information
 PackageName: proxy-addr
 SPDXID: SPDXRef-Package-Dependency-34
@@ -1821,6 +1856,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/proxy-addr
 ## Package Information
 PackageName: qs
 SPDXID: SPDXRef-Package-Dependency-35
@@ -1829,6 +1865,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/qs
 ## Package Information
 PackageName: range-parser
 SPDXID: SPDXRef-Package-Dependency-36
@@ -1837,6 +1874,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/range-parser
 ## Package Information
 PackageName: router
 SPDXID: SPDXRef-Package-Dependency-37
@@ -1845,6 +1883,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/router
 ## Package Information
 PackageName: send
 SPDXID: SPDXRef-Package-Dependency-38
@@ -1853,6 +1892,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/send
 ## Package Information
 PackageName: serve-static
 SPDXID: SPDXRef-Package-Dependency-39
@@ -1861,6 +1901,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/serve-static
 ## Package Information
 PackageName: statuses
 SPDXID: SPDXRef-Package-Dependency-40
@@ -1869,6 +1910,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/statuses
 ## Package Information
 PackageName: supertest
 SPDXID: SPDXRef-Package-Dependency-41
@@ -1877,6 +1919,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/supertest
 ## Package Information
 PackageName: type-is
 SPDXID: SPDXRef-Package-Dependency-42
@@ -1885,6 +1928,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/type-is
 ## Package Information
 PackageName: vary
 SPDXID: SPDXRef-Package-Dependency-43
@@ -1893,6 +1937,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/vary
 ## Package Information
 PackageName: vhost
 SPDXID: SPDXRef-Package-Dependency-44
@@ -1901,6 +1946,7 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/vhost
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
 Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-1

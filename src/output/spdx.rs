@@ -222,6 +222,9 @@ fn write_spdx_tag_value_package(
     writeln!(writer, "## Package Information")?;
     writeln!(writer, "PackageName: {}", plan.name)?;
     writeln!(writer, "SPDXID: {}", plan.spdx_id)?;
+    if let Some(version) = spdx_package_version(plan.package) {
+        writeln!(writer, "PackageVersion: {version}")?;
+    }
     writeln!(writer, "PackageDownloadLocation: NOASSERTION")?;
     writeln!(writer, "FilesAnalyzed: {}", plan.role.files_analyzed())?;
     // SPDX 2.2: a package verification code and per-file license info are
@@ -262,7 +265,28 @@ fn write_spdx_tag_value_package(
         "PackageCopyrightText: {}",
         format_spdx_text_field(&package_copyright_text)
     )?;
+    // The purl is the join key for downstream license enrichment; emit it as a
+    // package-manager ExternalRef (ADR 0012, issue #1320).
+    if let Some(purl) = spdx_package_purl(plan.package) {
+        writeln!(writer, "ExternalRef: PACKAGE-MANAGER purl {purl}")?;
+    }
     Ok(())
+}
+
+/// The package version for an SPDX package, when the inventory package carries a
+/// non-empty one. Promoted-dependency packages carry the resolved version from
+/// their versioned purl (issue #1320).
+fn spdx_package_version(package: Option<&OutputPackage>) -> Option<&str> {
+    package
+        .and_then(|package| package.version.as_deref())
+        .filter(|version| !version.is_empty())
+}
+
+/// The package purl for an SPDX package, when present and non-empty.
+fn spdx_package_purl(package: Option<&OutputPackage>) -> Option<&str> {
+    package
+        .and_then(|package| package.purl.as_deref())
+        .filter(|purl| !purl.is_empty())
 }
 
 pub(crate) fn write_spdx_rdf_xml(
@@ -450,6 +474,24 @@ pub(crate) fn write_spdx_rdf_xml(
         xml.push_str("    <spdx:name>");
         xml.push_str(&package_name);
         xml.push_str("</spdx:name>\n");
+        if let Some(version) = spdx_package_version(plan.package) {
+            xml.push_str("    <spdx:versionInfo>");
+            xml.push_str(&xml_escape(version));
+            xml.push_str("</spdx:versionInfo>\n");
+        }
+        // Purl as a package-manager ExternalRef — the downstream join key
+        // (ADR 0012, issue #1320).
+        if let Some(purl) = spdx_package_purl(plan.package) {
+            xml.push_str("    <spdx:externalRef><spdx:ExternalRef>");
+            xml.push_str("<spdx:referenceCategory rdf:resource=\"http://spdx.org/rdf/terms#referenceCategory_packageManager\"/>");
+            xml.push_str(
+                "<spdx:referenceType rdf:resource=\"http://spdx.org/rdf/references/purl\"/>",
+            );
+            xml.push_str("<spdx:referenceLocator>");
+            xml.push_str(&xml_escape(purl));
+            xml.push_str("</spdx:referenceLocator>");
+            xml.push_str("</spdx:ExternalRef></spdx:externalRef>\n");
+        }
         xml.push_str("  </spdx:Package>\n");
     }
 

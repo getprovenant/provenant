@@ -11,8 +11,8 @@ SPDX tag-value ([`sbom.spdx`](sbom.spdx)) and CycloneDX JSON ([`sbom.cdx.json`](
 
 ## What's inside
 
-- **91 components** — the project plus every resolved dependency, each with a package URL (purl).
-- **140 dependency relationships**, fully resolved: every `dependsOn` edge points to a component in this same document (no dangling references). A packages-only SBOM lists just the top-level package(s).
+- **107 components** — the project plus every resolved dependency, each with a package URL (purl).
+- **135 dependency relationships**, fully resolved: every `dependsOn` edge points to a component in this same document (no dangling references). A packages-only SBOM lists just the top-level package(s).
 
 ## How it compares
 

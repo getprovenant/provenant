@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.3",
-  "serialNumber": "urn:uuid:c56f4fa9-9afd-454b-8af9-081122de0c1f",
+  "serialNumber": "urn:uuid:97629256-60c7-481d-ada9-0cce9f7deb94",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T07:16:23Z",
+    "timestamp": "2026-07-24T08:01:39Z",
     "tools": [
       {
         "name": "Provenant",
@@ -505,6 +505,7 @@
       "bom-ref": "pkg:cargo/bstr@1.13.0",
       "name": "bstr",
       "version": "1.13.0",
+      "scope": "required",
       "purl": "pkg:cargo/bstr@1.13.0"
     },
     {
@@ -537,18 +538,32 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/crossbeam-channel",
+      "name": "crossbeam-channel",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/crossbeam-channel"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/crossbeam-channel@0.5.16",
       "name": "crossbeam-channel",
       "version": "0.5.16",
-      "scope": "required",
       "purl": "pkg:cargo/crossbeam-channel@0.5.16"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/crossbeam-deque",
+      "name": "crossbeam-deque",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/crossbeam-deque"
     },
     {
       "type": "library",
       "bom-ref": "pkg:cargo/crossbeam-deque@0.8.7",
       "name": "crossbeam-deque",
       "version": "0.8.7",
-      "scope": "required",
       "purl": "pkg:cargo/crossbeam-deque@0.8.7"
     },
     {
@@ -581,18 +596,32 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/encoding_rs",
+      "name": "encoding_rs",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/encoding_rs"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/encoding_rs@0.8.35",
       "name": "encoding_rs",
       "version": "0.8.35",
-      "scope": "required",
       "purl": "pkg:cargo/encoding_rs@0.8.35"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/encoding_rs_io",
+      "name": "encoding_rs_io",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/encoding_rs_io"
     },
     {
       "type": "library",
       "bom-ref": "pkg:cargo/encoding_rs_io@0.1.7",
       "name": "encoding_rs_io",
       "version": "0.1.7",
-      "scope": "required",
       "purl": "pkg:cargo/encoding_rs_io@0.1.7"
     },
     {
@@ -611,11 +640,26 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/glob",
+      "name": "glob",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/glob"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/glob@0.3.3",
       "name": "glob",
       "version": "0.3.3",
-      "scope": "required",
       "purl": "pkg:cargo/glob@0.3.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/globset@0.4.16",
+      "name": "globset",
+      "version": "0.4.16",
+      "scope": "required",
+      "purl": "pkg:cargo/globset@0.4.16"
     },
     {
       "type": "library",
@@ -627,10 +671,51 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/globset@0.4.16",
-      "name": "globset",
-      "version": "0.4.16",
-      "purl": "pkg:cargo/globset@0.4.16"
+      "bom-ref": "pkg:cargo/grep-cli",
+      "name": "grep-cli",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-cli"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-matcher",
+      "name": "grep-matcher",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-matcher"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-pcre2",
+      "name": "grep-pcre2",
+      "version": "unknown",
+      "scope": "optional",
+      "purl": "pkg:cargo/grep-pcre2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-printer",
+      "name": "grep-printer",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-printer"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-regex",
+      "name": "grep-regex",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-regex"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/grep-searcher",
+      "name": "grep-searcher",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/grep-searcher"
     },
     {
       "type": "library",
@@ -693,17 +778,18 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/log@0.4.33",
+      "name": "log",
+      "version": "0.4.33",
+      "scope": "required",
+      "purl": "pkg:cargo/log@0.4.33"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/log@0.4.20",
       "name": "log",
       "version": "0.4.20",
       "purl": "pkg:cargo/log@0.4.20"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:cargo/log@0.4.33",
-      "name": "log",
-      "version": "0.4.33",
-      "purl": "pkg:cargo/log@0.4.33"
     },
     {
       "type": "library",
@@ -751,11 +837,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/pcre2@0.2.11",
+      "bom-ref": "pkg:cargo/pcre2",
       "name": "pcre2",
-      "version": "0.2.11",
+      "version": "unknown",
       "scope": "required",
-      "purl": "pkg:cargo/pcre2@0.2.11"
+      "purl": "pkg:cargo/pcre2"
     },
     {
       "type": "library",
@@ -763,6 +849,13 @@
       "name": "pcre2-sys",
       "version": "0.2.10",
       "purl": "pkg:cargo/pcre2-sys@0.2.10"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/pcre2@0.2.11",
+      "name": "pcre2",
+      "version": "0.2.11",
+      "purl": "pkg:cargo/pcre2@0.2.11"
     },
     {
       "type": "library",
@@ -808,11 +901,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/regex@1.13.0",
+      "bom-ref": "pkg:cargo/regex",
       "name": "regex",
-      "version": "1.13.0",
+      "version": "unknown",
       "scope": "required",
-      "purl": "pkg:cargo/regex@1.13.0"
+      "purl": "pkg:cargo/regex"
     },
     {
       "type": "library",
@@ -860,10 +953,24 @@
     },
     {
       "type": "library",
+      "bom-ref": "pkg:cargo/regex@1.13.0",
+      "name": "regex",
+      "version": "1.13.0",
+      "purl": "pkg:cargo/regex@1.13.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/same-file",
+      "name": "same-file",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/same-file"
+    },
+    {
+      "type": "library",
       "bom-ref": "pkg:cargo/same-file@1.0.6",
       "name": "same-file",
       "version": "1.0.6",
-      "scope": "required",
       "purl": "pkg:cargo/same-file@1.0.6"
     },
     {
@@ -871,8 +978,16 @@
       "bom-ref": "pkg:cargo/serde",
       "name": "serde",
       "version": "unknown",
-      "scope": "required",
+      "scope": "optional",
       "purl": "pkg:cargo/serde"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/serde@1.0.228",
+      "name": "serde",
+      "version": "1.0.228",
+      "scope": "required",
+      "purl": "pkg:cargo/serde@1.0.228"
     },
     {
       "type": "library",
@@ -883,13 +998,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/serde@1.0.228",
-      "name": "serde",
-      "version": "1.0.228",
-      "purl": "pkg:cargo/serde@1.0.228"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:cargo/serde_core@1.0.228",
       "name": "serde_core",
       "version": "1.0.228",
@@ -897,11 +1005,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/serde_derive",
+      "bom-ref": "pkg:cargo/serde_derive@1.0.228",
       "name": "serde_derive",
-      "version": "unknown",
+      "version": "1.0.228",
       "scope": "required",
-      "purl": "pkg:cargo/serde_derive"
+      "purl": "pkg:cargo/serde_derive@1.0.228"
     },
     {
       "type": "library",
@@ -912,10 +1020,11 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:cargo/serde_derive@1.0.228",
-      "name": "serde_derive",
-      "version": "1.0.228",
-      "purl": "pkg:cargo/serde_derive@1.0.228"
+      "bom-ref": "pkg:cargo/serde_json",
+      "name": "serde_json",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/serde_json"
     },
     {
       "type": "library",
@@ -945,6 +1054,14 @@
       "name": "syn",
       "version": "2.0.48",
       "purl": "pkg:cargo/syn@2.0.48"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/termcolor",
+      "name": "termcolor",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/termcolor"
     },
     {
       "type": "library",
@@ -997,6 +1114,14 @@
       "version": "2.5.0",
       "scope": "required",
       "purl": "pkg:cargo/walkdir@2.5.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/walkdir",
+      "name": "walkdir",
+      "version": "unknown",
+      "scope": "required",
+      "purl": "pkg:cargo/walkdir"
     },
     {
       "type": "library",
@@ -1081,7 +1206,15 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:cargo/crossbeam-channel",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/crossbeam-channel@0.5.16",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/crossbeam-deque",
       "dependsOn": []
     },
     {
@@ -1105,7 +1238,15 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:cargo/encoding_rs",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/encoding_rs@0.8.35",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/encoding_rs_io",
       "dependsOn": []
     },
     {
@@ -1124,7 +1265,6 @@
         "pkg:cargo/bstr@1.9.0",
         "pkg:cargo/cc@1.0.83",
         "pkg:cargo/derive_arbitrary@1.3.2",
-        "pkg:cargo/globset",
         "pkg:cargo/globset@0.4.16",
         "pkg:cargo/jobserver@0.1.27",
         "pkg:cargo/libc@0.2.152",
@@ -1147,6 +1287,10 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:cargo/glob",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/glob@0.3.3",
       "dependsOn": []
     },
@@ -1164,13 +1308,17 @@
         "pkg:cargo/aho-corasick",
         "pkg:cargo/arbitrary",
         "pkg:cargo/bstr",
-        "pkg:cargo/glob@0.3.3",
+        "pkg:cargo/glob",
         "pkg:cargo/log",
         "pkg:cargo/regex-automata",
         "pkg:cargo/regex-syntax",
         "pkg:cargo/serde",
-        "pkg:cargo/serde_json@1.0.150"
+        "pkg:cargo/serde_json"
       ]
+    },
+    {
+      "ref": "pkg:cargo/grep-cli",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/grep-cli@0.1.12",
@@ -1178,86 +1326,106 @@
         "pkg:cargo/bstr",
         "pkg:cargo/globset",
         "pkg:cargo/log",
-        "pkg:cargo/termcolor@1.4.1"
+        "pkg:cargo/termcolor"
       ]
+    },
+    {
+      "ref": "pkg:cargo/grep-matcher",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/grep-matcher@0.1.9",
       "dependsOn": [
         "pkg:cargo/memchr",
-        "pkg:cargo/regex@1.13.0"
+        "pkg:cargo/regex"
       ]
+    },
+    {
+      "ref": "pkg:cargo/grep-pcre2",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/grep-pcre2@0.1.10",
       "dependsOn": [
-        "pkg:cargo/grep-matcher@0.1.9",
+        "pkg:cargo/grep-matcher",
         "pkg:cargo/log",
-        "pkg:cargo/pcre2@0.2.11"
+        "pkg:cargo/pcre2"
       ]
+    },
+    {
+      "ref": "pkg:cargo/grep-printer",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/grep-printer@0.3.1",
       "dependsOn": [
         "pkg:cargo/bstr",
-        "pkg:cargo/grep-matcher@0.1.9",
-        "pkg:cargo/grep-regex@0.1.14",
-        "pkg:cargo/grep-searcher@0.1.17",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/grep-regex",
+        "pkg:cargo/grep-searcher",
         "pkg:cargo/log",
         "pkg:cargo/serde",
-        "pkg:cargo/serde_json@1.0.150",
-        "pkg:cargo/termcolor@1.4.1"
+        "pkg:cargo/serde_json",
+        "pkg:cargo/termcolor"
       ]
+    },
+    {
+      "ref": "pkg:cargo/grep-regex",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/grep-regex@0.1.14",
       "dependsOn": [
         "pkg:cargo/bstr",
-        "pkg:cargo/grep-matcher@0.1.9",
+        "pkg:cargo/grep-matcher",
         "pkg:cargo/log",
         "pkg:cargo/regex-automata",
         "pkg:cargo/regex-syntax"
       ]
     },
     {
+      "ref": "pkg:cargo/grep-searcher",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/grep-searcher@0.1.17",
       "dependsOn": [
         "pkg:cargo/bstr",
-        "pkg:cargo/encoding_rs@0.8.35",
-        "pkg:cargo/encoding_rs_io@0.1.7",
-        "pkg:cargo/grep-matcher@0.1.9",
-        "pkg:cargo/grep-regex@0.1.14",
+        "pkg:cargo/encoding_rs",
+        "pkg:cargo/encoding_rs_io",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/grep-regex",
         "pkg:cargo/log",
         "pkg:cargo/memchr",
         "pkg:cargo/memmap",
-        "pkg:cargo/regex@1.13.0"
+        "pkg:cargo/regex"
       ]
     },
     {
       "ref": "pkg:cargo/grep@0.4.1",
       "dependsOn": [
-        "pkg:cargo/grep-cli@0.1.12",
-        "pkg:cargo/grep-matcher@0.1.9",
-        "pkg:cargo/grep-pcre2@0.1.10",
-        "pkg:cargo/grep-printer@0.3.1",
-        "pkg:cargo/grep-regex@0.1.14",
-        "pkg:cargo/grep-searcher@0.1.17",
-        "pkg:cargo/termcolor@1.4.1",
-        "pkg:cargo/walkdir@2.5.0"
+        "pkg:cargo/grep-cli",
+        "pkg:cargo/grep-matcher",
+        "pkg:cargo/grep-pcre2",
+        "pkg:cargo/grep-printer",
+        "pkg:cargo/grep-regex",
+        "pkg:cargo/grep-searcher",
+        "pkg:cargo/termcolor",
+        "pkg:cargo/walkdir"
       ]
     },
     {
       "ref": "pkg:cargo/ignore@0.4.29",
       "dependsOn": [
         "pkg:cargo/bstr",
-        "pkg:cargo/crossbeam-channel@0.5.16",
-        "pkg:cargo/crossbeam-deque@0.8.7",
+        "pkg:cargo/crossbeam-channel",
+        "pkg:cargo/crossbeam-deque",
         "pkg:cargo/globset",
         "pkg:cargo/log",
         "pkg:cargo/memchr",
         "pkg:cargo/regex-automata",
-        "pkg:cargo/same-file@1.0.6",
-        "pkg:cargo/walkdir@2.5.0"
+        "pkg:cargo/same-file",
+        "pkg:cargo/walkdir"
       ]
     },
     {
@@ -1325,6 +1493,10 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:cargo/pcre2",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:cargo/pcre2-sys@0.2.10",
       "dependsOn": []
     },
@@ -1354,6 +1526,10 @@
     },
     {
       "ref": "pkg:cargo/r-efi@6.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/regex",
       "dependsOn": []
     },
     {
@@ -1390,7 +1566,6 @@
         "pkg:cargo/aho-corasick@1.1.4",
         "pkg:cargo/anyhow@1.0.103",
         "pkg:cargo/arbitrary@1.4.2",
-        "pkg:cargo/bstr",
         "pkg:cargo/bstr@1.13.0",
         "pkg:cargo/cc@1.2.67",
         "pkg:cargo/cfg-if@1.0.4",
@@ -1417,7 +1592,6 @@
         "pkg:cargo/jobserver@0.1.35",
         "pkg:cargo/lexopt@0.3.2",
         "pkg:cargo/libc@0.2.186",
-        "pkg:cargo/log",
         "pkg:cargo/log@0.4.33",
         "pkg:cargo/memchr@2.8.3",
         "pkg:cargo/memmap2@0.9.11",
@@ -1431,10 +1605,8 @@
         "pkg:cargo/regex-syntax@0.8.11",
         "pkg:cargo/regex@1.13.0",
         "pkg:cargo/same-file@1.0.6",
-        "pkg:cargo/serde",
         "pkg:cargo/serde@1.0.228",
         "pkg:cargo/serde_core@1.0.228",
-        "pkg:cargo/serde_derive",
         "pkg:cargo/serde_derive@1.0.228",
         "pkg:cargo/serde_json@1.0.150",
         "pkg:cargo/shlex@2.0.1",
@@ -1450,6 +1622,10 @@
         "pkg:cargo/windows-sys@0.61.2",
         "pkg:cargo/zmij@1.0.23"
       ]
+    },
+    {
+      "ref": "pkg:cargo/same-file",
+      "dependsOn": []
     },
     {
       "ref": "pkg:cargo/same-file@1.0.6",
@@ -1472,15 +1648,15 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:cargo/serde_derive",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:cargo/serde_derive@1.0.195",
       "dependsOn": []
     },
     {
       "ref": "pkg:cargo/serde_derive@1.0.228",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/serde_json",
       "dependsOn": []
     },
     {
@@ -1497,6 +1673,10 @@
     },
     {
       "ref": "pkg:cargo/syn@2.0.48",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/termcolor",
       "dependsOn": []
     },
     {
@@ -1521,6 +1701,10 @@
     },
     {
       "ref": "pkg:cargo/unicode-ident@1.0.24",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:cargo/walkdir",
       "dependsOn": []
     },
     {

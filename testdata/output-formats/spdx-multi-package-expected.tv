@@ -17,6 +17,7 @@ Created: 2026-01-01T00:00:00Z
 ## Package Information
 PackageName: widget-a
 SPDXID: SPDXRef-Package-1
+PackageVersion: 1.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: c361e706434ebcd03e8857c6c8dd2786adaeb3ef
@@ -24,9 +25,11 @@ PackageLicenseConcluded: NOASSERTION
 PackageLicenseInfoFromFiles: MIT
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: Copyright 2024 Widget A Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/widget-a@1.0.0
 ## Package Information
 PackageName: widget-b
 SPDXID: SPDXRef-Package-2
+PackageVersion: 2.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 8fe04df3f4570c5b3840493e6159d69afa80ed7d
@@ -34,6 +37,7 @@ PackageLicenseConcluded: NOASSERTION
 PackageLicenseInfoFromFiles: Apache-2.0
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: Copyright 2024 Widget B Contributors
+ExternalRef: PACKAGE-MANAGER purl pkg:npm/widget-b@2.0.0
 ## Package Information
 PackageName: workspace
 SPDXID: SPDXRef-Package-unassigned

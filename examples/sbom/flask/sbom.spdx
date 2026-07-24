@@ -13,10 +13,11 @@ Visit https://github.com/getprovenant/provenant/ for support and download.
 SPDX License List: 3.27</text>
 ## Creation Information
 Creator: Tool: Provenant-1.0.1
-Created: 2026-07-24T07:16:27Z
+Created: 2026-07-24T08:01:46Z
 ## Package Information
 PackageName: flask-example-celery
 SPDXID: SPDXRef-Package-1
+PackageVersion: 1.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 94e723dc305f28b58ba1aba04e14aade037baa95
@@ -24,9 +25,11 @@ PackageLicenseConcluded: NOASSERTION
 PackageLicenseInfoFromFiles: NONE
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/flask-example-celery@1.0.0
 ## Package Information
 PackageName: Flask
 SPDXID: SPDXRef-Package-2
+PackageVersion: 3.1.3
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 10a34637ad661d98ba3344717656fcc76209c2f8
@@ -35,9 +38,11 @@ PackageLicenseInfoFromFiles: BSD-3-Clause
 PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
 PackageLicenseDeclared: BSD-3-Clause
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/flask@3.1.3
 ## Package Information
 PackageName: flaskr
 SPDXID: SPDXRef-Package-3
+PackageVersion: 1.0.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 10a34637ad661d98ba3344717656fcc76209c2f8
@@ -46,9 +51,11 @@ PackageLicenseInfoFromFiles: BSD-3-Clause
 PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
 PackageLicenseDeclared: BSD-3-Clause
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/flaskr@1.0.0
 ## Package Information
 PackageName: js_example
 SPDXID: SPDXRef-Package-4
+PackageVersion: 1.1.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: true
 PackageVerificationCode: 10a34637ad661d98ba3344717656fcc76209c2f8
@@ -57,6 +64,7 @@ PackageLicenseInfoFromFiles: BSD-3-Clause
 PackageLicenseInfoFromFiles: LicenseRef-scancode-unknown-license-reference
 PackageLicenseDeclared: BSD-3-Clause
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/js-example@1.1.0
 ## Package Information
 PackageName: flask
 SPDXID: SPDXRef-Package-unassigned
@@ -1701,11 +1709,13 @@ FileCopyrightText: NONE
 ## Package Information
 PackageName: amqp
 SPDXID: SPDXRef-Package-Dependency-1
+PackageVersion: 5.1.1
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/amqp@5.1.1
 ## Package Information
 PackageName: asgiref
 SPDXID: SPDXRef-Package-Dependency-2
@@ -1714,22 +1724,27 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/asgiref
 ## Package Information
 PackageName: async-timeout
 SPDXID: SPDXRef-Package-Dependency-3
+PackageVersion: 4.0.2
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/async-timeout@4.0.2
 ## Package Information
 PackageName: billiard
 SPDXID: SPDXRef-Package-Dependency-4
+PackageVersion: 3.6.4.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/billiard@3.6.4.0
 ## Package Information
 PackageName: blinker
 SPDXID: SPDXRef-Package-Dependency-5
@@ -1738,310 +1753,421 @@ FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/blinker
+## Package Information
+PackageName: blinker
+SPDXID: SPDXRef-Package-Dependency-6
+PackageVersion: 1.6.2
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/blinker@1.6.2
 ## Package Information
 PackageName: celery
-SPDXID: SPDXRef-Package-Dependency-6
+SPDXID: SPDXRef-Package-Dependency-7
+PackageVersion: 5.2.7
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/celery@5.2.7
 ## Package Information
 PackageName: click
-SPDXID: SPDXRef-Package-Dependency-7
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: click-didyoumean
 SPDXID: SPDXRef-Package-Dependency-8
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/click
+## Package Information
+PackageName: click-didyoumean
+SPDXID: SPDXRef-Package-Dependency-9
+PackageVersion: 0.3.0
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/click-didyoumean@0.3.0
 ## Package Information
 PackageName: click-plugins
-SPDXID: SPDXRef-Package-Dependency-9
+SPDXID: SPDXRef-Package-Dependency-10
+PackageVersion: 1.1.1
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/click-plugins@1.1.1
 ## Package Information
 PackageName: click-repl
-SPDXID: SPDXRef-Package-Dependency-10
+SPDXID: SPDXRef-Package-Dependency-11
+PackageVersion: 0.2.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/click-repl@0.2.0
+## Package Information
+PackageName: click
+SPDXID: SPDXRef-Package-Dependency-12
+PackageVersion: 8.1.3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/click@8.1.3
 ## Package Information
 PackageName: cryptography
-SPDXID: SPDXRef-Package-Dependency-11
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: flask
-SPDXID: SPDXRef-Package-Dependency-12
-PackageDownloadLocation: NOASSERTION
-FilesAnalyzed: false
-PackageLicenseConcluded: NOASSERTION
-PackageLicenseDeclared: NOASSERTION
-PackageCopyrightText: NONE
-## Package Information
-PackageName: flask
 SPDXID: SPDXRef-Package-Dependency-13
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/cryptography
 ## Package Information
-PackageName: gha-update
+PackageName: flask
 SPDXID: SPDXRef-Package-Dependency-14
+PackageVersion: 2.3.2
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/flask@2.3.2
 ## Package Information
-PackageName: greenlet
+PackageName: flask
 SPDXID: SPDXRef-Package-Dependency-15
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/flask
 ## Package Information
-PackageName: importlib-metadata
+PackageName: gha-update
 SPDXID: SPDXRef-Package-Dependency-16
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/gha-update
 ## Package Information
-PackageName: itsdangerous
+PackageName: greenlet
 SPDXID: SPDXRef-Package-Dependency-17
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/greenlet
 ## Package Information
-PackageName: jinja2
+PackageName: importlib-metadata
 SPDXID: SPDXRef-Package-Dependency-18
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/importlib-metadata
 ## Package Information
-PackageName: kombu
+PackageName: itsdangerous
 SPDXID: SPDXRef-Package-Dependency-19
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/itsdangerous
 ## Package Information
-PackageName: markupsafe
+PackageName: itsdangerous
 SPDXID: SPDXRef-Package-Dependency-20
+PackageVersion: 2.1.2
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/itsdangerous@2.1.2
 ## Package Information
-PackageName: mypy
+PackageName: jinja2
 SPDXID: SPDXRef-Package-Dependency-21
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/jinja2
 ## Package Information
-PackageName: pallets-sphinx-themes
+PackageName: jinja2
 SPDXID: SPDXRef-Package-Dependency-22
+PackageVersion: 3.1.2
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/jinja2@3.1.2
 ## Package Information
-PackageName: pre-commit
+PackageName: kombu
 SPDXID: SPDXRef-Package-Dependency-23
+PackageVersion: 5.2.4
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/kombu@5.2.4
 ## Package Information
-PackageName: pre-commit-uv
+PackageName: markupsafe
 SPDXID: SPDXRef-Package-Dependency-24
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/markupsafe
 ## Package Information
-PackageName: prompt-toolkit
+PackageName: markupsafe
 SPDXID: SPDXRef-Package-Dependency-25
+PackageVersion: 2.1.2
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/markupsafe@2.1.2
 ## Package Information
-PackageName: pyright
+PackageName: mypy
 SPDXID: SPDXRef-Package-Dependency-26
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/mypy
 ## Package Information
-PackageName: pytest
+PackageName: pallets-sphinx-themes
 SPDXID: SPDXRef-Package-Dependency-27
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/pallets-sphinx-themes
 ## Package Information
-PackageName: python-dotenv
+PackageName: pre-commit
 SPDXID: SPDXRef-Package-Dependency-28
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/pre-commit
 ## Package Information
-PackageName: pytz
+PackageName: pre-commit-uv
 SPDXID: SPDXRef-Package-Dependency-29
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/pre-commit-uv
 ## Package Information
-PackageName: redis
+PackageName: prompt-toolkit
 SPDXID: SPDXRef-Package-Dependency-30
+PackageVersion: 3.0.38
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/prompt-toolkit@3.0.38
 ## Package Information
-PackageName: ruff
+PackageName: pyright
 SPDXID: SPDXRef-Package-Dependency-31
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/pyright
 ## Package Information
-PackageName: six
+PackageName: pytest
 SPDXID: SPDXRef-Package-Dependency-32
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/pytest
 ## Package Information
-PackageName: sphinx
+PackageName: python-dotenv
 SPDXID: SPDXRef-Package-Dependency-33
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/python-dotenv
 ## Package Information
-PackageName: sphinx-autobuild
+PackageName: pytz
 SPDXID: SPDXRef-Package-Dependency-34
+PackageVersion: 2023.3
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/pytz@2023.3
 ## Package Information
-PackageName: sphinx-tabs
+PackageName: redis
 SPDXID: SPDXRef-Package-Dependency-35
+PackageVersion: 4.5.4
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/redis@4.5.4
 ## Package Information
-PackageName: sphinxcontrib-log-cabinet
+PackageName: ruff
 SPDXID: SPDXRef-Package-Dependency-36
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/ruff
 ## Package Information
-PackageName: tox
+PackageName: six
 SPDXID: SPDXRef-Package-Dependency-37
+PackageVersion: 1.16.0
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/six@1.16.0
 ## Package Information
-PackageName: tox-uv
+PackageName: sphinx
 SPDXID: SPDXRef-Package-Dependency-38
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/sphinx
 ## Package Information
-PackageName: types-contextvars
+PackageName: sphinx-autobuild
 SPDXID: SPDXRef-Package-Dependency-39
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/sphinx-autobuild
 ## Package Information
-PackageName: types-dataclasses
+PackageName: sphinx-tabs
 SPDXID: SPDXRef-Package-Dependency-40
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/sphinx-tabs
 ## Package Information
-PackageName: vine
+PackageName: sphinxcontrib-log-cabinet
 SPDXID: SPDXRef-Package-Dependency-41
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/sphinxcontrib-log-cabinet
 ## Package Information
-PackageName: wcwidth
+PackageName: tox
 SPDXID: SPDXRef-Package-Dependency-42
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/tox
 ## Package Information
-PackageName: werkzeug
+PackageName: tox-uv
 SPDXID: SPDXRef-Package-Dependency-43
 PackageDownloadLocation: NOASSERTION
 FilesAnalyzed: false
 PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/tox-uv
+## Package Information
+PackageName: types-contextvars
+SPDXID: SPDXRef-Package-Dependency-44
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/types-contextvars
+## Package Information
+PackageName: types-dataclasses
+SPDXID: SPDXRef-Package-Dependency-45
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/types-dataclasses
+## Package Information
+PackageName: vine
+SPDXID: SPDXRef-Package-Dependency-46
+PackageVersion: 5.0.0
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/vine@5.0.0
+## Package Information
+PackageName: wcwidth
+SPDXID: SPDXRef-Package-Dependency-47
+PackageVersion: 0.2.6
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/wcwidth@0.2.6
+## Package Information
+PackageName: werkzeug
+SPDXID: SPDXRef-Package-Dependency-48
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/werkzeug
+## Package Information
+PackageName: werkzeug
+SPDXID: SPDXRef-Package-Dependency-49
+PackageVersion: 2.3.3
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NONE
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/werkzeug@2.3.3
 ## Relationships
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-1
 Relationship: SPDXRef-Package-1 CONTAINS SPDXRef-106
@@ -2282,57 +2408,56 @@ Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-231
 Relationship: SPDXRef-Package-unassigned CONTAINS SPDXRef-232
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-1
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-10
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-11
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-12
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-13
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-17
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-18
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-19
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-14
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-20
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-22
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-23
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-25
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-29
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-3
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-30
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-32
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-34
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-35
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-37
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-4
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-41
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-42
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-43
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-5
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-46
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-47
+Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-49
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-6
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-7
-Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-8
 Relationship: SPDXRef-Package-1 DEPENDS_ON SPDXRef-Package-Dependency-9
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-11
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-14
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-15
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-13
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-16
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-17
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-18
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-19
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-2
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-20
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-21
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-22
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-23
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-24
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-26
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-27
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-28
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-29
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-31
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-32
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-33
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-34
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-35
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-36
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-37
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-38
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-39
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-40
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-41
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-42
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-43
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-44
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-45
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-48
 Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-5
-Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-7
-Relationship: SPDXRef-Package-3 DEPENDS_ON SPDXRef-Package-Dependency-12
-Relationship: SPDXRef-Package-3 DEPENDS_ON SPDXRef-Package-Dependency-27
-Relationship: SPDXRef-Package-4 DEPENDS_ON SPDXRef-Package-Dependency-12
-Relationship: SPDXRef-Package-4 DEPENDS_ON SPDXRef-Package-Dependency-27
+Relationship: SPDXRef-Package-2 DEPENDS_ON SPDXRef-Package-Dependency-8
+Relationship: SPDXRef-Package-3 DEPENDS_ON SPDXRef-Package-Dependency-15
+Relationship: SPDXRef-Package-3 DEPENDS_ON SPDXRef-Package-Dependency-32
+Relationship: SPDXRef-Package-4 DEPENDS_ON SPDXRef-Package-Dependency-15
+Relationship: SPDXRef-Package-4 DEPENDS_ON SPDXRef-Package-Dependency-32
 ## License Information
 LicenseID: LicenseRef-scancode-unknown-license-reference
 ExtractedText: <text>See details at https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/unknown-license-reference_see_license_at_manifest_2.RULE
