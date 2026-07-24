@@ -139,7 +139,10 @@ join safe:
 
 - **Owner-scoped.** A version is never borrowed across owners. Two packages can
   resolve the same requirement to different versions; each edge takes its
-  version only from its own owner's resolution.
+  version only from its own owner's resolution. An absent or empty owner is not
+  a shared bucket either: ownerless edges never contribute to or consult the
+  sibling index, so a bare hoisted requirement can only take a version from its
+  own `resolved_package`, never from an unrelated ownerless dependency.
 - **Identity strips only the version.** Type, namespace, name, qualifiers, and
   subpath are all preserved, so variants that differ by a qualifier (`?arch=`,
   `?classifier=`, …) or subpath are distinct coordinates and never conflated.

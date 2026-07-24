@@ -213,22 +213,29 @@ fn purl_version_less_identity(purl: &str) -> Option<(String, bool)> {
     Some((identity.to_string(), versioned))
 }
 
-/// Owner (`for_package_uid`) key for a dependency edge; `None` collapses to an
-/// empty owner so unowned edges only ever match each other, never a real owner.
-fn owner_key(dep: &TopLevelDependency) -> String {
-    dep.for_package_uid.clone().unwrap_or_default()
+/// The concrete owner (`for_package_uid`) of a dependency edge, if any. An
+/// absent or empty owner is **not** a shared coalescing bucket: distinct
+/// ownerless (e.g. hoisted, or from separate workspaces/datafiles) edges must
+/// never pool their versions, so such edges have no sibling-index key at all.
+fn concrete_owner(dep: &TopLevelDependency) -> Option<&str> {
+    dep.for_package_uid
+        .as_deref()
+        .filter(|owner| !owner.is_empty())
 }
 
-/// Build per-owner version evidence from dependency edges only. Each edge
-/// records the versioned purls it carries (its own purl and its resolved
-/// package's purl) under its owner and version-less identity. Detected packages
-/// are intentionally excluded — they are not owner-scoped, so using them as
-/// version evidence could assign one package's resolved version to another
-/// package's requirement.
+/// Build per-owner version evidence from dependency edges only. Each edge with a
+/// concrete owner records the versioned purls it carries (its own purl and its
+/// resolved package's purl) under `(owner, version-less identity)`. Ownerless
+/// edges are excluded so they can never pool versions with each other, and
+/// detected packages are excluded because they are not owner-scoped — either
+/// could otherwise assign one context's resolved version to another's
+/// requirement.
 fn build_version_index(dependencies: &[TopLevelDependency]) -> VersionIndex {
     let mut index: VersionIndex = HashMap::new();
     for dep in dependencies {
-        let owner = owner_key(dep);
+        let Some(owner) = concrete_owner(dep) else {
+            continue;
+        };
         let purls = [
             dep.purl.as_deref(),
             dep.resolved_package
@@ -238,7 +245,7 @@ fn build_version_index(dependencies: &[TopLevelDependency]) -> VersionIndex {
         for purl in purls.into_iter().flatten() {
             if let Some((identity, true)) = purl_version_less_identity(purl) {
                 index
-                    .entry((owner.clone(), identity))
+                    .entry((owner.to_string(), identity))
                     .or_default()
                     .insert(purl.to_string());
             }
@@ -252,9 +259,10 @@ fn build_version_index(dependencies: &[TopLevelDependency]) -> VersionIndex {
 /// An already-versioned edge keeps its purl. An unversioned edge is upgraded
 /// only from proof about that same edge — first its own `resolved_package`
 /// purl, then a single unambiguous versioned sibling recorded under the **same
-/// owner** and identity. When the owner has zero or several candidate versions
-/// for the identity, the edge keeps its unversioned purl (honest-unknown), and
-/// no version is ever borrowed from a different owner.
+/// concrete owner** and identity. When the edge is ownerless, or its owner has
+/// zero or several candidate versions for the identity, the edge keeps its
+/// unversioned purl (honest-unknown); a version is never borrowed from a
+/// different owner or pooled across ownerless contexts.
 fn resolve_edge_purl(dep: &TopLevelDependency, version_index: &VersionIndex) -> Option<String> {
     let declared = dependency_edge_purl(dep)?;
     let (identity, versioned) = purl_version_less_identity(&declared)?;
@@ -274,8 +282,10 @@ fn resolve_edge_purl(dep: &TopLevelDependency, version_index: &VersionIndex) -> 
         return Some(resolved_purl.to_string());
     }
 
-    // Same-owner sibling evidence, only when unambiguous.
-    if let Some(candidates) = version_index.get(&(owner_key(dep), identity))
+    // Same-owner sibling evidence, only for a concrete owner and only when
+    // unambiguous. Ownerless edges never consult the index.
+    if let Some(owner) = concrete_owner(dep)
+        && let Some(candidates) = version_index.get(&(owner.to_string(), identity))
         && candidates.len() == 1
         && let Some(only) = candidates.iter().next()
     {
@@ -1087,6 +1097,50 @@ mod tests {
         );
     }
 
+    // P1 (ownerless): an absent owner is not a shared coalescing bucket. Two
+    // ownerless dependencies from different contexts (e.g. separate workspaces
+    // or datafiles) must not pool versions — a bare ownerless requirement stays
+    // unversioned rather than borrow an unrelated ownerless sibling's version.
+    #[test]
+    fn ownerless_requirement_does_not_borrow_sibling_version() {
+        let deps = vec![
+            // A versioned ownerless dependency from one context.
+            dependency(Some("pkg:npm/lib@1.0.0"), Some(false), None, "ctx-a"),
+            // A bare ownerless requirement from an unrelated context.
+            dependency(Some("pkg:npm/lib"), Some(false), None, "ctx-b"),
+        ];
+        let index = build_version_index(&deps);
+        assert_eq!(
+            resolve_edge_purl(&deps[1], &index).as_deref(),
+            Some("pkg:npm/lib"),
+            "an ownerless requirement must not borrow an unrelated ownerless version"
+        );
+
+        let output = output_with(vec![], deps);
+        let inventory = build_inventory(&output);
+        let purls: BTreeSet<&str> = inventory
+            .packages()
+            .filter_map(|pkg| pkg.purl.as_deref())
+            .collect();
+        assert_eq!(
+            purls,
+            BTreeSet::from(["pkg:npm/lib", "pkg:npm/lib@1.0.0"]),
+            "both components present; the bare requirement stays unversioned"
+        );
+        let ids: Vec<String> = (0..inventory.entries.len())
+            .map(|i| format!("id-{i}"))
+            .collect();
+        let edges = dependency_edges(&inventory, &output.dependencies, &ids);
+        for children in edges.values() {
+            for child in children {
+                assert!(
+                    ids.contains(child),
+                    "every edge resolves within the document"
+                );
+            }
+        }
+    }
+
     // Versioned-purl gap (issue #1320): the resolved version lives only on a
     // sibling lockfile edge. An unversioned requirement edge with no detected
     // package must still be promoted at the resolved coordinate and pick up the
@@ -1103,12 +1157,12 @@ mod tests {
         resolved.declared_license_expression_spdx = Some("MIT".to_string());
 
         let deps = vec![
-            dependency(Some("pkg:npm/left-pad"), Some(false), None, "req"),
-            dependency(
+            dependency_owned(Some("pkg:npm/left-pad"), None, "req", "owner-1"),
+            dependency_owned(
                 Some("pkg:npm/left-pad@1.3.0"),
-                Some(false),
                 Some(resolved),
                 "lock",
+                "owner-1",
             ),
         ];
         let output = output_with(vec![], deps);
@@ -1124,15 +1178,15 @@ mod tests {
         );
     }
 
-    // Honest-unknowns: when an unversioned requirement could match more than one
+    // Honest-unknowns: when one owner's requirement could match more than one
     // resolved version, Provenant must not guess. The edge keeps its unversioned
     // purl and each resolved version remains its own component.
     #[test]
     fn ambiguous_versions_leave_unversioned_requirement_unresolved() {
         let deps = vec![
-            dependency(Some("pkg:npm/multi"), Some(false), None, "req"),
-            dependency(Some("pkg:npm/multi@1.0.0"), Some(false), None, "v1"),
-            dependency(Some("pkg:npm/multi@2.0.0"), Some(false), None, "v2"),
+            dependency_owned(Some("pkg:npm/multi"), None, "req", "owner-1"),
+            dependency_owned(Some("pkg:npm/multi@1.0.0"), None, "v1", "owner-1"),
+            dependency_owned(Some("pkg:npm/multi@2.0.0"), None, "v2", "owner-1"),
         ];
         let output = output_with(vec![], deps);
         let inventory = build_inventory(&output);
