@@ -265,7 +265,13 @@ fn build_version_index(dependencies: &[TopLevelDependency]) -> VersionIndex {
 /// different owner or pooled across ownerless contexts.
 fn resolve_edge_purl(dep: &TopLevelDependency, version_index: &VersionIndex) -> Option<String> {
     let declared = dependency_edge_purl(dep)?;
-    let (identity, versioned) = purl_version_less_identity(&declared)?;
+    // A non-empty purl must never be dropped. If it does not parse we cannot
+    // canonicalize or dedup it, but the coordinate is still real — the native
+    // output keeps it — so pass it through unchanged rather than erase the
+    // component and its graph edge (only a genuinely empty purl is absent).
+    let Some((identity, versioned)) = purl_version_less_identity(&declared) else {
+        return Some(declared);
+    };
     if versioned {
         return Some(declared);
     }
@@ -1136,6 +1142,60 @@ mod tests {
                 assert!(
                     ids.contains(child),
                     "every edge resolves within the document"
+                );
+            }
+        }
+    }
+
+    // P1 (unparseable purl): a non-empty purl the `PackageUrl` parser rejects
+    // must never erase the dependency. The component keeps its original
+    // coordinate and its owner→dep edge, so both CycloneDX and SPDX still emit
+    // it and the graph stays closed. Only a genuinely empty purl may be absent.
+    #[test]
+    fn unparseable_purl_is_retained_as_component_and_edge() {
+        let malformed = "not-a-purl";
+        assert!(
+            PackageUrl::from_str(malformed).is_err(),
+            "test requires a genuinely unparseable purl"
+        );
+
+        let mut owner = detected_package("pkg:npm/app@1.0.0");
+        owner.package_uid = "owner-1".to_string();
+        let dep = dependency_owned(Some(malformed), None, "d1", "owner-1");
+        let output = output_with(vec![owner], vec![dep]);
+        let inventory = build_inventory(&output);
+
+        let promoted: Vec<&str> = inventory
+            .entries
+            .iter()
+            .filter(|entry| entry.is_promoted())
+            .filter_map(|entry| entry.package().purl.as_deref())
+            .collect();
+        assert_eq!(
+            promoted,
+            vec![malformed],
+            "an unparseable but non-empty purl is retained as a component"
+        );
+
+        // bom-ref/id per entry: purl when present, else package_uid — the same
+        // scheme the renderers use, so the edge ref must equal the retained purl.
+        let ids: Vec<String> = inventory
+            .packages()
+            .map(|pkg| pkg.purl.clone().unwrap_or_else(|| pkg.package_uid.clone()))
+            .collect();
+        let owner_id = &ids[0];
+        let edges = dependency_edges(&inventory, &output.dependencies, &ids);
+        assert!(
+            edges
+                .get(owner_id)
+                .is_some_and(|children| children.contains(malformed)),
+            "the owner→dep edge to the unparseable coordinate is retained"
+        );
+        for children in edges.values() {
+            for child in children {
+                assert!(
+                    ids.contains(child),
+                    "every edge resolves within the document (graph closed)"
                 );
             }
         }

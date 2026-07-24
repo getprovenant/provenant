@@ -146,6 +146,10 @@ join safe:
 - **Identity strips only the version.** Type, namespace, name, qualifiers, and
   subpath are all preserved, so variants that differ by a qualifier (`?arch=`,
   `?classifier=`, …) or subpath are distinct coordinates and never conflated.
+- **A non-empty purl is never dropped.** When a purl cannot be parsed it cannot
+  be canonicalized or deduped, but it is a real coordinate the native output
+  keeps, so it is passed through unchanged as the component/edge purl rather
+  than erased. Only a genuinely empty purl is absent.
 
 When the owner has zero or multiple candidate versions for an identity, the edge
 keeps its unversioned purl (honest-unknowns — Provenant does not guess which
