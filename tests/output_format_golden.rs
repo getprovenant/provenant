@@ -1289,6 +1289,83 @@ fn test_cyclonedx_xml_matches_local_fixture_after_normalization() {
     );
 }
 
+#[test]
+fn test_cyclonedx_json_evidence_matches_local_fixture_after_normalization() {
+    let output = sample_cyclonedx_evidence_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::CycloneDxJson)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::CycloneDxJson,
+                custom_template: None,
+                scanned_path: Some("scan".to_string()),
+            },
+        )
+        .expect("cyclonedx json output should be generated");
+
+    let actual: Value = serde_json::from_slice(&bytes).expect("cyclonedx json should be valid");
+    let expected_text =
+        fs::read_to_string("testdata/output-formats/cyclonedx-evidence-expected.json")
+            .expect("cyclonedx evidence json fixture should be readable");
+    let expected: Value = serde_json::from_str(&expected_text)
+        .expect("cyclonedx evidence json fixture should be valid");
+
+    assert_eq!(
+        normalize_cyclonedx(actual.clone()),
+        normalize_cyclonedx(expected)
+    );
+
+    // The declared license is `declared`; the source-observed detections become
+    // component evidence with file + line occurrences.
+    let component = &actual["components"][0];
+    assert_eq!(component["licenses"][0]["acknowledgement"], "declared");
+    assert_eq!(
+        component["evidence"]["licenses"][0]["expression"],
+        "Apache-2.0"
+    );
+    assert_eq!(component["evidence"]["licenses"][1]["expression"], "MIT");
+    assert_eq!(
+        component["evidence"]["occurrences"][0]["location"],
+        "scan/LICENSE"
+    );
+    assert_eq!(component["evidence"]["occurrences"][0]["line"], 1);
+    assert_eq!(
+        component["evidence"]["occurrences"][1]["location"],
+        "scan/src/main.js"
+    );
+    assert_eq!(component["evidence"]["occurrences"][1]["line"], 5);
+}
+
+#[test]
+fn test_cyclonedx_xml_evidence_matches_local_fixture_after_normalization() {
+    let output = sample_cyclonedx_evidence_output();
+    let mut bytes = Vec::new();
+    let schema_output = OutputSchemaOutput::from(&output);
+    writer_for_format(OutputFormat::CycloneDxXml)
+        .write(
+            &schema_output,
+            &mut bytes,
+            &OutputWriteConfig {
+                format: OutputFormat::CycloneDxXml,
+                custom_template: None,
+                scanned_path: Some("scan".to_string()),
+            },
+        )
+        .expect("cyclonedx xml output should be generated");
+
+    let actual = String::from_utf8(bytes).expect("cyclonedx xml should be utf-8");
+    let expected = fs::read_to_string("testdata/output-formats/cyclonedx-evidence-expected.xml")
+        .expect("cyclonedx evidence xml fixture should be readable");
+
+    assert_eq!(
+        normalize_cyclonedx_xml(&actual),
+        normalize_cyclonedx_xml(&expected)
+    );
+}
+
 fn normalize_cyclonedx(mut value: Value) -> Value {
     if let Some(obj) = value.as_object_mut() {
         obj.remove("serialNumber");
@@ -2547,6 +2624,93 @@ fn sample_cyclonedx_dependency_output() -> Output {
         vec![owned_dep, shared_dep, leftpad_requirement, leftpad_resolved],
         vec![],
     )
+}
+
+/// A single package that declares MIT and owns two files whose file-content
+/// detections observe MIT (in `LICENSE`) and Apache-2.0 (in a source file).
+/// Exercises CycloneDX `component.evidence`: the declared license is tagged
+/// `declared`, while the observed detections become `evidence.licenses` +
+/// `evidence.occurrences` (file + line) on the owning component.
+fn sample_cyclonedx_evidence_output() -> Output {
+    let widget_uid = PackageUid::from_raw(
+        "pkg:npm/widget@1.0.0?uuid=00000000-0000-0000-0000-0000000000e1".to_string(),
+    );
+    let widget = {
+        let mut pkg = Package::from_package_data(
+            &PackageData {
+                package_type: Some(PackageType::Npm),
+                name: Some("widget".to_string()),
+                version: Some("1.0.0".to_string()),
+                purl: Some("pkg:npm/widget@1.0.0".to_string()),
+                declared_license_expression: Some("mit".to_string()),
+                declared_license_expression_spdx: Some("MIT".to_string()),
+                ..Default::default()
+            },
+            "scan/package.json".to_string(),
+        );
+        pkg.package_uid = widget_uid.clone();
+        pkg
+    };
+
+    let file_detection = |key: &str, spdx: &str, path: &str, line: usize| {
+        let n = LineNumber::new(line).expect("line >= 1");
+        provenant::models::LicenseDetection {
+            license_expression: key.to_string(),
+            license_expression_spdx: spdx.to_string(),
+            matches: vec![provenant::models::Match {
+                license_expression: key.to_string(),
+                license_expression_spdx: spdx.to_string(),
+                from_file: Some(path.to_string()),
+                start_line: n,
+                end_line: n,
+                matcher: MatcherKind::Hash,
+                score: MatchScore::MAX,
+                matched_length: Some(1),
+                match_coverage: Some(100.0),
+                rule_relevance: Some(100),
+                rule_identifier: format!("{key}_1.RULE"),
+                rule_url: None,
+                matched_text: Some(spdx.to_string()),
+                referenced_filenames: None,
+                matched_text_diagnostics: None,
+            }],
+            detection_log: vec![],
+            identifier: String::new(),
+        }
+    };
+
+    let mut license_file = sample_plain_text_file(
+        "LICENSE",
+        "LICENSE",
+        "",
+        "scan/LICENSE",
+        40,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        vec![],
+    );
+    license_file.detected_license_expression = Some("MIT".to_string());
+    license_file.license_detections = vec![file_detection("mit", "MIT", "scan/LICENSE", 1)];
+    license_file.for_packages = vec![widget_uid.clone()];
+
+    let mut source_file = sample_plain_text_file(
+        "main.js",
+        "main",
+        ".js",
+        "scan/src/main.js",
+        80,
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        vec![],
+    );
+    source_file.detected_license_expression = Some("Apache-2.0".to_string());
+    source_file.license_detections = vec![file_detection(
+        "apache-2.0",
+        "Apache-2.0",
+        "scan/src/main.js",
+        5,
+    )];
+    source_file.for_packages = vec![widget_uid];
+
+    sample_output_with_sections(2, 0, vec![widget], vec![], vec![license_file, source_file])
 }
 
 /// A scanned subject package that owns files, plus one promoted resolved

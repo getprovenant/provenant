@@ -48,10 +48,13 @@ SMOKE_SCAN_ROOT = ROOT / "testdata" / "smoke"
 CYCLONEDX_JSON_FIXTURES = [
     "cyclonedx-expected.json",
     "cyclonedx-dependencies-expected.json",
+    # Exercises component license evidence (evidence.licenses + occurrences).
+    "cyclonedx-evidence-expected.json",
 ]
 CYCLONEDX_XML_FIXTURES = [
     "cyclonedx-expected.xml",
     "cyclonedx-dependencies-expected.xml",
+    "cyclonedx-evidence-expected.xml",
 ]
 
 # `spdx-empty-expected.tv` is intentionally excluded: Provenant emits a

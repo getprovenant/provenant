@@ -2,14 +2,14 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:c6e24877-6586-467d-92b7-4f00db357b0e",
+  "serialNumber": "urn:uuid:c93cfeb2-5956-49cb-89bf-5513c66125cd",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T14:05:55Z",
+    "timestamp": "2026-07-24T14:34:34Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.2"
+        "version": "1.0.3"
       }
     ]
   },
@@ -40,7 +40,55 @@
           "type": "website",
           "url": "https://crates.io/crates/benches"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "benches/Cargo.toml",
+            "line": 6
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -68,7 +116,55 @@
           "type": "website",
           "url": "https://crates.io/crates/examples"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "examples/Cargo.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -97,7 +193,55 @@
           "type": "website",
           "url": "https://crates.io/crates/stress-test"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "stress-test/Cargo.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -126,7 +270,55 @@
           "type": "website",
           "url": "https://crates.io/crates/tests-build"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tests-build/Cargo.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -155,7 +347,55 @@
           "type": "website",
           "url": "https://crates.io/crates/tests-integration"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tests-integration/Cargo.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -215,7 +455,67 @@
           "type": "vcs",
           "url": "https://github.com/tokio-rs/tokio"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tokio-macros/Cargo.toml",
+            "line": 11
+          },
+          {
+            "location": "tokio-macros/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "tokio-macros/LICENSE",
+            "line": 6
+          },
+          {
+            "location": "tokio-macros/README.md",
+            "line": 5
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -275,7 +575,67 @@
           "type": "vcs",
           "url": "https://github.com/tokio-rs/tokio"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tokio-stream/Cargo.toml",
+            "line": 11
+          },
+          {
+            "location": "tokio-stream/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "tokio-stream/LICENSE",
+            "line": 5
+          },
+          {
+            "location": "tokio-stream/README.md",
+            "line": 5
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -313,7 +673,67 @@
           "type": "vcs",
           "url": "https://github.com/tokio-rs/tokio"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tokio-test/Cargo.toml",
+            "line": 11
+          },
+          {
+            "location": "tokio-test/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "tokio-test/LICENSE",
+            "line": 5
+          },
+          {
+            "location": "tokio-test/README.md",
+            "line": 5
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -351,7 +771,67 @@
           "type": "vcs",
           "url": "https://github.com/tokio-rs/tokio"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tokio-util/Cargo.toml",
+            "line": 11
+          },
+          {
+            "location": "tokio-util/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "tokio-util/LICENSE",
+            "line": 5
+          },
+          {
+            "location": "tokio-util/README.md",
+            "line": 5
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -389,7 +869,83 @@
           "type": "vcs",
           "url": "https://github.com/tokio-rs/tokio"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 20
+          },
+          {
+            "location": "README.md",
+            "line": 26
+          },
+          {
+            "location": "README.md",
+            "line": 250
+          },
+          {
+            "location": "README.md",
+            "line": 252
+          },
+          {
+            "location": "README.md",
+            "line": 263
+          },
+          {
+            "location": "deny.toml",
+            "line": 8
+          },
+          {
+            "location": "tokio/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "tokio/LICENSE",
+            "line": 1
+          },
+          {
+            "location": "tokio/LICENSE",
+            "line": 5
+          },
+          {
+            "location": "tokio/README.md",
+            "line": 20
+          },
+          {
+            "location": "tokio/README.md",
+            "line": 26
+          },
+          {
+            "location": "tokio/README.md",
+            "line": 250
+          },
+          {
+            "location": "tokio/README.md",
+            "line": 252
+          },
+          {
+            "location": "tokio/README.md",
+            "line": 263
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "Apache-2.0 OR MIT"
+          },
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",

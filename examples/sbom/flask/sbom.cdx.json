@@ -2,14 +2,14 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:258f8af3-9f4f-4016-94ad-5ef0ccb6390c",
+  "serialNumber": "urn:uuid:96b8310d-ea47-490f-8934-9194fa93de20",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T14:05:49Z",
+    "timestamp": "2026-07-24T14:34:31Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.2"
+        "version": "1.0.3"
       }
     ],
     "component": {
@@ -38,7 +38,24 @@
           "type": "website",
           "url": "https://pypi.org/project/Flask"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "pyproject.toml",
+            "line": 6
+          },
+          {
+            "location": "pyproject.toml",
+            "line": 7
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     }
   },
   "components": [
@@ -93,7 +110,24 @@
           "type": "website",
           "url": "https://pypi.org/project/Flask"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "pyproject.toml",
+            "line": 6
+          },
+          {
+            "location": "pyproject.toml",
+            "line": 7
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -123,7 +157,24 @@
           "type": "website",
           "url": "https://pypi.org/project/flaskr"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "examples/tutorial/LICENSE.txt",
+            "line": 3
+          },
+          {
+            "location": "examples/tutorial/pyproject.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -153,7 +204,24 @@
           "type": "website",
           "url": "https://pypi.org/project/js_example"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "examples/javascript/LICENSE.txt",
+            "line": 3
+          },
+          {
+            "location": "examples/javascript/pyproject.toml",
+            "line": 6
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-3-Clause"
+          }
+        ]
+      }
     },
     {
       "type": "library",

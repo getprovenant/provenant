@@ -199,15 +199,18 @@ unchanged (ADR 0008).
   (`license_detections`) is `concluded`. The field tags provenance without
   altering the expression a component reports. In JSON it sits beside
   `expression`; in XML it is the `acknowledgement` attribute on `<expression>`.
+- **License evidence is source-faithful.** Each component carries
+  `component.evidence` built from the file-content license detections of the
+  files it owns, using the same file→package ownership assembly computes
+  (`file.for_packages`): the distinct observed SPDX expressions as
+  `evidence.licenses`, and the file+line of each detection as
+  `evidence.occurrences`. Only detected packages own scanned files; a promoted
+  resolved dependency owns none, so it carries no evidence. This is
+  render-time reuse of data already in the document — nothing is re-detected.
 - **Conformance is externally gated.** Goldens prove stability, not conformance;
   all CycloneDX goldens and the four `examples/sbom` validate against the
   official CycloneDX schema + XSD for the emitted version via
   `scripts/validate_output_format_fixtures.py` (`cyclonedx-python-lib`).
-
-Component license **evidence** (`evidence.licenses` / `evidence.occurrences`
-with file + line) is a documented follow-up, not part of this contract: a clean
-component-level file→license mapping is more than a moderate change in a
-renderer that does not otherwise consume `output.files`.
 
 ## Consequences
 
@@ -253,8 +256,7 @@ renderer that does not otherwise consume `output.files`.
 
 - Issue #1319
 - Issue #1320 (versioned purls + vendored-license join amendment)
-- Issue #1328 (CycloneDX 1.7 + license acknowledgement amendment)
-- Issue #1330 (component license evidence follow-up)
+- Issue #1328 (CycloneDX 1.7 + license acknowledgement/evidence amendment)
 - Promotion/dedup: `src/output/sbom.rs`
 - CycloneDX renderer: `src/output/cyclonedx.rs`
 - SPDX renderer: `src/output/spdx.rs`

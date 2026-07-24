@@ -2,14 +2,14 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:647b41f1-9c9e-43aa-b13d-8cfc458f218c",
+  "serialNumber": "urn:uuid:9a30ff04-67e1-468e-aa86-b8e480c4b564",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T14:05:45Z",
+    "timestamp": "2026-07-24T14:34:28Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.2"
+        "version": "1.0.3"
       }
     ],
     "component": {
@@ -46,7 +46,60 @@
           "type": "vcs",
           "url": "https://github.com/expressjs/express"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 7
+          },
+          {
+            "location": "Readme.md",
+            "line": 261
+          },
+          {
+            "location": "index.js",
+            "line": 6
+          },
+          {
+            "location": "lib/application.js",
+            "line": 6
+          },
+          {
+            "location": "lib/express.js",
+            "line": 6
+          },
+          {
+            "location": "lib/request.js",
+            "line": 6
+          },
+          {
+            "location": "lib/response.js",
+            "line": 5
+          },
+          {
+            "location": "lib/utils.js",
+            "line": 5
+          },
+          {
+            "location": "lib/view.js",
+            "line": 6
+          },
+          {
+            "location": "package.json",
+            "line": 15
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     }
   },
   "components": [
@@ -86,7 +139,60 @@
           "type": "vcs",
           "url": "https://github.com/expressjs/express"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "LICENSE",
+            "line": 1
+          },
+          {
+            "location": "LICENSE",
+            "line": 7
+          },
+          {
+            "location": "Readme.md",
+            "line": 261
+          },
+          {
+            "location": "index.js",
+            "line": 6
+          },
+          {
+            "location": "lib/application.js",
+            "line": 6
+          },
+          {
+            "location": "lib/express.js",
+            "line": 6
+          },
+          {
+            "location": "lib/request.js",
+            "line": 6
+          },
+          {
+            "location": "lib/response.js",
+            "line": 5
+          },
+          {
+            "location": "lib/utils.js",
+            "line": 5
+          },
+          {
+            "location": "lib/view.js",
+            "line": 6
+          },
+          {
+            "location": "package.json",
+            "line": 15
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          }
+        ]
+      }
     },
     {
       "type": "library",

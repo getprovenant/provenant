@@ -2,14 +2,14 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:c92e1b1c-6b2b-4ff6-ab6a-b5dbe1f2272d",
+  "serialNumber": "urn:uuid:bb50d7b5-c5e7-4611-8543-e53bcd2122bb",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-07-24T14:05:43Z",
+    "timestamp": "2026-07-24T14:34:27Z",
     "tools": [
       {
         "name": "Provenant",
-        "version": "1.0.2"
+        "version": "1.0.3"
       }
     ],
     "component": {
@@ -46,7 +46,392 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": ".github/workflows/release.yml",
+            "line": 219
+          },
+          {
+            "location": "COPYING",
+            "line": 1
+          },
+          {
+            "location": "Cargo.toml",
+            "line": 15
+          },
+          {
+            "location": "Cargo.toml",
+            "line": 98
+          },
+          {
+            "location": "Cargo.toml",
+            "line": 99
+          },
+          {
+            "location": "FAQ.md",
+            "line": 928
+          },
+          {
+            "location": "FAQ.md",
+            "line": 929
+          },
+          {
+            "location": "FAQ.md",
+            "line": 930
+          },
+          {
+            "location": "FAQ.md",
+            "line": 933
+          },
+          {
+            "location": "FAQ.md",
+            "line": 936
+          },
+          {
+            "location": "FAQ.md",
+            "line": 939
+          },
+          {
+            "location": "FAQ.md",
+            "line": 940
+          },
+          {
+            "location": "FAQ.md",
+            "line": 947
+          },
+          {
+            "location": "FAQ.md",
+            "line": 948
+          },
+          {
+            "location": "GUIDE.md",
+            "line": 44
+          },
+          {
+            "location": "GUIDE.md",
+            "line": 47
+          },
+          {
+            "location": "GUIDE.md",
+            "line": 638
+          },
+          {
+            "location": "LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 15
+          },
+          {
+            "location": "UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "benchsuite/runs/2020-10-14-archlinux-frink/README.md",
+            "line": 32
+          },
+          {
+            "location": "benchsuite/runs/2022-12-16-archlinux-duff/README.md",
+            "line": 31
+          },
+          {
+            "location": "crates/cli/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/cli/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/cli/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/cli/README.md",
+            "line": 11
+          },
+          {
+            "location": "crates/cli/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/core/flags/complete/rg.zsh",
+            "line": 662
+          },
+          {
+            "location": "crates/globset/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/globset/Cargo.toml",
+            "line": 15
+          },
+          {
+            "location": "crates/globset/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/globset/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/globset/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/globset/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/grep/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/grep/README.md",
+            "line": 8
+          },
+          {
+            "location": "crates/grep/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/Cargo.toml",
+            "line": 14
+          },
+          {
+            "location": "crates/ignore/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/ignore/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/ignore/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 129
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 143
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 144
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 148
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 152
+          },
+          {
+            "location": "crates/matcher/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/matcher/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/matcher/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/matcher/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/matcher/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/pcre2/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/pcre2/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/pcre2/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/pcre2/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/pcre2/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/printer/Cargo.toml",
+            "line": 14
+          },
+          {
+            "location": "crates/printer/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/printer/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/printer/README.md",
+            "line": 9
+          },
+          {
+            "location": "crates/printer/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/regex/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/regex/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/regex/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/regex/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/regex/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/searcher/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/searcher/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/searcher/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/searcher/README.md",
+            "line": 11
+          },
+          {
+            "location": "crates/searcher/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 3
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 236
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 469
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 702
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 935
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 1168
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 1401
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 1634
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-2-Clause"
+          },
+          {
+            "expression": "BSD-3-Clause"
+          },
+          {
+            "expression": "CC-BY-4.0 AND LGPL-2.0-or-later"
+          },
+          {
+            "expression": "LGPL-2.0-or-later AND Apache-2.0"
+          },
+          {
+            "expression": "LGPL-2.0-or-later AND LicenseRef-scancode-other-copyleft"
+          },
+          {
+            "expression": "LicenseRef-scancode-generic-exception"
+          },
+          {
+            "expression": "LicenseRef-scancode-gutenberg-2020"
+          },
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT AND Unlicense"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          },
+          {
+            "expression": "Unlicense AND MIT"
+          },
+          {
+            "expression": "Unlicense OR MIT OR LicenseRef-scancode-unknown-license-reference"
+          }
+        ]
+      }
     }
   },
   "components": [
@@ -108,7 +493,46 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/globset/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/globset/Cargo.toml",
+            "line": 15
+          },
+          {
+            "location": "crates/globset/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/globset/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/globset/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/globset/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -146,7 +570,42 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/cli"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/cli/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/cli/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/cli/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/cli/README.md",
+            "line": 11
+          },
+          {
+            "location": "crates/cli/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -184,7 +643,42 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/matcher/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/matcher/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/matcher/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/matcher/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/matcher/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -222,7 +716,42 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/pcre2"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/pcre2/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/pcre2/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/pcre2/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/pcre2/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/pcre2/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -260,7 +789,42 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/printer"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/printer/Cargo.toml",
+            "line": 14
+          },
+          {
+            "location": "crates/printer/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/printer/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/printer/README.md",
+            "line": 9
+          },
+          {
+            "location": "crates/printer/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -298,7 +862,42 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/regex"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/regex/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/regex/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/regex/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/regex/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/regex/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -336,7 +935,42 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/searcher"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/searcher/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/searcher/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/searcher/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/searcher/README.md",
+            "line": 11
+          },
+          {
+            "location": "crates/searcher/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -374,7 +1008,46 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/grep"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/grep/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/grep/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/grep/README.md",
+            "line": 8
+          },
+          {
+            "location": "crates/grep/UNLICENSE",
+            "line": 1
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -412,7 +1085,75 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "crates/ignore/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/Cargo.toml",
+            "line": 14
+          },
+          {
+            "location": "crates/ignore/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/ignore/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/ignore/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 129
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 143
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 144
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 148
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 152
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-2-Clause"
+          },
+          {
+            "expression": "CC-BY-4.0 AND LGPL-2.0-or-later"
+          },
+          {
+            "expression": "LGPL-2.0-or-later AND Apache-2.0"
+          },
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          }
+        ]
+      }
     },
     {
       "type": "library",
@@ -450,7 +1191,392 @@
           "type": "vcs",
           "url": "https://github.com/BurntSushi/ripgrep"
         }
-      ]
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": ".github/workflows/release.yml",
+            "line": 219
+          },
+          {
+            "location": "COPYING",
+            "line": 1
+          },
+          {
+            "location": "Cargo.toml",
+            "line": 15
+          },
+          {
+            "location": "Cargo.toml",
+            "line": 98
+          },
+          {
+            "location": "Cargo.toml",
+            "line": 99
+          },
+          {
+            "location": "FAQ.md",
+            "line": 928
+          },
+          {
+            "location": "FAQ.md",
+            "line": 929
+          },
+          {
+            "location": "FAQ.md",
+            "line": 930
+          },
+          {
+            "location": "FAQ.md",
+            "line": 933
+          },
+          {
+            "location": "FAQ.md",
+            "line": 936
+          },
+          {
+            "location": "FAQ.md",
+            "line": 939
+          },
+          {
+            "location": "FAQ.md",
+            "line": 940
+          },
+          {
+            "location": "FAQ.md",
+            "line": 947
+          },
+          {
+            "location": "FAQ.md",
+            "line": 948
+          },
+          {
+            "location": "GUIDE.md",
+            "line": 44
+          },
+          {
+            "location": "GUIDE.md",
+            "line": 47
+          },
+          {
+            "location": "GUIDE.md",
+            "line": 638
+          },
+          {
+            "location": "LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "README.md",
+            "line": 15
+          },
+          {
+            "location": "UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "benchsuite/runs/2020-10-14-archlinux-frink/README.md",
+            "line": 32
+          },
+          {
+            "location": "benchsuite/runs/2022-12-16-archlinux-duff/README.md",
+            "line": 31
+          },
+          {
+            "location": "crates/cli/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/cli/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/cli/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/cli/README.md",
+            "line": 11
+          },
+          {
+            "location": "crates/cli/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/core/flags/complete/rg.zsh",
+            "line": 662
+          },
+          {
+            "location": "crates/globset/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/globset/Cargo.toml",
+            "line": 15
+          },
+          {
+            "location": "crates/globset/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/globset/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/globset/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/globset/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/grep/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/grep/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/grep/README.md",
+            "line": 8
+          },
+          {
+            "location": "crates/grep/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/COPYING",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/Cargo.toml",
+            "line": 14
+          },
+          {
+            "location": "crates/ignore/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/ignore/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/ignore/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 129
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 143
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 144
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 148
+          },
+          {
+            "location": "crates/ignore/src/default_types.rs",
+            "line": 152
+          },
+          {
+            "location": "crates/matcher/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/matcher/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/matcher/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/matcher/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/matcher/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/pcre2/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/pcre2/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/pcre2/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/pcre2/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/pcre2/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/printer/Cargo.toml",
+            "line": 14
+          },
+          {
+            "location": "crates/printer/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/printer/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/printer/README.md",
+            "line": 9
+          },
+          {
+            "location": "crates/printer/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/regex/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/regex/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/regex/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/regex/README.md",
+            "line": 10
+          },
+          {
+            "location": "crates/regex/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "crates/searcher/Cargo.toml",
+            "line": 13
+          },
+          {
+            "location": "crates/searcher/LICENSE-MIT",
+            "line": 1
+          },
+          {
+            "location": "crates/searcher/LICENSE-MIT",
+            "line": 5
+          },
+          {
+            "location": "crates/searcher/README.md",
+            "line": 11
+          },
+          {
+            "location": "crates/searcher/UNLICENSE",
+            "line": 1
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 3
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 236
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 469
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 702
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 935
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 1168
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 1401
+          },
+          {
+            "location": "tests/data/sherlock-nul.txt",
+            "line": 1634
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "BSD-2-Clause"
+          },
+          {
+            "expression": "BSD-3-Clause"
+          },
+          {
+            "expression": "CC-BY-4.0 AND LGPL-2.0-or-later"
+          },
+          {
+            "expression": "LGPL-2.0-or-later AND Apache-2.0"
+          },
+          {
+            "expression": "LGPL-2.0-or-later AND LicenseRef-scancode-other-copyleft"
+          },
+          {
+            "expression": "LicenseRef-scancode-generic-exception"
+          },
+          {
+            "expression": "LicenseRef-scancode-gutenberg-2020"
+          },
+          {
+            "expression": "MIT"
+          },
+          {
+            "expression": "MIT AND Unlicense"
+          },
+          {
+            "expression": "MIT OR Unlicense"
+          },
+          {
+            "expression": "Unlicense"
+          },
+          {
+            "expression": "Unlicense AND MIT"
+          },
+          {
+            "expression": "Unlicense OR MIT OR LicenseRef-scancode-unknown-license-reference"
+          }
+        ]
+      }
     },
     {
       "type": "library",
