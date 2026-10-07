@@ -72,6 +72,16 @@ pub fn should_start_absorbing(
     }
     let first = &tree[start];
 
+    // `... (https://example.com). Codes are released ...` starts a new sentence.
+    if detector::token_utils::collect_all_leaves(copyright_node)
+        .last()
+        .is_some_and(|t| t.tag == PosTag::Url && t.value.ends_with('.'))
+        && matches!(first, ParseNode::Leaf(t) if t.tag == PosTag::Nnp)
+        && matches!(tree.get(start + 1), Some(ParseNode::Leaf(t)) if t.tag == PosTag::Is)
+    {
+        return false;
+    }
+
     let last_line = detector::token_utils::collect_all_leaves(copyright_node)
         .last()
         .map(|t| t.start_line);

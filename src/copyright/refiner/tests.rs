@@ -36,6 +36,16 @@ fn test_strip_trailing_original_authors() {
 }
 
 #[test]
+fn test_strip_trailing_original_authors_drops_and_or_clause() {
+    assert_eq!(
+        strip_trailing_original_authors(
+            "Copyright (c) 2010 onwards by Ken DeVellis and/or the original authors"
+        ),
+        "Copyright (c) 2010 onwards by Ken DeVellis"
+    );
+}
+
+#[test]
 fn test_refine_keeps_collective_author_s_holder() {
     assert_eq!(
         refine_copyright("Copyright 2018 The Author(s)."),
@@ -2403,6 +2413,18 @@ fn test_refine_holder_in_copyright_context_strips_onwards_prefix() {
     assert_eq!(
         refine_holder_in_copyright_context("onwards The Apache Software Foundation"),
         Some("The Apache Software Foundation".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_in_copyright_context_keeps_capitalized_beyond_name() {
+    assert_eq!(
+        refine_holder_in_copyright_context("Beyond Software Ltd."),
+        Some("Beyond Software Ltd.".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("beyond Acme Inc."),
+        Some("Acme Inc.".to_string())
     );
 }
 

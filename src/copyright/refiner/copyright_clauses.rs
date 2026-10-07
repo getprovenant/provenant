@@ -455,6 +455,15 @@ pub(super) fn strip_publisher_after_authors_s(s: &str) -> String {
 pub(super) fn strip_trailing_original_authors(s: &str) -> String {
     static ORIGINAL_AUTHORS_RE: LazyLock<Regex> =
         LazyLock::new(|| compile_static_regex(r"(?i)^(.*\bthe original)\s+authors\b\s*$"));
+    static AND_OR_ORIGINAL_AUTHORS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(r"(?i)^(.*\S)\s+(?:and/or|and|or)\s+the\s+original\s+authors\b\s*$")
+    });
+    if s.to_ascii_lowercase().contains("original")
+        && let Some(cap) = AND_OR_ORIGINAL_AUTHORS_RE.captures(s)
+        && prefix_has_holder_words(&cap[1])
+    {
+        return cap[1].trim().to_string();
+    }
     if let Some(cap) = ORIGINAL_AUTHORS_RE.captures(s) {
         cap[1].trim().to_string()
     } else {

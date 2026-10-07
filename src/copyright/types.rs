@@ -43,9 +43,10 @@ pub enum PosTag {
     SpdxContrib, // "SPDX-FileContributor"
 
     // Year-related
-    Yr,     // A year like "2024"
-    YrPlus, // Year with plus: "2024+"
-    BareYr, // Short year: "99"
+    Yr,      // A year like "2024"
+    YrPlus,  // Year with plus: "2024+"
+    BareYr,  // Short year: "99"
+    Onwards, // Open-ended year range: "onwards", "beyond"
 
     // Names and entities
     Nnp,      // Proper noun: "John", "Smith"

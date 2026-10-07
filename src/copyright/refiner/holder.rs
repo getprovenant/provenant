@@ -94,8 +94,11 @@ pub(super) fn strip_trailing_see_reference_in_holder(s: &str) -> String {
 }
 
 pub(super) fn strip_leading_and_onwards_holder_prefix(s: &str) -> String {
-    static AND_ONWARDS_RE: LazyLock<Regex> =
-        LazyLock::new(|| compile_static_regex(r"(?i)^(?:and\s+)?onwards\b[\s,;:.-]*"));
+    static AND_ONWARDS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^(?:-\s*|and\s+)?(?:onwards|(?-i:beyond))\b[\s,;:.|-]*(?:by\s+)?",
+        )
+    });
     normalize_whitespace(&AND_ONWARDS_RE.replace(s, " "))
 }
 

@@ -216,6 +216,15 @@ pub(crate) static GRAMMAR_RULES: &[GrammarRule] = &[
         label: YrRange,
         pattern: &[Tag(Cds), Tag(Nnp), Label(YrRange)],
     },
+    // YR-RANGE: {<YR-RANGE> <CC|DASH>? <ONWARDS>} "2014 and beyond", "2017 - onwards"
+    GrammarRule {
+        label: YrRange,
+        pattern: &[Label(YrRange), Tag(Onwards)],
+    },
+    GrammarRule {
+        label: YrRange,
+        pattern: &[Label(YrRange), AnyTag(&[Cc, Dash]), Tag(Onwards)],
+    },
     // =========================================================================
     // ALL RIGHTS RESERVED (Python line 2395)
     // =========================================================================

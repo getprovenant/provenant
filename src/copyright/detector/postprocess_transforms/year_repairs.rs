@@ -1001,7 +1001,8 @@ pub fn derive_holder_from_simple_copyright_string(s: &str) -> Option<String> {
             .expect("valid iso-date copyright holder regex")
     });
     static LEADING_AND_ONWARDS_RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?i)^and\s+onwards\b[\s,;:.-]*").expect("valid leading and onwards regex")
+        Regex::new(r"(?i)^(?:-\s*|and\s+)?(?:onwards|(?-i:beyond))\b[\s,;:.|-]*(?:by\s+)?")
+            .expect("valid leading and onwards regex")
     });
     static LEADING_YEARISH_TOKEN_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
