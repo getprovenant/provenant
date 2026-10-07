@@ -545,6 +545,28 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_maven_uberjar_manifest_match() {
+        match run_assembly_golden_test("maven-uberjar-manifest-match") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for maven-uberjar-manifest-match: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
+    fn test_assembly_maven_uberjar_manifest_mismatch() {
+        match run_assembly_golden_test("maven-uberjar-manifest-mismatch") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for maven-uberjar-manifest-mismatch: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
     fn test_assembly_maven_distinct_gav_poms() {
         match run_assembly_golden_test("maven-distinct-gav-poms") {
             Ok(_) => (),

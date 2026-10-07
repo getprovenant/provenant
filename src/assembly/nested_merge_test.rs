@@ -220,9 +220,8 @@ fn test_find_package_root_debian() {
     assert_eq!(root, Some(PathBuf::from("my-pkg")));
 }
 
-#[test]
-fn test_maven_nested_merge_skips_multiple_nested_poms() {
-    let config = AssemblerConfig {
+fn uberjar_config() -> AssemblerConfig {
+    AssemblerConfig {
         datasource_ids: &[
             DatasourceId::MavenPom,
             DatasourceId::MavenPomProperties,
@@ -231,53 +230,139 @@ fn test_maven_nested_merge_skips_multiple_nested_poms() {
         sibling_file_patterns: &["pom.xml", "pom.properties", "**/META-INF/MANIFEST.MF"],
         mode: crate::assembly::AssemblyMode::SiblingMerge,
         directory_merger: None,
-    };
+    }
+}
 
-    let files = vec![
-        test_file(
-            "uberjar/META-INF/MANIFEST.MF",
-            vec![PackageData {
-                datasource_id: Some(DatasourceId::JavaJarManifest),
-                package_type: Some(crate::models::PackageType::Maven),
-                primary_language: Some("Java".to_string()),
-                purl: Some("pkg:maven/com.example/app-one@1.0.0".to_string()),
-                name: Some("app-one".to_string()),
-                namespace: Some("com.example".to_string()),
-                version: Some("1.0.0".to_string()),
-                ..Default::default()
-            }],
-        ),
-        test_file(
+fn maven_file(
+    path: &str,
+    datasource_id: DatasourceId,
+    namespace: Option<&str>,
+    name: &str,
+    version: &str,
+) -> FileInfo {
+    test_file(
+        path,
+        vec![PackageData {
+            datasource_id: Some(datasource_id),
+            package_type: Some(crate::models::PackageType::Maven),
+            primary_language: Some("Java".to_string()),
+            purl: namespace.map(|ns| format!("pkg:maven/{ns}/{name}@{version}")),
+            name: Some(name.to_string()),
+            namespace: namespace.map(str::to_string),
+            version: Some(version.to_string()),
+            ..Default::default()
+        }],
+    )
+}
+
+fn uberjar_poms() -> Vec<FileInfo> {
+    vec![
+        maven_file(
             "uberjar/META-INF/maven/com.example/app-one/pom.xml",
-            vec![PackageData {
-                datasource_id: Some(DatasourceId::MavenPom),
-                package_type: Some(crate::models::PackageType::Maven),
-                primary_language: Some("Java".to_string()),
-                purl: Some("pkg:maven/com.example/app-one@1.0.0".to_string()),
-                name: Some("app-one".to_string()),
-                namespace: Some("com.example".to_string()),
-                version: Some("1.0.0".to_string()),
-                ..Default::default()
-            }],
+            DatasourceId::MavenPom,
+            Some("com.example"),
+            "app-one",
+            "1.0.0",
         ),
-        test_file(
-            "uberjar/META-INF/maven/com.example/app-two/pom.xml",
-            vec![PackageData {
-                datasource_id: Some(DatasourceId::MavenPom),
-                package_type: Some(crate::models::PackageType::Maven),
-                primary_language: Some("Java".to_string()),
-                purl: Some("pkg:maven/com.example/app-two@2.0.0".to_string()),
-                name: Some("app-two".to_string()),
-                namespace: Some("com.example".to_string()),
-                version: Some("2.0.0".to_string()),
-                ..Default::default()
-            }],
+        maven_file(
+            "uberjar/META-INF/maven/com.example/app-one/pom.properties",
+            DatasourceId::MavenPomProperties,
+            Some("com.example"),
+            "app-one",
+            "1.0.0",
         ),
-    ];
+        maven_file(
+            "uberjar/META-INF/maven/org.shaded/app-two/pom.xml",
+            DatasourceId::MavenPom,
+            Some("org.shaded"),
+            "app-two",
+            "2.0.0",
+        ),
+    ]
+}
 
-    let assembled = assemble_nested_patterns(&files, &config);
+#[test]
+fn test_maven_nested_merge_multiple_poms_merges_manifest_into_matching_pom() {
+    let mut files = uberjar_poms();
+    files.push(maven_file(
+        "uberjar/META-INF/MANIFEST.MF",
+        DatasourceId::JavaJarManifest,
+        Some("com.example"),
+        "app-one",
+        "1.0.0",
+    ));
 
-    assert!(assembled.is_none());
+    let (package, _, mut affected) =
+        assemble_nested_patterns(&files, &uberjar_config()).expect("manifest should merge");
+
+    assert_eq!(
+        package.purl.as_deref(),
+        Some("pkg:maven/com.example/app-one@1.0.0")
+    );
+    affected.sort_unstable();
+    assert_eq!(affected, vec![0, 1, 3]);
+}
+
+#[test]
+fn test_maven_nested_merge_multiple_poms_matches_namespace_less_manifest() {
+    let mut files = uberjar_poms();
+    files.push(maven_file(
+        "uberjar/META-INF/MANIFEST.MF",
+        DatasourceId::JavaJarManifest,
+        None,
+        "app-two",
+        "2.0.0",
+    ));
+
+    let (package, _, mut affected) =
+        assemble_nested_patterns(&files, &uberjar_config()).expect("manifest should merge");
+
+    assert_eq!(
+        package.purl.as_deref(),
+        Some("pkg:maven/org.shaded/app-two@2.0.0")
+    );
+    affected.sort_unstable();
+    assert_eq!(affected, vec![2, 3]);
+}
+
+#[test]
+fn test_maven_nested_merge_multiple_poms_skips_non_matching_manifest() {
+    let mut files = uberjar_poms();
+    files.push(maven_file(
+        "uberjar/META-INF/MANIFEST.MF",
+        DatasourceId::JavaJarManifest,
+        Some("com.example"),
+        "app-one",
+        "9.9.9",
+    ));
+
+    assert!(assemble_nested_patterns(&files, &uberjar_config()).is_none());
+}
+
+#[test]
+fn test_maven_nested_merge_multiple_poms_skips_ambiguous_manifest() {
+    let mut files = uberjar_poms();
+    files.push(maven_file(
+        "uberjar/META-INF/maven/org.other/app-one/pom.xml",
+        DatasourceId::MavenPom,
+        Some("org.other"),
+        "app-one",
+        "1.0.0",
+    ));
+    files.push(maven_file(
+        "uberjar/META-INF/MANIFEST.MF",
+        DatasourceId::JavaJarManifest,
+        None,
+        "app-one",
+        "1.0.0",
+    ));
+
+    assert!(assemble_nested_patterns(&files, &uberjar_config()).is_none());
+}
+
+#[test]
+fn test_maven_nested_merge_multiple_poms_without_manifest_skips() {
+    assert!(assemble_nested_patterns(&uberjar_poms(), &uberjar_config()).is_none());
 }
 
 #[test]

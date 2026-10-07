@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Bundle-SymbolicName: org.apache.htrace.core4
+Bundle-Version: 4.0.0.incubating
+Implementation-Title: htrace-core4
+Implementation-Version: 4.0.0-incubating
+Implementation-Vendor-Id: org.apache.htrace
+Bundle-License: http://www.apache.org/licenses/LICENSE-2.0.txt
