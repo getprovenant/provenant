@@ -1,0 +1,24 @@
+what:
+  - copyrights
+  - holders
+  - authors
+copyrights:
+  - "Copyright 2014 and beyond Acme Inc."
+  - "Copyright 2017 and beyond Isomorphic Software, Inc."
+  - "COPYRIGHT 2016 and beyond by Caleb Mazalevskis"
+  - "Copyright 2001 and beyond, Ron Gage - Saginaw, MI"
+  - "Copyright (c) 2015 - onwards by Acme Inc."
+  - "(c) 2017 - onwards by TU Delft, Georgios Gousios"
+  - "Copyright (c) 2010 onwards by Ken DeVellis"
+  - "copyright 2014 onwards by edulabs.org"
+  - "Copyright 2020 and beyond unlimitDesign (https://unlimit.design)"
+holders:
+  - "Acme Inc."
+  - "Isomorphic Software, Inc."
+  - "Caleb Mazalevskis"
+  - "Ron Gage - Saginaw, MI"
+  - "TU Delft, Georgios Gousios"
+  - "Ken DeVellis"
+  - "edulabs.org"
+  - "unlimitDesign"
+authors: []

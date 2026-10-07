@@ -87,6 +87,7 @@ const JUNK_URLS: &[&str] = &[
     "http://www.w3.org/markup/dtd/xhtml-rdfa-1.dtd",
     "http://www.w3.org/1999/02/22-rdf-syntax-ns",
     "http://www.w3.org/1999/xhtml",
+    "http://www.w3.org/1998/math/mathml",
     // Keep xlink namespace URLs: they appear in shipped SVGs and are real referenced URLs,
     // unlike the broader XML namespace/schema noise filtered below.
     "http://www.w3.org/1999/xmlschema",
@@ -254,16 +255,17 @@ pub(crate) fn classify_url(url: &str) -> bool {
     {
         return false;
     }
-    if JUNK_URLS.contains(&normalized.as_str()) {
-        return false;
-    }
-    if JUNK_URL_PREFIXES
-        .iter()
-        .any(|prefix| normalized.starts_with(prefix))
-    {
-        return false;
-    }
-    true
+    // Junk entries are listed in their `http://` form; match `https://` too.
+    let http_form = normalized
+        .strip_prefix("https://")
+        .map(|rest| format!("http://{rest}"));
+    let is_junk = |candidate: &str| {
+        JUNK_URLS.contains(&candidate)
+            || JUNK_URL_PREFIXES
+                .iter()
+                .any(|prefix| candidate.starts_with(prefix))
+    };
+    !(is_junk(&normalized) || http_form.as_deref().is_some_and(is_junk))
 }
 
 fn has_embedded_nested_scheme_in_path(url: &str) -> bool {

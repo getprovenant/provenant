@@ -1,0 +1,27 @@
+Copyright 2014 and beyond Acme Inc.
+
+
+  Copyright 2017 and beyond Isomorphic Software, Inc. All rights reserved.
+
+
+CIDRAM COPYRIGHT 2016 and beyond by Caleb Mazalevskis (Maikuolan).
+
+
+Copyright 2001 and beyond, Ron Gage - Saginaw, MI
+
+
+Copyright (c) 2015 - onwards by Acme Inc.
+
+
+This work is (c) 2017 - onwards by TU Delft, Georgios Gousios and the book
+co-authors
+
+
+All Kleosis code in this folder is Copyright (c) 2010 onwards by 
+Ken DeVellis and/or the original authors.
+
+
+ * @copyright 2014 onwards by edulabs.org and associated programmers
+
+
+Copyright 2020 and beyond [unlimitDesign](https://unlimit.design). Codes are released under [the MIT license](https://example.com/LICENSE).

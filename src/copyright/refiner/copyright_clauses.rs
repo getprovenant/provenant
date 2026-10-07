@@ -436,9 +436,69 @@ pub(super) fn strip_independent_jpeg_groups_software_tail(s: &str) -> String {
     JPEG_GROUP_SOFTWARE_RE.replace(s, "$1").trim().to_string()
 }
 
+/// `The Author(s). Published by <Publisher>` names the publisher, not a co-holder.
+pub(super) fn strip_publisher_after_authors_s(s: &str) -> String {
+    static PUBLISHER_AFTER_AUTHORS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^(?P<prefix>.*\bauthor\(s\))\.?\s+(?:(?:19|20)\d{2}\.?\s+)?(?:published\s+(?:by|with)|open\s+access)\b.*$",
+        )
+    });
+    if !(s.contains("(s)") || s.contains("(S)")) {
+        return s.to_string();
+    }
+    match PUBLISHER_AFTER_AUTHORS_RE.captures(s) {
+        Some(cap) => cap["prefix"].trim().to_string(),
+        None => s.to_string(),
+    }
+}
+
+/// Drop journal boilerplate glued after a holder: `. This is an open-access
+/// article ...` and the `, including` left behind by `All rights reserved, including ...`.
+pub(super) fn strip_trailing_open_access_or_including_tail(s: &str) -> String {
+    static TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^(?P<prefix>.*?\S)(?:\.\s+This\s+is\s+an?\s+open[- ]access\b.*|\.?\s*,\s*including)$",
+        )
+    });
+    let lower = s.to_ascii_lowercase();
+    if !(lower.contains("including") || lower.contains("access")) {
+        return s.to_string();
+    }
+    match TAIL_RE.captures(s.trim()) {
+        Some(cap) => cap["prefix"].to_string(),
+        None => s.to_string(),
+    }
+}
+
+/// Drop a change note continued from the next comment line, as in
+/// `John Bovey <jdb@ukc.ac.uk> - original version`.
+pub(super) fn strip_trailing_dash_revision_note(s: &str) -> String {
+    static DASH_REVISION_NOTE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"^(?P<prefix>.*?\S)\s+-\s+(?:(?:original|initial|first)\s+(?:version|implementation|port)|(?:extensive|major|minor|various)\s+(?:modifications|changes|fixes))\.?$",
+        )
+    });
+    if !s.contains(" - ") {
+        return s.to_string();
+    }
+    match DASH_REVISION_NOTE_RE.captures(s.trim()) {
+        Some(cap) => cap["prefix"].to_string(),
+        None => s.to_string(),
+    }
+}
+
 pub(super) fn strip_trailing_original_authors(s: &str) -> String {
     static ORIGINAL_AUTHORS_RE: LazyLock<Regex> =
         LazyLock::new(|| compile_static_regex(r"(?i)^(.*\bthe original)\s+authors\b\s*$"));
+    static AND_OR_ORIGINAL_AUTHORS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(r"(?i)^(.*\S)\s+(?:and/or|and|or)\s+the\s+original\s+authors\b\s*$")
+    });
+    if s.to_ascii_lowercase().contains("original")
+        && let Some(cap) = AND_OR_ORIGINAL_AUTHORS_RE.captures(s)
+        && prefix_has_holder_words(&cap[1])
+    {
+        return cap[1].trim().to_string();
+    }
     if let Some(cap) = ORIGINAL_AUTHORS_RE.captures(s) {
         cap[1].trim().to_string()
     } else {

@@ -1,0 +1,17 @@
+  * All portions of code are copyright by their respective author/s.
+ * Copyright (c) 1992      John Bovey, University of Kent at Canterbury <jdb@ukc.ac.uk>
+ *                              - original version
+ * Copyright (c) 1994      Robert Nation <nation@rocket.sanders.lockheed.com>
+ *                              - extensive modifications
+ * Copyright (c) 1996      Chuck Blake <cblake@BBN.COM>
+
+
+
+ (a book serving as documentation for various tooling
+surrounding TeachBooks) written by the Author(s).
+Stefan Aarninkhof, Dean of Civil Engineering & Geosciences
+
+
+
+All credits go to original Author(s).
+Publisher of this fork version (Md Nazrul Islam<email2nazrul@gmail.com>) doest not reserve any Copyright rights.

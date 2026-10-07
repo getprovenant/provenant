@@ -216,6 +216,15 @@ pub(crate) static GRAMMAR_RULES: &[GrammarRule] = &[
         label: YrRange,
         pattern: &[Tag(Cds), Tag(Nnp), Label(YrRange)],
     },
+    // YR-RANGE: {<YR-RANGE> <CC|DASH>? <ONWARDS>} "2014 and beyond", "2017 - onwards"
+    GrammarRule {
+        label: YrRange,
+        pattern: &[Label(YrRange), Tag(Onwards)],
+    },
+    GrammarRule {
+        label: YrRange,
+        pattern: &[Label(YrRange), AnyTag(&[Cc, Dash]), Tag(Onwards)],
+    },
     // =========================================================================
     // ALL RIGHTS RESERVED (Python line 2395)
     // =========================================================================
@@ -4451,6 +4460,20 @@ pub(crate) static GRAMMAR_RULES: &[GrammarRule] = &[
         label: Copyright,
         pattern: &[Label(Copyright), Tag(Nn), Tag(AuthDot)],
     },
+    // Copyright 2001 - 2009 by the original author(s).
+    // Copyright 2011 the above author(s).
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Label(Copyright2), Tag(By), Tag(Nn), Tag(Nn), Tag(Auths)],
+    },
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Label(Copyright2), Tag(Nn), Tag(Nn), Tag(Auths)],
+    },
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Label(Copyright2), Tag(Nn), Tag(Nn), Tag(Nn), Tag(Auths)],
+    },
     // #15800
     GrammarRule {
         label: Copyright,
@@ -4764,6 +4787,11 @@ pub(crate) static GRAMMAR_RULES: &[GrammarRule] = &[
     GrammarRule {
         label: Copyright,
         pattern: &[Tag(Copy), Tag(Nnp), Tag(Auths)],
+    },
+    // (c) The Author(s).
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Tag(Copy), Tag(Nn), Tag(Auths)],
     },
     GrammarRule {
         label: Copyright,

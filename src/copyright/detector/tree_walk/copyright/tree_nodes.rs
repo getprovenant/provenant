@@ -720,6 +720,13 @@ pub fn extract_from_tree_nodes(
                 i += skip;
             }
         } else if label == Some(TreeLabel::Author) {
+            if detector::token_utils::collect_all_leaves(node)
+                .first()
+                .is_some_and(|t| super::spans::is_prose_author_s(t))
+            {
+                i += 1;
+                continue;
+            }
             if let Some(dets) = author::extract_sectioned_authors_from_author_node(node) {
                 authors.extend(dets);
                 i += 1;

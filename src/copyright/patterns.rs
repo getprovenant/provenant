@@ -385,6 +385,9 @@ fn build_pattern_list() -> Vec<(String, PosTag)> {
     // all other cardinal numbers
     add(r"^-?[0-9]+(.[0-9]+)?[\.,]?$", PosTag::Cd);
 
+    // open-ended year ranges: "2014 and beyond", "2011 onwards"
+    add(r"^(?:onwards|beyond),?$", PosTag::Onwards);
+
     ////////////////////////////////////////////////////////////////////////////
     // FOLLOWING, HOLDER, MONTH, DAY (from Python lines 1115, 1715-1718, 1779)
     // These are included here as they are part of the "special tokens" batch
@@ -433,6 +436,13 @@ fn build_pattern_list() -> Vec<(String, PosTag)> {
     add(r"^__authors?__$", PosTag::Auths);
     add(r"^__contributors?__$", PosTag::Auths);
     add(r"^Author\(s\)[\.,:]?$", PosTag::Auths);
+    add(r"^author\(s\)[\.,]?$", PosTag::Auths);
+    // handle with a parenthesized real name: nanchen(刘世麟), nanchen(Liu)
+    add(
+        r"^[a-z][a-z0-9_-]+\((?:\p{Lu}\p{Ll}+|[\p{Han}\p{Hangul}\p{Hiragana}\p{Katakana}]+)\)[\.,]?$",
+        PosTag::Nnp,
+    );
+    add(r"^if\(we\),?$", PosTag::Nnp);
     add(r"^[A-a]ffiliate\(s\)[\.,:]?$", PosTag::Comp);
     // Exceptions to short mixed caps with trailing cap
     add(r"ApS$", PosTag::Comp);

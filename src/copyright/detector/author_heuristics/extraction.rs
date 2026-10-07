@@ -2960,6 +2960,9 @@ pub(in super::super) fn extract_comment_author_label_authors(
         LazyLock::new(|| Regex::new(r"(?ix)^copyright\s*\(c\)\s*[0-9\s,\-–/]+$").unwrap());
     static COMMENT_PREFIX_RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^\s*(?:#+|;+|//+|/\*+|\*+|!+|--+|>+|\|+|\.\!+)\s*").unwrap());
+    // `Author: Frankie.Chu` — a handle-style First.Last name kept in source form.
+    static DOTTED_PERSON_NAME_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:\.\p{Lu}\p{Ll}+)+$").unwrap());
     let normalize_comment_line = |line: &str| {
         line.trim()
             .trim_start_matches(|ch: char| {
@@ -3024,6 +3027,7 @@ pub(in super::super) fn extract_comment_author_label_authors(
                 });
             } else if has_comment_prefix
                 && let Some(author) = refine_author_with_optional_handle_suffix(who)
+                    .or_else(|| DOTTED_PERSON_NAME_RE.is_match(who).then(|| who.to_string()))
             {
                 authors.push(AuthorDetection {
                     author,

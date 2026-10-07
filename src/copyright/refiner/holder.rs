@@ -94,8 +94,11 @@ pub(super) fn strip_trailing_see_reference_in_holder(s: &str) -> String {
 }
 
 pub(super) fn strip_leading_and_onwards_holder_prefix(s: &str) -> String {
-    static AND_ONWARDS_RE: LazyLock<Regex> =
-        LazyLock::new(|| compile_static_regex(r"(?i)^(?:and\s+)?onwards\b[\s,;:.-]*"));
+    static AND_ONWARDS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^(?:-\s*|and\s+)?(?:onwards|(?-i:beyond))\b[\s,;:.|-]*(?:by\s+)?",
+        )
+    });
     normalize_whitespace(&AND_ONWARDS_RE.replace(s, " "))
 }
 
@@ -123,6 +126,9 @@ pub(super) fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<
         h = rest;
     }
     h = strip_leading_author_label_in_holder(&h);
+    h = strip_publisher_after_authors_s(&h);
+    h = strip_trailing_open_access_or_including_tail(&h);
+    h = strip_trailing_dash_revision_note(&h);
     h = strip_angle_bracketed_www_domains(&h);
     if in_copyright_context {
         h = strip_angle_bracketed_emails(&h);

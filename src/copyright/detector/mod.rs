@@ -491,6 +491,7 @@ pub fn detect_copyrights_from_text_with_deadline(
 
     dedupe_exact_span_holders(&mut holders);
 
+    postprocess_transforms::drop_dangling_prefix_copyrights_same_span(&mut copyrights);
     dedupe_exact_span_copyrights(&mut copyrights);
     dedupe_exact_span_holders(&mut holders);
     dedupe_overlapping_authors(&mut authors);

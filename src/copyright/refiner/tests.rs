@@ -36,6 +36,68 @@ fn test_strip_trailing_original_authors() {
 }
 
 #[test]
+fn test_strip_trailing_original_authors_drops_and_or_clause() {
+    assert_eq!(
+        strip_trailing_original_authors(
+            "Copyright (c) 2010 onwards by Ken DeVellis and/or the original authors"
+        ),
+        "Copyright (c) 2010 onwards by Ken DeVellis"
+    );
+}
+
+#[test]
+fn test_refine_keeps_collective_author_s_holder() {
+    assert_eq!(
+        refine_copyright("Copyright 2018 The Author(s)."),
+        Some("Copyright 2018 The Author(s)".to_string())
+    );
+    assert_eq!(
+        refine_copyright("Copyright 2021 The Author(s). Published by Elsevier B.V."),
+        Some("Copyright 2021 The Author(s)".to_string())
+    );
+    assert_eq!(
+        refine_holder("The Author(s). 2019 Open Access"),
+        Some("The Author(s)".to_string())
+    );
+    assert!(!is_junk_copyright("(c) The Author(s)"));
+    assert!(is_junk_copyright("(c) the following conditions"));
+}
+
+#[test]
+fn test_refine_drops_glued_journal_and_change_note_tails() {
+    assert_eq!(
+        refine_holder("Beni. This is an open-access"),
+        Some("Beni".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            "Copyright 1999-2026 John Wiley & Sons, Inc (https://www.wiley.com) or related companies., including"
+        ),
+        Some(
+            "Copyright 1999-2026 John Wiley & Sons, Inc (https://www.wiley.com) or related companies"
+                .to_string()
+        )
+    );
+    assert_eq!(
+        refine_holder("John Wiley & Sons, Inc (https://www.wiley.com) or related companies"),
+        Some("John Wiley & Sons, Inc or related companies".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_drops_next_line_change_note() {
+    assert_eq!(
+        refine_holder("John Bovey, University of Kent at Canterbury - original version"),
+        Some("John Bovey, University of Kent at Canterbury".to_string())
+    );
+}
+
+#[test]
+fn test_refine_author_rejects_trailing_preposition() {
+    assert_eq!(refine_author("Publisher of"), None);
+}
+
+#[test]
 fn test_refine_copyright_preserves_portions_created_by_prefix() {
     let refined = refine_copyright(
             "Portions created by the Initial Developer are Copyright (C) 1998-2000 the Initial Developer.",
@@ -2385,6 +2447,18 @@ fn test_refine_holder_in_copyright_context_strips_onwards_prefix() {
     assert_eq!(
         refine_holder_in_copyright_context("onwards The Apache Software Foundation"),
         Some("The Apache Software Foundation".to_string())
+    );
+}
+
+#[test]
+fn test_refine_holder_in_copyright_context_keeps_capitalized_beyond_name() {
+    assert_eq!(
+        refine_holder_in_copyright_context("Beyond Software Ltd."),
+        Some("Beyond Software Ltd.".to_string())
+    );
+    assert_eq!(
+        refine_holder_in_copyright_context("beyond Acme Inc."),
+        Some("Acme Inc.".to_string())
     );
 }
 

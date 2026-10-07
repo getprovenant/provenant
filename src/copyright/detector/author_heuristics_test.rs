@@ -2105,3 +2105,70 @@ CREATE TABLE book(
 
     assert!(authors.is_empty(), "authors: {authors:?}");
 }
+
+#[test]
+fn test_markdown_contributor_roster_emits_one_author_per_entry() {
+    let raw_lines = vec![
+        "## Contributors",
+        "",
+        "* [Alice Smith](https://example.com/alice)",
+        "* [Bob Jones](https://example.com/bob)",
+        "* [Docs](https://example.com/docs)",
+    ];
+    let authors: Vec<_> = extract_markdown_contributor_roster_authors(&raw_lines)
+        .into_iter()
+        .map(|a| a.author)
+        .collect();
+
+    assert_eq!(
+        authors,
+        vec![
+            "Alice Smith (https://example.com/alice)",
+            "Bob Jones (https://example.com/bob)",
+        ]
+    );
+}
+
+#[test]
+fn test_markdown_contributor_roster_requires_heading_and_two_people() {
+    let no_heading = vec![
+        "## Links",
+        "* [Alice Smith](https://example.com/alice)",
+        "* [Bob Jones](https://example.com/bob)",
+    ];
+    let single_entry = vec![
+        "## Contributors",
+        "* [Alice Smith](https://example.com/alice)",
+    ];
+    let no_contact = vec!["## Contributors", "* Alice Smith", "* Bob Jones"];
+    let keyword_only_in_url = vec![
+        "## [Related reading](https://example.com/authors)",
+        "* [Alice Smith](https://example.com/alice)",
+        "* [Bob Jones](https://example.com/bob)",
+    ];
+
+    assert!(extract_markdown_contributor_roster_authors(&no_heading).is_empty());
+    assert!(extract_markdown_contributor_roster_authors(&single_entry).is_empty());
+    assert!(extract_markdown_contributor_roster_authors(&no_contact).is_empty());
+    assert!(extract_markdown_contributor_roster_authors(&keyword_only_in_url).is_empty());
+
+    let fenced_example = vec![
+        "```markdown",
+        "## Contributors",
+        "* [Alice Smith](https://example.com/alice)",
+        "* [Bob Jones](https://example.com/bob)",
+        "```",
+    ];
+    assert!(extract_markdown_contributor_roster_authors(&fenced_example).is_empty());
+}
+
+#[test]
+fn test_comment_author_label_keeps_dotted_name_in_source_form() {
+    let raw_lines = vec!["// Author:Frankie.Chu", "//  Author: Frankie.Chu"];
+    let authors: Vec<_> = extract_comment_author_label_authors(&raw_lines)
+        .into_iter()
+        .map(|a| a.author)
+        .collect();
+
+    assert_eq!(authors, vec!["Frankie.Chu", "Frankie.Chu"]);
+}

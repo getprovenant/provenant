@@ -107,6 +107,24 @@ mod tests {
     }
 
     #[test]
+    fn test_find_urls_ignores_https_namespace_urls() {
+        let text = concat!(
+            "https://www.w3.org/2001/XMLSchema-instance\n",
+            "https://www.w3.org/2001/XMLSchema\n",
+            "https://www.w3.org/1999/xhtml\n",
+            "https://www.w3.org/2000/svg\n",
+            "https://www.w3.org/TR/xslt\n",
+            "http://www.w3.org/1998/Math/MathML\n",
+            "https://java.sun.com/xml/ns/javaee\n",
+            "https://www.w3.org/People/Berners-Lee/\n",
+        );
+        let urls = find_urls(text, &DetectionConfig::default());
+        let values: Vec<_> = urls.into_iter().map(|url| url.url).collect();
+
+        assert_eq!(values, vec!["https://www.w3.org/People/Berners-Lee/"]);
+    }
+
+    #[test]
     fn test_find_urls_ignores_email_like_ftp_token() {
         let text = "See ftp.mtuci@gmail.com for details.";
         let config = DetectionConfig::default();
