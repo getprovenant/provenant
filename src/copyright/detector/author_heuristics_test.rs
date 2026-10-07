@@ -2161,3 +2161,14 @@ fn test_markdown_contributor_roster_requires_heading_and_two_people() {
     ];
     assert!(extract_markdown_contributor_roster_authors(&fenced_example).is_empty());
 }
+
+#[test]
+fn test_comment_author_label_keeps_dotted_name_in_source_form() {
+    let raw_lines = vec!["// Author:Frankie.Chu", "//  Author: Frankie.Chu"];
+    let authors: Vec<_> = extract_comment_author_label_authors(&raw_lines)
+        .into_iter()
+        .map(|a| a.author)
+        .collect();
+
+    assert_eq!(authors, vec!["Frankie.Chu", "Frankie.Chu"]);
+}
