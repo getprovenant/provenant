@@ -245,6 +245,8 @@ mod os_release;
 #[cfg(test)]
 mod os_release_test;
 mod pep508;
+#[cfg(test)]
+mod pep508_test;
 mod pip_inspect_deplock;
 #[cfg(test)]
 mod pip_inspect_deplock_test;

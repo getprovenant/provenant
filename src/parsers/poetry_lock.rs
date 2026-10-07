@@ -229,7 +229,8 @@ fn build_dependency_from_package(package_table: &TomlMap<String, TomlValue>) -> 
         extracted_requirement: None,
         scope: None,
         is_runtime: None,
-        is_optional: None,
+        // `optional = true` proves an extras-only package; `false` does not prove it required.
+        is_optional: poetry_optional.then_some(true),
         is_pinned: Some(true),
         is_direct: None,
         resolved_package: Some(Box::new(resolved_package)),

@@ -57,6 +57,87 @@ mod tests {
     }
 
     #[test]
+    fn test_python_metadata_scan_keeps_compound_marker_python_version() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let dist_info = temp_dir
+            .path()
+            .join("venv/lib/python3.11/site-packages/demo-1.0.dist-info");
+        fs::create_dir_all(&dist_info).expect("create dist-info dir");
+        fs::write(
+            dist_info.join("METADATA"),
+            "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\n\
+             Requires-Dist: tomli; extra == \"dev\" and python_version < \"3.11\"\n",
+        )
+        .expect("write METADATA");
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+        let package = result
+            .packages
+            .iter()
+            .find(|package| package.name.as_deref() == Some("demo"))
+            .expect("METADATA should assemble a package");
+        let tomli = result
+            .dependencies
+            .iter()
+            .find(|dep| {
+                dep.purl.as_deref() == Some("pkg:pypi/tomli")
+                    && dep.for_package_uid.as_deref() == Some(package.package_uid.as_str())
+            })
+            .expect("tomli dependency");
+        let extra = tomli.extra_data.as_ref().expect("tomli marker data");
+        assert_eq!(tomli.scope.as_deref(), Some("dev"));
+        assert_eq!(
+            extra.get("python_version"),
+            Some(&JsonValue::String("< 3.11".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_poetry_lock_scan_marks_extras_only_packages_optional() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        fs::write(
+            temp_dir.path().join("pyproject.toml"),
+            "[tool.poetry]\nname = \"lock-demo\"\nversion = \"1.0.0\"\n",
+        )
+        .expect("write pyproject.toml");
+        fs::write(
+            temp_dir.path().join("poetry.lock"),
+            r#"[[package]]
+name = "requests"
+version = "2.31.0"
+optional = false
+python-versions = ">=3.7"
+files = []
+
+[[package]]
+name = "pyyaml"
+version = "6.0.1"
+optional = true
+python-versions = ">=3.6"
+files = []
+
+[metadata]
+lock-version = "2.0"
+python-versions = "^3.8"
+content-hash = "test"
+"#,
+        )
+        .expect("write poetry.lock");
+
+        let (_files, result) = scan_and_assemble(temp_dir.path());
+        let optional_flag = |purl: &str| {
+            result
+                .dependencies
+                .iter()
+                .find(|dep| dep.purl.as_deref() == Some(purl))
+                .unwrap_or_else(|| panic!("{purl} dependency"))
+                .is_optional
+        };
+        assert_eq!(optional_flag("pkg:pypi/pyyaml@6.0.1"), Some(true));
+        assert_eq!(optional_flag("pkg:pypi/requests@2.31.0"), None);
+    }
+
+    #[test]
     fn test_python_pkg_info_scan_assigns_installed_files_entries() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         let site_packages = temp_dir.path().join("venv/lib/python3.11/site-packages");

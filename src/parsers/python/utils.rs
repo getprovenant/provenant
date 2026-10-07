@@ -23,11 +23,6 @@ static EXTRA_MARKER_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"extra\s*==\s*['\"]([^'\"]+)['\"]"#).expect("extra marker regex should compile")
 });
 
-static MARKER_FIELD_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(\w+)\s*(==|!=|<=|>=|<|>)\s*['\"]([^'\"]+)['\"]"#)
-        .expect("marker field regex should compile")
-});
-
 static TESTS_REQUIRE_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"tests_require\s*=\s*\[([^\]]+)\]").expect("tests_require regex should compile")
 });
@@ -375,14 +370,8 @@ fn parse_rfc822_marker(
 }
 
 fn extract_marker_field(marker: &str, field: &str) -> Option<String> {
-    let captures = MARKER_FIELD_RE.captures(marker)?;
-    let matched_field = captures.get(1)?.as_str();
-    if matched_field != field {
-        return None;
-    }
-    let operator = captures.get(2)?.as_str();
-    let value = captures.get(3)?.as_str();
-    Some(format!("{} {}", operator, value))
+    let clauses = crate::parsers::pep508::marker_conjunct_comparisons(marker, field);
+    (!clauses.is_empty()).then(|| clauses.join(", "))
 }
 
 pub(super) fn parse_requires_txt(content: &str) -> Vec<Dependency> {

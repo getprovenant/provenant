@@ -1815,6 +1815,44 @@ Test package description.
     }
 
     #[test]
+    fn test_extract_metadata_requires_dist_compound_marker_python_version() {
+        let (_temp_dir, file_path) = create_temp_dist_info_metadata_file(
+            "Metadata-Version: 2.1\nName: demo\nVersion: 1.0.0\n\
+             Requires-Dist: tomli; extra == \"dev\" and python_version < \"3.11\"\n\
+             Requires-Dist: pywin32; sys_platform == \"win32\" and \"3.8\" <= python_version\n\
+             Requires-Dist: backports; python_version >= \"3.8\" and python_version < \"3.12\"\n",
+        );
+        let package_data = PythonParser::extract_first_package(&file_path);
+
+        let extra = |purl: &str, key: &str| -> Option<String> {
+            package_data
+                .dependencies
+                .iter()
+                .find(|dep| dep.purl.as_deref() == Some(purl))
+                .and_then(|dep| dep.extra_data.as_ref())
+                .and_then(|extra| extra.get(key))
+                .and_then(|value| value.as_str())
+                .map(str::to_string)
+        };
+        assert_eq!(
+            extra("pkg:pypi/tomli", "python_version").as_deref(),
+            Some("< 3.11")
+        );
+        assert_eq!(
+            extra("pkg:pypi/pywin32", "python_version").as_deref(),
+            Some(">= 3.8")
+        );
+        assert_eq!(
+            extra("pkg:pypi/pywin32", "sys_platform").as_deref(),
+            Some("== win32")
+        );
+        assert_eq!(
+            extra("pkg:pypi/backports", "python_version").as_deref(),
+            Some(">= 3.8, < 3.12")
+        );
+    }
+
+    #[test]
     fn test_is_match_wheel_extension() {
         let wheel_path = PathBuf::from("/some/path/package-1.0.0-py3-none-any.whl");
         let wheel_uppercase = PathBuf::from("/some/path/package-1.0.0-py3-none-any.WHL");
