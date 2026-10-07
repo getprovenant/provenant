@@ -70,7 +70,11 @@ ignored_licenses = []
 "agpl-3.0_and_other-copyleft_2.RULE" = "Same other-copyleft mislabel as agpl-3.0_and_other-copyleft_1.RULE on the https variant of the same SugarCRM notice; fixing only one variant would report different expressions for the same text. Keep the upstream identifier so it replaces the mislabeled rule in place."
 "agpl-3.0_and_other-copyleft_and_unknown_1.RULE" = "Same other-copyleft mislabel class as ScanCode issue #5274 on the Projects4Me variant of the SugarCRM Section 7(a)/7(b) notice; only the catch-all component is corrected and the separate unknown component is preserved. Keep the upstream identifier so it replaces the mislabeled rule in place."
 "agpl-3.0_and_other-copyleft_and_unknown_2.RULE" = "Same other-copyleft mislabel as agpl-3.0_and_other-copyleft_and_unknown_1.RULE on the https variant of the same Projects4Me notice. Keep the upstream identifier so it replaces the mislabeled rule in place."
-"unknown_10.RULE" = "Narrow the upstream unknown-license-reference rule to the reviewed 'See LICENSE file for details' shape with a required LICENSE filename instead of letting broader mentions overmatch."
+"agpl-3.0_326.RULE" = "Correct this 'either version 3 of the Licence, or (at your option) any later version' AGPL notice to AGPL-3.0-or-later instead of AGPL-3.0-only (ScanCode PR #5336). Keep the upstream identifier so it replaces the mislabeled rule in place."
+"mit_expat_terms_notice_1.RULE" = "Detect the standalone 'Licensed under the terms of the Expat License' notice as MIT; without it the line only yields an unknown-license-reference intro beside the MIT text (ScanCode PR #5340)."
+"bsd-simplified_license_txt_link_1.RULE" = "Detect Markdown links such as '[... Simplified BSD License](LICENSE.txt)' as BSD-2-Clause so the weaker 'BSD licenses LICENSE.txt' BSD-3-Clause rule does not add bsd-new (ScanCode issue #5299, PR #5311)."
+"bsd-simplified_license_txt_link_2.RULE" = "Cover the '[2-clause BSD License](LICENSE.txt)' sibling of bsd-simplified_license_txt_link_1.RULE so it is not reported as BSD-2-Clause AND BSD-3-Clause (ScanCode issue #5299)."
+"unknown_10.RULE" ="Narrow the upstream unknown-license-reference rule to the reviewed 'See LICENSE file for details' shape with a required LICENSE filename instead of letting broader mentions overmatch."
 
 [overlay_reasons.licenses]
 "cc-pdm-1.0.LICENSE" = "Require materially more than a handful of public-domain words before surfacing CC-PDM-1.0, so tiny unrelated prose fragments do not survive as low-quality clues."
