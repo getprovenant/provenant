@@ -273,7 +273,7 @@ pub(super) fn is_truncated_lowercase_prose_holder(s: &str) -> bool {
 
 /// Return true if `s` matches any known junk copyright pattern.
 pub fn is_junk_copyright(s: &str) -> bool {
-    if looks_like_structured_copyright_notice_with_year(s) {
+    if looks_like_structured_copyright_notice_with_year(s) || is_bare_c_the_authors_notice(s) {
         return false;
     }
 
@@ -288,6 +288,17 @@ pub fn is_junk_copyright(s: &str) -> bool {
         || contains_unicode_segmentation_markers(s)
         || is_bare_markup_tag(s)
         || looks_like_source_code(s)
+}
+
+/// `(c) The Author(s)` is a complete collective notice, unlike prose led by `(c) the`.
+fn is_bare_c_the_authors_notice(s: &str) -> bool {
+    static C_THE_AUTHORS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^\(c\)\s+the\s+(?:[a-z-]+\s+)?author(?:s|\(s\))\.?(?:\s+(?:19|20)\d{2}\.?)?$",
+        )
+    });
+    let trimmed = s.trim();
+    trimmed.len() < 64 && C_THE_AUTHORS_RE.is_match(trimmed)
 }
 
 /// Return true if the whole candidate is a single markup tag such as the XML

@@ -34,6 +34,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     }
     let mut c = original.clone();
     c = strip_known_copyright_wrappers(&c);
+    c = strip_publisher_after_authors_s(&c);
     c = trim_separator_rule_runs(&c);
     c = strip_trailing_quote_before_email(&c);
     c = normalize_b_dot_angle_emails(&c);
@@ -967,6 +968,10 @@ pub(super) fn strip_trailing_author_label(s: &str) -> String {
     let Some(m) = TRAILING_AUTHOR_RE.find(s) else {
         return s.to_string();
     };
+    // `The Author(s)` is a collective holder, not a trailing author label.
+    if s[m.end()..].starts_with("(s)") || s[m.end()..].starts_with("(S)") {
+        return s.to_string();
+    }
 
     let prefix = s[..m.start()].trim_end();
     if !prefix_has_holder_words(prefix) {

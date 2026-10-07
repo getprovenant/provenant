@@ -4765,6 +4765,11 @@ pub(crate) static GRAMMAR_RULES: &[GrammarRule] = &[
         label: Copyright,
         pattern: &[Tag(Copy), Tag(Nnp), Tag(Auths)],
     },
+    // (c) The Author(s).
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Tag(Copy), Tag(Nn), Tag(Auths)],
+    },
     GrammarRule {
         label: Copyright,
         pattern: &[Tag(Copy), Tag(Nnp), Tag(Nnp), Tag(Auths)],

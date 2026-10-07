@@ -1,0 +1,15 @@
+what:
+  - copyrights
+  - holders
+  - authors
+copyrights:
+  - "Copyright 2018 The Author(s)"
+  - "Copyright 2018, The Author(s)"
+  - "Copyright (c) 2018 the Author(s)"
+  - "Copyright (c) 2021 The Author(s)"
+  - "(c) 2020 The Author(s)"
+  - "(c) The Author(s)"
+holders:
+  - "The Author(s)"
+  - "the Author(s)"
+authors: []

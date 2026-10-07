@@ -36,6 +36,24 @@ fn test_strip_trailing_original_authors() {
 }
 
 #[test]
+fn test_refine_keeps_collective_author_s_holder() {
+    assert_eq!(
+        refine_copyright("Copyright 2018 The Author(s)."),
+        Some("Copyright 2018 The Author(s)".to_string())
+    );
+    assert_eq!(
+        refine_copyright("Copyright 2021 The Author(s). Published by Elsevier B.V."),
+        Some("Copyright 2021 The Author(s)".to_string())
+    );
+    assert_eq!(
+        refine_holder("The Author(s). 2019 Open Access"),
+        Some("The Author(s)".to_string())
+    );
+    assert!(!is_junk_copyright("(c) The Author(s)"));
+    assert!(is_junk_copyright("(c) the following conditions"));
+}
+
+#[test]
 fn test_refine_copyright_preserves_portions_created_by_prefix() {
     let refined = refine_copyright(
             "Portions created by the Initial Developer are Copyright (C) 1998-2000 the Initial Developer.",

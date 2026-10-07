@@ -436,6 +436,22 @@ pub(super) fn strip_independent_jpeg_groups_software_tail(s: &str) -> String {
     JPEG_GROUP_SOFTWARE_RE.replace(s, "$1").trim().to_string()
 }
 
+/// `The Author(s). Published by <Publisher>` names the publisher, not a co-holder.
+pub(super) fn strip_publisher_after_authors_s(s: &str) -> String {
+    static PUBLISHER_AFTER_AUTHORS_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^(?P<prefix>.*\bauthor\(s\))\.?\s+(?:(?:19|20)\d{2}\.?\s+)?(?:published\s+(?:by|with)|open\s+access)\b.*$",
+        )
+    });
+    if !(s.contains("(s)") || s.contains("(S)")) {
+        return s.to_string();
+    }
+    match PUBLISHER_AFTER_AUTHORS_RE.captures(s) {
+        Some(cap) => cap["prefix"].trim().to_string(),
+        None => s.to_string(),
+    }
+}
+
 pub(super) fn strip_trailing_original_authors(s: &str) -> String {
     static ORIGINAL_AUTHORS_RE: LazyLock<Regex> =
         LazyLock::new(|| compile_static_regex(r"(?i)^(.*\bthe original)\s+authors\b\s*$"));
