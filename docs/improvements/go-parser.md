@@ -22,11 +22,13 @@ The Python reference covers `go.mod` and `go.sum`, but module-graph data, direct
 
 ### Module graph support
 
-- Rust adds a dedicated `go.mod.graph` / `go.modgraph` parser for checked-in `go mod graph` output.
+- Rust adds a dedicated `go.mod.graph` / `go.modgraph` / `go-mod-graph.deplock` parser for checked-in `go mod graph` output.
 - The graph parser models:
   - direct module edges from the main module
   - transitive module edges from dependency modules
   - pinned versions from the graph artifact itself
+- `go@…` and `toolchain@…` nodes are skipped because they are Go language and toolchain requirements, not modules.
+- `is_runtime` and `is_optional` stay unset because the graph does not prove them.
 - This keeps graph semantics distinct from `go.sum`, which remains checksum-focused.
 
 ### Build-constraint-aware categorization

@@ -34,7 +34,7 @@ impl PackageParser for GoModGraphParser {
     fn metadata() -> Vec<ParserMetadata> {
         vec![ParserMetadata {
             description: "Go module graph file",
-            file_patterns: &["*go.mod.graph", "*go.modgraph"],
+            file_patterns: &["*go.mod.graph", "*go.modgraph", "*go-mod-graph.deplock"],
             package_type: "golang",
             primary_language: "Go",
             documentation_url: Some("https://go.dev/ref/mod#go-mod-graph"),
@@ -44,7 +44,12 @@ impl PackageParser for GoModGraphParser {
     fn is_match(path: &Path) -> bool {
         path.file_name()
             .and_then(|name| name.to_str())
-            .is_some_and(|name| matches!(name, "go.mod.graph" | "go.modgraph"))
+            .is_some_and(|name| {
+                matches!(
+                    name,
+                    "go.mod.graph" | "go.modgraph" | "go-mod-graph.deplock"
+                )
+            })
     }
 
     fn extract_packages(path: &Path) -> Vec<PackageData> {
@@ -89,9 +94,12 @@ pub(crate) fn parse_go_mod_graph(content: &str) -> PackageData {
 
         let source = parse_graph_module(source);
         let target = parse_graph_module(target);
-
         if source.version.is_none() && root_module.is_none() {
             root_module = Some(truncate_field(source.module_path.to_string()));
+        }
+
+        if is_go_pseudo_module(&source) || is_go_pseudo_module(&target) {
+            continue;
         }
 
         let Some(purl) = create_golang_purl(target.module_path, target.version) else {
@@ -109,8 +117,8 @@ pub(crate) fn parse_go_mod_graph(content: &str) -> PackageData {
                 purl: Some(truncate_field(purl)),
                 extracted_requirement: target.version.map(|v| truncate_field(v.to_string())),
                 scope: Some("dependency".to_string()),
-                is_runtime: Some(true),
-                is_optional: Some(false),
+                is_runtime: None,
+                is_optional: None,
                 is_pinned: Some(target.version.is_some()),
                 is_direct: Some(source.version.is_none()),
                 resolved_package: None,
@@ -151,6 +159,11 @@ pub(crate) fn parse_go_mod_graph(content: &str) -> PackageData {
     }
 }
 
+/// `go@…` and `toolchain@…` graph nodes are version requirements, not modules.
+fn is_go_pseudo_module(module: &GraphModule<'_>) -> bool {
+    module.version.is_some() && matches!(module.module_path, "go" | "toolchain")
+}
+
 fn parse_graph_module(token: &str) -> GraphModule<'_> {
     if let Some((module_path, version)) = token.rsplit_once('@') {
         GraphModule {
@@ -176,6 +189,9 @@ mod tests {
     fn test_is_match() {
         assert!(GoModGraphParser::is_match(Path::new("go.mod.graph")));
         assert!(GoModGraphParser::is_match(Path::new("go.modgraph")));
+        assert!(GoModGraphParser::is_match(Path::new(
+            "go-mod-graph.deplock"
+        )));
         assert!(!GoModGraphParser::is_match(Path::new("go.mod")));
     }
 
@@ -207,6 +223,38 @@ mod tests {
             .find(|dep| dep.purl.as_deref() == Some("pkg:golang/golang.org/x/net@v0.10.0"))
             .unwrap();
         assert_eq!(transitive.is_direct, Some(false));
+    }
+
+    #[test]
+    fn test_parse_go_mod_graph_skips_go_and_toolchain_nodes() {
+        let content = "example.com/main go@1.22.0\nexample.com/main toolchain@go1.22.3\nexample.com/main github.com/a/b@v1.0.0\ngo@1.22.0 toolchain@go1.22.3\ngithub.com/a/b@v1.0.0 go@1.20\n";
+
+        let package_data = parse_go_mod_graph(content);
+
+        let purls: Vec<_> = package_data
+            .dependencies
+            .iter()
+            .filter_map(|dep| dep.purl.as_deref())
+            .collect();
+        assert_eq!(purls, vec!["pkg:golang/github.com/a/b@v1.0.0"]);
+        let dep = &package_data.dependencies[0];
+        assert_eq!(dep.is_runtime, None);
+        assert_eq!(dep.is_optional, None);
+        assert_eq!(dep.is_pinned, Some(true));
+        assert_eq!(dep.is_direct, Some(true));
+    }
+
+    #[test]
+    fn test_parse_go_mod_graph_keeps_root_with_only_pseudo_node_edges() {
+        let content = "example.com/main go@1.22.0\ngo@1.22.0 toolchain@go1.22.3\n";
+
+        let package_data = parse_go_mod_graph(content);
+
+        assert_eq!(
+            package_data.purl.as_deref(),
+            Some("pkg:golang/example.com/main")
+        );
+        assert!(package_data.dependencies.is_empty());
     }
 
     #[test]

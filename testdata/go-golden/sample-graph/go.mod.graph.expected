@@ -12,8 +12,8 @@
         "purl": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
         "extracted_requirement": "v1.1.1",
         "scope": "dependency",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": false
       },
@@ -21,8 +21,8 @@
         "purl": "pkg:golang/github.com/gin-gonic/gin@v1.9.0",
         "extracted_requirement": "v1.9.0",
         "scope": "dependency",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": true
       },
@@ -30,8 +30,8 @@
         "purl": "pkg:golang/github.com/stretchr/testify@v1.8.4",
         "extracted_requirement": "v1.8.4",
         "scope": "dependency",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": true
       },
@@ -39,8 +39,8 @@
         "purl": "pkg:golang/golang.org/x/net@v0.10.0",
         "extracted_requirement": "v0.10.0",
         "scope": "dependency",
-        "is_runtime": true,
-        "is_optional": false,
+        "is_runtime": null,
+        "is_optional": null,
         "is_pinned": true,
         "is_direct": false
       }

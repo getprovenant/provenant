@@ -7,9 +7,7 @@
       "extracted_requirement": "v1.1.1",
       "for_package_uid": "pkg:golang/example.com/test-module?uuid=fixed-uid-done-for-testing-5642512d1758",
       "is_direct": false,
-      "is_optional": false,
       "is_pinned": true,
-      "is_runtime": true,
       "purl": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
       "scope": "dependency"
     },
@@ -32,9 +30,7 @@
       "extracted_requirement": "v1.9.0",
       "for_package_uid": "pkg:golang/example.com/test-module?uuid=fixed-uid-done-for-testing-5642512d1758",
       "is_direct": true,
-      "is_optional": false,
       "is_pinned": true,
-      "is_runtime": true,
       "purl": "pkg:golang/github.com/gin-gonic/gin@v1.9.0",
       "scope": "dependency"
     },
@@ -70,9 +66,7 @@
       "extracted_requirement": "v1.8.4",
       "for_package_uid": "pkg:golang/example.com/test-module?uuid=fixed-uid-done-for-testing-5642512d1758",
       "is_direct": true,
-      "is_optional": false,
       "is_pinned": true,
-      "is_runtime": true,
       "purl": "pkg:golang/github.com/stretchr/testify@v1.8.4",
       "scope": "dependency"
     },
@@ -108,9 +102,7 @@
       "extracted_requirement": "v0.10.0",
       "for_package_uid": "pkg:golang/example.com/test-module?uuid=fixed-uid-done-for-testing-5642512d1758",
       "is_direct": false,
-      "is_optional": false,
       "is_pinned": true,
-      "is_runtime": true,
       "purl": "pkg:golang/golang.org/x/net@v0.10.0",
       "scope": "dependency"
     },
