@@ -466,6 +466,14 @@ Copyright - split out libs\0\xff",
     }
 
     #[test]
+    fn test_golden_reference_follow_readme_simplified_bsd_link() {
+        assert_reference_follow_fixture_matches_expected(
+            "testdata/summarycode-golden/reference_following/readme_simplified_bsd_link",
+            "testdata/summarycode-golden/reference_following/readme_simplified_bsd_link/expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_reference_follow_file_to_package_inheritance() {
         assert_reference_follow_fixture_matches_expected(
             "testdata/summarycode-golden/reference_following/file_to_package_inheritance",
