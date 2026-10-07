@@ -1,0 +1,290 @@
+{
+  "packages": [
+    {
+      "type": "maven",
+      "namespace": "com.fasterxml.jackson.core",
+      "name": "jackson-core",
+      "version": "2.4.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": null,
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "apache-2.0",
+      "declared_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.xml",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 9,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "apache-2.0_1189.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_1189.RULE",
+              "matched_text": "- license:\n    name: The Apache Software License, Version 2.0\n"
+            }
+          ],
+          "identifier": "apache_2_0-e763e942-1695-c6d7-875f-71cc82b8705e"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": "- license:\n    name: The Apache Software License, Version 2.0\n",
+      "notice_text": null,
+      "source_packages": [
+        "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.4.0?classifier=sources"
+      ],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {},
+      "repository_homepage_url": "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.4.0/",
+      "repository_download_url": "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.4.0/jackson-core-2.4.0.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.4.0/jackson-core-2.4.0.pom",
+      "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.4.0",
+      "package_uid": "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.4.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.properties",
+        "META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.xml"
+      ],
+      "datasource_ids": ["maven_pom", "maven_pom_properties"]
+    },
+    {
+      "type": "maven",
+      "namespace": "commons-logging",
+      "name": "commons-logging",
+      "version": "1.1.1",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": null,
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "apache-2.0",
+      "declared_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "META-INF/maven/commons-logging/commons-logging/pom.xml",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 5,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "apache-2.0_required_phrase_11.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_required_phrase_11.RULE",
+              "matched_text": "- license:\n    name: Apache 2\n"
+            }
+          ],
+          "identifier": "apache_2_0-a819e150-d813-2bc0-2b82-364dfbe2a9ae"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": "- license:\n    name: Apache 2\n",
+      "notice_text": null,
+      "source_packages": ["pkg:maven/commons-logging/commons-logging@1.1.1?classifier=sources"],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {},
+      "repository_homepage_url": "https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.1/",
+      "repository_download_url": "https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.1/commons-logging-1.1.1.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.1/commons-logging-1.1.1.pom",
+      "purl": "pkg:maven/commons-logging/commons-logging@1.1.1",
+      "package_uid": "pkg:maven/commons-logging/commons-logging@1.1.1?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "META-INF/maven/commons-logging/commons-logging/pom.properties",
+        "META-INF/maven/commons-logging/commons-logging/pom.xml"
+      ],
+      "datasource_ids": ["maven_pom", "maven_pom_properties"]
+    },
+    {
+      "type": "maven",
+      "namespace": "org.apache.htrace",
+      "name": "htrace-core4",
+      "version": "4.0.0-incubating",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Java",
+      "description": null,
+      "release_date": null,
+      "parties": [],
+      "keywords": [],
+      "homepage_url": null,
+      "download_url": null,
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "apache-2.0",
+      "declared_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "META-INF/maven/org.apache.htrace/htrace-core4/pom.xml",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 7,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "apache-2.0_68.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_68.RULE",
+              "matched_text": "- license:\n    name: Apache License, Version 2.0\n"
+            }
+          ],
+          "identifier": "apache_2_0-eac2b724-feb4-38d9-14c8-538c04b83ab5"
+        },
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "META-INF/MANIFEST.MF",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 1,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "apache-2.0_42.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/apache-2.0_42.RULE",
+              "matched_text": "http://www.apache.org/licenses/LICENSE-2.0.txt",
+              "referenced_filenames": []
+            }
+          ],
+          "identifier": "apache_2_0-d10f9090-b50c-5c3f-cb98-83913dd16fd6"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": "- license:\n    name: Apache License, Version 2.0\n",
+      "notice_text": null,
+      "source_packages": [
+        "pkg:maven/org.apache.htrace/htrace-core4@4.0.0-incubating?classifier=sources"
+      ],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {
+        "osgi_bundle_symbolic_name": "org.apache.htrace.core4",
+        "osgi_bundle_version": "4.0.0.incubating"
+      },
+      "repository_homepage_url": "https://repo1.maven.org/maven2/org/apache/htrace/htrace-core4/4.0.0-incubating/",
+      "repository_download_url": "https://repo1.maven.org/maven2/org/apache/htrace/htrace-core4/4.0.0-incubating/htrace-core4-4.0.0-incubating.jar",
+      "api_data_url": "https://repo1.maven.org/maven2/org/apache/htrace/htrace-core4/4.0.0-incubating/htrace-core4-4.0.0-incubating.pom",
+      "purl": "pkg:maven/org.apache.htrace/htrace-core4@4.0.0-incubating",
+      "package_uid": "pkg:maven/org.apache.htrace/htrace-core4@4.0.0-incubating?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "META-INF/MANIFEST.MF",
+        "META-INF/maven/org.apache.htrace/htrace-core4/pom.properties",
+        "META-INF/maven/org.apache.htrace/htrace-core4/pom.xml"
+      ],
+      "datasource_ids": ["java_jar_manifest", "maven_pom", "maven_pom_properties"]
+    }
+  ],
+  "dependencies": [],
+  "files_with_packages": [
+    {
+      "path": "META-INF/MANIFEST.MF",
+      "for_packages": [
+        "pkg:maven/org.apache.htrace/htrace-core4@4.0.0-incubating?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.properties",
+      "for_packages": [
+        "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.4.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.xml",
+      "for_packages": [
+        "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.4.0?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "META-INF/maven/commons-logging/commons-logging/pom.properties",
+      "for_packages": [
+        "pkg:maven/commons-logging/commons-logging@1.1.1?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "META-INF/maven/commons-logging/commons-logging/pom.xml",
+      "for_packages": [
+        "pkg:maven/commons-logging/commons-logging@1.1.1?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "META-INF/maven/org.apache.htrace/htrace-core4/pom.properties",
+      "for_packages": [
+        "pkg:maven/org.apache.htrace/htrace-core4@4.0.0-incubating?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    },
+    {
+      "path": "META-INF/maven/org.apache.htrace/htrace-core4/pom.xml",
+      "for_packages": [
+        "pkg:maven/org.apache.htrace/htrace-core4@4.0.0-incubating?uuid=fixed-uid-done-for-testing-5642512d1758"
+      ]
+    }
+  ]
+}

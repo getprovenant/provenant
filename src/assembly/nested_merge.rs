@@ -38,9 +38,12 @@ pub fn assemble_nested_patterns(
         return None;
     }
 
-    if should_skip_nested_merge(&package_root, &sibling_indices, files, config) {
-        return None;
-    }
+    let sibling_indices =
+        if nested_maven_pom_count(&package_root, &sibling_indices, files, config) > 1 {
+            select_uberjar_manifest_owner(&package_root, &sibling_indices, files)?
+        } else {
+            sibling_indices
+        };
 
     assemble_from_indices(config, files, &sibling_indices)
 }
@@ -127,37 +130,112 @@ fn find_nested_siblings(root: &Path, files: &[FileInfo], config: &AssemblerConfi
         .collect()
 }
 
-fn should_skip_nested_merge(
+/// Counts Maven POMs anchored under `root`; zero for non-Maven configs.
+///
+/// The nested merge folds a single packaged artifact (one POM plus its sibling
+/// `pom.properties` / `MANIFEST.MF`) into one package. More than one POM means
+/// either a source reactor, whose module POMs the per-directory merge already
+/// models, or a fat jar bundling shaded POMs; neither may be folded wholesale.
+fn nested_maven_pom_count(
     root: &Path,
     indices: &[usize],
     files: &[FileInfo],
     config: &AssemblerConfig,
-) -> bool {
-    if !config
-        .datasource_ids
-        .contains(&crate::models::DatasourceId::MavenPom)
-    {
-        return false;
+) -> usize {
+    if !config.datasource_ids.contains(&DatasourceId::MavenPom) {
+        return 0;
     }
 
-    let maven_pom_count = indices
+    indices
         .iter()
         .filter(|&&idx| {
-            files[idx].package_data.iter().any(|pkg_data| {
-                pkg_data.datasource_id == Some(crate::models::DatasourceId::MavenPom)
-                    && Path::new(&files[idx].path).starts_with(root)
-            })
+            Path::new(&files[idx].path).starts_with(root)
+                && files[idx]
+                    .package_data
+                    .iter()
+                    .any(|pkg_data| pkg_data.datasource_id == Some(DatasourceId::MavenPom))
         })
-        .count();
+        .count()
+}
 
-    // The Maven nested merge exists to fold a single packaged artifact (one
-    // `pom.xml` plus its sibling `pom.properties` / `MANIFEST.MF`) into one
-    // package. It must fire only when exactly one Maven POM is anchored under
-    // the root. Skip a source reactor, where each module `pom.xml` is an
-    // independent package the per-directory sibling merge already produced, and
-    // skip a fat artifact bundling multiple POMs; both surface more than one POM
-    // under the root.
-    maven_pom_count > 1
+/// For a fat jar bundling several `META-INF/maven/<group>/<artifact>/` POMs,
+/// selects the jar's root `META-INF/MANIFEST.MF` plus the one POM directory whose
+/// identity matches it. Returns `None` (manifest stays unowned) when the manifest
+/// has no identity or zero or several POM directories match; shaded POMs keep
+/// their own per-directory packages either way.
+fn select_uberjar_manifest_owner(
+    root: &Path,
+    indices: &[usize],
+    files: &[FileInfo],
+) -> Option<Vec<usize>> {
+    let manifest_path = root.join("META-INF").join("MANIFEST.MF");
+    let maven_dir = root.join("META-INF").join("maven");
+
+    let manifest_idx = indices
+        .iter()
+        .copied()
+        .find(|&idx| Path::new(&files[idx].path) == manifest_path)?;
+    let manifest_identities: Vec<&PackageData> = files[manifest_idx]
+        .package_data
+        .iter()
+        .filter(|pkg_data| {
+            matches!(
+                pkg_data.datasource_id,
+                Some(DatasourceId::JavaJarManifest | DatasourceId::JavaOsgiManifest)
+            )
+        })
+        .collect();
+
+    let pom_dir_of = |idx: usize| -> Option<&Path> {
+        let dir = Path::new(&files[idx].path).parent()?;
+        (dir.parent()?.parent()? == maven_dir).then_some(dir)
+    };
+
+    let mut matched_dirs: Vec<&Path> = indices
+        .iter()
+        .filter_map(|&idx| {
+            let dir = pom_dir_of(idx)?;
+            files[idx]
+                .package_data
+                .iter()
+                .filter(|pkg_data| {
+                    matches!(
+                        pkg_data.datasource_id,
+                        Some(DatasourceId::MavenPom | DatasourceId::MavenPomProperties)
+                    )
+                })
+                .any(|pom| {
+                    manifest_identities
+                        .iter()
+                        .any(|manifest| manifest_identity_matches(manifest, pom))
+                })
+                .then_some(dir)
+        })
+        .collect();
+    matched_dirs.sort_unstable();
+    matched_dirs.dedup();
+
+    let [owner_dir] = matched_dirs.as_slice() else {
+        return None;
+    };
+
+    let mut selected: Vec<usize> = indices
+        .iter()
+        .copied()
+        .filter(|&idx| pom_dir_of(idx) == Some(*owner_dir))
+        .collect();
+    selected.push(manifest_idx);
+    Some(selected)
+}
+
+/// Name and version must be present and equal; a manifest namespace, when known,
+/// must equal the POM group.
+fn manifest_identity_matches(manifest: &PackageData, pom: &PackageData) -> bool {
+    manifest.name.is_some()
+        && manifest.version.is_some()
+        && manifest.name == pom.name
+        && manifest.version == pom.version
+        && (manifest.namespace.is_none() || manifest.namespace == pom.namespace)
 }
 
 fn should_dedupe_ruby_extracted_dependencies(config: &AssemblerConfig) -> bool {
