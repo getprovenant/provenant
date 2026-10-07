@@ -175,6 +175,11 @@ fn run_author_extraction_and_repairs(
     seen.dedup_new_authors(&mut new_a, 0);
     authors.extend(new_a);
 
+    let mut new_a =
+        super::author_heuristics::extract_markdown_contributor_roster_authors(raw_lines);
+    seen.dedup_new_authors(&mut new_a, 0);
+    authors.extend(new_a);
+
     let mut new_a = super::author_heuristics::extract_written_on_top_of_by_authors(content);
     seen.dedup_new_authors(&mut new_a, 0);
     authors.extend(new_a);
