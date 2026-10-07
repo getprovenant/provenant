@@ -70,7 +70,7 @@ content-hash = "test"
             .find(|d| d.purl.as_ref().unwrap().contains("pytest"))
             .expect("Should find pytest dependency");
 
-        assert_eq!(pytest.is_optional, None);
+        assert_eq!(pytest.is_optional, Some(true));
         assert_eq!(pytest.is_runtime, None);
         assert_eq!(pytest.is_direct, None);
         assert_eq!(

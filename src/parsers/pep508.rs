@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::parser_warn as warn;
 use crate::parsers::utils::{CappedIterExt, MAX_FIELD_LENGTH, truncate_field};
 
@@ -222,5 +224,222 @@ fn normalize_specifiers(rest: &str) -> Option<String> {
         None
     } else {
         Some(normalized)
+    }
+}
+
+const MAX_MARKER_DEPTH: usize = 32;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum MarkerToken {
+    Open,
+    Close,
+    And,
+    Or,
+    Op(String),
+    Var(String),
+    Str(String),
+}
+
+enum MarkerExpr {
+    And(Vec<MarkerExpr>),
+    Or,
+    Compare(MarkerToken, String, MarkerToken),
+}
+
+/// Comparisons on `variable` that hold whenever the PEP 508 `marker` holds,
+/// rendered as `"<op> <value>"` with the variable on the left. Clauses under an
+/// `or` are not unconditional and are skipped; an unparseable marker yields none.
+pub(crate) fn marker_conjunct_comparisons(marker: &str, variable: &str) -> Vec<String> {
+    if marker.len() > MAX_FIELD_LENGTH {
+        return Vec::new();
+    }
+    let Some(tokens) = tokenize_marker(marker) else {
+        return Vec::new();
+    };
+    let mut position = 0;
+    let Some(expr) = parse_marker_or(&tokens, &mut position, 0) else {
+        return Vec::new();
+    };
+    if position != tokens.len() {
+        return Vec::new();
+    }
+
+    let mut clauses = Vec::new();
+    collect_conjunct_comparisons(&expr, variable, &mut clauses);
+    let mut seen = HashSet::new();
+    clauses.retain(|clause| seen.insert(clause.clone()));
+    clauses
+}
+
+fn tokenize_marker(marker: &str) -> Option<Vec<MarkerToken>> {
+    let mut tokens = Vec::new();
+    let mut chars = marker.char_indices().peekable();
+    while let Some(&(start, ch)) = chars.peek() {
+        match ch {
+            c if c.is_whitespace() => {
+                chars.next();
+            }
+            '(' => {
+                chars.next();
+                tokens.push(MarkerToken::Open);
+            }
+            ')' => {
+                chars.next();
+                tokens.push(MarkerToken::Close);
+            }
+            '\'' | '"' => {
+                chars.next();
+                let end = marker[start + 1..].find(ch)? + start + 1;
+                tokens.push(MarkerToken::Str(marker[start + 1..end].to_string()));
+                while chars.peek().is_some_and(|&(index, _)| index <= end) {
+                    chars.next();
+                }
+            }
+            '<' | '>' | '=' | '!' | '~' => {
+                let rest = &marker[start..];
+                let op = ["===", "~=", "==", "!=", "<=", ">=", "<", ">"]
+                    .into_iter()
+                    .find(|op| rest.starts_with(op))?;
+                for _ in 0..op.len() {
+                    chars.next();
+                }
+                tokens.push(MarkerToken::Op(op.to_string()));
+            }
+            c if c.is_ascii_alphanumeric() || c == '_' || c == '.' => {
+                let mut end = start;
+                while let Some(&(index, next)) = chars.peek() {
+                    if !(next.is_ascii_alphanumeric() || next == '_' || next == '.') {
+                        break;
+                    }
+                    end = index + next.len_utf8();
+                    chars.next();
+                }
+                let word = &marker[start..end];
+                let token = match word {
+                    "and" => MarkerToken::And,
+                    "or" => MarkerToken::Or,
+                    "in" | "not" => MarkerToken::Op(word.to_string()),
+                    _ => MarkerToken::Var(word.to_string()),
+                };
+                tokens.push(token);
+            }
+            _ => return None,
+        }
+    }
+    Some(tokens)
+}
+
+fn parse_marker_or(
+    tokens: &[MarkerToken],
+    position: &mut usize,
+    depth: usize,
+) -> Option<MarkerExpr> {
+    let first = parse_marker_and(tokens, position, depth)?;
+    let mut is_disjunction = false;
+    while tokens.get(*position) == Some(&MarkerToken::Or) {
+        *position += 1;
+        parse_marker_and(tokens, position, depth)?;
+        is_disjunction = true;
+    }
+    Some(if is_disjunction {
+        MarkerExpr::Or
+    } else {
+        first
+    })
+}
+
+fn parse_marker_and(
+    tokens: &[MarkerToken],
+    position: &mut usize,
+    depth: usize,
+) -> Option<MarkerExpr> {
+    let mut operands = vec![parse_marker_atom(tokens, position, depth)?];
+    while tokens.get(*position) == Some(&MarkerToken::And) {
+        *position += 1;
+        operands.push(parse_marker_atom(tokens, position, depth)?);
+    }
+    Some(if operands.len() == 1 {
+        operands.remove(0)
+    } else {
+        MarkerExpr::And(operands)
+    })
+}
+
+fn parse_marker_atom(
+    tokens: &[MarkerToken],
+    position: &mut usize,
+    depth: usize,
+) -> Option<MarkerExpr> {
+    if tokens.get(*position) == Some(&MarkerToken::Open) {
+        if depth >= MAX_MARKER_DEPTH {
+            return None;
+        }
+        *position += 1;
+        let expr = parse_marker_or(tokens, position, depth + 1)?;
+        if tokens.get(*position) != Some(&MarkerToken::Close) {
+            return None;
+        }
+        *position += 1;
+        return Some(expr);
+    }
+
+    let lhs = marker_operand(tokens.get(*position)?)?;
+    *position += 1;
+    let op = match tokens.get(*position)? {
+        MarkerToken::Op(op) if op == "not" => {
+            *position += 1;
+            match tokens.get(*position)? {
+                MarkerToken::Op(next) if next == "in" => "not in".to_string(),
+                _ => return None,
+            }
+        }
+        MarkerToken::Op(op) => op.clone(),
+        _ => return None,
+    };
+    *position += 1;
+    let rhs = marker_operand(tokens.get(*position)?)?;
+    *position += 1;
+    Some(MarkerExpr::Compare(lhs, op, rhs))
+}
+
+fn marker_operand(token: &MarkerToken) -> Option<MarkerToken> {
+    matches!(token, MarkerToken::Var(_) | MarkerToken::Str(_)).then(|| token.clone())
+}
+
+fn collect_conjunct_comparisons(expr: &MarkerExpr, variable: &str, clauses: &mut Vec<String>) {
+    match expr {
+        MarkerExpr::And(operands) => {
+            for operand in operands {
+                collect_conjunct_comparisons(operand, variable, clauses);
+            }
+        }
+        MarkerExpr::Or => {}
+        MarkerExpr::Compare(lhs, op, rhs) => {
+            let clause = match (lhs, rhs) {
+                (MarkerToken::Var(name), MarkerToken::Str(value)) if name == variable => {
+                    Some((op.as_str(), value))
+                }
+                (MarkerToken::Str(value), MarkerToken::Var(name)) if name == variable => {
+                    reversed_marker_op(op).map(|op| (op, value))
+                }
+                _ => None,
+            };
+            if let Some((op, value)) = clause.filter(|(op, _)| !matches!(*op, "in" | "not in")) {
+                clauses.push(format!("{op} {value}"));
+            }
+        }
+    }
+}
+
+fn reversed_marker_op(op: &str) -> Option<&'static str> {
+    match op {
+        "<" => Some(">"),
+        "<=" => Some(">="),
+        ">" => Some("<"),
+        ">=" => Some("<="),
+        "==" => Some("=="),
+        "!=" => Some("!="),
+        "===" => Some("==="),
+        _ => None,
     }
 }

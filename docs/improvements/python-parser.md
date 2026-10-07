@@ -68,13 +68,13 @@ Rust now extracts dependency information from RFC822-style Python metadata files
 - extra-scoped requirements expressed through `extra == ...` markers
 - sibling `.egg-info/requires.txt` when source-package metadata needs additional dependency evidence
 
-That closes the wheel versus source-package gap for common Python metadata layouts. Extra scopes, simple markers, and pinned requirements are preserved structurally instead of being dropped.
+That closes the wheel versus source-package gap for common Python metadata layouts. Extra scopes, markers, and pinned requirements are preserved structurally instead of being dropped. The derived `python_version` and `sys_platform` values collect every comparison that holds for the whole marker (for example `extra == "dev" and python_version >= "3.8" and python_version < "3.12"` yields `>= 3.8, < 3.12`), accept every PEP 508 comparison operator and reversed operands, and skip clauses that sit under an `or`.
 
 ### 7b. More honest `poetry.lock` package inventory semantics
 
 Rust now treats top-level `poetry.lock` package entries as resolved package inventory rather than pretending the lockfile alone proves root-level runtime classification.
 
-The parser still preserves pinned resolved packages and raw optionality signals, but it no longer turns `[[package]].optional` into a synthetic `is_runtime=false` claim. Optional feature edges from `[package.extras]` stay marked optional without forcing a runtime/non-runtime guess that the lockfile does not guarantee.
+The parser still preserves pinned resolved packages and raw optionality signals, but it no longer turns `[[package]].optional` into a synthetic `is_runtime=false` claim. `optional = true` sets `is_optional` because it proves the package is locked only for extras; `optional = false` leaves `is_optional` unset because it does not prove the package is required. Optional feature edges from `[package.extras]` stay marked optional without forcing a runtime/non-runtime guess that the lockfile does not guarantee.
 
 ### 8. Direct source distribution archive support
 
