@@ -112,6 +112,14 @@ pub fn refine_author(s: &str) -> Option<String> {
         return None;
     }
 
+    // A name never ends in a bare preposition: `Publisher of` is a cut-off phrase.
+    if a.rsplit(' ')
+        .next()
+        .is_some_and(|word| matches!(word, "of" | "for" | "with" | "to"))
+    {
+        return None;
+    }
+
     if !a.is_empty()
         && !AUTHORS_JUNK.contains(a.to_lowercase().as_str())
         && !a.starts_with(AUTHORS_JUNK_PREFIX)

@@ -128,6 +128,7 @@ pub(super) fn refine_holder_impl(s: &str, in_copyright_context: bool) -> Option<
     h = strip_leading_author_label_in_holder(&h);
     h = strip_publisher_after_authors_s(&h);
     h = strip_trailing_open_access_or_including_tail(&h);
+    h = strip_trailing_dash_revision_note(&h);
     h = strip_angle_bracketed_www_domains(&h);
     if in_copyright_context {
         h = strip_angle_bracketed_emails(&h);

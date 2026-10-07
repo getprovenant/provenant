@@ -482,6 +482,15 @@ pub fn extract_from_spans(
             if token.tag == PosTag::Auths && is_prose_author_s(token) {
                 continue;
             }
+            // `... by the Author(s).` closes a sentence; the next line is not its value.
+            if token.tag == PosTag::Auths
+                && token.value.ends_with('.')
+                && all_leaves
+                    .get(i)
+                    .is_some_and(|t| t.start_line != start_line)
+            {
+                continue;
+            }
             while i < all_leaves.len() && detector::token_utils::is_author_span_token(all_leaves[i])
             {
                 let t = all_leaves[i];

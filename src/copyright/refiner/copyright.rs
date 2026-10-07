@@ -36,6 +36,7 @@ pub fn refine_copyright(s: &str) -> Option<String> {
     c = strip_known_copyright_wrappers(&c);
     c = strip_publisher_after_authors_s(&c);
     c = strip_trailing_open_access_or_including_tail(&c);
+    c = strip_trailing_dash_revision_note(&c);
     c = trim_separator_rule_runs(&c);
     c = strip_trailing_quote_before_email(&c);
     c = normalize_b_dot_angle_emails(&c);

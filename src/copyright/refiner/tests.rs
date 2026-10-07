@@ -85,6 +85,19 @@ fn test_refine_drops_glued_journal_and_change_note_tails() {
 }
 
 #[test]
+fn test_refine_holder_drops_next_line_change_note() {
+    assert_eq!(
+        refine_holder("John Bovey, University of Kent at Canterbury - original version"),
+        Some("John Bovey, University of Kent at Canterbury".to_string())
+    );
+}
+
+#[test]
+fn test_refine_author_rejects_trailing_preposition() {
+    assert_eq!(refine_author("Publisher of"), None);
+}
+
+#[test]
 fn test_refine_copyright_preserves_portions_created_by_prefix() {
     let refined = refine_copyright(
             "Portions created by the Initial Developer are Copyright (C) 1998-2000 the Initial Developer.",

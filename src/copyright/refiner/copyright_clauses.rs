@@ -470,6 +470,23 @@ pub(super) fn strip_trailing_open_access_or_including_tail(s: &str) -> String {
     }
 }
 
+/// Drop a change note continued from the next comment line, as in
+/// `John Bovey <jdb@ukc.ac.uk> - original version`.
+pub(super) fn strip_trailing_dash_revision_note(s: &str) -> String {
+    static DASH_REVISION_NOTE_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"^(?P<prefix>.*?\S)\s+-\s+(?:(?:original|initial|first)\s+(?:version|implementation|port)|(?:extensive|major|minor|various)\s+(?:modifications|changes|fixes))\.?$",
+        )
+    });
+    if !s.contains(" - ") {
+        return s.to_string();
+    }
+    match DASH_REVISION_NOTE_RE.captures(s.trim()) {
+        Some(cap) => cap["prefix"].to_string(),
+        None => s.to_string(),
+    }
+}
+
 pub(super) fn strip_trailing_original_authors(s: &str) -> String {
     static ORIGINAL_AUTHORS_RE: LazyLock<Regex> =
         LazyLock::new(|| compile_static_regex(r"(?i)^(.*\bthe original)\s+authors\b\s*$"));
