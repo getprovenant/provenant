@@ -137,6 +137,55 @@ mod tests {
     }
 
     #[test]
+    fn test_maven_multiple_extracted_jars_each_own_their_manifest() {
+        let (files, result) = scan_and_assemble(Path::new(
+            "testdata/assembly-golden/maven-multi-jar-extract",
+        ));
+
+        assert_eq!(uberjar_purls(&result).len(), 2);
+        for (name, jar_dir) in [
+            ("alpha", "alpha.jar-extract/"),
+            ("beta", "beta.jar-extract/"),
+        ] {
+            let package = result
+                .packages
+                .iter()
+                .find(|package| package.name.as_deref() == Some(name))
+                .unwrap_or_else(|| panic!("{name} should be assembled"));
+            let jar_files: Vec<_> = files
+                .iter()
+                .filter(|file| file.path.contains(jar_dir) && !file.package_data.is_empty())
+                .collect();
+            assert_eq!(jar_files.len(), 3);
+            for file in jar_files {
+                assert_eq!(
+                    file.for_packages,
+                    vec![package.package_uid.clone()],
+                    "{} should belong only to {name}",
+                    file.path
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_maven_built_source_tree_folds_into_source_package() {
+        let (files, result) = scan_and_assemble(Path::new(
+            "testdata/assembly-golden/maven-built-source-tree",
+        ));
+
+        assert_eq!(result.packages.len(), 1);
+        let package = &result.packages[0];
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:maven/com.example/app@1.0.0")
+        );
+        for file in files.iter().filter(|file| !file.package_data.is_empty()) {
+            assert_eq!(file.for_packages, vec![package.package_uid.clone()]);
+        }
+    }
+
+    #[test]
     fn test_maven_distinct_gav_poms_in_one_dir_assemble_as_separate_packages() {
         // A flat directory of standalone `.pom` fixtures, each with a distinct
         // GAV, must produce one top-level package per pom rather than collapsing

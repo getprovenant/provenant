@@ -186,37 +186,41 @@ pub fn assemble(files: &mut [FileInfo]) -> AssemblyResult {
         ) {
             continue;
         }
-        if let Some((pkg, deps, affected_indices)) =
-            nested_merge::assemble_nested_patterns(files, config)
-        {
-            let package_uid = pkg.package_uid.clone();
-
-            // The nested merge subsumes exactly the per-directory packages that were
-            // previously created for the files it consumed. Those packages are recorded
-            // on the affected files' `for_packages`, so key dedup off those specific UIDs
-            // rather than a blanket purl match (which would also delete unrelated packages,
-            // including every purl-less package scan-wide when the merged purl is `None`).
-            let removed_package_uids: HashSet<PackageUid> = affected_indices
-                .iter()
-                .flat_map(|idx| files[*idx].for_packages.iter().cloned())
-                .filter(|uid| *uid != package_uid)
-                .collect();
-
-            packages.retain(|p| !removed_package_uids.contains(&p.package_uid));
-            dependencies.retain(|d| {
-                d.for_package_uid
-                    .as_ref()
-                    .is_none_or(|old_uid| !removed_package_uids.contains(old_uid))
-            });
-
-            for idx in &affected_indices {
-                files[*idx].for_packages.clear();
-                files[*idx].for_packages.push(package_uid.clone());
-            }
-
-            packages.push(pkg);
-            dependencies.extend(deps);
+        let merged = nested_merge::assemble_nested_patterns(files, config);
+        if merged.is_empty() {
+            continue;
         }
+
+        // The nested merge subsumes exactly the per-directory packages that were
+        // previously created for the files it consumed. Those packages are recorded
+        // on the affected files' `for_packages`, so key dedup off those specific UIDs
+        // rather than a blanket purl match (which would also delete unrelated packages,
+        // including every purl-less package scan-wide when the merged purl is `None`).
+        let mut removed_package_uids: HashSet<PackageUid> = HashSet::new();
+        let mut merged_packages = Vec::with_capacity(merged.len());
+        let mut merged_dependencies = Vec::new();
+
+        for (pkg, deps, affected_indices) in merged {
+            let package_uid = pkg.package_uid.clone();
+            for idx in &affected_indices {
+                removed_package_uids.extend(
+                    std::mem::replace(&mut files[*idx].for_packages, vec![package_uid.clone()])
+                        .into_iter()
+                        .filter(|uid| *uid != package_uid),
+                );
+            }
+            merged_packages.push(pkg);
+            merged_dependencies.extend(deps);
+        }
+
+        packages.retain(|p| !removed_package_uids.contains(&p.package_uid));
+        dependencies.retain(|d| {
+            d.for_package_uid
+                .as_ref()
+                .is_none_or(|old_uid| !removed_package_uids.contains(old_uid))
+        });
+        packages.extend(merged_packages);
+        dependencies.extend(merged_dependencies);
     }
 
     assemblers::run_post_assembly_passes(files, &mut packages, &mut dependencies, &topology_plan);

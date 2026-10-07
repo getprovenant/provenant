@@ -153,8 +153,8 @@ fn test_find_package_root() {
         ),
     ];
 
-    let root = find_package_root(&[0, 1], &files);
-    assert_eq!(root, Some(PathBuf::from("my-lib")));
+    let roots = find_package_roots(&[0, 1], &files);
+    assert_eq!(roots, vec![PathBuf::from("my-lib")]);
 }
 
 #[test]
@@ -216,8 +216,14 @@ fn test_find_package_root_debian() {
         ),
     ];
 
-    let root = find_package_root(&[0, 1], &files);
-    assert_eq!(root, Some(PathBuf::from("my-pkg")));
+    let roots = find_package_roots(&[0, 1], &files);
+    assert_eq!(roots, vec![PathBuf::from("my-pkg")]);
+}
+
+fn single_merge(files: &[FileInfo], config: &AssemblerConfig) -> NestedMergeOutput {
+    let mut results = assemble_nested_patterns(files, config);
+    assert_eq!(results.len(), 1, "expected exactly one nested merge");
+    results.remove(0)
 }
 
 fn uberjar_config() -> AssemblerConfig {
@@ -292,8 +298,7 @@ fn test_maven_nested_merge_multiple_poms_merges_manifest_into_matching_pom() {
         "1.0.0",
     ));
 
-    let (package, _, mut affected) =
-        assemble_nested_patterns(&files, &uberjar_config()).expect("manifest should merge");
+    let (package, _, mut affected) = single_merge(&files, &uberjar_config());
 
     assert_eq!(
         package.purl.as_deref(),
@@ -314,8 +319,7 @@ fn test_maven_nested_merge_multiple_poms_matches_namespace_less_manifest() {
         "2.0.0",
     ));
 
-    let (package, _, mut affected) =
-        assemble_nested_patterns(&files, &uberjar_config()).expect("manifest should merge");
+    let (package, _, mut affected) = single_merge(&files, &uberjar_config());
 
     assert_eq!(
         package.purl.as_deref(),
@@ -336,7 +340,7 @@ fn test_maven_nested_merge_multiple_poms_skips_non_matching_manifest() {
         "9.9.9",
     ));
 
-    assert!(assemble_nested_patterns(&files, &uberjar_config()).is_none());
+    assert!(assemble_nested_patterns(&files, &uberjar_config()).is_empty());
 }
 
 #[test]
@@ -357,12 +361,12 @@ fn test_maven_nested_merge_multiple_poms_skips_ambiguous_manifest() {
         "1.0.0",
     ));
 
-    assert!(assemble_nested_patterns(&files, &uberjar_config()).is_none());
+    assert!(assemble_nested_patterns(&files, &uberjar_config()).is_empty());
 }
 
 #[test]
 fn test_maven_nested_merge_multiple_poms_without_manifest_skips() {
-    assert!(assemble_nested_patterns(&uberjar_poms(), &uberjar_config()).is_none());
+    assert!(assemble_nested_patterns(&uberjar_poms(), &uberjar_config()).is_empty());
 }
 
 #[test]
@@ -406,5 +410,246 @@ fn test_maven_nested_merge_skips_source_reactor_poms() {
 
     let assembled = assemble_nested_patterns(&files, &config);
 
-    assert!(assembled.is_none());
+    assert!(assembled.is_empty());
+}
+
+fn extracted_jar(root: &str, name: &str) -> Vec<FileInfo> {
+    let maven_dir = format!("{root}/META-INF/maven/com.example/{name}");
+    vec![
+        maven_file(
+            &format!("{root}/META-INF/MANIFEST.MF"),
+            DatasourceId::JavaJarManifest,
+            None,
+            name,
+            "1.0.0",
+        ),
+        maven_file(
+            &format!("{maven_dir}/pom.xml"),
+            DatasourceId::MavenPom,
+            Some("com.example"),
+            name,
+            "1.0.0",
+        ),
+        maven_file(
+            &format!("{maven_dir}/pom.properties"),
+            DatasourceId::MavenPomProperties,
+            Some("com.example"),
+            name,
+            "1.0.0",
+        ),
+    ]
+}
+
+fn merged_paths(files: &[FileInfo], results: &[NestedMergeOutput]) -> Vec<(String, Vec<String>)> {
+    let mut merged: Vec<(String, Vec<String>)> = results
+        .iter()
+        .map(|(package, _, affected)| {
+            let mut paths: Vec<String> = affected
+                .iter()
+                .map(|&idx| files[idx].path.clone())
+                .collect();
+            paths.sort();
+            (package.purl.clone().unwrap_or_default(), paths)
+        })
+        .collect();
+    merged.sort();
+    merged
+}
+
+#[test]
+fn test_nested_merge_assembles_every_extracted_jar_root() {
+    let mut files = extracted_jar("scan/a.jar-extract", "app-a");
+    files.extend(extracted_jar("scan/b.jar-extract", "app-b"));
+
+    let expected = vec![
+        (
+            "pkg:maven/com.example/app-a@1.0.0".to_string(),
+            vec![
+                "scan/a.jar-extract/META-INF/MANIFEST.MF".to_string(),
+                "scan/a.jar-extract/META-INF/maven/com.example/app-a/pom.properties".to_string(),
+                "scan/a.jar-extract/META-INF/maven/com.example/app-a/pom.xml".to_string(),
+            ],
+        ),
+        (
+            "pkg:maven/com.example/app-b@1.0.0".to_string(),
+            vec![
+                "scan/b.jar-extract/META-INF/MANIFEST.MF".to_string(),
+                "scan/b.jar-extract/META-INF/maven/com.example/app-b/pom.properties".to_string(),
+                "scan/b.jar-extract/META-INF/maven/com.example/app-b/pom.xml".to_string(),
+            ],
+        ),
+    ];
+
+    let results = assemble_nested_patterns(&files, &uberjar_config());
+    assert_eq!(merged_paths(&files, &results), expected);
+
+    files.reverse();
+    let results = assemble_nested_patterns(&files, &uberjar_config());
+    assert_eq!(merged_paths(&files, &results), expected);
+}
+
+#[test]
+fn test_nested_merge_assembles_jar_nested_inside_jar_separately() {
+    let mut files = extracted_jar("outer.jar-extract", "outer");
+    files.extend(extracted_jar(
+        "outer.jar-extract/lib/inner.jar-extract",
+        "inner",
+    ));
+
+    let results = assemble_nested_patterns(&files, &uberjar_config());
+    let merged = merged_paths(&files, &results);
+
+    assert_eq!(merged.len(), 2);
+    assert_eq!(merged[0].0, "pkg:maven/com.example/inner@1.0.0");
+    assert!(
+        merged[0]
+            .1
+            .iter()
+            .all(|path| path.contains("inner.jar-extract/"))
+    );
+    assert_eq!(merged[1].0, "pkg:maven/com.example/outer@1.0.0");
+    assert!(
+        merged[1]
+            .1
+            .iter()
+            .all(|path| !path.contains("inner.jar-extract/"))
+    );
+}
+
+#[test]
+fn test_nested_merge_folds_built_source_tree_regardless_of_file_order() {
+    let mut files = vec![
+        maven_file(
+            "project/pom.xml",
+            DatasourceId::MavenPom,
+            Some("com.example"),
+            "app",
+            "1.0.0",
+        ),
+        maven_file(
+            "project/build/classes/META-INF/MANIFEST.MF",
+            DatasourceId::JavaJarManifest,
+            None,
+            "app",
+            "1.0.0",
+        ),
+        maven_file(
+            "project/build/classes/META-INF/maven/com.example/app/pom.properties",
+            DatasourceId::MavenPomProperties,
+            Some("com.example"),
+            "app",
+            "1.0.0",
+        ),
+    ];
+
+    for _ in 0..2 {
+        let results = assemble_nested_patterns(&files, &uberjar_config());
+        let merged = merged_paths(&files, &results);
+        assert_eq!(merged.len(), 1, "source tree must fold into one package");
+        assert_eq!(merged[0].0, "pkg:maven/com.example/app@1.0.0");
+        assert_eq!(merged[0].1.len(), 3);
+        files.reverse();
+    }
+}
+
+#[test]
+fn test_nested_merge_build_output_with_own_pom_xml_assembles_as_jar_layout() {
+    let mut files = vec![maven_file(
+        "project/pom.xml",
+        DatasourceId::MavenPom,
+        Some("com.example"),
+        "app",
+        "1.0.0",
+    )];
+    files.extend(extracted_jar("project/target/classes", "app"));
+
+    let results = assemble_nested_patterns(&files, &uberjar_config());
+    let merged = merged_paths(&files, &results);
+
+    assert_eq!(merged.len(), 1);
+    assert_eq!(merged[0].1.len(), 3);
+    assert!(
+        merged[0]
+            .1
+            .iter()
+            .all(|path| path.starts_with("project/target/classes/"))
+    );
+}
+
+fn gem_config() -> AssemblerConfig {
+    AssemblerConfig {
+        datasource_ids: &[
+            DatasourceId::GemArchiveExtracted,
+            DatasourceId::GemspecExtracted,
+        ],
+        sibling_file_patterns: &[
+            "metadata.gz-extract",
+            "**/data.gz-extract/*.gemspec",
+            "*.gemspec",
+        ],
+        mode: crate::assembly::AssemblyMode::SiblingMergePerIdentity,
+        directory_merger: None,
+    }
+}
+
+fn gem_file(path: &str, datasource_id: DatasourceId, name: &str) -> FileInfo {
+    test_file(
+        path,
+        vec![PackageData {
+            datasource_id: Some(datasource_id),
+            package_type: Some(crate::models::PackageType::Gem),
+            purl: Some(format!("pkg:gem/{name}@1.0.0")),
+            name: Some(name.to_string()),
+            version: Some("1.0.0".to_string()),
+            ..Default::default()
+        }],
+    )
+}
+
+#[test]
+fn test_nested_merge_assembles_every_extracted_gem_root() {
+    let files = vec![
+        gem_file(
+            "a.gem-extract/metadata.gz-extract",
+            DatasourceId::GemArchiveExtracted,
+            "gem-a",
+        ),
+        gem_file(
+            "a.gem-extract/data.gz-extract/gem-a.gemspec",
+            DatasourceId::GemspecExtracted,
+            "gem-a",
+        ),
+        gem_file(
+            "b.gem-extract/metadata.gz-extract",
+            DatasourceId::GemArchiveExtracted,
+            "gem-b",
+        ),
+        gem_file(
+            "b.gem-extract/data.gz-extract/gem-b.gemspec",
+            DatasourceId::GemspecExtracted,
+            "gem-b",
+        ),
+    ];
+
+    let results = assemble_nested_patterns(&files, &gem_config());
+
+    assert_eq!(
+        merged_paths(&files, &results),
+        vec![
+            (
+                "pkg:gem/gem-a@1.0.0".to_string(),
+                vec![
+                    "a.gem-extract/data.gz-extract/gem-a.gemspec".to_string(),
+                    "a.gem-extract/metadata.gz-extract".to_string(),
+                ],
+            ),
+            (
+                "pkg:gem/gem-b@1.0.0".to_string(),
+                vec![
+                    "b.gem-extract/data.gz-extract/gem-b.gemspec".to_string(),
+                    "b.gem-extract/metadata.gz-extract".to_string(),
+                ],
+            ),
+        ]
+    );
 }

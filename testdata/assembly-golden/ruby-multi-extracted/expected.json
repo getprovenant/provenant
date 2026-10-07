@@ -1,0 +1,256 @@
+{
+  "packages": [
+    {
+      "type": "gem",
+      "namespace": null,
+      "name": "alpha",
+      "version": "1.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Ruby",
+      "description": "Alpha gem",
+      "release_date": null,
+      "parties": [
+        {
+          "type": "person",
+          "role": "author",
+          "name": "John Doe",
+          "email": null,
+          "url": null
+        }
+      ],
+      "keywords": [],
+      "homepage_url": "https://example.com/alpha",
+      "download_url": "https://rubygems.org/downloads/alpha-1.0.0.gem",
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "mit",
+      "declared_license_expression_spdx": "MIT",
+      "license_detections": [
+        {
+          "license_expression": "mit",
+          "license_expression_spdx": "MIT",
+          "matches": [
+            {
+              "license_expression": "mit",
+              "license_expression_spdx": "MIT",
+              "from_file": "alpha-1.0.0.gem-extract/metadata.gz-extract",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 1,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "parser-declared-license",
+              "rule_url": null,
+              "matched_text": "MIT"
+            }
+          ],
+          "identifier": "mit-baa8883e-2a3e-91b8-cdd5-5b082d60e708"
+        },
+        {
+          "license_expression": "mit",
+          "license_expression_spdx": "MIT",
+          "matches": [
+            {
+              "license_expression": "mit",
+              "license_expression_spdx": "MIT",
+              "from_file": "alpha-1.0.0.gem-extract/data.gz-extract/alpha.gemspec",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 1,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "parser-declared-license",
+              "rule_url": null,
+              "matched_text": "MIT"
+            }
+          ],
+          "identifier": "mit-baa8883e-2a3e-91b8-cdd5-5b082d60e708"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": "MIT",
+      "notice_text": null,
+      "source_packages": [],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {},
+      "repository_homepage_url": "https://rubygems.org/gems/alpha/versions/1.0.0",
+      "repository_download_url": "https://rubygems.org/downloads/alpha-1.0.0.gem",
+      "api_data_url": "https://rubygems.org/api/v2/rubygems/alpha/versions/1.0.0.json",
+      "purl": "pkg:gem/alpha@1.0.0",
+      "package_uid": "pkg:gem/alpha@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "alpha-1.0.0.gem-extract/data.gz-extract/alpha.gemspec",
+        "alpha-1.0.0.gem-extract/metadata.gz-extract"
+      ],
+      "datasource_ids": ["gem_archive_extracted", "gemspec_extracted"]
+    },
+    {
+      "type": "gem",
+      "namespace": null,
+      "name": "beta",
+      "version": "2.0.0",
+      "qualifiers": {},
+      "subpath": null,
+      "primary_language": "Ruby",
+      "description": "Beta gem",
+      "release_date": null,
+      "parties": [
+        {
+          "type": "person",
+          "role": "author",
+          "name": "Jane Smith",
+          "email": null,
+          "url": null
+        }
+      ],
+      "keywords": [],
+      "homepage_url": "https://example.com/beta",
+      "download_url": "https://rubygems.org/downloads/beta-2.0.0.gem",
+      "size": null,
+      "sha1": null,
+      "md5": null,
+      "sha256": null,
+      "sha512": null,
+      "bug_tracking_url": null,
+      "code_view_url": null,
+      "vcs_url": null,
+      "copyright": null,
+      "holder": null,
+      "declared_license_expression": "apache-2.0",
+      "declared_license_expression_spdx": "Apache-2.0",
+      "license_detections": [
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "beta-2.0.0.gem-extract/metadata.gz-extract",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 1,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+              "matched_text": "Apache-2.0"
+            }
+          ],
+          "identifier": "apache_2_0-e4602d8c-0914-7fcd-bb51-6018f5c21d97"
+        },
+        {
+          "license_expression": "apache-2.0",
+          "license_expression_spdx": "Apache-2.0",
+          "matches": [
+            {
+              "license_expression": "apache-2.0",
+              "license_expression_spdx": "Apache-2.0",
+              "from_file": "beta-2.0.0.gem-extract/data.gz-extract/beta.gemspec",
+              "start_line": 1,
+              "end_line": 1,
+              "matcher": "parser-declared-license",
+              "score": 100.0,
+              "matched_length": 1,
+              "match_coverage": 100.0,
+              "rule_relevance": 100,
+              "rule_identifier": "spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+              "rule_url": "https://github.com/aboutcode-org/scancode-toolkit/tree/develop/src/licensedcode/data/rules/spdx_license_id_apache-2.0_for_apache-2.0.RULE",
+              "matched_text": "Apache-2.0"
+            }
+          ],
+          "identifier": "apache_2_0-e4602d8c-0914-7fcd-bb51-6018f5c21d97"
+        }
+      ],
+      "other_license_expression": null,
+      "other_license_expression_spdx": null,
+      "other_license_detections": [],
+      "extracted_license_statement": "Apache-2.0",
+      "notice_text": null,
+      "source_packages": [],
+      "is_private": false,
+      "is_virtual": false,
+      "extra_data": {},
+      "repository_homepage_url": "https://rubygems.org/gems/beta/versions/2.0.0",
+      "repository_download_url": "https://rubygems.org/downloads/beta-2.0.0.gem",
+      "api_data_url": "https://rubygems.org/api/v2/rubygems/beta/versions/2.0.0.json",
+      "purl": "pkg:gem/beta@2.0.0",
+      "package_uid": "pkg:gem/beta@2.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_paths": [
+        "beta-2.0.0.gem-extract/data.gz-extract/beta.gemspec",
+        "beta-2.0.0.gem-extract/metadata.gz-extract"
+      ],
+      "datasource_ids": ["gem_archive_extracted", "gemspec_extracted"]
+    }
+  ],
+  "dependencies": [
+    {
+      "purl": "pkg:gem/json",
+      "extracted_requirement": ">= 2.0",
+      "scope": "runtime",
+      "is_runtime": true,
+      "is_optional": false,
+      "is_pinned": null,
+      "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
+      "dependency_uid": "pkg:gem/json?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:gem/beta@2.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_path": "beta-2.0.0.gem-extract/metadata.gz-extract",
+      "datasource_id": "gem_archive_extracted",
+      "namespace": null
+    },
+    {
+      "purl": "pkg:gem/rake",
+      "extracted_requirement": "~> 13.0",
+      "scope": "runtime",
+      "is_runtime": true,
+      "is_optional": false,
+      "is_pinned": null,
+      "is_direct": true,
+      "resolved_package": null,
+      "extra_data": {},
+      "dependency_uid": "pkg:gem/rake?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "for_package_uid": "pkg:gem/alpha@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758",
+      "datafile_path": "alpha-1.0.0.gem-extract/metadata.gz-extract",
+      "datasource_id": "gem_archive_extracted",
+      "namespace": null
+    }
+  ],
+  "files_with_packages": [
+    {
+      "path": "alpha-1.0.0.gem-extract/data.gz-extract/alpha.gemspec",
+      "for_packages": ["pkg:gem/alpha@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
+    },
+    {
+      "path": "alpha-1.0.0.gem-extract/metadata.gz-extract",
+      "for_packages": ["pkg:gem/alpha@1.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
+    },
+    {
+      "path": "beta-2.0.0.gem-extract/data.gz-extract/beta.gemspec",
+      "for_packages": ["pkg:gem/beta@2.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
+    },
+    {
+      "path": "beta-2.0.0.gem-extract/metadata.gz-extract",
+      "for_packages": ["pkg:gem/beta@2.0.0?uuid=fixed-uid-done-for-testing-5642512d1758"]
+    }
+  ]
+}
