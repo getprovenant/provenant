@@ -1028,7 +1028,17 @@ pub(super) fn contains_code_call_fragment(s: &str) -> bool {
         return false;
     }
 
-    CODE_CALL_RE.is_match(trimmed)
+    // A handle with a parenthesized real name (`nanchen(Liu)`) or a company
+    // named like a call (`if(we), Inc.`) is a party, not a call.
+    static PAREN_NAMED_PARTY_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"\b[a-z][a-z0-9_-]+\((?:\p{Lu}\p{Ll}+|[\p{Han}\p{Hangul}\p{Hiragana}\p{Katakana}]+)\)|\b[a-z]+\([a-z]+\),?\s+(?:Inc|LLC|Ltd|GmbH|Corp)\b",
+        )
+    });
+    if !CODE_CALL_RE.is_match(trimmed) {
+        return false;
+    }
+    CODE_CALL_RE.is_match(&PAREN_NAMED_PARTY_RE.replace_all(trimmed, " "))
 }
 
 pub(super) fn looks_like_translation_or_ui_phrase(s: &str) -> bool {
