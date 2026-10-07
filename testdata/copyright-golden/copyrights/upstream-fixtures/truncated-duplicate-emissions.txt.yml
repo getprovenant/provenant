@@ -1,0 +1,22 @@
+what:
+  - copyrights
+  - holders
+  - authors
+copyrights:
+  - "Copyright (c) 2020 Beni"
+  - "Copyright (c) 2010-2012 The Async HBase Authors"
+  - "Copyright (c) 2017-2019 by the author(s)"
+  - "Copyright 2016 by the author(s)"
+  - "Copyright 2023 by the author(s)"
+  - "Copyright 2001 - 2009 by the original author(s)"
+  - "Copyright 2011 the above author(s)"
+  - "Copyright (c) 1999-2026 John Wiley & Sons, Inc (https://www.wiley.com) or related companies"
+  - "(c) 2022. The Author(s)"
+holders:
+  - "Beni"
+  - "the author(s)"
+  - "the original author(s)"
+  - "John Wiley & Sons, Inc or related companies"
+  - "The Async HBase Authors"
+  - "The Author(s)"
+authors: []

@@ -294,8 +294,12 @@ pub(super) fn strip_trailing_url(s: &str) -> String {
         return s.to_string();
     }
 
-    let stripped = URL_TOKEN_RE.replace_all(s, " ").into_owned();
-    let stripped = normalize_whitespace(&stripped);
+    static PAREN_URL_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\(\s*https?://[^()\s]*\s*\)").unwrap());
+
+    let stripped = PAREN_URL_RE.replace_all(s, " ");
+    let stripped = URL_TOKEN_RE.replace_all(&stripped, " ").into_owned();
+    let stripped = normalize_whitespace(&stripped).replace(" )", ")");
     let stripped = stripped.trim_matches(&[',', ' ', ';'][..]).to_string();
 
     if stripped.is_empty() {

@@ -478,6 +478,10 @@ pub fn extract_from_spans(
             if i < all_leaves.len() && all_leaves[i].tag == PosTag::Of {
                 continue;
             }
+            // Prose `author(s)` (`not by any author(s) (or ...)`) labels no value.
+            if token.tag == PosTag::Auths && is_prose_author_s(token) {
+                continue;
+            }
             while i < all_leaves.len() && detector::token_utils::is_author_span_token(all_leaves[i])
             {
                 let t = all_leaves[i];
@@ -723,4 +727,9 @@ pub fn extract_copyrights_from_spans(
     }
 
     (copyrights, holders)
+}
+
+/// A lowercase `author(s)` in running prose, as opposed to an `Author(s):` label.
+pub(super) fn is_prose_author_s(token: &Token) -> bool {
+    matches!(token.value.as_str(), "author(s)" | "author(s).")
 }

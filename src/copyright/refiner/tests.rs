@@ -64,6 +64,27 @@ fn test_refine_keeps_collective_author_s_holder() {
 }
 
 #[test]
+fn test_refine_drops_glued_journal_and_change_note_tails() {
+    assert_eq!(
+        refine_holder("Beni. This is an open-access"),
+        Some("Beni".to_string())
+    );
+    assert_eq!(
+        refine_copyright(
+            "Copyright 1999-2026 John Wiley & Sons, Inc (https://www.wiley.com) or related companies., including"
+        ),
+        Some(
+            "Copyright 1999-2026 John Wiley & Sons, Inc (https://www.wiley.com) or related companies"
+                .to_string()
+        )
+    );
+    assert_eq!(
+        refine_holder("John Wiley & Sons, Inc (https://www.wiley.com) or related companies"),
+        Some("John Wiley & Sons, Inc or related companies".to_string())
+    );
+}
+
+#[test]
 fn test_refine_copyright_preserves_portions_created_by_prefix() {
     let refined = refine_copyright(
             "Portions created by the Initial Developer are Copyright (C) 1998-2000 the Initial Developer.",

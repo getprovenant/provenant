@@ -452,6 +452,24 @@ pub(super) fn strip_publisher_after_authors_s(s: &str) -> String {
     }
 }
 
+/// Drop journal boilerplate glued after a holder: `. This is an open-access
+/// article ...` and the `, including` left behind by `All rights reserved, including ...`.
+pub(super) fn strip_trailing_open_access_or_including_tail(s: &str) -> String {
+    static TAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+        compile_static_regex(
+            r"(?i)^(?P<prefix>.*?\S)(?:\.\s+This\s+is\s+an?\s+open[- ]access\b.*|\.?\s*,\s*including)$",
+        )
+    });
+    let lower = s.to_ascii_lowercase();
+    if !(lower.contains("including") || lower.contains("access")) {
+        return s.to_string();
+    }
+    match TAIL_RE.captures(s.trim()) {
+        Some(cap) => cap["prefix"].to_string(),
+        None => s.to_string(),
+    }
+}
+
 pub(super) fn strip_trailing_original_authors(s: &str) -> String {
     static ORIGINAL_AUTHORS_RE: LazyLock<Regex> =
         LazyLock::new(|| compile_static_regex(r"(?i)^(.*\bthe original)\s+authors\b\s*$"));

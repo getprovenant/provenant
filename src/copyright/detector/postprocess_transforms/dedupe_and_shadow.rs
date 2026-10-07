@@ -805,7 +805,45 @@ pub fn dedupe_exact_span_copyrights(copyrights: &mut Vec<CopyrightDetection>) {
         return;
     }
     let mut seen: HashSet<(usize, usize, String)> = HashSet::new();
-    copyrights.retain(|c| seen.insert((c.start_line.get(), c.end_line.get(), c.copyright.clone())));
+    copyrights.retain(|c| {
+        let key = c.copyright.replace(" .", ".").replace(" ,", ",");
+        seen.insert((c.start_line.get(), c.end_line.get(), key))
+    });
+}
+
+/// Drop a copyright truncated at a dangling article or preposition (`... The`,
+/// `... by the`) when a same-span copyright continues it.
+pub fn drop_dangling_prefix_copyrights_same_span(copyrights: &mut Vec<CopyrightDetection>) {
+    if copyrights.len() < 2 {
+        return;
+    }
+    let by_span: HashMap<(usize, usize), Vec<String>> = group_by(copyrights.clone(), |c| {
+        (c.start_line.get(), c.end_line.get())
+    })
+    .into_iter()
+    .map(|(span, group)| (span, group.into_iter().map(|c| c.copyright).collect()))
+    .collect();
+
+    copyrights.retain(|c| {
+        let short = c.copyright.trim();
+        let dangling = short.rsplit(' ').next().is_some_and(|word| {
+            matches!(
+                word.to_ascii_lowercase().as_str(),
+                "the" | "by" | "of" | "and" | "a" | "an"
+            )
+        });
+        !dangling
+            || !by_span
+                .get(&(c.start_line.get(), c.end_line.get()))
+                .is_some_and(|texts| {
+                    texts.iter().any(|other| {
+                        other.len() > short.len()
+                            && other
+                                .strip_prefix(short)
+                                .is_some_and(|rest| rest.starts_with(' '))
+                    })
+                })
+    });
 }
 
 pub fn dedupe_exact_span_holders(holders: &mut Vec<HolderDetection>) {

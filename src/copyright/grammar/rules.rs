@@ -4460,6 +4460,20 @@ pub(crate) static GRAMMAR_RULES: &[GrammarRule] = &[
         label: Copyright,
         pattern: &[Label(Copyright), Tag(Nn), Tag(AuthDot)],
     },
+    // Copyright 2001 - 2009 by the original author(s).
+    // Copyright 2011 the above author(s).
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Label(Copyright2), Tag(By), Tag(Nn), Tag(Nn), Tag(Auths)],
+    },
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Label(Copyright2), Tag(Nn), Tag(Nn), Tag(Auths)],
+    },
+    GrammarRule {
+        label: Copyright,
+        pattern: &[Label(Copyright2), Tag(Nn), Tag(Nn), Tag(Nn), Tag(Auths)],
+    },
     // #15800
     GrammarRule {
         label: Copyright,

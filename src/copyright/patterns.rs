@@ -436,6 +436,7 @@ fn build_pattern_list() -> Vec<(String, PosTag)> {
     add(r"^__authors?__$", PosTag::Auths);
     add(r"^__contributors?__$", PosTag::Auths);
     add(r"^Author\(s\)[\.,:]?$", PosTag::Auths);
+    add(r"^author\(s\)[\.,]?$", PosTag::Auths);
     add(r"^[A-a]ffiliate\(s\)[\.,:]?$", PosTag::Comp);
     // Exceptions to short mixed caps with trailing cap
     add(r"ApS$", PosTag::Comp);
