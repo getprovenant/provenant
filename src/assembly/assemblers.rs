@@ -647,6 +647,7 @@ pub static ASSEMBLERS: &[AssemblerConfig] = &[
             "go.work",
             "go.mod.graph",
             "go.modgraph",
+            "go-mod-graph.deplock",
             "go.sum",
             "Godeps.json",
         ],
