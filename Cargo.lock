@@ -4518,7 +4518,7 @@ dependencies = [
 
 [[package]]
 name = "provenant-cli"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "allsorts",
  "anyhow",
