@@ -4,13 +4,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
-use std::collections::HashSet;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use glob::Pattern;
 
 use crate::models::{DatasourceId, FileInfo, Package, PackageData, TopLevelDependency};
 
+use super::maven_placeholder::{
+    adopt_resolved_maven_coordinates, resolved_identity_purl, resolving_properties,
+};
 use super::{
     AssemblerConfig, DirectoryMergeOutput, should_skip_placeholder_only_cocoapods_podspec,
 };
@@ -108,6 +112,7 @@ pub(super) fn assemble_single_sibling_package(
                         }
                     }
                     Some(pkg) => {
+                        adopt_resolved_maven_coordinates(pkg, pkg_data, &datafile_path);
                         pkg.update(pkg_data, datafile_path.clone());
                     }
                 }
@@ -176,19 +181,33 @@ pub(super) fn assemble_siblings_per_identity(
 ) -> Vec<DirectoryMergeOutput> {
     // Collect every handled datafile carrying a concrete purl identity, keyed by
     // (file_idx, package_data_idx). Distinct purls mean independent packages.
-    let mut purled: Vec<(usize, usize, &str)> = Vec::new();
+    // A `${...}` POM is keyed by its coordinates as resolved by the sibling
+    // `pom.properties`, which is also applied when the POM seeds its package.
+    let handled: Vec<&PackageData> = file_indices
+        .iter()
+        .flat_map(|&idx| files[idx].package_data.iter())
+        .filter(|pkg_data| is_handled_by(pkg_data, config))
+        .collect();
+    let mut resolvers: HashMap<(usize, usize), &PackageData> = HashMap::new();
+    let mut purled: Vec<(usize, usize, Cow<'_, str>)> = Vec::new();
     for &idx in file_indices {
         for (pkg_data_idx, pkg_data) in files[idx].package_data.iter().enumerate() {
             if !is_handled_by(pkg_data, config) {
                 continue;
             }
-            if let Some(purl) = pkg_data.purl.as_deref() {
+            let resolved =
+                resolving_properties(pkg_data, handled.iter().copied()).and_then(|properties| {
+                    let purl = resolved_identity_purl(pkg_data, properties)?;
+                    resolvers.insert((idx, pkg_data_idx), properties);
+                    Some(Cow::Owned(purl))
+                });
+            if let Some(purl) = resolved.or(pkg_data.purl.as_deref().map(Cow::Borrowed)) {
                 purled.push((idx, pkg_data_idx, purl));
             }
         }
     }
 
-    let distinct_purls: HashSet<&str> = purled.iter().map(|(_, _, purl)| *purl).collect();
+    let distinct_purls: HashSet<&str> = purled.iter().map(|(_, _, purl)| purl.as_ref()).collect();
     if distinct_purls.len() < 2 {
         // Zero or one distinct identity: the default single-package merge already
         // produces the correct result (and keeps supplementary purl-less files
@@ -206,6 +225,7 @@ pub(super) fn assemble_siblings_per_identity(
     let mut groups: std::collections::HashMap<&str, Vec<(usize, usize)>> =
         std::collections::HashMap::new();
     for (idx, pkg_data_idx, purl) in &purled {
+        let purl = purl.as_ref();
         groups.entry(purl).or_insert_with(|| {
             purl_order.push(purl);
             Vec::new()
@@ -217,21 +237,32 @@ pub(super) fn assemble_siblings_per_identity(
 
     let mut results = Vec::new();
     for purl in purl_order {
-        let group = &groups[purl];
+        // POMs seed the package so their purl qualifiers (e.g. `type=war`) are kept.
+        let mut group = groups[purl].clone();
+        group.sort_by_key(|&(idx, pkg_data_idx)| {
+            files[idx].package_data[pkg_data_idx].datasource_id != Some(DatasourceId::MavenPom)
+        });
 
         let mut package: Option<Package> = None;
         let mut pending_dependencies: Vec<PendingDependency> = Vec::new();
         let mut affected_indices: Vec<usize> = Vec::new();
 
-        for &(idx, pkg_data_idx) in group {
+        for &(idx, pkg_data_idx) in &group {
             let pkg_data = &files[idx].package_data[pkg_data_idx];
             let datafile_path = files[idx].path.clone();
 
             match &mut package {
                 None => {
-                    package = Some(Package::from_package_data(pkg_data, datafile_path.clone()));
+                    let mut seeded = Package::from_package_data(pkg_data, datafile_path.clone());
+                    if let Some(properties) = resolvers.get(&(idx, pkg_data_idx)) {
+                        adopt_resolved_maven_coordinates(&mut seeded, properties, &datafile_path);
+                    }
+                    package = Some(seeded);
                 }
-                Some(pkg) => pkg.update(pkg_data, datafile_path.clone()),
+                Some(pkg) => {
+                    adopt_resolved_maven_coordinates(pkg, pkg_data, &datafile_path);
+                    pkg.update(pkg_data, datafile_path.clone());
+                }
             }
 
             // Mirror the default Maven sibling path: only hoist dependencies that

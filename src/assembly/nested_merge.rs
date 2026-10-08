@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use crate::models::{DatasourceId, Dependency, FileInfo, Package, PackageData, TopLevelDependency};
 
 use super::AssemblerConfig;
+use super::maven_placeholder::adopt_resolved_maven_coordinates;
 
 struct PendingDependency {
     dependency: Dependency,
@@ -355,6 +356,7 @@ fn assemble_from_indices(
                         }
                     }
                     Some(pkg) => {
+                        adopt_resolved_maven_coordinates(pkg, pkg_data, &datafile_path);
                         pkg.update(pkg_data, datafile_path.clone());
                     }
                 }

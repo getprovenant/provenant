@@ -1,0 +1,13 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>placeholder-lib</artifactId>
+    <version>${revision}</version>
+    <name>Placeholder Library</name>
+    <description>CI-friendly version resolved at build time</description>
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+        </license>
+    </licenses>
+</project>
