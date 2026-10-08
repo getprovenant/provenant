@@ -27,6 +27,7 @@ mod manifest;
 mod pom;
 mod properties;
 
+pub(crate) use self::coordinates::build_maven_repository_links;
 pub use self::jar::{JvmArchiveKind, extract_jvm_archive};
 
 #[cfg(test)]

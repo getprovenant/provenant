@@ -705,6 +705,7 @@ pub use self::huggingface::{
 pub use self::ivy::{IvyDependenciesPropertiesParser, IvyXmlParser};
 pub use self::julia::{JuliaManifestTomlParser, JuliaProjectTomlParser};
 pub use self::maven::MavenParser;
+pub(crate) use self::maven::build_maven_repository_links;
 pub use self::meson::MesonParser;
 pub use self::microsoft_update_manifest::MicrosoftUpdateManifestParser;
 pub use self::misc::{

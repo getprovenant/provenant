@@ -186,6 +186,65 @@ mod tests {
     }
 
     #[test]
+    fn test_maven_placeholder_pom_version_resolves_from_pom_properties() {
+        let (files, result) = scan_and_assemble(Path::new(
+            "testdata/assembly-golden/maven-meta-inf-placeholder-version",
+        ));
+
+        let pom = files
+            .iter()
+            .find(|file| file.path.ends_with("placeholder-lib/pom.xml"))
+            .expect("pom.xml should be scanned");
+        assert_eq!(
+            pom.package_data[0].version.as_deref(),
+            Some("${revision}"),
+            "fixture must keep the unresolved POM placeholder"
+        );
+
+        assert_eq!(result.packages.len(), 1);
+        let package = &result.packages[0];
+        assert_eq!(
+            package.purl.as_deref(),
+            Some("pkg:maven/com.example/placeholder-lib@1.0.0")
+        );
+        assert_eq!(package.version.as_deref(), Some("1.0.0"));
+        assert!(
+            package
+                .package_uid
+                .starts_with("pkg:maven/com.example/placeholder-lib@1.0.0?uuid=")
+        );
+        for file in files.iter().filter(|file| !file.package_data.is_empty()) {
+            assert_eq!(file.for_packages, vec![package.package_uid.clone()]);
+        }
+    }
+
+    #[test]
+    fn test_maven_placeholder_pom_version_resolves_in_every_extracted_jar() {
+        let (files, result) =
+            scan_and_assemble(Path::new("testdata/maven/placeholder-version-two-jars"));
+
+        assert_eq!(result.packages.len(), 2);
+        for package in &result.packages {
+            assert_eq!(
+                package.purl.as_deref(),
+                Some("pkg:maven/com.example/placeholder-lib@1.0.0")
+            );
+            assert_eq!(package.datafile_paths.len(), 2);
+            let jar_dir = Path::new(&package.datafile_paths[0])
+                .ancestors()
+                .nth(5)
+                .expect("jar root");
+            for file in files
+                .iter()
+                .filter(|file| Path::new(&file.path).starts_with(jar_dir))
+                .filter(|file| !file.package_data.is_empty())
+            {
+                assert_eq!(file.for_packages, vec![package.package_uid.clone()]);
+            }
+        }
+    }
+
+    #[test]
     fn test_maven_distinct_gav_poms_in_one_dir_assemble_as_separate_packages() {
         // A flat directory of standalone `.pom` fixtures, each with a distinct
         // GAV, must produce one top-level package per pom rather than collapsing

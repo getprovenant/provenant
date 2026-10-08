@@ -20,8 +20,8 @@ use self::licenses::LicenseData;
 use self::parent::ParentEntry;
 use self::project::{ProjectDetails, ProjectMetadata};
 use super::super::coordinates::{
-    build_maven_download_url, build_maven_purl, build_maven_repository_url,
-    build_maven_source_package, infer_meta_inf_maven_coordinates,
+    build_maven_purl, build_maven_repository_links, build_maven_source_package,
+    infer_meta_inf_maven_coordinates,
 };
 use super::super::default_package_data;
 use super::licenses::{MavenLicenseEntry, is_license_like_comment};
@@ -585,33 +585,17 @@ impl PomAccumulator {
             self.package_data.namespace.as_deref(),
             self.package_data.name.as_deref(),
         ) {
-            self.package_data.repository_homepage_url = Some(build_maven_repository_url(
+            let links = build_maven_repository_links(
                 group_id,
                 artifact_id,
                 self.package_data.version.as_deref(),
-                None,
-            ));
-
-            if let Some(ver) = self.package_data.version.as_deref() {
-                self.package_data.repository_download_url = Some(build_maven_download_url(
-                    group_id,
-                    artifact_id,
-                    ver,
-                    self.project_details.classifier(),
-                    self.project_details.packaging_str(),
-                ));
-            } else {
-                self.package_data.repository_download_url = None;
-            }
-
-            if let Some(ver) = self.package_data.version.as_deref() {
-                let pom_filename = format!("{artifact_id}-{ver}.pom");
-                self.package_data.api_data_url = Some(build_maven_repository_url(
-                    group_id,
-                    artifact_id,
-                    Some(ver),
-                    Some(&pom_filename),
-                ));
+                self.project_details.classifier(),
+                self.project_details.packaging_str(),
+            );
+            self.package_data.repository_homepage_url = Some(links.homepage_url);
+            self.package_data.repository_download_url = links.download_url;
+            if links.api_data_url.is_some() {
+                self.package_data.api_data_url = links.api_data_url;
             }
         }
     }

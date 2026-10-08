@@ -163,6 +163,32 @@ pub(super) fn build_maven_download_url(
     build_maven_repository_url(group_id, artifact_id, Some(version), Some(&filename))
 }
 
+/// Maven Central links derived from a package's coordinates.
+pub(crate) struct MavenRepositoryLinks {
+    pub(crate) homepage_url: String,
+    pub(crate) download_url: Option<String>,
+    pub(crate) api_data_url: Option<String>,
+}
+
+pub(crate) fn build_maven_repository_links(
+    group_id: &str,
+    artifact_id: &str,
+    version: Option<&str>,
+    classifier: Option<&str>,
+    packaging: Option<&str>,
+) -> MavenRepositoryLinks {
+    MavenRepositoryLinks {
+        homepage_url: build_maven_repository_url(group_id, artifact_id, version, None),
+        download_url: version.map(|version| {
+            build_maven_download_url(group_id, artifact_id, version, classifier, packaging)
+        }),
+        api_data_url: version.map(|version| {
+            let pom_filename = format!("{artifact_id}-{version}.pom");
+            build_maven_repository_url(group_id, artifact_id, Some(version), Some(&pom_filename))
+        }),
+    }
+}
+
 pub(super) fn build_maven_source_package(namespace: &str, name: &str, version: &str) -> String {
     build_maven_purl(namespace, name, Some(version), Some("sources"), None)
 }

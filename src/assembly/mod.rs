@@ -22,6 +22,7 @@ mod gradle_multiproject;
 mod hackage_merge;
 mod huggingface_merge;
 mod ivy_dependencies_properties_assign;
+mod maven_placeholder;
 mod maven_reactor;
 mod mix_umbrella_merge;
 mod nested_merge;

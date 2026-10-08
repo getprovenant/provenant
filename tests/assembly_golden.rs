@@ -545,6 +545,17 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_maven_meta_inf_placeholder_version() {
+        match run_assembly_golden_test("maven-meta-inf-placeholder-version") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for maven-meta-inf-placeholder-version: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
     fn test_assembly_maven_uberjar_manifest_match() {
         match run_assembly_golden_test("maven-uberjar-manifest-match") {
             Ok(_) => (),
