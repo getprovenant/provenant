@@ -42,6 +42,42 @@ mod tests {
     }
 
     #[test]
+    fn test_ruby_multiple_extracted_gems_each_assemble_their_own_package() {
+        let (files, result) =
+            scan_and_assemble(Path::new("testdata/assembly-golden/ruby-multi-extracted"));
+
+        assert_eq!(result.packages.len(), 2);
+        for (name, dir, dependency) in [
+            ("alpha", "alpha-1.0.0.gem-extract", "pkg:gem/rake"),
+            ("beta", "beta-2.0.0.gem-extract", "pkg:gem/json"),
+        ] {
+            let package = result
+                .packages
+                .iter()
+                .find(|package| package.name.as_deref() == Some(name))
+                .unwrap_or_else(|| panic!("{name} gem should be assembled"));
+            assert_file_links_to_package(
+                &files,
+                &format!("{dir}/metadata.gz-extract"),
+                &package.package_uid,
+                DatasourceId::GemArchiveExtracted,
+            );
+            assert_file_links_to_package(
+                &files,
+                &format!("{dir}/data.gz-extract/{name}.gemspec"),
+                &package.package_uid,
+                DatasourceId::GemspecExtracted,
+            );
+            let dep = result
+                .dependencies
+                .iter()
+                .find(|dep| dep.purl.as_deref() == Some(dependency))
+                .unwrap_or_else(|| panic!("{dependency} should be hoisted"));
+            assert_eq!(dep.for_package_uid.as_ref(), Some(&package.package_uid));
+        }
+    }
+
+    #[test]
     fn test_ruby_manifest_lock_scan_assembles_gemspec_and_lockfile() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         fs::copy(

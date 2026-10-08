@@ -1,0 +1,12 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.example</groupId>
+    <artifactId>beta</artifactId>
+    <version>2.0.0</version>
+    <name>Beta</name>
+    <licenses>
+        <license>
+            <name>MIT</name>
+        </license>
+    </licenses>
+</project>

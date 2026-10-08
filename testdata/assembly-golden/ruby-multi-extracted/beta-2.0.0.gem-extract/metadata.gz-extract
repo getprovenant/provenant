@@ -1,0 +1,20 @@
+--- !ruby/object:Gem::Specification
+name: beta
+version: !ruby/object:Gem::Version
+  version: 2.0.0
+platform: ruby
+authors:
+- Jane Smith
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: json
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '2.0'
+  type: :runtime
+homepage: https://example.com/beta
+licenses:
+- Apache-2.0
+summary: Beta gem

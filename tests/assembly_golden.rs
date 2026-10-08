@@ -586,6 +586,39 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_maven_multi_jar_extract() {
+        match run_assembly_golden_test("maven-multi-jar-extract") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for maven-multi-jar-extract: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
+    fn test_assembly_maven_built_source_tree() {
+        match run_assembly_golden_test("maven-built-source-tree") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for maven-built-source-tree: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
+    fn test_assembly_ruby_multi_extracted() {
+        match run_assembly_golden_test("ruby-multi-extracted") {
+            Ok(_) => (),
+            Err(e) => panic!(
+                "Assembly golden test failed for ruby-multi-extracted: {}",
+                e
+            ),
+        }
+    }
+
+    #[test]
     fn test_assembly_gradle_multiproject() {
         match run_assembly_golden_test("gradle-multiproject") {
             Ok(_) => (),

@@ -1,0 +1,20 @@
+--- !ruby/object:Gem::Specification
+name: alpha
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+platform: ruby
+authors:
+- John Doe
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: rake
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '13.0'
+  type: :runtime
+homepage: https://example.com/alpha
+licenses:
+- MIT
+summary: Alpha gem

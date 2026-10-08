@@ -17,35 +17,57 @@ struct PendingDependency {
     datasource_id: DatasourceId,
 }
 
+pub type NestedMergeOutput = (Package, Vec<TopLevelDependency>, Vec<usize>);
+
+/// Folds each nested package root's supplementary metadata into one package.
+///
+/// Roots run outermost-first so a source tree (`project/pom.xml`) keeps folding
+/// its build output; a deeper root only assembles files no outer root consumed.
 pub fn assemble_nested_patterns(
     files: &[FileInfo],
     config: &AssemblerConfig,
-) -> Option<(Package, Vec<TopLevelDependency>, Vec<usize>)> {
+) -> Vec<NestedMergeOutput> {
     if !has_nested_patterns(config) {
-        return None;
+        return Vec::new();
     }
 
-    let matching_files = find_matching_files(files, config);
-    if matching_files.is_empty() {
-        return None;
+    let roots = find_package_roots(&find_matching_files(files, config), files);
+    if roots.is_empty() {
+        return Vec::new();
     }
 
-    let package_root = find_package_root(&matching_files, files)?;
+    let candidates = find_nested_candidates(files, config);
+    let mut consumed = vec![false; files.len()];
+    let mut results = Vec::new();
 
-    let sibling_indices = find_nested_siblings(&package_root, files, config);
+    for root in &roots {
+        let mut sibling_indices: Vec<usize> = files_under(root, &candidates, files)
+            .filter(|&idx| !consumed[idx])
+            .collect();
+        sibling_indices.sort_unstable();
 
-    if sibling_indices.len() < 2 {
-        return None;
-    }
+        if sibling_indices.len() < 2 {
+            continue;
+        }
 
-    let sibling_indices =
-        if nested_maven_pom_count(&package_root, &sibling_indices, files, config) > 1 {
-            select_uberjar_manifest_owner(&package_root, &sibling_indices, files)?
+        let selected = if nested_maven_pom_count(root, &sibling_indices, files, config) > 1 {
+            match select_uberjar_manifest_owner(root, &sibling_indices, files) {
+                Some(selected) => selected,
+                None => continue,
+            }
         } else {
             sibling_indices
         };
 
-    assemble_from_indices(config, files, &sibling_indices)
+        if let Some(result) = assemble_from_indices(config, files, &selected) {
+            for &idx in &selected {
+                consumed[idx] = true;
+            }
+            results.push(result);
+        }
+    }
+
+    results
 }
 
 fn has_nested_patterns(config: &AssemblerConfig) -> bool {
@@ -72,49 +94,47 @@ fn find_matching_files(files: &[FileInfo], config: &AssemblerConfig) -> Vec<usiz
 
 const NESTED_ANCHOR_DIRS: &[&str] = &["META-INF", "debian", "data.gz-extract"];
 
-fn find_package_root(matching_indices: &[usize], files: &[FileInfo]) -> Option<PathBuf> {
-    for &idx in matching_indices {
-        let file_path = Path::new(&files[idx].path);
+/// Distinct package roots of the matching datafiles, outermost first, then by path.
+fn find_package_roots(matching_indices: &[usize], files: &[FileInfo]) -> Vec<PathBuf> {
+    let mut roots: Vec<PathBuf> = matching_indices
+        .iter()
+        .filter_map(|&idx| package_root_of(Path::new(&files[idx].path)))
+        .collect();
+    roots.sort_by(|left, right| {
+        left.components()
+            .count()
+            .cmp(&right.components().count())
+            .then_with(|| left.cmp(right))
+    });
+    roots.dedup();
+    roots
+}
 
-        for &anchor in NESTED_ANCHOR_DIRS {
-            if file_path.components().any(|c| c.as_os_str() == anchor) {
-                let mut current = file_path;
-                while let Some(parent) = current.parent() {
-                    if parent
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .is_some_and(|name| name == anchor)
-                    {
-                        return parent.parent().map(|p| p.to_path_buf());
-                    }
-                    current = parent;
-                }
-            }
-        }
-
-        if file_path.file_name().and_then(|n| n.to_str()) == Some("metadata.gz-extract") {
-            return file_path.parent().map(|p| p.to_path_buf());
-        }
-
-        if file_path.file_name().and_then(|n| n.to_str()) == Some("pom.xml") {
-            return file_path.parent().map(|p| p.to_path_buf());
+fn package_root_of(file_path: &Path) -> Option<PathBuf> {
+    for &anchor in NESTED_ANCHOR_DIRS {
+        if let Some(anchor_dir) = file_path
+            .ancestors()
+            .skip(1)
+            .find(|dir| dir.file_name().is_some_and(|name| name == anchor))
+        {
+            return anchor_dir.parent().map(Path::to_path_buf);
         }
     }
 
-    None
+    match file_path.file_name().and_then(|n| n.to_str()) {
+        Some("metadata.gz-extract" | "pom.xml") => file_path.parent().map(Path::to_path_buf),
+        _ => None,
+    }
 }
 
-fn find_nested_siblings(root: &Path, files: &[FileInfo], config: &AssemblerConfig) -> Vec<usize> {
-    files
+/// Files matching any sibling pattern, sorted by path so each root's subtree is
+/// one contiguous range.
+fn find_nested_candidates(files: &[FileInfo], config: &AssemblerConfig) -> Vec<usize> {
+    let mut candidates: Vec<usize> = files
         .iter()
         .enumerate()
         .filter(|(_, file)| {
             let file_path = Path::new(&file.path);
-
-            if !file_path.starts_with(root) {
-                return false;
-            }
-
             config.sibling_file_patterns.iter().any(|pattern| {
                 if pattern.contains("**") {
                     matches_nested_pattern(&file.path, pattern)
@@ -127,7 +147,22 @@ fn find_nested_siblings(root: &Path, files: &[FileInfo], config: &AssemblerConfi
             })
         })
         .map(|(idx, _)| idx)
-        .collect()
+        .collect();
+    candidates
+        .sort_by(|&left, &right| Path::new(&files[left].path).cmp(Path::new(&files[right].path)));
+    candidates
+}
+
+fn files_under<'a>(
+    root: &'a Path,
+    candidates: &'a [usize],
+    files: &'a [FileInfo],
+) -> impl Iterator<Item = usize> + 'a {
+    let start = candidates.partition_point(|&idx| Path::new(&files[idx].path) < root);
+    candidates[start..]
+        .iter()
+        .copied()
+        .take_while(move |&idx| Path::new(&files[idx].path).starts_with(root))
 }
 
 /// Counts Maven POMs anchored under `root`; zero for non-Maven configs.

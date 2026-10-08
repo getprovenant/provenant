@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Implementation-Title: app
+Implementation-Version: 1.0.0
+Implementation-Vendor: Example Corp

@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Implementation-Title: beta
+Implementation-Version: 2.0.0
+Implementation-Vendor: Example Org
