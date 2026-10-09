@@ -1,0 +1,3 @@
+art.txt: first 100 lines (trailing whitespace trimmed) of the ASCII-art logo that opens the
+Pyros3D LICENSE file (MIT), as reported in getprovenant/provenant#1446. Kept as a
+ruler-heavy regression input for copyright detection; it contains no license text.

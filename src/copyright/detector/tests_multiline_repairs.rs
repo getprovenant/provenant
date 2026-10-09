@@ -427,6 +427,35 @@ fn test_copyright_does_not_bleed_across_multiple_rulers() {
     );
 }
 
+// Ruler-heavy input (ASCII art) must not re-enter ruler splitting per segment,
+// which multiplied detector runs exponentially (issue #1446).
+#[test]
+fn test_ruler_heavy_ascii_art_finishes_quickly() {
+    let input = include_str!("../../../testdata/copyright/ascii-art-rulers/art.txt");
+    let start = std::time::Instant::now();
+    let (copyrights, holders, authors) = detect_copyrights_from_text(input);
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(5),
+        "took {:?}",
+        start.elapsed()
+    );
+    assert!(copyrights.is_empty() && holders.is_empty() && authors.is_empty());
+}
+
+// `--timeout` must bound ruler splitting too: a spent budget skips the
+// per-segment verdict runs instead of paying for them.
+#[test]
+fn test_ruler_splitting_honours_an_expired_deadline() {
+    let input = include_str!("../../../testdata/copyright/ascii-art-rulers/art.txt");
+    let start = std::time::Instant::now();
+    let _ = detect_copyrights_from_text_with_deadline(input, Some(std::time::Duration::ZERO));
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(1),
+        "took {:?}",
+        start.elapsed()
+    );
+}
+
 // An `SPDX-License-Identifier:` line is a license declaration and must never be
 // absorbed into a copyright statement or holder, even when the preceding
 // copyright line ends with a trailing `, et al.` that would otherwise drive a
