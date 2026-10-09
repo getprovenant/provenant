@@ -46,7 +46,7 @@ fn trace_candidate_groups(content: &str) -> Vec<CandidateGroupTrace> {
             .enumerate()
             .map(|(index, line)| (index + 1, *line)),
     );
-    let groups = split_groups_at_rulers(groups, &raw_lines);
+    let groups = split_groups_at_rulers(groups, &raw_lines, None);
 
     groups
         .into_iter()
