@@ -26,6 +26,14 @@ ignore = [
     # their quick-xml requirement. Remove once they do.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
+    # RUSTSEC-2026-0367/0368/0369 affect only zip's `extract` APIs (SUID/SGID
+    # bits and symlinks written during extraction). The vulnerable zip 4.6.1 is
+    # held by rusty-axml 0.2.1, which has no newer release; it only opens an APK
+    # and reads one entry, and Provenant calls its `parse_from_reader`, which
+    # never touches zip. Remove once rusty-axml moves to zip >= 9.
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
 ]
 
 [bans]

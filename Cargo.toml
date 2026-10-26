@@ -109,7 +109,7 @@ tempfile = "3.27.0"
 toml = "1.1.2"
 url = "2.5.8"
 yaml_serde = "0.10.4"
-zstd = "0.13.3"
+zstd = "0.14.3"
 
 [lib]
 name = "provenant"
@@ -178,7 +178,7 @@ object = { version = "0.39.1", default-features = false, features = [
 ] }
 os_info = "3.15.0"
 packageurl = "0.6.0"
-pdf_oxide = "0.3.69"
+pdf_oxide = "0.3.78"
 postcard = { workspace = true }
 prost = { version = "0.14.3", features = ["derive"] }
 quick-xml = "0.41.0"
@@ -187,13 +187,7 @@ rayon = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 rkyv = { workspace = true, features = ["smallvec-1"] }
-rpm = { version = "0.25.0", default-features = false, features = [
-    "payload",
-    "gzip-compression",
-    "xz-compression",
-    "zstd-compression",
-    "bzip2-compression",
-] }
+rpm = { version = "0.30.2", default-features = false, features = ["payload", "gzip-compression", "xz-compression", "zstd-compression", "bzip2-compression"] }
 ruff_python_ast = { version = "0.15.8", package = "rustpython-ruff_python_ast" }
 ruff_python_parser = { version = "0.15.8", package = "rustpython-ruff_python_parser" }
 rusqlite = { version = "0.40.0", features = ["bundled"], optional = true }
@@ -215,7 +209,7 @@ toml = { workspace = true }
 url = { workspace = true }
 uuid = { version = "1.23.1", features = ["v4"] }
 yaml_serde = { workspace = true }
-zip = "8.6.0"
+zip = "9"
 zstd = { workspace = true }
 
 [target.'cfg(target_env = "musl")'.dependencies]

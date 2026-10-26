@@ -772,7 +772,17 @@ fn extract_zip_archive(archive_path: &Path, file: File, output_dir: &Path) -> Re
         let mut entry = archive.by_index(index).map_err(|e| {
             IngestError::internal_with_source(e, format!("failed to read zip entry {index}"))
         })?;
-        let Some(relative_path) = normalize_archive_path(Path::new(entry.name())) else {
+        let entry_name = match entry.name() {
+            Ok(name) => name,
+            Err(e) => {
+                log::warn!(
+                    "Skipping zip entry {index} with unreadable name in {}: {e}",
+                    archive_path.display()
+                );
+                continue;
+            }
+        };
+        let Some(relative_path) = normalize_archive_path(Path::new(entry_name.as_ref())) else {
             continue;
         };
         if entry.is_dir() {

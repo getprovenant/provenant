@@ -87,8 +87,12 @@ fn collect_validated_zip_entries(
         let compressed_size = file.compressed_size();
         let uncompressed_size = file.size();
 
-        let Some(entry_name) = normalize_archive_entry_path(file.name()) else {
-            warn!("Skipping unsafe path in zip {:?}: {}", path, file.name());
+        let Ok(raw_name) = file.name() else {
+            warn!("Skipping zip entry with unreadable name in {:?}", path);
+            continue;
+        };
+        let Some(entry_name) = normalize_archive_entry_path(&raw_name) else {
+            warn!("Skipping unsafe path in zip {:?}: {}", path, raw_name);
             continue;
         };
 
