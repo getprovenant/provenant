@@ -81,7 +81,10 @@ fn extract_nupkg_archive(path: &Path) -> Result<PackageData, String> {
                 .by_index(i)
                 .map_err(|e| format!("Failed to read ZIP entry: {}", e))?;
 
-            let entry_name = entry.name().to_string();
+            let entry_name = entry
+                .name()
+                .map_err(|e| format!("Failed to read ZIP entry name: {}", e))?
+                .into_owned();
             let entry_size = entry.size();
 
             total_uncompressed += entry_size;
@@ -164,7 +167,10 @@ fn read_nupkg_license_file(
         let mut entry = archive
             .by_index(i)
             .map_err(|e| format!("Failed to read ZIP entry: {}", e))?;
-        let entry_name = entry.name().replace('\\', "/");
+        let entry_name = entry
+            .name()
+            .map_err(|e| format!("Failed to read ZIP entry name: {}", e))?
+            .replace('\\', "/");
 
         if entry_name != normalized_target
             && !entry_name.ends_with(&format!("/{}", normalized_target))

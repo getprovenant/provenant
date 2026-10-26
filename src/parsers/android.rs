@@ -834,7 +834,10 @@ where
             ));
         }
 
-        let entry_name = entry.name().replace('\\', "/");
+        let entry_name = entry
+            .name()
+            .map_err(|e| format!("Archive {:?} has an unreadable entry name: {}", path, e))?
+            .replace('\\', "/");
         if entry_name.starts_with('/') || entry_name.split('/').any(|segment| segment == "..") {
             return Err(format!(
                 "Archive entry {} contains a disallowed path",
