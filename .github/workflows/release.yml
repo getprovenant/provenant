@@ -234,6 +234,9 @@ jobs:
       # build-provenance attestation.
       id-token: write
       attestations: write
+      # Lets attest-build-provenance record the pushed image in the org's
+      # artifact-metadata storage records (it warns when this is missing).
+      artifact-metadata: write
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7

@@ -29,7 +29,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread::sleep;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
@@ -42,6 +42,16 @@ const TRIAGE_LABEL: &str = "scancode-triage";
 // (e.g. https://api.groq.com/openai/v1).
 const DEFAULT_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/openai";
 const THROTTLE: Duration = Duration::from_secs(6); // space requests within rate limits
+// reqwest's blocking client defaults to 30s, which tool-calling completions on
+// the Gemini free tier regularly exceed.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+const MODEL_ATTEMPTS: u64 = 5;
+// Consecutive candidates that exhaust their retries before the model is
+// treated as down. Keeps a quota or outage from running into the job timeout.
+const MAX_CONSECUTIVE_LLM_ERRORS: usize = 2;
+// Wall-clock cap on all model work in one run, so the report and findings are
+// published before the workflow's own timeout can kill the job.
+const MODEL_BUDGET: Duration = Duration::from_secs(20 * 60);
 const MAX_TURNS: usize = 6; // tool-loop backstop per issue
 const TOOL_RESULT_CHARS: usize = 2500; // cap tool output fed back to the model
 const ISSUE_BODY_CHARS: usize = 1800; // keep each request within model input limits
@@ -214,6 +224,7 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>, u
     let endpoint = chat_completions_url();
     let client = reqwest::blocking::Client::builder()
         .user_agent("provenant-triage")
+        .timeout(REQUEST_TIMEOUT)
         .build()?;
 
     let issues = fetch_issues(since)?;
@@ -234,7 +245,24 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>, u
     let mut rows = Vec::new();
     let mut findings = Vec::new();
     let mut llm_errors = 0usize;
+    let mut consecutive_llm_errors = 0usize;
+    let deadline = Instant::now() + MODEL_BUDGET;
     for (i, issue) in candidates.iter().enumerate() {
+        let skip_reason = if consecutive_llm_errors >= MAX_CONSECUTIVE_LLM_ERRORS {
+            Some("model unavailable")
+        } else if Instant::now() >= deadline {
+            Some("time budget exhausted")
+        } else {
+            None
+        };
+        if let Some(reason) = skip_reason {
+            llm_errors += 1;
+            rows.push(format!(
+                "| [#{n}](https://github.com/{SCANCODE_REPO}/issues/{n}) | ? | needs manual check | not triaged: {reason} |",
+                n = issue.number
+            ));
+            continue;
+        }
         eprintln!(
             "  [{}/{}] triaging #{}: {}",
             i + 1,
@@ -243,9 +271,12 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>, u
             truncate(&issue.title, 60)
         );
         let Triaged { row, llm_error } =
-            triage_one_issue(&client, &endpoint, &token, model, args, issue);
+            triage_one_issue(&client, &endpoint, &token, model, args, issue, deadline);
         if llm_error {
             llm_errors += 1;
+            consecutive_llm_errors += 1;
+        } else {
+            consecutive_llm_errors = 0;
         }
         if row.to_lowercase().contains("worth fixing") {
             // Row shape: '' | Issue | Type | Verdict | Evidence | ''
@@ -267,6 +298,7 @@ fn run(args: &Args, model: &str, since: &str) -> Result<(String, Vec<Finding>, u
         license_requests.len(),
         &candidates,
         &rows,
+        llm_errors,
     );
     // A candidate that hit an LLM error was not actually triaged. Report the
     // count so the caller can fail loudly rather than let a green run mask
@@ -281,14 +313,21 @@ fn assemble_report(
     license_requests: usize,
     candidates: &[Issue],
     rows: &[String],
+    not_triaged: usize,
 ) -> String {
+    let untriaged_note = if not_triaged > 0 {
+        format!(" · **{not_triaged} not triaged**")
+    } else {
+        String::new()
+    };
     let mut lines = vec![
         "## ScanCode -> Provenant weekly triage".to_string(),
         String::new(),
         format!(
             "Window: issues created since **{since}**. {total} total · {license_requests} \
-             \"New license request\" (skipped) · {} candidates triaged.",
-            candidates.len()
+             \"New license request\" (skipped) · {} candidates · {} triaged{untriaged_note}.",
+            candidates.len(),
+            candidates.len() - not_triaged
         ),
         String::new(),
         "| Issue | Type | Verdict | Evidence |".to_string(),
@@ -327,6 +366,7 @@ fn triage_one_issue(
     model: &str,
     args: &Args,
     issue: &Issue,
+    deadline: Instant,
 ) -> Triaged {
     let n = issue.number;
     let row = |note: &str| {
@@ -356,7 +396,7 @@ fn triage_one_issue(
     ];
 
     for _turn in 0..MAX_TURNS {
-        let resp = match call_model(client, endpoint, token, model, &messages) {
+        let resp = match call_model(client, endpoint, token, model, &messages, deadline) {
             Ok(v) => v,
             Err(e) => {
                 return Triaged {
@@ -462,6 +502,7 @@ fn call_model(
     token: &str,
     model: &str,
     messages: &[Value],
+    deadline: Instant,
 ) -> Result<Value> {
     let payload = json!({
         "model": model,
@@ -470,7 +511,16 @@ fn call_model(
         "temperature": 0.1,
     });
     let body = serde_json::to_vec(&payload)?;
-    for attempt in 0..5u64 {
+    let mut last_error = String::new();
+    for attempt in 0..MODEL_ATTEMPTS {
+        if attempt > 0 {
+            let wait = 15 * attempt;
+            if Instant::now() + Duration::from_secs(wait) >= deadline {
+                bail!("{last_error} (time budget exhausted)");
+            }
+            eprintln!("  [{last_error}; retrying in {wait}s]");
+            sleep(Duration::from_secs(wait));
+        }
         let resp = client
             .post(endpoint)
             .header("Authorization", format!("Bearer {token}"))
@@ -478,14 +528,20 @@ fn call_model(
             .body(body.clone())
             .send();
         match resp {
-            Ok(r) if r.status().as_u16() == 429 => {
-                let wait = 15 * (attempt + 1);
-                eprintln!("  [rate limited, waiting {wait}s]");
-                sleep(Duration::from_secs(wait));
+            // Rate limits, provider overload (503) and transport failures
+            // (timeouts, resets) are transient; anything else is not.
+            Ok(r) if r.status().as_u16() == 429 || r.status().is_server_error() => {
+                last_error = format!("model request returned {}", r.status());
             }
             Ok(r) => {
                 let status = r.status();
-                let bytes = r.bytes()?;
+                let bytes = match r.bytes() {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        last_error = format!("model response failed: {e}");
+                        continue;
+                    }
+                };
                 if !status.is_success() {
                     // error_for_status() discards the body; GitHub returns the
                     // actual reason there (e.g. "no access to model"), so surface
@@ -495,10 +551,10 @@ fn call_model(
                 }
                 return Ok(serde_json::from_slice(&bytes)?);
             }
-            Err(e) => return Err(anyhow!("model request failed: {e}")),
+            Err(e) => last_error = format!("model request failed: {e}"),
         }
     }
-    bail!("exhausted retries (429)")
+    bail!("{last_error} (gave up after {MODEL_ATTEMPTS} attempts)")
 }
 
 // ---- tools -----------------------------------------------------------------
