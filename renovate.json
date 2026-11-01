@@ -147,6 +147,11 @@
       "allowedVersions": "/^\\d*[02468]\\../",
       "groupName": "Node.js",
       "groupSlug": "node"
+    },
+    {
+      "description": "Pins keep the version already in use and carry no release timestamp, so a release-age gate would hold them pending forever; must stay last to override group release ages",
+      "matchUpdateTypes": ["pin", "pinDigest"],
+      "minimumReleaseAge": null
     }
   ]
 }

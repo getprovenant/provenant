@@ -236,6 +236,16 @@ pub(crate) fn collect_top_level_license_detections(
     #[derive(Clone, Copy)]
     struct RepresentativeDetection<'a> {
         detection: &'a LicenseDetection,
+        path: &'a str,
+    }
+
+    impl RepresentativeDetection<'_> {
+        // Logged detections win; ties go to the smallest path so walk order cannot change output.
+        fn is_preferred_over(&self, current: &Self) -> bool {
+            let rank =
+                |candidate: &Self| (candidate.detection.detection_log.is_empty(), candidate.path);
+            rank(self) < rank(current)
+        }
     }
 
     struct AggregatedDetection<'a> {
@@ -258,18 +268,20 @@ pub(crate) fn collect_top_level_license_detections(
                 continue;
             }
 
+            let candidate = RepresentativeDetection {
+                detection,
+                path: &file.path,
+            };
             let entry = detections_by_identifier
                 .entry(detection.identifier.clone())
                 .or_insert_with(|| AggregatedDetection {
-                    representative: RepresentativeDetection { detection },
+                    representative: candidate,
                     seen_regions: HashSet::new(),
                     detection_count: 0,
                 });
 
-            if entry.representative.detection.detection_log.is_empty()
-                && !detection.detection_log.is_empty()
-            {
-                entry.representative = RepresentativeDetection { detection };
+            if candidate.is_preferred_over(&entry.representative) {
+                entry.representative = candidate;
             }
 
             if let Some(region_key) = public_detection_region_key(detection, &file.path)
@@ -1998,6 +2010,57 @@ mod tests {
             detections[0].detection_log,
             vec!["imperfect-match-coverage".to_string()]
         );
+    }
+
+    #[test]
+    fn collect_top_level_license_detections_representative_ignores_file_order() {
+        let detected_in = |path: &str| {
+            let mut info = file(path);
+            info.license_detections = vec![crate::models::LicenseDetection {
+                license_expression: "mit".to_string(),
+                license_expression_spdx: "MIT".to_string(),
+                matches: vec![Match {
+                    license_expression: "mit".to_string(),
+                    license_expression_spdx: "MIT".to_string(),
+                    from_file: Some(path.to_string()),
+                    start_line: LineNumber::ONE,
+                    end_line: LineNumber::ONE,
+                    matcher: MatcherKind::Hash,
+                    score: MatchScore::MAX,
+                    matched_length: Some(10),
+                    match_coverage: Some(100.0),
+                    rule_relevance: Some(100),
+                    rule_identifier: "mit.LICENSE".to_string(),
+                    rule_url: None,
+                    matched_text: None,
+                    referenced_filenames: None,
+                    matched_text_diagnostics: None,
+                }],
+                detection_log: vec![],
+                identifier: "mit-shared-id".to_string(),
+            }];
+            info
+        };
+
+        for files in [
+            [
+                detected_in("project/LICENSE.txt"),
+                detected_in("project/README.md"),
+            ],
+            [
+                detected_in("project/README.md"),
+                detected_in("project/LICENSE.txt"),
+            ],
+        ] {
+            let detections = collect_top_level_license_detections(&files);
+
+            assert_eq!(detections.len(), 1);
+            assert_eq!(detections[0].detection_count, 2);
+            assert_eq!(
+                detections[0].reference_matches[0].from_file.as_deref(),
+                Some("project/LICENSE.txt")
+            );
+        }
     }
 
     #[test]
