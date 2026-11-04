@@ -46,6 +46,14 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_groovy_code_in_dependencies() {
+        run_golden(
+            "testdata/gradle-golden/groovy/code-in-dependencies/build.gradle",
+            "testdata/gradle-golden/groovy/code-in-dependencies/build.gradle-expected.json",
+        );
+    }
+
+    #[test]
     fn test_golden_groovy2() {
         run_golden(
             "testdata/gradle-golden/groovy/groovy2/build.gradle",

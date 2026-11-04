@@ -1,0 +1,18 @@
+// Synthetic fixture modeled on react-native-reanimated's android/build.gradle:
+// exception messages and log calls inside `dependencies` are not dependencies.
+dependencies {
+    implementation "com.facebook.yoga:proguard-annotations:1.19.0"
+    implementation "androidx.core:core:1.6.0"
+    implementation "com.facebook.react:react-android" // version substituted by RNGP
+
+    if (project == rootProject) {
+        // This is needed for linting in the library's repo.
+    } else {
+        if (rootProject.subprojects.find { it.name == "react-native-worklets" }) {
+            implementation project(":react-native-worklets")
+        } else {
+            throw new GradleException("[Reanimated] `react-native-worklets` library not found. Read the documentation for more details: https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting")
+        }
+    }
+    println("Note: worklets resolved")
+}

@@ -507,6 +507,16 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
             }
         };
 
+        if scope_name == "throw" {
+            i = skip_thrown_expression(tokens, i + 1);
+            continue;
+        }
+
+        if is_diagnostic_call(&scope_name) {
+            i = skip_call_arguments(tokens, i + 1);
+            continue;
+        }
+
         if is_skip_keyword(&scope_name) {
             i += 1;
             continue;
@@ -573,7 +583,10 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
                 && tokens[next + 1] == Tok::Comma
                 && matches!(tokens.get(next + 2), Some(Tok::Str(_)));
             let effective_scope = if is_multi { "" } else { &scope_name };
-            let rd = parse_colon_string(val, effective_scope);
+            let Some(rd) = parse_colon_string(val, effective_scope) else {
+                i = next + 1;
+                continue;
+            };
             deps.push(rd);
             if is_malformed {
                 break;
@@ -584,8 +597,9 @@ fn parse_block(tokens: &[Tok]) -> Vec<RawDep> {
                 if i < tokens.len()
                     && let Tok::Str(ref v2) = tokens[i]
                     && v2.contains(':')
+                    && let Some(rd) = parse_colon_string(v2, "")
                 {
-                    deps.push(parse_colon_string(v2, ""));
+                    deps.push(rd);
                     i += 1;
                     continue;
                 }
@@ -681,6 +695,38 @@ fn parse_control_flow_block(tokens: &[Tok], start: usize, deps: &mut Vec<RawDep>
     Some(block_end + 1)
 }
 
+/// Skips `[new] ExceptionType(...)` so its message is never read as a dependency.
+fn skip_thrown_expression(tokens: &[Tok], mut i: usize) -> usize {
+    if matches!(tokens.get(i), Some(Tok::Ident(name)) if name == "new") {
+        i += 1;
+    }
+    if matches!(tokens.get(i), Some(Tok::Ident(_))) {
+        i += 1;
+    }
+    // `throw existing` has no argument list; a following quoted call is a new statement.
+    if tokens.get(i) == Some(&Tok::OpenParen) {
+        return skip_call_arguments(tokens, i);
+    }
+    i
+}
+
+fn skip_call_arguments(tokens: &[Tok], i: usize) -> usize {
+    match tokens.get(i) {
+        Some(Tok::OpenParen) => find_matching_paren(tokens, i).map_or(i + 1, |end| end + 1),
+        Some(Tok::Str(_) | Tok::MalformedStr(_)) => i + 1,
+        _ => i,
+    }
+}
+
+fn is_diagnostic_call(name: &str) -> bool {
+    matches!(
+        name,
+        "println" | "print" | "printf" | "error" | "assert" | "require" | "check"
+    ) || ["logger.", "project.logger.", "System.out.", "System.err."]
+        .iter()
+        .any(|prefix| name.starts_with(prefix))
+}
+
 fn is_skip_keyword(name: &str) -> bool {
     matches!(
         name,
@@ -743,7 +789,7 @@ fn parse_paren_content(scope: &str, tokens: &[Tok], deps: &mut Vec<RawDep>) {
             if let Some(Tok::Str(val)) = inner.first()
                 && val.contains(':')
             {
-                deps.push(parse_colon_string(val, inner_fn));
+                deps.extend(parse_colon_string(val, inner_fn));
                 return;
             }
 
@@ -767,7 +813,7 @@ fn parse_paren_content(scope: &str, tokens: &[Tok], deps: &mut Vec<RawDep>) {
     if let Some(Tok::Str(val)) = tokens.first()
         && val.contains(':')
     {
-        deps.push(parse_colon_string(val, scope));
+        deps.extend(parse_colon_string(val, scope));
     }
 }
 
@@ -926,8 +972,17 @@ fn parse_symbolic_ref(scope: &str, value: &str) -> RawDep {
     }
 }
 
-fn parse_colon_string(val: &str, scope: &str) -> RawDep {
+/// Returns `None` for non-coordinate strings such as `println("Note: ...")` messages.
+fn parse_colon_string(val: &str, scope: &str) -> Option<RawDep> {
     let parts: Vec<&str> = val.split(':').collect();
+    // Group and artifact IDs never contain whitespace; versions may (`[1.0, 2.0)`).
+    if parts
+        .iter()
+        .take(2)
+        .any(|part| has_whitespace_outside_interpolation(part))
+    {
+        return None;
+    }
     let (namespace, name, version) = match parts.len() {
         n if n >= 4 => (
             truncate_field(parts[0].to_string()),
@@ -951,7 +1006,7 @@ fn parse_colon_string(val: &str, scope: &str) -> RawDep {
         ),
     };
 
-    RawDep {
+    Some(RawDep {
         namespace,
         name,
         version,
@@ -959,7 +1014,25 @@ fn parse_colon_string(val: &str, scope: &str) -> RawDep {
         catalog_alias: None,
         symbolic_ref: None,
         project_path: None,
+    })
+}
+
+fn has_whitespace_outside_interpolation(value: &str) -> bool {
+    let mut depth = 0usize;
+    let mut chars = value.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '$' if chars.peek() == Some(&'{') => {
+                chars.next();
+                depth += 1;
+            }
+            '{' if depth > 0 => depth += 1,
+            '}' if depth > 0 => depth -= 1,
+            c if c.is_whitespace() && depth == 0 => return true,
+            _ => {}
+        }
     }
+    false
 }
 
 fn find_matching_paren(tokens: &[Tok], start: usize) -> Option<usize> {
@@ -1294,7 +1367,9 @@ fn resolve_gradle_buildsrc_symbolic_refs(path: &Path, raw_dependencies: &mut [Ra
             continue;
         }
 
-        let resolved_dependency = parse_colon_string(&resolved, &raw.scope);
+        let Some(resolved_dependency) = parse_colon_string(&resolved, &raw.scope) else {
+            continue;
+        };
         raw.namespace = resolved_dependency.namespace;
         raw.name = resolved_dependency.name;
         raw.version = resolved_dependency.version;
