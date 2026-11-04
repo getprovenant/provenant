@@ -1,0 +1,103 @@
+[
+  {
+    "type": "cocoapods",
+    "namespace": null,
+    "name": "Heredoc",
+    "version": "1.0.0",
+    "qualifiers": null,
+    "subpath": null,
+    "primary_language": "Objective-C",
+    "description": "The #1 heredoc demo\nUsage: add this to your podspec:\n      s.dependency 'Usage Example', '~> 2.0'\n    s.name = 'NotTheName'",
+    "release_date": null,
+    "parties": [
+      {
+        "type": "person",
+        "role": "author",
+        "name": "Example",
+        "email": "dev@example.com",
+        "url": null
+      }
+    ],
+    "keywords": [],
+    "homepage_url": "https://github.com/example/Heredoc",
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": "https://github.com/example/Heredoc/issues/",
+    "code_view_url": "https://github.com/example/Heredoc/tree/1.0.0",
+    "vcs_url": "https://github.com/example/Heredoc.git",
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": "mit",
+    "declared_license_expression_spdx": "MIT",
+    "license_detections": [
+      {
+        "license_expression": "mit",
+        "license_expression_spdx": "MIT",
+        "matches": [
+          {
+            "license_expression": "mit",
+            "license_expression_spdx": "MIT",
+            "from_file": null,
+            "start_line": 1,
+            "end_line": 1,
+            "matcher": "parser-declared-license",
+            "score": 100.0,
+            "matched_length": 1,
+            "match_coverage": 100.0,
+            "rule_relevance": 100,
+            "rule_identifier": "parser-declared-license",
+            "rule_url": null,
+            "matched_text": "MIT",
+            "referenced_filenames": ["LICENSE"]
+          }
+        ],
+        "identifier": "mit-baa8883e-2a3e-91b8-cdd5-5b082d60e708"
+      }
+    ],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": "MIT",
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {
+      "license_file": "LICENSE"
+    },
+    "dependencies": [
+      {
+        "purl": "pkg:cocoapods/AFNetworking",
+        "extracted_requirement": "~> 4.0",
+        "scope": "runtime",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": null
+      },
+      {
+        "purl": "pkg:cocoapods/Core",
+        "extracted_requirement": "~> 1.0.0",
+        "scope": "runtime",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": null
+      }
+    ],
+    "repository_homepage_url": "https://cocoapods.org/pods/Heredoc",
+    "repository_download_url": "https://github.com/example/Heredoc/archive/refs/tags/1.0.0.zip",
+    "api_data_url": "https://raw.githubusercontent.com/CocoaPods/Specs/blob/master/Specs/4/2/2/Heredoc/1.0.0/Heredoc.podspec.json",
+    "datasource_id": "cocoapods_podspec",
+    "purl": "pkg:cocoapods/Heredoc@1.0.0"
+  }
+]

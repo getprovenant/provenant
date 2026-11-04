@@ -306,6 +306,7 @@ mod rpm_yumdb;
 mod ruby;
 #[cfg(test)]
 mod ruby_scan_test;
+mod ruby_source;
 #[cfg(test)]
 mod ruby_test;
 mod sbt;

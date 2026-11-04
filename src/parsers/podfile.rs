@@ -31,6 +31,7 @@ use packageurl::PackageUrl;
 use regex::Regex;
 
 use super::metadata::ParserMetadata;
+use super::ruby_source::{mask_ruby_non_code, strip_ruby_line_comment};
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType};
 use crate::parsers::PackageParser;
 use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
@@ -168,10 +169,11 @@ fn extract_dependencies(content: &str) -> Vec<Dependency> {
 
 fn extract_dependencies_with_context(content: &str, base_dir: Option<&Path>) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
-    let contexts = load_podfile_contexts(content, base_dir);
+    let code = mask_ruby_non_code(content);
+    let contexts = load_podfile_contexts(&code, base_dir);
     let version_hashes = extract_podfile_hash_assignments(&contexts);
 
-    for line in content.lines().capped("Podfile lines") {
+    for line in code.lines().capped("Podfile lines") {
         let cleaned_line = pre_process(line);
         if let Some(caps) = POD_PATTERN.captures(&cleaned_line) {
             let name = truncate_field(caps.get(1).map(|m| m.as_str()).unwrap_or("").to_string());
@@ -202,10 +204,11 @@ fn create_dependency(
 
     let purl = PackageUrl::new("cocoapods", &name).ok()?;
 
-    let is_pinned = version_req
-        .as_ref()
-        .map(|v| !v.contains(&['~', '>', '<', '='][..]))
-        .unwrap_or(false);
+    let is_pinned = match version_req.as_deref() {
+        Some(v) if v.contains("#{") => None,
+        Some(v) => Some(!v.contains(&['~', '>', '<', '='][..])),
+        None => Some(false),
+    };
 
     Some(Dependency {
         purl: Some(truncate_field(purl.to_string())),
@@ -213,7 +216,7 @@ fn create_dependency(
         scope: Some("dependencies".to_string()),
         is_runtime: None,
         is_optional: None,
-        is_pinned: Some(is_pinned),
+        is_pinned,
         is_direct: Some(true),
         resolved_package: None,
         extra_data: None,
@@ -222,12 +225,7 @@ fn create_dependency(
 
 /// Pre-process a line by removing comments and trimming
 fn pre_process(line: &str) -> String {
-    let line = if let Some(comment_pos) = line.find('#') {
-        &line[..comment_pos]
-    } else {
-        line
-    };
-    line.trim().to_string()
+    strip_ruby_line_comment(line).trim().to_string()
 }
 
 fn extract_pod_version_requirement(
@@ -290,7 +288,7 @@ fn load_podfile_contexts(content: &str, base_dir: Option<&Path>) -> Vec<String> 
                 continue;
             }
             if let Ok(required_content) = read_file_to_string(&canonical_candidate, None) {
-                contexts.push(required_content);
+                contexts.push(mask_ruby_non_code(&required_content));
                 break;
             }
         }
@@ -427,6 +425,41 @@ pod 'Active', '2.0'  # inline comment
         let deps = extract_dependencies(content);
         assert_eq!(deps.len(), 1);
         assert_eq!(deps[0].purl, Some("pkg:cocoapods/Active".to_string()));
+    }
+
+    #[test]
+    fn test_ignores_heredoc_bodies_and_embedded_docs() {
+        let content = r#"
+target 'App' do
+  pod 'Alamofire', '~> 5.0'
+end
+NOTE = <<~TXT
+  pod 'Usage Example', '1.0'
+TXT
+=begin
+pod 'BlockCommented'
+=end
+"#;
+        let deps = extract_dependencies(content);
+        let purls: Vec<_> = deps.iter().filter_map(|d| d.purl.as_deref()).collect();
+        assert_eq!(purls, ["pkg:cocoapods/Alamofire"]);
+    }
+
+    #[test]
+    fn test_keeps_hash_inside_string_requirement() {
+        let content = r#"
+pod 'Core', "~> #{CORE_VERSION}"
+pod 'Lib', '1.2.3' # pinned
+"#;
+        let deps = extract_dependencies(content);
+        assert_eq!(deps.len(), 2);
+        assert_eq!(
+            deps[0].extracted_requirement.as_deref(),
+            Some("~> #{CORE_VERSION}")
+        );
+        assert_eq!(deps[0].is_pinned, None);
+        assert_eq!(deps[1].extracted_requirement.as_deref(), Some("1.2.3"));
+        assert_eq!(deps[1].is_pinned, Some(true));
     }
 
     #[test]

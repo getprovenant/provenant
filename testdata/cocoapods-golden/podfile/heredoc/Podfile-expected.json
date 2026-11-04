@@ -1,0 +1,23 @@
+[
+  {
+    "type": "cocoapods",
+    "primary_language": "Objective-C",
+    "parties": [],
+    "dependencies": [
+      {
+        "purl": "pkg:cocoapods/Alamofire",
+        "extracted_requirement": "~> 5.0",
+        "scope": "dependencies",
+        "is_pinned": false,
+        "is_direct": true
+      },
+      {
+        "purl": "pkg:cocoapods/Core",
+        "extracted_requirement": "~> #{CORE_VERSION}",
+        "scope": "dependencies",
+        "is_direct": true
+      }
+    ],
+    "datasource_id": "cocoapods_podfile"
+  }
+]

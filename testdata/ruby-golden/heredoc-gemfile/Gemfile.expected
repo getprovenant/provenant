@@ -1,0 +1,36 @@
+[
+  {
+    "type": "gem",
+    "primary_language": "Ruby",
+    "parties": [],
+    "extra_data": {
+      "sources": [
+        "https://rubygems.org"
+      ]
+    },
+    "dependencies": [
+      {
+        "purl": "pkg:gem/rails",
+        "extracted_requirement": "~> 7.0",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_direct": true,
+        "extra_data": {
+          "source": "https://rubygems.org"
+        }
+      },
+      {
+        "purl": "pkg:gem/rspec",
+        "extracted_requirement": "~> 3.0",
+        "scope": "test",
+        "is_runtime": false,
+        "is_optional": true,
+        "is_direct": true,
+        "extra_data": {
+          "source": "https://rubygems.org"
+        }
+      }
+    ],
+    "datasource_id": "gemfile"
+  }
+]

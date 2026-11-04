@@ -36,15 +36,16 @@ use md5::{Digest, Md5};
 use regex::Regex;
 
 use super::metadata::ParserMetadata;
+use super::ruby_source::{
+    RubySource, ruby_interpolation_starts, ruby_statements, strip_ruby_line_comment,
+};
 use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party, PartyType};
 use crate::parsers::PackageParser;
 use crate::parsers::license_normalization::{
     DeclaredLicenseMatchMetadata, build_declared_license_data_from_pair,
     normalize_spdx_declared_license,
 };
-use crate::parsers::utils::{
-    CappedIterExt, capped_iteration_limit, read_file_to_string, truncate_field,
-};
+use crate::parsers::utils::{CappedIterExt, read_file_to_string, truncate_field};
 
 /// Parses CocoaPods specification files (.podspec).
 ///
@@ -57,7 +58,8 @@ use crate::parsers::utils::{
 /// - Dependencies with version constraints
 ///
 /// # Heredoc Support
-/// Handles multiline descriptions: `s.description = <<-DESC ... DESC`
+/// Handles multiline descriptions (`s.description = <<-DESC ... DESC`, also `<<~` and `<<`);
+/// other heredoc bodies and `=begin`/`=end` blocks are ignored.
 pub struct PodspecParser;
 
 impl PackageParser for PodspecParser {
@@ -91,20 +93,41 @@ impl PackageParser for PodspecParser {
             }
         };
 
-        let raw_name = extract_raw_field(&content, &NAME_PATTERN);
-        let raw_version = extract_raw_field(&content, &VERSION_PATTERN);
-        let name = extract_metadata_field(&content, &NAME_PATTERN).map(truncate_field);
-        let version = extract_metadata_field(&content, &VERSION_PATTERN).map(truncate_field);
-        let summary = extract_metadata_field(&content, &SUMMARY_PATTERN).map(truncate_field);
-        let description =
-            merge_summary_and_description(summary.as_deref(), extract_description(&content))
-                .map(truncate_field);
-        let homepage_url = extract_metadata_field(&content, &HOMEPAGE_PATTERN).map(truncate_field);
-        let license = extract_license_statement(&content).map(truncate_field);
+        let ruby_source = RubySource::parse(&content);
+        let code = ruby_source.code();
+        let content = code.as_str();
+
+        let raw_name = extract_raw_field(content, &NAME_PATTERN);
+        let raw_version = extract_raw_field(content, &VERSION_PATTERN);
+        let name = extract_identity_field(content, &NAME_PATTERN);
+        let version = extract_identity_field(content, &VERSION_PATTERN);
+        let identity = SpecIdentity {
+            receiver: SPEC_RECEIVER_PATTERN
+                .captures(content)
+                .and_then(|caps| caps.get(1))
+                .map(|m| m.as_str()),
+            name: name
+                .as_deref()
+                .filter(|_| raw_name.as_deref().is_some_and(is_ruby_string_literal)),
+            version: version
+                .as_deref()
+                .filter(|_| raw_version.as_deref().is_some_and(is_ruby_string_literal)),
+        };
+        let summary = extract_metadata_field(content, &SUMMARY_PATTERN).map(truncate_field);
+        let description = merge_summary_and_description(
+            summary.as_deref(),
+            extract_description(&ruby_source, content),
+        )
+        .map(truncate_field);
+        let homepage_url = extract_raw_field(content, &HOMEPAGE_PATTERN)
+            .map(|raw| clean_string(&resolve_self_interpolation(&raw, &identity)))
+            .and_then(|value| normalize_podspec_dynamic_metadata_value(&value))
+            .map(truncate_field);
+        let license = extract_license_statement(content).map(truncate_field);
         let (declared_license_expression, declared_license_expression_spdx, license_detections) =
-            normalize_podspec_declared_license(&content, license.as_deref());
-        let source = extract_source_url(&content).map(truncate_field);
-        let authors = extract_authors(&content);
+            normalize_podspec_declared_license(content, license.as_deref());
+        let source = extract_source_url(content, &identity).map(truncate_field);
+        let authors = extract_authors(content);
 
         let parties = authors
             .into_iter()
@@ -120,7 +143,7 @@ impl PackageParser for PodspecParser {
             })
             .collect();
 
-        let dependencies = extract_dependencies(&content);
+        let dependencies = extract_dependencies(content, &identity);
         let mut extra_data = serde_json::Map::new();
         let has_dynamic_identity_placeholders = raw_name
             .as_deref()
@@ -134,7 +157,7 @@ impl PackageParser for PodspecParser {
                 serde_json::Value::Bool(true),
             );
         }
-        if let Some(raw_license) = extract_field(&content, &LICENSE_PATTERN)
+        if let Some(raw_license) = extract_field(content, &LICENSE_PATTERN)
             && let Some(license_file) = extract_ruby_hash_file(&raw_license)
         {
             extra_data.insert(
@@ -255,9 +278,32 @@ static SOURCE_HTTP_PATTERN: LazyLock<Regex> =
 
 static DEPENDENCY_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-    r#"(?:s\.)?(?:dependency|add_dependency|add_(?:runtime|development)_dependency)\s+['"]([^'"]+)['"](?:\s*,\s*(.+))?"#
+    r#"^\s*(?:[A-Za-z_]\w*\.)*(?:dependency|add_dependency|add_(?:runtime|development)_dependency)\s+['"]([^'"]+)['"](?:\s*,\s*(.+))?"#
 ).expect("valid regex")
 });
+static SELF_INTERPOLATION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"#\{\s*([A-Za-z_]\w*)\.(name|version)(?:\.to_s)?\s*\}").expect("valid regex")
+});
+static SPEC_RECEIVER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"Pod::Spec\.new\b[^|\n]*?(?:\bdo|\{)\s*\|\s*([A-Za-z_]\w*)\s*\|")
+        .expect("valid regex")
+});
+static RUBY_STRING_LITERAL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^(?:'[^'\\]*'|"[^"\\#]*"|%q\{[^}]*\}|\d[\w.+-]*)(?:\.freeze)?$"#)
+        .expect("valid regex")
+});
+
+/// The `Pod::Spec.new do |s|` receiver and the name/version it assigns as plain literals.
+#[derive(Default)]
+struct SpecIdentity<'a> {
+    receiver: Option<&'a str>,
+    name: Option<&'a str>,
+    version: Option<&'a str>,
+}
+
+fn is_ruby_string_literal(raw: &str) -> bool {
+    RUBY_STRING_LITERAL_PATTERN.is_match(raw.trim())
+}
 
 fn extract_license_statement(content: &str) -> Option<String> {
     let raw_license = extract_raw_field(content, &LICENSE_PATTERN)?;
@@ -396,6 +442,41 @@ fn extract_metadata_field(content: &str, pattern: &Regex) -> Option<String> {
         .and_then(|value| normalize_podspec_dynamic_metadata_value(&value))
 }
 
+/// Name/version with unresolved `#{...}` interpolation are left unknown rather than guessed.
+fn extract_identity_field(content: &str, pattern: &Regex) -> Option<String> {
+    extract_metadata_field(content, pattern)
+        .filter(|value| !value.contains("#{"))
+        .map(truncate_field)
+}
+
+/// Substitutes `#{s.name}` / `#{s.version}` (spec receiver only) in raw Ruby source text,
+/// only where Ruby interpolates (not single-quoted, `%q`, or escaped `\#{`).
+fn resolve_self_interpolation(raw: &str, identity: &SpecIdentity<'_>) -> String {
+    if !raw.contains("#{") {
+        return raw.to_string();
+    }
+    let live = ruby_interpolation_starts(raw);
+    SELF_INTERPOLATION_PATTERN
+        .replace_all(raw, |caps: &regex::Captures<'_>| {
+            let whole = caps.get(0);
+            let receiver = caps.get(1).map(|m| m.as_str());
+            let is_live = whole.is_some_and(|m| live.contains(&m.start()));
+            let resolved = if is_live && receiver.is_some() && receiver == identity.receiver {
+                match caps.get(2).map(|m| m.as_str()) {
+                    Some("name") => identity.name,
+                    _ => identity.version,
+                }
+            } else {
+                None
+            };
+            resolved.map_or_else(
+                || whole.map_or("", |m| m.as_str()).to_string(),
+                str::to_string,
+            )
+        })
+        .into_owned()
+}
+
 fn extract_raw_field(content: &str, pattern: &Regex) -> Option<String> {
     for line in content.lines().capped("podspec extract_raw_field lines") {
         let cleaned_line = pre_process(line);
@@ -417,14 +498,13 @@ fn extract_field(content: &str, pattern: &Regex) -> Option<String> {
     None
 }
 
-/// Extract description, handling multiline heredoc format
-fn extract_description(content: &str) -> Option<String> {
-    let lines: Vec<&str> = content
+/// Extract description, reading heredoc bodies from the original source.
+fn extract_description(source: &RubySource<'_>, code: &str) -> Option<String> {
+    for (i, line) in code
         .lines()
+        .enumerate()
         .capped("podspec extract_description lines")
-        .collect();
-
-    for (i, line) in lines.iter().enumerate() {
+    {
         let cleaned = pre_process(line);
         if let Some(value) = DESCRIPTION_PATTERN
             .captures(&cleaned)
@@ -432,8 +512,8 @@ fn extract_description(content: &str) -> Option<String> {
         {
             let value_str = value.as_str();
 
-            if value_str.contains("<<-") {
-                return extract_multiline_description(&lines, i);
+            if value_str.starts_with("<<") {
+                return source.heredoc_body(i);
             } else {
                 return normalize_podspec_dynamic_metadata_value(&clean_string(value_str));
             }
@@ -454,43 +534,6 @@ fn merge_summary_and_description(
         (Some(summary), Some(description)) => Some(format!("{}\n{}", summary, description)),
         (Some(summary), None) => Some(summary.to_string()),
         (None, description) => description,
-    }
-}
-
-/// Extract multiline description in heredoc format
-fn extract_multiline_description(lines: &[&str], start_index: usize) -> Option<String> {
-    let start_line = lines.get(start_index)?;
-
-    // Extract the delimiter (e.g., "DESC" from "<<-DESC")
-    let delimiter = start_line
-        .split("<<-")
-        .nth(1)?
-        .trim()
-        .trim_matches(|c| c == '"' || c == '\'');
-
-    let mut description_lines = Vec::new();
-    let mut found_start = false;
-
-    let limit = capped_iteration_limit(lines.len(), "podspec extract_multiline_description lines");
-    for line in lines.iter().take(limit).skip(start_index) {
-        if !found_start && line.contains("<<-") {
-            found_start = true;
-            continue;
-        }
-
-        if found_start {
-            let trimmed = line.trim();
-            if trimmed == delimiter {
-                break;
-            }
-            description_lines.push(*line);
-        }
-    }
-
-    if description_lines.is_empty() {
-        None
-    } else {
-        Some(description_lines.join("\n").trim().to_string())
     }
 }
 
@@ -526,16 +569,17 @@ fn extract_authors(content: &str) -> Vec<(String, Option<String>)> {
     authors
 }
 
-fn extract_source_url(content: &str) -> Option<String> {
+fn extract_source_url(content: &str, identity: &SpecIdentity<'_>) -> Option<String> {
     for line in content.lines().capped("podspec extract_source_url lines") {
         let cleaned_line = pre_process(line);
         let Some(value) = SOURCE_PATTERN
             .captures(&cleaned_line)
             .and_then(|caps| caps.get(1))
-            .map(|m| m.as_str())
+            .map(|m| resolve_self_interpolation(m.as_str(), identity))
         else {
             continue;
         };
+        let value = value.as_str();
 
         if let Some(caps) = SOURCE_GIT_PATTERN.captures(value)
             && let Some(url) = caps.get(1)
@@ -595,15 +639,20 @@ fn parse_author_string(author: &str) -> (String, Option<String>) {
 }
 
 /// Extract dependencies from podspec
-fn extract_dependencies(content: &str) -> Vec<Dependency> {
+fn extract_dependencies(content: &str, identity: &SpecIdentity<'_>) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
     for line in content.lines().capped("podspec extract_dependencies lines") {
         let cleaned_line = pre_process(line);
-        if let Some(caps) = DEPENDENCY_PATTERN.captures(&cleaned_line) {
+        for statement in ruby_statements(&cleaned_line) {
+            let Some(caps) = DEPENDENCY_PATTERN.captures(statement) else {
+                continue;
+            };
             let method = caps.get(0).map(|m| m.as_str()).unwrap_or("");
             let name = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-            let version_req = caps.get(2).map(|m| clean_string(m.as_str()));
+            let version_req = caps
+                .get(2)
+                .map(|m| clean_string(&resolve_self_interpolation(m.as_str(), identity)));
 
             if let Some(dep) = create_dependency(name, version_req, method) {
                 dependencies.push(dep);
@@ -622,11 +671,11 @@ fn create_dependency(name: &str, version_req: Option<String>, method: &str) -> O
 
     let purl = build_cocoapods_purl(name, None)?;
 
-    // Determine if version is pinned (exact version)
-    let is_pinned = version_req
-        .as_ref()
-        .map(|v| !v.contains(&['~', '>', '<', '='][..]))
-        .unwrap_or(false);
+    let is_pinned = match version_req.as_deref() {
+        Some(v) if v.contains("#{") => None,
+        Some(v) => Some(!v.contains(&['~', '>', '<', '='][..])),
+        None => Some(false),
+    };
 
     let is_development = method.contains("add_development_dependency");
 
@@ -643,7 +692,7 @@ fn create_dependency(name: &str, version_req: Option<String>, method: &str) -> O
         ),
         is_runtime: Some(!is_development),
         is_optional: Some(is_development),
-        is_pinned: Some(is_pinned),
+        is_pinned,
         is_direct: Some(true),
         resolved_package: None,
         extra_data: None,
@@ -652,24 +701,20 @@ fn create_dependency(name: &str, version_req: Option<String>, method: &str) -> O
 
 /// Pre-process a line by removing comments and trimming
 fn pre_process(line: &str) -> String {
-    let line = if let Some(comment_pos) = line.find('#') {
-        &line[..comment_pos]
-    } else {
-        line
-    };
-    line.trim().to_string()
+    strip_ruby_line_comment(line).trim().to_string()
 }
 
 /// Clean a string value by removing quotes and special characters
 fn clean_string(s: &str) -> String {
     let after_removing_special_patterns = s.trim().replace("%q", "").replace(".freeze", "");
+    // Keep the closing brace of a trailing `#{...}` interpolation.
+    let interpolated = after_removing_special_patterns.contains("#{");
 
     after_removing_special_patterns
         .trim_matches(|c| {
             c == '\''
                 || c == '"'
-                || c == '{'
-                || c == '}'
+                || (!interpolated && (c == '{' || c == '}'))
                 || c == '['
                 || c == ']'
                 || c == '<'
@@ -801,11 +846,258 @@ Pod::Spec.new do |s|
   DESC
 end
 "#;
-        let desc = extract_description(content);
-        assert!(desc.is_some());
-        let desc_text = desc.unwrap();
-        assert!(desc_text.contains("delightful networking"));
-        assert!(desc_text.contains("Modern API"));
+        let source = RubySource::parse(content);
+        let desc = extract_description(&source, &source.code());
+        assert_eq!(
+            desc.as_deref(),
+            Some("A delightful networking library.\n    Features include:\n    - Modern API")
+        );
+    }
+
+    fn parse_podspec(content: &str) -> PackageData {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("Demo.podspec");
+        std::fs::write(&path, content).expect("write podspec");
+        PodspecParser::extract_first_package(&path)
+    }
+
+    fn dependency_purls(package: &PackageData) -> Vec<&str> {
+        package
+            .dependencies
+            .iter()
+            .filter_map(|dep| dep.purl.as_deref())
+            .collect()
+    }
+
+    #[test]
+    fn test_heredoc_and_string_text_is_not_parsed_as_declarations() {
+        let package = parse_podspec(
+            r#"Pod::Spec.new do |s|
+  s.description = <<-DESC
+    Usage: add this to your podspec:
+      s.dependency 'Usage Example', '~> 2.0'
+    s.name = 'NotTheName'
+  DESC
+  s.name = 'Demo'
+  s.version = '1.0.0'
+  s.dependency 'AFNetworking', '~> 4.0'
+  Pod::UI.warn "Note: s.dependency 'Deprecated Thing' is gone"
+  puts "s.dependency 'Fake thing', '1.0'"
+=begin
+  s.dependency 'BlockCommented'
+=end
+end
+"#,
+        );
+
+        assert_eq!(package.name.as_deref(), Some("Demo"));
+        assert_eq!(dependency_purls(&package), ["pkg:cocoapods/AFNetworking"]);
+        let description = package.description.as_deref().unwrap_or_default();
+        assert!(description.contains("s.dependency 'Usage Example'"));
+    }
+
+    #[test]
+    fn test_squiggly_heredoc_description_is_dedented() {
+        let package = parse_podspec(
+            "Pod::Spec.new do |s|\n  s.name = 'Demo'\n  s.description = <<~DESC.strip\n    First line.\n      Indented.\n  DESC\nend\n",
+        );
+        assert_eq!(
+            package.description.as_deref(),
+            Some("First line.\n  Indented.")
+        );
+    }
+
+    #[test]
+    fn test_hash_inside_strings_is_not_a_comment() {
+        let package = parse_podspec(
+            r##"Pod::Spec.new do |s|
+  s.name = 'Demo'
+  s.version = '1.0.0'
+  s.summary = "The #1 networking lib"
+  s.homepage = "https://github.com/example/#{s.name}"
+  s.source = { :git => "https://github.com/example/#{s.name}.git", :tag => s.version.to_s }
+  s.dependency 'Core', "~> #{s.version}" # trailing comment
+  s.dependency 'Other', "#{OTHER_VERSION}"
+end
+"##,
+        );
+
+        assert_eq!(
+            package.description.as_deref(),
+            Some("The #1 networking lib")
+        );
+        assert_eq!(
+            package.homepage_url.as_deref(),
+            Some("https://github.com/example/Demo")
+        );
+        assert_eq!(
+            package.vcs_url.as_deref(),
+            Some("https://github.com/example/Demo.git")
+        );
+        assert_eq!(
+            package.dependencies[0].extracted_requirement.as_deref(),
+            Some("~> 1.0.0")
+        );
+        assert_eq!(package.dependencies[0].is_pinned, Some(false));
+        assert_eq!(
+            package.dependencies[1].extracted_requirement.as_deref(),
+            Some("#{OTHER_VERSION}")
+        );
+        assert_eq!(package.dependencies[1].is_pinned, None);
+    }
+
+    #[test]
+    fn test_interpolated_identity_is_left_unknown() {
+        let package = parse_podspec(
+            "Pod::Spec.new do |s|\n  s.name = \"#{PREFIX}Kit\"\n  s.version = \"1.0.#{BUILD}\"\nend\n",
+        );
+        assert_eq!(package.name, None);
+        assert_eq!(package.version, None);
+        assert_eq!(package.purl, None);
+    }
+
+    #[test]
+    fn test_platform_and_subspec_dependencies_are_kept() {
+        let deps = extract_dependencies(
+            "  s.ios.dependency 'IOSOnly', '1.0'\n  ss.dependency 'SubDep'\n  dependency 'Bare'\n",
+            &SpecIdentity::default(),
+        );
+        let purls: Vec<_> = deps.iter().filter_map(|d| d.purl.as_deref()).collect();
+        assert_eq!(
+            purls,
+            [
+                "pkg:cocoapods/IOSOnly",
+                "pkg:cocoapods/SubDep",
+                "pkg:cocoapods/Bare"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_one_line_subspec_dependency_is_kept() {
+        let deps = extract_dependencies(
+            "  s.subspec 'Core' do |ss| ss.dependency 'Foundation', '~> 1.0' end\n  puts \"s.dependency 'x'\"\n",
+            &SpecIdentity::default(),
+        );
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].purl.as_deref(), Some("pkg:cocoapods/Foundation"));
+        assert_eq!(deps[0].extracted_requirement.as_deref(), Some("~> 1.0"));
+    }
+
+    #[test]
+    fn test_nested_interpolation_literals_keep_following_dependency() {
+        let package = parse_podspec(
+            r##"Pod::Spec.new do |s|
+  s.name = 'Demo'
+  puts "#{h["}"]}"; s.dependency 'Real'
+  s.description = 'Usage:
+    s.dependency "Fake"'
+end
+"##,
+        );
+        let purls: Vec<_> = package
+            .dependencies
+            .iter()
+            .filter_map(|d| d.purl.as_deref())
+            .collect();
+        assert_eq!(purls, ["pkg:cocoapods/Real"]);
+    }
+
+    #[test]
+    fn test_percent_literal_text_is_not_parsed_as_dependency() {
+        let deps = extract_dependencies(
+            "  s.description = %q{Example; s.dependency 'Fake'}\n  s.source_files = %w[a;b c]; s.dependency 'Real'\n",
+            &SpecIdentity::default(),
+        );
+        let purls: Vec<_> = deps.iter().filter_map(|d| d.purl.as_deref()).collect();
+        assert_eq!(purls, ["pkg:cocoapods/Real"]);
+    }
+
+    #[test]
+    fn test_self_interpolation_only_resolves_spec_receiver() {
+        let package = parse_podspec(
+            "Pod::Spec.new do |spec|\n  spec.name = 'Demo'\n  spec.version = '2.0.0'\n  spec.dependency 'A', \"~> #{spec.version}\"\n  spec.dependency 'B', \"~> #{core.version}\"\n  spec.dependency 'C', \"#{x.name}\"\nend\n",
+        );
+        let reqs: Vec<_> = package
+            .dependencies
+            .iter()
+            .map(|d| (d.extracted_requirement.as_deref(), d.is_pinned))
+            .collect();
+        assert_eq!(
+            reqs,
+            [
+                (Some("~> 2.0.0"), Some(false)),
+                (Some("~> #{core.version}"), None),
+                (Some("#{x.name}"), None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_self_interpolation_only_where_ruby_interpolates() {
+        let package = parse_podspec(
+            r##"Pod::Spec.new do |s|
+  s.name = 'Demo'
+  s.version = '1.0.0'
+  s.homepage = 'https://example.org/#{s.name}'
+  s.source = { :git => "https://example.org/#{s.name}.git", :tag => s.version.to_s }
+  s.dependency 'A', '~> #{s.version}'
+  s.dependency 'B', "~> \#{s.version}"
+  s.dependency 'C', "~> #{s.version}"
+end
+"##,
+        );
+        assert_eq!(
+            package.homepage_url.as_deref(),
+            Some("https://example.org/#{s.name}")
+        );
+        assert_eq!(
+            package.vcs_url.as_deref(),
+            Some("https://example.org/Demo.git")
+        );
+        let reqs: Vec<_> = package
+            .dependencies
+            .iter()
+            .map(|d| (d.extracted_requirement.as_deref(), d.is_pinned))
+            .collect();
+        assert_eq!(
+            reqs,
+            [
+                (Some("~> #{s.version}"), None),
+                (Some("~> \\#{s.version}"), None),
+                (Some("~> 1.0.0"), Some(false)),
+            ]
+        );
+
+        let identity = SpecIdentity {
+            receiver: Some("s"),
+            name: Some("Demo"),
+            version: Some("1.0.0"),
+        };
+        for (raw, expected) in [
+            ("%q(v#{s.version})", "%q(v#{s.version})"),
+            ("%Q(v#{s.version})", "%Q(v1.0.0)"),
+            ("%(v#{s.version})", "%(v1.0.0)"),
+            (
+                "'v#{s.version}' + \"v#{s.version}\"",
+                "'v#{s.version}' + \"v1.0.0\"",
+            ),
+        ] {
+            assert_eq!(resolve_self_interpolation(raw, &identity), expected);
+        }
+    }
+
+    #[test]
+    fn test_self_interpolation_skips_non_literal_identity() {
+        let package = parse_podspec(
+            "Pod::Spec.new do |s|\n  s.name = package['name']\n  s.version = package['version']\n  s.dependency 'Core', \"#{s.version}\"\nend\n",
+        );
+        assert_eq!(package.version.as_deref(), Some("packageversion"));
+        assert_eq!(
+            package.dependencies[0].extracted_requirement.as_deref(),
+            Some("#{s.version}")
+        );
+        assert_eq!(package.dependencies[0].is_pinned, None);
     }
 
     #[test]
@@ -816,7 +1108,7 @@ Pod::Spec.new do |s|
   s.dependency "Alamofire"
 end
 "#;
-        let deps = extract_dependencies(content);
+        let deps = extract_dependencies(content, &SpecIdentity::default());
         assert_eq!(deps.len(), 2);
 
         assert_eq!(deps[0].purl, Some("pkg:cocoapods/AFNetworking".to_string()));
@@ -837,7 +1129,7 @@ Pod::Spec.new do |s|
 end
 "#;
 
-        let deps = extract_dependencies(content);
+        let deps = extract_dependencies(content, &SpecIdentity::default());
         assert_eq!(deps.len(), 3);
 
         assert_eq!(deps[0].scope.as_deref(), Some("runtime"));

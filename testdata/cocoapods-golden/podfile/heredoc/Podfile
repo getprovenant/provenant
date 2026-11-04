@@ -1,0 +1,14 @@
+platform :ios, '13.0'
+
+target 'App' do
+  pod 'Alamofire', '~> 5.0'
+  pod 'Core', "~> #{CORE_VERSION}" # resolved elsewhere
+end
+
+NOTE = <<~TXT
+  pod 'Usage Example', '1.0'
+TXT
+
+=begin
+pod 'BlockCommented'
+=end
