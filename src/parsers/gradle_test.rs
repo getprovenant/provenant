@@ -815,3 +815,69 @@ dependencies {
     );
     assert_eq!(deps[0].scope, Some("runtimeOnly".to_string()));
 }
+
+#[test]
+fn test_code_strings_in_dependency_block_are_not_dependencies() {
+    let content = r#"
+dependencies {
+    implementation "androidx.core:core:1.6.0"
+    println("Note: using local build")
+    logger.warn("Warning: deprecated config")
+    error "Missing: thing"
+    if (rootProject.subprojects.find { it.name == "worklets" }) {
+        implementation project(":worklets")
+    } else {
+        throw new GradleException("[Lib] `worklets` not found. Details: https://example.com/docs#worklets")
+    }
+    throw GradleException("missing:dependency")
+    println("org.example:lib:1.0")
+    logger.lifecycle "org.example:other:2.0"
+}
+"#;
+    let tokens = lex(content);
+    let purls: Vec<_> = extract_dependencies(&tokens)
+        .into_iter()
+        .filter_map(|dep| dep.purl)
+        .collect();
+    assert_eq!(
+        purls,
+        vec![
+            "pkg:maven/androidx.core/core@1.6.0".to_string(),
+            "pkg:maven/worklets".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn test_whitespace_only_rejected_in_group_and_artifact() {
+    let content = r#"
+dependencies {
+    implementation "com.example:ranged:[1.0, 2.0)"
+    implementation "${ groupId }:lib:1.0"
+    implementation("${groupIds.find { it == wantedGroup } }:lib:1.0")
+}
+"#;
+    let tokens = lex(content);
+    let purls: Vec<_> = extract_dependencies(&tokens)
+        .into_iter()
+        .filter_map(|dep| dep.purl)
+        .collect();
+    assert_eq!(purls.len(), 3, "{purls:?}");
+    assert!(purls[0].starts_with("pkg:maven/com.example/ranged@"));
+}
+
+#[test]
+fn test_throw_of_existing_value_keeps_following_quoted_dependency() {
+    let content = r#"
+dependencies {
+    if (bad) throw failure
+    "custom"("org.example:lib:1.0")
+}
+"#;
+    let tokens = lex(content);
+    let purls: Vec<_> = extract_dependencies(&tokens)
+        .into_iter()
+        .filter_map(|dep| dep.purl)
+        .collect();
+    assert_eq!(purls, vec!["pkg:maven/org.example/lib@1.0".to_string()]);
+}
