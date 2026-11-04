@@ -309,3 +309,197 @@ end
         Some("1.0")
     );
 }
+
+fn deps_of(deps_body: &str) -> Vec<Dependency> {
+    let content = format!(
+        r#"
+defmodule Demo.MixProject do
+  use Mix.Project
+
+  def project do
+    [app: :demo, version: "0.1.0", deps: deps()]
+  end
+
+  defp deps do
+{deps_body}
+  end
+
+  defp aliases do
+    [setup: ["deps.get"]]
+  end
+end
+"#
+    );
+    super::mix_exs::parse_mix_exs_for_test(&content).dependencies
+}
+
+#[test]
+fn test_parse_mix_exs_deps_after_leading_statements() {
+    let deps = deps_of(
+        r#"    IO.puts("Resolving deps: see https://example.com")
+    Logger.warning("Missing: thing. Read more: https://docs.example.com/x")
+    [{:jason, "~> 1.4"}]"#,
+    );
+    assert_eq!(purls(&deps), vec![Some("pkg:hex/jason".to_string())]);
+    assert_eq!(deps[0].extracted_requirement.as_deref(), Some("~> 1.4"));
+}
+
+#[test]
+fn test_parse_mix_exs_deps_after_leading_comments_and_semicolons() {
+    let deps = deps_of(
+        r#"    # Pinned for compatibility; see "upgrade notes".
+    _ = :ok; :ok
+    [
+      # the JSON library
+      {:jason, "~> 1.4"},
+      {:plug, "~> 1.15", only: :test}
+    ]"#,
+    );
+    assert_eq!(
+        purls(&deps),
+        vec![
+            Some("pkg:hex/jason".to_string()),
+            Some("pkg:hex/plug".to_string())
+        ]
+    );
+    assert_eq!(dep(&deps, "pkg:hex/plug").scope.as_deref(), Some("test"));
+}
+
+#[test]
+fn test_parse_mix_exs_deps_bound_variable_returned() {
+    let deps = deps_of(
+        r#"    deps = [
+      {:jason, "~> 1.4"},
+      {:ecto, ">= 3.0.0"}
+    ]
+
+    deps"#,
+    );
+    assert_eq!(
+        purls(&deps),
+        vec![
+            Some("pkg:hex/jason".to_string()),
+            Some("pkg:hex/ecto".to_string())
+        ]
+    );
+}
+
+#[test]
+fn test_parse_mix_exs_deps_bound_variable_in_conditional_return() {
+    // Only deps returned by every branch are emitted; the dev-only extra is skipped.
+    let deps = deps_of(
+        r#"    deps = [{:jason, "~> 1.4"}]
+    if Mix.env() == :dev, do: deps ++ [{:credo, "~> 1.7"}], else: deps"#,
+    );
+    assert_eq!(purls(&deps), vec![Some("pkg:hex/jason".to_string())]);
+
+    let deps = deps_of(
+        r#"    deps = [{:jason, "~> 1.4"}]
+
+    if Mix.env() == :dev do
+      deps ++ [{:credo, "~> 1.7"}]
+    else
+      deps
+    end"#,
+    );
+    assert_eq!(purls(&deps), vec![Some("pkg:hex/jason".to_string())]);
+}
+
+#[test]
+fn test_parse_mix_exs_deps_leading_list_with_concat_continuation() {
+    let deps = deps_of(
+        r#"    [{:jason, "~> 1.4"}]
+    ++ optional_deps()"#,
+    );
+    assert_eq!(purls(&deps), vec![Some("pkg:hex/jason".to_string())]);
+}
+
+#[test]
+fn test_parse_mix_exs_deps_ignore_tuples_in_leading_statements() {
+    let deps = deps_of(
+        r#"    IO.puts("Note: {:fake, \"~> 1.0\"} deprecated")
+    IO.inspect([{:also_fake, "1.0"}])
+    unused = [{:unused, "1.0"}]
+    [{:jason, "~> 1.4"}]"#,
+    );
+    assert_eq!(purls(&deps), vec![Some("pkg:hex/jason".to_string())]);
+}
+
+#[test]
+fn test_parse_mix_exs_deps_reassignment_to_non_literal_invalidates_binding() {
+    let deps = deps_of(
+        r#"    deps = [{:old, "1.0"}]
+    deps = load_deps()
+    deps"#,
+    );
+    assert!(deps.is_empty(), "unexpected deps: {:?}", purls(&deps));
+}
+
+#[test]
+fn test_parse_mix_exs_deps_reassignment_with_concat_is_traced() {
+    let deps = deps_of(
+        r#"    deps = [{:jason, "~> 1.4"}]
+    deps = deps ++ [{:ecto, ">= 3.0.0"}]
+    deps"#,
+    );
+    assert_eq!(
+        purls(&deps),
+        vec![
+            Some("pkg:hex/jason".to_string()),
+            Some("pkg:hex/ecto".to_string())
+        ]
+    );
+}
+
+#[test]
+fn test_parse_mix_exs_deps_wrapped_or_condition_only_variable_is_unknown() {
+    for tail in [
+        "Enum.reject(deps, fn _ -> true end)",
+        "deps |> Enum.reject(&(elem(&1, 0) == :jason))",
+        "deps -- [{:jason, \"1.4\"}]",
+        "if length(deps) > 0, do: fetch_deps(), else: []",
+        "if deps == [] do\n      fetch_deps()\n    else\n      other_deps()\n    end",
+    ] {
+        let deps = deps_of(&format!("    deps = [{{:jason, \"1.4\"}}]\n    {tail}"));
+        assert!(
+            deps.is_empty(),
+            "{tail}: unexpected deps {:?}",
+            purls(&deps)
+        );
+    }
+}
+
+#[test]
+fn test_parse_mix_exs_deps_branch_intersection_ignores_tuple_formatting() {
+    let deps = deps_of(
+        r#"    if Mix.env() == :dev do
+      [{:jason, "~> 1.4"}, {:credo, "~> 1.7"}, {:ecto, "~> 3.0"}]
+    else
+      [{:jason,"~> 1.4"}, {:ecto, "~> 3.1"}]
+    end"#,
+    );
+    assert_eq!(purls(&deps), vec![Some("pkg:hex/jason".to_string())]);
+}
+
+#[test]
+fn test_parse_mix_exs_deps_self_concatenation_is_bounded() {
+    let mut body = String::from("    deps = [{:a, \"1.0\"}, {:b, \"1.0\"}]\n");
+    for _ in 0..64 {
+        body.push_str("    deps = deps ++ deps\n");
+    }
+    body.push_str("    deps");
+
+    let started = std::time::Instant::now();
+    let deps = deps_of(&body);
+    assert_eq!(deps.len(), super::mix_exs::MAX_DEPENDENCIES);
+    assert!(started.elapsed() < std::time::Duration::from_secs(10));
+}
+
+#[test]
+fn test_parse_mix_exs_deps_unresolvable_return_is_empty() {
+    let deps = deps_of(
+        r#"    IO.puts("{:fake, \"1.0\"}")
+    base_deps() ++ extra_deps()"#,
+    );
+    assert!(deps.is_empty(), "unexpected deps: {:?}", purls(&deps));
+}

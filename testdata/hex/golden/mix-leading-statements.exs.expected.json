@@ -1,0 +1,73 @@
+[
+  {
+    "type": "hex",
+    "namespace": null,
+    "name": "demo",
+    "version": "0.1.0",
+    "qualifiers": {},
+    "subpath": null,
+    "primary_language": "Elixir",
+    "description": null,
+    "release_date": null,
+    "parties": [],
+    "keywords": [],
+    "homepage_url": null,
+    "download_url": null,
+    "size": null,
+    "sha1": null,
+    "md5": null,
+    "sha256": null,
+    "sha512": null,
+    "bug_tracking_url": null,
+    "code_view_url": null,
+    "vcs_url": null,
+    "copyright": null,
+    "holder": null,
+    "declared_license_expression": null,
+    "declared_license_expression_spdx": null,
+    "license_detections": [],
+    "other_license_expression": null,
+    "other_license_expression_spdx": null,
+    "other_license_detections": [],
+    "extracted_license_statement": null,
+    "notice_text": null,
+    "source_packages": [],
+    "file_references": [],
+    "is_private": false,
+    "is_virtual": false,
+    "extra_data": {},
+    "dependencies": [
+      {
+        "purl": "pkg:hex/jason",
+        "extracted_requirement": "~> 1.4",
+        "scope": null,
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "app": "jason"
+        }
+      },
+      {
+        "purl": "pkg:hex/ecto",
+        "extracted_requirement": ">= 3.0.0",
+        "scope": "test",
+        "is_runtime": null,
+        "is_optional": null,
+        "is_pinned": null,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "app": "ecto"
+        }
+      }
+    ],
+    "repository_homepage_url": null,
+    "repository_download_url": null,
+    "api_data_url": null,
+    "datasource_id": "hex_mix_exs",
+    "purl": "pkg:hex/demo@0.1.0"
+  }
+]
