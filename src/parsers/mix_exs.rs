@@ -13,7 +13,10 @@
 //!     module attribute when `version: @version` is used)
 //! - direct dependencies from the `defp deps do [...]` (or `def deps`) list of
 //!   tuples such as `{:phoenix, "~> 1.7"}`, `{:ecto, ">= 3.0", only: :test}`,
-//!   or `{:foo, github: "..."}`.
+//!   or `{:foo, github: "..."}`. Only the list the function body provably
+//!   returns is used: a literal, a `var = [...]` binding returned as `var`,
+//!   `++` concatenations of those, or `if` branches that all return them.
+//!   Earlier statements are never mined for tuples.
 //!
 //! Anything dynamic (computed versions, helper-function deps, `System.get_env`,
 //! `if Mix.env()`, interpolated strings, …) is skipped rather than guessed: a
@@ -37,8 +40,9 @@
 //! mistaken for (nonexistent, unversioned) Hex registry packages; umbrella
 //! assembly resolves them to the sibling app's actual package identity.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::rc::Rc;
 
 use packageurl::PackageUrl;
 use serde_json::Value as JsonValue;
@@ -182,6 +186,10 @@ fn extract_block_body(content: &str, keyword: &str, name: &str) -> Option<String
 
     // Find the `do` that opens the block, starting at the header.
     let do_pos = find_do_after(&chars, header)?;
+    // The keyword form `def deps, do: [...]` has no `end`-delimited body.
+    if chars.get(do_pos + 2) == Some(&':') {
+        return None;
+    }
     let body_start = do_pos + 2;
 
     let mut depth = 1usize;
@@ -205,16 +213,16 @@ fn extract_block_body(content: &str, keyword: &str, name: &str) -> Option<String
             _ => {}
         }
         if let Some(word) = word_at(&chars, idx) {
-            match word.as_str() {
-                "do" | "fn" => depth += 1,
-                "end" => {
+            if is_block_delimiter(&chars, idx, &word) {
+                if word == "end" {
                     depth -= 1;
                     if depth == 0 {
                         let body: String = chars[body_start..idx].iter().collect();
                         return Some(body);
                     }
+                } else {
+                    depth += 1;
                 }
-                _ => {}
             }
             idx += word.chars().count();
             continue;
@@ -222,6 +230,13 @@ fn extract_block_body(content: &str, keyword: &str, name: &str) -> Option<String
         idx += 1;
     }
     None
+}
+
+/// `do`/`fn`/`end` used as a block delimiter, not as a `do:` keyword key or a `:end` atom.
+fn is_block_delimiter(chars: &[char], idx: usize, word: &str) -> bool {
+    matches!(word, "do" | "fn" | "end")
+        && (idx == 0 || chars[idx - 1] != ':')
+        && chars.get(idx + word.chars().count()) != Some(&':')
 }
 
 /// Locate the byte-independent char index just past a `<keyword> <name>` header
@@ -280,7 +295,7 @@ fn find_do_after(chars: &[char], mut idx: usize) -> Option<usize> {
 }
 
 /// Extract direct dependencies from the `deps` block. Supports `defp deps` and
-/// `def deps`. The body is expected to be a list literal `[ {..}, {..} ]`.
+/// `def deps`; see [`resolve_expr`] for which return shapes are traced.
 fn extract_deps(content: &str) -> Vec<Dependency> {
     let body = extract_block_body(content, "defp", "deps")
         .or_else(|| extract_block_body(content, "def", "deps"));
@@ -288,18 +303,415 @@ fn extract_deps(content: &str) -> Vec<Dependency> {
         return Vec::new();
     };
 
-    let Some(list_inner) = slice_outer_list(&body) else {
-        return Vec::new();
-    };
+    let items = returned_items(&body, &HashMap::new(), 0).unwrap_or_default();
+    if items.len() >= MAX_DEPENDENCIES {
+        warn!(
+            "mix.exs deps list truncated at {} entries",
+            MAX_DEPENDENCIES
+        );
+    }
+    items.into_iter().map(Rc::unwrap_or_clone).collect()
+}
 
-    let tuples = split_top_level_items(&list_inner);
-    let mut dependencies = Vec::new();
-    for tuple_src in tuples.into_iter().take(MAX_ITERATION_COUNT) {
-        if let Some(dep) = parse_dep_tuple(&tuple_src) {
-            dependencies.push(dep);
+const MAX_RETURN_NESTING: usize = 8;
+pub(super) const MAX_DEPENDENCIES: usize = 5_000;
+const MAX_BODY_STATEMENTS: usize = 1_000;
+
+type Items = Vec<Rc<Dependency>>;
+type Bindings = HashMap<String, Rc<Items>>;
+
+/// Known-returned dependencies of a function or branch body: `var = expr` statements
+/// update bindings, and the final statement is resolved with [`resolve_expr`].
+fn returned_items(body: &str, outer: &Bindings, depth: usize) -> Option<Items> {
+    if depth > MAX_RETURN_NESTING {
+        return None;
+    }
+    let statements = split_top_level_statements(body);
+    let (last, earlier) = statements.split_last()?;
+    if earlier.len() > MAX_BODY_STATEMENTS {
+        warn!(
+            "mix.exs deps body exceeded {} statements",
+            MAX_BODY_STATEMENTS
+        );
+        return None;
+    }
+    let mut bindings = outer.clone();
+    for statement in earlier {
+        if let Some((var, rhs)) = split_assignment(statement) {
+            match resolve_expr(&rhs, &bindings, depth) {
+                Some(items) => bindings.insert(var, Rc::new(items)),
+                None => bindings.remove(&var),
+            };
         }
     }
-    dependencies
+    resolve_expr(last, &bindings, depth)
+}
+
+/// Dependencies an expression is known to return (at most [`MAX_DEPENDENCIES`]): list
+/// literals and bound variables, `++` chains of those (calls in a chain only add unknown
+/// items), and `if` branches (deps common to all branches). Other shapes are `None`.
+fn resolve_expr(expr: &str, bindings: &Bindings, depth: usize) -> Option<Items> {
+    let expr = expr.trim();
+    if let Some(rest) = strip_if_keyword(expr) {
+        return resolve_if(rest, bindings, depth + 1);
+    }
+    let mut items = Items::new();
+    for part in split_top_level_concat(expr) {
+        let part = part.trim();
+        let room = MAX_DEPENDENCIES.saturating_sub(items.len());
+        if let Some(inner) = exact_list_literal(part) {
+            let parsed = split_top_level_items(&inner)
+                .into_iter()
+                .filter_map(|tuple_src| parse_dep_tuple(&tuple_src))
+                .take(room)
+                .map(Rc::new);
+            items.extend(parsed);
+        } else if is_variable(part) {
+            if let Some(bound) = bindings.get(part) {
+                items.extend(bound.iter().take(room).cloned());
+            }
+        } else if !is_call(part) {
+            return None;
+        }
+    }
+    Some(items)
+}
+
+fn resolve_if(rest: &str, bindings: &Bindings, depth: usize) -> Option<Items> {
+    let (then_src, else_src) = split_if_block(rest).or_else(|| split_if_keywords(rest))?;
+    let then_items = returned_items(&then_src, bindings, depth)?;
+    let else_items = returned_items(&else_src?, bindings, depth)?;
+    let else_keys: HashSet<_> = else_items.iter().map(|dep| dependency_key(dep)).collect();
+    Some(
+        then_items
+            .into_iter()
+            .filter(|dep| else_keys.contains(&dependency_key(dep)))
+            .collect(),
+    )
+}
+
+type DependencyKey<'a> = (
+    Option<&'a str>,
+    Option<&'a str>,
+    Option<&'a str>,
+    Option<bool>,
+    Option<&'a str>,
+);
+
+/// Identity of a parsed dependency, independent of the tuple's source formatting.
+fn dependency_key(dep: &Dependency) -> DependencyKey<'_> {
+    let extra = dep.extra_data.as_ref();
+    (
+        dep.purl.as_deref(),
+        dep.extracted_requirement.as_deref(),
+        dep.scope.as_deref(),
+        dep.is_optional,
+        extra
+            .and_then(|extra| extra.get("app"))
+            .and_then(JsonValue::as_str),
+    )
+}
+
+/// The source after a leading `if` keyword, if `expr` is an `if` expression.
+fn strip_if_keyword(expr: &str) -> Option<&str> {
+    let rest = expr.strip_prefix("if")?;
+    rest.starts_with(|c: char| c.is_whitespace() || c == '(')
+        .then_some(rest)
+}
+
+/// Branches of `if cond do X else Y end`; the else branch is `None` when absent.
+fn split_if_block(rest: &str) -> Option<(String, Option<String>)> {
+    let chars: Vec<char> = rest.chars().collect();
+    let mut nesting = 0i32;
+    let mut blocks = 0i32;
+    let mut then_start = None;
+    let mut else_at = None;
+    let mut idx = 0usize;
+    while idx < chars.len() {
+        match chars[idx] {
+            '"' => {
+                idx = skip_string(&chars, idx);
+                continue;
+            }
+            '(' | '[' | '{' => nesting += 1,
+            ')' | ']' | '}' => nesting -= 1,
+            _ => {}
+        }
+        if let Some(word) = word_at(&chars, idx) {
+            let len = word.chars().count();
+            if is_block_delimiter(&chars, idx, &word) {
+                if word == "end" {
+                    blocks -= 1;
+                    if blocks == 0 {
+                        let start = then_start?;
+                        if chars[idx + len..].iter().any(|c| !c.is_whitespace()) {
+                            return None;
+                        }
+                        let collect =
+                            |from: usize, to: usize| -> String { chars[from..to].iter().collect() };
+                        return Some(match else_at {
+                            Some(at) => (collect(start, at), Some(collect(at + 4, idx))),
+                            None => (collect(start, idx), None),
+                        });
+                    }
+                } else {
+                    if word == "do" && blocks == 0 && nesting == 0 {
+                        then_start = Some(idx + len);
+                    }
+                    blocks += 1;
+                }
+            } else if word == "else"
+                && blocks == 1
+                && nesting == 0
+                && chars.get(idx + len) != Some(&':')
+            {
+                else_at = Some(idx);
+            }
+            idx += len;
+            continue;
+        }
+        idx += 1;
+    }
+    None
+}
+
+/// Branches of `if cond, do: X, else: Y` (optionally parenthesized).
+fn split_if_keywords(rest: &str) -> Option<(String, Option<String>)> {
+    let rest = rest.trim();
+    let inner = exact_parenthesized(rest).unwrap_or(rest);
+    let items = split_top_level_items(inner);
+    let mut then_src = None;
+    let mut else_src = None;
+    for item in items.iter().skip(1) {
+        match split_keyword_entry(item)? {
+            (key, value) if key == "do" => then_src = Some(value),
+            (key, value) if key == "else" => else_src = Some(value),
+            _ => return None,
+        }
+    }
+    Some((then_src?, else_src))
+}
+
+/// Split `var = rhs` (a plain variable binding) into the variable and the right-hand side.
+fn split_assignment(statement: &str) -> Option<(String, String)> {
+    let chars: Vec<char> = statement.chars().collect();
+    let var = word_at(&chars, 0)?;
+    if !is_variable(&var) {
+        return None;
+    }
+    let eq = skip_inline_ws(&chars, var.chars().count());
+    if chars.get(eq) != Some(&'=') || matches!(chars.get(eq + 1), Some('=' | '~' | '>')) {
+        return None;
+    }
+    Some((var, chars[eq + 1..].iter().collect()))
+}
+
+/// Split an expression on top-level `++` operators.
+fn split_top_level_concat(expr: &str) -> Vec<String> {
+    let chars: Vec<char> = expr.chars().collect();
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut nesting = 0i32;
+    let mut blocks = 0i32;
+    let mut idx = 0usize;
+    while idx < chars.len() {
+        let c = chars[idx];
+        match c {
+            '"' => {
+                let end = skip_string(&chars, idx);
+                current.extend(&chars[idx..end.min(chars.len())]);
+                idx = end;
+                continue;
+            }
+            '(' | '[' | '{' => nesting += 1,
+            ')' | ']' | '}' => nesting -= 1,
+            '+' if nesting == 0 && blocks == 0 && chars.get(idx + 1) == Some(&'+') => {
+                parts.push(std::mem::take(&mut current));
+                idx += 2;
+                continue;
+            }
+            _ => {}
+        }
+        if let Some(word) = word_at(&chars, idx) {
+            if is_block_delimiter(&chars, idx, &word) {
+                blocks += if word == "end" { -1 } else { 1 };
+            }
+            idx += word.chars().count();
+            current.push_str(&word);
+            continue;
+        }
+        current.push(c);
+        idx += 1;
+    }
+    parts.push(current);
+    parts
+}
+
+/// Inner source of `src` when the whole of it is one `[ ... ]` list literal.
+fn exact_list_literal(src: &str) -> Option<String> {
+    let chars: Vec<char> = src.chars().collect();
+    if chars.first() != Some(&'[') || matching_close(&chars, 0)? + 1 != chars.len() {
+        return None;
+    }
+    Some(chars[1..chars.len() - 1].iter().collect())
+}
+
+/// Inner source of `src` when the whole of it is one `( ... )` group.
+fn exact_parenthesized(src: &str) -> Option<&str> {
+    let chars: Vec<char> = src.chars().collect();
+    if chars.first() != Some(&'(') || matching_close(&chars, 0)? + 1 != chars.len() {
+        return None;
+    }
+    src.strip_prefix('(')?.strip_suffix(')')
+}
+
+/// A local variable name (lowercase or `_` start), not a module or a call.
+fn is_variable(src: &str) -> bool {
+    let chars: Vec<char> = src.chars().collect();
+    word_at(&chars, 0).is_some_and(|word| word == src)
+        && src.starts_with(|c: char| c.is_ascii_lowercase() || c == '_')
+}
+
+/// A function call such as `extra_deps()` or `Mod.fun(arg)` spanning all of `src`.
+fn is_call(src: &str) -> bool {
+    let chars: Vec<char> = src.chars().collect();
+    let name_len = chars
+        .iter()
+        .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '?' | '!'))
+        .count();
+    name_len > 0
+        && chars.get(name_len) == Some(&'(')
+        && matching_close(&chars, name_len).is_some_and(|close| close + 1 == chars.len())
+}
+
+/// Index of the bracket closing the one opened at `open`, skipping string literals.
+fn matching_close(chars: &[char], open: usize) -> Option<usize> {
+    let mut nesting = 0i32;
+    let mut idx = open;
+    while idx < chars.len() {
+        match chars[idx] {
+            '"' => {
+                idx = skip_string(chars, idx);
+                continue;
+            }
+            '(' | '[' | '{' => nesting += 1,
+            ')' | ']' | '}' => {
+                nesting -= 1;
+                if nesting == 0 {
+                    return Some(idx);
+                }
+            }
+            _ => {}
+        }
+        idx += 1;
+    }
+    None
+}
+
+/// Split a block body into top-level statements on `;` or on a newline that ends an
+/// expression outside brackets and `do`/`fn`...`end` blocks. Comments are dropped.
+fn split_top_level_statements(body: &str) -> Vec<String> {
+    let chars: Vec<char> = body.chars().collect();
+    let mut statements = Vec::new();
+    let mut current = String::new();
+    let mut nesting = 0i32;
+    let mut blocks = 0i32;
+    let mut last_significant: Option<char> = None;
+    let mut idx = 0usize;
+    let mut iterations = 0usize;
+    while idx < chars.len() {
+        iterations += 1;
+        if iterations > MAX_ITERATION_COUNT {
+            warn!("mix.exs statement scan exceeded MAX_ITERATION_COUNT");
+            break;
+        }
+        let c = chars[idx];
+        match c {
+            '"' => {
+                let end = skip_string(&chars, idx);
+                current.extend(&chars[idx..end.min(chars.len())]);
+                last_significant = Some('"');
+                idx = end;
+                continue;
+            }
+            '#' => {
+                idx = skip_line_comment(&chars, idx);
+                continue;
+            }
+            '(' | '[' | '{' => nesting += 1,
+            ')' | ']' | '}' => nesting -= 1,
+            ';' | '\n' if nesting <= 0 && blocks <= 0 => {
+                let next = next_significant_index(&chars, idx + 1);
+                if c == '\n'
+                    && (last_significant.is_some_and(is_continuation_char)
+                        || starts_continuation_operator(&chars, next))
+                {
+                    current.push(' ');
+                    idx = next;
+                    continue;
+                }
+                push_statement(&mut statements, &mut current);
+                last_significant = None;
+                idx += 1;
+                continue;
+            }
+            _ => {}
+        }
+        if let Some(word) = word_at(&chars, idx) {
+            if is_block_delimiter(&chars, idx, &word) {
+                if word == "end" {
+                    blocks -= 1;
+                } else {
+                    blocks += 1;
+                }
+            }
+            last_significant = word.chars().last();
+            idx += word.chars().count();
+            current.push_str(&word);
+            continue;
+        }
+        current.push(c);
+        if !c.is_whitespace() {
+            last_significant = Some(c);
+        }
+        idx += 1;
+    }
+    push_statement(&mut statements, &mut current);
+    statements
+}
+
+fn push_statement(statements: &mut Vec<String>, current: &mut String) {
+    let statement = current.trim();
+    if !statement.is_empty() {
+        statements.push(statement.to_string());
+    }
+    current.clear();
+}
+
+/// Index of the next char that is neither whitespace nor inside a `#` comment.
+fn next_significant_index(chars: &[char], mut idx: usize) -> usize {
+    while idx < chars.len() {
+        match chars[idx] {
+            '#' => idx = skip_line_comment(chars, idx),
+            c if c.is_whitespace() => idx += 1,
+            _ => break,
+        }
+    }
+    idx
+}
+
+/// A trailing char that leaves an expression open across a newline (`=`, `++`, `,`, `do:`).
+fn is_continuation_char(c: char) -> bool {
+    matches!(
+        c,
+        '=' | '+' | '-' | '*' | '/' | '|' | '>' | '<' | ',' | ':' | '\\' | '&' | '.'
+    )
+}
+
+/// A binary operator at the start of a line that continues the previous expression.
+fn starts_continuation_operator(chars: &[char], idx: usize) -> bool {
+    let pair: String = chars.iter().skip(idx).take(2).collect();
+    matches!(pair.as_str(), "|>" | "++" | "--" | "<>" | "||" | "&&")
 }
 
 fn parse_dep_tuple(tuple_src: &str) -> Option<Dependency> {
@@ -521,55 +933,6 @@ fn split_keyword_entry(item: &str) -> Option<(String, String)> {
     let key: String = chars[..idx].iter().collect();
     let value: String = chars[idx + 1..].iter().collect();
     Some((key, value.trim().to_string()))
-}
-
-/// Given a block body, return the inner content of its outer `[ ... ]` list, if
-/// the body is a list literal (ignoring surrounding whitespace/comments).
-fn slice_outer_list(body: &str) -> Option<String> {
-    let chars: Vec<char> = body.chars().collect();
-    let mut start = 0usize;
-    while start < chars.len() {
-        match chars[start] {
-            c if c.is_whitespace() => start += 1,
-            '#' => start = skip_line_comment(&chars, start),
-            '[' => break,
-            _ => return None,
-        }
-    }
-    if chars.get(start) != Some(&'[') {
-        return None;
-    }
-    // Find the matching close bracket.
-    let mut depth = 0usize;
-    let mut idx = start;
-    let mut iterations = 0usize;
-    while idx < chars.len() {
-        iterations += 1;
-        if iterations > MAX_ITERATION_COUNT {
-            return None;
-        }
-        match chars[idx] {
-            '"' => {
-                idx = skip_string(&chars, idx);
-                continue;
-            }
-            '#' if chars.get(idx + 1) != Some(&'{') => {
-                idx = skip_line_comment(&chars, idx);
-                continue;
-            }
-            '[' => depth += 1,
-            ']' => {
-                depth -= 1;
-                if depth == 0 {
-                    let inner: String = chars[start + 1..idx].iter().collect();
-                    return Some(inner);
-                }
-            }
-            _ => {}
-        }
-        idx += 1;
-    }
-    None
 }
 
 /// Split a comma-separated source fragment into top-level items, respecting

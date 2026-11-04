@@ -20,4 +20,18 @@ mod golden_tests {
             Err(e) => panic!("Golden test failed: {}", e),
         }
     }
+
+    #[test]
+    fn test_golden_hex_mix_exs_leading_statements() {
+        let test_file = PathBuf::from("testdata/hex/leading-statements/mix.exs");
+        let expected_file =
+            PathBuf::from("testdata/hex/golden/mix-leading-statements.exs.expected.json");
+
+        let package_data = MixExsParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
 }
