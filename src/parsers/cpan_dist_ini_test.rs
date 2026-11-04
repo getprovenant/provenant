@@ -189,4 +189,18 @@ author = John Doe
         assert_eq!(pkg.name, None);
         assert_eq!(pkg.version, None);
     }
+
+    #[test]
+    fn test_author_with_closing_bracket_before_email_does_not_panic() {
+        let pkg = parse_dist_ini("name = Demo\nauthor = Team > Ops <ops@example.com>\n");
+        let parties: Vec<_> = pkg
+            .parties
+            .iter()
+            .map(|party| (party.name.as_deref(), party.email.as_deref()))
+            .collect();
+        assert_eq!(parties, vec![(Some("Team > Ops"), Some("ops@example.com"))]);
+
+        let pkg = parse_dist_ini("name = Demo\nauthor = Team > Ops <ops@example.com\n");
+        assert_eq!(pkg.name.as_deref(), Some("Demo"));
+    }
 }

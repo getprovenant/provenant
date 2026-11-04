@@ -629,8 +629,9 @@ fn parse_author_hash_entry(entry: &str) -> Option<(String, String)> {
 /// Parse author from string, extracting email if present
 fn parse_author_string(author: &str) -> (String, Option<String>) {
     if let Some(email_start) = author.find('<')
-        && let Some(email_end) = author.find('>')
+        && let Some(email_len) = author[email_start + 1..].find('>')
     {
+        let email_end = email_start + 1 + email_len;
         let name = author[..email_start].trim().to_string();
         let email = author[email_start + 1..email_end].trim().to_string();
         return (name, Some(email));
@@ -766,6 +767,21 @@ mod tests {
         )));
         assert!(!PodspecParser::is_match(Path::new("Podfile")));
         assert!(!PodspecParser::is_match(Path::new("Podfile.lock")));
+    }
+
+    #[test]
+    fn test_parse_author_string_ignores_closing_bracket_before_email() {
+        assert_eq!(
+            parse_author_string("Team > Ops <ops@example.com"),
+            ("Team > Ops <ops@example.com".to_string(), None)
+        );
+        assert_eq!(
+            parse_author_string("Team > Ops <ops@example.com>"),
+            (
+                "Team > Ops".to_string(),
+                Some("ops@example.com".to_string())
+            )
+        );
     }
 
     #[test]
