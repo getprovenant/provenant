@@ -217,8 +217,9 @@ fn parse_author(fields: &HashMap<String, String>) -> Vec<Party> {
 
 fn parse_author_string(s: &str) -> Option<(String, String)> {
     if let Some(start) = s.find('<')
-        && let Some(end) = s.find('>')
+        && let Some(len) = s[start + 1..].find('>')
     {
+        let end = start + 1 + len;
         let name = truncate_field(s[..start].trim().to_string());
         let email = truncate_field(s[start + 1..end].trim().to_string());
         return Some((name, email));
