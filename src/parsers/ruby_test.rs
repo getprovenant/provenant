@@ -2414,4 +2414,124 @@ platform: ruby
         assert_eq!(rspec.scope, Some("development".to_string()));
         assert_eq!(rspec.is_runtime, Some(false));
     }
+
+    fn dependency_purls(package_data: &crate::models::PackageData) -> Vec<&str> {
+        package_data
+            .dependencies
+            .iter()
+            .filter_map(|d| d.purl.as_deref())
+            .collect()
+    }
+
+    #[test]
+    fn test_gemfile_ignores_heredoc_bodies_and_embedded_docs() {
+        let content = r#"source "https://rubygems.org"
+gem "rails", "~> 7.0"
+MSG = <<~TXT
+  gem "usage example", "1.0"
+end
+TXT
+group :test do
+  gem "rspec"
+end
+=begin
+gem "block commented", "1.0"
+=end
+"#;
+        let (_temp_dir, gemfile_path) = create_temp_gemfile(content);
+        let package_data = GemfileParser::extract_first_package(&gemfile_path);
+
+        assert_eq!(
+            dependency_purls(&package_data),
+            ["pkg:gem/rails", "pkg:gem/rspec"]
+        );
+        assert_eq!(package_data.dependencies[1].scope.as_deref(), Some("test"));
+    }
+
+    #[test]
+    fn test_gemfile_heredoc_marker_inside_multiline_string_keeps_real_gems() {
+        let content = "source \"https://rubygems.org\"\nmessage = \"Example:\n<<~TEXT\n\"\ngem \"rails\", \"~> 7.0\"\nTEXT\ngem \"rspec\"\n";
+        let (_temp_dir, gemfile_path) = create_temp_gemfile(content);
+        let package_data = GemfileParser::extract_first_package(&gemfile_path);
+
+        assert_eq!(
+            dependency_purls(&package_data),
+            ["pkg:gem/rails", "pkg:gem/rspec"]
+        );
+    }
+
+    #[test]
+    fn test_gemspec_heredoc_body_does_not_override_identity_or_dependencies() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let gemspec_path = temp_dir.path().join("demo.gemspec");
+        fs::write(
+            &gemspec_path,
+            r#"Gem::Specification.new do |s|
+  s.name = "demo"
+  s.version = "1.0.0"
+  s.summary = "The #1 demo gem" # trailing comment
+  s.description = <<~DESC
+    Add to Gemfile:
+      s.add_dependency "usage example", "~> 2.0"
+    s.name = "not the name"
+  DESC
+  s.add_dependency "rake", ">= 1.0"
+=begin
+  s.add_dependency "block commented"
+=end
+end
+"#,
+        )
+        .expect("write gemspec");
+
+        let package_data =
+            crate::parsers::ruby::GemspecParser::extract_first_package(&gemspec_path);
+
+        assert_eq!(package_data.name.as_deref(), Some("demo"));
+        assert_eq!(package_data.purl.as_deref(), Some("pkg:gem/demo@1.0.0"));
+        assert_eq!(dependency_purls(&package_data), ["pkg:gem/rake"]);
+        assert_eq!(
+            package_data.description.as_deref(),
+            Some(
+                "Add to Gemfile:\n  s.add_dependency \"usage example\", \"~> 2.0\"\ns.name = \"not the name\""
+            )
+        );
+    }
+
+    #[test]
+    fn test_gemspec_heredoc_description_after_blank_lines_and_quoted_delimiter() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let gemspec_path = temp_dir.path().join("demo.gemspec");
+        fs::write(
+            &gemspec_path,
+            "Gem::Specification.new do |s|\n  s.name = \"demo\"\n\n\n  s.description = <<'description'\n  s.add_dependency \"usage example\"\n  s.name = \"not the name\"\ndescription\n  s.add_dependency \"rake\"\nend\n",
+        )
+        .expect("write gemspec");
+
+        let package_data =
+            crate::parsers::ruby::GemspecParser::extract_first_package(&gemspec_path);
+
+        assert_eq!(package_data.name.as_deref(), Some("demo"));
+        assert_eq!(dependency_purls(&package_data), ["pkg:gem/rake"]);
+        assert_eq!(
+            package_data.description.as_deref(),
+            Some("s.add_dependency \"usage example\"\n  s.name = \"not the name\"")
+        );
+    }
+
+    #[test]
+    fn test_gemspec_summary_keeps_hash_inside_string() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let gemspec_path = temp_dir.path().join("demo.gemspec");
+        fs::write(
+            &gemspec_path,
+            "Gem::Specification.new do |s|\n  s.name = \"demo\"\n  s.summary = \"The #1 demo gem\" # note\nend\n",
+        )
+        .expect("write gemspec");
+
+        let package_data =
+            crate::parsers::ruby::GemspecParser::extract_first_package(&gemspec_path);
+
+        assert_eq!(package_data.description.as_deref(), Some("The #1 demo gem"));
+    }
 }

@@ -55,7 +55,8 @@ Ruby DSL format for CocoaPods specifications.
   - `s.name`, `s.version`, `s.summary`, `s.description`
   - `s.homepage`, `s.license`, `s.source`
   - `s.author`, `s.authors` (single and multiple)
-- Multiline description parsing (heredoc format `<<-DESC`)
+- Multiline description parsing (heredoc formats `<<-DESC`, `<<~DESC`, `<<DESC`)
+- Other heredoc bodies and `=begin`/`=end` blocks are ignored, so prose such as usage examples is not read as declarations
 - Dependency extraction: `s.dependency`, `add_dependency`, `add_runtime_dependency`
 - Author parsing with email extraction
 - License statement extraction

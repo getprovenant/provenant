@@ -163,6 +163,34 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_podspec_heredoc() {
+        let test_file = PathBuf::from("testdata/cocoapods-golden/podspec/Heredoc.podspec");
+        let expected_file =
+            PathBuf::from("testdata/cocoapods-golden/podspec/Heredoc.podspec.expected.json");
+
+        let package_data = PodspecParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_golden_podfile_heredoc() {
+        let test_file = PathBuf::from("testdata/cocoapods-golden/podfile/heredoc/Podfile");
+        let expected_file =
+            PathBuf::from("testdata/cocoapods-golden/podfile/heredoc/Podfile-expected.json");
+
+        let package_data = PodfileParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
+
+    #[test]
     fn test_golden_podfile_solo() {
         let test_file = PathBuf::from("testdata/cocoapods-golden/assemble/solo/Podfile");
         let expected_file = PathBuf::from(

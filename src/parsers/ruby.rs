@@ -48,6 +48,7 @@ use tar::Archive;
 use super::PackageParser;
 use super::license_normalization::normalize_spdx_declared_license;
 use super::metadata::ParserMetadata;
+use super::ruby_source::{RubySource, mask_ruby_non_code, ruby_comment_start};
 
 const PACKAGE_TYPE: PackageType = PackageType::Gem;
 
@@ -180,7 +181,8 @@ fn parse_gemfile(content: &str) -> PackageData {
         }
     };
 
-    for line in content.lines().capped("Gemfile lines") {
+    let code = mask_ruby_non_code(content);
+    for line in code.lines().capped("Gemfile lines") {
         let trimmed = line.trim();
 
         // Skip comments and empty lines
@@ -1082,13 +1084,7 @@ fn gemspec_datasource_id(path: &Path) -> DatasourceId {
 
 /// Cleans a value extracted from gemspec by stripping quotes, .freeze, %q{}, and brackets.
 fn clean_gemspec_value(s: &str) -> String {
-    let s = strip_freeze_suffix(s).trim();
-
-    let s = if let Some(pos) = s.find(" #") {
-        s[..pos].trim()
-    } else {
-        s
-    };
+    let s = strip_gemspec_trailing_comment(strip_freeze_suffix(s).trim());
 
     let s = if let Some(stripped) = s.strip_prefix("%q{") {
         stripped.strip_suffix('}').unwrap_or(stripped)
@@ -1109,6 +1105,14 @@ fn clean_gemspec_value(s: &str) -> String {
         .trim_end_matches('\'');
     let s = strip_freeze_suffix(s).trim();
     s.to_string()
+}
+
+/// Cuts a whitespace-preceded `#` comment, keeping `#` inside string literals.
+fn strip_gemspec_trailing_comment(s: &str) -> &str {
+    match ruby_comment_start(s) {
+        Some(pos) if s[..pos].ends_with(char::is_whitespace) => s[..pos].trim(),
+        _ => s,
+    }
 }
 
 /// Extracts items from a Ruby array literal like `["a", "b", "c"]`.
@@ -1305,11 +1309,7 @@ fn resolve_scalar_expression(
     base_dir: Option<&Path>,
     contexts: &[String],
 ) -> Option<String> {
-    let expression = if let Some(pos) = expression.find(" #") {
-        expression[..pos].trim()
-    } else {
-        expression.trim()
-    };
+    let expression = strip_gemspec_trailing_comment(expression.trim());
 
     let file_read_re = Regex::new(r#"^File\.read\((.+)\)(?:\.strip)?(?:\.freeze)?$"#).ok()?;
     if let Some(caps) = file_read_re.captures(expression) {
@@ -1443,7 +1443,7 @@ fn load_required_ruby_contexts(content: &str, base_dir: Option<&Path>) -> Vec<St
                 continue;
             };
             if let Ok(required_content) = read_file_to_string(&safe_candidate, None) {
-                contexts.push(required_content);
+                contexts.push(mask_ruby_non_code(&required_content));
                 break;
             }
         }
@@ -1477,6 +1477,9 @@ fn parse_gemspec(content: &str) -> PackageData {
 }
 
 fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> PackageData {
+    let source = RubySource::parse(content);
+    let code = source.code();
+    let content = code.as_str();
     let contexts = load_required_ruby_contexts(content, base_dir);
 
     // Regex for spec.name = "value" or s.name = "value"
@@ -1555,7 +1558,18 @@ fn parse_gemspec_with_context(content: &str, base_dir: Option<&Path>) -> Package
             "summary" => {
                 summary = resolve_gemspec_scalar_value(raw_value, content, base_dir, &contexts)
             }
-            "description" => description = Some(truncate_field(clean_gemspec_value(raw_value))),
+            "description" => {
+                let heredoc = raw_value.contains("<<").then(|| {
+                    // The match itself can start on an earlier blank line (`^\s*` spans newlines).
+                    let start = caps.get(1).map_or(0, |m| m.start());
+                    source.heredoc_body(content[..start].matches('\n').count())
+                });
+                description = Some(truncate_field(
+                    heredoc
+                        .flatten()
+                        .unwrap_or_else(|| clean_gemspec_value(raw_value)),
+                ));
+            }
             "homepage" => {
                 homepage = resolve_gemspec_scalar_value(raw_value, content, base_dir, &contexts)
             }

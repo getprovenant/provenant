@@ -97,6 +97,33 @@ mod golden_tests {
     }
 
     #[test]
+    fn test_golden_heredoc_gemspec() {
+        let test_file = PathBuf::from("testdata/ruby-golden/heredoc-gemspec/heredoc.gemspec");
+        let expected_file =
+            PathBuf::from("testdata/ruby-golden/heredoc-gemspec/heredoc.gemspec.expected");
+
+        let package_data = GemspecParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_golden_heredoc_gemfile() {
+        let test_file = PathBuf::from("testdata/ruby-golden/heredoc-gemfile/Gemfile");
+        let expected_file = PathBuf::from("testdata/ruby-golden/heredoc-gemfile/Gemfile.expected");
+
+        let package_data = GemfileParser::extract_first_package(&test_file);
+
+        match compare_package_data_parser_only(&package_data, &expected_file) {
+            Ok(_) => (),
+            Err(e) => panic!("Golden test failed: {}", e),
+        }
+    }
+
+    #[test]
     fn test_golden_gemfile_lock_git() {
         let test_file = PathBuf::from("testdata/ruby-golden/gemfile-lock-git/Gemfile.lock");
         let expected_file =
