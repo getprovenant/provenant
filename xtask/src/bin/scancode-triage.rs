@@ -28,11 +28,13 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::LazyLock;
 use std::thread::sleep;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
+use regex::Regex;
 use serde_json::{Value, json};
 
 const SCANCODE_REPO: &str = "aboutcode-org/scancode-toolkit";
@@ -885,14 +887,17 @@ fn create_finding_issues(repo: &str, findings: &[Finding]) -> Result<()> {
         let body = format!(
             "Surfaced by the weekly ScanCode → Provenant triage: this upstream issue \
              reproduces against the current Provenant build.\n\n\
-             - **Upstream:** https://github.com/{SCANCODE_REPO}/issues/{}\n\
+             - **Upstream:** https://redirect.github.com/{SCANCODE_REPO}/issues/{}\n\
              - **Type:** {}\n\
              - **Evidence:** {}\n\n\
              Reproduce locally with the `scancode-triage` xtask tool (see \
              [`xtask/README.md`](../blob/main/xtask/README.md)) or scan the fixture the \
              upstream issue links.\n\n\
              <!-- scancode-triage:SC-{} -->",
-            f.scancode_number, f.kind, f.evidence, f.scancode_number
+            f.scancode_number,
+            f.kind,
+            defang_upstream_refs(&f.evidence),
+            f.scancode_number
         );
         run_gh(&[
             "issue",
@@ -909,6 +914,19 @@ fn create_finding_issues(repo: &str, findings: &[Finding]) -> Result<()> {
         eprintln!("  Opened issue for ScanCode #{}", f.scancode_number);
     }
     Ok(())
+}
+
+/// Rewrites ScanCode references so our issues never create backlinks on the upstream tracker.
+fn defang_upstream_refs(text: &str) -> String {
+    static URL: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)https?://(?:www\.)?github\.com/((?:aboutcode-org|nexb)/scancode)")
+            .expect("valid regex")
+    });
+    static SHORT_REF: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\b((?:aboutcode-org|nexb)/scancode[\w.-]*)#(\d+)").expect("valid regex")
+    });
+    let text = URL.replace_all(text, "https://redirect.github.com/$1");
+    SHORT_REF.replace_all(&text, "$1 issue $2").into_owned()
 }
 
 fn run_gh(args: &[&str]) -> Result<()> {
@@ -972,4 +990,46 @@ fn civil_from_days(z: i64) -> String {
     let m = if mp < 10 { mp + 3 } else { mp - 9 }; // [1, 12]
     let y = if m <= 2 { y + 1 } else { y };
     format!("{y:04}-{m:02}-{d:02}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::defang_upstream_refs;
+
+    #[test]
+    fn upstream_refs_are_defanged() {
+        assert_eq!(
+            defang_upstream_refs(
+                "see https://github.com/aboutcode-org/scancode-toolkit/issues/12 and \
+                 https://github.com/nexB/scancode-toolkit/pull/3 or aboutcode-org/scancode-toolkit#4"
+            ),
+            "see https://redirect.github.com/aboutcode-org/scancode-toolkit/issues/12 and \
+             https://redirect.github.com/nexB/scancode-toolkit/pull/3 or \
+             aboutcode-org/scancode-toolkit issue 4"
+        );
+        assert_eq!(
+            defang_upstream_refs(
+                "`see aboutcode-org/scancode-toolkit#4 here` and nexB/scancode-toolkit#5"
+            ),
+            "`see aboutcode-org/scancode-toolkit issue 4 here` and \
+             nexB/scancode-toolkit issue 5"
+        );
+        assert_eq!(
+            defang_upstream_refs("a stray ` character; see aboutcode-org/scancode-toolkit#4"),
+            "a stray ` character; see \
+             aboutcode-org/scancode-toolkit issue 4"
+        );
+        assert_eq!(
+            defang_upstream_refs("\\`aboutcode-org/scancode-toolkit#4\\`"),
+            "\\`aboutcode-org/scancode-toolkit issue 4\\`"
+        );
+        assert_eq!(
+            defang_upstream_refs("[aboutcode-org/scancode-toolkit#4](https://example.com)"),
+            "[aboutcode-org/scancode-toolkit issue 4](https://example.com)"
+        );
+        assert_eq!(
+            defang_upstream_refs("https://github.com/other/repo/issues/1"),
+            "https://github.com/other/repo/issues/1"
+        );
+    }
 }
