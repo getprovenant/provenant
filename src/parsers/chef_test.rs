@@ -8,7 +8,7 @@ use crate::models::{DatasourceId, PackageType};
 use std::path::PathBuf;
 
 use super::PackageParser;
-use super::chef::{ChefMetadataJsonParser, ChefMetadataRbParser};
+use super::chef::{ChefMetadataJsonParser, ChefMetadataRbParser, first_lines};
 
 #[test]
 fn test_is_match_metadata_json() {
@@ -673,4 +673,48 @@ long_description 'This is a long description'
     assert_eq!(package.description, Some("Short description".to_string()));
 
     std::fs::remove_file(&test_file).unwrap();
+}
+
+#[test]
+fn test_metadata_rb_heredoc_and_block_comment_are_not_declarations() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("metadata.rb");
+    std::fs::write(
+        &path,
+        r#"name             'demo'
+version          '1.0.0'
+description <<~DESC
+  Usage:
+  depends 'usage example', '>= 2.0'
+  name 'not the name'
+DESC
+=begin
+depends 'block commented'
+=end
+depends 'apt', '~> 7.0'
+"#,
+    )
+    .expect("write metadata.rb");
+
+    let package = ChefMetadataRbParser::extract_first_package(&path);
+
+    assert_eq!(package.name.as_deref(), Some("demo"));
+    assert_eq!(package.version.as_deref(), Some("1.0.0"));
+    assert_eq!(
+        package.description.as_deref(),
+        Some("Usage:\ndepends 'usage example', '>= 2.0'\nname 'not the name'")
+    );
+    let purls: Vec<_> = package
+        .dependencies
+        .iter()
+        .filter_map(|dep| dep.purl.as_deref())
+        .collect();
+    assert_eq!(purls, vec!["pkg:chef/apt"]);
+}
+
+#[test]
+fn test_first_lines_bounds_ruby_prepass_input() {
+    assert_eq!(first_lines("a\nb\nc\n", 2), "a\nb");
+    assert_eq!(first_lines("a\nb\n", 2), "a\nb\n");
+    assert_eq!(first_lines("a\nb", 5), "a\nb");
 }
