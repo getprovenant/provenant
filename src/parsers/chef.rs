@@ -27,8 +27,7 @@
 //! - IO.read(...) expressions in Ruby files are skipped (cannot evaluate Ruby code)
 
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader};
+use std::fs;
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -41,8 +40,10 @@ use crate::models::{DatasourceId, Dependency, PackageData, PackageType, Party};
 
 use super::PackageParser;
 use super::metadata::ParserMetadata;
+use super::ruby_source::RubySource;
 use super::utils::{
-    CappedIterExt, MAX_MANIFEST_SIZE, capped_iteration_limit, read_file_to_string, truncate_field,
+    CappedIterExt, MAX_ITERATION_COUNT, MAX_MANIFEST_SIZE, capped_iteration_limit,
+    read_file_to_string, truncate_field,
 };
 
 const FIELD_NAME: &str = "name";
@@ -64,6 +65,9 @@ static RE_DEPENDS: LazyLock<Regex> = LazyLock::new(|| {
 });
 static RE_IO_READ: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"IO\.read\(").expect("valid regex"));
+static RE_HEREDOC_DESCRIPTION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\s*(description|long_description)\s*\(?\s*<<[~-]?").expect("valid regex")
+});
 
 struct ChefPackageFields {
     datasource_id: DatasourceId,
@@ -273,38 +277,31 @@ impl PackageParser for ChefMetadataRbParser {
             return vec![default_package_data(DatasourceId::ChefCookbookMetadataRb)];
         }
 
-        let file = match File::open(path) {
-            Ok(f) => f,
+        let content = match read_file_to_string(path, None) {
+            Ok(content) => content,
             Err(e) => {
-                warn!("Failed to open metadata.rb at {:?}: {}", path, e);
+                warn!("Failed to read metadata.rb at {:?}: {}", path, e);
                 return vec![default_package_data(DatasourceId::ChefCookbookMetadataRb)];
             }
         };
 
-        let reader = BufReader::new(file);
+        let source = RubySource::parse(first_lines(&content, MAX_ITERATION_COUNT));
+        let code = source.code();
         let mut fields: HashMap<String, String> = HashMap::new();
         let mut deps: HashMap<String, Option<String>> = HashMap::new();
 
-        for line in reader.lines().capped("metadata.rb lines") {
-            let line = match line {
-                Ok(l) => l,
-                Err(e) => {
-                    warn!("Skipping non-UTF-8 line in {:?}: {}", path, e);
-                    continue;
-                }
-            };
-
+        for (line_index, line) in code.lines().enumerate().capped("metadata.rb lines") {
             let trimmed = line.trim();
 
             if trimmed.is_empty() || trimmed.starts_with('#') {
                 continue;
             }
 
-            if RE_IO_READ.is_match(&line) {
+            if RE_IO_READ.is_match(line) {
                 continue;
             }
 
-            if let Some(caps) = RE_DEPENDS.captures(&line) {
+            if let Some(caps) = RE_DEPENDS.captures(line) {
                 let dep_name = caps
                     .get(1)
                     .map(|m| m.as_str().to_string())
@@ -316,7 +313,14 @@ impl PackageParser for ChefMetadataRbParser {
                 continue;
             }
 
-            if let Some(caps) = RE_FIELD.captures(&line) {
+            if let Some(caps) = RE_HEREDOC_DESCRIPTION.captures(line)
+                && let Some(body) = source.heredoc_body(line_index)
+            {
+                fields.insert(caps[1].to_string(), body);
+                continue;
+            }
+
+            if let Some(caps) = RE_FIELD.captures(line) {
                 let key = caps
                     .get(1)
                     .map(|m| m.as_str().to_string())
@@ -405,6 +409,17 @@ impl PackageParser for ChefMetadataRbParser {
             bug_tracking_url,
             deps,
         })]
+    }
+}
+
+/// Bounds the Ruby pre-pass to the lines the parser will actually read.
+pub(super) fn first_lines(content: &str, max_lines: usize) -> &str {
+    match content.match_indices('\n').nth(max_lines.saturating_sub(1)) {
+        Some((end, _)) if !content[end + 1..].is_empty() => {
+            warn!("Truncated metadata.rb to {} lines", max_lines);
+            &content[..end]
+        }
+        _ => content,
     }
 }
 
