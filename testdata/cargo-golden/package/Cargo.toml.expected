@@ -178,6 +178,20 @@
         "is_optional": false,
         "is_pinned": false,
         "is_direct": true
+      },
+      {
+        "purl": "pkg:cargo/ansi_term",
+        "extracted_requirement": "0.11",
+        "scope": "dependencies",
+        "is_runtime": true,
+        "is_optional": true,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "target": "cfg(not(windows))",
+          "version": "0.11"
+        }
       }
     ],
     "repository_homepage_url": "https://crates.io/crates/clap",

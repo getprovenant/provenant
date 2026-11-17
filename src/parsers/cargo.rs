@@ -27,7 +27,8 @@
 use crate::models::{DatasourceId, Dependency, FileReference, PackageData, PackageType, Party};
 use crate::parser_warn as warn;
 use crate::parsers::utils::{
-    MAX_ITERATION_COUNT, RecursionGuard, read_file_to_string, split_name_email, truncate_field,
+    MAX_FIELD_LENGTH, MAX_ITERATION_COUNT, RecursionGuard, capped_iteration_limit,
+    read_file_to_string, split_name_email, truncate_field,
 };
 use packageurl::PackageUrl;
 use std::path::Path;
@@ -139,15 +140,27 @@ impl PackageParser for CargoParser {
 
         let extracted_license_statement = raw_license.clone();
 
-        let dependencies = extract_dependencies_for_scopes(&toml_content, &[FIELD_DEPENDENCIES]);
-        let dev_dependencies = extract_dependencies_for_scopes(
-            &toml_content,
-            &[FIELD_DEV_DEPENDENCIES, FIELD_DEV_DEPENDENCIES_LEGACY],
-        );
-        let build_dependencies = extract_dependencies_for_scopes(
-            &toml_content,
-            &[FIELD_BUILD_DEPENDENCIES, FIELD_BUILD_DEPENDENCIES_LEGACY],
-        );
+        let mut dependencies = manifest_dependencies(&toml_content);
+        if let Some(targets) = toml_content.get("target").and_then(Value::as_table) {
+            // Each dependency owns a copy of its target selector in scan output.
+            let mut remaining_selector_bytes = MAX_FIELD_LENGTH;
+            let limit = capped_iteration_limit(targets.len(), "Cargo target tables");
+            'targets: for (target, table) in targets.iter().take(limit) {
+                for mut dep in manifest_dependencies(table) {
+                    if target.len() > remaining_selector_bytes {
+                        warn!(
+                            "Cargo target selector byte limit reached; remaining target dependencies omitted"
+                        );
+                        break 'targets;
+                    }
+                    remaining_selector_bytes -= target.len();
+                    dep.extra_data
+                        .get_or_insert_with(Default::default)
+                        .insert("target".into(), serde_json::Value::String(target.clone()));
+                    dependencies.push(dep);
+                }
+            }
+        }
 
         let purl = create_package_url(&name, &version);
 
@@ -228,7 +241,7 @@ impl PackageParser for CargoParser {
             is_private,
             is_virtual: false,
             extra_data,
-            dependencies: [dependencies, dev_dependencies, build_dependencies].concat(),
+            dependencies,
             repository_homepage_url,
             repository_download_url,
             api_data_url,
@@ -391,7 +404,7 @@ fn extract_dependencies(toml_content: &Value, scope: &str) -> Vec<Dependency> {
     let mut dependencies = Vec::new();
 
     // Determine is_runtime based on scope
-    let is_runtime = !scope.ends_with("dev-dependencies") && !scope.ends_with("build-dependencies");
+    let is_runtime = scope == FIELD_DEPENDENCIES;
 
     if let Some(deps_table) = toml_content.get(scope).and_then(|v| v.as_table()) {
         if deps_table.len() > MAX_ITERATION_COUNT {
@@ -508,11 +521,17 @@ fn extract_dependencies(toml_content: &Value, scope: &str) -> Vec<Dependency> {
     dependencies
 }
 
-fn extract_dependencies_for_scopes(toml_content: &Value, scopes: &[&str]) -> Vec<Dependency> {
-    scopes
-        .iter()
-        .flat_map(|scope| extract_dependencies(toml_content, scope))
-        .collect()
+fn manifest_dependencies(toml_content: &Value) -> Vec<Dependency> {
+    [
+        FIELD_DEPENDENCIES,
+        FIELD_DEV_DEPENDENCIES,
+        FIELD_DEV_DEPENDENCIES_LEGACY,
+        FIELD_BUILD_DEPENDENCIES,
+        FIELD_BUILD_DEPENDENCIES_LEGACY,
+    ]
+    .iter()
+    .flat_map(|scope| extract_dependencies(toml_content, scope))
+    .collect()
 }
 
 /// Extracts keywords and categories, merging them into a single keywords array
