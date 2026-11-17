@@ -106,7 +106,7 @@ pub fn parse_go_mod(content: &str) -> PackageData {
         }
 
         // Bug #5: Reset block state on closing paren
-        if trimmed == ")" {
+        if strip_comment(trimmed).trim_end() == ")" {
             block_state = BlockState::None;
             continue;
         }

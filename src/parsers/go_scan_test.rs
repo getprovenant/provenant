@@ -11,6 +11,45 @@ mod tests {
     use crate::models::{DatasourceId, PackageType};
 
     #[test]
+    fn go_mod_comments_preserve_block_boundaries() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("go.mod"),
+            r#"module example.com/hello
+require (
+    // direct dependency
+    example.com/a v1.0.0
+
+    example.com/b v1.0.1 // indirect
+) // end requirements
+exclude (
+    // broken release
+
+    example.com/a v1.0.2
+) // end exclusions
+"#,
+        )
+        .unwrap();
+        let (_, result) = scan_and_assemble(dir.path());
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(result.dependencies.len(), 3);
+        for (purl, scope, direct) in [
+            ("pkg:golang/example.com/a@v1.0.0", "require", true),
+            ("pkg:golang/example.com/b@v1.0.1", "require", false),
+            ("pkg:golang/example.com/a@v1.0.2", "exclude", true),
+        ] {
+            assert!(
+                result
+                    .dependencies
+                    .iter()
+                    .any(|dep| dep.purl.as_deref() == Some(purl)
+                        && dep.scope.as_deref() == Some(scope)
+                        && dep.is_direct == Some(direct))
+            );
+        }
+    }
+
+    #[test]
     fn test_go_basic_scan_assembles_module_and_sum() {
         let (files, result) = scan_and_assemble(Path::new("testdata/assembly-golden/go-basic"));
 
