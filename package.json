@@ -5,7 +5,7 @@
   "description": "Documentation tooling for Provenant",
   "scripts": {
     "prepare": "lefthook install",
-    "setup": "npm install && cargo install --locked cargo-sort cargo-machete cargo-deny cargo-llvm-cov && ./setup.sh",
+    "setup": "npm install && cargo install --locked cargo-sort cargo-machete@0.9.2 cargo-deny cargo-llvm-cov && ./setup.sh",
     "hooks:install": "lefthook install",
     "hooks:run": "lefthook run pre-commit --all-files",
     "skills:sync": "./scripts/sync_agent_skills.sh",

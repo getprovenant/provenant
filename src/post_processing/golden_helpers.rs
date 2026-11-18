@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-use chrono::Utc;
 use flate2::read::GzDecoder;
+use jiff::Timestamp;
 use serde_json::{Value, json};
 use tar::Archive;
 use tempfile::{TempDir, tempdir};
@@ -405,8 +405,8 @@ pub(crate) fn compute_fixture_output(
     };
 
     let models_output = create_output(
-        Utc::now(),
-        Utc::now(),
+        Timestamp::now(),
+        Timestamp::now(),
         crate::scanner::ProcessResult {
             excluded_count: scan_result.excluded_count,
             files,

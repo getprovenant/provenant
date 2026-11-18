@@ -9,8 +9,8 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
-use chrono::Utc;
 use glob::Pattern;
+use jiff::Timestamp;
 use serde_json::{Map, Value};
 
 use self::classification::apply_file_classification;
@@ -111,12 +111,12 @@ pub(crate) struct CreateOutputContext<'a> {
 }
 
 pub(crate) fn create_output(
-    start_time: chrono::DateTime<Utc>,
-    end_time: chrono::DateTime<Utc>,
+    start_time: Timestamp,
+    end_time: Timestamp,
     scan_result: scanner::ProcessResult,
     context: CreateOutputContext<'_>,
 ) -> Output {
-    let duration = (end_time - start_time).num_nanoseconds().unwrap_or(0) as f64 / 1_000_000_000.0;
+    let duration = end_time.duration_since(start_time).as_secs_f64();
 
     let extra_data = ExtraData {
         system_environment: current_system_environment(),

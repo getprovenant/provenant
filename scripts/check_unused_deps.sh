@@ -6,7 +6,7 @@ set -euo pipefail
 
 if ! command -v cargo-machete &> /dev/null; then
     echo "cargo-machete is required but not installed." >&2
-    echo "Install it with: cargo install cargo-machete" >&2
+    echo "Install it with: cargo install --locked cargo-machete@0.9.2" >&2
     exit 1
 fi
 

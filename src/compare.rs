@@ -111,7 +111,7 @@ fn resolve_artifact_dir(artifact_dir: Option<&Path>) -> Result<PathBuf> {
     }
 
     let cwd = std::env::current_dir().context("failed to determine current working directory")?;
-    let timestamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+    let timestamp = jiff::Timestamp::now().strftime("%Y%m%dT%H%M%SZ");
     Ok(cwd.join(format!("provenant-compare-{timestamp}")))
 }
 
@@ -1119,7 +1119,9 @@ fn write_manifest(
     let manifest = CompareManifest {
         mode: COMPARISON_MODE,
         tool_version: BUILD_VERSION,
-        created_at: chrono::Utc::now().to_rfc3339(),
+        created_at: jiff::Timestamp::now()
+            .strftime("%FT%T%.f+00:00")
+            .to_string(),
         inputs: CompareInputManifest {
             scancode_json_source: scancode_source.to_path_buf(),
             provenant_json_source: provenant_source.to_path_buf(),

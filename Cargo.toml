@@ -133,7 +133,6 @@ ar = "0.9" # Unix ar archive format (for .deb)
 base64 = "0.22.1"
 bit-set = "0.11.0"
 bzip2 = "0.6.1"
-chrono = "0.4.45"
 clap = { workspace = true }
 csv = "1.4.0"
 daachorse = "3.0.2"
@@ -160,6 +159,7 @@ image = { version = "0.25.10", default-features = false, features = [
 ] }
 indicatif = "0.18.4"
 indicatif-log-bridge = "0.2.3"
+jiff = { version = "0.2", default-features = false, features = ["std"] }
 json5 = "1.3.1"
 kamadak-exif = "0.6.1"
 liblzma = "0.4.6"
@@ -190,7 +190,7 @@ rkyv = { workspace = true, features = ["smallvec-1"] }
 rpm = { version = "0.30.2", default-features = false, features = ["payload", "gzip-compression", "xz-compression", "zstd-compression", "bzip2-compression"] }
 ruff_python_ast = { version = "0.15.8", package = "rustpython-ruff_python_ast" }
 ruff_python_parser = { version = "0.15.8", package = "rustpython-ruff_python_parser" }
-rusqlite = { version = "0.40.0", features = ["bundled"], optional = true }
+rusqlite = { version = "0.41", features = ["bundled"], optional = true }
 rustc-hash = "2.1.2"
 rusty-axml = "0.2.1"
 schemars = { version = "1.2.1", features = ["derive"] }
@@ -209,7 +209,7 @@ toml = { workspace = true }
 url = { workspace = true }
 uuid = { version = "1.23.1", features = ["v4"] }
 yaml_serde = { workspace = true }
-zip = "9"
+zip = "9.0.5"
 zstd = { workspace = true }
 
 [target.'cfg(target_env = "musl")'.dependencies]

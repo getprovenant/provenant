@@ -10,7 +10,7 @@ fn create_output_gates_summary_tallies_and_generated_sections() {
     disabled_license.is_generated = Some(true);
     disabled_license.tallies = Some(Tallies::default());
 
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let output_without_flags = create_output(
         start,
@@ -133,7 +133,7 @@ fn create_output_gates_summary_tallies_and_generated_sections() {
 
 #[test]
 fn create_output_preserves_scanner_generated_flags_without_scan_root() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
 
     let mut generated = file("project/generated.c");
@@ -200,7 +200,7 @@ fn create_output_preserves_scanner_generated_flags_without_scan_root() {
 
 #[test]
 fn create_output_score_only_keeps_clarity_without_full_summary_fields() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let mut license = file("project/LICENSE");
     license.detected_license_expression = Some("mit".to_string());
@@ -276,7 +276,7 @@ fn create_output_score_only_keeps_clarity_without_full_summary_fields() {
 
 #[test]
 fn create_output_preserves_file_level_license_clues_in_json_shape() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let mut clue_file = file("project/NOTICE");
     clue_file.license_clues = vec![Match {
@@ -358,7 +358,7 @@ fn create_output_preserves_file_level_license_clues_in_json_shape() {
 
 #[test]
 fn create_output_preserves_empty_package_data_license_and_dependency_arrays() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let mut manifest = file("project/package.json");
     manifest.package_data = vec![PackageData {
@@ -421,7 +421,7 @@ fn create_output_preserves_empty_package_data_license_and_dependency_arrays() {
 
 #[test]
 fn create_output_tallies_by_facet_does_not_leak_resource_tallies() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let mut source = file("project/src/lib.rs");
     source.programming_language = Some("Rust".to_string());
@@ -471,7 +471,7 @@ fn create_output_tallies_by_facet_does_not_leak_resource_tallies() {
 
 #[test]
 fn create_output_promotes_package_metadata_without_summary_flags() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let package_uid = "pkg:npm/demo?uuid=test".to_string();
     let mut license = file("project/LICENSE");
@@ -538,7 +538,7 @@ fn create_output_promotes_package_metadata_without_summary_flags() {
 
 #[test]
 fn create_output_summary_still_resolves_after_strip_root_normalization() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let temp = tempfile::tempdir().expect("tempdir should be created");
     let root = temp.path().join("project");
@@ -626,7 +626,7 @@ fn create_output_summary_still_resolves_after_strip_root_normalization() {
 
 #[test]
 fn create_output_classify_only_sets_key_file_flags() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
 
     let output = create_output(
@@ -678,18 +678,12 @@ fn create_output_classify_only_sets_key_file_flags() {
 
 #[test]
 fn create_output_uses_scancode_header_timestamp_format() {
-    let start = Utc
-        .with_ymd_and_hms(2026, 4, 11, 9, 18, 28)
-        .single()
-        .expect("timestamp should be valid")
-        .with_nanosecond(24_390_124)
-        .expect("nanoseconds should be valid");
-    let end = Utc
-        .with_ymd_and_hms(2026, 4, 11, 9, 18, 29)
-        .single()
-        .expect("timestamp should be valid")
-        .with_nanosecond(987_654_321)
-        .expect("nanoseconds should be valid");
+    let start = "2026-04-11T09:18:28.024390124Z"
+        .parse::<Timestamp>()
+        .expect("valid timestamp");
+    let end = "2026-04-11T09:18:29.987654321Z"
+        .parse::<Timestamp>()
+        .expect("valid timestamp");
 
     let output = create_output(
         start,
@@ -770,7 +764,7 @@ fn create_output_promotes_declared_license_from_cohosted_legal_file() {
     package.declared_license_expression = None;
     package.declared_license_expression_spdx = None;
 
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let output = create_output(
         start,
@@ -878,7 +872,7 @@ fn create_output_promotes_single_file_compound_license_from_cohosted_legal_file(
     package.declared_license_expression = None;
     package.declared_license_expression_spdx = None;
 
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let output = create_output(
         start,

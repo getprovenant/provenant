@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Provenant contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use chrono::{DateTime, Datelike, NaiveDateTime, Timelike, Utc};
+use jiff::Timestamp;
 
 const ISO_UTC_TIMESTAMP_FALLBACK: &str = "1970-01-01T00:00:00Z";
 
@@ -10,29 +10,11 @@ pub(crate) fn fallback_iso_utc_timestamp() -> &'static str {
 }
 
 pub(crate) fn convert_header_timestamp_to_iso_utc(value: &str) -> Option<String> {
-    parse_header_timestamp(value).map(|timestamp| format_iso_utc_timestamp(&timestamp))
-}
-
-fn format_iso_utc_timestamp(timestamp: &DateTime<Utc>) -> String {
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-        timestamp.year(),
-        timestamp.month(),
-        timestamp.day(),
-        timestamp.hour(),
-        timestamp.minute(),
-        timestamp.second()
-    )
-}
-
-fn parse_header_timestamp(value: &str) -> Option<DateTime<Utc>> {
-    if let Ok(timestamp) = DateTime::parse_from_rfc3339(value) {
-        return Some(timestamp.with_timezone(&Utc));
-    }
-
-    NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H%M%S%.f")
-        .ok()
-        .map(|timestamp| DateTime::<Utc>::from_naive_utc_and_offset(timestamp, Utc))
+    let timestamp = value.parse::<Timestamp>().ok().or_else(|| {
+        let datetime = jiff::civil::DateTime::strptime("%Y-%m-%dT%H%M%S%.f", value).ok()?;
+        Some(datetime.to_zoned(jiff::tz::TimeZone::UTC).ok()?.timestamp())
+    })?;
+    Some(timestamp.strftime("%Y-%m-%dT%H:%M:%SZ").to_string())
 }
 
 #[cfg(test)]

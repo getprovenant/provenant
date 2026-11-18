@@ -4,35 +4,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // Derived from ScanCode Toolkit (Apache-2.0); modified. See NOTICE.
 
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use jiff::Timestamp;
 
-pub(crate) fn format_scancode_timestamp(timestamp: &DateTime<Utc>) -> String {
-    format!(
-        "{:04}-{:02}-{:02}T{:02}{:02}{:02}.{:06}",
-        timestamp.year(),
-        timestamp.month(),
-        timestamp.day(),
-        timestamp.hour(),
-        timestamp.minute(),
-        timestamp.second(),
-        timestamp.timestamp_subsec_micros()
-    )
+pub(crate) fn format_scancode_timestamp(timestamp: &Timestamp) -> String {
+    timestamp.strftime("%Y-%m-%dT%H%M%S.%6f").to_string()
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::{TimeZone, Timelike, Utc};
+    use jiff::Timestamp;
 
     use super::format_scancode_timestamp;
 
     #[test]
     fn format_scancode_timestamp_uses_compact_microsecond_precision() {
-        let timestamp = Utc
-            .with_ymd_and_hms(2026, 4, 11, 9, 18, 28)
-            .single()
-            .expect("timestamp should be valid")
-            .with_nanosecond(24_390_124)
-            .expect("nanoseconds should be valid");
+        let timestamp = "2026-04-11T09:18:28.024390124Z"
+            .parse::<Timestamp>()
+            .expect("valid timestamp");
 
         assert_eq!(
             format_scancode_timestamp(&timestamp),

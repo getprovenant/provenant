@@ -5,7 +5,7 @@ use super::*;
 
 #[test]
 fn create_output_preserves_top_level_license_references_from_context() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let output = create_output(
         start,
@@ -109,7 +109,7 @@ fn create_output_preserves_top_level_license_references_from_context() {
 
 #[test]
 fn create_output_projects_file_scan_errors_into_headers_and_serialized_files() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let parse_error =
         "Failed to read or parse package.json at \"project/package.json\": expected value";
@@ -174,7 +174,7 @@ fn create_output_projects_file_scan_errors_into_headers_and_serialized_files() {
 
 #[test]
 fn create_output_embeds_license_index_provenance_in_header_extra_data() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let output = create_output(
         start,
@@ -241,7 +241,7 @@ fn create_output_embeds_license_index_provenance_in_header_extra_data() {
 
 #[test]
 fn create_output_header_errors_summarize_errored_paths_by_default() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let first_error = "Failed to parse package.json at \"project/package.json\": expected value";
     let second_error = "Timeout before license scan (> 120.00s)";
@@ -296,7 +296,7 @@ fn create_output_header_errors_summarize_errored_paths_by_default() {
 
 #[test]
 fn create_output_header_errors_expand_scan_error_details_in_verbose_mode() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let first_error = "Failed to parse package.json at \"project/package.json\": expected value";
     let second_error = "Timeout before license scan (> 120.00s)";
@@ -353,7 +353,7 @@ fn create_output_header_errors_expand_scan_error_details_in_verbose_mode() {
 
 #[test]
 fn create_output_preserves_extra_errors_in_header_summary() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
 
     let output = create_output(
@@ -400,7 +400,7 @@ fn create_output_preserves_extra_errors_in_header_summary() {
 
 #[test]
 fn create_output_preserves_extra_warnings_in_header() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
 
     let output = create_output(
@@ -447,7 +447,7 @@ fn create_output_preserves_extra_warnings_in_header() {
 
 #[test]
 fn create_output_routes_warning_like_scan_errors_into_header_warnings() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
 
     let mut manifest = file("project/pom.xml");
@@ -505,7 +505,7 @@ fn create_output_routes_warning_like_scan_errors_into_header_warnings() {
 
 #[test]
 fn create_output_routes_structured_warning_diagnostics_into_header_warnings() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
 
     let mut manifest = file("project/custom.txt");
@@ -558,7 +558,7 @@ fn create_output_routes_structured_warning_diagnostics_into_header_warnings() {
 
 #[test]
 fn create_output_deduplicates_header_summary_errors() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let parse_error =
         "Failed to read or parse package.json at \"project/package.json\": expected value";
@@ -614,7 +614,7 @@ fn create_output_deduplicates_header_summary_errors() {
 
 #[test]
 fn create_output_preserves_top_level_license_detections_from_context() {
-    let start = Utc::now();
+    let start = Timestamp::now();
     let end = start;
     let output = create_output(
         start,
