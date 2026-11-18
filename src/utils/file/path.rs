@@ -7,8 +7,8 @@
 use std::fs;
 use std::path::Path;
 
-use chrono::{TimeZone, Utc};
 use glob::Pattern;
+use jiff::Timestamp;
 
 pub(super) const PLAIN_TEXT_EXTENSIONS: &[&str] = &[
     "rst", "rest", "md", "txt", "log", "json", "xml", "yaml", "yml", "toml", "ini",
@@ -20,10 +20,9 @@ pub fn get_creation_date(metadata: &fs::Metadata) -> Option<String> {
     let seconds_since_epoch = time.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs() as i64;
 
     Some(
-        Utc.timestamp_opt(seconds_since_epoch, 0)
-            .single()
-            .unwrap_or_else(Utc::now)
-            .format("%Y-%m-%d")
+        Timestamp::from_second(seconds_since_epoch)
+            .unwrap_or_else(|_| Timestamp::now())
+            .strftime("%Y-%m-%d")
             .to_string(),
     )
 }

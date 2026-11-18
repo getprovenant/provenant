@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::{Context, Result, anyhow};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use regex::Regex;
 
 use crate::app::request::{InputMode, ScanRequest};
@@ -146,7 +146,7 @@ pub(crate) fn load_scan_session(
 pub(crate) struct ExecutedRequest {
     pub(crate) output: Output,
     pub(crate) progress: Arc<ScanProgress>,
-    pub(crate) start_time: DateTime<Utc>,
+    pub(crate) start_time: Timestamp,
     /// Carried from [`ScanSession::has_hollow_package_detection_input`] so
     /// the CLI layer can gate hollow-SBOM detection without re-deriving it
     /// from raw header options after the session has been consumed.
@@ -154,7 +154,7 @@ pub(crate) struct ExecutedRequest {
 }
 
 pub(crate) fn execute_request(request: &ScanRequest) -> Result<ExecutedRequest> {
-    let start_time = Utc::now();
+    let start_time = Timestamp::now();
     let scan_plan = ScanPlan::from_request(request);
 
     let progress = Arc::new(ScanProgress::new(scan_plan.progress_mode));
@@ -199,7 +199,7 @@ pub(crate) fn build_output_model(
     facet_rules: &[FacetRule],
     ignore_author_patterns: &[Regex],
     ignore_copyright_holder_patterns: &[Regex],
-    start_time: DateTime<Utc>,
+    start_time: Timestamp,
 ) -> Result<Output> {
     progress.start_post_scan();
 
@@ -459,7 +459,7 @@ pub(crate) fn build_output_model(
             }
         });
 
-    let end_time = Utc::now();
+    let end_time = Timestamp::now();
     let spdx_license_list_version = session
         .active_license_engine
         .as_ref()

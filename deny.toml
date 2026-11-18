@@ -36,6 +36,12 @@ ignore = [
     "RUSTSEC-2026-0368",
     "RUSTSEC-2026-0369",
     "RUSTSEC-2026-0429",
+    # The same rusty-axml-only zip 4.x dependency builds without AES support
+    # (0545). parse_from_reader never calls ZipStreamReader or extracts archive
+    # entries (0548). Our own archive reader uses patched zip 9.x. Remove
+    # these exceptions when rusty-axml upgrades or drops its zip dependency.
+    "RUSTSEC-2026-0545",
+    "RUSTSEC-2026-0548",
 ]
 
 [bans]

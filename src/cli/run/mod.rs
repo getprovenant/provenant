@@ -12,7 +12,7 @@ use crate::progress::{ProgressMode, ScanProgress, init_cli_logger};
 use crate::serve::run as run_serve_shell;
 use crate::time::format_scancode_timestamp;
 use anyhow::{Result, anyhow};
-use chrono::Utc;
+use jiff::Timestamp;
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -179,7 +179,7 @@ pub fn run() -> Result<ExitCode> {
     progress.record_final_header_counts(&output.headers);
     progress.finish_output();
 
-    let summary_end = Utc::now();
+    let summary_end = Timestamp::now();
     progress.display_summary(
         &format_scancode_timestamp(&start_time),
         &format_scancode_timestamp(&summary_end),
