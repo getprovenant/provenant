@@ -88,6 +88,66 @@
         "extra_data": {
           "version": "2"
         }
+      },
+      {
+        "purl": "pkg:cargo/gtk",
+        "extracted_requirement": "0.18",
+        "scope": "dependencies",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "target": "cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"openbsd\", target_os = \"netbsd\"))",
+          "version": "0.18",
+          "features": [
+            "v3_24"
+          ]
+        }
+      },
+      {
+        "purl": "pkg:cargo/jni",
+        "extracted_requirement": "0.21",
+        "scope": "dependencies",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "target": "cfg(target_os = \"android\")"
+        }
+      },
+      {
+        "purl": "pkg:cargo/url",
+        "extracted_requirement": "2",
+        "scope": "dependencies",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "target": "cfg(target_os = \"macos\")"
+        }
+      },
+      {
+        "purl": "pkg:cargo/windows",
+        "extracted_requirement": "0.51",
+        "scope": "dependencies",
+        "is_runtime": true,
+        "is_optional": false,
+        "is_pinned": false,
+        "is_direct": true,
+        "resolved_package": null,
+        "extra_data": {
+          "target": "cfg(windows)",
+          "features": [
+            "Win32_Foundation"
+          ],
+          "version": "0.51"
+        }
       }
     ],
     "repository_homepage_url": "https://crates.io/crates/tauri-runtime",

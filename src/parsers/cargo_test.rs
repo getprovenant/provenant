@@ -19,6 +19,45 @@ mod tests {
     }
 
     #[test]
+    fn target_selector_budget_counts_each_copy_across_targets() {
+        let selector_len = crate::parsers::utils::MAX_FIELD_LENGTH / 16;
+        let first = "a".repeat(selector_len);
+        let second = "b".repeat(selector_len);
+        let mut manifest =
+            format!("[package]\nname='demo'\nversion='1.0.0'\n[target.'{first}'.dependencies]\n");
+        for n in 0..15 {
+            manifest.push_str(&format!("dep{n}='1'\n"));
+        }
+        manifest.push_str(&format!("[target.'{second}'.dependencies]\nlast='1'\n"));
+        for overflow in [false, true] {
+            if overflow {
+                manifest.push_str("overflow='1'\n");
+            }
+            let (_dir, path) = create_temp_cargo_toml(&manifest);
+            let result = capture_parser_diagnostics(
+                || CargoParser::extract_packages(&path),
+                "CargoParser",
+                &path,
+                None,
+            );
+            let deps = &result.packages[0].dependencies;
+            assert_eq!(deps.len(), 16);
+            assert!(
+                deps.iter()
+                    .any(|d| d.purl.as_deref() == Some("pkg:cargo/last"))
+            );
+            assert_eq!(
+                result
+                    .scan_diagnostics
+                    .iter()
+                    .any(|d| d.severity == DiagnosticSeverity::Warning
+                        && d.message.contains("target selector byte limit")),
+                overflow
+            );
+        }
+    }
+
+    #[test]
     fn test_is_match() {
         let valid_path = PathBuf::from("/some/path/Cargo.toml");
         let lowercase_path = PathBuf::from("/some/path/cargo.toml");

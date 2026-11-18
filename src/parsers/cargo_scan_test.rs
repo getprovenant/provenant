@@ -11,6 +11,54 @@ mod tests {
     use crate::models::{DatasourceId, PackageType};
 
     #[test]
+    fn cargo_target_dependencies_survive_assembly() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            r#"[package]
+name = "demo"
+version = "1.0.0"
+[target.'cfg(windows)'.dependencies]
+shared = "1"
+[target.x86_64-unknown-linux-gnu.dev-dependencies]
+shared = "2"
+[target.'cfg(unix)'.build-dependencies]
+builder = "3"
+"#,
+        )
+        .unwrap();
+        let (_, result) = scan_and_assemble(dir.path());
+        assert_eq!(result.dependencies.len(), 3);
+        for (purl, scope, target, runtime) in [
+            ("pkg:cargo/shared", "dependencies", "cfg(windows)", true),
+            (
+                "pkg:cargo/shared",
+                "dev-dependencies",
+                "x86_64-unknown-linux-gnu",
+                false,
+            ),
+            (
+                "pkg:cargo/builder",
+                "build-dependencies",
+                "cfg(unix)",
+                false,
+            ),
+        ] {
+            assert!(result.dependencies.iter().any(|dep| {
+                dep.purl.as_deref() == Some(purl)
+                    && dep.scope.as_deref() == Some(scope)
+                    && dep.is_runtime == Some(runtime)
+                    && dep
+                        .extra_data
+                        .as_ref()
+                        .and_then(|data| data.get("target"))
+                        .and_then(|value| value.as_str())
+                        == Some(target)
+            }));
+        }
+    }
+
+    #[test]
     fn test_cargo_basic_scan_assembles_manifest_and_lockfile() {
         let (files, result) = scan_and_assemble(Path::new("testdata/assembly-golden/cargo-basic"));
 
